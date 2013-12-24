@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+	<collection>
+		<list_url_list>
+			<list_url><![CDATA[http://tapastic.com/series/288]]></list_url>
+		</list_url_list>
+		<element_class>ep-contents</element_class>
+	</collection>
+	<extraction>
+		<element_list>
+			<element_class>episode-body</element_class>
+		</element_list>
+	</extraction>
+	<rss>
+		<title><![CDATA[JoyOfTech::GeekCulture]]></title>
+		<description><![CDATA[JoyOfTech::GeekCulture - 모바일 버전 RSS Feed]]></description>
+		<feed_url><![CDATA[http://terzeron.net/joyoftech.xml]]></feed_url>
+		<link><![CDATA[http://terzeron.net/joyoftech.xml]]></link>
+		<generator><![CDATA[Terzeron's Feed Generator]]></generator>
+		<copyright><![CDATA[Copyright (c) Geek Culture. All rights reserved.]]></copyright>
+		<language>ko</language>
+	</rss>
+</configuration>

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+	<collection>
+		<is_completed>false</is_completed>
+		<unit_size_per_day>24</unit_size_per_day>
+		<sort_field_pattern><![CDATA[logNo=(\d+)]]></sort_field_pattern>
+		<list_url_list>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=50&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=49&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=48&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=47&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=46&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=45&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=44&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=43&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=42&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=41&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=40&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=39&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=38&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=37&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=36&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=35&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=34&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=33&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=32&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=31&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=30&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=29&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=28&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=27&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=26&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=25&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=24&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=23&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=22&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=21&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=20&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=19&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=18&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=17&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=16&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=15&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=14&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=13&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=12&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=11&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=10&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=9&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=8&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=7&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=6&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=5&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=4&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=3&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=2&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=escaflowne&viewdate=&currentPage=1&categoryNo=55&parentCategoryNo=0&countPerPage=10]]></list_url>
+		</list_url_list>
+		<element_path>/html/body</element_path>
+	</collection>
+	<extraction>
+		<element_list>
+			<element_class>post-view</element_class>
+		</element_list>
+	</extraction>
+	<rss>
+		<title><![CDATA[락스미스::네이버블로그]]></title>
+		<description><![CDATA[락스미스::네이버블로그 - 모바일 RSS Feed]]></description>
+		<feed_url><![CDATA[http://terzeron.net/naverblog.rocksmith.xml]]></feed_url>
+		<link><![CDATA[http://terzeron.net/naverblog.rocksmith.xml]]></link>
+		<generator><![CDATA[Terzeron's Feed Generator]]></generator>
+		<copyright><![CDATA[Copyright (c) NAVER Corp. All Rights Reserved]]></copyright>
+		<language>ko</language>
+	</rss>
+</configuration>
+

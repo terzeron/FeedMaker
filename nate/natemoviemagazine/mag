@@ -1,0 +1,833 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ko" lang="ko">
+<head>
+<title>네이트 영화</title>
+<meta name="Robots" content="noindex,nofollow" />
+<meta http-equiv="content-type" content="text/html; charset=EUC-KR" />
+<meta http-equiv="Cache-Control" content="no-cache" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta name="viewport" content="user-scalable=yes, initial-scale = 1.0, width=400" />
+<link rel="apple-touch-icon-precomposed" href="/img/home_screen/nate_144.png" />
+<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+<link rel="stylesheet" type="text/css" href="/css/empas_cinema.css?ver=4550" />
+<link rel="stylesheet" type="text/css" href="/css/slidemain.css?ver=4481" />
+<!--[if IE 6]>
+<link rel="stylesheet" type="text/css" href="/css/slidemain_ie6.css?ver=1666" />
+<![endif]-->
+<link rel="stylesheet" type="text/css" href="/css/cine_magazine.css?ver=3928" />
+<link rel="stylesheet" type="text/css" href="/css/snb.css?ver=4483" />
+ 
+<script type="text/javascript" src="/js/common.js?ver=4069"></script>
+<script type="text/javascript" src="/js/constans.js?ver=1.2"></script>
+<script type="text/javascript" src="/js/eprototypeui.js"></script>
+<script type="text/javascript" src="/js/init.js?ver=4527"></script>
+<script type="text/javascript" src="/js/login_lib.js?ver=3502"></script>
+<script type="text/javascript" src="/js/searchbox.js?ver=2602"></script>
+<script type="text/javascript" src="http://v.nate.com/player/js/videoplayer.js"></script> 
+<script type="text/javascript" src="/js/json2.js"></script>
+<script type="text/javascript" src="/js/CVIajax.js"></script>
+<script type="text/javascript" src="/js/CVIplayer.js?ver=2978"></script>
+<script type="text/javascript" src="/js/CVIsaver.js"></script>
+</head>
+
+<body>
+	<div id="cinemaWraper">
+		<!-- HEADER -->
+		<div id="header">
+			<h1><a href="http://www.nate.com">NATE</a></h1>
+			<h2><a href="http://movie.nate.com">영화</a></h2>
+			<div class="gnbArea">
+				<script type="text/javascript" src="http://common.nate.com/nameUI/CommonScript.aspx?c=UTF8&m=movie" charset="utf-8"></script>
+				<script type="text/javascript" charset="utf-8">
+					var NateGNB = new classNateGNB();
+				</script>
+				<noscript>
+					<div id="noscript_gnb">
+						<div>
+							<a href="http://www.nate.com/" title="네이트 메인으로">네이트 메인으로</a> <span>|</span>
+							<a href="http://www.nate.com/sitemap/" title="사이트맵">사이트맵</a>
+						</div>
+					</div>
+				</noscript>
+
+			</div>
+
+			<!-- 검색창 영역 시작 -->
+			<div id="searchWrap">
+				<!-- 서비스 검색 통합 : S [2010.04.26] -->
+				<form id="search_section" name="search_section" method="get" autocomplete=off onSubmit="SetAction(this,'all')">
+				<input type="hidden" id="search" name="search" value="all" />
+				<input type="hidden" id="thr" name="thr" value="snmv" />
+				<input type="hidden" id="nq" name="nq" value="1" />
+				<input type="hidden" name="stype" value="all" />
+					<fieldset>
+						<legend>검색영역</legend>
+
+						<div id="acWrap" class="search">
+							<div class="wrapBox">
+								<div id="selectTxt" onclick="selectView();">전체</div>
+								<div id="search_layer" style="display:none;">
+									<ul class="select_list">
+										<li onmouseover="Chgbg(this, '#F5F5F5');" onmouseout="Chgbg(this, '');" onclick="selectChg('전체','all');">전체</li>
+										<li onmouseover="Chgbg(this, '#F5F5F5');" onmouseout="Chgbg(this, '');" onclick="selectChg('영화','info');">영화</li>
+										<li onmouseover="Chgbg(this, '#F5F5F5');" onmouseout="Chgbg(this, '');" onclick="selectChg('영화인','star');">영화인</li>
+										<li onmouseover="Chgbg(this, '#F5F5F5');" onmouseout="Chgbg(this, '');" onclick="selectChg('포토','photo');">포토</li>
+										<li onmouseover="Chgbg(this, '#F5F5F5');" onmouseout="Chgbg(this, '');" onclick="selectChg('동영상','video');">동영상</li>
+										<li onmouseover="Chgbg(this, '#F5F5F5');" onmouseout="Chgbg(this, '');" onclick="selectChg('매거진','magazine');">매거진</li>
+									</ul>
+								</div>
+								<input type="text" id="q" name="q" class="searchBox" value="" />
+							</div>
+							<input id="acBtn" type="button" class="btn_service" title="검색" onclick="javascript:CmdNateSearch(2)" />
+							<input id="acBtn_all" type="button" class="btn_all" title="통합검색" onclick="javascript:CmdNateSearch(1)" />
+
+							<img id="acImg" src="http://movie.nate.com/img/common/ico_arrow_down.gif" alt="자동완성" />
+							<div id="acDiv">
+								<iframe id="acIfrm" name="acIfrm" scrolling="no" frameborder=0 marginheight=0 marginwidth=0 src="http://nac.nate.com/ioh0420.html?s=movie&rp=nm&fn=search_section&qn=q"></iframe>
+							</div>
+						</div>
+					</fieldset>
+				</form>
+				<!-- 서비스 검색 통합 : E [2010.04.26] -->
+			</div>
+			<!-- 검색창 영역 : E -->
+	<div class="secNaviWrap">
+		<ul>
+			<li class="movie_home"><a href="http://movie.nate.com/main">영화홈</a></li>
+			<li class="movie_reserve"><a href="http://ticket.movie.nate.com/czweb/action/rsrvMain">예매</a></li>
+			<li class="movie_info"><a href="http://movie.nate.com/movie/">영화정보</a></li>
+			<li class="movie_magazine_select"><a href="http://movie.nate.com/mag/">매거진</a></li>
+			<li class="movie_multimedia"><a href="http://movie.nate.com/multi/">멀티미디어</a></li>
+			<li class="movie_community"><a href="http://movie.nate.com/comm/">커뮤니티</a></li>
+			<li class="movie_preview"><a href="http://movie.nate.com/event/">시사회/이벤트</a></li>
+			<li class="movie_my"><a href="javascript:CmdLogin('http://movie.nate.com/mymovie/')">MY영화</a></li>
+			<li class="moive_reserve"><a href="javascript:CmdLogin('http://movie.nate.com/mymovie/freeticket/')">예매권 등록</a></li>
+			<li class="moive_hoppin"><a href="http://www.hoppin.nate.com" target="_blank">hoppin</a></li>
+		</ul>
+	</div>
+	
+	<div class="promotionSpot">
+		<a href="http://www.hoppin.nate.com" target="_blank"><img src="/img/@banner_smart.jpg" alt="BANNER" /></a>
+	</div>
+
+<div class="promotionSpot"><a href="http://movie.nate.com/notice/detail?seq=414&mode=service" target="_self"><img src="http://movie.nate.com/upload/banner/gnb_banner/image_gnb_banner1_112038.gif" alt="BANNER" /></a></div>
+</div>
+<!-- HEADER : E -->
+<hr />
+
+	<!-- start of [ id="Sec_magazine" ] -->
+	<div id="Sec_magazine">
+		<!-- // start of [ id="content Container"] -->
+		<div id="review" class="contentContainer column3 f_clear">
+			<!-- 좌측 섹션 네비게이션 -->
+			<div class="sectionNavigation">
+				<h4>매거진 Movie Magazine</h4>
+					<ul class="sectionNavi f_clear">
+						<li><a href="/mag/article/?category=NEWS"><img src="/img/btn_magazin_submenu01.gif" alt="뉴스" /></a></li>
+						<li><a href="/mag/article/?category=PLAN"><img src="/img/btn_magazin_submenu02.gif" alt="기획/특집" /></a></li>
+						<li><a href="/mag/article/?category=INTERVIEW"><img src="/img/btn_magazin_submenu03.gif" alt="인터뷰" /></a></li>
+						<li><a href="/mag/article/?category=COLUMN"><img src="/img/btn_magazin_submenu04.gif" alt="칼럼" /></a></li>
+						<li><a href="/mag/article/?category=REVIEW"><img src="/img/btn_magazin_submenu05.gif" alt="전문가 리뷰" /></a></li>
+						<li><a href="/mag/boxoffice/"><img src="/img/btn_magazin_submenu06.gif" alt="박스오피스" /></a></li>
+						<!--<li><a href="/mag/letter/"><img src="/img/btn_magazin_submenu08.gif" alt="영화 레터" /></a></li>-->
+					</ul>
+				<script type="text/javascript">
+	function viewLeftMoreRank(url) {
+		document.location.href = url;
+	}
+	function viewLeftMovie(url) {
+		document.location.href = url;
+	}
+</script>
+<div id='rank_div' class="movieRanking wrapingBox f_clear">
+	<p class="headTitle">무비랭킹</p>
+	<dl class="f_clear">
+		<dt><img src="http://movie.nate.com/img/ico_movie_film.gif" alt="" /> 영화 예매순위</dt>
+		<dd>
+			<ol class="f_clear">
+				<li class="num01"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/movie/movieinfo?cinema_id=53381')">늑대소년</a></li>
+				<li class="num02"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/movie/movieinfo?cinema_id=53726')">브레이킹 던 part ..</a></li>
+				<li class="num03"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/movie/movieinfo?cinema_id=53711')">내가 살인범이다</a></li>
+				<li class="num04"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/movie/movieinfo?cinema_id=54336')">자칼이 온다</a></li>
+				<li class="num05"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/movie/movieinfo?cinema_id=51292')">광해, 왕이 된 남..</a></li>
+				<li class="num06"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/movie/movieinfo?cinema_id=48620')">007 스카이폴</a></li>
+				<li class="num07"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/movie/movieinfo?cinema_id=53772')">나우 이즈 굿</a></li>
+				<li class="num08"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/movie/movieinfo?cinema_id=53927')">업사이드 다운</a></li>
+				<li class="num09"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/movie/movieinfo?cinema_id=55139')">터치</a></li>
+				<li class="num10"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/movie/movieinfo?cinema_id=54393')">늑대아이</a></li>
+			</ol>
+		</dd>
+		<dd class="termInfo">(2012-11-14 기준)</dd>
+	</dl>
+	<a href="javascript:rotateRank('media')" class="nbtn rankingPre">이전</a>
+	<a href="javascript:rotateRank('star')" class="nbtn rankingNext">다음</a>
+</div>
+<div id='rank_ticket' style="display:none">
+	<p class="headTitle">무비랭킹</p>
+	<dl class="f_clear">
+		<dt><img src="http://movie.nate.com/img/ico_movie_film.gif" alt="" /> 영화 예매순위</dt>
+		<dd>
+			<ol class="f_clear">
+				<li class="num01"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/movie/movieinfo?cinema_id=53381')">늑대소년</a></li>
+				<li class="num02"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/movie/movieinfo?cinema_id=53726')">브레이킹 던 part ..</a></li>
+				<li class="num03"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/movie/movieinfo?cinema_id=53711')">내가 살인범이다</a></li>
+				<li class="num04"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/movie/movieinfo?cinema_id=54336')">자칼이 온다</a></li>
+				<li class="num05"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/movie/movieinfo?cinema_id=51292')">광해, 왕이 된 남..</a></li>
+				<li class="num06"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/movie/movieinfo?cinema_id=48620')">007 스카이폴</a></li>
+				<li class="num07"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/movie/movieinfo?cinema_id=53772')">나우 이즈 굿</a></li>
+				<li class="num08"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/movie/movieinfo?cinema_id=53927')">업사이드 다운</a></li>
+				<li class="num09"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/movie/movieinfo?cinema_id=55139')">터치</a></li>
+				<li class="num10"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/movie/movieinfo?cinema_id=54393')">늑대아이</a></li>
+			</ol>
+		</dd>
+		<dd class="termInfo">(2012-11-14 기준)</dd>
+	</dl>
+	<a href="javascript:rotateRank('media')" class="nbtn rankingPre">이전</a>
+	<a href="javascript:rotateRank('star')" class="nbtn rankingNext">다음</a>
+</div>
+<div id='rank_star' style="display:none">
+	<p class="headTitle">무비랭킹</p>
+	<dl class="f_clear">
+		<dt><img src="http://movie.nate.com/img/ico_movie_film02.gif" alt="" /> 스타 인기순위</dt>
+		<dd>
+			<ol class="f_clear">
+				<li class="num01"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/star/starinfo?people_id=108950')">김학선</a></li>
+				<li class="num02"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/star/starinfo?people_id=9148')">에밀리 모티머</a></li>
+				<li class="num03"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/star/starinfo?people_id=100452')">요시다 타에코</a></li>
+				<li class="num04"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/star/starinfo?people_id=72684')">우민호</a></li>
+				<li class="num05"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/star/starinfo?people_id=8040')">유진 레비</a></li>
+				<li class="num06"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/star/starinfo?people_id=83174')">정성일</a></li>
+				<li class="num07"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/star/starinfo?people_id=105152')">사노 토모키</a></li>
+				<li class="num08"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/star/starinfo?people_id=127439')">야마다 신타로 </a></li>
+				<li class="num09"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/star/starinfo?people_id=2213')">사라 폴리</a></li>
+				<li class="num10"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/star/starinfo?people_id=130634')">잇사 </a></li>
+			</ol>
+		</dd>
+		<dd class="termInfo">(2012-11-07 ~ 2012-11-14)</dd>
+	</dl>
+	<a href="javascript:rotateRank('ticket')" class="nbtn rankingPre">이전</a>
+	<a href="javascript:rotateRank('mag')" class="nbtn rankingNext">다음</a>
+</div>
+<div id='rank_mag' style="display:none">
+	<p class="headTitle">무비랭킹</p>
+	<dl class="f_clear">
+		<dt><img src="http://movie.nate.com/img/ico_movie_article.gif" alt="" /> 기사 조회순위</dt>
+		<dd>
+			<ol class="f_clear">
+				<li class="num01"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/mag/article/magview?id=12101&category=')" title="보자마자 한마디! 매력 없는 김재중 선물세트 <자칼이 온다>">보자마자 한마디! ..</a></li>
+				<li class="num02"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/mag/article/magview?id=12087&category=')" title="너는 늑대, 세상 어디에도 없는 늑대! <늑대소년> 송중기">너는 늑대, 세상 ..</a></li>
+				<li class="num03"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/mag/article/magview?id=12090&category=')" title="소녀가 소년의 이름을 불러 주었을 때 (오락성 7 작품성 7)">소녀가 소년의 이..</a></li>
+				<li class="num04"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/mag/article/magview?id=12088&category=')" title="엠블랙 이준, 김기덕의 <배우는 배우다> 캐스팅 유력">엠블랙 이준, 김기..</a></li>
+				<li class="num05"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/mag/article/magview?id=12105&category=')" title="산악인 엄홍길 대장 실화, 영화로 제작">산악인 엄홍길 대..</a></li>
+				<li class="num06"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/mag/article/magview?id=12108&category=')" title="JIFF 실무자 8인 사퇴, 영화제 난항 예상">JIFF 실무자 8인 ..</a></li>
+				<li class="num07"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/mag/article/magview?id=12089&category=')" title="<돈 크라이 마미> 청소년도 볼 수 있을까">&lt;돈 크라이 마미&gt; ..</a></li>
+				<li class="num08"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/mag/article/magview?id=12080&category=')" title="<007 스카이폴>, 비정규직은 뭘해도 고달프다">&lt;007 스카이폴&gt;, ..</a></li>
+				<li class="num09"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/mag/article/magview?id=12091&category=')" title="11월 1주차 국내 박스오피스. 극장가 <늑대소년>의 매력 속으로">11월 1주차 국내 ..</a></li>
+				<li class="num10"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/mag/article/magview?id=12082&category=')" title="어느 노장감독의 쓸쓸한 퇴보 (오락성 5 작품성 5)">어느 노장감독의 ..</a></li>
+			</ol>
+		</dd>
+		<dd class="termInfo">(2012-11-14 기준)</dd>
+	</dl>
+	<a href="javascript:rotateRank('star')" class="nbtn rankingPre">이전</a>
+	<a href="javascript:rotateRank('media')" class="nbtn rankingNext">다음</a>
+</div>
+<div id='rank_media' style="display:none">
+	<p class="headTitle">무비랭킹</p>
+	<dl class="f_clear">
+		<dt><img src="http://movie.nate.com/img/ico_movie_film.gif" alt="" /> 동영상 인기순위</dt>
+		<dd>
+			<ol class="f_clear">
+				<li class="num01"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/multi/media/detail?video_seq=15893')" title="<개들의 전쟁> 예고편">&lt;개들의 전쟁&gt; 예..</a></li>
+				<li class="num02"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/multi/media/detail?video_seq=15907')" title="<업사이드 다운> 쾌남 패러디 영상">&lt;업사이드 다운&gt; ..</a></li>
+				<li class="num03"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/multi/media/detail?video_seq=15908')" title="<나의 PS 파트너> 제작보고회 영상">&lt;나의 PS 파트너&gt; ..</a></li>
+				<li class="num04"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/multi/media/detail?video_seq=15909')" title="<나의 PS 파트너> 19금 로코 비긴즈 영상">&lt;나의 PS 파트너&gt; ..</a></li>
+				<li class="num05"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/multi/media/detail?video_seq=15910')" title="<브레이킹 던 part 2> 뮤직비디오">&lt;브레이킹 던 part..</a></li>
+				<li class="num06"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/multi/media/detail?video_seq=15911')" title="<타워> 김상경 캐릭터 영상">&lt;타워&gt; 김상경 캐..</a></li>
+				<li class="num07"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/multi/media/detail?video_seq=15912')" title="<자칼이 온다> 본 예고편">&lt;자칼이 온다&gt; 본 ..</a></li>
+				<li class="num08"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/multi/media/detail?video_seq=15914')" title="<남영동1985> 30초 예고편">&lt;남영동1985&gt; 30초..</a></li>
+				<li class="num09"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/multi/media/detail?video_seq=15915')" title="<남영동1985> 메인 예고편">&lt;남영동1985&gt; 메인..</a></li>
+				<li class="num10"><span class="num"></span> <a href="javascript:viewLeftMovie('http://movie.nate.com/multi/media/detail?video_seq=15916')" title="<돈크라이 마미> 뮤직비디오">&lt;돈크라이 마미&gt; ..</a></li>
+			</ol>
+		</dd>
+		<dd class="termInfo">(2012-11-14 기준)</dd>
+	</dl>
+	<a href="javascript:rotateRank('mag')" class="nbtn rankingPre">이전</a>
+	<a href="javascript:rotateRank('ticket')" class="nbtn rankingNext">다음</a>
+</div>
+<script type="text/javascript">
+	document.getElementById('rank_div').innerHTML = document.getElementById('rank_ticket').innerHTML;		function rotateRank(pos) {
+		document.getElementById('rank_div').innerHTML = document.getElementById('rank_'+pos).innerHTML;
+	}
+</script>
+				<div class="moviePlusBox wrapingBox">
+	<p class="headTitle">무비플러스</p>
+	<ul class="f_clear">
+		<li><a href="http://movie.nate.com/notice/detail?seq=414&mode=service" target="_self" ><img src="http://movie.nate.com/upload/banner/movieplus_left/image_movieplus_left1_095046.gif" alt="" /></a></li>
+		<li><a href="http://movie.nate.com/multi/media/detail?page=1&order=new&tab=all&video_seq=15921" target="_self" ><img src="http://movie.nate.com/upload/banner/movieplus_left/image_movieplus_left3_185933.jpg" alt="" /></a></li>
+	</ul>
+</div>
+				<div class="noticeBox wrapingBox">
+						<p class="headTitle">공지사항</p>
+						<a href="http://movie.nate.com/notice/" class="viewMore">더보기</a>
+						<ul class="f_clear">
+							<!--  -->
+							<li><a href="http://movie.nate.com/notice/detail?seq=457&mode=service">[공지] CGV/프리머스 전점..</a></li>
+							<!--  -->
+							<li><a href="http://movie.nate.com/notice/detail?seq=456&mode=service">[예매] 롯데시네마 서청주..</a></li>
+							<!--  -->
+							<li><a href="http://movie.nate.com/notice/detail?seq=455&mode=service">[공지] OK캐쉬백 포인트 ..</a></li>
+							<!--  -->						
+						</ul>
+					</div>
+				
+			</div>
+			<!-- /좌측 섹션 네비게이션 -->
+			<!-- 내용 -->
+			<div class="contentBox sectionMain">
+<div class="contentCover">
+<!-//매거진 커버 이미지 맵 시작-->
+<IMG SRC="http://movie.nate.com/upload/main/banner_mag_1_160310.jpg" USEMAP="#MagazineCoverMap" BORDER="0">
+<MAP NAME="MagazineCoverMap">
+ 
+             <AREA SHAPE="RECT" COORDS="308,55,442,111" HREF="http://movie.nate.com/mag/article/magview?id=12107&page=1&category=REVIEW" TITLE="" _onfocus="this.blur()">
+ 
+             <AREA SHAPE="RECT" COORDS="310,132,479,148" HREF="http://movie.nate.com/mag/article/magview?id=12098&page=1&category=REVIEW" TITLE="" _onfocus="this.blur()">
+ 
+             <AREA SHAPE="RECT" COORDS="310,153,485,166" HREF="http://movie.nate.com/mag/article/magview?id=12094&page=2&category=NEWS" TITLE="" _onfocus="this.blur()">
+ 
+             <AREA SHAPE="RECT" COORDS="307,169,524,183" HREF="http://movie.nate.com/mag/article/magview?id=12088&page=2&category=NEWS" TITLE="" _onfocus="this.blur()">
+ 
+</MAP>
+
+<!-//매거진 커버 이미지 맵 끝-->
+</div>
+
+<div class="mdl_headtitle_Box magazineBest">
+	<h5><img src="/img/tit_magazine_main01.gif" alt="매거진 베스트" /></h5>
+	<span class="sotrBy f_clear">
+		<a href="?order=new" class="sortBy">최신</a> <i style="">/</i><a href="?order=pop" class="">인기</a>
+	</span>
+
+	<ol class="common_magazineList listMdl">
+		<li>
+			<span class="numBox num01"></span>
+			<a href="/mag/article/magview?id=12113&category=NEWS" class="thumbNail"><img src="http://movieimg.nate.com/Image/x00/07/22/41s.jpg" width="100" height="70"  onerror="this.src='/img/noimg/noimg_100x70.gif'" alt="콜린 퍼스·크리스 터커, 1% 우정 만들기 도전" /></a>
+			<dl class="movieMdl">
+				<dt class="title"><a href="/mag/article/magview?id=12113&category=NEWS">콜린 퍼스·크리스 터커, 1% 우정 만들기 도전</a></dt>
+				<dd><a href="/mag/article/magview?id=12113&category=NEWS"> 콜린 퍼스와 크리스 터커가 1% 우정 만들기에 도전한다. 외신에 따르면 콜린 퍼스와 크리스 터커는 &lt;1 %의 우정&gt;의 할리우드 리메이크 판에 캐스팅 됐다...</a></dd>
+			</dl>
+		</li>
+		<li>
+			<span class="numBox num02"></span>
+			<a href="/mag/article/magview?id=12112&category=REVIEW" class="thumbNail"><img src="http://movieimg.nate.com/Image/x00/07/22/68s.jpg" width="100" height="70"  onerror="this.src='/img/noimg/noimg_100x70.gif'" alt="기발한 구성이 불러온 극한 공포 (오락성 6 작품성 6)" /></a>
+			<dl class="movieMdl">
+				<dt class="title"><a href="/mag/article/magview?id=12112&category=REVIEW">기발한 구성이 불러온 극한 공포 (오락성 6 작품성 6)</a></dt>
+				<dd><a href="/mag/article/magview?id=12112&category=REVIEW"> 실제 범죄 사건을 바탕으로 쓴 첫 소설이 대박나면서 성공가도를 달렸던 앨리슨(에단 호크). 하지만 이후 작품에서 이렇다 할 두각을 펼치지 못한다. 그는 베스..</a></dd>
+			</dl>
+		</li>
+		<li>
+			<span class="numBox num03"></span>
+			<a href="/mag/article/magview?id=12110&category=NEWS" class="thumbNail"><img src="http://movieimg.nate.com/Image/x00/07/22/34s.jpg" width="100" height="70"  onerror="this.src='/img/noimg/noimg_100x70.gif'" alt="<내가 살인범이다>, “내가 원작자다!” 표절시비" /></a>
+			<dl class="movieMdl">
+				<dt class="title"><a href="/mag/article/magview?id=12110&category=NEWS">&lt;내가 살인범이다&gt;, “내가 원작자다!” 표절시비</a></dt>
+				<dd><a href="/mag/article/magview?id=12110&category=NEWS"> &lt;내가 살인범이다&gt; 정병길 감독공소시효를 넘긴 살인범이 자신의 범죄를 책으로 발간한다,는 독특한 소재로 화제몰이 중인 &lt;내가 살인범이다&gt;가 표..</a></dd>
+			</dl>
+		</li>
+		<li>
+			<span class="numBox num04"></span>
+			<a href="/mag/article/magview?id=12111&category=REVIEW" class="thumbNail"><img src="http://movieimg.nate.com/Image/x00/07/22/32s.jpg" width="100" height="70"  onerror="this.src='/img/noimg/noimg_100x70.gif'" alt="대여한 책에도 정은 간다 (오락성 6 작품성 6)" /></a>
+			<dl class="movieMdl">
+				<dt class="title"><a href="/mag/article/magview?id=12111&category=REVIEW">대여한 책에도 정은 간다 (오락성 6 작품성 6)</a></dt>
+				<dd><a href="/mag/article/magview?id=12111&category=REVIEW"> 이 영화를 말하기에 앞서 트뤼포가 말했던 그 유명한 영화를 사랑하는 세 단계를 다시 생각하지 않을 수 없다. 영화를 두 번 보는 것, 평을 쓰는 것, 그리고 영..</a></dd>
+			</dl>
+		</li>
+		<li>
+			<span class="numBox num05"></span>
+			<a href="/mag/article/magview?id=12108&category=NEWS" class="thumbNail"><img src="http://movieimg.nate.com/Image/x00/07/22/24s.jpg" width="100" height="70"  onerror="this.src='/img/noimg/noimg_100x70.gif'" alt="JIFF 실무자 8인 사퇴, 영화제 난항 예상" /></a>
+			<dl class="movieMdl">
+				<dt class="title"><a href="/mag/article/magview?id=12108&category=NEWS">JIFF 실무자 8인 사퇴, 영화제 난항 예상</a></dt>
+				<dd><a href="/mag/article/magview?id=12108&category=NEWS"> 전주국제영화제(이하 ‘JIFF’)가 또 한 번 난항을 겪을 전망이다. 영화제 주요 실무자 8인이 사퇴하는 일이 벌어졌다. 영화제 사퇴를 결정한 8인은 공식 보도 ..</a></dd>
+			</dl>
+		</li>
+		<li>
+			<span class="numBox num06"></span>
+			<a href="/mag/article/magview?id=12107&category=REVIEW" class="thumbNail"><img src="http://movieimg.nate.com/Image/x00/07/22/03s.jpg" width="100" height="70"  onerror="this.src='/img/noimg/noimg_100x70.gif'" alt="<자칼이 온다> 절재의 미덕이 아쉬운 소동극 (오락성 5 작품성 5)" /></a>
+			<dl class="movieMdl">
+				<dt class="title"><a href="/mag/article/magview?id=12107&category=REVIEW">&lt;자칼이 온다&gt; 절재의 미덕이 아쉬운 소동극 (오락성 5 작품성 5)</a></dt>
+				<dd><a href="/mag/article/magview?id=12107&category=REVIEW"> 킬러 봉민정(송지효)은 톱스타 최현(김재중)을 제거하라는 의뢰를 받는다. 일본인으로 위장한 봉민정은 최현이 투숙중인 호텔에 잠입, 그를 납치하는데 성공한..</a></dd>
+			</dl>
+		</li>
+		<li>
+			<span class="numBox num07"></span>
+			<a href="/mag/article/magview?id=12106&category=NEWS" class="thumbNail"><img src="http://movieimg.nate.com/Image/x00/07/22/20s.jpg" width="100" height="70"  onerror="this.src='/img/noimg/noimg_100x70.gif'" alt="11월 2주차 북미 박스오피스. <007 스카이폴> 시리즈 최고 오프닝 스코어로 1위 데뷔" /></a>
+			<dl class="movieMdl">
+				<dt class="title"><a href="/mag/article/magview?id=12106&category=NEWS">11월 2주차 북미 박스오피스. &lt;007 스카이폴&gt; 시리즈 최고 오프닝 스코어로 1위 데뷔</a></dt>
+				<dd><a href="/mag/article/magview?id=12106&category=NEWS"> 국내보다 2주 늦게 개봉한 &lt;007 스카이폴&gt;이 북미 극장가를 장악했다. 13일 북미박스오피스모조에 따르면, 007 시리즈 50주년 기념작이자 23번째 작품인 ..</a></dd>
+			</dl>
+		</li>
+	</ol>
+</div>
+
+<div class="subArticleBox f_clear">
+	
+	<div class="specialArticle">
+		<p class="headtitle"><img src="/img/tit_magazine_main02.gif" alt="기획특집" /></p>
+		<div class="outterBox">
+			<dl>
+				<dt><a href="/mag/article/magview?id=12080&category=PLAN"><007 스카이폴>, 비정규직은 뭘..</dt>
+				<dd class="thumbNail"><a href="/mag/article/magview?id=12080&category=PLAN"><img src="http://movieimg.nate.com/Image/x00/07/20/10s.jpg" width="70" height="49" onerror="this.src='/img/noimg/noimg_100x70.gif'" alt="" /></a></dd>
+<dd class="desc">					<a href="/mag/article/magview?id=12038&category=PLAN">프랑켄슈타인을 사랑한 소년, 팀 버튼</a>
+					<a href="/mag/article/magview?id=11986&category=PLAN">[멘붕무비툰 3회]  &lt;레지던트 이블5&gt; 개수작 떨지마!!</a>
+</dd>			</dl>
+		</div>
+	</div>
+
+	<div class="interViewBox">
+		<p class="headtitle"><img src="/img/tit_magazine_main03.gif" alt="인터뷰" /></p>
+		<div class="outterBox">
+			<dl>
+				<dt><a href="/mag/article/magview?id=12103&category=INTERVIEW">이젠 영화배우다 &lt;내가 살인범이..</dt>
+				<dd class="thumbNail"><a href="/mag/article/magview?id=12103&category=INTERVIEW"><img src="http://movieimg.nate.com/Image/x00/07/22/01s.jpg" width="70" height="49" onerror="this.sr='/img/noimg/noimg_100x70.gif'" alt="" /></a></dd>
+<dd class="desc">					<a href="/mag/article/magview?id=12097&category=INTERVIEW">숨은 이름 찾기 &lt;복숭아나무&gt; 구혜선</a>
+					<a href="/mag/article/magview?id=12087&category=INTERVIEW">너는 늑대, 세상 어디에도 없는 늑대! &lt;늑대소년&gt; 송..</a>
+</dd>			</dl>
+		</div>
+	</div>
+	
+	<div class="columnBox">
+		<p class="headtitle"><img src="/img/tit_magazine_main04.gif" alt="칼럼" /></p>
+		<div class="outterBox">
+			<dl>
+				<dt><a href="/mag/article/magview?id=12079&category=COLUMN">대종상은 &lt;광해&gt;의 ‘지능적 안..</dt>
+				<dd class="thumbNail"><a href="/mag/article/magview?id=12079&category=COLUMN"><img src="http://movieimg.nate.com/Image/x00/07/20/31s.jpg" width="70" height="49" onerror="this.src='/img/noimg/noimg_100x70.gif'" alt="" /></a></dd>
+<dd class="desc">					<a href="/mag/article/magview?id=11948&category=COLUMN">김기덕, 그는 ‘리트윗’을 하지 않는다</a>
+					<a href="/mag/article/magview?id=11749&category=COLUMN">&lt;두 개의 문&gt; 누가 그들을 대변해줄 것인가</a>
+</dd>			</dl>
+		</div>
+	</div>
+
+</div>
+
+<div class="mdl_headtitle_Box movieInterview">
+	<h5><img src="/img/tit_magazine_main05.gif" alt="동영상 인터뷰" /></h5>
+	<ul class="listwrap">
+		<li>
+			<span class="mvInfoTag"><a href="javascript:goVideoDetail('15900&tab=interview');"><em class="interview">인터뷰</em><img src="http://thumb.movie.nateimg.co.kr/thumb_100x75/http://mpmedia573.video.cyworld.com/img/033/8A/00/09/B_20121108101101600806971033.jpg" width="100" height="67" alt="&lt;늑대소년&gt; 송중기 수능 응원 영상" /></a></span>
+			<dl class="desc">
+				<dt><a href="javascript:goVideoDetail('15900&tab=interview');">&lt;늑대소년&gt; 송..</a></dt>
+				<dd></dd>
+			</dl>
+		</li>
+		<li>
+			<span class="mvInfoTag"><a href="javascript:goVideoDetail('15840&tab=interview');"><em class="interview">인터뷰</em><img src="http://thumb.movie.nateimg.co.kr/thumb_100x75/http://mpmedia568.video.cyworld.com/img/033/88/00/09/B_20121031111001599383291033.jpg" width="100" height="67" alt="&lt;고, 보이즈!:마지막 잎새 사수 프로젝트&gt; 감독 코믹 인사말 영상" /></a></span>
+			<dl class="desc">
+				<dt><a href="javascript:goVideoDetail('15840&tab=interview');">&lt;고, 보이즈!:..</a></dt>
+				<dd></dd>
+			</dl>
+		</li>
+		<li>
+			<span class="mvInfoTag"><a href="javascript:goVideoDetail('15806&tab=interview');"><em class="interview">인터뷰</em><img src="http://thumb.movie.nateimg.co.kr/thumb_100x75/http://mpmedia562.video.cyworld.com/img/033/86/00/09/B_20121024151001598124091033.jpg" width="100" height="67" alt="&lt;나우 이즈 굿&gt; 카야 스코델라리오 인터뷰 영상" /></a></span>
+			<dl class="desc">
+				<dt><a href="javascript:goVideoDetail('15806&tab=interview');">&lt;나우 이즈 굿..</a></dt>
+				<dd></dd>
+			</dl>
+		</li>
+		<li>
+			<span class="mvInfoTag"><a href="javascript:goVideoDetail('15750&tab=interview');"><em class="interview">인터뷰</em><img src="http://thumb.movie.nateimg.co.kr/thumb_100x75/http://mpmedia558.video.cyworld.com/img/033/84/00/09/B_20121016141001596707771033.jpg" width="100" height="67" alt="&lt;아르고&gt; 벤 애플렉 한국어 인사 영상" /></a></span>
+			<dl class="desc">
+				<dt><a href="javascript:goVideoDetail('15750&tab=interview');">&lt;아르고&gt; 벤 ..</a></dt>
+				<dd></dd>
+			</dl>
+		</li>
+		<li class="listEnd">
+			<span class="mvInfoTag"><a href="javascript:goVideoDetail('15738&tab=interview');"><em class="interview">인터뷰</em><img src="http://thumb.movie.nateimg.co.kr/thumb_100x75/http://mpmedia562.video.cyworld.com/img/033/83/00/09/B_20121012161001596078011033.jpg" width="100" height="67" alt="&lt;프랑켄위니&gt; 팀 버튼 감독 인터뷰 영상" /></a></span>
+			<dl class="desc">
+				<dt><a href="javascript:goVideoDetail('15738&tab=interview');">&lt;프랑켄위니&gt; ..</a></dt>
+				<dd></dd>
+			</dl>
+		</li>
+	</ul>
+</div>
+
+
+			</div>
+			<!-- /내용 -->
+			<!-- 우측 네비게이션 -->
+			<div class="subContentBox f_clear">
+				<!-- 공통배너 -->
+					<div class="commonBanner">
+						<a href="http://movie.nate.com/event/detail?event_id=1197" id="commbanner_link" ><img src="/upload/event/banner_210_19085.jpg" id="commbanner_img" border=0></a>
+					</div>
+					<!-- // 공통배너 -->
+				<div class="bannerBox movieRecovery">
+	<span class="descBox">
+	<em><a href="http://movie.nate.com/movie/movieinfo?cinema_id=340">희극배우<br /> <strong>김인권</strong>의 스크린 데뷔작은?</a></em>
+	<a href="http://movie.nate.com/movieinfo/directory"><img src="/img/btn_moviedir.gif" alt="영화디렉토리" /></a>
+	</span>
+</div>
+				<div class="mdl_headtitle_Box bestworstChar">
+	<h5>베스트/워스트 배역</h5>
+	<dl>
+		<dt><a href="http://movie.nate.com/star/starinfo?people_id=1180&tab=filmo">에드워드 노튼의 베스트/워스트</a></dt>
+		<dd class="movieInfo f_clear">
+		<span class="leftMovie">
+			<a href="http://movie.nate.com/movie/movieinfo?cinema_id=1343"><img src="http://movieimg.nate.com/upload/images/poster2/thumbnail/lposter001343.jpg" onerror="this.src='/img/noimg/noimg_60x86.gif'" width="60" height="86" /></a>
+			<a href="http://movie.nate.com/movie/movieinfo?cinema_id=1343">[베스트]<br>프라이멀 피어</a>		</span>
+		<span class="rightMovie">
+			<a href="http://movie.nate.com/movie/movieinfo?cinema_id=36434"><img src="http://movieimg.nate.com/upload/images/poster2/thumbnail/lposter036434.jpg" onerror="this.src='/img/noimg/noimg_60x86.gif'" width="60" height="86" /></a>
+			<a href="http://movie.nate.com/movie/movieinfo?cinema_id=36434">[워스트]<br>다운 인 더 밸리</a>		</span>
+		</dd>
+	</dl>
+	</div>
+				<!-- 시사회 이벤트 -->
+<div class="mdl_headtitle_Box previewEventBox">
+	<h5>시사회 이벤트</h5>
+	<ul>
+<li class="thumbNail"><a href="/event/detail?event_id=1200"><img src="http://movieimg.nate.com/upload/event/201211/nate_54470_mini_101715.jpg" id="mControll_event" width="210" alt="" /></a></li>		<li>
+			<span class="premium"></span>
+
+			<a href="/event/detail?event_id=1200">&lt;철가방 우수씨&gt; 예매권 이벤..</a>
+		</li>
+		<li>
+			<span class="premium"></span>
+
+			<a href="/event/detail?event_id=1199">&lt;음치클리닉&gt; 대국민 음치 탈..</a>
+		</li>
+		<li>
+			<span class="preview"></span>
+
+			<a href="/event/detail?event_id=1198">&lt;가디언즈&gt; 자신만만 입소문 ..</a>
+		</li>
+	</ul>
+	<br class="clear" />
+	<a href="/event/" class="moreArrow">더보기</a>
+</div>
+<!-- // 시사회 이벤트 -->
+				<!-- �눥�븨 諛뺤뒪 -->
+<div class="mdl_headtitle_Box shoppingBox">
+    <div class="sideiframe" style="padding-top: 25px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; clear: both;">
+        <iframe width="100%" height="320" src="http://shop.nate.com/shopbox/shopbox_2_3.htm?svcpage=movie" frameBorder="0"></iframe>
+    </div>
+</div>
+			</div>
+			<!-- /우측 네비게이션 -->
+
+		</div>
+		<!-- // end of [ id="content Container"] -->
+	</div>
+	<!-- end of [ id="Sec_magazine" ] -->
+
+<hr />
+<!-- start of [ id="footer" ] -->
+<div id="footer">
+	<dl class="footer_list">
+		<dt>네이트 공용 푸터 영역</dt>
+		<dd>
+			<a href="http://www.nate.com/footer/legal/index.html" target="_top">서비스 이용약관</a><span>|</span>
+			<a href="http://www.nate.com/footer/privacy/index.html" target="_top">개인정보취급방침</a><span>|</span>
+			<a href="http://adguide.nate.com/" target="_top">광고문의</a><span>|</span>
+			<a href="http://helpdesk.nate.com/" target="_top">네이트/싸이월드 고객센터</a>
+		</dd>
+	</dl>
+	<p class="copyright">Copyright &copy; <a href="http://www.skcomms.co.kr" target="_blank"><strong><span class="sk">SK</span> Communications.</strong></a> All rights reserved.</p>
+</div>
+<!-- end of [ id="footer"]-->
+</div>
+<!-- end of [ id="cinemaWraper"]-->
+
+<!-- slide layer -->
+<script type="text/javascript">
+// <![CDATA[
+/* 스페셜 BG */
+function setSpecialBg(jsonTxt) {
+	try {
+		if (jsonTxt) {
+			var jsonData = eval("("+jsonTxt+")");
+			// left_bg, left_link, right_bg, right_link
+			$('left_bg').style.backgroundImage ='url(' + jsonData.left_bg + ')';
+			$('right_bg').style.backgroundImage ='url(' + jsonData.right_bg + ')';
+		}
+	} catch(e) {}
+}
+function resetSpecialBg() {
+	$('left_bg').style.backgroundImage ='';
+	$('right_bg').style.backgroundImage ='';
+}
+/* 오늘본영화 */
+function setTodayMovieCount(today) {
+	var url = '/slideCount';
+	var pars = 'pos=2&today='+today;
+
+	new Empas.Ajax.Request(url, 
+		{method: 'get',
+		parameters: pars,
+		onComplete: updateTodayMovieCount,
+		onFailure: function() {
+			window.alert("오늘 본 영화 갯수를 가져올수 없습니다.");
+		}});
+}
+function updateTodayMovieCount(req) {
+	var jsonTxt = req.responseText;
+	if (jsonTxt.trim().length > 0) {
+		var jsonData = eval("("+jsonTxt+")");
+		$('todaymovieCount').innerHTML = jsonData.count;
+	}
+}
+/* 예매바구니 */
+function setBasketCount() {
+	$('basketCount').innerHTML = '0';
+	return;
+}
+function updateBasketCount(req) {
+	var jsonTxt = req.responseText;
+	if (jsonTxt.trim().length > 0) {
+		var jsonData = eval("("+jsonTxt+")");
+		$('basketCount').innerHTML = jsonData.count;
+	}
+}
+/* 예매확인/취소 */
+function setReserveCount() {
+	$('reserveCount').innerHTML = '0';
+	return;
+}
+function updateReserveCount(req) {
+	var jsonTxt = req.responseText;
+	if (jsonTxt.trim().length > 0) {
+		var jsonData = eval("("+jsonTxt+")");
+		$('reserveCount').innerHTML = jsonData.count;
+	}
+}
+function reloadTodayMovie(today) {
+	setTodayMovieCount(today);
+	if (this.currentMenu == 2) {
+		var url = '/slide/todaymovie';
+		changeSlideFrame('left',url);
+	}
+}
+function init() {
+//	resizeWin();
+	setTodayMovieCount('');
+}
+// slide control
+var currentMenu = 0;
+/* 슬라이드 open/close */
+function showSlide() {
+	if ($('contentBox').style.display == 'none') {
+		$('contentBox').style.display = 'block';
+		//$('layerControlBtn').src = '/img/btn_slide_close.gif';
+		$('slide_open').className = 'contentLayerControl close';
+		$('slide_open').blur();
+		if (this.currentMenu == 0) {
+			setSlideTop10NDR();
+		}
+	} else {
+		//$('layerControlBtn').src = '/img/btn_slide_open.gif';
+		$('slide_open').className = 'contentLayerControl open';
+		$('slide_open').blur();
+		$('contentBox').style.display = 'none';
+	}
+	/*
+	if ((navigator.userAgent.indexOf('MSIE 8.0') == 0) && (navigator.userAgent.indexOf('MSIE 6.0') != -1)) {
+		SetSlidePosition();
+	}
+	*/
+}
+/* 슬라이드 open 체크 */
+function checkSlide() {
+	if ($('contentBox').style.display == 'none') {
+		$('contentBox').style.display = 'block';
+		$('slide_open').className = 'contentLayerControl close';
+		$('slide_open').blur();
+	} else return;
+}
+/* 슬라이드 선택 */
+function selectSlide(pos) {
+	var bLoginCheck = true;
+	var bPositionCheck = true;
+	if (pos < 3) {
+		bPositionCheck = false;
+		if (this.currentMenu == pos) {
+			showSlide();
+			return;
+		} else {
+			checkSlide();
+		}
+	}
+
+	if (bPositionCheck && bLoginCheck) {
+		CmdLogin('http://movie.nate.com/mag');
+	} else {
+		var nMenu = 4;
+		var className = '';
+		var onOff = '';
+		for (var i = 1; i <= nMenu; i++) {
+			if (i == 1) {
+				className = 'tab home';
+			} else if (i == nMenu) {
+				className = 'tab end';
+			} else {
+				className = 'tab';
+			}
+			if (i == pos) {
+				className += ' selected';
+				$('slide_img_'+i).src='/img/btn_slide_tab0'+i+'_on.gif';
+			} else {
+				$('slide_img_'+i).src='/img/btn_slide_tab0'+i+'.gif';
+			}
+			$('slide_tab_'+i).className = className;
+		}
+		var url = '';
+		switch (pos) {
+			case '1' :
+				url = '/slide/top10';
+				setSlideTop10NDR();
+				break;
+			case '2' :
+				url = '/slide/todaymovie';
+				break;
+			case '3' :
+				url = '/slide/reserve_basket';
+				break;
+			case '4' :
+				url = '/slide/reserve_check';
+				break;
+		}
+
+		changeSlideFrame('left',url);
+		if (this.currentMenu == pos) {
+			showSlide();
+		} else {
+			checkSlide();
+		}
+		this.currentMenu = pos;
+	}
+}
+function setSlideTop10NDR() {
+	$('slide_ndr').src = 'http://movie.nate.com/_template/content/slide/top10_ndr.html';
+}
+function selectSlideNotMove(pos) {
+	var nMenu = 4;
+	var className = '';
+	var onOff = '';
+	for (var i = 1; i <= nMenu; i++) {
+		if (i == 1) {
+			className = 'tab first';
+		} else if (i == nMenu) {
+			className = 'tab end';
+		} else {
+			className = 'tab';
+		}
+		if (i == pos) {
+			className += ' selected';
+			$('slide_img_'+i).src='/img/btn_slide_tab0'+i+'_on.gif';
+		} else {
+			$('slide_img_'+i).src='/img/btn_slide_tab0'+i+'.gif';
+		}
+		$('slide_tab_'+i).className = className;
+	}
+}
+function SetSlidePosition() {
+	var PageHeight = document.documentElement.offsetHeight;	// 화면 높이
+	var ScrollTop = document.documentElement.scrollTop;		// 스크롤 된 위치
+	var SlideLayerHeight = $('slideWraper').offsetHeight;	// 슬라이드 레이어 높이
+	var exception = 0; // 에러값
+	//var ScrollWidth = document.documentElement.offsetHeight - document.documentElement.clientHeight;
+
+	if (PageHeight + ScrollTop > document.body.clientHeight) {
+		exception = PageHeight + ScrollTop - document.body.clientHeight
+	}
+	$('slideWraper').style.top = PageHeight - SlideLayerHeight + ScrollTop - exception;
+}
+/*
+if ((navigator.userAgent.indexOf('MSIE 8.0') == 0) && (navigator.userAgent.indexOf('MSIE 6.0') != -1)) {
+	window.onscroll = function() {SetSlidePosition();}
+}
+*/
+try {
+	$ONDOMLOAD(init);
+} catch (e) {}
+
+// ]]>
+</script>
+
+	<iframe id="slide_ndr" src="about:blank" frameborder="0" width="0" height="0" scrolling="no"></iframe>
+
+	<!--슬라이드 레이어 -->
+	<div id="slideWraper">
+		<div id="slideLayer">
+			<!-- 텝 메뉴 -->		
+			<dl class="menuBox">
+				<dt>슬라이드 레이어 메뉴</dt>
+				<dd id="slide_tab_1" class="tab home selected"><a href="#" onclick="javascript:selectSlide('1');""><span><img id="slide_img_1" src="/img/btn_slide_tab01_on.gif" alt="무비TOP10" /></span></a></dd>
+				<dd id="slide_tab_2" class="tab"><a href="#" onclick="javascript:selectSlide('2');"><span><img id="slide_img_2" src="/img/btn_slide_tab02.gif" alt="오늘 본 영화" /> <em>(<font id='todaymovieCount'>0</font>)</em></span></a></dd>
+				<dd id="slide_tab_3" class="tab"><a href="#" onclick="javascript:selectSlide('3');"><span><img id="slide_img_3" src="/img/btn_slide_tab03.gif" alt="예매바구니" /> <em>(<font id='basketCount'>0</font>)</em></span></a></dd>
+				<dd id="slide_tab_4" class="tab end"><a href="#" onclick="javascript:selectSlide('4');"><span><img id="slide_img_4" src="/img/btn_slide_tab04.gif" alt="예매확인/취소" /> <em><font id='reserveCount'></font></em></span></a></dd>
+			</dl>
+			<!-- // 텝 메뉴 -->
+
+			<a id="slide_open" href="javascript:showSlide();" class="contentLayerControl open"></a>
+		</div>
+		<div id="contentBox" style="display:none">
+
+			<!-- 예매바구니란? 레이어 -->
+			<div id="reserveBasketLayer" class="layer_wrap" style="display:none">
+				<div class="layer">
+					<div class="top_line"></div>
+					<div class="side_line"></div>
+					<strong class="title"><img src="/img/tit_slide_layer02.gif" alt="예매바구니란?" /></strong>
+					<a href="javascript:closeHelpBasket()" class="closeLayer">닫기</a>
+					<div class="imgDesc">
+						<img src="/img/txt_desc_reservebasket.gif" alt="예매바구니를 사용하시면 영화의 날짜,사간,극장정보를 담아두고 나중에 결제하여 관람하실 수 있습니다. 원하시는 영화들을 담아두고 비교해서 예매하세요!" />
+						<img src="/img/img_slide_example.gif" alt="사용 예시화면" />
+					</div>
+					<div class="subDesc">
+						<dl>
+							<dt><img src="/img/txt_slide_01.gif" alt="이럴 때 사용해요!" /></dt>
+							<dd>
+								<p>
+									보고싶은 영화가 너무 많을 때<br />
+									담아두고 "관람 스케줄 짜기!"
+								</p>
+								<p>
+									어느 영화를 볼지 아직 결정 못했을때! 담아두고 결정되면 "바로예매!"
+								</p>
+								<p>
+									다음 주에 볼 영화인데 바로<br />
+									결제하기는 두려울 때. "우선<br />
+									담아둔다!"
+								</p>
+								<p>
+									그 외에도 필요하면 언제든지 "예매<br />
+									담아두는 센스!!"
+								</p>
+							</dd>
+						</dl>
+					</div>
+				</div>
+				<div class="bottom_line"></div>
+			</div>
+			<!-- // 예매바구니란? 레이어 -->
+
+			<iframe id="slide_left_content" class="slideLeftIframe" src="/slide/top10" frameborder="0" scrolling="no"></iframe>
+
+			<!-- 영화 빠른 예매 -->
+			<iframe id="slide_right_content" class="slideRightIframe" src="/slide/right_reserve" frameborder="0" scrolling="no"></iframe>
+			<!-- // 영화 빠른 예매 -->
+
+		</div>
+		<!-- // 레이어 컨텐츠 -->
+			<a href="http://ticket.movie.nate.com/czweb/helpdesk/payment/sktMemberShipCardInfo.jsp?type=reserve&DIC=DPRSRVM0003" class="advertise" style="top:-90px;" target="_self"><img src="http://movie.nate.com/upload/banner/slide_icon/image_slide_icon2_175814.png" class="png24" /></a>
+	</div>
+	<!--// 슬라이드 레이어 -->
+<!-- /slide layer -->
+
+<script type="text/javascript">
+// <![CDATA[
+	document.domain='nate.com';
+	try {document.execCommand("BackgroundImageCache", false, true);} catch(e){}
+// ]]>
+</script>
+<script type="text/javascript" src="/js/resize.js"></script>
+<img id="img_ndr" ndr="movie_ndr.nate.com/mag/" src="http://stat.nate.com/stat/stat.tiff?cp_url=[movie_ndr.nate.com/mag/??ndru3=&ndrl3=]" width=0 height=0 border=0>
+</body>
+</html>

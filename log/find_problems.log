@@ -1,0 +1,166 @@
+
+===== check the validity of configuration file =====
+--- the number of <list_url> element ---
+2	./naver/navercast.m
+3	./hankooki/i
+3	./hankooki/resurrectionofkiller
+3	./hankooki/theunderdog
+3	./hankooki/tropicana
+3	./tstore/healingpatissier
+3	./tstore/highschoolaffairs
+3	./tstore/soulguardian
+4	./nate/warriorinwhite
+4	./stoo/stripornot
+4	./torrentrg/torrentrg.movie
+4	./tstore/oddseries
+5	./daum/daummoviepromagazine
+5	./nate/deathplanner
+5	./nate/koreantraditionalclothes
+7	./tstore/tstorewebtoon
+20	./tstore/mistersushiking
+--- the number of occurrence of each element ---
+   1 render_js
+   1 review_point_threshold
+  32 unit_size_per_day
+  35 is_completed
+  35 sort_field_pattern
+ 172 post_process_script
+ 226 item_capture_script
+--- spaces instead of tab ---
+
+===== check the size and timestamp of result file =====
+--- old xml files in public_html/xml ---
+--- too small html file ---
+./tstore/nobledocument/html/3e4b4545da7a11bc88c18fc355a44d66.html
+./yahoo/topnews/html/56fd61adde352c37982445bd8bf99404.html
+./yahoo/topnews/html/6678921ea9f600651cd0103b2f611544.html
+./yahoo/topnews/html/944a3f79fa9419637408f7abadeda293.html
+--- html files containing iframe element ---
+   1 daumsportscolumn
+   1 ppomppu.phone
+   1 trauma
+   2 navercast.87
+   3 todaymovie
+   3 todaymusic
+   4 navercast.18
+   4 navercast.204
+   4 navercast.53
+   5 navercast
+   5 navercast.142
+   5 navercast.28
+   5 navercast.74
+   5 navercast.98
+   5 navercast.m
+   6 navercast.48
+   7 themecast.book
+  17 cstory
+  25 navercast.69
+  30 themecast.life
+  69 natespopubcolumn
+ 167 daummoviepromagazine
+1845 daummovienews
+
+===== check the incremental feeding =====
+--- completed feeds ---
+./nate/deathplanner/conf.xml
+./nate/koreantraditionalclothes/conf.xml
+./nate/warriorinwhite/conf.xml
+./ollehmarket/ensemble/conf.xml
+./stoo/stripornot/conf.xml
+./tstore/mistersushiking/conf.xml
+./tstore/oddseries/conf.xml
+./tstore/soulguardian/conf.xml
+--- start_idx vs # of items ---
+
+===== check the garbage feeds =====
+--- log/feed_acceess.txt ---
+     454 log/feed_acceess.txt
+--- check the existence of requested feed ---
+--- false path (public_html/xml) of recent days ---
+boreddevilking            [1;39m410[0m Gone
+cassandra                 [1;34m200[0m OK
+clien.park                [1;32m404[0m Not Found
+design                    [1;39m410[0m Gone
+fettersofsympathy         [1;34m200[0m OK
+kimspoiler                [1;34m200[0m OK
+opchromite                [1;34m200[0m OK
+roedeer                   [1;39m410[0m Gone
+towerofgod                [1;34m200[0m OK
+voigtclub.freeboard       [1;32m404[0m Not Found
+
+===== inconsistent registration =====
+--- feedly(http request) vs. .htaccess ---
+15d14
+< baqui
+18d16
+< bikeylecture
+24d21
+< browserconfig
+32,33d28
+< clien.market
+< clien.park
+38d32
+< crushingsword
+43d36
+< dblp.cacm
+47d39
+< dblp.vldbjournal
+58d49
+< ensemble
+64,66d54
+< fishingtaste
+< fishingtaste2
+< fishingtaste3
+72d59
+< gambledog
+78d64
+< girlstheatergroup
+95d80
+< homelessking
+104d88
+< index
+141d124
+< mulein
+144d126
+< naverblog.rocksmith
+172d153
+< slrclub.free
+184d164
+< steam.sale
+187d166
+< stripornot
+198,199d176
+< torreng.game
+< torreng.movie
+210d186
+< voigtclub.freeboard
+222,223d197
+< yonginlib.ebook.02
+< yonginlib.ebook.04
+225d198
+< yonginlib.ebook.08
+228d200
+< yonginlib.ebook.14
+234d205
+< yonginlib.ebook.28
+238,241d208
+< yonginlib.ebook.36
+< yonginlib.ebook.38
+< yonginlib.ebook.41
+< yonginlib.ebook.42
+243d209
+< yonginlib.ebook.49
+--- .htaccess vs. public_html/xml ---
+142d141
+< ppomppu.phone
+154d152
+< smallroomfantasia
+177d174
+< torrentrg.game
+--- public_html/xml vs. feedmaker/*/*/*.xml ---
+141a142
+> ppomppu.phone
+152a154
+> smallroomfantasia
+174a177
+> torrentrg.game

@@ -1,0 +1,99 @@
+Tue Dec 24 15:21:00 KST 2013
+deleting old image files...
+/Users/terzeron/workspace/feedmaker
+
+====================
+metro/vorkosigan
+====================
+Warning: can't get old list!
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+	main::main() called at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 592
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+====================
+mysite/myfeed1
+====================
+Warning: can't get old list!
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+	main::main() called at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 592
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+====================
+mysite/myfeed2
+====================
+Warning: can't get old list!
+Error: can't execute './capture_item_link_title.pl', at /Users/terzeron/workspace/feedmaker/bin/collect_new_list.pl line 142.
+	main::main() called at /Users/terzeron/workspace/feedmaker/bin/collect_new_list.pl line 158
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+	main::main() called at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 592
+Error: can't execute './capture_item_link_title.pl', at /Users/terzeron/workspace/feedmaker/bin/collect_new_list.pl line 142.
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+====================
+naver/navercast.1
+====================
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+	main::main() called at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 592
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+====================
+naver/navercast.179
+====================
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+	main::main() called at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 592
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+====================
+naver/navercast.2
+====================
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+	main::main() called at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 592
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+====================
+naver/navercast.205
+====================
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+	main::main() called at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 592
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+====================
+naver/navercast.37
+====================
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+	main::main() called at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 592
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+====================
+naver/navercast.41
+====================
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+	main::main() called at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 592
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+====================
+naver/navercast.48
+====================
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+	main::main() called at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 592
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+====================
+naver/navercast.53
+====================
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+	main::main() called at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 592
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+====================
+naver/navercast.58
+====================
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+	main::main() called at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 592
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+====================
+naver/navercast.65
+====================
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+	main::main() called at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 592
+Error: can't get recent list!, at /Users/terzeron/workspace/feedmaker/bin/make_feed.pl line 548.
+====================
+yahoo/topnews
+====================
+Warning: can't get old list!
+Warning: Edward Snowden: 'Mission's already accomplished': http://news.yahoo.com/nsa-leaker-39-mission-39-already-accomplished-39-033430455--politics.html --> html/56fd61adde352c37982445bd8bf99404.html: 0 (< 64 byte)
+Warning: For some troops, a holiday-dinner-in-a-box: http://news.yahoo.com/for-some-troops--holiday-dinner-in-a-box-234612164.html --> html/6678921ea9f600651cd0103b2f611544.html: 0 (< 64 byte)
+Warning: Car bomb at Egypt police HQ kills 14: http://news.yahoo.com/blast-police-hq-egypt-city-kills-5-security-000704526.html --> html/944a3f79fa9419637408f7abadeda293.html: 0 (< 64 byte)
+list=',vorkosigan,myfeed1,myfeed2,navercast.1,navercast.179,navercast.2,navercast.205,navercast.37,navercast.41,navercast.48,navercast.53,navercast.58,navercast.65'
+sending error messge
+2013년 12월 24일 화요일 15시 27분 36초 KST
+elapse=396

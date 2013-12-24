@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+	<collection>
+		<list_url_list>
+			<list_url><![CDATA[http://comic.naver.com/webtoon/list.nhn?titleId=597449]]></list_url>
+		</list_url_list>
+		<element_class>viewList</element_class>
+		<item_capture_script>../capture_item_naverwebtoon.pl</item_capture_script>
+	</collection>
+	<extraction>
+		<element_list>
+			<element_class>wt_viewer</element_class>
+		</element_list>
+		<post_process_script>../post_process_naverwebtoon.pl</post_process_script>
+	</extraction>
+	<rss>
+		<title><![CDATA[샌프란시스코 화랑관::네이버]]></title>
+		<description><![CDATA[샌프란시스코 화랑관::네이버 - 모바일 버전 RSS Feed]]></description>
+		<feed_url><![CDATA[http://terzeron.net/sanfranciscodrillhall.xml]]></feed_url>
+		<link><![CDATA[http://terzeron.net/sanfranciscodrillhall.xml]]></link>
+		<generator><![CDATA[Terzeron's Feed Generator]]></generator>
+		<copyright><![CDATA[Copyright (c) NHN Corp. All rights reserved.]]></copyright>
+		<language>ko</language>
+	</rss>
+</configuration>
+

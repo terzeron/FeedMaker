@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+	<collection>
+		<list_url_list>
+			<list_url><![CDATA[http://sports.khan.co.kr/comics/cartoon_view.html?comics=b2b&sec_id=1098]]></list_url>
+		</list_url_list>
+		<item_capture_script>../capture_item_link_title.pl</item_capture_script>
+		<encoding>cp949</encoding>
+	</collection>
+	<extraction>
+		<element_list>
+			<element_id>NewsAdContent</element_id>
+		</element_list>
+		<post_process_script>../post_process_sportskhan.pl</post_process_script>
+		<encoding>cp949</encoding>
+	</extraction>
+	<rss>
+		<title><![CDATA[개::스포츠경향]]></title>
+		<description><![CDATA[개::스포츠경향 - 모바일 버전 RSS Feed]]></description>
+		<feed_url><![CDATA[http://terzeron.net/dog.xml]]></feed_url>
+		<link><![CDATA[http://terzeron.net/dog.xml]]></link>
+		<generator><![CDATA[Terzeron's Feed Generator]]></generator>
+		<copyright><![CDATA[Copyright (c) The Kyunghyang Shinmun. All Rights Reserved]]></copyright>
+		<language>ko</language>
+	</rss>
+</configuration>
+

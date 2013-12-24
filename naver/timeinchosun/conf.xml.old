@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+	<collection>
+		<is_completed>true</is_completed>
+		<sort_field_pattern><![CDATA[no=(\d+)]]></sort_field_pattern>
+		<list_url_list>
+			<list_url><![CDATA[http://comic.naver.com/webtoon/list.nhn?titleId=337964&page=12]]></list_url>
+			<list_url><![CDATA[http://comic.naver.com/webtoon/list.nhn?titleId=337964&page=11]]></list_url>
+			<list_url><![CDATA[http://comic.naver.com/webtoon/list.nhn?titleId=337964&page=10]]></list_url>
+			<list_url><![CDATA[http://comic.naver.com/webtoon/list.nhn?titleId=337964&page=9]]></list_url>
+			<list_url><![CDATA[http://comic.naver.com/webtoon/list.nhn?titleId=337964&page=8]]></list_url>
+			<list_url><![CDATA[http://comic.naver.com/webtoon/list.nhn?titleId=337964&page=7]]></list_url>
+			<list_url><![CDATA[http://comic.naver.com/webtoon/list.nhn?titleId=337964&page=6]]></list_url>
+			<list_url><![CDATA[http://comic.naver.com/webtoon/list.nhn?titleId=337964&page=5]]></list_url>
+			<list_url><![CDATA[http://comic.naver.com/webtoon/list.nhn?titleId=337964&page=4]]></list_url>
+			<list_url><![CDATA[http://comic.naver.com/webtoon/list.nhn?titleId=337964&page=3]]></list_url>
+			<list_url><![CDATA[http://comic.naver.com/webtoon/list.nhn?titleId=337964&page=2]]></list_url>
+			<list_url><![CDATA[http://comic.naver.com/webtoon/list.nhn?titleId=337964&page=1]]></list_url>
+		</list_url_list>
+		<element_class>viewList</element_class>
+		<item_capture_script>../capture_item_naverwebtoon.pl</item_capture_script>
+	</collection>
+	<extraction>
+		<element_list>
+			<element_class>wt_viewer</element_class>
+		</element_list>
+		<post_process_script>../post_process_naverwebtoon.pl</post_process_script>
+	</extraction>
+	<rss>
+		<title><![CDATA[타임인조선::네이버]]></title>
+		<description><![CDATA[타임인조선::네이버 - 모바일 버전 RSS Feed]]></description>
+		<feed_url><![CDATA[http://terzeron.net/timeinchosun.xml]]></feed_url>
+		<link><![CDATA[http://terzeron.net/timeinchosun.xml]]></link>
+		<generator><![CDATA[Terzeron's Feed Generator]]></generator>
+		<copyright><![CDATA[Copyright (c) NHN Corp. All rights reserved.]]></copyright>
+		<language>ko</language>
+	</rss>
+</configuration>
+
