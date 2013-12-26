@@ -1,19 +1,36 @@
 date
-REMOVE_HTMLS=0
-if [ "$1" == "-f" ]; then
-	REMOVE_HTMLS=1
-fi
-shift
 
+# 옵션처리
+REMOVE_HTMLS=0
+FORCE_COLLECT_OPT=""
+while getopts "hrc" arg; do
+	case $arg in
+		h) 
+			echo "usage: $0 [-h] [-r] [-c]"; 
+			echo "  -h: print usage"
+			echo "  -r: remove html files"
+			echo "  -c: force collect"
+			;;
+		r) 
+			REMOVE_HTMLS=1
+			;;
+		c)
+			FORCE_COLLECT_OPT="-c"
+			;;
+	esac
+done
+
+# 첫번째 파라미터를 피드 디렉토리로 간주하고 chdir
 if [ -d "$1" ]; then
 	cd $1
 fi
 
+# html 디렉토리에서 120일 이상 오래된 파일을 삭제함
 if [ -d html ]; then
 	grep -q "<is_completed>true</is_completed>" conf.xml || (echo "deleting old html files"; find html -mtime +120d -exec rm -f "{}" \; -ls)
 fi
 
-# -f 옵션이 켜져 있으면 일부 파일을 미리 삭제함
+# -r 옵션이 켜져 있으면 일부 파일을 미리 삭제함
 if [ ${REMOVE_HTMLS} -eq 1 ]; then
 	img_list=`perl -ne 'if (m!xml/img/(\w+\.jpg)!) { print $1 . "\n"; }' html/* *.xml *.xml.old`
 	for f in $img_list; do 
@@ -41,9 +58,10 @@ done
 start_ts=`date +"%s"`
 PKGID=`basename $PWD`
 RESULT_XML=$PKGID.xml
-make_feed.pl $RESULT_XML
+make_feed.pl $FORCE_COLLECT_OPT $RESULT_XML
 
 rm -f cookie.txt nohup.out
+
 date
 end_ts=`date +"%s"`
 echo "elapse="$(($end_ts-$start_ts))
