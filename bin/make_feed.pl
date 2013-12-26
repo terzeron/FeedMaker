@@ -7,6 +7,7 @@ use Modern::Perl;
 use Carp;
 use Encode;
 use Cwd;
+use Getopt::Std;
 
 use Digest::MD5;
 use File::Path;
@@ -445,11 +446,21 @@ sub cmp_int_or_str
 	}
 }
 
+
 sub main
 {
 	print STDOUT "=========================================================\n";
 	print STDOUT " " . getcwd() . " \n";
 	print STDOUT "=========================================================\n";
+
+	my $force_collect = 0;
+	my %opts = ();
+	my $opt_str = "c";
+	our $opt_c;
+	getopts($opt_str, \%opts);
+	if (defined $opts{"c"}) {
+		$force_collect = 1;
+	}
 
 	if (scalar @ARGV < 1) {
 		print_usage();
@@ -478,6 +489,10 @@ sub main
 			confess "Error: can't identify boolean type '$is_completed'\n";
 			return -1;
 		}
+	}
+	# -c 옵션이 지정된 경우, 설정의 is_completed 값 무시
+	if ($force_collect == 1) {
+		$is_completed = 0;
 	}
 
 	my $list_dir = "newlist";
