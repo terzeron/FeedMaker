@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<rss version="2.0"
+ xmlns:blogChannel="http://backend.userland.com/blogChannelModule"
+>
+
+<channel>
+<title><![CDATA[오빠왔다::네이버]]></title>
+<link><![CDATA[http://terzeron.net/brothercame.xml]]></link>
+<description><![CDATA[오빠왔다::네이버 - 모바일 버전 RSS Feed]]></description>
+<copyright><![CDATA[Copyright (c) NHN Corp. All rights reserved.]]></copyright>
+<pubDate><![CDATA[Tue, 24 Dec 2013 16:49:09 +0900]]></pubDate>
+<lastBuildDate><![CDATA[Tue, 24 Dec 2013 16:49:09 +0900]]></lastBuildDate>
+<generator><![CDATA[Terzeron's Feed Generator]]></generator>
+
+<item>
+<title><![CDATA[0066. 66화 ]]></title>
+<link><![CDATA[http://comic.naver.com/webtoon/detail.nhn?titleId=551650&no=66]]></link>
+<description><![CDATA[<img src='http://terzeron.net/xml/img/a97f9b84be2c284b1d81d6761374400a.jpg' width='100%'/>
+<img src='http://terzeron.net/xml/img/c0107bfbdba94a89e3ed8cd077769f8b.jpg' width='100%'/>
+<img src='http://terzeron.net/xml/img/089627eaa1e2fb61db78659c86b6799a.jpg' width='100%'/>
+]]></description>
+<guid isPermaLink="false"><![CDATA[http://comic.naver.com/webtoon/detail.nhn?titleId=551650&no=66]]></guid>
+<pubDate><![CDATA[Tue, 24 Dec 2013 16:49:09 +0900]]></pubDate>
+</item>
+<item>
+<title><![CDATA[0065. 65화 ]]></title>
+<link><![CDATA[http://comic.naver.com/webtoon/detail.nhn?titleId=551650&no=65]]></link>
+<description><![CDATA[<img src='http://terzeron.net/xml/img/946c2fcc177ab73cf5301085379f7e01.jpg' width='100%'/>
+<img src='http://terzeron.net/xml/img/b2c1c91bc4b02b4535275e3738562a90.jpg' width='100%'/>
+<img src='http://terzeron.net/xml/img/a9997f9c93b68c94c160083b9ecea88f.jpg' width='100%'/>
+]]></description>
+<guid isPermaLink="false"><![CDATA[http://comic.naver.com/webtoon/detail.nhn?titleId=551650&no=65]]></guid>
+<pubDate><![CDATA[Tue, 24 Dec 2013 16:49:09 +0900]]></pubDate>
+</item>
+<item>
+<title><![CDATA[0064. 64화 ]]></title>
+<link><![CDATA[http://comic.naver.com/webtoon/detail.nhn?titleId=551650&no=64]]></link>
+<description><![CDATA[<img src='http://terzeron.net/xml/img/cdb5a72332b57cecc9bc1ac6db0f50c8.jpg' width='100%'/>
+]]></description>
+<guid isPermaLink="false"><![CDATA[http://comic.naver.com/webtoon/detail.nhn?titleId=551650&no=64]]></guid>
+<pubDate><![CDATA[Tue, 24 Dec 2013 16:49:09 +0900]]></pubDate>
+</item>
+<item>
+<title><![CDATA[0063. 63화 ]]></title>
+<link><![CDATA[http://comic.naver.com/webtoon/detail.nhn?titleId=551650&no=63]]></link>
+<description><![CDATA[<img src='http://terzeron.net/xml/img/2f7e609927df1528305f3350eda445e5.jpg' width='100%'/>
+]]></description>
+<guid isPermaLink="false"><![CDATA[http://comic.naver.com/webtoon/detail.nhn?titleId=551650&no=63]]></guid>
+<pubDate><![CDATA[Tue, 24 Dec 2013 16:49:09 +0900]]></pubDate>
+</item>
+<item>
+<title><![CDATA[0062. 62화 ]]></title>
+<link><![CDATA[http://comic.naver.com/webtoon/detail.nhn?titleId=551650&no=62]]></link>
+<description><![CDATA[<img src='http://terzeron.net/xml/img/8bc8edc481b38b3c6ec4395552de83a0.jpg' width='100%'/>
+<img src='http://terzeron.net/xml/img/5e291992300e0200c192c2e261022176.jpg' width='100%'/>
+<img src='http://terzeron.net/xml/img/a8e288fe19711d68a41213aa8b0b7bc7.jpg' width='100%'/>
+<img src='http://terzeron.net/xml/img/0569227a3fa5cc7125a9857423903249.jpg' width='100%'/>
+]]></description>
+<guid isPermaLink="false"><![CDATA[http://comic.naver.com/webtoon/detail.nhn?titleId=551650&no=62]]></guid>
+<pubDate><![CDATA[Tue, 24 Dec 2013 16:49:09 +0900]]></pubDate>
+</item>
+<item>
+<title><![CDATA[0061. 61화 ]]></title>
+<link><![CDATA[http://comic.naver.com/webtoon/detail.nhn?titleId=551650&no=61]]></link>
+<description><![CDATA[<img src='http://terzeron.net/xml/img/c7cdf648c2fe3ab4043b03bf1d1b1e2e.jpg' width='100%'/>
+<img src='http://terzeron.net/xml/img/2dadc2d2f45e99313f794cff2a237b4d.jpg' width='100%'/>
+<img src='http://terzeron.net/xml/img/e2ba37f7d241cd745e8addf6ecc71e2b.jpg' width='100%'/>
+<img src='http://terzeron.net/xml/img/12174fb8ad22773f100b671288a873f0.jpg' width='100%'/>
+]]></description>
+<guid isPermaLink="false"><![CDATA[http://comic.naver.com/webtoon/detail.nhn?titleId=551650&no=61]]></guid>
+<pubDate><![CDATA[Tue, 24 Dec 2013 16:49:09 +0900]]></pubDate>
+</item>
+<item>
+<title><![CDATA[0060. 60화 ]]></title>
+<link><![CDATA[http://comic.naver.com/webtoon/detail.nhn?titleId=551650&no=60]]></link>
+<description><![CDATA[<img src='http://terzeron.net/xml/img/8379995be74de98884295e4f304e8bfe.jpg' width='100%'/>
+]]></description>
+<guid isPermaLink="false"><![CDATA[http://comic.naver.com/webtoon/detail.nhn?titleId=551650&no=60]]></guid>
+<pubDate><![CDATA[Tue, 24 Dec 2013 16:49:09 +0900]]></pubDate>
+</item>
+<item>
+<title><![CDATA[0059. 59화 ]]></title>
+<link><![CDATA[http://comic.naver.com/webtoon/detail.nhn?titleId=551650&no=59]]></link>
+<description><![CDATA[<img src='http://terzeron.net/xml/img/896fff1f70225d55578708ffd7fb68c2.jpg' width='100%'/>
+]]></description>
+<guid isPermaLink="false"><![CDATA[http://comic.naver.com/webtoon/detail.nhn?titleId=551650&no=59]]></guid>
+<pubDate><![CDATA[Tue, 24 Dec 2013 16:49:09 +0900]]></pubDate>
+</item>
+<item>
+<title><![CDATA[0058. 58화 ]]></title>
+<link><![CDATA[http://comic.naver.com/webtoon/detail.nhn?titleId=551650&no=58]]></link>
+<description><![CDATA[<img src='http://terzeron.net/xml/img/d703dcac3c1b4b7d8ceb14e69eb9db1a.jpg' width='100%'/>
+<img src='http://terzeron.net/xml/img/3739b68b4be4a819213bc0db53cd5006.jpg' width='100%'/>
+<img src='http://terzeron.net/xml/img/cbb53dbf5685a020894250c6aee01e65.jpg' width='100%'/>
+<img src='http://terzeron.net/xml/img/eeffc59d6d983b650f73f25fd134954a.jpg' width='100%'/>
+]]></description>
+<guid isPermaLink="false"><![CDATA[http://comic.naver.com/webtoon/detail.nhn?titleId=551650&no=58]]></guid>
+<pubDate><![CDATA[Tue, 24 Dec 2013 16:49:09 +0900]]></pubDate>
+</item>
+<item>
+<title><![CDATA[0057. 57화 ]]></title>
+<link><![CDATA[http://comic.naver.com/webtoon/detail.nhn?titleId=551650&no=57]]></link>
+<description><![CDATA[<img src='http://terzeron.net/xml/img/cc20d9055659cb0e17c80e4facacccf7.jpg' width='100%'/>
+<img src='http://terzeron.net/xml/img/63c2a3a0cdfa4181bc51cfce28fcb989.jpg' width='100%'/>
+<img src='http://terzeron.net/xml/img/d23bebb29c402dc9759fcfe60f62694e.jpg' width='100%'/>
+<img src='http://terzeron.net/xml/img/f464eeb7f1f757b97cc4394f6427b476.jpg' width='100%'/>
+]]></description>
+<guid isPermaLink="false"><![CDATA[http://comic.naver.com/webtoon/detail.nhn?titleId=551650&no=57]]></guid>
+<pubDate><![CDATA[Tue, 24 Dec 2013 16:49:09 +0900]]></pubDate>
+</item>
+</channel>
+</rss>

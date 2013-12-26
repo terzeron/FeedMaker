@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+	<collection>
+		<list_url_list>
+			<list_url><![CDATA[http://www.sisainlive.com/Autobox/sisaphoto_ct.html]]></list_url>
+		</list_url_list>
+		<element_class>content</element_class>
+		<encoding>cp949</encoding>
+	</collection>
+	<extraction>
+		<element_list>
+		<element_id>articleBody</element_id>
+		</element_list>
+		<post_process_script>post_process_sisaincartoon.pl</post_process_script>
+		<encoding>cp949</encoding>
+	</extraction>
+	<rss>
+		<title><![CDATA[본격시사인만화::시사인]]></title>
+		<description><![CDATA[본격시사인만화::시사인 - 모바일 버전 RSS Feed]]></description>
+		<feed_url><![CDATA[http://terzeron.net/sisaincartoon.xml]]></feed_url>
+		<link><![CDATA[http://terzeron.net/sisaincartoon.xml]]></link>
+		<generator><![CDATA[Terzeron's Feed Generator]]></generator>
+		<copyright><![CDATA[Copyright (c) 시사IN. All rights reserved.]]></copyright>
+		<language>ko</language>
+	</rss>
+</configuration>

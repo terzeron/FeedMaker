@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+	<collection>
+		<list_url_list>
+			<list_url><![CDATA[http://comics.nate.com/webtoon/index.php?category=1]]></list_url>
+		</list_url_list>
+		<element_class>wtl_table</element_class>
+	</collection>
+	<extraction>
+		<element_list>
+			<element_class>tif_infoBox</element_class>
+		</element_list>
+	</extraction>
+	<rss>
+		<title><![CDATA[네이트웹툰목록]]></title>
+		<description><![CDATA[네이트웹툰목록 - 모바일 버전 RSS Feed]]></description>
+		<feed_url><![CDATA[http://terzeron.net/natewebtoon.xml]]></feed_url>
+		<link><![CDATA[http://terzeron.net/natewebtoon.xml]]></link>
+		<generator><![CDATA[Terzeron's Feed Generator]]></generator>
+		<copyright><![CDATA[Copyright (c) SK Communications. All Rights Reserved]]></copyright>
+		<language>ko</language>
+	</rss>
+</configuration>
+
