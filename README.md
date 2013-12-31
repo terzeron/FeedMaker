@@ -3,8 +3,8 @@ FeedMaker
 
 Utility set of making feeds from websites
 
-Prerequisites
--------------
+Requirements
+------------
 1. Python & modules
 	1) bs4
 2. Perl & modules
