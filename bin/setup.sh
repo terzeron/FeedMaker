@@ -1,4 +1,4 @@
-export FEED_MAKER_HOME=/Users/terzeron/workspace/feedmaker
+export FEED_MAKER_HOME=/Users/terzeron/workspace/FeedMaker
 BIN_DIR=${FEED_MAKER_HOME}/bin
 export PATH=~/bin:.:${BIN_DIR}:/usr/local/bin/:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin:${PATH}
 export PYTHONPATH=${BIN_DIR}:/usr/local/lib/python2.7/site-packages:${PYTHONPATH}

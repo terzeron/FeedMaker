@@ -2,7 +2,7 @@ date
 start_ts=`date +"%s"`
 
 MAX_IDX=1000
-FEED_MAKER_HOME=/Users/terzeron/workspace/feedmaker
+FEED_MAKER_HOME=/Users/terzeron/workspace/FeedMaker
 BIN_DIR=${FEED_MAKER_HOME}/bin
 . /Users/terzeron/.bashrc
 . ${BIN_DIR}/setup.sh

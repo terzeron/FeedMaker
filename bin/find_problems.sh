@@ -1,4 +1,4 @@
-cd /Users/terzeron/workspace/feedmaker
+cd /Users/terzeron/workspace/FeedMaker
 
 echo
 echo "===== check the validity of configuration file ====="
@@ -138,7 +138,7 @@ find ~/public_html/xml/ -name "*.xml" -exec basename "{}" \; | perl -pe 's/\.xml
 perl -ne 'if (m!RewriteRule\s+\^(\S*)\\\.xml\$?\s+xml/(\S+)\\\.xml!) { print $1 . "\n"; }' ~/public_html/.htaccess | perl -pe 's/\.xml//; s/\\\././g' | sort -u | grep -v -E -e "(cstory|daummovienews|daummoviepromagazine|daumsportscolumn|magazines|magazinec|navercast|natemoviemagazine|natespopubcolumn|themecast|todaymusic|todaymovie)" > $htaccess1_xml_file
 perl -ne 'if (m!RewriteRule\s+\^(\S*)\\\.xml\$?\s+xml/(\S+)\\\.xml!) { print $2 . "\n"; }' ~/public_html/.htaccess | perl -pe 's/\.xml//; s/\\\././g' | sort -u | grep -v -E -e "(cstory|daummovienews|daummoviepromagazine|daumsportscolumn|magazines|magazinec|navercast|natemoviemagazine|natespopubcolumn|themecast|todaymusic|todaymovie)" > $htaccess2_xml_file
 perl -ne 'if (m!(\w+)\\\.xml.*\[G\]!) { print $1 . "\n"; }' ~/public_html/.htaccess | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $denied_xml_file
-find ~/workspace/feedmaker/*/ -name "*.xml" \! -name conf.xml -exec basename "{}" \; | perl -pe 's/\.xml//; s/\\\././g' | sort -u | grep -v -E -e "(cstory|daummovienews|daummoviepromagazine|daumsportscolumn|magazines|magazinec|navercast|natemoviemagazine|natespopubcolumn|themecast|todaymusic|todaymovie|test)" > $feedmaker_file
+find */ -name "*.xml" \! -name conf.xml -exec basename "{}" \; | perl -pe 's/\.xml//; s/\\\././g' | sort -u | grep -v -E -e "(cstory|daummovienews|daummoviepromagazine|daumsportscolumn|magazines|magazinec|navercast|natemoviemagazine|natespopubcolumn|themecast|todaymusic|todaymovie|test)" > $feedmaker_file
 perl -e '
 open(IN1, $ARGV[0]);
 my %denied_feed_map = ();
