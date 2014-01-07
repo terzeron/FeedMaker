@@ -25,6 +25,7 @@ sub cp949_decode { return decode("cp949", shift); }
 
 sub get_md5_name
 {
+	use Digest::MD5;
 	return Digest::MD5::md5_hex(shift);
 }
 
