@@ -14,7 +14,7 @@ find . -name conf.xml -exec grep -l "    " "{}" \;
 
 
 echo 
-echo "===== check the size and timestamp of result file ====="
+echo "===== check the size and time of result file ====="
 
 echo "--- old xml files in public_html/xml ---"
 find ~/public_html/xml -name "*.xml" -mtime +10d -print
@@ -24,6 +24,9 @@ find . -name "*.html" -size -50c -print | grep -v warfareafterschool
 
 echo "--- html files containing iframe element ---"
 find . -name "*.html" -exec grep -l "<iframe" "{}" \; | cut -d/ -f3 | uniq -c | sort -n
+
+echo "--- running time ---"
+find . -name run.log | xargs grep elapse= | sort -t= -k2 -n | tail -10
 
 echo 
 echo "===== check the incremental feeding ====="
