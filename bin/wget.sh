@@ -7,6 +7,7 @@ printout_opt="-q"
 ua_opt="-U 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.37 (KHTML, like Gecko) Chrome/31.0.1650.58 Safari/537.37'"
 cookie_opt="--keep-session-cookies --load-cookies cookie.txt --save-cookies cookie.txt"
 cert_opt="--no-check-certificate"
+timeout_opt="--timeout=5"
 
 if [ "$1" == "-v" ]; then
 	shift
@@ -25,9 +26,9 @@ elif [ "$1" == "--download" ]; then
 		referer_opt="--referer='$3'"
 	fi
 	if [ "${printout_opt}" == "-v" ]; then
-		echo "# wget ${printout_opt} \"${ua_opt}\" ${cert_opt} ${cookie_opt} ${referer_opt} -O \"$2\" \"$1\""
+		echo "# wget ${printout_opt} ${timeout_opt} \"${ua_opt}\" ${cert_opt} ${cookie_opt} ${referer_opt} -O \"$2\" \"$1\""
 	fi
-	wget ${printout_opt} "${ua_opt}" ${cert_opt} ${cookie_opt} ${referer_opt} -O "$2" "$1" 
+	wget ${printout_opt} ${timeout_opt} "${ua_opt}" ${cert_opt} ${cookie_opt} ${referer_opt} -O "$2" "$1" 
 	exit_status=$?
 	if [ $exit_status -eq 0 ]; then
 		touch "$2"
@@ -46,13 +47,13 @@ elif [ "$1" == "--render_js" ]; then
 else 
 	if [ "$2" == "utf8" ]; then
 		if [ "${printout_opt}" == "-v" ]; then
-			echo "# wget ${printout_opt} -O - \"${ua_opt}\" ${cert_opt} ${cookie_opt} \"$1\""
+			echo "# wget ${printout_opt} ${timeout_opt} -O - \"${ua_opt}\" ${cert_opt} ${cookie_opt} \"$1\""
 		fi
-		wget ${printout_opt} -O - "${ua_opt}" ${cert_opt} ${cookie_opt} "$1"
+		wget ${printout_opt} ${timeout_opt} -O - "${ua_opt}" ${cert_opt} ${cookie_opt} "$1"
 	else
 		if [ "${printout_opt}" == "-v" ]; then
-			echo "# wget ${printout_opt} -O - \"${ua_opt}\" ${cert_opt} ${cookie_opt} \"$1\" | iconv -c -f $2 -t utf8"
+			echo "# wget ${printout_opt} ${timeout_opt} -O - \"${ua_opt}\" ${cert_opt} ${cookie_opt} \"$1\" | iconv -c -f $2 -t utf8"
 		fi
-		wget ${printout_opt} -O - "${ua_opt}" ${cert_opt} ${cookie_opt} "$1" | iconv -c -f $2 -t utf8
+		wget ${printout_opt} ${timeout_opt} -O - "${ua_opt}" ${cert_opt} ${cookie_opt} "$1" | iconv -c -f $2 -t utf8
 	fi
 fi
