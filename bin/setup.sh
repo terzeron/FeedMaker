@@ -1,7 +1,7 @@
 # determine the feedmaker home from current working directory
 # ex) /home1/terzeron/work/fm.dev/naver --> /home1/terzeron/work/fm.dev
 # ex) /Users/terzeron/FeedMaker/cnn/news -> /Users/terzeron/FeedMaker
-FEED_MAKER_HOME=$(echo $PWD | gsed -r 's/((fm|[Ff]eed[Mm]aker)[^\/]+).*/\1/')
+FEED_MAKER_HOME=$(echo $PWD/ | gsed -r 's/((fm|[Ff]eed[Mm]aker)[^\/]*).*/\1/')
 
 BIN_DIR=${FEED_MAKER_HOME}/bin
 export PATH=~/bin:.:${BIN_DIR}:/usr/local/bin/:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin:${PATH}
