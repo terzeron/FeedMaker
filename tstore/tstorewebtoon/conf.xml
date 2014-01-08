@@ -14,6 +14,7 @@
 			<list_url><![CDATA[http://m.tstore.co.kr/mobilepoc/webtoon/weekdayList.omp?weekday=7]]></list_url>
 		</list_url_list>
 		<element_class>listWrap3</element_class>
+		<ignore_old_list>true</ignore_old_list>
 	</collection>
 	<extraction>
 		<element_list>

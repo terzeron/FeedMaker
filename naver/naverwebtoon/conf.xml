@@ -5,6 +5,7 @@
 			<list_url><![CDATA[http://comic.naver.com/webtoon/weekday.nhn]]></list_url>
 		</list_url_list>
 		<element_class>daily_all</element_class>
+		<ignore_old_list>true</ignore_old_list>
 	</collection>
 	<extraction>
 		<element_list>

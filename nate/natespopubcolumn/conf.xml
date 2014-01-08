@@ -6,6 +6,7 @@
 		</list_url_list>
 		<element_class>pubColumnNist</element_class>
 		<encoding>cp949</encoding>
+		<ignore_old_list>true</ignore_old_list>
 	</collection>
 	<extraction>
 		<element_list>

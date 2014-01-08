@@ -8,6 +8,7 @@
 			<list_url><![CDATA[http://www.torrentrg.com/bbs/board.php?bo_table=torrent_movie&page=35]]></list_url>
 		</list_url_list>
 		<element_id>mw_basic</element_id>
+		<ignore_old_list>true</ignore_old_list>
 	</collection>
 	<extraction>
 		<element_list>

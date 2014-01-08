@@ -5,6 +5,7 @@
 			<list_url><![CDATA[http://comics.nate.com/webtoon/index.php?category=1]]></list_url>
 		</list_url_list>
 		<element_class>wtl_table</element_class>
+		<ignore_old_list>true</ignore_old_list>
 	</collection>
 	<extraction>
 		<element_list>
