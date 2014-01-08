@@ -266,6 +266,7 @@ sub append_item_to_result
 	my $feed_list_ref = shift;
 	my $item = shift;
 	my $config_file = shift;
+	my $rss_file_name = shift;
 
 	my ($url, $title, $review_point) = split /\t/, $item;
 	my $new_file_name = get_new_file_name($url);
@@ -314,6 +315,13 @@ sub append_item_to_result
 			if ($CHILD_ERROR != 0) {
 				confess "Error: can't extract HTML elements,";
 			}
+			my $md5_name = get_md5_name($url);
+			$cmd = qq(echo "<img src='http://terzeron.net/img/1x1.jpg?feed=${rss_file_name}&item=${md5_name}'/>" >> "${new_file_name}");
+			print "# $cmd\n";
+			$result = qx($cmd);
+			if ($CHILD_ERROR != 0) {
+				confess "Error: can't append page view logging tag,";
+			}
 			$size = -s $new_file_name;
 			if ($size < $MIN_CONTENT_LENGTH) {
 				# 피드 리스트에서 제외
@@ -336,6 +344,7 @@ sub diff_old_and_recent
 	my @old_list = @$arg;
 	my $feed_list_ref = shift;
 	my $config_file = shift;
+	my $rss_file_name = shift;
 
 	my %old_map = ();
 
@@ -371,14 +380,14 @@ sub diff_old_and_recent
 		if ($new_item =~ /^\#/) {
 			next;
 		}
-		append_item_to_result($feed_list_ref, $new_item, $config_file);
+		append_item_to_result($feed_list_ref, $new_item, $config_file, $rss_file_name);
 	}
 	print "Appending " . scalar(@old_list) . " old item to the feed list\n";
 	for my $old_item (reverse @old_list) {
 		if ($old_item =~ /^\#/) {
 			next;
 		}
-		append_item_to_result($feed_list_ref, $old_item, $config_file);
+		append_item_to_result($feed_list_ref, $old_item, $config_file, $rss_file_name);
 	}
 
 	if (scalar @$feed_list_ref == 0) {
@@ -578,7 +587,7 @@ sub main
 			@feed_list = @recent_list;
 		}
 		if (diff_old_and_recent(\@recent_list, \@old_list, \@feed_list,
-								$config_file) < 0) {
+								$config_file, $rss_file_name) < 0) {
 			return -1;
 		}
 	}
