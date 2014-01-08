@@ -4,7 +4,9 @@ start_ts=`date +"%s"`
 max_idx=1000
 . /Users/terzeron/.bashrc
 script_path=$(dirname $0)
-. ${script_path}/bin/setup.sh
+#echo script_path=${script_path}
+. ${script_path}/setup.sh
+#echo FEED_MAKER_HOME=${FEED_MAKER_HOME}
 
 runlog=run.log
 errorlog=error.log

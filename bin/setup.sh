@@ -1,7 +1,15 @@
 # determine the feedmaker home from current working directory
 # ex) /home1/terzeron/work/fm.dev/naver --> /home1/terzeron/work/fm.dev
 # ex) /Users/terzeron/FeedMaker/cnn/news -> /Users/terzeron/FeedMaker
-FEED_MAKER_HOME=$(echo $PWD/ | gsed -r 's/((fm|[Ff]eed[Mm]aker)[^\/]*).*/\1/')
+if [ "$0" != "-bash" ]; then
+	# ex) called from all.sh
+	path=$(dirname $0)
+else
+	# ex) . ../../bin/setup.sh
+	path=${PWD}/
+fi
+export FEED_MAKER_HOME=$(echo $path | gsed -r 's/((fm|[Ff]eed[Mm]aker)[^\/]*).*/\1/')
+#echo FEED_MAKER_HOME=${FEED_MAKER_HOME}
 
 BIN_DIR=${FEED_MAKER_HOME}/bin
 export PATH=~/bin:.:${BIN_DIR}:/usr/local/bin/:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin:${PATH}

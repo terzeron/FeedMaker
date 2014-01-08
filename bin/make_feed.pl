@@ -482,7 +482,7 @@ sub main
 	} else {
 		$ignore_old_list = 0;
 	}
-	print "ignore_old_list:" . $ignore_old_list . "\n";
+	#print "ignore_old_list:" . $ignore_old_list . "\n";
 
 	my $is_completed = get_config_value($config, 0, ("collection", "is_completed"));
 	if (not defined $is_completed or $is_completed eq "") {
@@ -573,15 +573,13 @@ sub main
 		}
 		
 		# 과거 피드항목 리스트와 최근 피드항목 리스트를 비교함
-		print "ignore_old_list:" . $ignore_old_list . "\n";
 		if ($ignore_old_list == 1) {
 			@old_list = ();
 			@feed_list = @recent_list;
-		} else {
-			if (diff_old_and_recent(\@recent_list, \@old_list, \@feed_list,
-									$config_file) < 0) {
-				return -1;
-			}
+		}
+		if (diff_old_and_recent(\@recent_list, \@old_list, \@feed_list,
+								$config_file) < 0) {
+			return -1;
 		}
 	}
 
