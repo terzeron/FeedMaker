@@ -1,13 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 	<collection>
-		<is_completed>true</is_completed>
+		<is_completed>false</is_completed>
 		<sort_field_pattern><![CDATA[id=(\d{8,8})]]></sort_field_pattern>
 		<unit_size_per_day>6</unit_size_per_day>
 		<list_url_list>
-			<list_url><![CDATA[http://stoo.asiae.co.kr/cartoon/ctlist.php?pg=4&strForm=s_list&sc3=62&sc2=ing]]></list_url>
-			<list_url><![CDATA[http://stoo.asiae.co.kr/cartoon/ctlist.php?pg=3&strForm=s_list&sc3=62&sc2=ing]]></list_url>
-			<list_url><![CDATA[http://stoo.asiae.co.kr/cartoon/ctlist.php?pg=2&strForm=s_list&sc3=62&sc2=ing]]></list_url>
 			<list_url><![CDATA[http://stoo.asiae.co.kr/cartoon/ctlist.php?pg=1&strForm=s_list&sc3=62&sc2=ing]]></list_url>
 		</list_url_list>
 		<item_capture_script>../capture_item_stoo2.pl</item_capture_script>

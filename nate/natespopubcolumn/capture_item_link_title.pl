@@ -51,6 +51,9 @@ sub main
 		$encoding = "utf8";
 	}
 
+	my $cmd = qq(find ./html -name "*.html" -mtime +7 | xargs rm -f);
+	my $result = qx($cmd);
+
 	while (my $line = <STDIN>) {
 		if ($line =~ m!<dt><a href="(http://sports.news.nate.com/spopub/column\?cp=(\w+))">(.+)</a></dt>!) {
 			$url = $1;

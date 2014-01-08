@@ -13,7 +13,9 @@ sub get_list_page_link
 	my $link = shift;
 	my $encoding = shift;
 
-	my $cmd = qq(wget.sh "$link" $encoding | perl -ne 'if (m!<li class="wt_ing1"><a href="(/mobilepoc/webtoon/webtoonList\\.omp\\?prodId=[^"&]+)[^"]*">[^<]*</a></li>!) { print \$1 . "\\n"; }');
+	# 링크에 들어가서 1화를 찾아서 해당 링크 주소를 확인
+	my $html_file = "newlist/" . FeedMaker::get_md5_name($link) . ".html";
+	my $cmd = qq([ -e "${html_file}" -a -s "${html_file}" ] || wget.sh --download "$link" ${html_file}; perl -ne 'if (m!<li class="wt_ing1"><a href="(/mobilepoc/webtoon/webtoonList\\.omp\\?prodId=[^"&]+)[^"]*">[^<]*</a></li>!) { print \$1 . "\\n"; }' ${html_file});
 	#print $cmd . "\n";
 	my $result = qx($cmd);
 	if ($ERRNO != 0) {
@@ -65,6 +67,9 @@ sub main
 	my @result_arr = ();
 
 	my $encoding = get_config_encoding();
+
+	my $cmd = qq(find newlist -name "*.html" -mtime +7 -exec rm -f "{}" \\;);
+	my $result = qx($cmd);
 
 	while (my $line = <STDIN>) {
 		if ($state == 0) {

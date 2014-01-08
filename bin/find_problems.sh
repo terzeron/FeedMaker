@@ -1,4 +1,8 @@
-cd /Users/terzeron/workspace/FeedMaker
+home_dir=/Users/terzeron
+www_dir=${home_dir}/public_html/xml
+work_dir=${home_dir}/workspace/FeedMaker
+
+cd ${work_dir}
 
 echo
 echo "===== check the validity of configuration file ====="
@@ -16,16 +20,16 @@ find . -name conf.xml -exec grep -l "    " "{}" \;
 echo 
 echo "===== check the size and time of result file ====="
 
-echo "--- old xml files in public_html/xml ---"
-find ~/public_html/xml -name "*.xml" -mtime +10d -print
+echo "--- old xml files in ${www_dir} ---"
+find ${www_dir} -name "*.xml" -mtime +10d -print
 
 echo "--- too small html file ---"
-find . -name "*.html" -size -50c -print | grep -v warfareafterschool
+find . -name "*.html" -maxdepth 3 -size -50c -print | grep -v warfareafterschool
 
 echo "--- html files containing iframe element ---"
 find . -name "*.html" -exec grep -l "<iframe" "{}" \; | cut -d/ -f3 | uniq -c | sort -n
 
-echo "--- running time ---"
+echo "--- top 10 in running time ---"
 find . -name run.log | xargs grep elapse= | sort -t= -k2 -n | tail -10
 
 echo 
@@ -35,12 +39,12 @@ echo "--- completed feeds ---"
 find . -name conf.xml -exec grep -l "<is_completed>true" "{}" \; 
 
 echo "--- start_idx vs # of items ---"
-for f in `find . -name conf.xml -exec grep -l "<is_completed>true" "{}" \; | xargs -L1 dirname`; do [ -d "$f" ] && (cd $f; idx=`cut -f1 start_idx.txt`; cnt=`sort -u newlist/*.txt | wc -l | tr -d ' '`; if [ "$idx" -gt "$cnt" ]; then echo "$f idx=$idx count=$cnt"; fi); done
+for f in $(find . -name conf.xml -exec grep -l "<is_completed>true" "{}" \; | xargs -L1 dirname); do [ -d "$f" ] && (cd $f; idx=$(cut -f1 start_idx.txt); cnt=$(sort -u newlist/*.txt | wc -l | tr -d ' '); if [ "$idx" -gt "$cnt" ]; then echo "$f idx=$idx count=$cnt"; fi); done
 
 echo
 echo "===== check the garbage feeds ====="
-today_date_str=`date +"%Y%m%d"`
-yesterday_date_str=`date -v-1d +"%Y%m%d"`
+today_date_str=$(date +"%Y%m%d")
+yesterday_date_str=$(date -v-1d +"%Y%m%d")
 today_access_log="/Applications/MAMP/logs/apache_access.log.$today_date_str"
 yesterday_access_log="/Applications/MAMP/logs/apache_access.log.$yesterday_date_str"
 feed_access_file="log/feed_acceess.txt"
@@ -49,7 +53,7 @@ perl -e '
 my %name_date_map = ();
 my %month_map = ("Jan"=>"01", "Feb"=>"02", "Mar"=>"03", "Apr"=>"04", "May"=>"05", "Jun"=>"06", "Jul"=>"07", "Aug"=>"08", "Sep"=>"09", "Oct"=>"10", "Nov"=>"11", "Dec"=>"12"); 
 while (my $line = <>) {
-	if ($line =~ m!\[(\d+)/(\w+)/(\d+):\d+:\d+:\d+ \+\d+\] "GET /(?:xml/)?([\w\.\_]+)\.xml HTTP\S+" (\d+)!) { 
+	if ($line =~ m!\[(\d+)/(\w+)/(\d+):\d+:\d+:\d+ \+\d+\] "GET /(?:xml/)?([\w\.\_]+)\.xml HTTP\S+" (\d+) (?:\d+|-) "[^"]+" "Feedly[^"]+"!) { 
 		$name_date_map{$4} = "$3$month_map{$2}$1\t$5";
 	}
 } 
@@ -96,7 +100,7 @@ while (my $line = <LASTREQ>) {
 	}
 }
 close(LASTREQ);' $feedmaker_file $feed_access_file
-echo "--- false path (public_html/xml) of recent days ---"
+echo "--- false path (${www_dir}) of recent days ---"
 perl -e '
 use HTTP::Status qw(status_message); 
 use DateTime; 
@@ -137,11 +141,11 @@ public_html_xml_file="log/public_html_xml.txt"
 htaccess1_xml_file="log/htaccess1_xml.txt"
 htaccess2_xml_file="log/htaccess2_xml.txt"
 denied_xml_file="log/denied_xml.txt"
-find ~/public_html/xml/ -name "*.xml" -exec basename "{}" \; | perl -pe 's/\.xml//; s/\\\././g' | sort -u | grep -v -E -e "(cstory|daummovienews|daummoviepromagazine|daumsportscolumn|magazines|magazinec|navercast|natemoviemagazine|natespopubcolumn|themecast|todaymusic|todaymovie)" > $public_html_xml_file
+find ${www_dir} -name "*.xml" -exec basename "{}" \; | perl -pe 's/\.xml//; s/\\\././g' | sort -u | grep -v -E -e "(cstory|daummovienews|daummoviepromagazine|daumsportscolumn|magazines|magazinec|navercast|natemoviemagazine|natespopubcolumn|themecast|todaymusic|todaymovie)" > $public_html_xml_file
 perl -ne 'if (m!RewriteRule\s+\^(\S*)\\\.xml\$?\s+xml/(\S+)\\\.xml!) { print $1 . "\n"; }' ~/public_html/.htaccess | perl -pe 's/\.xml//; s/\\\././g' | sort -u | grep -v -E -e "(cstory|daummovienews|daummoviepromagazine|daumsportscolumn|magazines|magazinec|navercast|natemoviemagazine|natespopubcolumn|themecast|todaymusic|todaymovie)" > $htaccess1_xml_file
 perl -ne 'if (m!RewriteRule\s+\^(\S*)\\\.xml\$?\s+xml/(\S+)\\\.xml!) { print $2 . "\n"; }' ~/public_html/.htaccess | perl -pe 's/\.xml//; s/\\\././g' | sort -u | grep -v -E -e "(cstory|daummovienews|daummoviepromagazine|daumsportscolumn|magazines|magazinec|navercast|natemoviemagazine|natespopubcolumn|themecast|todaymusic|todaymovie)" > $htaccess2_xml_file
 perl -ne 'if (m!(\w+)\\\.xml.*\[G\]!) { print $1 . "\n"; }' ~/public_html/.htaccess | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $denied_xml_file
-find */ -name "*.xml" \! -name conf.xml -exec basename "{}" \; | perl -pe 's/\.xml//; s/\\\././g' | sort -u | grep -v -E -e "(cstory|daummovienews|daummoviepromagazine|daumsportscolumn|magazines|magazinec|navercast|natemoviemagazine|natespopubcolumn|themecast|todaymusic|todaymovie|test)" > $feedmaker_file
+find */ -maxdepth 2 -name "*.xml" \! -name conf.xml -exec basename "{}" \; | perl -pe 's/\.xml//; s/\\\././g' | sort -u | grep -v -E -e "(cstory|daummovienews|daummoviepromagazine|daumsportscolumn|magazines|magazinec|navercast|natemoviemagazine|natespopubcolumn|themecast|todaymusic|todaymovie|test)" > $feedmaker_file
 perl -e '
 open(IN1, $ARGV[0]);
 my %denied_feed_map = ();
@@ -161,9 +165,9 @@ while (my $line = <IN2>) {
 close(IN2);' $denied_xml_file $feed_access_file | sort -u | grep -v -E -e "(cstory|daummovienews|daummoviepromagazine|daumsportscolumn|magazines|magazinec|navercast|natemoviemagazine|natespopubcolumn|themecast|todaymusic|todaymovie)" > $feedly_file
 echo "--- feedly(http request) vs. .htaccess ---"
 /usr/local/bin/colordiff $feedly_file $htaccess1_xml_file
-echo "--- .htaccess vs. public_html/xml ---"
+echo "--- .htaccess vs. ${www_dir} ---"
 /usr/local/bin/colordiff $htaccess2_xml_file $public_html_xml_file 
-echo "--- public_html/xml vs. feedmaker/*/*/*.xml ---"
+echo "--- ${www_dir} vs. feedmaker/*/*/*.xml ---"
 /usr/local/bin/colordiff $public_html_xml_file $feedmaker_file
 #rm -f $feedly_file $htaccess_xml_file $public_html_xml_file $feedmaker_file
 
