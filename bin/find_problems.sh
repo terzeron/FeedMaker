@@ -1,6 +1,5 @@
-home_dir=/Users/terzeron
-www_dir=${home_dir}/public_html/xml
-work_dir=${home_dir}/workspace/FeedMaker
+work_dir=${FEED_MAKER_HOME}
+www_dir=${work_dir}/www
 
 cd ${work_dir}
 

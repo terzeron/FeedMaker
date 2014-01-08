@@ -1,11 +1,10 @@
 date
 start_ts=`date +"%s"`
 
-MAX_IDX=1000
-FEED_MAKER_HOME=/Users/terzeron/workspace/FeedMaker
-BIN_DIR=${FEED_MAKER_HOME}/bin
+max_idx=1000
 . /Users/terzeron/.bashrc
-. ${BIN_DIR}/setup.sh
+script_path=$(dirname $0)
+. ${script_path}/bin/setup.sh
 
 runlog=run.log
 errorlog=error.log
@@ -36,8 +35,8 @@ cd ${FEED_MAKER_HOME}
 pwd
 
 dirs=(`find . -type d \! \( -name "_*" -o -name .git -o -name . -o -name newlist -o -name html \)`)
-for i in $(seq 0 5 $MAX_IDX); do
-#for i in $(seq 0 1 $MAX_IDX); do
+for i in $(seq 0 5 $max_idx); do
+#for i in $(seq 0 1 $max_idx); do
 	if [ "${dirs[$i]}" == "" ]; then
 		break
 	fi
