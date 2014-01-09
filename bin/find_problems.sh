@@ -1,5 +1,5 @@
 work_dir=${FEED_MAKER_HOME}
-www_dir=${work_dir}/www
+public_html_dir=/Users/terzeron/public_html/xml
 
 cd ${work_dir}
 
@@ -19,8 +19,8 @@ find . -name conf.xml -exec grep -l "    " "{}" \;
 echo 
 echo "===== check the size and time of result file ====="
 
-echo "--- old xml files in ${www_dir} ---"
-find ${www_dir} -name "*.xml" -mtime +10d -print
+echo "--- old xml files in ${public_html_dir} ---"
+find ${public_html_dir} -name "*.xml" -mtime +10d -print
 
 echo "--- too small html file ---"
 find . -name "*.html" -maxdepth 3 -size -50c -print | grep -v warfareafterschool
@@ -99,7 +99,7 @@ while (my $line = <LASTREQ>) {
 	}
 }
 close(LASTREQ);' $feedmaker_file $feed_access_file
-echo "--- false path (${www_dir}) of recent days ---"
+echo "--- false path (${public_html_dir}) of recent days ---"
 perl -e '
 use HTTP::Status qw(status_message); 
 use DateTime; 
@@ -140,7 +140,7 @@ public_html_xml_file="log/public_html_xml.txt"
 htaccess1_xml_file="log/htaccess1_xml.txt"
 htaccess2_xml_file="log/htaccess2_xml.txt"
 denied_xml_file="log/denied_xml.txt"
-find ${www_dir} -name "*.xml" -exec basename "{}" \; | perl -pe 's/\.xml//; s/\\\././g' | sort -u | grep -v -E -e "(cstory|daummovienews|daummoviepromagazine|daumsportscolumn|magazines|magazinec|navercast|natemoviemagazine|natespopubcolumn|themecast|todaymusic|todaymovie)" > $public_html_xml_file
+find ${public_html_dir} -name "*.xml" -exec basename "{}" \; | perl -pe 's/\.xml//; s/\\\././g' | sort -u | grep -v -E -e "(cstory|daummovienews|daummoviepromagazine|daumsportscolumn|magazines|magazinec|navercast|natemoviemagazine|natespopubcolumn|themecast|todaymusic|todaymovie)" > $public_html_xml_file
 perl -ne 'if (m!RewriteRule\s+\^(\S*)\\\.xml\$?\s+xml/(\S+)\\\.xml!) { print $1 . "\n"; }' ~/public_html/.htaccess | perl -pe 's/\.xml//; s/\\\././g' | sort -u | grep -v -E -e "(cstory|daummovienews|daummoviepromagazine|daumsportscolumn|magazines|magazinec|navercast|natemoviemagazine|natespopubcolumn|themecast|todaymusic|todaymovie)" > $htaccess1_xml_file
 perl -ne 'if (m!RewriteRule\s+\^(\S*)\\\.xml\$?\s+xml/(\S+)\\\.xml!) { print $2 . "\n"; }' ~/public_html/.htaccess | perl -pe 's/\.xml//; s/\\\././g' | sort -u | grep -v -E -e "(cstory|daummovienews|daummoviepromagazine|daumsportscolumn|magazines|magazinec|navercast|natemoviemagazine|natespopubcolumn|themecast|todaymusic|todaymovie)" > $htaccess2_xml_file
 perl -ne 'if (m!(\w+)\\\.xml.*\[G\]!) { print $1 . "\n"; }' ~/public_html/.htaccess | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $denied_xml_file
@@ -164,9 +164,9 @@ while (my $line = <IN2>) {
 close(IN2);' $denied_xml_file $feed_access_file | sort -u | grep -v -E -e "(cstory|daummovienews|daummoviepromagazine|daumsportscolumn|magazines|magazinec|navercast|natemoviemagazine|natespopubcolumn|themecast|todaymusic|todaymovie)" > $feedly_file
 echo "--- feedly(http request) vs. .htaccess ---"
 /usr/local/bin/colordiff $feedly_file $htaccess1_xml_file
-echo "--- .htaccess vs. ${www_dir} ---"
+echo "--- .htaccess vs. ${public_html_dir} ---"
 /usr/local/bin/colordiff $htaccess2_xml_file $public_html_xml_file 
-echo "--- ${www_dir} vs. feedmaker/*/*/*.xml ---"
+echo "--- ${public_html_dir} vs. feedmaker/*/*/*.xml ---"
 /usr/local/bin/colordiff $public_html_xml_file $feedmaker_file
 #rm -f $feedly_file $htaccess_xml_file $public_html_xml_file $feedmaker_file
 

@@ -30,7 +30,7 @@ function execute_job
 	fi
 }
 
-echo "deleting old image files..."
+echo "deleting old or zero-size image files..."
 find /Users/terzeron/public_html/xml/img \( -mtime +30d -o -size 0 \) -exec rm -f "{}" \; -ls
 
 cd ${FEED_MAKER_HOME}
