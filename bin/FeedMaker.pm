@@ -82,7 +82,7 @@ sub get_config_value
 			$c = $c->{$name};
 			if (not defined $c) {
 				if ($is_compulsory == 1) {
-					print STDERR "Warning: can't find '$name' element from config\n";
+					carp "Warning: can't find '$name' element from config\n";
 				}
 				return "";
 			}

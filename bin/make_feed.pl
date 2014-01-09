@@ -149,7 +149,8 @@ sub read_old_list_from_file
 sub generate_rss_feed
 {
 	my $config = shift;
-	my $arg = shift;	my @feed_list = @$arg;
+	my $arg = shift;	
+	my @feed_list = @$arg;
 	my $rss_file_name = shift;
 
 	my $rss_config = $config->{"rss"};
@@ -184,15 +185,24 @@ sub generate_rss_feed
 		my $new_file_name = get_new_file_name($article_url);
 
 		# notice!
-		unless (defined $rss_no_item_desc and $rss_no_item_desc eq "yes") {
+		if (defined $rss_no_item_desc and $rss_no_item_desc eq "yes") {
+			# skip the content of the feed
+			$rss->add_item(title => xml_escape($article_title),
+						   link => xml_escape($article_url),
+						   guid => xml_escape($article_url),
+						   pubDate => xml_escape($pub_date_str));
+		} else {
+			# general case
 			my $content = "";
 			if (not open(IN, $new_file_name)) {
-				confess "Error: can't open '$new_file_name' for reading, $ERRNO,";
+				# 영화토렌트의 경우 파일이 존재하지 않을 수도 있음
+				warn "Warning: can't open '$new_file_name' for reading, $ERRNO,";
+				next;
 			}
 			print "adding '$new_file_name' to the result\n";
 			while (my $line = <IN>) {
 				$content .= $line;
-
+				
 				# restrict big contents
 				if (length($content) >= $MAX_CONTENT_LENGTH) {
 					$content = "<strong>본문이 너무 길어서 전문을 싣지 않았습니다. 다음의 원문 URL을 참고해주세요.</strong><br/>" . $content; 
@@ -205,11 +215,6 @@ sub generate_rss_feed
 						   guid => xml_escape($article_url),
 						   pubDate => xml_escape($pub_date_str),
 						   description => xml_escape($content));
-		} else {
-			$rss->add_item(title => xml_escape($article_title),
-						   link => xml_escape($article_url),
-						   guid => xml_escape($article_url),
-						   pubDate => xml_escape($pub_date_str));
 		}
 	}
 	$rss->save($temp_rss_file_name);
@@ -325,7 +330,7 @@ sub append_item_to_result
 			$size = -s $new_file_name;
 			if ($size < $MIN_CONTENT_LENGTH) {
 				# 피드 리스트에서 제외
-				print STDERR "Warning: $title: $url --> $new_file_name: $size (< $MIN_CONTENT_LENGTH byte)\n";
+				warn "Warning: $title: $url --> $new_file_name: $size (< $MIN_CONTENT_LENGTH byte)\n";
 			} else {
 				# 피드 리스트에 추가
 				print "Success: $title: $url --> $new_file_name: $size\n";
@@ -520,7 +525,7 @@ sub main
 	my @feed_list = ();
 	my @old_list = read_old_list_from_file($list_dir, $is_completed);
 	if (not @old_list) {
-		print STDERR "Warning: can't get old list!\n";
+		warn "Warning: can't get old list!\n";
 	}
 
 	# 완결여부 설정값 판단 
@@ -548,7 +553,7 @@ sub main
 			if ($old_list[$i] =~ qr/$sort_field_pattern/o) {
 				$sf = $1;
 			} else {
-				print STDERR "Warning: can't match the pattern /$sort_field_pattern/\n";
+				warn "Warning: can't match the pattern /$sort_field_pattern/\n";
 			}
 			if (not exists $feed_item_existence_map{$old_list[$i]}) {
 				my %feed_id_sf = ("id" => $i, "sf" => $sf);
