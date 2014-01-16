@@ -123,9 +123,9 @@ function setacl($parent_name, $feed_name, $sample_feed)
 	//date_default_timezone_set("Asia/Seoul");
 	
 	$timestamp = strftime("%y%m%d%H%M%S");
-	$cmd = "cp ../.htaccess ../.htaccess.$timestamp";
+	$cmd = "cp /Users/terzeron/public_html/.htaccess /Users/terzeron/public_html/.htaccess.$timestamp";
 	$ret = shell_exec($cmd);
-	$infile = "../.htaccess";
+	$infile = "/Users/terzeron/public_htm/.htaccess";
 	$outfile = $infile . ".temp." . $timestamp;
 
 	$infp = fopen($infile, "r");
@@ -166,9 +166,9 @@ function remove($parent_name, $sample_feed)
 	//
 
 	$timestamp = strftime("%y%m%d%H%M%S");
-	$cmd = "cp ../.htaccess ../.htaccess.$timestamp";
+	$cmd = "cp /Users/terzeron/public_html/.htaccess /Users/terzeron/public_html/.htaccess.$timestamp";
 	$ret = shell_exec($cmd);
-	$infile = "../.htaccess";
+	$infile = "/Users/terzeron/public_html/.htaccess";
 	$outfile = $infile.".temp.".$timestamp;
 
 	$infp = fopen($infile,"r");
