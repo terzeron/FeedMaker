@@ -10,7 +10,7 @@
 		<element_list>
 			<element_class>img_wrap</element_class>
 		</element_list>
-		<post_process_script>../post_process_daumwebtoon.pl</post_process_script>
+		<post_process_script>../post_process_daumwebtoon.pl -c white</post_process_script>
 	</extraction>
 	<rss>
 		<title><![CDATA[뽀짜툰::다음]]></title>
