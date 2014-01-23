@@ -27,7 +27,7 @@ fi
 
 # html 디렉토리에서 120일 이상 오래된 파일을 삭제함
 if [ -d html ]; then
-	grep -q "<is_completed>true</is_completed>" conf.xml || (echo "deleting old html files"; find html -mtime +120d -exec rm -f "{}" \; -ls)
+	grep -q "<is_completed>true</is_completed>" conf.xml || (echo "deleting old html files"; find html -mtime +60d -exec rm -f "{}" \; -ls)
 fi
 
 # -r 옵션이 켜져 있으면 일부 파일을 미리 삭제함

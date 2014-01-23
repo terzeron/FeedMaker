@@ -20,6 +20,7 @@ local $OUTPUT_AUTOFLUSH = 1;
 my $SECONDS_PER_DAY = 60 * 60 * 24;
 my $MIN_CONTENT_LENGTH = 64;
 my $MAX_CONTENT_LENGTH = 64 * 1024;
+my $max_num_days = 3;
 
 
 sub get_rss_date_str
@@ -97,8 +98,8 @@ sub read_old_list_from_file
 
 		my $list_file = "";
 		my $i = 0;
-		# 최대 7일의 과거까지 리스트가 존재하는지 확인
-		for ($i = 1; $i <= 7; $i++) {
+		# 과거까지 리스트가 존재하는지 확인
+		for ($i = 1; $i <= $max_num_days; $i++) {
 			my $date_str = get_date_str($ts - $i * $SECONDS_PER_DAY);
 			$list_file = get_list_file_name($list_dir, $date_str);
 			print "$list_file\n";
@@ -107,7 +108,7 @@ sub read_old_list_from_file
 				last;
 			}
 		}
-		if ($i > 7) {
+		if ($i > $max_num_days) {
 			return ();
 		}
 		# read the old list
@@ -196,7 +197,7 @@ sub generate_rss_feed
 			my $content = "";
 			if (not open(IN, $new_file_name)) {
 				# 영화토렌트의 경우 파일이 존재하지 않을 수도 있음
-				warn "Warning: can't open '$new_file_name' for reading, $ERRNO,";
+				#warn "Warning: can't open '$new_file_name' for reading, $ERRNO,";
 				next;
 			}
 			print "adding '$new_file_name' to the result\n";
@@ -321,11 +322,14 @@ sub append_item_to_result
 				confess "Error: can't extract HTML elements,";
 			}
 			my $md5_name = get_md5_name($url);
-			$cmd = qq(echo "<img src='http://terzeron.net/img/1x1.jpg?feed=${rss_file_name}&item=${md5_name}'/>" >> "${new_file_name}");
-			print "# $cmd\n";
-			$result = qx($cmd);
-			if ($CHILD_ERROR != 0) {
-				confess "Error: can't append page view logging tag,";
+			$size = -s $new_file_name;
+			if ($size > 0) {
+				$cmd = qq(echo "<img src='http://terzeron.net/img/1x1.jpg?feed=${rss_file_name}&item=${md5_name}'/>" >> "${new_file_name}");
+				print "# $cmd\n";
+				$result = qx($cmd);
+				if ($CHILD_ERROR != 0) {
+					confess "Error: can't append page view logging tag,";
+				}
 			}
 			$size = -s $new_file_name;
 			if ($size < $MIN_CONTENT_LENGTH) {
