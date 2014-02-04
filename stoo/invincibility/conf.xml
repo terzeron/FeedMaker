@@ -11,7 +11,7 @@
 		<element_list>
 			<element_class>ctview</element_class>
 		</element_list>
-		<post_process_script>../post_process_stoo.pl</post_process_script>
+		<post_process_script>../post_process_stoo.pl -c white</post_process_script>
 		<encoding>cp949</encoding>
 	</extraction>
 	<rss>

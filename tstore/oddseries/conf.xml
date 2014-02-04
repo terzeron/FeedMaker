@@ -1,14 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 	<collection>
-		<is_completed>true</is_completed>
+		<is_completed>false</is_completed>
 		<sort_field_pattern><![CDATA[prodId=(\w+)]]></sort_field_pattern>
 		<unit_size_per_day>1</unit_size_per_day>
 		<list_url_list>
 			<list_url><![CDATA[http://m.tstore.co.kr/mobilepoc/webtoon/webtoonListMore.omp?prodId=H001324918&currentPage=1]]></list_url>
-			<list_url><![CDATA[http://m.tstore.co.kr/mobilepoc/webtoon/webtoonListMore.omp?prodId=H001324918&currentPage=2]]></list_url>
-			<list_url><![CDATA[http://m.tstore.co.kr/mobilepoc/webtoon/webtoonListMore.omp?prodId=H001324918&currentPage=3]]></list_url>
-			<list_url><![CDATA[http://m.tstore.co.kr/mobilepoc/webtoon/webtoonListMore.omp?prodId=H001324918&currentPage=4]]></list_url>
 		</list_url_list>
 		<item_capture_script>../capture_item_tstore.pl</item_capture_script>
 	</collection>
