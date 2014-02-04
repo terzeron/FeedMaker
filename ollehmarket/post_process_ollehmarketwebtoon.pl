@@ -81,7 +81,13 @@ sub main
 				confess "Error: can't download the image from '$img_url', $ERRNO\n";
 				last;
 			}
-			print_local_path($img_url, $img_ext);
+			my $cache_file = get_cache_file_name($img_url, $img_ext);
+			if (-e $cache_file and -s $cache_file) {
+				print_local_path($img_url, $img_ext);
+			} else {
+				confess "Error: can't find the image '$cache_file', $ERRNO\n";
+				last;
+			}
 		}
 	}
 }	
