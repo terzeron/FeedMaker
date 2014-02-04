@@ -68,7 +68,7 @@ sub main
 	my $img_prefix = "";
 	my $img_index = -1;
 	my $img_ext = "jpg";
-	my $num_units = 20;
+	my $num_units = 25;
 
 	my %opts = ();
 	my $opt_str = "c:";
