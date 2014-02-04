@@ -2,16 +2,17 @@
 <configuration>
 	<collection>
 		<list_url_list>
-			<list_url><![CDATA[http://comic.naver.com/webtoon/list.nhn?titleId=579414]]></list_url>
+			<list_url><![CDATA[http://m.comic.naver.com/webtoon/list.nhn?titleId=579414]]></list_url>
 		</list_url_list>
-		<element_class>viewList</element_class>
-		<item_capture_script>../capture_item_naverwebtoon.pl</item_capture_script>
+		<element_class>top_toonlst</element_class>
+		<item_capture_script>../capture_item_naverwebtoon_mobile.pl</item_capture_script>
 	</collection>
 	<extraction>
 		<element_list>
-			<element_class>wt_viewer</element_class>
+			<element_class>toon_view_lst</element_class>
+			<element_id>toonLayer</element_id>
 		</element_list>
-		<post_process_script>../post_process_naverwebtoon.pl</post_process_script>
+		<post_process_script>../post_process_naverwebtoon_mobile.pl</post_process_script>
 	</extraction>
 	<rss>
 		<title><![CDATA[은주의방::네이버]]></title>
