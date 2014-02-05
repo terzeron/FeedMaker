@@ -17,11 +17,9 @@ sub main
 		if ($line =~ m!<img src='(http://comicmenu.mt.co.kr/[^']+.jpg)'(?: width='\d+%')?/>!i) {
 			my $img_url = $1;
 			# 광고 이미지 skip
-=pod		  
-			if ($img_url =~ m!http://comicmenu.mt.co.kr/list/\d+_list_original_page1_2_[^\.]+.jpg!i or $img_url =~ m!http://comicmenu.mt.co.kr/banner/comic_\d+_100811.jpg!i) {
+			if ($img_url =~ m!http://comicmenu.mt.co.kr/banner/comic_03_100811.jpg!i) {
 				next;
 			}
-=cut
 			print "<img src='" . $img_url . "' width='100%'/>\n";
 		} elsif ($line =~ m!<(style|meta)!) {
 			print $line . "\n";
