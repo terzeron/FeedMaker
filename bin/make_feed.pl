@@ -297,6 +297,10 @@ sub append_item_to_result
 			my $post_process_script = $extraction_config->{"post_process_script"};
 			if ($post_process_script) {
 				$post_process_cmd = qq(| $post_process_script "$url");
+				my $post_process2_script = $extraction_config->{"post_process2_script"};
+				if ($post_process2_script) {
+					$post_process_cmd .= qq( | $post_process2_script "$url");
+				}
 			}
 		}
 		my $encoding = $extraction_config->{"encoding"};
