@@ -117,70 +117,72 @@ sub main
 		}
 	}
 
-	# calculate the total height
-	my $total_height = 0;
-	for my $dimension (@img_size_arr) {
-		my ($width, $height) = split /\t/, $dimension;
-		$total_height += $height;
-	}
-	#print "total_height=$total_height\n";
-	if ($total_height > 65500) {
-		# no merge mode
-		for my $img_url (@img_url_arr) {
-			print_local_path($img_url, $img_ext);
+	if (scalar @img_file_arr > 0) {
+		# calculate the total height
+		my $total_height = 0;
+		for my $dimension (@img_size_arr) {
+			my ($width, $height) = split /\t/, $dimension;
+			$total_height += $height;
 		}
-	} else {
-		# merge mode
-		my $merged_img_file = get_cache_file_name($url, $img_ext);
-		$cmd = qq(../../../CartoonSplit/merge.py ${merged_img_file} );
-		for my $cache_file (@img_file_arr) {
-			$cmd .= $cache_file . " ";
-		}
-		#print "$cmd\n";
-		$result = qx($cmd);
-		#print $result;
-		if ($CHILD_ERROR != 0) {
-			confess "Error: can't merge the image files, cmd='$cmd'\n";
-			return -1;
-		}
-			
-		# remove the original image
-		$cmd = qq(rm -f );
-		for my $cache_file (@img_file_arr) {
-			$cmd .= $cache_file . " ";
-		}
-		#print "$cmd\n";
-		$result = qx($cmd);
-		#print $result;
-			
-		# split
-		$cmd = qq(../../../CartoonSplit/split.py -n ${num_units} -b 10 ${bgcolor_option} ${merged_img_file});
-		#print "$cmd\n";
-		$result = qx($cmd);
-		#print $result;
-		if ($CHILD_ERROR != 0) {
-			confess "Error: can't split the image file, cmd='$cmd'\n";
-			return -1;
-		}
-			
-		# remove the merged image
-		$cmd = qq(rm -f $merged_img_file);
-		#print "$cmd\n";
-		$result = qx($cmd);
-		#print $result;
-			
-		# print the split images
-		for (my $i = 1; $i <= $num_units; $i++) {
-			my $split_img_file = get_cache_file_name(get_md5_name($url) . "." . $i . "." . $img_ext);
-			if (-e $split_img_file) {
-				my $split_img_url = get_cache_url(get_md5_name($url) . "." . $i . "." . $img_ext);
-				print "<img src='${split_img_url}' width='100%'/>\n";
-			} else {
-				last;
+		#print "total_height=$total_height\n";
+		if ($total_height > 65500) {
+			# no merge mode
+			for my $img_url (@img_url_arr) {
+				print_local_path($img_url, $img_ext);
+			}
+		} else {
+			# merge mode
+			my $merged_img_file = get_cache_file_name($url, $img_ext);
+			$cmd = qq(../../../CartoonSplit/merge.py ${merged_img_file} );
+			for my $cache_file (@img_file_arr) {
+				$cmd .= $cache_file . " ";
+			}
+			#print "$cmd\n";
+			$result = qx($cmd);
+			#print $result;
+			if ($CHILD_ERROR != 0) {
+				confess "Error: can't merge the image files, cmd='$cmd'\n";
+				return -1;
+			}
+				
+			# remove the original image
+			$cmd = qq(rm -f );
+			for my $cache_file (@img_file_arr) {
+				$cmd .= $cache_file . " ";
+			}
+			#print "$cmd\n";
+			$result = qx($cmd);
+			#print $result;
+				
+			# split
+			$cmd = qq(../../../CartoonSplit/split.py -n ${num_units} -b 10 ${bgcolor_option} ${merged_img_file});
+			#print "$cmd\n";
+			$result = qx($cmd);
+			#print $result;
+			if ($CHILD_ERROR != 0) {
+				confess "Error: can't split the image file, cmd='$cmd'\n";
+				return -1;
+			}
+				
+			# remove the merged image
+			$cmd = qq(rm -f $merged_img_file);
+			#print "$cmd\n";
+			$result = qx($cmd);
+			#print $result;
+				
+			# print the split images
+			for (my $i = 1; $i <= $num_units; $i++) {
+				my $split_img_file = get_cache_file_name(get_md5_name($url) . "." . $i . "." . $img_ext);
+				if (-e $split_img_file) {
+					my $split_img_url = get_cache_url(get_md5_name($url) . "." . $i . "." . $img_ext);
+					print "<img src='${split_img_url}' width='100%'/>\n";
+				} else {
+					last;
+				}
 			}
 		}
-	}
-}	
+	}	
+}
 
 
 main();

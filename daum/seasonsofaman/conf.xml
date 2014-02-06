@@ -10,7 +10,8 @@
 		<element_list>
 			<element_class>img_wrap</element_class>
 		</element_list>
-		<post_process_script>../post_process_daumwebtoon.pl -c white</post_process_script>
+		<post_process_script>../post_process_daumwebtoon.pl</post_process_script>
+		<post_process2_script>../download_merge_split.pl -c white</post_process2_script>
 	</extraction>
 	<rss>
 		<title><![CDATA[수의 계절::다음]]></title>

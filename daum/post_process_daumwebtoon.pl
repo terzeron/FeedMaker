@@ -71,7 +71,9 @@ sub main
 		for my $line (split /}|\n/, $result) {
 			if ($line =~ m!"url":"(http://[^"]+)",(?:(?:.*imageOrder)|(?:\s*$))!) {
 				my $img_url = $1;
-				print "<img src='$img_url' width='100%'/>\n";
+				if ($img_url !~ m!VodPlayer\.swf!) {
+					print "<img src='$img_url' width='100%'/>\n";
+				}
 			}
 		}
 	}
