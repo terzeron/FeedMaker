@@ -11,7 +11,8 @@
 		<element_list>
 			<element_class>wt_viewer</element_class>
 		</element_list>
-		<post_process_script>../post_process_naverwebtoon.pl</post_process_script>
+		<post_process_script>../post_process_naverwebtoon_mobile.pl</post_process_script>
+		<post_process2_script>download_merge_split.pl -c blackorwhite</post_process2_script>
 	</extraction>
 	<rss>
 		<title><![CDATA[지옥캠프 단편선 시즌3::네이버]]></title>

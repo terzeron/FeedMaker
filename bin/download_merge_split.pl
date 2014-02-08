@@ -63,7 +63,7 @@ sub download_image
 	my $page_url = shift;
 
 	my $cache_file = get_cache_file_name($img_url, $img_ext);
-	my $cmd = qq(wget.sh --download "$img_url" "$cache_file" "$page_url");
+	my $cmd = qq([ -f "$cache_file" ] || wget.sh --download "$img_url" "$cache_file" "$page_url");
 	#print $cmd . "\n";
 	my $result = qx($cmd);
 	if ($CHILD_ERROR != 0) {
@@ -150,19 +150,22 @@ sub main
 		if ($total_height > 65500) {
 			# split array into two sub-array
 			my $half = int((scalar @img_file_arr) / 2); 
-			#print "lengt=" . (scalar @img_file_arr) . " half=$half\n";
+			#print "length=" . (scalar @img_file_arr) . " half=$half\n";
 			@img_file_arr1 = splice @img_file_arr, 0, $half;
 			@img_file_arr2 = splice @img_file_arr, 0;
-			#print scalar @img_file_arr1 . "\n";
-			#print scalar @img_file_arr2 . "\n";
 		}  else {
 			@img_file_arr1 = @img_file_arr;
 			@img_file_arr2 = ();
 		}
+		#print scalar @img_file_arr1 . "\n";
+		#print scalar @img_file_arr2 . "\n";
 
 		my $num = 1;
 		foreach my $img_file_arr_ref (\@img_file_arr1, \@img_file_arr2) {
 			my @img_file_arr = @$img_file_arr_ref;
+			if (scalar @img_file_arr == 0) {
+				next;
+			}
 			# merge mode
 			my $merged_img_file = get_cache_file_name($url, $img_ext, $num);
 			$cmd  = qq(../../../CartoonSplit/merge.py ${merged_img_file} );
