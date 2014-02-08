@@ -6,32 +6,7 @@ use warnings;
 use Carp;
 use Modern::Perl;
 use Digest::MD5;
-use FeedMaker qw(read_config);
-
-
-my $config_file = "conf.xml";
-
-
-sub get_encoding_from_config
-{
-	my $config = ();
-
-	if (not read_config($config_file, \$config)) {
-		confess "Error: can't read configuration!, ";
-		return -1;
-	}
-	my $extraction_config = $config->{"extraction"};
-	if (not defined $extraction_config) {
-		confess "Error: can't read extraction config!, ";
-		return -1;
-	}
-	my $encoding = $extraction_config->{"encoding"};
-	if (not defined $encoding) {
-		$encoding = "utf8";
-	}
-
-	return $encoding;
-}
+use FeedMaker qw(read_config get_encoding_from_config);
 
 
 sub main
@@ -45,7 +20,7 @@ sub main
 		print $line;
 	}
 
-	my $encoding = get_encoding_from_config();
+	my $encoding = get_encoding_from_config("conf.xml");
 
 	my $post_link = $ARGV[0];
 	if ($post_link =~ m!http://cartoon\.media\.daum\.net/(m/)?webtoon/viewer/(\d+)$!) {

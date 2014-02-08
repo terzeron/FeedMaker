@@ -5,38 +5,8 @@ use strict;
 use warnings;
 use Carp;
 use Modern::Perl;
-use FeedMaker;
+use FeedMaker qw(get_encoding_from_config);
 
-
-sub get_config
-{
-	my $config = ();
-	my $config_file = "conf.xml";
-	if (not FeedMaker::read_config($config_file, \$config)) {
-		confess "Error: can't read configuration!, ";
-		return -1;
-	}
-	my $extraction_config = $config->{"extraction"};
-	if (not defined $extraction_config) {
-		confess "Error: can't read extraction config!, ";
-		return -1;
-	}
-	my $element_list = $extraction_config->{"element_list"};
-	my $element_class = $element_list->{"element_class"};
-	if (not defined $element_class) {
-		$element_class = "";
-	}
-	my $element_id = $element_list->{"element_id"};
-	if (not defined $element_id) {
-		$element_id = "";
-	}
-	my $encoding = $extraction_config->{"encoding"};
-	if (not defined $encoding) {
-		$encoding = "utf8";
-	}
-
-	return $encoding;
-}
 
 sub main
 {
@@ -51,7 +21,7 @@ sub main
 		}
 	}
 
-	my $encoding = get_config();
+	my $encoding = get_encoding_from_config("conf.xml");
 
 	foreach my $url (@url_list) {
 		my $cmd = qq(wget.sh "$url" $encoding);

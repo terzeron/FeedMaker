@@ -3,7 +3,7 @@
 package FeedMaker;
 
 use base 'Exporter';
-our @EXPORT = qw(read_config get_config_value print_items print_all_hash_items get_date_str get_list_file_name get_md5_name utf8_decode utf8_encode xml_escape);
+our @EXPORT = qw(read_config get_config_value print_items print_all_hash_items get_date_str get_list_file_name get_md5_name utf8_decode utf8_encode xml_escape get_encoding_from_config);
 
 use English;
 use warnings;
@@ -142,6 +142,29 @@ sub get_user_input
 	my $answer = <>;
 	chomp $answer;
 	return $answer
+}
+
+
+sub get_encoding_from_config
+{
+	my $config_file = shift;
+	my $config = ();
+
+	if (not FeedMaker::read_config($config_file, \$config)) {
+		confess "Error: can't read configuration!, ";
+		return -1;
+	}
+	my $extraction_config = $config->{"extraction"};
+	if (not defined $extraction_config) {
+		confess "Error: can't read extraction config!, ";
+		return -1;
+	}
+	my $encoding = $extraction_config->{"encoding"};
+	if (not defined $encoding) {
+		$encoding = "utf8";
+	}
+
+	return $encoding;
 }
 
 

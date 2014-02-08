@@ -5,7 +5,6 @@ use strict;
 use warnings;
 use Carp;
 use Encode;
-
 use FeedMaker;
 
 
@@ -34,22 +33,7 @@ sub main
 {
 	my $url = "";
 
-	my $config_file = "conf.xml";
-	my $config = ();
-	if (not FeedMaker::read_config($config_file, \$config)) {
-		confess "Error: can't read configuration!, ";
-		return -1;
-	}
-	my $extraction_config = $config->{"extraction"};
-	if (not defined $extraction_config) {
-		confess "Error: can't read extraction config!, ";
-		return -1;
-	}
-
-	my $encoding = $extraction_config->{"encoding"};
-	if (not defined $encoding) {
-		$encoding = "utf8";
-	}
+	my $encoding = get_encoding_from_config("conf.xml");
 
 	my $cmd = qq(find ./html -name "*.html" -mtime +7 | xargs rm -f);
 	my $result = qx($cmd);

@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use Encode;
-use FeedMaker;
+use FeedMaker qw(get_encoding_from_config);
 
 
 sub get_title
@@ -62,14 +62,7 @@ sub main
 	my $conf_file = $ARGV[0];
 	my $config = ();
 
-	if (not FeedMaker::read_config($conf_file, \$config)) {
-		confess "Error: can't read configuration file '$conf_file'\n";
-		return -1;
-	}	
-	my $encoding = get_config_value($config, 0, ("collection", "encoding"));
-	if (not defined $encoding or $encoding eq ""){
-		$encoding = "utf8";
-	}
+	my $encoding = get_encoding_from_config($conf_file);
 
 	while (my $line = <STDIN>) {
 		if ($line =~ m!<a href=\"(cstory\.nhn\?nid=\d+)&(?:amp;)?page=\d+\"><img src="?[^>]+"?\s*/?></a>!) {

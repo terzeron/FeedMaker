@@ -6,7 +6,7 @@ use warnings;
 use Carp;
 use Modern::Perl;
 use Digest::MD5;
-use FeedMaker qw(read_config get_md5_name);
+use FeedMaker qw(get_md5_name get_encoding_from_config);
 
 
 sub get_cache_url
@@ -95,17 +95,7 @@ sub main
 	}
 	#print "img_path=$img_path, img_index=$img_index\n";
 
-	my $config = ();
-	my $config_file = "conf.xml";
-	if (not read_config($config_file, \$config)) {
-		confess "Error: can't read configuration!, ";
-		return -1;
-	}
-	my $extraction_config = $config->{"extraction"};
-	my $encoding = $extraction_config->{"encoding"};
-	if (not defined $encoding) {
-		$encoding = "utf8";
-	}
+	my $encoding = get_encoding_from_config("conf.xml");
 	
 	if ($img_path ne "" and $img_index >= 0) {
 		# add some additional images loaded dynamically
