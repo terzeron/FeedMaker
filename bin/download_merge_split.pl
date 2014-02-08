@@ -94,8 +94,8 @@ sub main
 			#print $img_url . "\n";
 			# download
 			if (download_image($img_url, $img_ext, $url) < 0) {
-				confess "Error: can't download the image from '$img_url', $ERRNO\n";
-				last;
+				#confess "Error: can't download the image from '$img_url', $ERRNO\n";
+				next;
 			}
 			
 			my $cache_file = get_cache_file_name($img_url, $img_ext);
