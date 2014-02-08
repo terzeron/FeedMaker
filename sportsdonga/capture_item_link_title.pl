@@ -30,9 +30,11 @@ sub main
 		}
 	}
 
-	for (my $i = 0; $i < 10; $i++) {
-		my $result = pop @result_arr;
-		print $result . "\n";
+	if (scalar @result_arr > 0) {
+		for (my $i = 1; $i < 10; $i++) {
+			my $result = pop @result_arr;
+			print $result . "\n";
+		}
 	}
 }
 
