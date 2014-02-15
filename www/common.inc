@@ -1,7 +1,9 @@
 <?php
 error_reporting(E_ALL ^ E_NOTICE);
 
-$work_dir = "./work";
+$home_dir = "/Users/terzeron";
+$work_dir = $home_dir . "/workspace/FeedMaker";
+$www_dir = $home_dir . "/public_html";
 
 function txt2html($content)
 {

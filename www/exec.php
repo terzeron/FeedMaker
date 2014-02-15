@@ -97,18 +97,12 @@ function lint($feed_name)
 
 function extract_data($parent_name, $feed_name)
 {
-	global $work_dir, $dir, $message;
+	global $home_dir, $work_dir, $www_dir, $dir, $message;
 
-	$cmd = "\
-mkdir ${work_dir}/${parent_name}/${feed_name}; \
-cd ${work_dir}/${parent_name}/${feed_name}; \
-mv ../../www/xmls/${feed_name}.xml conf.xml; \
-. ../../bin/setup.sh; \
-../../bin/run.sh > run.log 2> error.log; \
-";
+	$cmd = "mkdir ${work_dir}/${parent_name}/${feed_name}; cd ${work_dir}/${parent_name}/${feed_name}; mv ${www_dir}/xmls/${feed_name}.xml conf.xml; . ${home_dir}/.bashrc; . ../..//bin/setup.sh; run.sh > run.log 2> error.log;";
 	$result = shell_exec($cmd);
 	if (preg_match("/Error:/", $result)) {
-		$message = "can't execute extract command, $result";
+		$message = "can't execute extract command '$cmd', $result";
 		return -1;
 	}
 	
@@ -118,24 +112,24 @@ mv ../../www/xmls/${feed_name}.xml conf.xml; \
 
 function setacl($parent_name, $feed_name, $sample_feed)
 {
-	global $dir, $message;
+	global $www_dir, $dir, $message;
 
 	//date_default_timezone_set("Asia/Seoul");
 	
 	$timestamp = strftime("%y%m%d%H%M%S");
-	$cmd = "cp /Users/terzeron/public_html/.htaccess /Users/terzeron/public_html/.htaccess.$timestamp";
+	$cmd = "cp ${www_dir}/.htaccess ${www_dir}/.htaccess.$timestamp";
 	$ret = shell_exec($cmd);
-	$infile = "/Users/terzeron/public_htm/.htaccess";
+	$infile = "${www_dir}/.htaccess";
 	$outfile = $infile . ".temp." . $timestamp;
 
 	$infp = fopen($infile, "r");
 	if (!$infp) {
-		$message = "can't open file '$infile' for reading, $ret";
+		$message = "can't open file '$infile' for reading";
 		return -1;
 	}
 	$outfp = fopen($outfile, "w");
 	if (!$outfp) {
-		$message = "can't open file '$infile' for writing, $ret";
+		$message = "can't open file '$infile' for writing";
 		return -1;
 	}
 	while (!feof($infp)) {
@@ -159,16 +153,16 @@ function setacl($parent_name, $feed_name, $sample_feed)
 
 function remove($parent_name, $sample_feed)
 {
-	global $work_dir, $dir, $message;
+	global $work_dir, $www_dir, $dir, $message;
 
 	// 
 	// ACL 설정 제거
 	//
 
 	$timestamp = strftime("%y%m%d%H%M%S");
-	$cmd = "cp /Users/terzeron/public_html/.htaccess /Users/terzeron/public_html/.htaccess.$timestamp";
+	$cmd = "cp ${www_dir}/.htaccess ${www_dir}/.htaccess.$timestamp";
 	$ret = shell_exec($cmd);
-	$infile = "/Users/terzeron/public_html/.htaccess";
+	$infile = "${www_dir}/.htaccess";
 	$outfile = $infile.".temp.".$timestamp;
 
 	$infp = fopen($infile,"r");
@@ -200,12 +194,7 @@ function remove($parent_name, $sample_feed)
 	//
 	// 피드 디렉토리 정리
 	//
-	$cmd = "\
-rm -f ../xml/${sample_feed}.xml; \
-cd ${work_dir}/${parent_name}/${sample_feed}; \
-rm -rf html newlist run.log error.log ${sample_feed}.xml ${sample_feed}.xml.old start_idx.txt; \
-mv conf.xml conf.xml.old\
-";
+	$cmd = "rm -f ../xml/${sample_feed}.xml; cd ${work_dir}/${parent_name}/${sample_feed}; rm -rf html newlist run.log error.log ${sample_feed}.xml ${sample_feed}.xml.old start_idx.txt; mv conf.xml conf.xml.old";
 	$result = system($cmd);
 	if ($result != "") { 
 		$message = "can't clean the feed directory, $result";
@@ -259,7 +248,7 @@ function exec_command()
 		return -1;
 	}
 	
-	return0;
+	return 1;
 }
 
 
