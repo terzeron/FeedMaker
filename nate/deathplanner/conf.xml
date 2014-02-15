@@ -1,15 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 	<collection>
-		<is_completed>true</is_completed>
+		<is_completed>false</is_completed>
 		<sort_field_pattern><![CDATA[bsno=(\d+)]]></sort_field_pattern>
 		<unit_size_per_day>1</unit_size_per_day>
 		<list_url_list>
 			<list_url><![CDATA[http://comics.nate.com/webtoon/list.php?btno=48735]]></list_url>
-			<list_url><![CDATA[http://comics.nate.com/webtoon/list.php?btno=48735&page=2]]></list_url>
-			<list_url><![CDATA[http://comics.nate.com/webtoon/list.php?btno=48735&page=3]]></list_url>
-			<list_url><![CDATA[http://comics.nate.com/webtoon/list.php?btno=48735&page=4]]></list_url>
-			<list_url><![CDATA[http://comics.nate.com/webtoon/list.php?btno=48735&page=5]]></list_url>
 		</list_url_list>
 		<element_class>tel_list</element_class>
 		<item_capture_script>../capture_item_natewebtoonmobile.pl</item_capture_script>
@@ -19,6 +15,7 @@
 			<element_class>toonView</element_class>
 		</element_list>
 		<post_process_script>../post_process_natewebtoon.pl</post_process_script>
+		<post_process2_script>download_merge_split.pl -c blackorwhite</post_process2_script>
 	</extraction>
 	<rss>
 		<title><![CDATA[설계-데스플래너::네이트]]></title>

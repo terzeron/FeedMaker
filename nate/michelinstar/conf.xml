@@ -12,6 +12,7 @@
 			<element_class>toonView</element_class>
 		</element_list>
 		<post_process_script>../post_process_natewebtoon.pl</post_process_script>
+		<post_process2_script>download_merge_split.pl -c blackorwhite</post_process2_script>
 	</extraction>
 	<rss>
 		<title><![CDATA[미슐랭 스타::네이트]]></title>
