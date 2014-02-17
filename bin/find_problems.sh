@@ -17,7 +17,7 @@ echo "--- the number of occurrence of each element ---"
 find . -name conf.xml -exec perl -ne 'while (/\<(\w+)\>/g) { if ($1 !~ /encoding|collection|extraction|copyright|configuration|element_list|description|language|link|list_url_list|rss|title|list_url|element_class|element_id|element_path|feed_url|generator/) { print $1 . "\n"; } }' "{}" \; |sort | uniq -c | sort -n | perl -ne 'if (/^\s*(\d+)\s+/) { print; }'
 
 echo "--- spaces instead of tab ---"
-find . -name conf.xml -exec grep -l "    " "{}" \;
+find . -name conf.xml -exec grep -l "	 " "{}" \;
 
 
 echo 
@@ -52,13 +52,13 @@ period_file_list=""
 for i in {1..14}; do
 	period_file_list="${period_file_list} /Applications/MAMP/logs/apache_access.log.$(date -v-${i}d +'%Y%m%d')"
 done
-feed_access_file="log/feed_acceess.txt"
+feed_access_file="log/feed_access.txt"
 echo "--- $feed_access_file ---"
 perl -e '
 my %name_date_map = ();
 my %month_map = ("Jan"=>"01", "Feb"=>"02", "Mar"=>"03", "Apr"=>"04", "May"=>"05", "Jun"=>"06", "Jul"=>"07", "Aug"=>"08", "Sep"=>"09", "Oct"=>"10", "Nov"=>"11", "Dec"=>"12"); 
 while (my $line = <>) {
-    if ($line =~ m!\[(\d+)/(\w+)/(\d+):\d+:\d+:\d+ \+\d+\] "GET /img/1x1\.jpg\?feed=([\w\.\_]+)\.xml\S* HTTP\S+" (\d+) (?:\d+|-) "[^"]*" "[^"]*"!) {
+	if ($line =~ m!\[(\d+)/(\w+)/(\d+):\d+:\d+:\d+ \+\d+\] "GET /img/1x1\.jpg\?feed=([\w\.\_]+)\.xml\S* HTTP\S+" (\d+) (?:\d+|-) "[^"]*" "[^"]*"!) {
 		$name_date_map{$4} = "$3$month_map{$2}$1\t$5";
 	}
 } 
