@@ -19,7 +19,7 @@
 			<element_class>toonView</element_class>
 		</element_list>
 		<post_process_script>../post_process_natewebtoon.pl</post_process_script>
-		<post_process2_script>download_merge_split.pl -c blackorwhite</post_process2_script>
+		<post_process2_script>download_merge_split.pl -c dominant</post_process2_script>
 	</extraction>
 	<rss>
 		<title><![CDATA[한복이 너무해::네이트]]></title>
