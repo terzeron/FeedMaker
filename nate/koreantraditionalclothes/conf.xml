@@ -3,7 +3,7 @@
 	<collection>
 		<is_completed>true</is_completed>
 		<sort_field_pattern><![CDATA[bsno=(\d+)]]></sort_field_pattern>
-		<unit_size_per_day>1</unit_size_per_day>
+		<unit_size_per_day>4</unit_size_per_day>
 		<list_url_list>
 			<list_url><![CDATA[http://comics.nate.com/webtoon/list.php?btno=54511]]></list_url>
 			<list_url><![CDATA[http://comics.nate.com/webtoon/list.php?btno=54511&page=2]]></list_url>
