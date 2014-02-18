@@ -3,7 +3,7 @@
 	<collection>
 		<is_completed>true</is_completed>
 		<sort_field_pattern><![CDATA[&no=(\d+)]]></sort_field_pattern>
-		<unit_size_per_day>1</unit_size_per_day>
+		<unit_size_per_day>4</unit_size_per_day>
 		<list_url_list>
 			<list_url><![CDATA[http://comic.naver.com/webtoon/list.nhn?titleId=375703&page=13]]></list_url>
 			<list_url><![CDATA[http://comic.naver.com/webtoon/list.nhn?titleId=375703&page=12]]></list_url>
@@ -27,7 +27,7 @@
 			<element_class>wt_viewer</element_class>
 		</element_list>
 		<post_process_script>../post_process_naverwebtoon_mobile.pl</post_process_script>
-		<post_process2_script>download_merge_split.pl -c blackorwhite</post_process2_script>
+		<post_process2_script>download_merge_split.pl -c dominant</post_process2_script>
 	</extraction>
 	<rss>
 		<title><![CDATA[본초비담::네이버]]></title>

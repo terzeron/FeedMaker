@@ -96,7 +96,7 @@ sub main
 	our $opt_n;
 	getopts($opt_str, \%opts);
 	if (defined $opts{"c"}) {
-		if ($opts{"c"} =~ m!^(white|black|blackorwhite)$!) {
+		if ($opts{"c"} =~ m!^(\w+)$!) {
 			$bgcolor_option = "-c " . $opts{"c"};
 		}
 	}

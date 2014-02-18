@@ -3,7 +3,7 @@
 	<collection>
 		<is_completed>true</is_completed>
 		<sort_field_pattern><![CDATA[webtoonIdx=(\d+)]]></sort_field_pattern>
-		<unit_size_per_day>1</unit_size_per_day>
+		<unit_size_per_day>4</unit_size_per_day>
 		<list_url_list>
 			<list_url><![CDATA[http://www.wowtv.co.kr/funfun/fun/webtoon/view.asp?webtoonIdx=1219]]></list_url>
 		</list_url_list>
