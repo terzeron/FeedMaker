@@ -26,7 +26,12 @@ function execute_job
 	#echo $dir
 	if [ -d "$dir" -a -f "$dir/conf.xml" ]; then
 		#echo -n $dir "  "
-		(cd $dir; run.sh > $runlog 2> $errorlog)
+		is_completed=$(grep "<is_completed>true" $dir/conf.xml)
+		if [ "$is_completed" != "" ]; then
+			(cd $dir; run.sh -c; run.sh > $runlog 2> $errorlog)
+		else
+			(cd $dir; run.sh > $runlog 2> $errorlog)
+		fi
 	fi
 }
 
