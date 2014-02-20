@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 	<collection>
-		<is_completed>true</is_completed>
+		<is_completed>false</is_completed>
 		<sort_field_pattern><![CDATA[webtoonIdx=(\d+)]]></sort_field_pattern>
 		<unit_size_per_day>4</unit_size_per_day>
 		<list_url_list>
 			<list_url><![CDATA[http://www.wowtv.co.kr/funfun/fun/webtoon/view.asp?webtoonIdx=1219]]></list_url>
 		</list_url_list>
-		<item_capture_script>../capture_item_wowtv.pl</item_capture_script>
+		<item_capture_script>../capture_item_wowtv.pl -n 10</item_capture_script>
 		<element_class>toonSelect</element_class>
 		<encoding>cp949</encoding>
 	</collection>

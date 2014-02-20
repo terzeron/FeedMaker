@@ -13,6 +13,7 @@
 			<element_class>ctview</element_class>
 		</element_list>
 		<post_process_script>../post_process_stoo.pl</post_process_script>
+		<post_process2_script>download_merge_split.pl -c dominant</post_process2_script>
 		<encoding>cp949</encoding>
 	</extraction>
 	<rss>

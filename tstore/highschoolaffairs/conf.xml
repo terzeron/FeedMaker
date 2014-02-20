@@ -17,6 +17,7 @@
 			<element_class>w_paging</element_class>
 		</element_list>
 		<post_process_script>../post_process_tstore.pl</post_process_script>
+		<post_process2_script>download_merge_split.pl</post_process2_script>
 	</extraction>
 	<rss>
 		<title><![CDATA[왕성고의 흔한 사건::T스토어]]></title>

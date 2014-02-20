@@ -14,6 +14,7 @@
 			<element_class>non_existent_element</element_class>
 		</element_list>
 		<post_process_script>../post_process_sportsseoul.pl</post_process_script>
+		<post_process2_script>download_merge_split.pl</post_process2_script>
 	</extraction>
 	<rss>
 		<title><![CDATA[갬블독::스포츠서울]]></title>
