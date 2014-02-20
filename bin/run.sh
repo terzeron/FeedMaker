@@ -25,7 +25,7 @@ if [ -d "$1" ]; then
 	cd $1
 fi
 
-# html 디렉토리에서 120일 이상 오래된 파일을 삭제함
+# html 디렉토리에서 60일 이상 오래된 파일을 삭제함
 if [ -d html ]; then
 	grep -q "<is_completed>true</is_completed>" conf.xml || (echo "deleting old html files"; find html -mtime +60d -exec rm -f "{}" \; -ls)
 fi
@@ -40,8 +40,8 @@ if [ ${REMOVE_HTMLS} -eq 1 ]; then
 fi
 
 # 다운로드 안 된 이미지를 포함한 html을 지움
-# html은 14일 이내의 최신 파일만 해당함 (14일 이상 오래된 파일은 무시)
-for f in `find html -name "*.html" -mtime -14d -exec grep -q "<img src=.http://terzeron\.net/xml/img/" "{}" \; -print`; do
+# html은 60일 이내의 최신 파일만 해당함 (60일 이상 오래된 파일은 무시)
+for f in `find html -name "*.html" -mtime -60d -exec grep -q "<img src=.http://terzeron\.net/xml/img/" "{}" \; -print`; do
 	b=0
 	for i in `perl -ne 'if (m!<img src=.http://terzeron\.net/xml/img/([^.]+\.jpg)!) { print $1 . "\n"; }' $f`; do
 		if [ ! -e /Users/terzeron/public_html/xml/img/"$i" ]; then
@@ -51,7 +51,9 @@ for f in `find html -name "*.html" -mtime -14d -exec grep -q "<img src=.http://t
 		fi      
 	done
 	if [ "$b" == 1 ]; then
-		grep -q "<is_completed>true</is_completed>" conf.xml && echo "need to re-download images like '$last_img' in '$f'" || (echo "deleting '$f' for missing image '$last_img'"; ls -alF "$f"; rm -f "$f")
+		# 완결된 피드는 이미지를 다시 다운로드하라고 메시지를 출력하고
+		# 해당 html을 삭제
+		grep -q "<is_completed>true</is_completed>" conf.xml && echo "need to re-download images like '$last_img' in '$f'"; (echo "deleting '$f' for missing image '$last_img'"; ls -alF "$f"; rm -f "$f")
 	fi
 done
 
