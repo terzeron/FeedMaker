@@ -49,7 +49,7 @@ echo "===== check the garbage feeds ====="
 feedmaker_file="log/feedmaker.txt"
 find */ -maxdepth 2 -name "*.xml" \! -name conf.xml -exec basename "{}" \; | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $feedmaker_file
 period_file_list=""
-for i in {1..14}; do
+for i in {1..10}; do
 	period_file_list="${period_file_list} /Applications/MAMP/logs/apache_access.log.$(date -v-${i}d +'%Y%m%d')"
 done
 feed_access_file="log/feed_access.txt"

@@ -194,7 +194,7 @@ function remove($parent_name, $sample_feed)
 	//
 	// 피드 디렉토리 정리
 	//
-	$cmd = "rm -f ../xml/${sample_feed}.xml; cd ${work_dir}/${parent_name}/${sample_feed}; rm -rf html newlist run.log error.log ${sample_feed}.xml ${sample_feed}.xml.old start_idx.txt; mv conf.xml conf.xml.old";
+	$cmd = "rm -f ${www_dir}/xml/${sample_feed}.xml; cd ${work_dir}/${parent_name}; rm -rf ${sample_feed}";
 	$result = system($cmd);
 	if ($result != "") { 
 		$message = "can't clean the feed directory, $result";
