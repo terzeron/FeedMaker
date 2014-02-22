@@ -15,7 +15,7 @@
 			<element_class>img_wrap</element_class>
 		</element_list>
 		<post_process_script>../post_process_daumwebtoon.pl</post_process_script>
-		<post_process2_script>download_merge_split.pl</post_process2_script>
+		<post_process2_script>download_merge_split.pl -c fuzzy</post_process2_script>
 	</extraction>
 	<rss>
 		<title><![CDATA[마왕을 위한 동화::다음]]></title>

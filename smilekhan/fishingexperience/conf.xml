@@ -15,7 +15,7 @@
 			<element_class>manpyung_view</element_class>
 		</element_list>
 		<post_process_script>../post_process_sportskhan.pl</post_process_script>
-		<post_process2_script>download_merge_split.pl</post_process2_script>
+		<post_process2_script>download_merge_split.pl -c fuzzy</post_process2_script>
 		<encoding>cp949</encoding>
 	</extraction>
 	<rss>
