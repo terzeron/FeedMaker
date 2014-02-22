@@ -91,14 +91,18 @@ sub main
 	my $num_units = 25;
 
 	my %opts = ();
-	my $opt_str = "c:";
+	my $opt_str = "c:i";
 	my $bgcolor_option = "";
+	my $do_innercrop = 0;
 	our $opt_n;
 	getopts($opt_str, \%opts);
 	if (defined $opts{"c"}) {
 		if ($opts{"c"} =~ m!^(\w+)$!) {
 			$bgcolor_option = "-c " . $opts{"c"};
 		}
+	} 
+	if (defined $opts{"i"}) {
+		$do_innercrop = 1;
 	}
 
 	my $url = $ARGV[0];
@@ -179,6 +183,17 @@ sub main
 			if ($CHILD_ERROR != 0) {
 				confess "Error: can't merge the image files, cmd='$cmd'\n";
 				return -1;
+			}
+
+			# crop mode (optional)
+			if ($do_innercrop == 1) {
+				$cmd = qq(innercrop -f 4 -m crop ${merged_img_file} ${merged_img_file}.temp && mv -f ${merged_img_file}.temp ${merged_img_file});
+				#print "$cmd\n";
+                $result = qx($cmd);
+                if ($CHILD_ERROR != 0) {
+					confess "can't crop the image file '$merged_img_file', cmd='$cmd'\n";
+					return -1;
+				}
 			}
 				
 			# remove the original image
