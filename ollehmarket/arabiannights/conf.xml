@@ -7,7 +7,7 @@
 		<list_url_list>
 			<list_url><![CDATA[http://webtoon.olleh.com/main/getAjaxTimesList.kt?startRowNo=1&webtoonseq=24]]></list_url>
 		</list_url_list>
-		<item_capture_script>../capture_item_ollehmarketwebtoon.pl</item_capture_script>
+		<item_capture_script>../capture_item_ollehmarketwebtoon.pl -n 30</item_capture_script>
 	</collection>
 	<extraction>
 		<element_list>
