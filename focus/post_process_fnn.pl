@@ -17,7 +17,7 @@ sub main
 		chomp $line;
 		if ($line =~ m!(http://image.fnn.co.kr/.*\.(gif|jpg|png))!g) {
 			my $img_url = $1;
-			my $img_str = "<img src='" . $img_url . "' width='100%'/><br/>\n";
+			my $img_str = "<img src='" . $img_url . "' width='100%'/>\n";
 			print $img_str;
 		}
 	}
