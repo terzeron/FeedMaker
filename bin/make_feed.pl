@@ -224,14 +224,15 @@ sub generate_rss_feed
 	my $is_different = 0;
 	if (not -e $rss_file_name) {
 		$is_different = 1;
-	}
-	my $cmd = qq(diff "$temp_rss_file_name" "$rss_file_name" | grep -v -Ee \"(^(<|>) <(pubDate|lastBuildDate))|(^---\$)|(^[0-9,]+[a-z][0-9,]+\$)\" | wc -c);
-	print "$cmd\n";
-	my $result = qx($cmd);
-	print $result;
-	chomp $result;
-	if ($result =~ /^\s*(\d+)\s*$/ and $1 ne "0") {
-		$is_different = 1;
+	} else {
+		my $cmd = qq(diff "$temp_rss_file_name" "$rss_file_name" | grep -v -Ee \"(^(<|>) <(pubDate|lastBuildDate))|(^---\$)|(^[0-9,]+[a-z][0-9,]+\$)\" | wc -c);
+		print "$cmd\n";
+		my $result = qx($cmd);
+		print $result;
+		chomp $result;
+		if ($result =~ /^\s*(\d+)\s*$/ and $1 ne "0") {
+			$is_different = 1;
+		}
 	}
 	
 	if ($is_different == 1) {
