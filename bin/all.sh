@@ -16,8 +16,9 @@ function send_error_msg
     #id="terzeron"
     #curl -Sso/dev/null "http://ssea.naver.com:20000/smsg?id=$id&method=email&subject=feedmaker&msg=$1"
 	#echo "curl -Sso/dev/null http://ssea.naver.com:20000/smsg?id=$id&method=email&subject=feedmaker&msg=$1"
-	echo "$1" | mail -s "feedmaker error" terzeron@gmail.com
-    echo "send error message '$1'"
+	#echo "$1" | mail -s "feedmaker error" terzeron@gmail.com
+    #echo "send error message '$1'"
+	echo "email function is not supported"
 }
 
 function execute_job
