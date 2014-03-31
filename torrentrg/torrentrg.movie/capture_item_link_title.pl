@@ -61,6 +61,9 @@ sub main
 			$link =~ s!&amp;!&!g;
 			$link =~ s!&page=\d+!!g;
 			$title =~ s!\s+! !g;
+			if ($title !~ m!201[234]!) {
+				next;
+			}
 
 			my $review_point;
 			if (exists $link_point_map{$link} and defined $link_point_map{$link} and $link_point_map{$link} ne "") {
