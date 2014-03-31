@@ -99,7 +99,14 @@ function extract_data($parent_name, $feed_name)
 {
 	global $home_dir, $work_dir, $www_dir, $dir, $message;
 
-	$cmd = "mkdir ${work_dir}/${parent_name}/${feed_name}; cd ${work_dir}/${parent_name}/${feed_name}; mv ${www_dir}/xmls/${feed_name}.xml conf.xml; . ${home_dir}/.bashrc; . ../..//bin/setup.sh; run.sh > run.log 2> error.log;";
+	mkdir("${work_dir}/${parent_name}/${feed_name}");
+	chdir("${work_dir}/${parent_name}/${feed_name}");
+	if (!rename("${www_dir}/fm/xmls/${feed_name}.xml", "${work_dir}/${parent_name}/${feed_name}/conf.xml")) {
+		$message = "can't rename the conf file";
+		return -1;
+	}
+
+	$cmd = ". ${home_dir}/.bashrc; export FEED_MAKER_HOME=${work_dir}; export BIN_DIR=\${FEED_MAKER_HOME}/bin; export PATH=~/bin:.:\${BIN_DIR}:/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin:\${PATH}; export PYTHONPATH=\${BIN_DIR}:/usr/local/lib/python2.7/site-packages:\${PYTHONPATH}; export PERLBREW_ROOT=/Users/terzeron/perl5/perlbrew; . \${PERLBREW_ROOT}/etc/bashrc; PERL_INSTALLED_VERSION=5.19.5; export PERL5LIB=\${PERLBREW_ROOT}/perls/perl-\${PERL_INSTALLED_VERSION}/lib/site_perl/\${PERL_INSTALLED_VERSION}:.:\${BIN_DIR}; . \"`brew --prefix grc`/etc/grc.bashrc\"; run.sh > run.log 2> error.log;";
 	$result = shell_exec($cmd);
 	if (preg_match("/Error:/", $result)) {
 		$message = "can't execute extract command '$cmd', $result";
