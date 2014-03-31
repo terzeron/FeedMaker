@@ -175,7 +175,7 @@ def get_url_domain(url):
 	return ""
 
 def concatenate_url(full_url, url2):
-	if url2[0] == '/':
+	if len(url2) > 0 and url2[0] == '/':
 		url1 = get_url_domain(full_url)
 	else:
 		url1 = get_url_prefix(full_url)
