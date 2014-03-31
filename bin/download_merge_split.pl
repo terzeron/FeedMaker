@@ -63,7 +63,7 @@ sub download_image
 	my $page_url = shift;
 
 	my $cache_file = get_cache_file_name($img_url, $img_ext);
-	my $cmd = qq([ -f "$cache_file" ] || wget.sh --download "$img_url" "$cache_file" "$page_url");
+	my $cmd = qq([ -f "$cache_file" -a -s "$cache_file" ] || wget.sh --download "$img_url" "$cache_file" "$page_url");
 	#print $cmd . "\n";
 	my $result = qx($cmd);
 	if ($CHILD_ERROR != 0) {
@@ -125,7 +125,7 @@ sub main
 			my $cache_file = get_cache_file_name($img_url, $img_ext);
 			push @img_file_arr, $cache_file;
 			push @img_url_arr, $img_url;
-			#print "$img_url --> $cache_file\n";
+			print "<!-- $img_url -> $cache_file -->\n";
 			$cmd = qq(../../../CartoonSplit/size.py ${cache_file});
 			#print "$cmd\n";
 			$result = qx($cmd);
@@ -137,7 +137,7 @@ sub main
 				my $width = $1;
 				my $height = $2;
 				push @img_size_arr, "$width\t$height";
-				#print "cache_file=$cache_file, img_url=$img_url, width=$width, height=$height\n";
+				#print "<!-- cache_file=$cache_file, img_url=$img_url, width=$width, height=$height -->\n";
 			}
 		}
 	}
@@ -149,24 +149,20 @@ sub main
 			my ($width, $height) = split /\t/, $dimension;
 			$total_height += $height;
 		}
-		#print "total_height=$total_height\n";
+		print "<!-- total_height=$total_height -->\n";
 		my @img_file_arr1 = ();
 		my @img_file_arr2 = ();
-		if ($total_height > 65500) {
-			# split array into two sub-array
-			my $half = int((scalar @img_file_arr) / 2); 
-			#print "length=" . (scalar @img_file_arr) . " half=$half\n";
-			@img_file_arr1 = splice @img_file_arr, 0, $half;
-			@img_file_arr2 = splice @img_file_arr, 0;
-		}  else {
-			@img_file_arr1 = @img_file_arr;
-			@img_file_arr2 = ();
-		}
-		#print scalar @img_file_arr1 . "\n";
-		#print scalar @img_file_arr2 . "\n";
+		my @img_file_arr3 = ();
+		# split array into 3 sub-array
+		my $part = int((scalar @img_file_arr + 2) / 3); 
+		print "<!-- length=" . (scalar @img_file_arr) . " part=$part -->\n";
+		@img_file_arr1 = splice @img_file_arr, 0, $part;
+		@img_file_arr2 = splice @img_file_arr, 0, $part;
+		@img_file_arr3 = splice @img_file_arr, 0, $part;
+		print "<!-- part1=" . (scalar @img_file_arr1) . ", part2=" . (scalar @img_file_arr2) . ", part3=" . (scalar @img_file_arr3) . " -->\n";
 
 		my $num = 1;
-		foreach my $img_file_arr_ref (\@img_file_arr1, \@img_file_arr2) {
+		foreach my $img_file_arr_ref (\@img_file_arr1, \@img_file_arr2, \@img_file_arr3) {
 			my @img_file_arr = @$img_file_arr_ref;
 			if (scalar @img_file_arr == 0) {
 				next;
