@@ -24,6 +24,6 @@ Usage
 
 1. cd feedmaker
 1. . bin/setup.sh
-1. cd <sitedir>/<feeddir>
+1. cd \<sitedir\>/\<feeddir\>
 1. run.sh 
 
