@@ -76,7 +76,7 @@ sub main
 	close(OUT1);
 
 	# hierarchical clustering
-	my $cluster_dir = $ENV{"FEED_MAKER_HOME"} . "/../hcluster";
+	my $cluster_dir = $ENV{"FEED_MAKER_HOME"} . "/../HierarchicalCluster";
 	my $cmd = qq($cluster_dir/hcluster -t "$threshold" -s stop_words.txt "$new_input_file" "$temp_output_file");
 	#print $cmd . "\n";
 	my $result = qx($cmd);
