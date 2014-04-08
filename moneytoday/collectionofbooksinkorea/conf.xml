@@ -1,22 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 	<collection>
-		<is_completed>true</is_completed>
+		<is_completed>false</is_completed>
 		<sort_field_pattern><![CDATA[cno=(\d+)]]></sort_field_pattern>
 		<unit_size_per_day>4</unit_size_per_day>
 		<list_url_list>
-			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=87&nPage=13]]></list_url>
-			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=87&nPage=12]]></list_url>
-			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=87&nPage=11]]></list_url>
-			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=87&nPage=10]]></list_url>
-			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=87&nPage=9]]></list_url>
-			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=87&nPage=8]]></list_url>
-			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=87&nPage=7]]></list_url>
-			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=87&nPage=6]]></list_url>
-			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=87&nPage=5]]></list_url>
-			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=87&nPage=4]]></list_url>
-			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=87&nPage=3]]></list_url>
-			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=87&nPage=2]]></list_url>
 			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=87&nPage=1]]></list_url>
 		</list_url_list>
 		<element_class>cartoonList</element_class>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+	<collection>
+		<is_completed>false</is_completed>
+		<sort_field_pattern><![CDATA[webtoonIdx=(\d+)]]></sort_field_pattern>
+		<unit_size_per_day>1</unit_size_per_day>
+		<list_url_list>
+			<list_url><![CDATA[http://www.wowtv.co.kr/funfun/fun/webtoon/view.asp?webtoonIdx=1804]]></list_url>
+		</list_url_list>
+		<item_capture_script>../capture_item_wowtv.pl</item_capture_script>
+		<element_class>toonSelect</element_class>
+		<encoding>cp949</encoding>
+	</collection>
+	<extraction>
+		<element_list>
+			<element_id>toonArea</element_id>
+			<element_class>where</element_class>
+		</element_list>
+		<post_process_script>../post_process_wowtv.pl</post_process_script>
+		<post_process2_script>download_merge_split.pl -i -c fuzzy</post_process2_script>
+		<encoding>cp949</encoding>
+	</extraction>
+	<rss>
+		<title><![CDATA[파라필리아::한국경제TV]]></title>
+		<description><![CDATA[파라필리아::한국경제TV - 모바일 버전 RSS Feed]]></description>
+		<feed_url><![CDATA[http://terzeron.net/paraphilia.xml]]></feed_url>
+		<link><![CDATA[http://terzeron.net/paraphilia.xml]]></link>
+		<generator><![CDATA[Terzeron's Feed Generator]]></generator>
+		<copyright><![CDATA[Copyright (c) 한국경제TV. All Rights Reserved]]></copyright>
+		<language>ko</language>
+	</rss>
+</configuration>
+

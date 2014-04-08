@@ -13,7 +13,7 @@
 		<element_list>
 			<element_class>mw_basic_view_content</element_class>
 		</element_list>
-		<review_point_threshold>80.0</review_point_threshold>
+		<review_point_threshold>90.0</review_point_threshold>
 	</extraction>
 	<rss>
 		<title><![CDATA[영화::토렌트알지]]></title>

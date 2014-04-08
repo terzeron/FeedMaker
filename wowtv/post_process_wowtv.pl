@@ -12,9 +12,11 @@ sub main
 {
 	my $max_num_pages = 0;
 	my $img_prefix = "";
+	my $img_postfix = "";
 	my $img_index = 0;
 	my $img_index_len = 0;
 	my $img_ext = "";
+	my $delimiter = "";
 	my $page_url = $ARGV[0];
 
 	while (my $line = <STDIN>) {
@@ -25,19 +27,46 @@ sub main
 			if (int($1) > $max_num_pages) {
 				$max_num_pages = int($1);
 			}
-		} elsif ($line =~ m!<img src='(http://[^\\]+)\\(\d+)\.(jpg|png|gif)'/>!) {
-			$img_prefix = $1;
-			$img_index = $2;
+		} elsif ($line =~ m!<img src='(?<url>(?<prefix>http://[^\\]+)\\(?<index>\d+)\.(?<ext>jpg|png|gif))'/>!) {
+			my $url = $+{"url"};
+			$img_prefix = $+{"prefix"};
+			$img_index = $+{"index"};
 			$img_index_len = length($img_index);
-			$img_ext = $3;
-			#print "$img_prefix $img_index $img_ext\n";
-			last;
+			$img_ext = $+{"ext"};
+			$delimiter = "\\";
+			print "<!-- $img_prefix $img_index $img_ext -->\n";
+			print "<img src='$url' width='100%'/>\n";
+		} elsif ($line =~ m!<img src='(?<url>(?<prefix>http://.+)_(?<postfix>\w+)(?<index>\d+)\(\d+\)\.(?<ext>jpg|png|gif))'/>!) {
+			my $url = $+{"url"};
+			$img_prefix = $+{"prefix"};
+			$img_postfix = $+{"postfix"};
+			$img_index = $+{"index"};
+			$img_index_len = length($img_index);
+			$img_ext = $+{"ext"};
+			$delimiter = "_";
+			print "<!-- $img_prefix $img_index $img_ext -->\n";
+			print "<img src='$url' width='100%'/>\n";
+		} elsif ($line =~ m!<img src='(?<url>(?<prefix>http://.+)_(?<postfix>\w+)(?<index>\d+)\.(?<ext>jpg|png|gif))'/>!) {
+			my $url = $+{"url"};
+			$img_prefix = $+{"prefix"};
+			$img_postfix = $+{"postfix"};
+			$img_index = $+{"index"};
+			$img_index_len = length($img_index);
+			$img_ext = $+{"ext"};
+			$delimiter = "_";
+			print "<!-- $img_prefix $img_index $img_ext -->\n";
+			print "<img src='$url' width='100%'/>\n";
 		}
 	}
 
-	for (my $i = 1; $i <= $max_num_pages * 2; $i++) {
-		my $img_url = sprintf("%s/%0" . $img_index_len . "d.%s", $img_prefix, $i, $img_ext);
-		printf("<img src='%s/%0" . $img_index_len . "d.%s' width='100%%'>\n", $img_prefix, $i, $img_ext);
+	if ($max_num_pages > 0 and $img_prefix ne "" and $delimiter ne "") {
+		for (my $i = $img_index + 1; $i <= $max_num_pages * 2; $i++) {
+			if ($delimiter eq "\\") {
+				printf("<img src='%s/%0" . $img_index_len . "d.%s' width='100%%'>\n", $img_prefix, $i, $img_ext);
+			} elsif ($delimiter eq "_") {
+				printf("<img src='%s_%s%0" . $img_index_len . "d.%s' width='100%%'>\n", $img_prefix, $img_postfix, $i, $img_ext);
+			}
+		}
 	}
 }       
 
