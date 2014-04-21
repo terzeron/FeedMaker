@@ -4,6 +4,7 @@ if [ "${FEED_MAKER_HOME}" == "" ]; then
 fi
 work_dir=${FEED_MAKER_HOME}
 public_html_dir=/Users/terzeron/public_html/xml
+codediff_dir=${FEED_MAKER_HOME}/../coderev
 
 cd ${work_dir}
 
@@ -47,9 +48,9 @@ for f in $(find . -name conf.xml -exec grep -l "<is_completed>true" "{}" \; | xa
 echo
 echo "===== check the garbage feeds ====="
 feedmaker_file="log/feedmaker.txt"
-find */ -maxdepth 2 -name "*.xml" \! -name conf.xml -exec basename "{}" \; | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $feedmaker_file
+find */ -maxdepth 2 -name "*.xml" \! \( -name conf.xml -o -name _conf.xml \) -exec basename "{}" \; | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $feedmaker_file
 period_file_list=""
-for i in {0..7}; do
+for i in {0..14}; do
 	period_file_list="${period_file_list} /Applications/MAMP/logs/apache_access.log.$(date -v-${i}d +'%Y%m%d')"
 done
 feed_access_file="log/feed_access.txt"
@@ -155,3 +156,7 @@ echo "<는 더 이상 추출되지 않는데 외부에 제공되었던 파일만
 echo ">는 더 이상 외부에 제공되지 않는데 추출 설정을 지우지 않은 feed"
 /usr/local/bin/colordiff $public_html_xml_file $feedmaker_file
 #rm -f $feedly_file $htaccess_xml_file $public_html_xml_file $feedmaker_file
+
+${codediff_dir}/codediff.py -c -y $feedly_file $htaccess2_xml_file -o ${public_html_dir}/phase.1.diff.html
+${codediff_dir}/codediff.py -c -y $htaccess2_xml_file $public_html_xml_file -o ${public_html_dir}/phase.2.diff.html
+${codediff_dir}/codediff.py -c -y $public_html_xml_file $feedmaker_file -o ${public_html_dir}/phase.3.diff.html
