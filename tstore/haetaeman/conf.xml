@@ -6,9 +6,6 @@
 		<unit_size_per_day>1</unit_size_per_day>
 		<list_url_list>
 			<list_url><![CDATA[http://m.tstore.co.kr/mobilepoc/webtoon/webtoonListMore.omp?prodId=H001283462&currentPage=1]]></list_url>
-			<list_url><![CDATA[http://m.tstore.co.kr/mobilepoc/webtoon/webtoonListMore.omp?prodId=H001283462&currentPage=2]]></list_url>
-			<list_url><![CDATA[http://m.tstore.co.kr/mobilepoc/webtoon/webtoonListMore.omp?prodId=H001283462&currentPage=3]]></list_url>
-			<list_url><![CDATA[http://m.tstore.co.kr/mobilepoc/webtoon/webtoonListMore.omp?prodId=H001283462&currentPage=4]]></list_url>
 		</list_url_list>
 		<item_capture_script>../capture_item_tstore.pl</item_capture_script>
 	</collection>

@@ -4,16 +4,8 @@
 		<is_completed>true</is_completed>
 		<title><![CDATA[포천::머니투데이]]></title>
 		<sort_field_pattern><![CDATA[cno=(\d+)]]></sort_field_pattern>
-		<unit_size_per_day>4</unit_size_per_day>
+		<unit_size_per_day>12</unit_size_per_day>
 		<list_url_list>
-			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=38&nPage=26]]></list_url>
-			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=38&nPage=25]]></list_url>
-			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=38&nPage=24]]></list_url>
-			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=38&nPage=23]]></list_url>
-			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=38&nPage=22]]></list_url>
-			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=38&nPage=21]]></list_url>
-			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=38&nPage=20]]></list_url>
-			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=38&nPage=19]]></list_url>
 			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=38&nPage=18]]></list_url>
 			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=38&nPage=17]]></list_url>
 			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=38&nPage=16]]></list_url>
