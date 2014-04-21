@@ -10,6 +10,7 @@ while getopts "hrc" arg; do
 			echo "  -h: print usage"
 			echo "  -r: remove html files"
 			echo "  -c: force collect"
+			exit 1
 			;;
 		r) 
 			REMOVE_HTMLS=1
