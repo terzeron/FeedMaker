@@ -59,14 +59,13 @@ for i in $(seq 0 5 $max_idx); do
 done
 echo 
 
-for f in */*; do 
-	if [ -d "$f" -a -f "$f/conf.xml" ]; then
-		if [ -s $f/$errorlog ]; then
+for d in $(find . -type d \! \( -name "_*" -o -name .git -o -name . -o -name newlist -o -name html \)); do 
+	if [ -d "$d" -a -f "$d/conf.xml" ]; then
+		if [ -s $d/$errorlog ]; then
 			echo "===================="
-			echo $f
+			echo $d
 			echo "===================="
-			cat $f/$errorlog
-			egrep -i -e "(error)" $f/$errorlog && list="$list,${f##*/}"
+			egrep -i -e "(error)" $d/$errorlog && list="$list,${d##*/}"
 		fi
 	fi
 done
