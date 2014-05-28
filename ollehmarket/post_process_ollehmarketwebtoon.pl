@@ -72,7 +72,7 @@ sub main
 		chomp $line;
 		if ($line =~ m!<(meta|style)!) {
 			print $line . "\n";
-		} elsif ($line =~ m!<img src='(http://webtoon\.olleh\.com/download/webtoon/[^']+)\.(jpg|gif|png)'!gi) {
+		} elsif ($line =~ m!<img src='(http://webtoon(?:img)?\.(?:kthcorp|olleh)\.com/download/webtoon/[^']+)\.(jpg|gif|png)'!gi) {
 			$img_prefix = $1;
 			$img_ext = $2;
 			$img_url = $img_prefix . "." . $img_ext;

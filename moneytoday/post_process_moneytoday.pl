@@ -17,7 +17,7 @@ sub main
 		if ($line =~ m!<img src='(http://comicmenu.mt.co.kr/[^']+.jpg)'(?: width='\d+%')?/>!i) {
 			my $img_url = $1;
 			# 광고 이미지 skip
-			if ($img_url =~ m!http://comicmenu.mt.co.kr/banner/comic_03_100811.jpg!i) {
+			if ($img_url =~ m!http://comicmenu\.mt\.co\.kr/list/\d+_list_original_page1_5_a7e77\.jpg!i) {
 				next;
 			}
 			print "<img src='" . $img_url . "' width='100%'/>\n";
