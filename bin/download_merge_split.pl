@@ -8,15 +8,17 @@ use Modern::Perl;
 use Digest::MD5;
 use FeedMaker qw(get_md5_name);
 use Getopt::Std;
+use File::Path;
+use Cwd;
 
 
 sub get_cache_url
 {
+	my $url_prefix = shift;
 	my $img_url = shift;
 	my $img_ext = shift;
 	my $postfix = shift;
 	my $index = shift;
-	my $url_prefix = "http://terzeron.net/xml/img";
 
 	my $postfix_str = "";
 	if (defined $postfix and $postfix ne "") {
@@ -35,11 +37,11 @@ sub get_cache_url
 
 sub get_cache_file_name
 {
+	my $path_prefix = shift;
 	my $img_url = shift;
 	my $img_ext = shift;
 	my $postfix = shift;
 	my $index = shift;
-	my $path_prefix = "/Users/terzeron/public_html/xml/img";
 
 	my $postfix_str = ""; 
     if (defined $postfix and $postfix ne "") {
@@ -58,14 +60,16 @@ sub get_cache_file_name
 
 sub download_image
 {
+	my $path_prefix = shift;
 	my $img_url = shift;
 	my $img_ext = shift;
 	my $page_url = shift;
 
-	my $cache_file = get_cache_file_name($img_url, $img_ext);
+	my $cache_file = get_cache_file_name($path_prefix, $img_url, $img_ext);
 	my $cmd = qq([ -f "$cache_file" -a -s "$cache_file" ] || wget.sh --download "$img_url" "$cache_file" "$page_url");
 	#print $cmd . "\n";
 	my $result = qx($cmd);
+	#print $result;
 	if ($CHILD_ERROR != 0) {
 		return -1;
 	}
@@ -73,18 +77,14 @@ sub download_image
 }
 
 
-sub print_local_path
-{
-	my $img_url = shift;
-	my $img_ext = shift;
-
-	my $cache_url = get_cache_url($img_url, $img_ext);
-	print "<img src='$cache_url' width='100%'/><br/>\n";
-}
-
-
 sub main
 {
+	my $cwd = getcwd;
+	my $feed_name = qx(basename $cwd);
+	chomp $feed_name;
+	my $img_url_prefix = "http://terzeron.net/xml/img/$feed_name";
+	my $path_prefix = "/Users/terzeron/public_html/xml/img/$feed_name";
+
 	my $img_prefix = "";
 	my $img_index = -1;
 	my $img_ext = "jpg";
@@ -112,17 +112,19 @@ sub main
 	my $cmd = "";
 	my $result = "";
 
+	mkpath($path_prefix);
+
 	while (my $line = <STDIN>) {
 		if ($line =~ m!<img src=(?:["'])([^"']+)(?:["']) width='\d+%'/?>!) {
 			my $img_url = $1;
 			#print $img_url . "\n";
 			# download
-			if (download_image($img_url, $img_ext, $url) < 0) {
+			if (download_image($path_prefix, $img_url, $img_ext, $url) < 0) {
 				#confess "Error: can't download the image from '$img_url', $ERRNO\n";
 				next;
 			}
 			
-			my $cache_file = get_cache_file_name($img_url, $img_ext);
+			my $cache_file = get_cache_file_name($path_prefix, $img_url, $img_ext);
 			push @img_file_arr, $cache_file;
 			push @img_url_arr, $img_url;
 			print "<!-- $img_url -> $cache_file -->\n";
@@ -168,7 +170,7 @@ sub main
 				next;
 			}
 			# merge mode
-			my $merged_img_file = get_cache_file_name($url, $img_ext, $num);
+			my $merged_img_file = get_cache_file_name($path_prefix, $url, $img_ext, $num);
 			$cmd  = qq(../../../CartoonSplit/merge.py ${merged_img_file} );
 			for my $cache_file (@img_file_arr) {
 				$cmd .= $cache_file . " ";
@@ -219,9 +221,9 @@ sub main
 				
 			# print the split images
 			for (my $i = 1; $i <= $num_units; $i++) {
-				my $split_img_file = get_cache_file_name($url, $img_ext, $num, $i);
+				my $split_img_file = get_cache_file_name($path_prefix, $url, $img_ext, $num, $i);
 				if (-e $split_img_file) {
-					my $split_img_url = get_cache_url($url, $img_ext, $num, $i);
+					my $split_img_url = get_cache_url($img_url_prefix, $url, $img_ext, $num, $i);
 					print "<img src='${split_img_url}' width='100%'/>\n";
 				} else {
 					last;
