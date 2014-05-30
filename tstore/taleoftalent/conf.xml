@@ -2,7 +2,7 @@
 <configuration>
 	<collection>
 		<list_url_list>
-			<list_url><![CDATA[http://m.tstore.co.kr/mobilepoc/webtoon/webtoonListMore.omp?prodId=H001730663&currentPage=1]]></list_url>
+			<list_url><![CDATA[http://m.tstore.co.kr/mobilepoc/webtoon/webtoonListMore.omp?prodId=H001730656&menuId=DP26003&currentPage=1]]></list_url>
 		</list_url_list>
 		<item_capture_script>../capture_item_tstore.pl</item_capture_script>
 	</collection>

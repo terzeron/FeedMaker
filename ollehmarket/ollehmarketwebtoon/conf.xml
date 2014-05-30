@@ -5,14 +5,14 @@
 		<sort_field_pattern>webtoonSeq=(\d+)</sort_field_pattern>
 		<unit_size_per_day>24</unit_size_per_day>
 		<list_url_list>
-			<list_url><![CDATA[http://webtoon.olleh.com/main/getAjaxWeekWebtoonList.kt?depth=week&startRowNo=1]]></list_url>
+			<list_url><![CDATA[http://webtoon.olleh.com/toon/weekList.kt]]></list_url>
 		</list_url_list>
-		<element_class></element_class>
-		<item_capture_script>../capture_item_ollehmarketwebtoon.pl</item_capture_script>
+		<element_class>dl_wrapper</element_class>
+		<item_capture_script>./capture_item_link_title.pl</item_capture_script>
 	</collection>
 	<extraction>
 		<element_list>
-			<element_class>summeryArea</element_class>
+			<element_class>thumbEtc</element_class>
 		</element_list>
 	</extraction>
 	<rss>

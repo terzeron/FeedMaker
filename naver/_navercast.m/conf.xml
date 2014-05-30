@@ -2,14 +2,13 @@
 <configuration>
 	<collection>
 		<list_url_list>
-			<list_url><![CDATA[http://m.navercast.naver.com/mobile_main.nhn?page=2]]></list_url>
-			<list_url><![CDATA[http://m.navercast.naver.com/mobile_main.nhn?page=]]></list_url>
+			<list_url><![CDATA[http://m.navercast.naver.com/]]></list_url>
 		</list_url_list>
 		<element_class>card_list</element_class>
 	</collection>
 	<extraction>
 		<element_list>
-			<element_id>ct</element_id>
+			<element_id>hview-container</element_id>
 		</element_list>
 	</extraction>
 	<rss>

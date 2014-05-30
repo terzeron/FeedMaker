@@ -5,13 +5,14 @@
 		<sort_field_pattern><![CDATA[timesseq=(\d+)]]></sort_field_pattern>
 		<unit_size_per_day>1</unit_size_per_day>
 		<list_url_list>
-			<list_url><![CDATA[http://webtoon.olleh.com/main/getAjaxTimesList.kt?startRowNo=1&webtoonseq=67]]></list_url>
+			<list_url><![CDATA[http://webtoon.olleh.com/toon/timesList.kt?webtoonseq=67]]></list_url>
 		</list_url_list>
+		<element_class>toon_work_list</element_class>
 		<item_capture_script>../capture_item_ollehmarketwebtoon.pl</item_capture_script>
 	</collection>
 	<extraction>
 		<element_list>
-			<element_class>viewArea</element_class>
+			<element_class>toon_view_content</element_class>
 		</element_list>
 		<post_process_script>../post_process_ollehmarketwebtoon.pl</post_process_script>
 		<post_process2_script>download_merge_split.pl -c fuzzy</post_process2_script>

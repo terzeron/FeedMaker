@@ -76,6 +76,7 @@ sub main
 			$img_prefix = $1;
 			$img_ext = $2;
 			$img_url = $img_prefix . "." . $img_ext;
+=pod
 			# 이미지 다운로드
 			if (download_image($img_url, $img_ext, $page_url) < 0) {
 				confess "Error: can't download the image from '$img_url', $ERRNO\n";
@@ -88,6 +89,8 @@ sub main
 				confess "Error: can't find the image '$cache_file', $ERRNO\n";
 				last;
 			}
+=cut
+			print "<img src='$img_url' width='100%'/>\n";
 		}
 	}
 }	
