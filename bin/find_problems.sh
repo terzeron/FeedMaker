@@ -140,11 +140,11 @@ public_html_xml_file="log/public_html_xml.txt"
 htaccess1_xml_file="log/htaccess1_xml.txt"
 htaccess2_xml_file="log/htaccess2_xml.txt"
 find ${public_html_dir} -name "*.xml" -exec basename "{}" \; | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $public_html_xml_file
-perl -ne 'if (m!RewriteRule\s+\^(\S*)\\\.xml\$?\s+xml/(\S+)\\\.xml!) { print $1 . "\n"; }' ~/public_html/.htaccess | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $htaccess1_xml_file
-perl -ne 'if (m!RewriteRule\s+\^(\S*)\\\.xml\$?\s+xml/(\S+)\\\.xml!) { print $2 . "\n"; }' ~/public_html/.htaccess | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $htaccess2_xml_file
+perl -ne 'if (m!^RewriteRule\s+\^(\S*)\\\.xml\$?\s+xml/(\S+)\\\.xml!) { print $1 . "\n"; }' ~/public_html/.htaccess | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $htaccess1_xml_file
+perl -ne 'if (m!^RewriteRule\s+\^(\S*)\\\.xml\$?\s+xml/(\S+)\\\.xml!) { print $2 . "\n"; }' ~/public_html/.htaccess | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $htaccess2_xml_file
 perl -ne 'my ($date, $feed, $status) = split /\t/, $_; print $feed . "\n";' $feed_access_file | sort -u > $feedly_file
 echo "--- feedly(http request) vs. .htaccess ---"
-echo "<는 Feedly에 등록되었으나 htaccess에서 허가하지 않은 feed"
+echo "<는 최근 14일간 Feedly에서 조회되었으나 htaccess에서 허가하지 않은 feed"
 echo ">는 더 이상 구독되지 않는데 htaccess에 찌꺼기가 남은 feed"
 /usr/local/bin/colordiff $feedly_file $htaccess2_xml_file
 echo "--- .htaccess vs. ${public_html_dir} ---"

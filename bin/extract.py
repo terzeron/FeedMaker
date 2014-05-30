@@ -162,7 +162,7 @@ def traverse_element(element, url, encoding):
 					# 외부에서 접근 불가능한 이미지 제거
 					return ret
 				else:
-					# data-lazy-src 또는 lazysrc가 속성으로 존재하면 src 대신 사용
+					# data-lazy-src 또는 lazysrc, data-src가 속성으로 존재하면 src 대신 사용
 					if element.has_attr("data-lazy-src"):
 						data_lazy_src = element["data-lazy-src"]
 						if data_lazy_src[:7] != "http://":
@@ -173,6 +173,11 @@ def traverse_element(element, url, encoding):
 						if lazy_src[:7] != "http://":
 							lazy_src = concatenate_url(url, lazy_src)
 						src = lazy_src
+					if element.has_attr("data-src"):
+						data_src = element["data-src"]
+						if data_src[:7] != "http://":
+							data_src = concatenate_url(url, data_src)
+						src = data_src
 					sys.stdout.write("<img src='%s'" % src)
 					if element.has_attr("width"):
 						sys.stdout.write(" width='%s'" % element["width"])

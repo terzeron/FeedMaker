@@ -127,7 +127,7 @@ sub main
 			my $cache_file = get_cache_file_name($path_prefix, $img_url, $img_ext);
 			push @img_file_arr, $cache_file;
 			push @img_url_arr, $img_url;
-			print "<!-- $img_url -> $cache_file -->\n";
+			#print "<!-- $img_url -> $cache_file -->\n";
 			$cmd = qq(../../../CartoonSplit/size.py ${cache_file});
 			#print "$cmd\n";
 			$result = qx($cmd);
@@ -200,7 +200,7 @@ sub main
 				$cmd .= $cache_file . " ";
 			}
 			#print "$cmd\n";
-			#$result = qx($cmd);
+			$result = qx($cmd);
 			#print $result;
 				
 			# split
@@ -216,7 +216,7 @@ sub main
 			# remove the merged image
 			$cmd = qq(rm -f $merged_img_file);
 			#print "$cmd\n";
-			#$result = qx($cmd);
+			$result = qx($cmd);
 			#print $result;
 				
 			# print the split images

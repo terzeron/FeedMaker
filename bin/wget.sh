@@ -1,5 +1,5 @@
 if [ $# -lt 2 ]; then
-	echo "Usage: $0 [ --try ] [ --download ] [ --render_js ] <url> [ <encoding> ]"
+	echo "Usage: $0 [ --try ] [ --download ] [ --render_js ] <url> [ <encoding> [ <referer> ] ]"
 	exit 0
 fi
 
