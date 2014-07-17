@@ -16,8 +16,8 @@ sub main
 
 	while (my $line = <STDIN>) {
 		if ($state == 0) {
-			if ($line =~ m!<a href="(/toon/timesDetail\.kt\?[^"]+)"[^>]*>!) {
-				$link = "http://webtoon.olleh.com" . $1;
+			if ($line =~ m!<a href="#" onclick="javascript:fncChkAdult\((\d+),\s?(\d+)\)!) {
+				$link = "http://webtoon.olleh.com/toon/timesDetail.kt?webtoonseq=$1&timesseq=$2";
 				$link =~ s!&amp;!&!g;
 				$state = 1;
 			}

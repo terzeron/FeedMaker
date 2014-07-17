@@ -5,11 +5,13 @@
 			<list_url><![CDATA[http://comic.mt.co.kr/]]></list_url>
 		</list_url_list>
 		<element_id>comicBox</element_id>
+		<encoding>cp949</encoding>
 	</collection>
 	<extraction>
 		<element_list>
 			<element_class>comicDetailBox</element_class>
 		</element_list>
+		<encoding>cp949</encoding>
 	</extraction>
 	<rss>
 		<title><![CDATA[머니투데이웹툰목록]]></title>
