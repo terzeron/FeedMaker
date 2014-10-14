@@ -212,6 +212,60 @@ function remove($parent_name, $sample_feed)
 }
 
 
+function disable($parent_name, $sample_feed)
+{
+	global $work_dir, $www_dir, $dir, $message;
+
+	// 
+	// ACL 설정 제거
+	//
+
+	$timestamp = strftime("%y%m%d%H%M%S");
+	$cmd = "cp ${www_dir}/.htaccess ${www_dir}/.htaccess.$timestamp";
+	$ret = shell_exec($cmd);
+	$infile = "${www_dir}/.htaccess";
+	$outfile = $infile.".temp.".$timestamp;
+
+	$infp = fopen($infile,"r");
+	if (!$infp) {
+		$message = "can't open file '$infile' for reading, $ret";
+		return -1;
+	}
+	$outfp = fopen($outfile, "w");
+	if (!$outfp) {
+		$message = "can't open file '$infile' for writing, $ret";
+		return -1;
+	}
+	while (!feof($infp)) {
+		$content = fgets($infp);
+		if (preg_match("/${sample_feed}\\\.xml/", $content)) {
+			continue;
+		}
+		fputs($outfp, $content);
+	}
+	fputs($outfp, "RewriteRule\t^(xml/)?${sample_feed}\\.xml\$\t- [G]\n");
+	fclose($outfp);
+	fclose($infp);
+
+	if (!rename($outfile, $infile)) {
+		$message = "can't rename file '$infile' to '$outfile'";
+		return -1;
+	}
+	
+	//
+	// 피드 디렉토리 정리
+	//
+	$cmd = "rm -f ${www_dir}/xml/${sample_feed}.xml; cd ${work_dir}/${parent_name}; mv ${sample_feed}  _${sample_feed}";
+	$result = system($cmd);
+	if ($result != "") { 
+		$message = "can't clean the feed directory, $result";
+		return -1;
+	}
+	
+	return 0;
+}
+
+
 function exec_command()
 {
 	global $message, $dir;
@@ -250,6 +304,8 @@ function exec_command()
 		return setacl($parent_name, $feed_name, $sample_feed);
 	} else if ($command == "remove"){
 		return remove($parent_name, $sample_feed);
+	} else if ($command == "disable"){
+		return disable($parent_name, $sample_feed);
 	} else {
 		$message = "can'tidentifythecommand";
 		return -1;

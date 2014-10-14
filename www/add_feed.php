@@ -19,31 +19,35 @@ if (is_dir($work_dir)) {
 <h4>Feed 추가</h4>
 
 <div class="block">
-<div>
-	카테고리: <select id="dir_list" name="category_dir">
-	<?foreach ($category_list as $k) {?>
-		<option name="<?=$k?>" value="<?=$k?>"><?=$k?></option>
-	<?}?>
-	</select>
-	&nbsp;
-	샘플 피드: <select id="feed_list" name="feed_dir">
-	</select>
-</div>
+	<div>
+		카테고리: <select id="dir_list" name="category_dir">
+		<?foreach ($category_list as $k) {?>
+			<option name="<?=$k?>" value="<?=$k?>"><?=$k?></option>
+		<?}?>
+		</select>
+		&nbsp;
+		샘플 피드: <select id="feed_list" name="feed_dir">
+		</select>
+	</div>
 
-<div id="xml">
-</div>
+	<div id="xml">
+	</div>
 
-<div>
-	<div>새로운 Feed 이름: <input type='text' id='feed_name' name='feed_name'/>.xml에 <input type='button' id='save' value='저장'/></div>
-	<span>
-		<input type='button' id='lint' value='XML lint 실행'/>
-		<input type='button' id='extract' value='추출 실행'/>
-		<input type='button' id='setacl' value='ACL 설정'/>
-		<input type='button' id='remove' value='삭제'/>
-		<input type='button' id='reset' value='초기화'/>
-	</span>
-	<div id='status'></div>
-</div>
+	<div>
+		<div>새로운 Feed 이름: <input type='text' id='feed_name' name='feed_name'/>.xml에 <input type='button' id='save' value='저장'/></div>
+		<span>
+			<input type='button' id='lint' value='XML lint 실행'/>
+			<input type='button' id='extract' value='추출 실행'/>
+			<input type='button' id='setacl' value='ACL 설정'/>
+			<input type='button' id='disable' value='비활성화'/>
+			<input type='button' id='remove' value='삭제'/>
+			<input type='button' id='reset' value='초기화'/>
+		</span>
+		<div id='status'></div>
+	</div>
+    <div>
+		<a id='feedly_link' href='#' target='_blank' style='display: none;'>Feedly에 등록</a>
+    </div>
 </div>
 
 <script type="text/javascript">
@@ -86,6 +90,7 @@ if (is_dir($work_dir)) {
 			 }
 		 );
 	 });
+	 resetHandler();
  });
 
  $("#feed_list").change(function() {
@@ -111,149 +116,172 @@ if (is_dir($work_dir)) {
 			 }
 		 );
 	 });
+	 resetHandler();
  });
  
  // save button event handler
- $(function() {
-	 $("#save").button().click(function () {
-		 $("#save").val("저장 중");
-		 var feed_name = $("#feed_name").val();
-		 var parent_name = $("#dir_list").val();
-		 var sample_feed = $("#feed_list option:selected").val();
-		 if (check_feed_name(feed_name) < 0) {
-			 return -1;
-		 }
-		 var cdata_arr = read_form_cdata();
-		 var xml_text = replace_form_with_cdata(cdata_arr);
-		 $.post(
-			 ajax_url,
-			 { "command": "save", "feed_name": feed_name, "parent_name": parent_name, "sample_feed": sample_feed, "xml_text": xml_text },
-			 function(data, textStatus, jqXHR) {
-				 res = jQuery.parseJSON(data);
-				 if (res["result"] != "0") {
-					 $("#status").html(get_error_message(res["message"]));
-				 } else {
-					 $("#status").html(get_success_message(feed_name + ".xml 파일이 저장되었습니다."));
-					 $("#save").val("저장 완료");
-					 $("#save").button({disabled: true});
-				 }
+ var saveHandler = function() {
+	 $("#save").val("저장 중");
+	 var feed_name = $("#feed_name").val();
+	 var parent_name = $("#dir_list").val();
+	 var sample_feed = $("#feed_list option:selected").val();
+	 if (check_feed_name(feed_name) < 0) {
+		 return -1;
+	 }
+	 var cdata_arr = read_form_cdata();
+	 var xml_text = replace_form_with_cdata(cdata_arr);
+	 $.post(
+		 ajax_url,
+		 { "command": "save", "feed_name": feed_name, "parent_name": parent_name, "sample_feed": sample_feed, "xml_text": xml_text },
+		 function(data, textStatus, jqXHR) {
+			 res = jQuery.parseJSON(data);
+			 if (res["result"] != "0") {
+				 $("#status").html(get_error_message(res["message"]));
+			 } else {
+				 $("#status").html(get_success_message(feed_name + ".xml 파일이 저장되었습니다."));
+				 $("#save").val("저장 완료");
+				 $("#save").button({disabled: true});
 			 }
-		 );
-	 });
- });
+		 }
+	 );
+ };
  
  // lint button event handler
- $(function() {
-	 $("#lint").button().click(function () {
-		 $("#lint").val("XML lint 실행 중");
-		 var feed_name = $("#feed_name").val();
-		 var parent_name = $("#dir_list").val();
-		 var sample_feed = $("#feed_list option:selected").val();
-		 $.post(
-			 ajax_url,
-			 { "command": "lint", "feed_name": feed_name, "parent_name": parent_name, "sample_feed": sample_feed },
-			 function(data, textStatus, jqXHR) {
-				 res = jQuery.parseJSON(data);
-				 if (res["result"] != "0") {
-					 $("#status").html(get_error_message(res["message"]));
-				 } else {
-					 $("#status").html(get_success_message("XML 검사 완료"));
-					 $("#lint").val("XML lint 실행 완료");
-					 $("#lint").button({disabled: true});
-				 }
+ var lintHandler = function() {
+	 $("#lint").val("XML lint 실행 중");
+	 var feed_name = $("#feed_name").val();
+	 var parent_name = $("#dir_list").val();
+	 var sample_feed = $("#feed_list option:selected").val();
+	 $.post(
+		 ajax_url,
+		 { "command": "lint", "feed_name": feed_name, "parent_name": parent_name, "sample_feed": sample_feed },
+		 function(data, textStatus, jqXHR) {
+			 res = jQuery.parseJSON(data);
+			 if (res["result"] != "0") {
+				 $("#status").html(get_error_message(res["message"]));
+			 } else {
+				 $("#status").html(get_success_message("XML 검사 완료"));
+				 $("#lint").val("XML lint 실행 완료");
+				 $("#lint").button({disabled: true});
 			 }
-		 );
-	 });
- });
- 
+		 }
+	 );
+ };	 
+
  // extract button event handler
- $(function() {
-	 $("#extract").button().click(function () {
-		 $("#extract").val("추출 실행 중");
-		 var feed_name = $("#feed_name").val();
-		 var parent_name = $("#dir_list").val();
-		 var sample_feed = $("#feed_list option:selected").val();
-		 $.post(
-			 ajax_url,
-			 { "command": "extract", "feed_name": feed_name, "parent_name": parent_name, "sample_feed": sample_feed },
-			 function(data, textStatus, jqXHR) {
-				 res = jQuery.parseJSON(data);
-				 if (res["result"] != "0") {
-					 $("#status").html(get_error_message(res["message"]));
-					 $("#extract").val("재추출 시도");
-				 } else {
-					 $("#status").html(get_success_message("피드 추출 성공"));
-					 $("#extract").val("추출 실행 완료");
-					 $("#extract").button({disabled: true});
-				 }
+ var extractHandler = function() {
+	 $("#extract").val("추출 실행 중");
+	 var feed_name = $("#feed_name").val();
+	 var parent_name = $("#dir_list").val();
+	 var sample_feed = $("#feed_list option:selected").val();
+	 $.post(
+		 ajax_url,
+		 { "command": "extract", "feed_name": feed_name, "parent_name": parent_name, "sample_feed": sample_feed },
+		 function(data, textStatus, jqXHR) {
+			 res = jQuery.parseJSON(data);
+			 if (res["result"] != "0") {
+				 $("#status").html(get_error_message(res["message"]));
+				 $("#extract").val("재추출 시도");
+			 } else {
+				 $("#status").html(get_success_message("피드 추출 성공"));
+				 $("#extract").val("추출 실행 완료");
+				 $("#extract").button({disabled: true});
 			 }
-		 );
-	 });
- });
- 
+		 }
+	 );
+ };
+
  // setacl button event handler
- $(function() {
-	 $("#setacl").button().click(function () {
-		 $("setacl").val("ACL 설정 중");
-		 var feed_name = $("#feed_name").val();
-		 var parent_name = $("#dir_list").val();
-		 var sample_feed = $("#feed_list option:selected").val();
-		 $.post(
-			 ajax_url,
-			 { "command": "setacl", "feed_name": feed_name, "parent_name": parent_name, "sample_feed": sample_feed },
-			 function(data, textStatus, jqXHR) {
-				 res = jQuery.parseJSON(data);
-				 if (res["result"] != "0") {
-					 $("#status").html(get_error_message(res["message"]));
-				 } else {
-					 $("#status").html(get_success_message("ACL 설정 성공"));
-					 $("#setacl").val("ACL 설정 완료");
-					 $("#setacl").button({disabled: true});
-				 }
+ var setAclHandler = function() {
+	 $("setacl").val("ACL 설정 중");
+	 var feed_name = $("#feed_name").val();
+	 var parent_name = $("#dir_list").val();
+	 var sample_feed = $("#feed_list option:selected").val();
+	 $.post(
+		 ajax_url,
+		 { "command": "setacl", "feed_name": feed_name, "parent_name": parent_name, "sample_feed": sample_feed },
+		 function(data, textStatus, jqXHR) {
+			 res = jQuery.parseJSON(data);
+			 if (res["result"] != "0") {
+				 $("#status").html(get_error_message(res["message"]));
+			 } else {
+				 $("#status").html(get_success_message("ACL 설정 성공"));
+				 $("#setacl").val("ACL 설정 완료");
+				 $("#setacl").button({disabled: true});
+				 $("#feedly_link").attr('href, 'http://feedly.com/#subscription%2Ffeed%2Fhttp%3A%2F%2Fterzeron.net%2F' + feed_name + '.xml');
+				 $("#feedly_link").css('display', 'block');
 			 }
-		 );
-	 });
- });
+		 }
+	 );
+ };
 
  // reset button event handler
- $(function() {
-     $("#reset").button().click(function () {
- 		 $("#save").val("저장");
-		 $("#save").button({disabled: false})
- 		 $("#lint").val("XML lint 실행");
-		 $("#lint").button({disabled: false})
- 		 $("#extract").val("추출 실행");
-		 $("#extract").button({disabled: false})
- 		 $("#setacl").val("ACL 설정");
-		 $("#setacl").button({disabled: false})
- 		 $("#remove").val("삭제");
-		 $("#remove").button({disabled: false})
-	 });
- });
+ var resetHandler = function() {
+ 	 $("#save").val("저장");
+	 $("#save").button({disabled: false})
+ 	 $("#lint").val("XML lint 실행");
+	 $("#lint").button({disabled: false})
+ 	 $("#extract").val("추출 실행");
+	 $("#extract").button({disabled: false})
+ 	 $("#setacl").val("ACL 설정");
+	 $("#setacl").button({disabled: false})
+ 	 $("#disable").val("비활성화");
+	 $("#disable").button({disabled: false})
+ 	 $("#remove").val("삭제");
+	 $("#remove").button({disabled: false})
+ };
+ 
+ // remove button event handler
+ var removeHandler = function() {
+	 $("remove").val("삭제 중");
+	 //var feed_name = $("#feed_name").val();
+	 var parent_name = $("#dir_list").val();
+	 var sample_feed = $("#feed_list option:selected").val();
+	 $.post(
+		 ajax_url,
+		 { "command": "remove", "parent_name": parent_name, "sample_feed": sample_feed },
+		 function(data, textStatus, jqXHR) {
+			 res = jQuery.parseJSON(data);
+			 if (res["result"] != "0") {
+				 $("#status").html(get_error_message(res["message"]));
+			 } else {
+				 $("#status").html(get_success_message("삭제 성공"));
+				 $("#remove").val("삭제 완료");
+				 $("#remove").button({disabled: true});
+			 }
+		 }
+	 );
+ };
 
  // remove button event handler
- $(function() {
-     $("#remove").button().click(function () {
-		 $("remove").val("삭제 중");
-		 //var feed_name = $("#feed_name").val();
-		 var parent_name = $("#dir_list").val();
-		 var sample_feed = $("#feed_list option:selected").val();
-		 $.post(
-             ajax_url,
-             { "command": "remove", "parent_name": parent_name, "sample_feed": sample_feed },
-             function(data, textStatus, jqXHR) {
-                 res = jQuery.parseJSON(data);
-                 if (res["result"] != "0") {
-                     $("#status").html(get_error_message(res["message"]));
-                 } else {
-                     $("#status").html(get_success_message("삭제 성공"));
-                     $("#remove").val("삭제 완료");
-                     $("#remove").button({disabled: true});
-                 }
-             }
-         );
-	 });
- });
+ var disableHandler = function() {
+	 $("disable").val("비활성화 중");
+	 //var feed_name = $("#feed_name").val();
+	 var parent_name = $("#dir_list").val();
+	 var sample_feed = $("#feed_list option:selected").val();
+	 $.post(
+		 ajax_url,
+		 { "command": "disable", "parent_name": parent_name, "sample_feed": sample_feed },
+		 function(data, textStatus, jqXHR) {
+			 res = jQuery.parseJSON(data);
+			 if (res["result"] != "0") {
+				 $("#status").html(get_error_message(res["message"]));
+			 } else {
+				 $("#status").html(get_success_message("비활성화 성공"));
+				 $("#disable").val("비활성화 완료");
+				 $("#disable").button({disabled: true});
+			 }
+		 }
+	 );
+ };
+
+ $("#save").button().click(saveHandler);
+ $("#lint").button().click(lintHandler);
+ $("#extract").button().click(extractHandler);
+ $("#setacl").button().click(setAclHandler);
+ $("#reset").button().click(resetHandler);
+ $("#remove").button().click(removeHandler);
+ $("#disable").button().click(disableHandler);
 
  function read_form_cdata() {
 	 var cdata_arr = new Array();

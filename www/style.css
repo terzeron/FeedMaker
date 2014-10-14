@@ -58,6 +58,7 @@ h3 { font-size: 13pt; font-weight: bold; color: darkgreen; margin-top: 15px; mar
 h4 { font-size: 12pt; font-weight: bold; color: darkblue; margin-top: 10px; margin-left: 15px; }
 h5 { font-size: 11pt; font-weight: normal; color: green; margin-top: 10px; margin-left: 20px; }
 .block { margin-top: 5px; margin-left: 25px; margin-bottom: 5px; border: 1px dashed #ddd; padding: 2px; }
+.block div { margin-bottom: 5px; }
 .c31 { color: red; }
 .c32 { color: green; }
 .c34 { color: blue; }
