@@ -3,7 +3,7 @@
 	<collection>
 		<is_completed>true</is_completed>
 		<sort_field_pattern><![CDATA[\t(\d+) ]]></sort_field_pattern>
-		<unit_size_per_day>6</unit_size_per_day>
+		<unit_size_per_day>4</unit_size_per_day>
 		<list_url_list>
 			<list_url><![CDATA[http://mobile3.co.kr/theme-story/three-nations/%EC%82%BC%EA%B5%AD%EC%A7%80-%EC%84%9C%E5%BA%8F]]></list_url>
 		</list_url_list>

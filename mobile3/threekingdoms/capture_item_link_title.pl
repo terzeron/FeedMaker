@@ -15,7 +15,7 @@ sub main
   
 	while (my $line = <STDIN>) {
 		while ($line =~ m! href="(?<link>[^"]+)-1/?" title="(?<title>[^"]+)"!g) {
-			$link = $+{"link"} . "-1";
+			$link = $+{"link"} . "-1&dummy=1";
 			$title = $num . " " . $+{"title"} . "-1";
 			$link =~ s!&amp;!&!g;
 			print "$link\t$title\n";
@@ -30,6 +30,7 @@ sub main
 				}
 				$title = $num . " " . $+{"title"} . "-" . $i;
 				$link =~ s!&amp;!&!g;
+				$link .= "&dummy=1";
 				print "$link\t$title\n";
 				$num++;
 			}
