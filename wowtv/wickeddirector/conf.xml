@@ -17,7 +17,6 @@
 			<element_class>where</element_class>
 		</element_list>
 		<post_process_script>../post_process_wowtv.pl</post_process_script>
-		<post_process2_script>download_merge_split.pl -i -c fuzzy</post_process2_script>
 		<encoding>cp949</encoding>
 	</extraction>
 	<rss>

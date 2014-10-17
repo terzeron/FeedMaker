@@ -12,6 +12,7 @@
 			<element_class>wt_viewer</element_class>
 		</element_list>
 		<post_process_script>../post_process_naverwebtoon_mobile.pl</post_process_script>
+		<post_process2_script>download_merge_split.pl -c fuzzy</post_process2_script>
 	</extraction>
 	<rss>
 		<title><![CDATA[둥굴레차::네이버]]></title>
