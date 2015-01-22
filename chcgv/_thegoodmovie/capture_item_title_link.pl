@@ -12,14 +12,16 @@ sub main
 	my $link = "";
 	my $title = "";
 
-	# idempotent 
 	while (my $line = <STDIN>) {
-		while ($line =~ m!(?<link>\S+)\t(?<title>.+)!g) {
-			$link = $+{"link"};
-			$title = $+{"title"};
+		if ($line =~ m!<a href="([^"]+)"[^>]*>([^<]*) 이동진의.*</a>!) {
+			$link = $1;
+			$title = $2;
+			$link =~ s!&amp;!&!g;
+			$link = "http://program.interest.me" . $link;
 			print "$link\t$title\n";
 		}
 	}
 }
+
 
 main();

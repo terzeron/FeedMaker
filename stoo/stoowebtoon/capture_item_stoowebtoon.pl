@@ -13,11 +13,12 @@ sub main
 	my $title = "";
 
 	while (my $line = <STDIN>) {
-		if ($line =~ m!<dt class="desc"><a href="/(cartoon/ctlist.htm\?sc1=cartoon&amp;sc2=ing&amp;sc3=\d+)"[^>]*><em>([^<]+)(?:<img.*>)?</em></a>!) {
+		if ($line =~ m!<a href="/(cartoon/list.htm\?sec=\d+)"!) {
 			$link = $1;
-			$title = $2;
 			$link =~ s!&amp;!&!g;
 			$link = "http://stoo.asiae.co.kr/" . $link;
+		} elsif ($line =~ m!<dt class="desc">([^<]+)</dt>!) {
+			$title = $1;
 			print "$link\t$title\n";
 		}
 	}

@@ -7,7 +7,7 @@
 		<list_url_list>
 			<list_url><![CDATA[http://www.wowtv.co.kr/funfun/fun/webtoon/view.asp?webtoonIdx=1805]]></list_url>
 		</list_url_list>
-		<item_capture_script>../capture_item_wowtv.pl</item_capture_script>
+		<item_capture_script>../capture_item_wowtv.pl -n 5</item_capture_script>
 		<element_class>toonSelect</element_class>
 		<encoding>cp949</encoding>
 	</collection>
@@ -17,6 +17,7 @@
 			<element_class>where</element_class>
 		</element_list>
 		<post_process_script>../post_process_wowtv.pl</post_process_script>
+		<post_process2_script>download_merge_split.pl -c fuzzy</post_process2_script>
 		<encoding>cp949</encoding>
 	</extraction>
 	<rss>
