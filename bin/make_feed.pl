@@ -124,6 +124,7 @@ sub read_old_list_from_file
 	} else {
 		# 이미 완료된 피드에 대해서는 기존 리스트를 모두 취합함
 		
+		my %existence_check_map = ();
 		opendir(my $dh, $list_dir);
 		while (my $file_name = readdir($dh)) {
 			if ($file_name eq "." or $file_name eq "..") {
@@ -135,7 +136,11 @@ sub read_old_list_from_file
 			}
 			while (my $line = <IN>) {
 				chomp $line;
-				push(@list, $line);
+				my ($url, $title) = split /\t/, $line;
+				if (not exists $existence_check_map{$url}) {
+					$existence_check_map{$url} = 1;
+					push(@list, $line);
+				}
 			}
 			close(IN);
 		}
