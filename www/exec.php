@@ -275,17 +275,17 @@ function exec_command()
 		return -1;
 	}
 	$feed_name = $_POST["feed_name"];
-	if (!preg_match("/^\w*$/", $feed_name)){
+	if (!preg_match("/^[\w_\-]*$/", $feed_name)){
 		$message = "The feed name must be only alphanumeric word.";
 		return -1;
 	}
 	$parent_name = $_POST["parent_name"];
-	if (!preg_match("/^\w*$/", $parent_name)){
+	if (!preg_match("/^[\w_\-]*$/", $parent_name)){
 		$message = "The parent name must be only alphanumeric word.";
 		return -1;
 	}
 	$sample_feed = $_POST["sample_feed"];
-	if (!preg_match("/^\w*$/", $sample_feed)){
+	if (!preg_match("/^[\w_\-]*$/", $sample_feed)){
 		$message = "The sample feed name must be only alphanumeric word.";
 		return -1;
 	}
