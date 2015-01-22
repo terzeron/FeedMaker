@@ -208,7 +208,7 @@ if (is_dir($work_dir)) {
 				 $("#status").html(get_success_message("ACL 설정 성공"));
 				 $("#setacl").val("ACL 설정 완료");
 				 $("#setacl").button({disabled: true});
-				 $("#feedly_link").attr('href, 'http://feedly.com/#subscription%2Ffeed%2Fhttp%3A%2F%2Fterzeron.net%2F' + feed_name + '.xml');
+				 $("#feedly_link").attr('href', 'http://feedly.com/#subscription%2Ffeed%2Fhttp%3A%2F%2Fterzeron.net%2F' + feed_name + '.xml');
 				 $("#feedly_link").css('display', 'block');
 			 }
 		 }
