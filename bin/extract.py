@@ -216,6 +216,13 @@ def traverse_element(element, url, encoding):
 				else:
 					sys.stdout.write("%s\n" % str(element))
 				ret = 1
+		elif element.name in ("param", "object"):
+			if element.has_attr("name") and element["name"] == "Src" and element.has_attr("value") and ".swf" in element["value"]:
+				src = element["value"]
+				print "[Flash Player]<br/>"
+				print "<video src='%s'></video><br/>" % (src)
+				print "<a href='%s'>%s</a><br/>" % (src, src)
+			ret = 1
 		elif element.name == "map":
 			# image map
 			# extract only link information from area element
