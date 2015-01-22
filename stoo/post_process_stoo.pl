@@ -16,6 +16,8 @@ sub main
 		chomp $line;
 		if ($line =~ m!<a href='(http://[^']+)'[^>]*><img src='http://cwstatic\.asiae\.co\.kr/images/cartoon/btn_s\.gif'/>!) {
 			$second_page_url = $1;
+		} elsif ($line =~ m!<a href='(http://stoo.asiae.co.kr/cartoon/view.htm[^"]*)'>2페이지</a>!) {
+			$second_page_url = $1;
 		} elsif ($line =~ m!<img src='(http://cwcontent[^']+)'.*/>!) {
 			print "<img src='" . $1 . "' width='100%'/>\n";
 		}
