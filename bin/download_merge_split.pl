@@ -115,7 +115,7 @@ sub main
 	mkpath($path_prefix);
 
 	while (my $line = <STDIN>) {
-		if ($line =~ m!<img src=(?:["'])([^"']+)(?:["']) width='\d+%'/?>!) {
+		if ($line =~ m!<img src=(?:["'])([^"']+)(?:["']) width='\d+%?'/?>!) {
 			my $img_url = $1;
 			#print $img_url . "\n";
 			# download
@@ -141,6 +141,8 @@ sub main
 				push @img_size_arr, "$width\t$height";
 				#print "<!-- cache_file=$cache_file, img_url=$img_url, width=$width, height=$height -->\n";
 			}
+		} else {
+			print $line . "\n";
 		}
 	}
 
