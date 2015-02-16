@@ -42,7 +42,6 @@ sub main
 			$link =~ s!&amp;!&!g;
 			$link = "http://stoo.asiae.co.kr/cartoon/ctview.htm?" . $link;
 			print "$link\t$title\n";
-			print "$link\t$title\n";
 			$count++;
 			if ($count >= $limit_feeds) {
 				last;

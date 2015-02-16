@@ -12,19 +12,43 @@ sub get_list_page_link
 {
 	my $link = shift;
 	my $encoding = shift;
+	my $first_article_link = "";
 
 	# 링크에 들어가서 1화를 찾아서 해당 링크 주소를 확인
 	my $html_file = "newlist/" . FeedMaker::get_md5_name($link) . ".html";
-	my $cmd = qq([ -e "${html_file}" -a -s "${html_file}" ] || wget.sh --download "$link" ${html_file}; perl -ne 'if (m!<li class="wt_ing1"><a href="(/mobilepoc/webtoon/webtoonList\\.omp\\?prodId=[^"]+)[^"]*">[^<]*</a></li>!) { \$link = \$1; \$link =~ s!&amp;!&!g; print \$link . "\\n"; }' ${html_file});
-	#print $cmd . "\n";
+	my $cmd = qq{[ -e "${html_file}" -a -s "${html_file}" ] || wget.sh --download "$link" ${html_file}};
 	my $result = qx($cmd);
 	if ($ERRNO != 0) {
-		confess "Error: can't get list page url from '$link', $ERRNO\n";
+		confess "Error: can't get list page from '$link', $ERRNO\n";
 		exit(-1);
 	}
 
-	chomp $result;
-	return $result;
+	#print "html_file: $html_file\n";
+	open(my $infp, $html_file);
+	if ($infp) {
+		while (my $line = <$infp>) {
+			# <div class="btnFirview"><a href="javascript:goStatsContentsDetail('/webtoon/webtoonDetail.omp?prodId=H900723573&menuId=DP26001','49', '', 'H900723573','');">첫회보기</a></div>
+			if ($line =~ m!
+							  <div
+							  \s*
+							  class="btnFirview">
+							  <a
+							  \s*
+							  href="javascript:goStatsContentsDetail\('
+							  (/webtoon/webtoonDetail\.omp\?prodId=[^']+)
+							  '[^>]*
+							  >
+							  [^<]*
+							  </a>
+							  </div>
+						  !x) {
+				$first_article_link = $1;
+				last;
+			}
+		}
+	}
+	close($infp);
+	return $first_article_link;
 }
 
 
@@ -42,7 +66,7 @@ sub main
 
 	while (my $line = <STDIN>) {
 		if ($state == 0) {
-			if ($line =~ m!<a[^>]*href="javascript:goStatsContentsDetail\('(/webtoon/webtoonDetail[^']+)'[^"]*"!) {
+			if ($line =~ m!<a[^>]*href="javascript:goStatsContentsDetail\('(/webtoon/webtoonList[^']+)'[^"]*"!) {
 				$link = "http://m.tstore.co.kr/mobilepoc" . $1;
 				$link =~ s!&amp;!&!g;
 				$state = 1;
@@ -60,9 +84,10 @@ sub main
 			if ($line =~ m!^\s*<nobr>\s*(.+)\s*</nobr>\s*$!) {
 				$title = $1;
 				#print "link=$link, encoding=$encoding\n";
-				my $list_page_link = "http://m.tstore.co.kr" . get_list_page_link($link, $encoding);
-				print "$list_page_link\t$title\n";
-				push @result_arr, "$list_page_link\t$title";
+				#my $list_page_link = "http://m.tstore.co.kr/mobilepoc" . get_list_page_link($link, $encoding);
+				#print "$list_page_link\t$title\n";
+				#push @result_arr, "$list_page_link\t$title";
+				push @result_arr, "$link\t$title";
 				$state = 0;
 			}
 		}

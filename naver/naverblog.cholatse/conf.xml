@@ -10,6 +10,7 @@
 			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=wacho&viewdate=&currentPage=2&categoryNo=3&parentCategoryNo=&countPerPage=30]]></list_url>
 			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=wacho&viewdate=&currentPage=1&categoryNo=3&parentCategoryNo=&countPerPage=30]]></list_url>
 		</list_url_list>
+		<item_capture_script>../capture_item_naverblog.pl</item_capture_script>
 	</collection>
 	<extraction>
 		<element_list>

@@ -1,20 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 	<collection>
-		<is_completed>true</is_completed>
+		<is_completed>false</is_completed>
 		<unit_size_per_day>4</unit_size_per_day>
 		<sort_field_pattern><![CDATA[\/(\d+)\t]]></sort_field_pattern>
 		<list_url_list>
 			<list_url><![CDATA[http://cartoon.media.daum.net/data/mobile/webtoon/list_episode_by_nickname?nickname=chaser&page_no=1]]></list_url>
-			<list_url><![CDATA[http://cartoon.media.daum.net/data/mobile/webtoon/list_episode_by_nickname?nickname=chaser&page_no=2]]></list_url>
-			<list_url><![CDATA[http://cartoon.media.daum.net/data/mobile/webtoon/list_episode_by_nickname?nickname=chaser&page_no=3]]></list_url>
-			<list_url><![CDATA[http://cartoon.media.daum.net/data/mobile/webtoon/list_episode_by_nickname?nickname=chaser&page_no=4]]></list_url>
-			<list_url><![CDATA[http://cartoon.media.daum.net/data/mobile/webtoon/list_episode_by_nickname?nickname=chaser&page_no=5]]></list_url>
-			<list_url><![CDATA[http://cartoon.media.daum.net/data/mobile/webtoon/list_episode_by_nickname?nickname=chaser&page_no=6]]></list_url>
-			<list_url><![CDATA[http://cartoon.media.daum.net/data/mobile/webtoon/list_episode_by_nickname?nickname=chaser&page_no=7]]></list_url>
-			<list_url><![CDATA[http://cartoon.media.daum.net/data/mobile/webtoon/list_episode_by_nickname?nickname=chaser&page_no=8]]></list_url>
-			<list_url><![CDATA[http://cartoon.media.daum.net/data/mobile/webtoon/list_episode_by_nickname?nickname=chaser&page_no=9]]></list_url>
-			<list_url><![CDATA[http://cartoon.media.daum.net/data/mobile/webtoon/list_episode_by_nickname?nickname=chaser&page_no=10]]></list_url>
 		</list_url_list>
 		<item_capture_script>../capture_item_daumwebtoon_mobile.pl</item_capture_script>
 	</collection>
