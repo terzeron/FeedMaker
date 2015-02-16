@@ -7,7 +7,7 @@
 		<list_url_list>
 			<list_url><![CDATA[http://ilyo.co.kr/?ac=list&cate_id=50]]></list_url>
 		</list_url_list>
-		<element_class>seriesDiv</element_class>
+		<element_class>articleList</element_class>
 		<item_capture_script>../capture_item_ilyo.pl</item_capture_script>
 	</collection>
 	<extraction>
