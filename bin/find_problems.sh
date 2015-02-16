@@ -50,7 +50,7 @@ echo "===== check the garbage feeds ====="
 feedmaker_file="log/feedmaker.txt"
 find */ -maxdepth 2 -name "*.xml" \! \( -name conf.xml -o -name _conf.xml \) -exec basename "{}" \; | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $feedmaker_file
 period_file_list=""
-for i in {0..14}; do
+for i in {0..30}; do
 	period_file_list="${period_file_list} /Applications/MAMP/logs/apache_access.log.$(date -v-${i}d +'%Y%m%d')"
 done
 feed_access_file="log/feed_access.txt"
@@ -144,7 +144,7 @@ perl -ne 'if (m!^RewriteRule\s+\^(\S*)\\\.xml\$?\s+xml/(\S+)\\\.xml!) { print $1
 perl -ne 'if (m!^RewriteRule\s+\^(\S*)\\\.xml\$?\s+xml/(\S+)\\\.xml!) { print $2 . "\n"; }' ~/public_html/.htaccess | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $htaccess2_xml_file
 perl -ne 'my ($date, $feed, $status) = split /\t/, $_; print $feed . "\n";' $feed_access_file | sort -u > $feedly_file
 echo "--- feedly(http request) vs. .htaccess ---"
-echo "<는 최근 14일간 Feedly에서 조회되었으나 htaccess에서 허가하지 않은 feed"
+echo "<는 최근 30일간 Feedly에서 조회되었으나 htaccess에서 허가하지 않은 feed"
 echo ">는 더 이상 구독되지 않는데 htaccess에 찌꺼기가 남은 feed"
 /usr/local/bin/colordiff $feedly_file $htaccess2_xml_file
 echo "--- .htaccess vs. ${public_html_dir} ---"
