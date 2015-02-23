@@ -5,6 +5,7 @@ Utility set of making feeds from websites
 
 Requirements
 ------------
+
 1. Python & modules
   1. bs4
 1. Perl & modules
@@ -27,3 +28,9 @@ Usage
 1. cd \<sitedir\>/\<feeddir\>
 1. run.sh 
 
+Test
+----
+
+1. cd test
+1. ./FeedMaker.t
+1. ./feedmakerutil.t
