@@ -3,7 +3,7 @@
 	<collection>
 		<is_completed>true</is_completed>
 		<sort_field_pattern><![CDATA[no=(\d+)]]></sort_field_pattern>
-		<unit_size_per_day>2</unit_size_per_day>
+		<unit_size_per_day>4</unit_size_per_day>
 		<list_url_list>
 			<list_url><![CDATA[http://w.hankyung.com/board/list.php?id=community_kbm&category=1&ch=comm]]></list_url>
 			<list_url><![CDATA[http://w.hankyung.com/board/list.php?id=community_kbm&category=2&ch=comm]]></list_url>
