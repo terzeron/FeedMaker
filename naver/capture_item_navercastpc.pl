@@ -15,7 +15,7 @@ sub main
 
 	while (my $line = <STDIN>) {
 		if ($state == 0) {
-			if ($line =~ m!<a class="card" href="/?(contents\.nhn\?contents_id=\d+)[^"]*"[^>]*>!) {
+			if ($line =~ m!<a class="card" href="/?(contents\.nhn\?contents_id=\d+[^"]*)"[^>]*>!) {
 				$link = $1;
 				$link =~ s!&amp;!&!g;
 				$link = "http://navercast.naver.com/" . $link;
