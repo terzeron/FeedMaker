@@ -43,12 +43,12 @@ echo "===== check the incremental feeding ====="
 #find . -name conf.xml -exec grep -l "<is_completed>true" "{}" \; 
 
 echo "--- start_idx vs # of items ---"
-for f in $(find . -name conf.xml -exec grep -l "<is_completed>true" "{}" \; | xargs -L1 dirname); do [ -d "$f" ] && (cd $f; idx=$(cut -f1 start_idx.txt); cnt=$(sort -u newlist/*.txt | wc -l | tr -d ' '); if [ "$idx" -gt "$cnt" ]; then echo "$f idx=$idx count=$cnt"; fi); done
+for f in $(find . -name conf.xml -exec grep -l "<is_completed>true" "{}" \; | xargs -L1 dirname | grep -v /_); do [ -d "$f" ] && (cd $f; idx=$(cut -f1 start_idx.txt); cnt=$(sort -u newlist/*.txt | wc -l | tr -d ' '); if [ "$idx" -gt "$cnt" ]; then echo "$f idx=$idx count=$cnt"; fi); done
 
 echo
 echo "===== check the garbage feeds ====="
 feedmaker_file="log/feedmaker.txt"
-find */ -maxdepth 2 -name "*.xml" \! \( -name conf.xml -o -name _conf.xml \) -exec basename "{}" \; | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $feedmaker_file
+find */ -maxdepth 2 -name "*.xml" \! \( -name conf.xml -o -name _conf.xml \) | grep -v /_ | xargs basename | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $feedmaker_file
 period_file_list=""
 for i in {0..30}; do
 	period_file_list="${period_file_list} /Applications/MAMP/logs/apache_access.log.$(date -v-${i}d +'%Y%m%d')"
@@ -139,7 +139,7 @@ feedly_file="log/feedly.txt"
 public_html_xml_file="log/public_html_xml.txt"
 htaccess1_xml_file="log/htaccess1_xml.txt"
 htaccess2_xml_file="log/htaccess2_xml.txt"
-find ${public_html_dir} -name "*.xml" -exec basename "{}" \; | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $public_html_xml_file
+find ${public_html_dir} -name "*.xml" | grep -v /_ | xargs basename | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $public_html_xml_file
 perl -ne 'if (m!^RewriteRule\s+\^(\S*)\\\.xml\$?\s+xml/(\S+)\\\.xml!) { print $1 . "\n"; }' ~/public_html/.htaccess | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $htaccess1_xml_file
 perl -ne 'if (m!^RewriteRule\s+\^(\S*)\\\.xml\$?\s+xml/(\S+)\\\.xml!) { print $2 . "\n"; }' ~/public_html/.htaccess | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $htaccess2_xml_file
 perl -ne 'my ($date, $feed, $status) = split /\t/, $_; print $feed . "\n";' $feed_access_file | sort -u > $feedly_file
