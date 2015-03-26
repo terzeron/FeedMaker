@@ -255,7 +255,7 @@ def traverse_element(element, url, encoding):
 					leaf_id = result.group(2)
 					article_num = result.group(3)
 					page_num = result.group(4)
-					cmd = "collect_ajax_pages.pl " + leaf_id + " " + article_num + " " + page_num
+					cmd = "collect_ajax_pages.pl " + leaf_id + " " + article_num + " " + page_num + " " + encoding
 					output = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
 					print output
 					ret = 1
