@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+	<collection>
+		<list_url_list>
+			<list_url><![CDATA[http://stoo.asiae.co.kr/cartoon/ctlist.php?pg=1&strForm=s_list&sc3=103&sc2=ing]]></list_url>
+		</list_url_list>
+		<item_capture_script>../capture_item_stoo2.pl -n 10</item_capture_script>
+		<encoding>cp949</encoding>
+	</collection>
+	<extraction>
+		<element_list>
+			<element_class>ctview</element_class>
+		</element_list>
+		<post_process_script>../post_process_stoo.pl</post_process_script>
+		<encoding>cp949</encoding>
+	</extraction>
+	<rss>
+		<title><![CDATA[미스 군통령::스투닷컴]]></title>
+		<description><![CDATA[미스 군통령::스투닷컴 - 모바일 버전 RSS Feed]]></description>
+		<feed_url><![CDATA[http://terzeron.net/misssoldier.xml]]></feed_url>
+		<link><![CDATA[http://terzeron.net/misssoldier.xml]]></link>
+		<generator><![CDATA[Terzeron's Feed Generator]]></generator>
+		<copyright><![CDATA[Copyright (c) STOO.COM. All rights reserved.]]></copyright>
+		<language>ko</language>
+	</rss>
+</configuration>
+

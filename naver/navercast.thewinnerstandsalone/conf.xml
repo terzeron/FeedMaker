@@ -3,7 +3,7 @@
 	<collection>
 		<is_completed>true</is_completed>
 		<sort_field_pattern><![CDATA[contents_id=(\d+)]]></sort_field_pattern>
-		<unit_size_per_day>1</unit_size_per_day>
+		<unit_size_per_day>2</unit_size_per_day>
 		<list_url_list>
 			<list_url><![CDATA[http://navercast.naver.com/list.nhn?cid=29&category_id=29&sort=update&list_type=image&page=1]]></list_url>
 			<list_url><![CDATA[http://navercast.naver.com/list.nhn?cid=29&category_id=29&sort=update&list_type=image&page=2]]></list_url>

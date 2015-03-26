@@ -3,7 +3,7 @@
 	<collection>
 		<is_completed>true</is_completed>
 		<sort_field_pattern><![CDATA[&logNo=(\d+)]]></sort_field_pattern>
-		<unit_size_per_day>1</unit_size_per_day>
+		<unit_size_per_day>2</unit_size_per_day>
 		<list_url_list>
 			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=wacho&viewdate=&currentPage=4&categoryNo=3&parentCategoryNo=&countPerPage=30]]></list_url>
 			<list_url><![CDATA[http://blog.naver.com/PostTitleListAsync.nhn?blogId=wacho&viewdate=&currentPage=3&categoryNo=3&parentCategoryNo=&countPerPage=30]]></list_url>
