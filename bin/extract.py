@@ -161,28 +161,26 @@ def traverse_element(element, url, encoding):
 				if "ncc.phinf.naver.net" in src and ("/17.jpg" in src or "/8_17px.jpg" in src or "/7px.jpg" in src or "/20px.jpg" in src):
 					# 외부에서 접근 불가능한 이미지 제거
 					return ret
-				else:
-					# data-lazy-src 또는 lazysrc, data-src가 속성으로 존재하면 src 대신 사용
-					if element.has_attr("data-lazy-src"):
-						data_lazy_src = element["data-lazy-src"]
-						if data_lazy_src[:7] != "http://":
-							data_lazy_src = concatenate_url(url, data_lazy_src)
-						src = data_lazy_src
-					if element.has_attr("lazysrc"):
-						lazy_src = element["lazysrc"]
-						if lazy_src[:7] != "http://":
-							lazy_src = concatenate_url(url, lazy_src)
-						src = lazy_src
-					if element.has_attr("data-src"):
-						data_src = element["data-src"]
-						if data_src[:7] != "http://":
-							data_src = concatenate_url(url, data_src)
-						src = data_src
-					sys.stdout.write("<img src='%s'" % src)
-					if element.has_attr("width"):
-						sys.stdout.write(" width='%s'" % element["width"])
-					sys.stdout.write("/>\n")
-					ret = 1
+			elif element.has_attr("data-lazy-src"):
+				data_lazy_src = element["data-lazy-src"]
+				if data_lazy_src[:7] != "http://":
+					data_lazy_src = concatenate_url(url, data_lazy_src)
+				src = data_lazy_src
+			elif element.has_attr("lazysrc"):
+				lazy_src = element["lazysrc"]
+				if lazy_src[:7] != "http://":
+					lazy_src = concatenate_url(url, lazy_src)
+				src = lazy_src
+			elif element.has_attr("data-src"):
+				data_src = element["data-src"]
+				if data_src[:7] != "http://":
+					data_src = concatenate_url(url, data_src)
+				src = data_src
+			sys.stdout.write("<img src='%s'" % src)
+			if element.has_attr("width"):
+				sys.stdout.write(" width='%s'" % element["width"])
+			sys.stdout.write("/>\n")
+			ret = 1
 		elif element.name == "a":
 			if element.has_attr("onclick"):
 				# 주석레이어 제거
