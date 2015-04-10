@@ -8,7 +8,7 @@
 	</collection>
 	<extraction>
 		<element_list>
-			<element_path>//*[@id="sub_content"]/div[1]/h1</element_path>
+			<element_class>cartoon_banner</element_class>
 		</element_list>
 	</extraction>
 	<rss>
