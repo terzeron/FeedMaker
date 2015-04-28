@@ -2,7 +2,7 @@
 <configuration>
 	<collection>
 		<is_completed>false</is_completed>
-		<sort_field_pattern>prodId=(\w+)</sort_field_pattern>
+ 		<sort_field_pattern><![CDATA[prodId=(\w+)]]></sort_field_pattern>
 		<unit_size_per_day>24</unit_size_per_day>
 		<list_url_list>
 			<list_url><![CDATA[http://www.wowtv.co.kr/funfun/fun/webtoon/submain.asp?bcode=T00000000]]></list_url>

@@ -43,7 +43,17 @@ echo "===== check the incremental feeding ====="
 #find . -name conf.xml -exec grep -l "<is_completed>true" "{}" \; 
 
 echo "--- start_idx vs # of items ---"
-for f in $(find . -name conf.xml -exec grep -l "<is_completed>true" "{}" \; | xargs -L1 dirname | grep -v /_); do [ -d "$f" ] && (cd $f; idx=$(cut -f1 start_idx.txt); cnt=$(sort -u newlist/*.txt | wc -l | tr -d ' '); if [ "$idx" -gt "$cnt" ]; then echo "$f idx=$idx count=$cnt"; fi); done
+for f in $(find . -name conf.xml -exec grep -l "<is_completed>true" "{}" \; | xargs -L1 dirname | grep -v /_); do 
+	if [ -d "$f" ]; then
+		(
+			cd $f; idx=$(cut -f1 start_idx.txt); 
+			cnt=$(sort -u newlist/*.txt | wc -l | tr -d ' '); 
+			#if [ "$idx" -gt "$cnt" ]; then 
+				echo "$f " $((idx * 100 / cnt))%; 
+			#fi
+		)
+	fi
+done
 
 echo
 echo "===== check the garbage feeds ====="

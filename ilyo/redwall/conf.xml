@@ -2,7 +2,7 @@
 <configuration>
 	<collection>
 		<is_completed>false</is_completed>
-		<sort_field_pattern>entry_id=(\d+)</sort_field_pattern>
+		<sort_field_pattern><![CDATA[entry_id=(\d+)]]></sort_field_pattern>
 		<unit_size_per_day>24</unit_size_per_day>
 		<list_url_list>
 			<list_url><![CDATA[http://ilyo.co.kr/?ac=list&cate_id=179]]></list_url>
