@@ -229,6 +229,7 @@ if (is_dir($work_dir)) {
 	 $("#disable").button({disabled: false})
  	 $("#remove").val("삭제");
 	 $("#remove").button({disabled: false})
+	 $("#feedly_link").css('display', 'hidden');
  };
  
  // remove button event handler
