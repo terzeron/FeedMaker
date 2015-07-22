@@ -49,7 +49,7 @@ for f in $(find . -name conf.xml -exec grep -l "<is_completed>true" "{}" \; | xa
 			cd $f; idx=$(cut -f1 start_idx.txt); 
 			cnt=$(sort -u newlist/*.txt | wc -l | tr -d ' '); 
 			#if [ "$idx" -gt "$cnt" ]; then 
-				echo "$f " $((idx * 100 / cnt))%; 
+				echo "$f " $(((idx + 10) * 100 / cnt))%; 
 			#fi
 		)
 	fi
