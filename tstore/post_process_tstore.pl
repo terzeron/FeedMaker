@@ -15,7 +15,7 @@ sub main
 	my $img_ext = "";
 
 	while (my $line = <STDIN>) {
-		if ($line =~ m!<img src='(http://m.tstore.co.kr/SMILE_DATA[^']+)(\d+)\.(jpg)'/>!) {
+		if ($line =~ m!<img src='(http://m.tstore.co.kr/SMILE_DATA[^']+\/)(\d+)\.(jpg)'[^>]*/>!) {
 			$img_url_prefix = $1;
 			$img_index = int($2);
 			$img_ext = $3;

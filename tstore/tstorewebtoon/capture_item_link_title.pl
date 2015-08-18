@@ -66,27 +66,29 @@ sub main
 
 	while (my $line = <STDIN>) {
 		if ($state == 0) {
-			if ($line =~ m!<a[^>]*href="javascript:goStatsContentsDetail\('(/webtoon/webtoonList[^']+)'[^"]*"!) {
+			if ($line =~ m!
+							  <a
+							  [^>]*
+							  goInnerUrlDetail\(
+							  \\
+							  '
+							  (
+								  /webtoon/webtoonList[^']+
+							  )
+							  \\
+							  '
+						  !gx) {
 				$link = "http://m.tstore.co.kr/mobilepoc" . $1;
 				$link =~ s!&amp;!&!g;
 				$state = 1;
 			} 
 		} elsif ($state == 1) {
-			if ($line =~ m!<(?:span|dt) class="nobr4?">?<nobr>\s*(.+)\s*</nobr></(?:span|dt)>!m) {
+			if ($line =~ m!
+							  <dt>
+							  (.+)
+							  </dt>
+						  !gx) {
 				$title = $1;
-				#print "$link\t$title\n";
-				push @result_arr, "$link\t$title";
-				$state = 0;
-			} elsif ($line =~ m!<div class="nobr4">!) {
-				$state = 101;
-			} 
-		} elsif ($state == 101) {
-			if ($line =~ m!^\s*<nobr>\s*(.+)\s*</nobr>\s*$!) {
-				$title = $1;
-				#print "link=$link, encoding=$encoding\n";
-				#my $list_page_link = "http://m.tstore.co.kr/mobilepoc" . get_list_page_link($link, $encoding);
-				#print "$list_page_link\t$title\n";
-				#push @result_arr, "$list_page_link\t$title";
 				push @result_arr, "$link\t$title";
 				$state = 0;
 			}
