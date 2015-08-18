@@ -191,7 +191,7 @@ sub generate_rss_feed
 		my $new_file_name = get_new_file_name($article_url);
 
 		# notice!
-		if (defined $rss_no_item_desc and $rss_no_item_desc eq "yes") {
+		if (defined $rss_no_item_desc and $rss_no_item_desc =~ m!yes|true!) {
 			# skip the content of the feed
 			$rss->add_item(title => xml_escape($article_title),
 						   link => xml_escape($article_url),
@@ -315,8 +315,12 @@ sub append_item_to_result
 		}
 		my $render_js = $extraction_config->{"render_js"};
 		my $option = "";
-		if (defined $render_js and $render_js =~ m!(yes|true)!i) {
+		if (defined $render_js and $render_js =~ m!yes|true!i) {
 			$option = "--render_js";
+		}
+		my $force_sleep_between_articles = $extraction_config->{"force_sleep_between_articles"};
+		if ($not defined $force_sleep_between_articles) {
+			$force_sleep_between_articles = "";
 		}
 		my $review_point_threshold = $extraction_config->{"review_point_threshold"};
 	
@@ -349,6 +353,9 @@ sub append_item_to_result
 				# 피드 리스트에 추가
 				print "Success: $title: $url --> $new_file_name: $size\n";
 				push(@$feed_list_ref, $item);
+			}
+			if ($force_sleep_between_articles =~ m!yes|true!i) {
+				sleep(1);
 			}
 		}
 	}
@@ -505,7 +512,7 @@ sub main
 	}
 
 	my $ignore_old_list = get_config_value($config, 0, ("collection", "ignore_old_list"));
-	if (defined $ignore_old_list and $ignore_old_list =~ m!^\s*true|yes\s*$!i) {
+	if (defined $ignore_old_list and $ignore_old_list =~ m!yes|true!i) {
 		$ignore_old_list = 1;
 	} else {
 		$ignore_old_list = 0;
@@ -517,7 +524,7 @@ sub main
 		$is_completed = 0;
 	} else {
 		print "# is_completed: $is_completed\n";
-		if ($is_completed =~ m!(yes|true)!i) {
+		if ($is_completed =~ m!yes|true!i) {
 			$is_completed = 1;
 		} elsif ($is_completed =~ m!(no|false)!i) {
 			$is_completed = 0;
@@ -625,7 +632,7 @@ sub main
 		return -1;
 	}
 
-	if ($result =~ m!Upload: success!) {
+	if ($result =~ m!Upload: success! and $force_collect == 0) {
 		# email notification
 		my $email = get_config_value($config, 0, ("notification", "email"));
 		if (defined $email and $email ne "") {
