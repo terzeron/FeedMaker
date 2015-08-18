@@ -12,7 +12,7 @@
 			<element_path>/html/body/table[3]</element_path>
 		</element_list>
 		<encoding>cp949</encoding>
-		<post_process_script>../post_process_fnn.pl</post_process_script>
+		<post_process_script>post_process_only_for_images.pl</post_process_script>
 	</extraction>
 	<rss>
 		<title><![CDATA[달마과장::포커스]]></title>

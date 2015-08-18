@@ -11,7 +11,7 @@
 		<element_list>
 			<element_class>toonView</element_class>
 		</element_list>
-		<post_process_script>../post_process_natewebtoon.pl</post_process_script>
+		<post_process_script>post_process_only_for_images.pl</post_process_script>
 	</extraction>
 	<rss>
 		<title><![CDATA[미슐랭 스타::네이트]]></title>

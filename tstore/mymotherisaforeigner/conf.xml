@@ -8,8 +8,7 @@
 	</collection>
 	<extraction>
 		<element_list>
-			<element_class>appArea</element_class>
-			<element_class>w_paging</element_class>
+			<element_class>webtoon-view</element_class>
 		</element_list>
 		<post_process_script>../post_process_tstore.pl</post_process_script>
 	</extraction>

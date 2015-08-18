@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+	<collection>
+		<list_url_list>
+			<list_url><![CDATA[http://comic.mt.co.kr/comicDetail.htm?nComicSeq=128]]></list_url>
+		</list_url_list>
+		<element_class>cartoonList</element_class>
+		<item_capture_script>../capture_item_moneytoday.pl</item_capture_script>
+		<encoding>cp949</encoding>
+	</collection>
+	<extraction>
+		<element_list>
+			<element_class>cartoonBox</element_class>
+		</element_list>
+		<post_process_script>../post_process_moneytoday.pl</post_process_script>
+		<post_process2_script>download_image.pl</post_process2_script>
+		<encoding>cp949</encoding>
+	</extraction>
+	<rss>
+		<title><![CDATA[미치지 않고서야::머니투데이]]></title>
+		<description><![CDATA[미치지 않고서야::머니투데이 - 모바일 버전 RSS Feed]]></description>
+		<feed_url><![CDATA[http://terzeron.net/whointheirrightmind.xml]]></feed_url>
+		<link><![CDATA[http://terzeron.net/whointheirrightmind.xml]]></link>
+		<generator><![CDATA[Terzeron's Feed Generator]]></generator>
+		<copyright><![CDATA[Copyright (c) MoneyToday. All rights reserved.]]></copyright>
+		<language>ko</language>
+	</rss>
+</configuration>
+
