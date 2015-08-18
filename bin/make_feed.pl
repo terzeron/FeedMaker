@@ -340,7 +340,7 @@ sub append_item_to_result
 			return 0;
 		}
 
-		my $extraction_cmd = qq(| extract.py "$config.file" "$url");
+		my $extraction_cmd = qq(| extract.py "$config_file" "$url");
 		if ($bypass_element_extraction =~ m!yes|true!) {
 			$extraction_cmd = "";
 		}
@@ -538,7 +538,7 @@ sub main
 	}
 	#print "ignore_old_list:" . $ignore_old_list . "\n";
 
-	my $is_completed = get_config_value($config, 0, 0, ("collection", "is_completed"));
+	my $is_completed = get_config_value($config, 0, "", ("collection", "is_completed"));
 	if (not defined $is_completed or $is_completed eq "") {
 		$is_completed = 0;
 	} else {
