@@ -50,9 +50,9 @@ sub get_recent_list
 	my $post_process_cmd = qq(| remove_duplicate_link.pl "$newlist_file_name");
 	my $config = ();
 	if (FeedMaker::read_config($config_file, \$config)) {
-		my $extraction_config = $config->{"collection"};
-		if ($extraction_config) {
-			my $post_process_script = $extraction_config->{"post_process_script"};
+		my $collection_config = $config->{"collection"};
+		if ($collection_config) {
+			my $post_process_script = get_config_value($config, 0, "", ("collection", "post_process_script"));
 			if ($post_process_script) {
 				$post_process_cmd = qq(| $post_process_script "$newlist_file_name");
 			}
@@ -160,13 +160,17 @@ sub generate_rss_feed
 	my $rss_file_name = shift;
 
 	my $rss_config = $config->{"rss"};
-	my $rss_title = utf8_encode($rss_config->{"title"});
-	my $rss_description = utf8_encode($rss_config->{"description"});
-	my $rss_generator = utf8_encode($rss_config->{"generator"});
-	my $rss_copyright = utf8_encode($rss_config->{"copyright"});
-	my $rss_link = utf8_encode($rss_config->{"link"});
-	my $rss_language = utf8_encode($rss_config->{"language"});
-	my $rss_no_item_desc = $rss_config->{"no_item_desc"};
+	if (not defined $rss_config) {
+		confess "Error: missing rss configuration\n";
+		return -1;
+	}
+	my $rss_title = utf8_encode(get_config_value($config, 1, "", ("rss", "title")));
+	my $rss_description = utf8_encode(get_config_value($config, 1, "", ("rss", "description")));
+	my $rss_generator = utf8_encode(get_config_value($config, 1, "", ("rss", "generator")));
+	my $rss_copyright = utf8_encode(get_config_value($config, 1, "", ("rss", "copyright")));
+	my $rss_link = utf8_encode(get_config_value($config, 1, "", ("rss", "link")));
+	my $rss_language = utf8_encode(get_config_value($config, 1, "", ("rss", "language")));
+	my $rss_no_item_desc = get_config_value($config, 0, "", ("rss", "no_item_desc"));
 
 	print "# generate_rss_feed($rss_file_name)\n";
 
@@ -299,64 +303,79 @@ sub append_item_to_result
 			return -1;
 		}
 		my $extraction_config = $config->{"extraction"};
-		if ($extraction_config) {
-			my $post_process_script = $extraction_config->{"post_process_script"};
-			if ($post_process_script) {
-				$post_process_cmd = qq(| $post_process_script "$url");
-				my $post_process2_script = $extraction_config->{"post_process2_script"};
-				if ($post_process2_script) {
-					$post_process_cmd .= qq( | $post_process2_script "$url");
-				}
+		if (not defined $extraction_config) {
+		    confess "Error: missing extraction configuration\n";
+			return -1;
+		}
+
+		my $post_process_script = get_config_value($config, 0, "", ("extraction", "post_process_script"));
+		if ($post_process_script) {
+			$post_process_cmd = qq(| $post_process_script "$url");
+			my $post_process2_script = get_config_value($config, 0, "", ("extraction", "post_process2_script"));
+			if ($post_process2_script) {
+				$post_process_cmd .= qq( | $post_process2_script "$url");
 			}
 		}
-		my $encoding = $extraction_config->{"encoding"};
-		if (not defined $encoding) {
+		
+		my $encoding = get_config_value($config, 0, "utf8", ("extraction", "encoding"));
+		if (not defined $encoding or $encoding eq "") {
 			$encoding = "utf8";
 		}
-		my $render_js = $extraction_config->{"render_js"};
+		my $render_js = get_config_value($config, 0, 0, ("extraction", "render_js"));
 		my $option = "";
 		if (defined $render_js and $render_js =~ m!yes|true!i) {
 			$option = "--render_js";
 		}
-		my $force_sleep_between_articles = $extraction_config->{"force_sleep_between_articles"};
-		if (not defined $force_sleep_between_articles) {
-			$force_sleep_between_articles = "";
-		}
-		my $review_point_threshold = $extraction_config->{"review_point_threshold"};
+		my $force_sleep_between_articles = get_config_value($config, 0, 0, ("extraction", "force_sleep_between_articles"));
+		my $bypass_element_extraction = get_config_value($config, 0, 0, ("extraction", "bypass_element_extraction"));
+		my $review_point_threshold = get_config_value($config, 0, "", ("extraction", "review_point_threshold"));
 	
 		#print "title=$title, review_point=$review_point, review_point_threshold=$review_point_threshold\n";
-		if ((not defined $review_point or $review_point eq "" or not defined $review_point_threshold or $review_point_threshold eq "") or 
-			(defined $review_point and $review_point ne "" and defined $review_point_threshold and $review_point_threshold ne "" and $review_point > $review_point_threshold)) {
+		if (defined $review_point and $review_point ne "" and 
+			defined $review_point_threshold and $review_point_threshold ne "" and 
+			$review_point > $review_point_threshold) {
 			# 일반적으로 평점이 사용되지 않는 경우나
 			# 평점이 기준치를 초과하는 경우에만 추출
-			$cmd = qq(wget.sh $option "$url" "$encoding" | extract.py "$config_file" "$url" $post_process_cmd > "$new_file_name");
+			warn "Warning: ignore an article due to the low score\n";
+			return 0;
+		}
+
+		my $extraction_cmd = qq(| extract.py "$config.file" "$url");
+		if ($bypass_element_extraction =~ m!yes|true!) {
+			$extraction_cmd = "";
+		}
+
+		$cmd = qq(wget.sh $option "$url" "$encoding" $extraction_cmd $post_process_cmd > "$new_file_name");
+		print "# $cmd\n";
+		my $result = qx($cmd);
+		if ($CHILD_ERROR != 0) {
+			confess "Error: can't extract HTML elements,";
+			return -1;
+		}
+		my $md5_name = get_md5_name($url);
+		$size = -s $new_file_name;
+		if ($size > 0) {
+			$cmd = qq(echo "<img src='http://terzeron.net/img/1x1.jpg?feed=${rss_file_name}&item=${md5_name}'/>" >> "${new_file_name}");
 			print "# $cmd\n";
-			my $result = qx($cmd);
+			$result = qx($cmd);
 			if ($CHILD_ERROR != 0) {
-				confess "Error: can't extract HTML elements,";
+				confess "Error: can't append page view logging tag,";
+				return -1;
 			}
-			my $md5_name = get_md5_name($url);
-			$size = -s $new_file_name;
-			if ($size > 0) {
-				$cmd = qq(echo "<img src='http://terzeron.net/img/1x1.jpg?feed=${rss_file_name}&item=${md5_name}'/>" >> "${new_file_name}");
-				print "# $cmd\n";
-				$result = qx($cmd);
-				if ($CHILD_ERROR != 0) {
-					confess "Error: can't append page view logging tag,";
-				}
-			}
-			$size = -s $new_file_name;
-			if ($size < $MIN_CONTENT_LENGTH) {
-				# 피드 리스트에서 제외
-				warn "Warning: $title: $url --> $new_file_name: $size (< $MIN_CONTENT_LENGTH byte)\n";
-			} else {
-				# 피드 리스트에 추가
-				print "Success: $title: $url --> $new_file_name: $size\n";
-				push(@$feed_list_ref, $item);
-			}
-			if ($force_sleep_between_articles =~ m!yes|true!i) {
-				sleep(1);
-			}
+		}
+		$size = -s $new_file_name;
+		if ($size < $MIN_CONTENT_LENGTH) {
+			# 피드 리스트에서 제외
+			warn "Warning: $title: $url --> $new_file_name: $size (< $MIN_CONTENT_LENGTH byte)\n";
+			return 0;
+		} else {
+			# 피드 리스트에 추가
+			print "Success: $title: $url --> $new_file_name: $size\n";
+			push(@$feed_list_ref, $item);
+		}
+
+		if ($force_sleep_between_articles =~ m!yes|true!i) {
+			sleep(1);
 		}
 	}
 }
@@ -511,7 +530,7 @@ sub main
 		confess "Error: can't read configuration!,";
 	}
 
-	my $ignore_old_list = get_config_value($config, 0, ("collection", "ignore_old_list"));
+	my $ignore_old_list = get_config_value($config, 0, 0, ("collection", "ignore_old_list"));
 	if (defined $ignore_old_list and $ignore_old_list =~ m!yes|true!i) {
 		$ignore_old_list = 1;
 	} else {
@@ -519,7 +538,7 @@ sub main
 	}
 	#print "ignore_old_list:" . $ignore_old_list . "\n";
 
-	my $is_completed = get_config_value($config, 0, ("collection", "is_completed"));
+	my $is_completed = get_config_value($config, 0, 0, ("collection", "is_completed"));
 	if (not defined $is_completed or $is_completed eq "") {
 		$is_completed = 0;
 	} else {
@@ -564,11 +583,9 @@ sub main
 		# moneytoday: nViewSeq 파라미터 값
 		my @feed_id_sf_list = ();
 		my %feed_item_existence_map = ();
-		my $sort_field_pattern = get_config_value($config, 1, ("collection", "sort_field_pattern"));
-		my $unit_size_per_day = get_config_value($config, 0, ("collection", "unit_size_per_day"));
-		if (not defined $unit_size_per_day or $unit_size_per_day eq "") {
-			$unit_size_per_day = 12;
-		}
+		my $sort_field_pattern = get_config_value($config, 1, "", ("collection", "sort_field_pattern"));
+		my $unit_size_per_day = get_config_value($config, 1, "", ("collection", "unit_size_per_day"));
+
 		for (my $i = 0; $i < scalar @old_list; $i++) {
 			my $sf = "";
 			if ($old_list[$i] =~ qr/$sort_field_pattern/o) {
@@ -634,10 +651,10 @@ sub main
 
 	if ($result =~ m!Upload: success! and $force_collect == 0) {
 		# email notification
-		my $email = get_config_value($config, 0, ("notification", "email"));
+		my $email = get_config_value($config, 0, "", ("notification", "email"));
 		if (defined $email and $email ne "") {
-			my $recipient = get_config_value($config, 1, ("notification", "email", "recipient"));
-			my $subject = get_config_value($config, 1, ("notification", "email", "subject"));
+			my $recipient = get_config_value($config, 1, "", ("notification", "email", "recipient"));
+			my $subject = get_config_value($config, 1, "", ("notification", "email", "subject"));
 			open(OUT, "| mail -s '$subject' '$recipient'");
 			for my $feed (@recent_list) {
 				print OUT $feed . "\n";

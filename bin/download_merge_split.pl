@@ -157,16 +157,18 @@ sub main
 		my @img_file_arr1 = ();
 		my @img_file_arr2 = ();
 		my @img_file_arr3 = ();
-		# split array into 3 sub-array
-		my $part = int((scalar @img_file_arr + 2) / 3); 
+		my @img_file_arr4 = ();
+		# split array into 4 sub-array
+		my $part = int((scalar @img_file_arr + 3) / 4); 
 		print "<!-- length=" . (scalar @img_file_arr) . " part=$part -->\n";
 		@img_file_arr1 = splice @img_file_arr, 0, $part;
 		@img_file_arr2 = splice @img_file_arr, 0, $part;
 		@img_file_arr3 = splice @img_file_arr, 0, $part;
-		print "<!-- part1=" . (scalar @img_file_arr1) . ", part2=" . (scalar @img_file_arr2) . ", part3=" . (scalar @img_file_arr3) . " -->\n";
+		@img_file_arr4 = splice @img_file_arr, 0, $part;
+		print "<!-- part1=" . (scalar @img_file_arr1) . ", part2=" . (scalar @img_file_arr2) . ", part3=" . (scalar @img_file_arr3) . ", part4=" . (scalar @img_file_arr4) . " -->\n";
 
 		my $num = 1;
-		foreach my $img_file_arr_ref (\@img_file_arr1, \@img_file_arr2, \@img_file_arr3) {
+		foreach my $img_file_arr_ref (\@img_file_arr1, \@img_file_arr2, \@img_file_arr3, \@img_file_arr4) {
 			my @img_file_arr = @$img_file_arr_ref;
 			if (scalar @img_file_arr == 0) {
 				next;

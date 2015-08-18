@@ -110,7 +110,7 @@ sub main
 		return -1;
 	}
 
-	my $encoding = get_config_value($config, 0, ("collection", "encoding"));
+	my $encoding = get_config_value($config, 0, "utf8", ("collection", "encoding"));
 	if (not defined $encoding or $encoding eq "") {
 		$encoding = "utf8";
 	} else {
@@ -119,20 +119,20 @@ sub main
 			return -1;
 		}
 	}
-	my $render_js = get_config_value($config, 0, ("collection", "render_js"));
+	my $render_js = get_config_value($config, 0, 0, ("collection", "render_js"));
 	if (defined $render_js and $render_js =~ m!(true|yes)!i) {
 		$render_js = 1;
 	} else {
 		$render_js = 0;
 	}
 
-	my $list_url_list = get_config_value($config, 1, ("collection", "list_url_list"));
+	my $list_url_list = $config->{"collection"}->{"list_url_list"};
 	if (defined $list_url_list) {
 		print "# list_url_list:\n";
 		print_all_hash_items($list_url_list, "  - ");
 	}
 
-	my $item_capture_script = get_config_value($config, 0, ("collection", "item_capture_script"));
+	my $item_capture_script = get_config_value($config, 0, "", ("collection", "item_capture_script"));
 	if (not defined $item_capture_script or $item_capture_script eq "") {
 		$item_capture_script = "./capture_item_link_title.pl";
 	}

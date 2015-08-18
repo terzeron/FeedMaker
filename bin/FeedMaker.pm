@@ -74,22 +74,28 @@ sub get_config_value
 {
 	my $config = shift;
 	my $is_compulsory = shift;
+	my $default_value = shift;
 	my @config_path = @_;
 
-	if (defined $config and defined $config->{"rss"}) {
+	if (not defined $default_value) {
+		$default_value = "";
+	}
+
+	if (defined $config) {
 		my $c = $config;
 		for my $name (@config_path) {
 			$c = $c->{$name};
 			if (not defined $c) {
 				if ($is_compulsory == 1) {
 					carp "Warning: can't find '$name' element from config\n";
+					return $default_value;
 				}
-				return "";
+				return $default_value;
 			}
 		}
 		return $c;
 	}
-	return;
+	return $default_value;
 }
 
 
