@@ -18,7 +18,8 @@ function send_error_msg
 	#echo "curl -Sso/dev/null http://ssea.naver.com:20000/smsg?id=$id&method=email&subject=feedmaker&msg=$1"
 	#echo "$1" | mail -s "feedmaker error" terzeron@gmail.com
     #echo "send error message '$1'"
-	echo "email function is not supported"
+	#echo "email function is not supported"
+	echo "$1" | mail -s "FeedMaker error" 5jkfokr6ggh8@bxc.io
 }
 
 function execute_job
@@ -44,7 +45,7 @@ find /Users/terzeron/public_html/xml/img \( -mtime +20d -o -size 0 \) -exec rm -
 cd ${FEED_MAKER_HOME}
 pwd
 
-dirs=(`find . -type d \! \( -name "_*" -o -name .git -o -name . -o -name newlist -o -name html \)`)
+dirs=( $(find . -type d \! \( -name "_*" -o -name .git -o -name . -o -name newlist -o -name html \) | perl -MList::Util=shuffle -e 'print shuffle <STDIN>') )
 for i in $(seq 0 5 $max_idx); do
 #for i in $(seq 0 1 $max_idx); do
 	if [ "${dirs[$i]}" == "" ]; then
@@ -60,7 +61,7 @@ for i in $(seq 0 5 $max_idx); do
 done
 echo 
 
-for d in $(find . -type d \! \( -name "_*" -o -name .git -o -name . -o -name newlist -o -name html \)); do 
+for d in $dirs; do 
 	if [ -d "$d" -a -f "$d/conf.xml" ]; then
 		if [ -s $d/$errorlog ]; then
 			echo "===================="
@@ -74,7 +75,7 @@ done
 echo "list='$list'"
 if [ "$list" != "" ]; then
 	echo "sending error messge"
-	#send_error_msg "$list"
+	send_error_msg "$list"
 fi
 
 find_problems.sh > log/find_problems.log 2>&1
