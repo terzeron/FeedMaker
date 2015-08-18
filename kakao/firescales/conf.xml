@@ -3,7 +3,7 @@
 	<collection>
 		<is_completed>true</is_completed>
 		<sort_field_pattern><![CDATA[productId=(\d+)]]></sort_field_pattern>
-		<unit_size_per_day>2</unit_size_per_day>
+		<unit_size_per_day>4</unit_size_per_day>
 		<list_url_list>
 			<list_url><![CDATA[http://page.kakao.com/home/46661249]]></list_url>
 			<list_url><![CDATA[http://page.kakao.com/home/46661249?page=2]]></list_url>
