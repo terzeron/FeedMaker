@@ -319,7 +319,7 @@ sub append_item_to_result
 			$option = "--render_js";
 		}
 		my $force_sleep_between_articles = $extraction_config->{"force_sleep_between_articles"};
-		if ($not defined $force_sleep_between_articles) {
+		if (not defined $force_sleep_between_articles) {
 			$force_sleep_between_articles = "";
 		}
 		my $review_point_threshold = $extraction_config->{"review_point_threshold"};
