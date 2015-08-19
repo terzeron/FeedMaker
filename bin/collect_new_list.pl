@@ -16,18 +16,18 @@ $/ = "";
 
 sub extract_urls
 {
-	my $encoding = shift;
 	my $render_js = shift;
 	my $url = shift;
 	my $item_capture_script = shift;
-	#print "# extract_urls($encoding, $url, $item_capture_script)\n";
+	my $user_agent = shift;
+	#print "# extract_urls($url, $item_capture_script, $user_agent)\n";
 
 	my $option = "";
 	if ($render_js == 1) {
 		$option = "--render-js";
 	}
-	if ($encoding != "utf8") {
-		$option = "$option --encoding $encoding";
+	if ($user_agent ne "") {
+		$option .= " --ua '$user_agent'";
 	}
 	my $cmd = qq(wget.sh $option "$url" | extract_element.py collection 2>&1 | $item_capture_script);
 	print "# $cmd\n";
@@ -55,17 +55,17 @@ sub extract_urls
 
 sub compose_url_list
 {
-	my $encoding = shift;
 	my $render_js = shift;
 	my $list_url_list = shift ;
 	my $item_capture_script = shift;
+	my $user_agent = shift;
 	my $total_list = shift;
 
 	if (not defined $list_url_list) {
 		$list_url_list = "";
 	} 
 
-	print "# compose_url_list($encoding, $render_js, $list_url_list, $item_capture_script, $total_list)\n";
+	print "# compose_url_list($render_js, $list_url_list, $item_capture_script, $total_list)\n";
 
 	foreach my $key (keys %$list_url_list) {
 		my $value = $list_url_list->{$key};
@@ -73,13 +73,13 @@ sub compose_url_list
 			# list_url_list 아래 list_url이 여러 개 존재하는 경우
 			foreach my $url (@$value) {
 				my $a_url = $url;
-				my @url_list = extract_urls($encoding, $render_js, $a_url, $item_capture_script);
+				my @url_list = extract_urls($render_js, $a_url, $item_capture_script, $user_agent);
 				push @$total_list, @url_list;
 			}
 		} else {
             # list_url_list 아래 list_url이 하나 존재하는 경우
 			my $a_url = $value;
-			my @url_list = extract_urls($encoding, $render_js, $a_url, $item_capture_script);
+			my @url_list = extract_urls($render_js, $a_url, $item_capture_script, $user_agent);
 			push @$total_list, @url_list;
 		}
 	}
@@ -99,15 +99,6 @@ sub main
 		return -1;
 	}
 
-	my $encoding = get_config_value($config, 0, "utf8", ("collection", "encoding"));
-	if (not defined $encoding or $encoding eq "") {
-		$encoding = "utf8";
-	} else {
-		if ($encoding !~ m!(utf-?8|cp949)!i) {
-			confess "Error: can't identify encoding type '$encoding'\n";
-			return -1;
-		}
-	}
 	my $render_js = get_config_value($config, 0, 0, ("collection", "render_js"));
 	if (defined $render_js and $render_js =~ m!(true|yes)!i) {
 		$render_js = 1;
@@ -132,9 +123,11 @@ sub main
 		return -1;
 	}
 
+	my $user_agent = get_config_value($config, 0, "", ("collection", "user_agent"));
+
 	# collect items from specified url list
 	print "# collecting items from specified url list...\n";
-	compose_url_list($encoding, $render_js, $list_url_list, $item_capture_script, \@total_list);
+	compose_url_list($render_js, $list_url_list, $item_capture_script, $user_agent, \@total_list);
 
 	foreach my $item (@total_list) {
 		print $item . "\n";

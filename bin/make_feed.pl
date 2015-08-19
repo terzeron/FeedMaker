@@ -315,17 +315,10 @@ sub append_item_to_result
 			}
 		}
 		
-		my $encoding = get_config_value($config, 0, "utf8", ("extraction", "encoding"));
-		if (not defined $encoding or $encoding eq "") {
-			$encoding = "utf8";
-		}
 		my $render_js = get_config_value($config, 0, 0, ("extraction", "render_js"));
 		my $option = "";
 		if (defined $render_js and $render_js =~ m!yes|true!i) {
 			$option = "--render-js";
-		}
-		if (defined $encoding and $encoding != "utf8") {
-			$option = "$option --encoding $encoding"
 		}
 		my $force_sleep_between_articles = get_config_value($config, 0, 0, ("extraction", "force_sleep_between_articles"));
 		my $bypass_element_extraction = get_config_value($config, 0, 0, ("extraction", "bypass_element_extraction"));
