@@ -9,11 +9,13 @@
 		</list_url_list>
 		<element_class>seriesDiv</element_class>
 		<item_capture_script>../capture_item_ilyo.pl</item_capture_script>
+		<render_js>true</render_js>
 	</collection>
 	<extraction>
 		<element_list>
 			<element_class>contentView</element_class>
 		</element_list>
+		<render_js>true</render_js>
 	</extraction>
 	<rss>
 		<title><![CDATA[레슬러들::일요신문]]></title>

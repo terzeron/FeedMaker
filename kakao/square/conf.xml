@@ -16,7 +16,7 @@
 			<list_url><![CDATA[http://page.kakao.com/home/46792796?page=9]]></list_url>
 			<list_url><![CDATA[http://page.kakao.com/home/46792796?page=10]]></list_url>
 		</list_url_list>
-		<element_class>contentSlide</element_class>
+		<element_id>kakaopage_home_list</element_id>
 		<item_capture_script>../capture_item_kakaowebtoon.pl</item_capture_script>
 	</collection>
 	<extraction>
