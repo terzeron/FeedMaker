@@ -20,7 +20,7 @@ sub main
 		print $line;
 	}
 
-	my $encoding = get_encoding_from_config("conf.xml");
+	my $encoding = get_encoding_from_config();
 
 	my $post_link = $ARGV[0];
 	if ($post_link =~ m!http://cartoon\.media\.daum\.net/(m/)?webtoon/viewer/(\d+)$!) {

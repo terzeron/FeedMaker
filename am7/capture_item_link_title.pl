@@ -15,7 +15,7 @@ use JSON qw(decode_json);
 
 sub print_usage
 {
-    print "usage:\t$PROGRAM_NAME [ -n <limit of recent feeds> ] conf.xml\n";
+    print "usage:\t$PROGRAM_NAME [ -n <limit of recent feeds> ]\n";
     print "\n";
     exit(-1);
 }

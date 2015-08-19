@@ -6,6 +6,9 @@ import re
 from bs4 import BeautifulSoup, Comment
 
 
+config_file = "conf.xml"
+
+
 def get_first_token_from_path(path_str):
 	#print "get_first_token_from_path(path_str='%s')" % (path_str)
 	is_anywhere = False
@@ -122,7 +125,7 @@ def read_file(file):
     return html
 
 
-def read_config(config_file):
+def read_config():
 	import xml.dom.minidom
 	return xml.dom.minidom.parse(config_file)
 

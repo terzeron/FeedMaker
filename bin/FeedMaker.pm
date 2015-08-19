@@ -14,6 +14,7 @@ use Encode;
 use XML::Simple;
 use POSIX qw(strftime locale_h);
 
+my $config_file = "conf.xml";
 
 setlocale(LC_CTYPE, "ko_KR.utf8");
 setlocale(LC_TIME, "C");
@@ -57,7 +58,6 @@ sub xml_escape
 
 sub read_config
 {
-	my $config_file = shift;
 	my $config = shift;
 
 	my $xml = new XML::Simple;
@@ -153,10 +153,9 @@ sub get_user_input
 
 sub get_encoding_from_config
 {
-	my $config_file = shift;
 	my $config = ();
 
-	if (not FeedMaker::read_config($config_file, \$config)) {
+	if (not FeedMaker::read_config(\$config)) {
 		confess "Error: can't read configuration!, ";
 		return -1;
 	}

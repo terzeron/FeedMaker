@@ -60,9 +60,8 @@ sub get_title
 sub main
 {
 	my $conf_file = $ARGV[0];
-	my $config = ();
 
-	my $encoding = get_encoding_from_config($conf_file);
+	my $encoding = get_encoding_from_config();
 
 	while (my $line = <STDIN>) {
 		if ($line =~ m!<a href=\"(cstory\.nhn\?nid=\d+)&(?:amp;)?page=\d+\"><img src="?[^>]+"?\s*/?></a>!) {

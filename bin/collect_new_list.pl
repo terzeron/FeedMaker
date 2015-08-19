@@ -16,18 +16,17 @@ $/ = "";
 
 sub extract_urls
 {
-	my $config_file = shift;
 	my $encoding = shift;
 	my $render_js = shift;
 	my $url = shift;
 	my $item_capture_script = shift;
-	#print "# extract_urls($config_file, $encoding, $url, $item_capture_script)\n";
+	#print "# extract_urls($encoding, $url, $item_capture_script)\n";
 
 	my $option = "";
 	if ($render_js == 1) {
 		$option = "--render_js";
 	}
-	my $cmd = qq(wget.sh $option "$url" $encoding | extract_element.py $config_file collection 2>&1 | $item_capture_script $config_file);
+	my $cmd = qq(wget.sh $option "$url" $encoding | extract_element.py collection 2>&1 | $item_capture_script);
 	print "# $cmd\n";
 	my $result = `$cmd`;
 	if ($CHILD_ERROR != 0) {
@@ -53,7 +52,6 @@ sub extract_urls
 
 sub compose_url_list
 {
-	my $config_file = shift;
 	my $encoding = shift;
 	my $render_js = shift;
 	my $list_url_list = shift ;
@@ -64,7 +62,7 @@ sub compose_url_list
 		$list_url_list = "";
 	} 
 
-	print "# compose_url_list($config_file, $encoding, $render_js, $list_url_list, $item_capture_script, $total_list)\n";
+	print "# compose_url_list($encoding, $render_js, $list_url_list, $item_capture_script, $total_list)\n";
 
 	foreach my $key (keys %$list_url_list) {
 		my $value = $list_url_list->{$key};
@@ -72,23 +70,16 @@ sub compose_url_list
 			# list_url_list 아래 list_url이 여러 개 존재하는 경우
 			foreach my $url (@$value) {
 				my $a_url = $url;
-				my @url_list = extract_urls($config_file, $encoding, $render_js, $a_url, $item_capture_script);
+				my @url_list = extract_urls($encoding, $render_js, $a_url, $item_capture_script);
 				push @$total_list, @url_list;
 			}
 		} else {
             # list_url_list 아래 list_url이 하나 존재하는 경우
 			my $a_url = $value;
-			my @url_list = extract_urls($config_file, $encoding, $render_js, $a_url, $item_capture_script);
+			my @url_list = extract_urls($encoding, $render_js, $a_url, $item_capture_script);
 			push @$total_list, @url_list;
 		}
 	}
-}
-
-
-sub print_usage
-{
-	print "usage:\t$PROGRAM_NAME\t<config file>\n";
-	print "\n";
 }
 
 
@@ -96,16 +87,11 @@ sub main
 {
 	#print "# main()\n";
 
-	if (scalar @ARGV < 1) {
-		print_usage();
-		return -1;
-	}
-	my $config_file = $ARGV[0];
 	my @total_list = ();
 
 	# configuration
 	my $config = ();
-	if (not read_config($config_file, \$config)) {
+	if (not read_config(\$config)) {
 		confess "Error: can't read configuration!,";
 		return -1;
 	}
@@ -145,7 +131,7 @@ sub main
 
 	# collect items from specified url list
 	print "# collecting items from specified url list...\n";
-	compose_url_list($config_file, $encoding, $render_js, $list_url_list, $item_capture_script, \@total_list);
+	compose_url_list($encoding, $render_js, $list_url_list, $item_capture_script, \@total_list);
 
 	foreach my $item (@total_list) {
 		print $item . "\n";

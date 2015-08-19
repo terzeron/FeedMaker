@@ -16,13 +16,13 @@ from feedmakerutil import read_config, get_config_node, get_config_value, read_s
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 
-def extract_content(config_file, config_item):
-	#print "# extract_content(%s)" % config_file
+def extract_content(config_item):
+	#print "# extract_content()"
 	# configuration
 	class_str = ""
 	id_str = ""
 	path_str = ""
-	config = read_config(config_file)
+	config = read_config()
 	if config == None:
 		return -1
 	if config_item in ("collection", "extraction"):
@@ -85,12 +85,12 @@ def extract_content(config_file, config_item):
 
 
 def print_usage(program_name):
-	print "Usage:\t%s\t<config file> <config item>\n" % program_name
+	print "Usage:\t%s\t<config item>\n" % program_name
 	print ""
 
 
 if __name__ == "__main__":
-	if len(sys.argv) < 3:
+	if len(sys.argv) < 2:
 		print_usage(sys.argv[0])
 		sys.exit(-1)
-	extract_content(sys.argv[1], sys.argv[2])
+	extract_content(sys.argv[1])

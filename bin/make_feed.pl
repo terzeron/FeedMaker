@@ -40,16 +40,15 @@ sub get_new_file_name
 
 sub get_recent_list
 {
-	my $config_file = shift;
 	my $list_dir = shift;
 
-	print "# get_recent_list($config_file, $list_dir)\n";
+	print "# get_recent_list($list_dir)\n";
 
 	my $date_str = get_date_str(time());
 	my $newlist_file_name = get_list_file_name($list_dir, $date_str);
 	my $post_process_cmd = qq(| remove_duplicate_link.pl "$newlist_file_name");
 	my $config = ();
-	if (FeedMaker::read_config($config_file, \$config)) {
+	if (FeedMaker::read_config(\$config)) {
 		my $collection_config = $config->{"collection"};
 		if ($collection_config) {
 			my $post_process_script = get_config_value($config, 0, "", ("collection", "post_process_script"));
@@ -59,7 +58,7 @@ sub get_recent_list
 		}
 	}
 
-	my $cmd = qq(collect_new_list.pl "$config_file" ) . $post_process_cmd;
+	my $cmd = qq(collect_new_list.pl ) . $post_process_cmd;
 	print "# " . utf8_encode($cmd) . "\n";
 	my $result = qx($cmd);
 	if ($CHILD_ERROR != 0) {
@@ -281,7 +280,6 @@ sub append_item_to_result
 {
 	my $feed_list_ref = shift;
 	my $item = shift;
-	my $config_file = shift;
 	my $rss_file_name = shift;
 
 	my ($url, $title, $review_point) = split /\t/, $item;
@@ -298,7 +296,7 @@ sub append_item_to_result
 
 		my $post_process_cmd = "";
 		my $config = ();
-		if (not FeedMaker::read_config($config_file, \$config)) {
+		if (not FeedMaker::read_config(\$config)) {
 			confess "Error: can't read configuration!, ";
 			return -1;
 		}
@@ -340,7 +338,7 @@ sub append_item_to_result
 			return 0;
 		}
 
-		my $extraction_cmd = qq(| extract.py "$config_file" "$url");
+		my $extraction_cmd = qq(| extract.py "$url");
 		if ($bypass_element_extraction =~ m!yes|true!) {
 			$extraction_cmd = "";
 		}
@@ -388,12 +386,11 @@ sub diff_old_and_recent
 	$arg = shift;
 	my @old_list = @$arg;
 	my $feed_list_ref = shift;
-	my $config_file = shift;
 	my $rss_file_name = shift;
 
 	my %old_map = ();
 
-	print "# diff_old_and_recent($config_file)\n";
+	print "# diff_old_and_recent($rss_file_name)\n";
 
 	for my $old (@old_list) {
 		if ($old =~ /^\#/) {
@@ -425,14 +422,14 @@ sub diff_old_and_recent
 		if ($new_item =~ /^\#/) {
 			next;
 		}
-		append_item_to_result($feed_list_ref, $new_item, $config_file, $rss_file_name);
+		append_item_to_result($feed_list_ref, $new_item, $rss_file_name);
 	}
 	print "Appending " . scalar(@old_list) . " old item to the feed list\n";
 	for my $old_item (reverse @old_list) {
 		if ($old_item =~ /^\#/) {
 			next;
 		}
-		append_item_to_result($feed_list_ref, $old_item, $config_file, $rss_file_name);
+		append_item_to_result($feed_list_ref, $old_item, $rss_file_name);
 	}
 
 	if (scalar @$feed_list_ref == 0) {
@@ -522,11 +519,10 @@ sub main
 	}
 
 	my $rss_file_name = $ARGV[0];
-	my $config_file = "conf.xml";
 
 	# from configuration
 	my $config = ();
-	if (not FeedMaker::read_config($config_file, \$config)) {
+	if (not FeedMaker::read_config(\$config)) {
 		confess "Error: can't read configuration!,";
 	}
 
@@ -619,7 +615,7 @@ sub main
 		}
 	} else {
 		# 피딩 중인 피드는 최신 피드항목을 받아옴
-		@recent_list = get_recent_list($config_file, $list_dir);
+		@recent_list = get_recent_list($list_dir);
 		if (not @recent_list) {
 			confess "Error: can't get recent list!,";
 		}
@@ -629,8 +625,7 @@ sub main
 			@old_list = ();
 			@feed_list = @recent_list;
 		}
-		if (diff_old_and_recent(\@recent_list, \@old_list, \@feed_list,
-								$config_file, $rss_file_name) < 0) {
+		if (diff_old_and_recent(\@recent_list, \@old_list, \@feed_list, $rss_file_name) < 0) {
 			return -1;
 		}
 	}

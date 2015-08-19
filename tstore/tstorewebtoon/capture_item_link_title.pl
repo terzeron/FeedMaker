@@ -59,7 +59,7 @@ sub main
 	my $state = 0;
 	my @result_arr = ();
 
-	my $encoding = get_encoding_from_config("conf.xml");
+	my $encoding = get_encoding_from_config();
 
 	my $cmd = qq(find newlist -name "*.html" -mtime +7 -exec rm -f "{}" \\;);
 	my $result = qx($cmd);

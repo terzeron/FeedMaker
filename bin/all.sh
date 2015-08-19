@@ -27,7 +27,7 @@ function execute_job
 	dir=$1
 	#echo $dir
 	if [ -d "$dir" -a -f "$dir/conf.xml" ]; then
-		#echo -n $dir "  "
+		echo -n $dir "  "
 		is_completed=$(grep "<is_completed>true" $dir/conf.xml)
 		recent_collection_list=$(find $dir/newlist -type f -mmin 144)
 		rm -f $runlog $errorlog

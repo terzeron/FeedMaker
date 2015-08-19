@@ -27,14 +27,13 @@ def print_trailer():
 
 
 def extract_content(args):
-	config_file = args[0]
-	item_url = args[1]
+	item_url = args[0]
 	file = ""
-	if len(args) > 2:
-		file = args[2]
+	if len(args) > 1:
+		file = args[1]
 
 	# configuration
-	config = read_config(config_file)
+	config = read_config()
 	if config == None:
 		return -1
 	rss = get_config_node(config, "rss")
@@ -310,12 +309,12 @@ def traverse_element(element, url, encoding):
 
 
 def print_usage(program_name):
-	print "Usage:\t%s\t<config file> <file or url> <html file>\n" % program_name
+	print "Usage:\t%s\t<file or url> <html file>\n" % program_name
 	print ""
 
 
 if __name__ == "__main__":
-	if len(sys.argv) < 3:
+	if len(sys.argv) < 2:
 		print_usage(sys.argv[0])
 		sys.exit(-1)
 	signal.signal(signal.SIGPIPE, signal.SIG_DFL)

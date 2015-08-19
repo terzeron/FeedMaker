@@ -21,7 +21,7 @@ sub main
 		}
 	}
 
-	my $encoding = get_encoding_from_config("conf.xml");
+	my $encoding = get_encoding_from_config();
 
 	foreach my $url (@url_list) {
 		my $cmd = qq(wget.sh "$url" $encoding);
