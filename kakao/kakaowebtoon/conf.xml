@@ -11,6 +11,7 @@
 			<list_url><![CDATA[http://page.kakao.com/main/ajax_weekly_web?week=7&categoryType=MC09&navi=1&inkatalk=0&categoryUid=10&subCategoryUid=0]]></list_url>
 		</list_url_list>
 		<element_class>week_list</element_class>
+		<user_agent><![CDATA[Mozilla/5.0 (iPhone; CPU iPhone OS 8_4 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Mobile/12H143 KAKAOTALK]]></user_agent>
 	</collection>
 	<extraction>
 		<element_list>

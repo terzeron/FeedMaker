@@ -4,7 +4,7 @@
 		<list_url_list>
 			<list_url><![CDATA[http://sports.khan.co.kr/comics/]]></list_url>
 		</list_url_list>
-		<element_id>m_04</element_id>
+		<element_class>seriesfree_list</element_class>
 		<encoding>cp949</encoding>
 	</collection>
 	<extraction>

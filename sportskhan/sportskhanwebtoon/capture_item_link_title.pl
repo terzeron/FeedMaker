@@ -13,7 +13,7 @@ sub main
 	my $title = "";
   
 	while (my $line = <STDIN>) {
-		if ($line =~ m!<li(?: class="[^"]+")?><a href="(http://sports.khan.co.kr/[^"]+)">([^<]+)</a></li>!) {
+		if ($line =~ m!<strong><a href="(http://sports.khan.co.kr/comics/cartoon_view.html\?comics=b2c&amp;sec_id=\d+)">([^<]+)</a></strong>!) {
 			$link = $1;
 			$title = $2;
 			$link =~ s!&amp;!&!g;

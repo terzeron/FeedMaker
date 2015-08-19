@@ -48,12 +48,13 @@ else
 	cmd="wget -q -O - ${timeout_opt} ${ua_opt} ${cert_opt} ${cookie_opt} ${referer_opt} ${url}"
 fi
 
-if [ "${encoding}" != "utf8" ]; then
-	cmd="${cmd} | iconv -c -f ${encoding} -t utf8"
-fi
 
 if [ "${download_file}" != "" ]; then
 	cmd="${cmd} > \"${download_file}\""
+else
+	if [ "${encoding}" != "utf8" ]; then
+		cmd="${cmd} | iconv -c -f ${encoding} -t utf8"
+	fi
 fi
 
 if [ "${verbose_opt}" == "-v" ]; then

@@ -9,6 +9,7 @@
 		</list_url_list>
 		<element_id>kakaopage_home_list</element_id>
 		<item_capture_script>../capture_item_kakaowebtoon.pl</item_capture_script>
+		<user_agent><![CDATA[Mozilla/5.0 (iPhone; CPU iPhone OS 8_4 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Mobile/12H143 KAKAOTALK]]></user_agent>
 	</collection>
 	<extraction>
 		<element_list>

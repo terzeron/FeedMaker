@@ -29,7 +29,7 @@ function execute_job
 	if [ -d "$dir" -a -f "$dir/conf.xml" ]; then
 		echo -n $dir "  "
 		is_completed=$(grep "<is_completed>true" $dir/conf.xml)
-		recent_collection_list=$(find $dir/newlist -type f -mmin 144)
+		recent_collection_list=$([ -e "$dir/newlist" ] && find $dir/newlist -type f -mmin 144)
 		rm -f $runlog $errorlog
 		if [ "$is_completed" != "" -a "$recent_collection_list" == "" ]; then
 			(cd $dir; run.sh -c > $runlog 2> $errorlog; run.sh >> $runlog 2>> $errorlog)
@@ -45,7 +45,7 @@ find /Users/terzeron/public_html/xml/img \( -mtime +20d -o -size 0 \) -exec rm -
 cd ${FEED_MAKER_HOME}
 pwd
 
-dirs=( $(find . -type d \! \( -name "_*" -o -name .git -o -name . -o -name newlist -o -name html \) | perl -MList::Util=shuffle -e 'print shuffle <STDIN>') )
+dirs=( $(find . -type d -path "./*/*" -not \( -path "./.git/*" -o -path "./_*/*" -o -path "./*/_*" -o -name newlist -o -name html \) | perl -MList::Util=shuffle -e 'print shuffle <STDIN>') )
 for i in $(seq 0 5 $max_idx); do
 #for i in $(seq 0 1 $max_idx); do
 	if [ "${dirs[$i]}" == "" ]; then

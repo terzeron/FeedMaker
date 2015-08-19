@@ -5,13 +5,11 @@
 			<list_url><![CDATA[http://ilyo.co.kr/?ac=list&cate_id=118]]></list_url>
 		</list_url_list>
 		<element_class>mainSection</element_class>
-		<render_js>true</render_js>
 	</collection>
 	<extraction>
 		<element_list>
 			<element_class>headBnr</element_class>
 		</element_list>
-		<render_js>true</render_js>
 	</extraction>
 	<rss>
 		<title><![CDATA[일요신문웹툰목록]]></title>

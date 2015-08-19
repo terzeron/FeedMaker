@@ -25,7 +25,8 @@ sub main
 			$title = $2;
 
 			# 링크에 들어가서 1화를 찾아서 해당 링크 주소를 확인
-			my $cmd = qq([ -e "${html_file}" -a -s "${html_file}" ] || wget.sh "$link" | grep '<option value="[0-9][0-9]*">1[^0-9]' | head -1);
+			my $html_file = "newlist/" . FeedMaker::get_md5_name($link) . ".html";
+			my $cmd = qq([ -e "${html_file}" -a -s "${html_file}" ] || wget.sh --download "$html_file" "$link"; iconv -c -f $encoding -t utf8 ${html_file} | grep '<option value="[0-9][0-9]*">1[^0-9]' | head -1);
 			#print $cmd . "\n";
 			my $result = qx($cmd);
 			if ($ERRNO != 0) {
