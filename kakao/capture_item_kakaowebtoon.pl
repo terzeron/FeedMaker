@@ -16,14 +16,14 @@ sub main
 
 	while (my $line = <STDIN>) {
 		if ($state == 0) {
-			if ($line =~ m!<a class="p_info" data-productid="(\d+)"!) {
-				$id = $1;
-				$link = "http://page.kakao.com/viewer?productId=" . $id;
+			if ($line =~ m!<span class="title ellipsis_hd">([^<]+)</span>!) {
+				$title = $1;
 				$state = 1;
 			}
 		} elsif ($state == 1) {
-			if ($line =~ m!<strong class="p_title ellipsis">([^<]+)</strong>!) {
-				$title = $1;
+			if ($line =~ m!<input class="productId" type="hidden" value="(\d+)"!) {
+				$id = $1;
+				$link = "http://page.kakao.com/viewer?productId=" . $id;
 				print "$link\t$title\n";
 				$state = 0;
 			}

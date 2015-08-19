@@ -9,7 +9,7 @@
 	</collection>
 	<extraction>
 		<element_list>
-			<element_class>photo-view-area</element_class>
+			<element_class>article-text</element_class>
 		</element_list>
 	</extraction>
 	<rss>

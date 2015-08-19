@@ -18,7 +18,7 @@
 	</collection>
 	<extraction>
 		<element_list>
-			<element_class>wIntro</element_class>
+			<element_class>intro-toon</element_class>
 		</element_list>
 	</extraction>
 	<rss>

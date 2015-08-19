@@ -29,6 +29,7 @@
 			<element_class>toon_view_content</element_class>
 		</element_list>
 		<post_process_script>../post_process_ollehmarketwebtoon.pl</post_process_script>
+		<post_process2_script>download_image.pl</post_process2_script>
 	</extraction>
 	<rss>
 		<title><![CDATA[냄새를 보는 소녀::올레마켓]]></title>
