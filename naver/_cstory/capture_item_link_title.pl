@@ -16,7 +16,7 @@ sub get_title
 	print "# get_title($url, $encoding)\n";
 
 	my $state = 0;
-	my $cmd = qq(wget.sh "$url" "$encoding");
+	my $cmd = qq(wget.sh "$url");
 	my $result = `$cmd`;
 	if ($CHILD_ERROR != 0) {
 	    confess "Error: can't get html from '$url',";

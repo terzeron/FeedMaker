@@ -35,7 +35,7 @@ sub main
 	if ($second_page_url ne "") {
 		my $encoding = get_encoding_from_config();
 
-        my $cmd = qq(wget.sh "$second_page_url" $encoding | extract.py "$ARGV[0]");
+        my $cmd = qq(wget.sh "$second_page_url" | extract.py "$ARGV[0]");
         my $result = qx($cmd);
         foreach my $line (split /\n/, $result) {
 			if ($line =~ m!<img src='(http://comicmenu.mt.co.kr/[^']+.jpg)'(?: width='\d+%')?/>!i) {

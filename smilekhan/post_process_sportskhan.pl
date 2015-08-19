@@ -24,7 +24,7 @@ sub main
 	my $encoding = get_encoding_from_config();
 
 	foreach my $url (@url_list) {
-		my $cmd = qq(wget.sh "$url" $encoding);
+		my $cmd = qq(wget.sh "$url");
 		#print $cmd . "\n";
 		my $result = `$cmd`;
 		if ($CHILD_ERROR == 0) {

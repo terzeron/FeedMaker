@@ -24,9 +24,12 @@ sub extract_urls
 
 	my $option = "";
 	if ($render_js == 1) {
-		$option = "--render_js";
+		$option = "--render-js";
 	}
-	my $cmd = qq(wget.sh $option "$url" $encoding | extract_element.py collection 2>&1 | $item_capture_script);
+	if ($encoding != "utf8") {
+		$option = "$option --encoding $encoding";
+	}
+	my $cmd = qq(wget.sh $option "$url" | extract_element.py collection 2>&1 | $item_capture_script);
 	print "# $cmd\n";
 	my $result = `$cmd`;
 	if ($CHILD_ERROR != 0) {

@@ -23,7 +23,7 @@ sub main
 			last;
 		}
 	}
-	my $cmd = qq(wget.sh "$data_url" utf8 | gunzip);
+	my $cmd = qq(wget.sh "$data_url" | gunzip);
 	#print $cmd . "\n";
 	if (not open(DATA, "$cmd | ")) {
 		confess "Error: can't get data list from '$data_url'\n";

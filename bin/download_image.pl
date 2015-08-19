@@ -66,7 +66,7 @@ sub download_image
 	my $page_url = shift;
 
 	my $cache_file = get_cache_file_name($path_prefix, $img_url, $img_ext);
-	my $cmd = qq([ -f "$cache_file" -a -s "$cache_file" ] || wget.sh --download "$img_url" "$cache_file" "$page_url");
+	my $cmd = qq([ -f "$cache_file" -a -s "$cache_file" ] || wget.sh --download "$cache_file" --referer "$page_url" "$img_url");
 	#print $cmd . "\n";
 	my $result = qx($cmd);
 	#print $result;

@@ -26,7 +26,7 @@ sub main
 	if ($second_page_url ne "") {
 		my $encoding = get_encoding_from_config();
 
-		my $cmd = qq(wget.sh "$second_page_url" $encoding | extract_element.py extraction);
+		my $cmd = qq(wget.sh "$second_page_url" | extract_element.py extraction);
 		#print $cmd . "\n";
 		my $result = `$cmd`;
 		if ($CHILD_ERROR == 0) {

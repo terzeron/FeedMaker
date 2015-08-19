@@ -33,7 +33,7 @@ sub main
 		} else {
 			$url = "http://cartoon.media.daum.net/webtoon/viewer_images.js?webtoon_episode_id=$episode_id";
 		}
-		$cmd = qq(wget.sh "$url" $encoding);
+		$cmd = qq(wget.sh "$url");
 		#print $cmd . "\n";
 		my $result = qx($cmd);
 		if ($CHILD_ERROR != 0) {

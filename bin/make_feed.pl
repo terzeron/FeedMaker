@@ -322,7 +322,10 @@ sub append_item_to_result
 		my $render_js = get_config_value($config, 0, 0, ("extraction", "render_js"));
 		my $option = "";
 		if (defined $render_js and $render_js =~ m!yes|true!i) {
-			$option = "--render_js";
+			$option = "--render-js";
+		}
+		if (defined $encoding and $encoding != "utf8") {
+			$option = "$option --encoding $encoding"
 		}
 		my $force_sleep_between_articles = get_config_value($config, 0, 0, ("extraction", "force_sleep_between_articles"));
 		my $bypass_element_extraction = get_config_value($config, 0, 0, ("extraction", "bypass_element_extraction"));
@@ -343,7 +346,7 @@ sub append_item_to_result
 			$extraction_cmd = "";
 		}
 
-		$cmd = qq(wget.sh $option "$url" "$encoding" $extraction_cmd $post_process_cmd > "$new_file_name");
+		$cmd = qq(wget.sh $option "$url" $extraction_cmd $post_process_cmd > "$new_file_name");
 		print "# $cmd\n";
 		my $result = qx($cmd);
 		if ($CHILD_ERROR != 0) {

@@ -43,7 +43,7 @@ sub main
 			$url = $1;
 			$url =~ s!&amp;!&!g;
 			$url =~ s!</?em>!!g;
-			my $cmd = qq(wget.sh "$url" $encoding);
+			my $cmd = qq(wget.sh "$url");
 			#print "$cmd\n";
 			my $result = `$cmd`;
 			if ($CHILD_ERROR != 0) {

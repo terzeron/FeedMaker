@@ -16,7 +16,7 @@ sub get_list_page_link
 
 	# 링크에 들어가서 1화를 찾아서 해당 링크 주소를 확인
 	my $html_file = "newlist/" . FeedMaker::get_md5_name($link) . ".html";
-	my $cmd = qq{[ -e "${html_file}" -a -s "${html_file}" ] || wget.sh --download "$link" ${html_file}};
+	my $cmd = qq([ -e "$html_file" -a -s "$html_file" ] || wget.sh --download "$html_file" "$link");
 	my $result = qx($cmd);
 	if ($ERRNO != 0) {
 		confess "Error: can't get list page from '$link', $ERRNO\n";
