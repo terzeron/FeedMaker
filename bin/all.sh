@@ -67,7 +67,7 @@ for d in $dirs; do
 			echo "===================="
 			echo $d
 			echo "===================="
-			egrep -i -e "(error)" $d/$errorlog && list="$list,${d##*/}"
+			egrep -i -v -e "Warning" $d/$errorlog && list="$list,${d##*/}"
 		fi
 	fi
 done
