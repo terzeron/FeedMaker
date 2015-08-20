@@ -63,14 +63,12 @@ class XPathTest(unittest.TestCase):
 
 class IOTest(unittest.TestCase):
 	def test_read_config(self):
-		config_file = "test.config.xml"
-		config = read_config(config_file)
+		config = read_config()
 		self.assertTrue(config != None)
 		self.assertTrue(isinstance(config, xml.dom.minidom.Document))
 		
 	def test_get_config_node(self):
-		config_file = "test.config.xml"
-		config = read_config(config_file)
+		config = read_config()
 		collection = get_config_node(config, "collection")
 		self.assertTrue(collection)
 		list_url_list = get_config_node(collection, "list_url_list")
@@ -79,8 +77,7 @@ class IOTest(unittest.TestCase):
 		self.assertTrue(list_url)
 
 	def test_get_value_from_config(self):
-		config_file = "test.config.xml"
-		config = read_config(config_file)
+		config = read_config()
 		collection = get_config_node(config, "collection")
 		list_url_list = get_config_node(collection, "list_url_list")
 		list_url = get_config_node(list_url_list, "list_url")
