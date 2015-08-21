@@ -86,5 +86,45 @@ class ExtractionTest(unittest.TestCase):
 		self.assertEqual(expected, result)
 
 		
+	def test_ollehmarket_webtoon(self):
+		os.environ['FEED_MAKER_CONF_FILE'] = "ollehmarket.webtoon.1.conf.xml"
+		url = "http://comic.ollehmarket.com/webtoon/detail.nhn?titleId=548870&no=118"
+		htmlFileName = "ollehmarket.webtoon.1.html"
+		extractedFileName = htmlFileName + ".extracted"
+		processedFileName = htmlFileName + ".processed"
+		downloadedFileName = htmlFileName + ".downloaded"
+
+		# extract.py test
+		expected = read_entire_file(extractedFileName)
+		cmd = "cat %s | extract.py '%s'" % (htmlFileName, url)
+		result = subprocess.check_output(cmd, shell=True)
+		self.assertEqual(expected, result)
+
+		# post process test
+		expected = read_entire_file(processedFileName)
+		cmd = "cat %s | %s/ollehmarket/post_process_ollehmarketwebtoon.pl '%s'" % (extractedFileName, os.environ['FEED_MAKER_HOME'], url)
+		result = subprocess.check_output(cmd, shell=True)
+		self.assertEqual(expected, result)
+
+		# download test
+		expected = read_entire_file(downloadedFileName)
+		cmd = "cat %s | download_image.pl '%s'" % (processedFileName, url)
+		result = subprocess.check_output(cmd, shell=True)
+		self.assertEqual(expected, result)
+
+		
+	def test_yonginlib(self):
+		os.environ['FEED_MAKER_CONF_FILE'] = "yonginlib.2.conf.xml"
+		url = "http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788960605060&product_cd=001&category_id=1231"
+		htmlFileName = "yonginlib.2.html"
+		extractedFileName = htmlFileName + ".extracted"
+
+		# extract.py test
+		expected = read_entire_file(extractedFileName)
+		cmd = "cat %s | extract.py '%s'" % (htmlFileName, url)
+		result = subprocess.check_output(cmd, shell=True)
+		self.assertEqual(expected, result)
+
+		
 if __name__ == "__main__":
 	unittest.main()

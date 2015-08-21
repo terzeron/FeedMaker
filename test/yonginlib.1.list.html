@@ -1,0 +1,1197 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ko" lang="ko">
+<head>
+    <title>전자책 &gt; 소설/희곡 | 용인디지털정보도서관</title>
+    <meta http-equiv="content-type" content="text/html; charset=euc-kr" />
+    <link rel="stylesheet" type="text/css" href="/Kyobo_T3/Includes/css/base.css" />
+    <link rel="stylesheet" type="text/css" href="/Kyobo_T3/Includes/css/org.css" />
+    <link rel="stylesheet" type="text/css" href="/Kyobo_T3/Includes/css/child.css" />
+    
+    <script language="JavaScript" type="text/javascript" src="/Kyobo_T3/Includes/js/jquery-1.7.1.min.js"></script>
+    <script language="JavaScript" type="text/javascript" src="/Kyobo_T3/Includes/js/jquery.easing.1.3.js"></script>
+    <script language="JavaScript" type="text/javascript" src="/Kyobo_T3/Includes/js/jquery.cookie.js"></script>
+    <script language="JavaScript" type="text/javascript" src="/Kyobo_T3/Includes/js/oops.js"></script>
+    <script language="JavaScript" type="text/javascript" src="/Kyobo_T3/Includes/js/common_ui.js"></script>
+    <script language="JavaScript" type="text/javascript" src="/Kyobo_T3/Includes/js/common.js"></script>
+    <script language="JavaScript" type="text/javascript" src="/Kyobo_T3/Includes/js/process.js"></script>
+    <script language="JavaScript" type="text/javascript" src="/Kyobo_T3/Includes/js/launcher.js"></script>
+
+    <script language="JavaScript" type="text/javascript">
+        /*
+        기업형과 초등형이 모든 객체를 동일하게 사용하지 않으므로 아래 스크립트는 html 또는 include 헤더에 포함되어야 합니다
+        oops.js 에 포함할 수 없음 -> org.js || child.js 로 별도 저장해서 사용하는 것은 옵셔널
+        */
+        $(document).ready(function () {
+            var gnbPos = {
+                depth1: "1",
+                depth2: "0"
+            };
+
+            // GNB
+            var oops = new Oops(gnbPos);
+            oops.init();
+
+
+            // 푸터 롤링 배너
+            var banner3 = new Banners2();
+            banner3.init(".footer_roll_banner", 3000);
+
+        });
+    </script>
+
+    <style type="text/css">
+        .org_skin .list_sorting_mystore,
+        .org_skin .line_top,
+        .org_skin #contents .list_view_tab,
+        .org_skin .div_view,
+        .org_skin .conbtm_org .tab_cont .on,
+        .org_skin .obox .outer,
+        .org_skin .header_top,
+        .org_skin .side_menu,
+        .org_skin .list_sorting,
+        .org_skin #footer,
+        .org_skin .review_wrap.line_top	{border-color:#0a325c !important;}	
+
+        .org_skin .bar_wrap .inner ,
+        .org_skin .cate_list li.on a,
+        .org_skin .lnbtitle					{background-color:#0a325c !important;}
+
+        .child_skin .list_sorting_mystore,
+        .child_skin .line_top,
+        .child_skin #contents .list_view_tab,
+        .child_skin .div_view,
+        .child_skin .dropBox,
+        .child_skin .list_sorting,
+        .child_skin .search_wrap,
+        .child_skin .obox .outer,
+        .child_skin .lnbtitle,
+        .child_skin .side_menu				{border-color:#0a325c !important;}
+
+        .child_skin .cate_list li.on a,
+        .child_skin .search_btn,
+        .child_skin .gnb a					{background-color:#0a325c !important;}       
+        .child_skin .gnb a.on			    {background-color: !important;}
+    </style>
+
+</head>
+<body>
+<div id="accessibility">
+	<ul>
+		<li><a href="#gnb" class="hidden" accesskey="0">주 메뉴 바로가기</a></li>
+		<li><a href="#contents" class="hidden" accesskey="1">본문 바로가기</a></li>
+	</ul>
+</div>
+<div id="wrap" class="org_skin">
+
+    <div class="header_wrap">
+    
+        <div id="header">
+            <div class="header_top">
+                <h1 class="logo"><a href="http://ebook.yonginlib.go.kr"><img src="/Kyobo_T3/Upload/Images/Library/T-201306121371033899.jpg" alt="용인디지털정보도서관" /></a></h1>
+
+                <!-- 내서재 -->
+                
+                <ul class="my_library">
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/MyLibrary/MyLibrary_Borrow.asp" class="bg1 ml4" onclick="goMyLibrary('', 'Y', 'http://ebook.yonginlib.go.kr/Kyobo_T3/MyLibrary/MyLibrary_Borrow.asp'); return false"><em class="acc">내서재 가기</em></a></li>
+                </ul>                               
+                <!-- //내서재 -->
+
+                <!-- 유틸메뉴 -->
+                
+                <h2 class="hidden">유틸메뉴</h2>
+                <ul class="global">
+                
+					<li><a href="http://www.yonginlib.go.kr/digitallib/main.asp"><img src="http://ebook.yonginlib.go.kr/Kyobo_T3/images/org/home.jpg"></a></li>
+                    <li class="line"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Member/Member_Login.asp" class="bg1 gl3"><em class="acc">로그인</em></a></li>
+                    
+                    <!-- 기업형 유틸메뉴 시작 -->
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/HelpDesk/HelpDesk_BorrowGuide.asp?mcode=1" class="bg1 gl5"><em class="acc">이용안내</em></a></li>
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Board/Board_List.asp?b_id=1" class="bg1 gl6"><em class="acc">게시판</em></a></li>
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Sitemap/Sitemap.asp" class="bg1 gl7"><em class="acc">사이트맵</em></a></li>
+                    <!-- 기업형 유틸메뉴 끝 -->
+                
+                </ul>
+                <!-- //유틸메뉴 -->
+
+                <!-- GNB -->
+                
+                <h2 class="hidden">주메뉴</h2>
+                <ul class="gnb" id="gnb">
+                
+                    <li class="on2"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_Main.asp?product_cd=001" class="cate1"><em class="acc">전자책</em></a>
+                    
+                        <div class="dept2_wrap_t cate1">
+                            <div class="dept2_wrap_b">
+                                <ul class="dept2_wrap_c">
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=02">경영/경제 <strong>[463]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=04">자기계발 <strong>[420]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=06">소설/희곡 <strong>[2012]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=08">장르 <strong>[247]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=10">시/에세이 <strong>[1327]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=12">인문 <strong>[296]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=14">국어/외국어 <strong>[470]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=16">사회/정치/법 <strong>[120]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=19">역사/풍속/신화 <strong>[220]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=22">자연과학/공학 <strong>[115]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=24">컴퓨터/인터넷 <strong>[78]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=26">건강/의학 <strong>[59]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=28">가족/생활/요리 <strong>[506]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=30">여행/취미 <strong>[186]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=31">예술/대중문화 <strong>[70]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=35">종교/역학 <strong>[72]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=36">참고서/수험서/사전 <strong>[99]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=38">청소년교양 <strong>[22]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=41">유아 <strong>[107]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=42">아동 <strong>[2705]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=47">만화 <strong>[7]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=49">도서요약 <strong>[5]</strong></a></li>
+                                
+                                </ul>
+                            </div>
+                        </div>
+                    
+                    </li>
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/seminar/seminar_Main.asp?product_cd=003" class="cate3"><em class="acc">동영상북</em></a>
+                    
+                        <div class="dept2_wrap_t cate3">
+                            <div class="dept2_wrap_b">
+                                <ul class="dept2_wrap_c">
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/seminar/seminar_List.asp?product_cd=003&amp;category_id=15">북러닝 <strong>[230]</strong></a></li>
+                                
+                                </ul>
+                            </div>
+                        </div>
+                    
+                    </li>
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/elearning/elearning_Main.asp?product_cd=009" class="cate4"><em class="acc">e-Learning</em></a>
+                    
+                        <div class="dept2_wrap_t cate4">
+                            <div class="dept2_wrap_b">
+                                <ul class="dept2_wrap_c">
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/elearning/elearning_List.asp?product_cd=009&amp;category_id=02">사이버영화관 <strong>[3]</strong></a></li>
+                                
+                                </ul>
+                            </div>
+                        </div>
+                    
+                    </li>
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/kids/kids_Main.asp?product_cd=004" class="cate5"><em class="acc">키즈북</em></a>
+                    
+                        <div class="dept2_wrap_t cate5">
+                            <div class="dept2_wrap_b">
+                                <ul class="dept2_wrap_c">
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/kids/kids_List.asp?product_cd=004&amp;category_id=71">한글동화 <strong>[387]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/kids/kids_List.asp?product_cd=004&amp;category_id=73">영어동화 <strong>[240]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/kids/kids_List.asp?product_cd=004&amp;category_id=75">일어동화 <strong>[29]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/kids/kids_List.asp?product_cd=004&amp;category_id=79">공부방 <strong>[205]</strong></a></li>
+                                
+                                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/kids/kids_List.asp?product_cd=004&amp;category_id=81">놀이방 <strong>[47]</strong></a></li>
+                                
+                                </ul>
+                            </div>
+                        </div>
+                    
+                    </li>
+                
+                </ul>
+            
+                <!-- //GNB -->
+                <div class="search_wrap">
+                    <fieldset>
+                        <legend>콘텐츠 검색</legend>
+                        <!--
+                        ## 검색바 사이즈 조절 ##
+
+                        default : 중간값입니다. (웹디비 메뉴빼고 다 있을경우 정도의 길이) : <input class="search_keyword" title="통합검색키워드" name="" value="" />						
+                        가장 큰사이즈 (메뉴가 키즈북 까지 있을경우의 검색바 최고 사이즈) :	<input class="search_keyword size_max" title="통합검색키워드" name="" value="" /> 
+                        가장 작은 사이즈 (메뉴가 웹디비 까지 있을경우의 검색바 최저 사이즈): <input class="search_keyword size_min" title="통합검색키워드" name="" value="" />
+                        -->
+                        <form name="search" method="get" action="/Kyobo_T3/Content/Content_Search.asp" onsubmit="return TotalSearch();">
+                        <input class="search_keyword size_max" title="검색어" id="total_search_keyword" name="total_search_keyword" value="" />
+                        <input type="image" class="search_btn" src="/Kyobo_T3/Images/org/search_btn.png" alt="검색" title="검색하기"/>
+                        </form>
+                    </fieldset> 
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+        <div id="container">
+
+            <!-- 상단 이미지 -->
+                        
+            <div class="org_spot"><img src="/Kyobo_T3/Images/Org/img_org_spot_001.gif" alt="전자도서관과 함께하는 스마트한 독서 생활 멀리 있는 서점 찾아 헤매지 말고, 가까운 곳에서 독서를 즐기세요." /></div>
+
+            <!-- //상단 이미지 -->
+                          
+            <!-- 좌측 메뉴 -->      
+            
+            <div class="leftarea">
+                <h2 class="lnbtitle"><img src="/Kyobo_T3/Images/org/lnbtitle_1.png" alt="전자책" /></h2>
+            
+                <ul class="lnb">
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=02">경영/경제</a></li>
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=04">자기계발</a></li>
+                
+                    <li class="on"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=06">소설/희곡</a></li>
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=08">장르</a></li>
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=10">시/에세이</a></li>
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=12">인문</a></li>
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=14">국어/외국어</a></li>
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=16">사회/정치/법</a></li>
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=19">역사/풍속/신화</a></li>
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=22">자연과학/공학</a></li>
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=24">컴퓨터/인터넷</a></li>
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=26">건강/의학</a></li>
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=28">가족/생활/요리</a></li>
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=30">여행/취미</a></li>
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=31">예술/대중문화</a></li>
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=35">종교/역학</a></li>
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=36">참고서/수험서/사전</a></li>
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=38">청소년교양</a></li>
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=41">유아</a></li>
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=42">아동</a></li>
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=47">만화</a></li>
+                
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=49">도서요약</a></li>
+                
+                </ul>
+            
+
+                <!-- 좌측 바로가기 메뉴 -->
+                
+                <ul class="side_menu">
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/HelpDesk/HelpDesk_BorrowGuide.asp?mcode=1"><img src="/Kyobo_T3/Images/org/btn_org_left_ban1.gif" alt="대출안내" /></a></li>
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/HelpDesk/HelpDesk_InstallProgram.asp?mcode=2"><img src="/Kyobo_T3/Images/org/btn_org_left_ban2.gif" alt="프로그램 설치" /></a></li>
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/HelpDesk/HelpDesk_UserHelp.asp?mcode=7"><img src="/Kyobo_T3/Images/org/btn_org_left_ban3.gif" alt="사용자 도움말" /></a></li>
+                    
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/Content_Best_List.asp?list_type=S"><img src="/Kyobo_T3/Images/org/btn_org_left_ban4.gif" alt="모바일 서비스" /></a></li>
+                    
+                    <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/Content_Best_List.asp?list_type=A"><img src="/Kyobo_T3/Images/org/btn_org_left_ban5.gif" alt="부록 서비스 목록" /></a></li>
+                    
+                </ul>
+    
+<!--<br /><b>※ 컨텐츠 제공업체 구분</b><br />
+<img src="/Kyobo_T3/Images/org/ico_kb.png" style="margin-bottom:-5px;" alt="교보문고"> <b>교보문고</b>에서 제공<br />
+<img src="/Kyobo_T3/Images/org/ico_cpl.png" style="margin-bottom:-5px;" alt="워드CPL"> <b>워드CPL</b>에서 제공-->
+
+                <!-- //좌측 바로가기 메뉴 -->  
+            </div>
+            <!-- //좌측 메뉴 -->      
+
+            <div class="content_area">
+                
+                <!-- 메뉴 네비게이션 -->
+                <div class="conts_top">
+                    <div class="location"> 
+                        <a href="/Kyobo_T3/">MAIN</a> &gt;
+                        <a href="/Kyobo_T3/Content/ebook/ebook_Main.asp?product_cd=001">전자책</a> &gt;
+                    
+                        <strong>소설/희곡</strong>
+                    
+                    </div>
+                </div>
+                <!-- //메뉴 네비게이션 -->
+
+                <div id="contents">
+
+                    <!-- 서브 카테고리 -->      
+                    
+                    <div class="small_category">
+                        <h3 class="cate_title">소설/희곡</h3>
+                        <ul class="cate_list">
+                        
+                            <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=0601">한국소설</a></li>
+                        
+                            <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=0603">영미소설</a></li>
+                        
+                            <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=0605">일본소설</a></li>
+                        
+                            <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=0607">중국소설</a></li>
+                        
+                            <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=0609">러시아소설</a></li>
+                        
+                            <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=0611">프랑스소설</a></li>
+                        
+                            <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=0613">독일소설</a></li>
+                        
+                            <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=0615">기타나라소설</a></li>
+                        
+                            <li class="last"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=0617">희곡</a></li>
+                                                    
+                        </ul>
+                    </div>
+                    <!-- //서브 카테고리 -->
+
+                    <!-- 컨텐츠 리스트 -->      
+                    
+                    <div class="list_sorting">
+                    
+                        <!-- 전체도서보기/대출가능도서보기 -->
+                        <p class="select_order">
+                        
+                            <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=06&amp;content_all=Y&amp;order_key=pub_ymd&amp;search_keyword=&amp;search_type=&amp;search_product_cd=&amp;list_type="><img src="/Kyobo_T3/Images/org/btn_book_all_view_on.gif" alt="전체도서보기" /></a>
+                            <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=06&amp;content_all=N&amp;order_key=pub_ymd&amp;search_keyword=&amp;search_type=&amp;search_product_cd=&amp;list_type="><img src="/Kyobo_T3/Images/org/btn_book_passible_view_off.gif" alt="대출가능도서보기" /></a>
+                        
+                        </p>
+                        <!-- //전체도서보기/대출가능도서보기 -->
+                    
+                        <!-- 리스트 정렬 탭 -->
+                        <ul class="list_order">
+                        
+                            <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=06&amp;content_all=Y&amp;order_key=borrow_cnt&amp;search_keyword=&amp;search_type=&amp;search_product_cd="><span class="bg1 od1"><em class="acc">인기순</em></span></a></li>
+                            <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=06&amp;content_all=Y&amp;order_key=product_nm_kr&amp;search_keyword=&amp;search_type=&amp;search_product_cd="><span class="bg1 od2"><em class="acc">제목순</em></span></a></li>
+                            <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=06&amp;content_all=Y&amp;order_key=text_author_nm&amp;search_keyword=&amp;search_type=&amp;search_product_cd="><span class="bg1 od5"><em class="acc">저자순</em></span></a></li>
+                            <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=06&amp;content_all=Y&amp;order_key=cp_nm1&amp;search_keyword=&amp;search_type=&amp;search_product_cd="><span class="bg1 od3"><em class="acc">출판사순</em></span></a></li>
+                            <li class="on"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=06&amp;content_all=Y&amp;order_key=pub_ymd&amp;search_keyword=&amp;search_type=&amp;search_product_cd="><span class="bg1 od4"><em class="acc">출간일순</em></span></a></li>
+                        
+                        </ul>
+                        <!-- //리스트 정렬 탭 -->
+
+                        <h4 class="acc hidden">출간일순</h4>
+
+                        <span class="list_result">
+                        전체도서에는 총 <strong>2,012</strong>개의 자료가 있습니다.
+                        </span>
+
+                        <!-- 페이지 이동 -->
+                        
+                        <div class="page_move">
+                            <form name="form_pagemove" method="get" action="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp" onsubmit="return ConentListDirectPageCheck(1, 101);">
+                            <input type="hidden" name="product_cd" value="001" />
+                            <input type="hidden" name="category_id" value="06" />
+                            <input type="hidden" name="content_all" value="Y" />
+                            <input type="hidden" name="order_key" value="pub_ymd" />
+                            <input type="hidden" name="search_keyword" value="" />
+                            <input type="hidden" name="search_type" value=""  />
+                            <input type="hidden" name="search_product_cd" value="" />
+                            <input type="hidden" name="list_type" value="" />
+                            <input type="text" class="num_it" title="이동 할 페이지를 적어주세요." value="1" id="now_page" name="now_page" />
+                            <span class="total_count"> / 101 </span>                           
+                            <input type="image" src="/Kyobo_T3/Images/org/btn_page_move.gif" value="" name="" alt="페이지 이동하기" />
+                            <span class="page_pn">
+                                <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=06&amp;content_all=Y&amp;order_key=pub_ymd&amp;search_keyword=&amp;search_type=&amp;search_product_cd=&amp;list_type=&amp;now_page=1" class="p_prev"><img src="/Kyobo_T3/Images/org/btn_page_prev.gif" alt="이전페이지로 가기" onclick="alert('이전 페이지가 없습니다.');return false;" /></a>
+                                <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=06&amp;content_all=Y&amp;order_key=pub_ymd&amp;search_keyword=&amp;search_type=&amp;search_product_cd=&amp;list_type=&amp;now_page=2" class="p_next"><img src="/Kyobo_T3/Images/org/btn_page_next.gif" alt="다음페이지로 가기" /></a>
+                            </span>
+                            </form>
+                        </div>
+                        
+                        <!-- //페이지 이동 -->
+                    </div>
+
+                    <div id="list_books">
+                        <ul class="books_wrap">
+                        
+                            <li>
+                                <p class="pic">
+                                    <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=X0068458&amp;product_cd=001&amp;category_id=06"><img src="/DRMContent/bookimg/detail/X006/X0068458.gif" alt="비밀의 문 1 - 의궤 살인사건" /></a><span class="fold">&nbsp;</span>
+                                    
+                                </p>
+                                <dl>
+                                    <dt>
+                                        <span class="ico">
+                                        <img src="/Kyobo_T3/Images/org/ico_WR.png" alt="" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_smart.png" alt="스마트폰" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_tablet.png" alt="태블릿" />
+                                        </span>
+                                        <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=X0068458&amp;product_cd=001&amp;category_id=06">비밀의 문 1 - 의궤 살인사건</a>
+                                    </dt>
+                                    <dd>
+                                        <em>
+                                        김영은 / [ 예담 / 2015-05-08 ]
+                                        </em>
+                                        <p>역사에 대한 색다른 시선과 접근으로 화제가 된 드라마 《비밀의 문》 역사의 기록, 그 이면의 진실, 작가적 상상력이 어우러져 소설로 재탄생 탄탄한 ..</p>
+                                    </dd>
+                                </dl>
+                                <div class="service">
+                                
+                                    <ul>
+                                        <li class="loan"><strong class="txt"><span class="acc">대출 :</span></strong>
+                                            <span class="num"><strong>3</strong>/3</span>
+                                        </li>
+                                        <li class="reserv"><strong class="txt"><span class="acc">예약 :</span></strong>
+                                            <span class="num">0</span>
+                                        </li>
+                                    </ul>
+                                <p class="btn reserv"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Member/Member_Login.asp" title="'비밀의 문 1 - 의궤 살인사건' 예약하기" onclick="goLogin('Y', 'http://ebook.yonginlib.go.kr', '로그인 후 예약이 가능합니다.');return false"><em class="acc hidden">예약하기</em></a></p>
+                                </div>
+                            </li>
+                        
+                            <li>
+                                <p class="pic">
+                                    <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=X0068459&amp;product_cd=001&amp;category_id=06"><img src="/DRMContent/bookimg/detail/X006/X0068459.gif" alt="비밀의 문 2 - 의궤 살인사건" /></a><span class="fold">&nbsp;</span>
+                                    
+                                </p>
+                                <dl>
+                                    <dt>
+                                        <span class="ico">
+                                        <img src="/Kyobo_T3/Images/org/ico_WR.png" alt="" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_smart.png" alt="스마트폰" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_tablet.png" alt="태블릿" />
+                                        </span>
+                                        <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=X0068459&amp;product_cd=001&amp;category_id=06">비밀의 문 2 - 의궤 살인사건</a>
+                                    </dt>
+                                    <dd>
+                                        <em>
+                                        김영은 / [ 예담 / 2015-05-08 ]
+                                        </em>
+                                        <p>역사에 대한 색다른 시선과 접근으로 화제가 된 드라마 《비밀의 문》 역사의 기록, 그 이면의 진실, 작가적 상상력이 어우러져 소설로 재탄생 탄탄한 ..</p>
+                                    </dd>
+                                </dl>
+                                <div class="service">
+                                
+                                    <ul>
+                                        <li class="loan"><strong class="txt"><span class="acc">대출 :</span></strong>
+                                            <span class="num"><strong>2</strong>/3</span>
+                                        </li>
+                                        <li class="reserv"><strong class="txt"><span class="acc">예약 :</span></strong>
+                                            <span class="num">0</span>
+                                        </li>
+                                    </ul>
+                                <p class="btn loan"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Member/Member_Login.asp" title="'비밀의 문 2 - 의궤 살인사건' 대출하기" onclick="goLogin('Y', 'http://ebook.yonginlib.go.kr', '로그인 후 대출이 가능합니다.');return false"><em class="acc hidden">대출하기</em></a></p>
+                                </div>
+                            </li>
+                        
+                            <li>
+                                <p class="pic">
+                                    <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788967910914&amp;product_cd=001&amp;category_id=0601"><img src="/DRMContent/BX/images/9788967910914.jpg" alt="공장신문 (꼭 읽어야 할 한국 대표 소설 18)" /></a><span class="fold">&nbsp;</span>
+                                    
+                                </p>
+                                <dl>
+                                    <dt>
+                                        <span class="ico">
+                                        <img src="/Kyobo_T3/Images/org/ico_BX.png" alt="" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_smart.png" alt="스마트폰" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_tablet.png" alt="태블릿" />
+                                        </span>
+                                        <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788967910914&amp;product_cd=001&amp;category_id=0601">공장신문 (꼭 읽어야 할 한국 대표 소설 18)</a>
+                                    </dt>
+                                    <dd>
+                                        <em>
+                                        김남천 / [ 더플래닛 / 2015-03-25 ]
+                                        </em>
+                                        <p>1931년 7월 《조선일보》에 연재된 김남천의 단편소설.작가가 직접 공장파업에 가담했던 경험을 바탕으로 쓴 자전적인 소설로 노동자들에게 ‘‘평화고..</p>
+                                    </dd>
+                                </dl>
+                                <div class="service">
+                                
+                                    <ul>
+                                        <li class="loan"><strong class="txt"><span class="acc">대출 :</span></strong>
+                                            <span class="num"><strong>0</strong>/3</span>
+                                        </li>
+                                        <li class="reserv"><strong class="txt"><span class="acc">예약 :</span></strong>
+                                            <span class="num">0</span>
+                                        </li>
+                                    </ul>
+                                <p class="btn loan"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Member/Member_Login.asp" title="'공장신문 (꼭 읽어야 할 한국 대표 소설 18)' 대출하기" onclick="goLogin('Y', 'http://ebook.yonginlib.go.kr', '로그인 후 대출이 가능합니다.');return false"><em class="acc hidden">대출하기</em></a></p>
+                                </div>
+                            </li>
+                        
+                            <li>
+                                <p class="pic">
+                                    <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788967910907&amp;product_cd=001&amp;category_id=0601"><img src="/DRMContent/BX/images/9788967910907.jpg" alt="광염 소나타 (꼭 읽어야 할 한국 대표 소설 17)" /></a><span class="fold">&nbsp;</span>
+                                    
+                                </p>
+                                <dl>
+                                    <dt>
+                                        <span class="ico">
+                                        <img src="/Kyobo_T3/Images/org/ico_BX.png" alt="" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_smart.png" alt="스마트폰" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_tablet.png" alt="태블릿" />
+                                        </span>
+                                        <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788967910907&amp;product_cd=001&amp;category_id=0601">광염 소나타 (꼭 읽어야 할 한국 대표 소설 17)</a>
+                                    </dt>
+                                    <dd>
+                                        <em>
+                                        김동인 / [ 더플래닛 / 2015-03-25 ]
+                                        </em>
+                                        <p>1929년 1월 《중외일보》에 연재된 김동인의 단편소설로 그의 대표적인 유미주의적인 작품 중 하나다.유복자로 태어난 주인공 백성수는 병세가 심한 어..</p>
+                                    </dd>
+                                </dl>
+                                <div class="service">
+                                
+                                    <ul>
+                                        <li class="loan"><strong class="txt"><span class="acc">대출 :</span></strong>
+                                            <span class="num"><strong>0</strong>/3</span>
+                                        </li>
+                                        <li class="reserv"><strong class="txt"><span class="acc">예약 :</span></strong>
+                                            <span class="num">0</span>
+                                        </li>
+                                    </ul>
+                                <p class="btn loan"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Member/Member_Login.asp" title="'광염 소나타 (꼭 읽어야 할 한국 대표 소설 17)' 대출하기" onclick="goLogin('Y', 'http://ebook.yonginlib.go.kr', '로그인 후 대출이 가능합니다.');return false"><em class="acc hidden">대출하기</em></a></p>
+                                </div>
+                            </li>
+                        
+                            <li>
+                                <p class="pic">
+                                    <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788967910860&amp;product_cd=001&amp;category_id=0601"><img src="/DRMContent/BX/images/9788967910860.jpg" alt="낙동강 (꼭 읽어야 할 한국 대표 소설 13)" /></a><span class="fold">&nbsp;</span>
+                                    
+                                </p>
+                                <dl>
+                                    <dt>
+                                        <span class="ico">
+                                        <img src="/Kyobo_T3/Images/org/ico_BX.png" alt="" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_smart.png" alt="스마트폰" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_tablet.png" alt="태블릿" />
+                                        </span>
+                                        <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788967910860&amp;product_cd=001&amp;category_id=0601">낙동강 (꼭 읽어야 할 한국 대표 소설 13)</a>
+                                    </dt>
+                                    <dd>
+                                        <em>
+                                        조명희 / [ 더플래닛 / 2015-03-25 ]
+                                        </em>
+                                        <p>1927년 7월 《조선지광》에 발표된 조명희의 단편소설로 초기 신경향파 문학에서 프로문학으로 방향 전환을 이룬 작품으로 평가받는다.독립운동을 한 후..</p>
+                                    </dd>
+                                </dl>
+                                <div class="service">
+                                
+                                    <ul>
+                                        <li class="loan"><strong class="txt"><span class="acc">대출 :</span></strong>
+                                            <span class="num"><strong>0</strong>/3</span>
+                                        </li>
+                                        <li class="reserv"><strong class="txt"><span class="acc">예약 :</span></strong>
+                                            <span class="num">0</span>
+                                        </li>
+                                    </ul>
+                                <p class="btn loan"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Member/Member_Login.asp" title="'낙동강 (꼭 읽어야 할 한국 대표 소설 13)' 대출하기" onclick="goLogin('Y', 'http://ebook.yonginlib.go.kr', '로그인 후 대출이 가능합니다.');return false"><em class="acc hidden">대출하기</em></a></p>
+                                </div>
+                            </li>
+                        
+                            <li>
+                                <p class="pic">
+                                    <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788967910877&amp;product_cd=001&amp;category_id=0601"><img src="/DRMContent/BX/images/9788967910877.jpg" alt="도시와 유령 (꼭 읽어야 할 한국 대표 소설 14)" /></a><span class="fold">&nbsp;</span>
+                                    
+                                </p>
+                                <dl>
+                                    <dt>
+                                        <span class="ico">
+                                        <img src="/Kyobo_T3/Images/org/ico_BX.png" alt="" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_smart.png" alt="스마트폰" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_tablet.png" alt="태블릿" />
+                                        </span>
+                                        <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788967910877&amp;product_cd=001&amp;category_id=0601">도시와 유령 (꼭 읽어야 할 한국 대표 소설 14)</a>
+                                    </dt>
+                                    <dd>
+                                        <em>
+                                        이효석 / [ 더플래닛 / 2015-03-25 ]
+                                        </em>
+                                        <p>1928년 7월 《조선지광》에 발표된 이효석의 단편소설.일정한 거처 없이 서울 일대에서 노숙을 하며 미장이 일을 하는 ‘나’는 어느 날 밤 동료 김 서..</p>
+                                    </dd>
+                                </dl>
+                                <div class="service">
+                                
+                                    <ul>
+                                        <li class="loan"><strong class="txt"><span class="acc">대출 :</span></strong>
+                                            <span class="num"><strong>0</strong>/3</span>
+                                        </li>
+                                        <li class="reserv"><strong class="txt"><span class="acc">예약 :</span></strong>
+                                            <span class="num">0</span>
+                                        </li>
+                                    </ul>
+                                <p class="btn loan"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Member/Member_Login.asp" title="'도시와 유령 (꼭 읽어야 할 한국 대표 소설 14)' 대출하기" onclick="goLogin('Y', 'http://ebook.yonginlib.go.kr', '로그인 후 대출이 가능합니다.');return false"><em class="acc hidden">대출하기</em></a></p>
+                                </div>
+                            </li>
+                        
+                            <li>
+                                <p class="pic">
+                                    <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788967910846&amp;product_cd=001&amp;category_id=0601"><img src="/DRMContent/BX/images/9788967910846.jpg" alt="도정 (꼭 읽어야 할 한국 대표 소설 11)" /></a><span class="fold">&nbsp;</span>
+                                    
+                                </p>
+                                <dl>
+                                    <dt>
+                                        <span class="ico">
+                                        <img src="/Kyobo_T3/Images/org/ico_BX.png" alt="" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_smart.png" alt="스마트폰" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_tablet.png" alt="태블릿" />
+                                        </span>
+                                        <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788967910846&amp;product_cd=001&amp;category_id=0601">도정 (꼭 읽어야 할 한국 대표 소설 11)</a>
+                                    </dt>
+                                    <dd>
+                                        <em>
+                                        지하련 / [ 더플래닛 / 2015-03-25 ]
+                                        </em>
+                                        <p>1946년 7월 《문학》 창간호에 발표된 지하련의 단편소설로, 지하련은 이 소설로 조선문학가동맹이 주관한 제1회 조선문학상을 수상하였다.갑작스럽게 ..</p>
+                                    </dd>
+                                </dl>
+                                <div class="service">
+                                
+                                    <ul>
+                                        <li class="loan"><strong class="txt"><span class="acc">대출 :</span></strong>
+                                            <span class="num"><strong>0</strong>/3</span>
+                                        </li>
+                                        <li class="reserv"><strong class="txt"><span class="acc">예약 :</span></strong>
+                                            <span class="num">0</span>
+                                        </li>
+                                    </ul>
+                                <p class="btn loan"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Member/Member_Login.asp" title="'도정 (꼭 읽어야 할 한국 대표 소설 11)' 대출하기" onclick="goLogin('Y', 'http://ebook.yonginlib.go.kr', '로그인 후 대출이 가능합니다.');return false"><em class="acc hidden">대출하기</em></a></p>
+                                </div>
+                            </li>
+                        
+                            <li>
+                                <p class="pic">
+                                    <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788967910853&amp;product_cd=001&amp;category_id=0601"><img src="/DRMContent/BX/images/9788967910853.jpg" alt="미스터 방 (꼭 읽어야 할 한국 대표 소설 12)" /></a><span class="fold">&nbsp;</span>
+                                    
+                                </p>
+                                <dl>
+                                    <dt>
+                                        <span class="ico">
+                                        <img src="/Kyobo_T3/Images/org/ico_BX.png" alt="" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_smart.png" alt="스마트폰" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_tablet.png" alt="태블릿" />
+                                        </span>
+                                        <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788967910853&amp;product_cd=001&amp;category_id=0601">미스터 방 (꼭 읽어야 할 한국 대표 소설 12)</a>
+                                    </dt>
+                                    <dd>
+                                        <em>
+                                        채만식 / [ 더플래닛 / 2015-03-25 ]
+                                        </em>
+                                        <p>1946년 7월 《대조》에 발표된 채만식의 단편소설이자 풍자소설.머슴살이를 하다가 일본과 중국로 떠나 칠판 년 만에 고국으로 돌아온 방삼복은 신기료..</p>
+                                    </dd>
+                                </dl>
+                                <div class="service">
+                                
+                                    <ul>
+                                        <li class="loan"><strong class="txt"><span class="acc">대출 :</span></strong>
+                                            <span class="num"><strong>0</strong>/3</span>
+                                        </li>
+                                        <li class="reserv"><strong class="txt"><span class="acc">예약 :</span></strong>
+                                            <span class="num">0</span>
+                                        </li>
+                                    </ul>
+                                <p class="btn loan"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Member/Member_Login.asp" title="'미스터 방 (꼭 읽어야 할 한국 대표 소설 12)' 대출하기" onclick="goLogin('Y', 'http://ebook.yonginlib.go.kr', '로그인 후 대출이 가능합니다.');return false"><em class="acc hidden">대출하기</em></a></p>
+                                </div>
+                            </li>
+                        
+                            <li>
+                                <p class="pic">
+                                    <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788967910891&amp;product_cd=001&amp;category_id=0601"><img src="/DRMContent/BX/images/9788967910891.jpg" alt="박돌의 죽음 (꼭 읽어야 할 한국 대표 소설 16)" /></a><span class="fold">&nbsp;</span>
+                                    
+                                </p>
+                                <dl>
+                                    <dt>
+                                        <span class="ico">
+                                        <img src="/Kyobo_T3/Images/org/ico_BX.png" alt="" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_smart.png" alt="스마트폰" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_tablet.png" alt="태블릿" />
+                                        </span>
+                                        <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788967910891&amp;product_cd=001&amp;category_id=0601">박돌의 죽음 (꼭 읽어야 할 한국 대표 소설 16)</a>
+                                    </dt>
+                                    <dd>
+                                        <em>
+                                        최서해 / [ 더플래닛 / 2015-03-25 ]
+                                        </em>
+                                        <p>1925년 5월 《조선문단》에 발표된 최서해의 단편소설로 가난한 하층민의 비극적인 삶을 사실적으로 묘사하고 있다.가난한 집의 자식으로 태어난 열두 ..</p>
+                                    </dd>
+                                </dl>
+                                <div class="service">
+                                
+                                    <ul>
+                                        <li class="loan"><strong class="txt"><span class="acc">대출 :</span></strong>
+                                            <span class="num"><strong>0</strong>/3</span>
+                                        </li>
+                                        <li class="reserv"><strong class="txt"><span class="acc">예약 :</span></strong>
+                                            <span class="num">0</span>
+                                        </li>
+                                    </ul>
+                                <p class="btn loan"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Member/Member_Login.asp" title="'박돌의 죽음 (꼭 읽어야 할 한국 대표 소설 16)' 대출하기" onclick="goLogin('Y', 'http://ebook.yonginlib.go.kr', '로그인 후 대출이 가능합니다.');return false"><em class="acc hidden">대출하기</em></a></p>
+                                </div>
+                            </li>
+                        
+                            <li>
+                                <p class="pic">
+                                    <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788967910884&amp;product_cd=001&amp;category_id=0601"><img src="/DRMContent/BX/images/9788967910884.jpg" alt="빈처 (꼭 읽어야 할 한국 대표 소설 15)" /></a><span class="fold">&nbsp;</span>
+                                    
+                                </p>
+                                <dl>
+                                    <dt>
+                                        <span class="ico">
+                                        <img src="/Kyobo_T3/Images/org/ico_BX.png" alt="" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_smart.png" alt="스마트폰" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_tablet.png" alt="태블릿" />
+                                        </span>
+                                        <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788967910884&amp;product_cd=001&amp;category_id=0601">빈처 (꼭 읽어야 할 한국 대표 소설 15)</a>
+                                    </dt>
+                                    <dd>
+                                        <em>
+                                        현진건 / [ 더플래닛 / 2015-03-25 ]
+                                        </em>
+                                        <p>1921년 1월 《개벽(開闢)》에 발표된 현진건의 단편소설로 실질적인 데뷔작이다.생활고에 시달리는 무명의 소설가와 어진 아내 사이에 물질적 갈등이 생..</p>
+                                    </dd>
+                                </dl>
+                                <div class="service">
+                                
+                                    <ul>
+                                        <li class="loan"><strong class="txt"><span class="acc">대출 :</span></strong>
+                                            <span class="num"><strong>0</strong>/3</span>
+                                        </li>
+                                        <li class="reserv"><strong class="txt"><span class="acc">예약 :</span></strong>
+                                            <span class="num">0</span>
+                                        </li>
+                                    </ul>
+                                <p class="btn loan"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Member/Member_Login.asp" title="'빈처 (꼭 읽어야 할 한국 대표 소설 15)' 대출하기" onclick="goLogin('Y', 'http://ebook.yonginlib.go.kr', '로그인 후 대출이 가능합니다.');return false"><em class="acc hidden">대출하기</em></a></p>
+                                </div>
+                            </li>
+                        
+                            <li>
+                                <p class="pic">
+                                    <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788967910938&amp;product_cd=001&amp;category_id=0601"><img src="/DRMContent/BX/images/9788967910938.jpg" alt="유앵기 (꼭 읽어야 할 한국 대표 소설 20)" /></a><span class="fold">&nbsp;</span>
+                                    
+                                </p>
+                                <dl>
+                                    <dt>
+                                        <span class="ico">
+                                        <img src="/Kyobo_T3/Images/org/ico_BX.png" alt="" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_smart.png" alt="스마트폰" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_tablet.png" alt="태블릿" />
+                                        </span>
+                                        <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788967910938&amp;product_cd=001&amp;category_id=0601">유앵기 (꼭 읽어야 할 한국 대표 소설 20)</a>
+                                    </dt>
+                                    <dd>
+                                        <em>
+                                        계용묵 / [ 더플래닛 / 2015-03-25 ]
+                                        </em>
+                                        <p>1939년 2월 《조광》에 발표된 계용묵의 단편소설.투병하던 성눌은 오직 아버지의 지극정성으로 완쾌되고, 친구들은 투병 축하회를 열어준다. 하지만 만..</p>
+                                    </dd>
+                                </dl>
+                                <div class="service">
+                                
+                                    <ul>
+                                        <li class="loan"><strong class="txt"><span class="acc">대출 :</span></strong>
+                                            <span class="num"><strong>0</strong>/3</span>
+                                        </li>
+                                        <li class="reserv"><strong class="txt"><span class="acc">예약 :</span></strong>
+                                            <span class="num">0</span>
+                                        </li>
+                                    </ul>
+                                <p class="btn loan"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Member/Member_Login.asp" title="'유앵기 (꼭 읽어야 할 한국 대표 소설 20)' 대출하기" onclick="goLogin('Y', 'http://ebook.yonginlib.go.kr', '로그인 후 대출이 가능합니다.');return false"><em class="acc hidden">대출하기</em></a></p>
+                                </div>
+                            </li>
+                        
+                            <li>
+                                <p class="pic">
+                                    <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=4808956592459&amp;product_cd=001&amp;category_id=0613"><img src="/DRMContent/ebook/4808956592459/L4808956592459.jpg" alt="잃어버린 소녀들" /></a><span class="fold">&nbsp;</span>
+                                    
+                                </p>
+                                <dl>
+                                    <dt>
+                                        <span class="ico">
+                                        <img src="/Kyobo_T3/Images/org/ico_KB.png" alt="교보문고" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_smart.png" alt="스마트폰" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_tablet.png" alt="태블릿" />
+                                        </span>
+                                        <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=4808956592459&amp;product_cd=001&amp;category_id=0613">잃어버린 소녀들</a>
+                                    </dt>
+                                    <dd>
+                                        <em>
+                                        다니엘 홀베 / [ 예문 / 2015-03-25 ]
+                                        </em>
+                                        <p>
+다니엘 홀베 소설『잃어버린 소녀들』. 마지막까지 반전에 반전을 더하는 이 소설은 단순한 ‘실종’이라는 사건 하나만으로 우리에게 숨 쉴 틈 없는 ..</p>
+                                    </dd>
+                                </dl>
+                                <div class="service">
+                                
+                                    <ul>
+                                        <li class="loan"><strong class="txt"><span class="acc">대출 :</span></strong>
+                                            <span class="num"><strong>3</strong>/3</span>
+                                        </li>
+                                        <li class="reserv"><strong class="txt"><span class="acc">예약 :</span></strong>
+                                            <span class="num">0</span>
+                                        </li>
+                                    </ul>
+                                <p class="btn reserv"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Member/Member_Login.asp" title="'잃어버린 소녀들' 예약하기" onclick="goLogin('Y', 'http://ebook.yonginlib.go.kr', '로그인 후 예약이 가능합니다.');return false"><em class="acc hidden">예약하기</em></a></p>
+                                </div>
+                            </li>
+                        
+                            <li>
+                                <p class="pic">
+                                    <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788967910921&amp;product_cd=001&amp;category_id=0601"><img src="/DRMContent/BX/images/9788967910921.jpg" alt="제1과 제1장 (꼭 읽어야 할 한국 대표 소설 19)" /></a><span class="fold">&nbsp;</span>
+                                    
+                                </p>
+                                <dl>
+                                    <dt>
+                                        <span class="ico">
+                                        <img src="/Kyobo_T3/Images/org/ico_BX.png" alt="" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_smart.png" alt="스마트폰" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_tablet.png" alt="태블릿" />
+                                        </span>
+                                        <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788967910921&amp;product_cd=001&amp;category_id=0601">제1과 제1장 (꼭 읽어야 할 한국 대표 소설 19)</a>
+                                    </dt>
+                                    <dd>
+                                        <em>
+                                        이무영 / [ 더플래닛 / 2015-03-25 ]
+                                        </em>
+                                        <p>1939년 10월 《인문평론》에 발표된 이무영의 단편소설로 작가의 자전적인 요소가 반영된 농촌소설이다.소설가이자 신문기자인 수택은 소설 창작욕 때문..</p>
+                                    </dd>
+                                </dl>
+                                <div class="service">
+                                
+                                    <ul>
+                                        <li class="loan"><strong class="txt"><span class="acc">대출 :</span></strong>
+                                            <span class="num"><strong>0</strong>/3</span>
+                                        </li>
+                                        <li class="reserv"><strong class="txt"><span class="acc">예약 :</span></strong>
+                                            <span class="num">0</span>
+                                        </li>
+                                    </ul>
+                                <p class="btn loan"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Member/Member_Login.asp" title="'제1과 제1장 (꼭 읽어야 할 한국 대표 소설 19)' 대출하기" onclick="goLogin('Y', 'http://ebook.yonginlib.go.kr', '로그인 후 대출이 가능합니다.');return false"><em class="acc hidden">대출하기</em></a></p>
+                                </div>
+                            </li>
+                        
+                            <li>
+                                <p class="pic">
+                                    <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788959597260&amp;product_cd=001&amp;category_id=0601"><img src="/DRMContent/BX/images/9788959597260.jpg" alt="아름다운 것들" /></a><span class="fold">&nbsp;</span>
+                                    
+                                </p>
+                                <dl>
+                                    <dt>
+                                        <span class="ico">
+                                        <img src="/Kyobo_T3/Images/org/ico_BX.png" alt="" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_smart.png" alt="스마트폰" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_tablet.png" alt="태블릿" />
+                                        </span>
+                                        <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788959597260&amp;product_cd=001&amp;category_id=0601">아름다운 것들</a>
+                                    </dt>
+                                    <dd>
+                                        <em>
+                                        정재영 / [ 한솜미디어 / 2015-03-24 ]
+                                        </em>
+                                        <p>아름다운 것들....누구나 겪어온 어린 시절, 기억하고 싶은 그러나 아픈 추억이 있고 기억하고 싶지 않는 추억도 있으리라. 그 시절 그 순애보적인 사랑..</p>
+                                    </dd>
+                                </dl>
+                                <div class="service">
+                                
+                                    <ul>
+                                        <li class="loan"><strong class="txt"><span class="acc">대출 :</span></strong>
+                                            <span class="num"><strong>0</strong>/3</span>
+                                        </li>
+                                        <li class="reserv"><strong class="txt"><span class="acc">예약 :</span></strong>
+                                            <span class="num">0</span>
+                                        </li>
+                                    </ul>
+                                <p class="btn loan"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Member/Member_Login.asp" title="'아름다운 것들' 대출하기" onclick="goLogin('Y', 'http://ebook.yonginlib.go.kr', '로그인 후 대출이 가능합니다.');return false"><em class="acc hidden">대출하기</em></a></p>
+                                </div>
+                            </li>
+                        
+                            <li>
+                                <p class="pic">
+                                    <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9791156020905&amp;product_cd=001&amp;category_id=0601"><img src="/DRMContent/BX/images/9791156020905.jpg" alt="아빠와 딸" /></a><span class="fold">&nbsp;</span>
+                                    
+                                </p>
+                                <dl>
+                                    <dt>
+                                        <span class="ico">
+                                        <img src="/Kyobo_T3/Images/org/ico_BX.png" alt="" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_smart.png" alt="스마트폰" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_tablet.png" alt="태블릿" />
+                                        </span>
+                                        <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9791156020905&amp;product_cd=001&amp;category_id=0601">아빠와 딸</a>
+                                    </dt>
+                                    <dd>
+                                        <em>
+                                        정광섭 / [ 도서출판 행복에너지 / 2015-03-23 ]
+                                        </em>
+                                        <p>[태양과 그늘]의 저자 ‘정광섭’의 두 번째 소설!자신의 삶 속에서 ‘아버지의 이름’으로 지켜야 할 단 한 가지, 딸에게 다가서다!어둠의 세계에 잠시..</p>
+                                    </dd>
+                                </dl>
+                                <div class="service">
+                                
+                                    <ul>
+                                        <li class="loan"><strong class="txt"><span class="acc">대출 :</span></strong>
+                                            <span class="num"><strong>0</strong>/3</span>
+                                        </li>
+                                        <li class="reserv"><strong class="txt"><span class="acc">예약 :</span></strong>
+                                            <span class="num">0</span>
+                                        </li>
+                                    </ul>
+                                <p class="btn loan"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Member/Member_Login.asp" title="'아빠와 딸' 대출하기" onclick="goLogin('Y', 'http://ebook.yonginlib.go.kr', '로그인 후 대출이 가능합니다.');return false"><em class="acc hidden">대출하기</em></a></p>
+                                </div>
+                            </li>
+                        
+                            <li>
+                                <p class="pic">
+                                    <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=4808947540032&amp;product_cd=001&amp;category_id=060301"><img src="/DRMContent/ebook/4808947540032/L4808947540032.jpg" alt="허즈번드 시크릿" /></a><span class="fold">&nbsp;</span>
+                                    
+                                </p>
+                                <dl>
+                                    <dt>
+                                        <span class="ico">
+                                        <img src="/Kyobo_T3/Images/org/ico_KB.png" alt="교보문고" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_smart.png" alt="스마트폰" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_tablet.png" alt="태블릿" />
+                                        </span>
+                                        <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=4808947540032&amp;product_cd=001&amp;category_id=060301">허즈번드 시크릿</a>
+                                    </dt>
+                                    <dd>
+                                        <em>
+                                        리안 모리아티 / [ 마시멜로 / 2015-03-20 ]
+                                        </em>
+                                        <p>
+편지를 뜯는 순간, 모든 시간이 멈췄다!
+
+『허즈번드 시크릿』은 남편이 남긴 편지 한 통이 불러온 파장을 수습하기 위해 고군분투하는 세실리아, 사랑..</p>
+                                    </dd>
+                                </dl>
+                                <div class="service">
+                                
+                                    <ul>
+                                        <li class="loan"><strong class="txt"><span class="acc">대출 :</span></strong>
+                                            <span class="num"><strong>3</strong>/3</span>
+                                        </li>
+                                        <li class="reserv"><strong class="txt"><span class="acc">예약 :</span></strong>
+                                            <span class="num">24</span>
+                                        </li>
+                                    </ul>
+                                <p class="btn reserv"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Member/Member_Login.asp" title="'허즈번드 시크릿' 예약하기" onclick="goLogin('Y', 'http://ebook.yonginlib.go.kr', '로그인 후 예약이 가능합니다.');return false"><em class="acc hidden">예약하기</em></a></p>
+                                </div>
+                            </li>
+                        
+                            <li>
+                                <p class="pic">
+                                    <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788969104618&amp;product_cd=001&amp;category_id=0601"><img src="/DRMContent/BX/images/9788969104618.jpg" alt="색시" /></a><span class="fold">&nbsp;</span>
+                                    
+                                </p>
+                                <dl>
+                                    <dt>
+                                        <span class="ico">
+                                        <img src="/Kyobo_T3/Images/org/ico_BX.png" alt="" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_smart.png" alt="스마트폰" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_tablet.png" alt="태블릿" />
+                                        </span>
+                                        <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788969104618&amp;product_cd=001&amp;category_id=0601">색시</a>
+                                    </dt>
+                                    <dd>
+                                        <em>
+                                        이태준 / [ 온이퍼브 / 2015-03-18 ]
+                                        </em>
+                                        <p>『색시』는 ‘조광’ 지 발표작으로 시대적 여성인 ‘색시’는 과정 우리나라 근대화 과정에서 겪는 한 가정의 전형 인물로 전통사상 테두리 속에서 방..</p>
+                                    </dd>
+                                </dl>
+                                <div class="service">
+                                
+                                    <ul>
+                                        <li class="loan"><strong class="txt"><span class="acc">대출 :</span></strong>
+                                            <span class="num"><strong>0</strong>/3</span>
+                                        </li>
+                                        <li class="reserv"><strong class="txt"><span class="acc">예약 :</span></strong>
+                                            <span class="num">0</span>
+                                        </li>
+                                    </ul>
+                                <p class="btn loan"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Member/Member_Login.asp" title="'색시' 대출하기" onclick="goLogin('Y', 'http://ebook.yonginlib.go.kr', '로그인 후 대출이 가능합니다.');return false"><em class="acc hidden">대출하기</em></a></p>
+                                </div>
+                            </li>
+                        
+                            <li>
+                                <p class="pic">
+                                    <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788993876840&amp;product_cd=001&amp;category_id=0615"><img src="/DRMContent/BX/images/9788993876840.jpg" alt="그리스인 조르바" /></a><span class="fold">&nbsp;</span>
+                                    
+                                </p>
+                                <dl>
+                                    <dt>
+                                        <span class="ico">
+                                        <img src="/Kyobo_T3/Images/org/ico_BX.png" alt="" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_smart.png" alt="스마트폰" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_tablet.png" alt="태블릿" />
+                                        </span>
+                                        <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788993876840&amp;product_cd=001&amp;category_id=0615">그리스인 조르바</a>
+                                    </dt>
+                                    <dd>
+                                        <em>
+                                        니코스 카잔차키스 / [ 아름다운날 / 2015-03-13 ]
+                                        </em>
+                                        <p>최선을 다해 삶을 사랑하는 인간 조르바! 전 세계 작가들과 사상가들에게 영감을 준 작품으로 꼽히는 니코스 카잔차키스의 걸작 『그리스인 조르바』. ..</p>
+                                    </dd>
+                                </dl>
+                                <div class="service">
+                                
+                                    <ul>
+                                        <li class="loan"><strong class="txt"><span class="acc">대출 :</span></strong>
+                                            <span class="num"><strong>0</strong>/3</span>
+                                        </li>
+                                        <li class="reserv"><strong class="txt"><span class="acc">예약 :</span></strong>
+                                            <span class="num">0</span>
+                                        </li>
+                                    </ul>
+                                <p class="btn loan"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Member/Member_Login.asp" title="'그리스인 조르바' 대출하기" onclick="goLogin('Y', 'http://ebook.yonginlib.go.kr', '로그인 후 대출이 가능합니다.');return false"><em class="acc hidden">대출하기</em></a></p>
+                                </div>
+                            </li>
+                        
+                            <li>
+                                <p class="pic">
+                                    <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788969333612&amp;product_cd=001&amp;category_id=0601"><img src="/DRMContent/BX/images/9788969333612.jpg" alt="단편소설 모음집? 비행사" /></a><span class="fold">&nbsp;</span>
+                                    
+                                </p>
+                                <dl>
+                                    <dt>
+                                        <span class="ico">
+                                        <img src="/Kyobo_T3/Images/org/ico_BX.png" alt="" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_smart.png" alt="스마트폰" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_tablet.png" alt="태블릿" />
+                                        </span>
+                                        <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9788969333612&amp;product_cd=001&amp;category_id=0601">단편소설 모음집? 비행사</a>
+                                    </dt>
+                                    <dd>
+                                        <em>
+                                        문현실 / [ 키메이커 / 2015-03-13 ]
+                                        </em>
+                                        <p>나는 하루에 몇 번씩 비행기를 몰았다. 나는 생텍쥐페리가 되지 않기 위해 노력했다. 나는 그가 그린 그림들을 보았고, 그의 글도 읽었다. 하지만 그가 ..</p>
+                                    </dd>
+                                </dl>
+                                <div class="service">
+                                
+                                    <ul>
+                                        <li class="loan"><strong class="txt"><span class="acc">대출 :</span></strong>
+                                            <span class="num"><strong>0</strong>/3</span>
+                                        </li>
+                                        <li class="reserv"><strong class="txt"><span class="acc">예약 :</span></strong>
+                                            <span class="num">0</span>
+                                        </li>
+                                    </ul>
+                                <p class="btn loan"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Member/Member_Login.asp" title="'단편소설 모음집? 비행사' 대출하기" onclick="goLogin('Y', 'http://ebook.yonginlib.go.kr', '로그인 후 대출이 가능합니다.');return false"><em class="acc hidden">대출하기</em></a></p>
+                                </div>
+                            </li>
+                        
+                            <li>
+                                <p class="pic">
+                                    <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9791157666201&amp;product_cd=001&amp;category_id=0601"><img src="/DRMContent/BX/images/9791157666201.jpg" alt="제3의 고리" /></a><span class="fold">&nbsp;</span>
+                                    
+                                </p>
+                                <dl>
+                                    <dt>
+                                        <span class="ico">
+                                        <img src="/Kyobo_T3/Images/org/ico_BX.png" alt="" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_smart.png" alt="스마트폰" />&nbsp;<img src="/Kyobo_T3/Images/org/ico_tablet.png" alt="태블릿" />
+                                        </span>
+                                        <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_View.asp?barcode=9791157666201&amp;product_cd=001&amp;category_id=0601">제3의 고리</a>
+                                    </dt>
+                                    <dd>
+                                        <em>
+                                        지홍 / [ 좋은땅 / 2015-03-13 ]
+                                        </em>
+                                        <p>『제3의 고리』는 수도원, 천사들의 세계, 펠트리샤 대산맥, 곳곳의 몬스터들 등의 이야기들을 통해 박진감 넘치는 문체와 흥미진진한 소재들로 구성되..</p>
+                                    </dd>
+                                </dl>
+                                <div class="service">
+                                
+                                    <ul>
+                                        <li class="loan"><strong class="txt"><span class="acc">대출 :</span></strong>
+                                            <span class="num"><strong>0</strong>/3</span>
+                                        </li>
+                                        <li class="reserv"><strong class="txt"><span class="acc">예약 :</span></strong>
+                                            <span class="num">0</span>
+                                        </li>
+                                    </ul>
+                                <p class="btn loan"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Member/Member_Login.asp" title="'제3의 고리' 대출하기" onclick="goLogin('Y', 'http://ebook.yonginlib.go.kr', '로그인 후 대출이 가능합니다.');return false"><em class="acc hidden">대출하기</em></a></p>
+                                </div>
+                            </li>
+                                                    
+                        </ul>
+                    </div>
+
+                    <div class="paging">
+    <ol>
+        <li><strong>1</strong></li>
+        <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=06&amp;content_all=Y&amp;order_key=pub_ymd&amp;search_keyword=&amp;search_type=&amp;search_product_cd=&amp;list_type=&amp;now_page=2">2</a></li>
+        <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=06&amp;content_all=Y&amp;order_key=pub_ymd&amp;search_keyword=&amp;search_type=&amp;search_product_cd=&amp;list_type=&amp;now_page=3">3</a></li>
+        <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=06&amp;content_all=Y&amp;order_key=pub_ymd&amp;search_keyword=&amp;search_type=&amp;search_product_cd=&amp;list_type=&amp;now_page=4">4</a></li>
+        <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=06&amp;content_all=Y&amp;order_key=pub_ymd&amp;search_keyword=&amp;search_type=&amp;search_product_cd=&amp;list_type=&amp;now_page=5">5</a></li>
+        <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=06&amp;content_all=Y&amp;order_key=pub_ymd&amp;search_keyword=&amp;search_type=&amp;search_product_cd=&amp;list_type=&amp;now_page=6">6</a></li>
+        <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=06&amp;content_all=Y&amp;order_key=pub_ymd&amp;search_keyword=&amp;search_type=&amp;search_product_cd=&amp;list_type=&amp;now_page=7">7</a></li>
+        <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=06&amp;content_all=Y&amp;order_key=pub_ymd&amp;search_keyword=&amp;search_type=&amp;search_product_cd=&amp;list_type=&amp;now_page=8">8</a></li>
+        <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=06&amp;content_all=Y&amp;order_key=pub_ymd&amp;search_keyword=&amp;search_type=&amp;search_product_cd=&amp;list_type=&amp;now_page=9">9</a></li>
+        <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=06&amp;content_all=Y&amp;order_key=pub_ymd&amp;search_keyword=&amp;search_type=&amp;search_product_cd=&amp;list_type=&amp;now_page=10">10</a></li>
+    </ol>
+    <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=06&amp;content_all=Y&amp;order_key=pub_ymd&amp;search_keyword=&amp;search_type=&amp;search_product_cd=&amp;list_type=&amp;now_page=2" class="next"><img src="/Kyobo_T3/Images/org/btn_paging_next.gif" alt="다음목록으로가기" /></a>
+    <a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Content/ebook/ebook_List.asp?product_cd=001&amp;category_id=06&amp;content_all=Y&amp;order_key=pub_ymd&amp;search_keyword=&amp;search_type=&amp;search_product_cd=&amp;list_type=&amp;now_page=101" class="last"><img src="/Kyobo_T3/Images/org/btn_paging_last.gif" alt="마지막목록으로가기" /></a>
+</div>
+
+                    <!-- //컨텐츠 리스트 -->
+
+                </div>
+            </div>
+        </div>
+
+    <!-- 기업형 FOOTER -->
+    <div id="footer">
+        <a href="http://ebook.yonginlib.go.kr" class="footer_logo"><img src="/Kyobo_T3/Upload/Images/Library/B-201306121371033989.gif" alt="용인디지털정보도서관" /></a>
+        <div class="visit_count">
+            <dl>
+                <dt><strong>오늘</strong> : </dt>
+                <dd>48</dd>
+                <dt><strong>전체</strong> : </dt>
+                <dd>228,288</dd>
+            </dl>
+            <ul>
+                <li><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Member/Member_Promis.asp">이용약관</a></li>
+                <li class="end"><a href="http://ebook.yonginlib.go.kr/Kyobo_T3/Member/Member_Privacy.asp">개인정보보호정책</a></li>
+            </ul>
+        </div>		
+        
+<script type="text/javascript" language="javascript">
+    function goFamilySite(libraryType) {
+        if ($("#familysite option:selected").val() == "") {
+            if (libraryType == "1") {
+                alert("패밀리 사이트를 선택하세요!");
+                $("#familysite").focus();
+            }
+            return;
+        }
+        window.open('http://' + $("#familysite option:selected").val());
+    }
+</script>
+
+        <!-- 기업형 패밀리 사이트 시작 -->
+        <div class="familysite">
+            <select id="familysite" name="familysite" title="패밀리 사이트">
+                <option value="" selected="selected">FAMILY SITE</option>
+                
+            </select>
+            <input type="image" value="" name="btnFamilySiteGo" src="/Kyobo_T3/Images/org/btn_org_fm.gif" alt="패밀리 사이트 바로가기 - 새창" onclick="goFamilySite('1')" />
+        </div>
+        <!-- 기업형 패밀리 사이트 종료 -->
+    
+
+        <!-- 기업형 배너 -->
+        
+        <div class="footer_roll_banner">
+            <span class="num"><strong>1</strong> / 4</span>
+            <ul class="banner_wrap">
+            			
+            </ul>				
+            <span class="btn">
+                <a href="#self"><img src="/Kyobo_T3/Images/org/btn_prev_mb.gif" alt="이전-배너" /></a>
+                <a href="#self"><img src="/Kyobo_T3/Images/org/btn_pause_mb.gif" alt="정지-배너" /></a>
+                <a href="#self"><img src="/Kyobo_T3/Images/org/btn_next_mb.gif" alt="다음-배너" /></a>
+            </span>
+        </div>
+
+        <!-- //기업형 배너 -->
+
+        <div class="company_information">
+            <address>도서관명 : 용인디지털정보도서관 | 주소 : 경기도 용인시 처인구 중부대로 1199 (삼가동 556) 문화예술원 1층</address>
+            <p>대표전화 : 031-324-4623 | 팩스 : 031-324-4624</p>
+            <p>Copyright ⓒ KYOBO BOOK CENTER . All rights reserved.</p>
+        </div>
+        <div class="wa"><img src="/Kyobo_T3/Images/org/wa.jpg" title="웹접근성 우수사이트" alt="웹접근성 우수사이트" /></div>
+    </div>
+    <!-- //기업형 FOOTER -->
+
+</div>
+<object id="plugin0" type="application/x-elibraryplugin" width="1" height="1"></object>
+</body>
+</html>

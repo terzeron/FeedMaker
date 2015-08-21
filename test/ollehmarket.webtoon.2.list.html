@@ -1,0 +1,1503 @@
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<title> 올레마켓웹툰 </title>
+<!-- 페이스북 og 태그 시작 -->
+<meta property="og:title" content="고삼무쌍"/>
+<meta property="og:image" content="http://webtoonimg.kthcorp.com/download/thumb/2014/05/27/1401160256332.jpg"/>
+<meta property="og:url" content="http://webtoon.olleh.com/toon/timesList.kt?webtoonseq=62"/>
+<meta property="og:site_name" content="올레마켓웹툰"/>
+<meta property="og:type" content="article"/>
+<meta property="og:description" content="고삼무쌍" /> 
+<meta property="og:article:author" content="올레마켓웹툰" />
+<meta property="og:article:author:url" content="http://webtoon.olleh.com" />
+<!-- 페이스북 og 태그 끝 -->
+
+
+
+
+
+
+
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" /><!-- 최신 브라우저 랜더링 20140801 추가 -->
+<link href="/images/mobile/olleh_webtooon.ico" rel="shortcut icon" />
+
+<link rel="stylesheet" href="/css/pc/design.css?dt=2015020413" type="text/css" /><!-- css -->
+<link rel="stylesheet" href="/css/pc/event_reply_festival.css?dt=20150204" type="text/css" /><!-- css -->
+<link rel="stylesheet" href="/css/pc/event.css" type="text/css" /><!-- 201408070 event css 추가 -->
+
+<script type="text/javascript" src="/js/common/common_util.js?dt=20150213"></script>
+<script type="text/javascript" src="/js/common/date.js"></script>
+<script type="text/javascript" src="/js/common/jquery-1.7.2.min.js"></script><!-- jquery -->
+<script type="text/javascript" src="/js/jquery/jquery.cookie.js"></script><!-- jquery -->
+<script type="text/javascript" src="/js/jquery/plugin/jquery.autotab.min.js"></script><!-- jquery -->
+
+<script type="text/javascript" src="/js/common/jquery.ezmark.js"></script><!-- checkbox etc jquery -->
+<script type="text/javascript" src="/js/common/jquery.flexslider.js"></script><!-- flexslider ~ rolling banner js -->
+<script type="text/javascript" src="/js/common/jquery.placeholder.js"></script><!-- flexslider ~ rolling banner js -->
+
+<script type="text/javascript" src="/js/pc/common.js"></script><!-- common jquery -->
+<script type="text/javascript" src="/js/common/jcarousellite_1.0.1.js"></script>
+<script type="text/javascript" src="/js/common/common_paging.js"></script>
+<script type="text/javascript" src="/js/common/validation_util.js?dt=20150213"></script>
+<script type="text/javascript" src="/js/common/socialShare.js?dt=20150204"></script>
+<script type="text/javascript" src="/js/adobe/s_code2.js"></script>
+<script type="text/javascript" src="/js/log/log.js?dt=20150619"></script>
+<script type="text/javascript" src="https://wcs.naver.net/wcslog.js"></script>
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-64461634-1', 'auto');
+	  
+if(!wcs_add) var wcs_add = {}; 
+wcs_add["wa"] = "15d36bd8ff8fac"; 
+</script>
+<script type="text/javascript">
+
+
+document.domain = "olleh.com";
+
+var wtlog_sslyn = 'N';		//https로 호출할지 여부 (Y/N)
+var wtlog_sfg = "pc"; 		//서비스구분  (pc : PC, mobile : Mobile, android : Android App, ios : IOS App)
+var wtlog_cfg = 'pc';		//채널구분  (pc : PC, mobile : Mobile)
+var wtlog_ifg = null; 	//아이디 구분 ("" 또는 null : 비로그인, open : 오픈ID, olleh : 올레ID)
+var wtlog_un = null;		//회원번호 (로그인 사용자면 회원번호, 로그인하지 않은 사용자면 "" 또는 null)
+var wtlog_ws = null; 			//작품순번 (코드에 작품명이 들어가는 경우에 작품순번, 작품명이 들어가지 않는 경우 "" 또는 null)
+var wtlog_ts = null;			//회차순번 (코드에 회차명이 들어가는 경우에 회차순번, 회차명이 들어가지 않는 경우 "" 또는 null)
+
+if(document.URL.indexOf("https://") > -1) wtlog_sslyn = "Y";	
+if(document.URL.indexOf("timesDetail.kt") > -1 || document.URL.indexOf("timesList.kt") > -1) wtlog_ws = "62";		
+if(document.URL.indexOf("timesDetail.kt") > -1) wtlog_ts = "null";
+
+function adobePageAnalytics(pagenm){
+	
+	
+	var wtlog_cd = ""+pagenm;		//통계 정리한 엑셀의 page name (예 : 메인^오늘의웹툰, TOON^요일별^화^작가순)
+	//웹툰 통계
+	lf_sendLoadLog(wtlog_sslyn, wtlog_cd, wtlog_sfg, wtlog_ifg, wtlog_un, wtlog_ws, wtlog_ts);
+	
+	
+	//어도비 통계
+	s.pageName = "^www^webtoon"+pagenm;
+	s.eVar="N";
+	var s_code=s.t();if(s_code)document.write(s_code);
+	
+	
+	
+	return false;
+}
+
+function adobeTrackClicks(site, clicknm){
+	var wtlog_cd = clicknm;		//통계 정리한 엑셀의 page name (예 : 메인^오늘의웹툰, TOON^요일별^화^작가순)
+	//웹툰 통계
+	lf_sendClickLog(wtlog_sslyn, wtlog_cd, wtlog_sfg, wtlog_ifg, wtlog_un, wtlog_ws, wtlog_ts);
+	
+	//어도비 통계
+	trackClicks(site, clicknm);
+}
+
+function adobeAdAnalytics(adseq, afg, rurl){
+	//광고 통계	
+	lf_sendAdLoadLog(wtlog_sslyn, adseq, wtlog_sfg, wtlog_cfg, afg, rurl, wtlog_ifg, wtlog_un);
+	  
+	return false;
+}
+
+function adobeAdClicks(site, clicknm, newyn, adseq, afg, rurl){
+	//광고 통계
+	if(rurl != "#")
+		lf_sendAdClickLog(newyn, adseq, wtlog_sfg, wtlog_cfg, afg, rurl, wtlog_ifg, wtlog_un);
+	
+	//어도비 통계
+	trackClicks(site, clicknm);
+}
+</script>
+<script type="text/javascript">
+$(function(){
+   	//ajax 기본 세팅
+   	jQuery.ajaxSetup({
+   	   	global: false,
+   	    cache: true,
+   	    dataType: 'json',
+   	    timeout: 30000,
+   	    type: 'POST'
+   	});
+   	
+   	$(".ollehLoginBtn").click(function(){
+   		ollehLoginBtn();
+   		return false;
+   	});
+   	
+   	$(".webtoonLoginBtn").click(function(){
+   		webtoonLoginBtn();
+   		return false;
+   	});
+   	
+   	$('input, textarea').placeholder();
+   	
+   	
+
+});
+
+
+function ollehLoginBtn(){
+
+	//올레 로그인 이동
+	location.href = "https://login.olleh.com/wamui/AthWeb.do?urlcd=" + document.URL;
+
+	
+	return false;
+}
+
+function webtoonLoginBtn(){
+	var url = "";
+
+	//로그인 이동
+	
+	url = "https://webtoon.olleh.com/login.kt";
+
+	location.href = url;
+	/* var referLink = document.createElement('a');
+	referLink.href = url;
+	document.body.appendChild(referLink);
+	referLink.click(); */
+
+	return false;
+}
+
+function toonsearch(){
+	if(($("input[name=query]").val()).trim() == ""){
+		alert("검색어를 입력하세요.");
+		$("input[name=query]").focus();
+		return false;
+	}
+	
+	document.searchform.submit();
+}
+
+
+</script>
+
+<!-- 어도비 통계 스크립트 시작-->
+<script type="text/javascript">
+$(document).ready(function(){	adobePageAnalytics('^TOON^회차리스트^고삼무쌍'); });
+</script>
+<!-- 어도비 통계 스크립트 끝 -->
+
+<script type="text/javascript">
+
+var blueMembershipyn = 'N';
+
+var mWebtoonseq = "";
+var mTimesseq = "";
+var mTimestitle = "";
+var mPrice = "";
+var mPurchasefg = "";
+var mTerm = "";
+var mPrdfg = "";
+var mPrdhistoryseq1 = "";//회차 prdhistoryseq
+var mPrdhistoryseq2 = "";//상품 prdhistoryseq
+
+//구매관련 error code
+var ADULT_CERT_ERROR 	  = 4;
+var SELF_CERT_ERROR 	  = 5;
+var LAWER_CERT_ERROR 	  = 6;
+var BERRY_SHORTAGE_ERROR  = 9;
+var BBERRY_SHORTAGE_ERROR = 13;
+var MBERRY_SHORTAGE_ERROR = 14;
+var BLUE_MEMBERSHIP_ERROR = 15;
+
+var myBerry = 0;
+var myBlueBerry = 0;
+
+//SNS연동
+function fncSocialShare(snsFg) {
+	
+	snsTracks('^TOON^회차리스트^고삼무쌍^작품소개^공유하기', snsFg);
+	socialShare(snsFg, 62, "webtoon", "http://webtoon.olleh.com/toon/timesList.kt?webtoonseq=62", "http://webtoonimg.kthcorp.com/download/thumb/2014/05/27/1401160256332.jpg", "고삼무쌍", "N");
+}
+
+$(document).ready(function(){
+	
+	//복합, 구매 팝업 x버튼 이벤트 등록
+	$('.com_popup_layout .popup_close02 a').click(function(){
+		$(this).parent().parent().fadeOut('fast');
+		$('.com_popup_bglayer').hide();
+		
+		//복합결제 팝업
+		if($(this).parent().parent().attr("class") == "com_popup_layout spopup_buy_toon"){
+			fncMixPopReset();
+		}else if($(this).parent().parent().attr("class") == "com_popup_layout spopup_toon_view"){ //구매 팝업
+			//구매팝업 초기화
+			mPrdfg = "";
+			mPrdhistoryseq1 = "";
+			$('#radio01').prop('checked', true);
+		}
+		
+		return false;
+	});
+	
+	//복합, 구매 팝업 취소 버튼 이벤트 등록
+	$('.com_popup_layout .popup_com_cont #btnarea .bt_normal_cancel').click(function(){
+		$(this).parent().parent().parent().fadeOut('fast');
+		$('.com_popup_bglayer').hide();
+
+		//복합결제 팝업
+		if($(this).parent().attr("class") == "sbt_btn"){
+			fncMixPopReset();
+		}else if($(this).parent().attr("class") == "spop_tvBtm"){ //구매 팝업
+			//구매팝업 초기화
+			mPrdfg = "";
+			mPrdhistoryseq1 = "";
+			$('#radio01').prop('checked', true);
+		}
+		
+		return false;
+	});
+
+	//복합결제팝업 이벤트 등록
+	$('#berry, #blueberry').keyup(function(){
+		
+		var prdprice = mPrice.replace("무료", "0").replace(/\,/g,'');
+		if(isNaN($(this).val()) != 0){
+			$(this).val("");
+		}else{
+			if(Number($(this).val()) > prdprice){
+				$(this).val(prdprice);
+				if($(this).attr("id") == "berry"){
+					$("#blueberry").val(prdprice - Number($(this).val()));	
+				}else{
+					$("#berry").val(prdprice - Number($(this).val()));
+				}
+			}else{
+				if($(this).attr("id") == "berry"){
+					$("#blueberry").val(prdprice - Number($(this).val()));	
+				}else{
+					$("#berry").val(prdprice - Number($(this).val()));
+				}
+			}
+		}
+		
+		/* $('#useberry').html("총 소요 베리 "+cfFormatCash(berry+blueberry)+" 베리"); */
+		
+	});
+	
+	//복합결제 구매하기 버튼 이벤트 등록
+	$('.spop_tvBtm .bt_viewToon').click(function(){
+
+		$('.popup_tit02').parent().fadeOut('fast');
+		$('.com_popup_bglayer').hide();
+		
+		mPrdfg = $('input:radio[name=prdfg]:checked').val();
+		
+		if(mPrdfg == "webtoon"){
+			mPrice = '0';
+			mPurchasefg = 'null';
+		}
+		
+    	if(mPurchasefg == "mix"){
+    		if(Number(myBerry) + Number(myBlueBerry) == mPrice.replace(/\,/g,'')){
+    			$('#priceBox').show();
+    			$('#priceInputBox').hide();
+    			$('#mixBerry').text(myBerry);
+    			$('#mixBberry').text(myBlueBerry);
+    			/* $('#useberry').text("총 소요 베리 "+(mPrice)+" 베리"); */
+    		}else{
+    			$('#priceBox').hide();
+    			$('#priceInputBox').show();
+    		}
+    		
+    		fncShowMixPopup();
+    	}else{
+			fncBuyProduct(mWebtoonseq, mTimesseq, mTimestitle, mPrice, mPurchasefg, mTerm, 'N', mPrdfg);
+		}
+		
+		return false;
+	});
+	
+	$('.sbt_btn .bt_viewToon').click(function(){
+		fncBuyProduct(mWebtoonseq, mTimesseq, mTimestitle, mPrice, mPurchasefg, mTerm, 'N', mPrdfg);
+	});
+});
+
+//숫자만 입력 체크
+var telValidate = function(event) 
+{
+	var key = window.event ? event.keyCode : event.which;
+	var keychar = String.fromCharCode(key);
+	var reg = /[0-9\b]/;
+	return reg.test(keychar);
+};
+
+function fncMixPopReset(){
+	
+	$('#berry').val("");
+	$('#blueberry').val("");
+	/* $('#useberry').html("총 소요 베리 0 베리"); */
+}
+
+function fncShowMixPopup(){
+	
+	$('.spopup_buy_toon').fadeIn('fast');
+	var popupY = 0;
+	if ($(window).height() < $('.spopup_buy_toon').outerHeight())
+	{
+		popupY = $(window).scrollTop();
+	} else {
+		popupY = $(window).scrollTop() + ($(window).height()/2) - ($('.spopup_buy_toon').outerHeight()/2);
+	}
+	$('.spopup_buy_toon').css({ top: popupY });
+	$('.com_popup_bglayer').css({opacity: 0, height: $(document).height()});
+	$('.com_popup_bglayer').show();
+	
+	if(mPrdfg == "webtoon"){
+		$('#mixPrdTitle').text('“고삼무쌍” 전회차 구매(총 71화)');
+		$('#mixPrdPrice').text('0 베리');
+		$('#mixPrdTerm').text('0일');
+	}else{
+		$('#mixPrdTitle').text(mTimestitle + " - " + '고삼무쌍');
+		$('#mixPrdPrice').text(mPrice + "베리");
+		$('#mixPrdTerm').text(mTerm + "일");
+	}	
+	
+	//복합결제 가격 셋팅
+	var prdprice = mPrice.replace("무료", "0").replace(/\,/g,'');
+	var defaultBlueBerry = myBlueBerry >= prdprice ? prdprice : myBlueBerry;
+	var defaultBerry = prdprice - defaultBlueBerry;
+	
+	$('#berry').val(defaultBerry);
+	$('#blueberry').val(defaultBlueBerry);
+}
+
+function fncChkAdult(webtoonSeq, timesSeq){
+	
+	
+		adobeTrackClicks('웹툰', '^웹툰^TOON^회차리스트^고삼무쌍^리스트^프롤로그');
+		location.href = "/toon/timesDetail.kt?webtoonseq="+webtoonSeq+"&timesseq="+timesSeq;
+		
+}
+
+var isRunning = false;
+//ajax 방식으로 작품, 회차를 구매하는 메소드
+function fncBuyProduct(webtoonSeq, timesSeq, timesTitle, price, purchasefg, term, preview, prdFg){
+	
+	
+		webtoonLoginBtn();
+	
+}
+
+
+//회차 구매 팝업 실행
+function fncPurchasePopup(webtoonSeq, timesSeq, timesTitle, price, purchaseFg, term, prdFg){
+	
+	$('.spopup_toon_view').fadeIn('fast');
+	var popupY = 0;
+	if ($(window).height() < $('.spopup_toon_view').outerHeight())
+	{
+		popupY = $(window).scrollTop();
+	} 
+	else 
+	{
+		popupY = $(window).scrollTop() + ($(window).height()/2) - ($('.spopup_toon_view').outerHeight()/2);
+	}
+	
+	mWebtoonseq = webtoonSeq;
+	mTimesseq = timesSeq;
+	mTimestitle = timesTitle;
+	mPrice = price;
+	mPurchasefg = purchaseFg;
+	mTerm = term;	
+	
+	//상단 전체 구매 클릭 시
+	if(prdFg == 'webtoon'){
+		$('.popup_tit02').text("작품감상");
+		$('.spop_tvTop strong').text('고삼무쌍 - 전회차 구매');
+		$("input:radio[name='prdfg']:radio[value='webtoon']").attr("checked",true);
+		$('#times_purchase').hide();
+	}else{ //회차 클릭 시
+		$('.popup_tit02').text("회차감상");
+		$('#timesTerm').text(term + "일");
+
+		//구매방식 구분
+		var html = "";
+		if(purchaseFg == "berry")
+		{
+			html += "<span class=\"ico_berry\">Berry</span>";
+			html += "<span class=\"colorRd\">";
+			html +=  " " + price + "베리";
+			html += "</span>";
+		}
+		else if(purchaseFg == "blue")
+		{
+			html += "<span class=\"ico_bberry\">Blue Berry</span>";
+			html += "<span class=\"colorBl\">";
+			html +=  " " + price + "베리";
+			html += "</span>";
+		}
+		else if(purchaseFg == "mix")
+		{
+			html += "<span class=\"ico_berry\">Berry</span>";
+			html += "<span class=\"ico_bberry\">Blue Berry</span>";
+			html +=  price + "베리";
+		}
+		
+		$('#timesPrice').html(html);
+		$('#timesPrdnm').text(timesTitle + " - " + '고삼무쌍');
+		$('.spop_tvTop strong').text(timesTitle + " - " + '고삼무쌍');
+		
+		$("input:radio[name='prdfg']:radio[value='times']").attr("checked",true);
+		$('#times_purchase').show();
+	}
+	
+	$('.spopup_toon_view').css({ top: popupY });
+	$('.com_popup_bglayer').css({opacity: 0, height: $(document).height()});
+	$('.com_popup_bglayer').show();
+}
+
+//즐겨찾기 추가 팝업
+function showAddPopup(){
+	if(confirm("추가 하시겠습니까?")){
+		fncSetFavorites();
+	}
+	return false;
+}
+
+function fncSetFavorites()
+{	
+	adobeTrackClicks('웹툰', "^웹툰^TOON^회차리스트^고삼무쌍^작품소개^즐겨찾기");
+	
+	
+		webtoonLoginBtn();
+	
+}
+</script>
+<script type="text/javascript" >
+jQuery(document).ready(function(){
+	
+	///총 레코드수, 시작 인덱스, 페이지 사이즈, 하단에 보일 페이지 최대 개수
+	jQuery('#pagingDiv').html(cfGetPagingHtml(71, 0, 10, 'fncMovePage'));
+});
+
+/***************************************************************
+ * common_paging.js의 cfGetPagingHtml메소드에서 생성되는 
+ * 페이지 번호 클릭 시 호출되어 해당 페이지 를 가져오는 메소드
+ * 
+ * @param pageNo : 이동 할 페이지 번호
+ * @return void
+****************************************************************/
+function fncMovePage(pageNo) 
+{
+	 location.replace("/toon/timesList.kt?webtoonseq=62&startRowNo="+pageNo+"&category=toon");
+}
+
+</script>
+</head>
+<body>
+
+<!-- wrap -->
+<div id="wrap">
+	
+	<!-- ### header ### -->
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script type="text/javascript">
+$(document).ready(function()
+{    
+	$("#query").bind("keyup", function()
+	{		
+		if ($(this).val().length > 50) 
+		{
+			alert("검색은 최대 50자까지 입력 가능합니다.");
+			$(this).val($(this).val().substring(0, 50));
+			return;
+		}
+	});
+});
+</script>
+
+	<div id="header">
+		<div class="top">
+			<h1><a href="http://webtoon.olleh.com/main.kt"><img src="/images/pc/logo/logo.gif?day=20150109" alt="올레마켓웹툰" /></a></h1>
+			<h2 class="hidden">상단영역</h2>
+		<!--20141107 수정-->
+			<div class="h1Etc">
+				<!-- gnb -->
+				<div class="h_gnb">
+					<!-- 로그인 했을 때 -->
+					
+					<!--그외-->
+					<!--해지자, 미가입자, 비로그인 시-->
+					
+						<a href="https://webtoon.olleh.com/login.kt" onclick="javascript:adobePageAnalytics('^메인^로그인');">로그인</a> | 
+						<a href="https://webtoon.olleh.com/user/regist.kt" onclick="javascript:adobePageAnalytics('^메인^회원가입');">회원가입</a> | 
+					
+					<a href="http://webtoon.olleh.com/mytoon/favoriteList.kt">MY</a> | 
+					<a href="http://webtoon.olleh.com/support/noticeList.kt">고객센터</a>
+					<!--해지자, 미가입자, 비로그인 시-->
+				</div>
+				<!-- //gnb -->
+
+				<!--h_gnb_etc-->
+				<div class="h_gnb_etc">
+					<!--h_loginInfo-->
+					<div class="h_loginInfo">
+						<!--가입자 로그인시 -->
+						
+							
+							
+							
+								<span class="first_txt" style="cursor:pointer">블루멤버십</span> |
+								<span class="berry_txt" style="cursor:pointer">매월 블루베리가 쏟아진다.</span>
+								<script type="text/javascript">
+									$(".h_loginInfo .first_txt, .h_loginInfo .berry_txt").click(function()
+									{
+										location.href = '/bluemembership/introduction.kt';
+									});
+								</script>
+							
+						
+						<!--//해지자, 미가입자, 비로그인 시-->
+					</div>
+					<!--//h_loginInfo-->
+
+					<!-- 검색 -->
+				<div class="h_sch">
+					<form action="http://webtoon.olleh.com/search.kt" name="searchform" method="get" onsubmit="javascript:toonsearch();return false;">
+						<fieldset>
+							<legend class="hidden">작품 또는 작가로 검색하기</legend>
+							<input type="text" placeholder="작품 또는 작가 검색" title="작품 또는 작가 검색" name="query" id="query" value=""  />
+							<button type="submit" onclick="javascript:adobePageAnalytics('^메인^검색^검색결과');"><img src="/images/pc/btn_search.gif" alt="검색" /></button>
+						</fieldset>
+					</form>
+				</div>
+				<!-- //검색 -->
+				</div>
+				<!--//h_gnb_etc-->
+			</div>
+		<!--//20141107 수정-->
+		</div>
+		
+
+		<!-- 메인메뉴 -->
+		<div class="topEtc">
+			<ul>
+				<li><a href="http://webtoon.olleh.com/toon/weekList.kt" class='on'><!-- 현재 페이지에 해당하는 카테고리면 a태크에 on 클래스 붙임 -->
+					<img src="/images/pc/top_menu01.gif?r=201407071300" alt="Toon" class="menu" />
+					<!-- <img src="/images/pc/top_menu_new.gif" alt="new" class="new" /> --><!-- new 아이콘 -->
+				</a></li>
+				<li><a href="http://webtoon.olleh.com/ranking/monthList.kt" >
+					<img src="/images/pc/top_menu02.gif?r=201407071300" alt="랭킹" class="menu" />
+				</a></li>
+				<li><a href="http://webtoon.olleh.com/applay/recommendAppList.kt" >
+					<img src="/images/pc/top_menu03.gif?r=201407071300" alt="ApPLAY" class="menu" />
+				</a></li>
+				<li><a href="http://webtoon.olleh.com/yoyozine/main.kt" >
+					<img src="/images/pc/top_menu04.gif?r=201407071300" alt="Yoyozine" class="menu" />
+				</a></li>
+				<li><a href="http://webtoon.olleh.com/premium/premiumMain.kt" >
+					<img src="/images/pc/top_menu05.gif?r=201407071300" alt="Premium" class="menu" />
+				</a></li>
+				<li><a href="http://webtoon.olleh.com/shop/shopMain.kt" >
+					<img src="/images/pc/top_menu06.gif?r=201407071300" alt="Shop" class="menu" />
+				</a></li>
+			</ul>
+			
+			<!-- 베리 충전소 링크 추가 -->
+			<div class="topMenuEtc">
+				<a href="https://webtoon.olleh.com/payment/payment.kt"><img alt="베리 충전소" src="/images/pc/top_menu_bnr.png?dt=20150112"></a>
+			</div>
+			<!-- //베리 충전소 링크 추가 -->
+		</div>
+		<!-- //메인메뉴 -->
+
+		<!-- TOON 하위메뉴 -->
+		<div class="subMenu subMenu01 "><!-- subMenuOn 클래스 붙이면 노출됨 -->
+			<div class="topEtcDepth2">
+				<ul>
+					<li ><a href="http://webtoon.olleh.com/toon/weekList.kt">요일별</a> |</li>
+					<li ><a href="http://webtoon.olleh.com/toon/genreList.kt">장르별</a> |</li>
+					<li ><a href="http://webtoon.olleh.com/toon/toonList.kt?sort=subject">작품별</a></li>
+					
+				</ul>
+			</div>
+		</div>
+		<!-- //TOON 하위메뉴 -->
+
+		<!-- 랭킹 하위메뉴 20140507 수정 -->
+		<div class="subMenu subMenu02 ">
+			<div class="topEtcDepth2">
+				<ul>
+					<!-- 현재 페이지 표시는 li 태그에 on 클래스 붙이면 됨 -->
+					<li ><a href="/ranking/monthList.kt">월간 랭킹</a> |</li>
+					<li ><a href="/ranking/yorankingList.kt">Yo랭킹</a></li>
+				</ul>
+			</div>
+		</div>
+		<!-- //랭킹 하위메뉴 20140507 수정 -->
+		
+		
+		<!-- //랭킹 하위메뉴 -->
+
+		<!-- 프리미엄관 하위메뉴 -->
+		<div class="subMenu subMenu05 ">
+			<div class="topEtcDepth2">
+				<ul>
+					<li ><a href="/premium/premiumMain.kt">프리미엄웹툰</a> |</li>
+					<li ><a href="/novel/novelMain.kt">웹소설</a></li>
+				</ul>
+			</div>
+		</div>
+		<!-- //프리미엄관 하위메뉴 -->
+		
+		<!-- YOYOZINE 하위메뉴 -->
+		
+		<!-- //YOYOZINE 하위메뉴 -->
+
+		<!-- ApPLAY 하위메뉴 -->
+		<div class="subMenu subMenu05 ">
+			<div class="topEtcDepth2">
+				<ul style="left:234px">
+					<li ><a href="http://webtoon.olleh.com/applay/recommendAppList.kt">추천앱</a> |</li>
+					<li ><a href="http://webtoon.olleh.com/applay/eventList.kt">이벤트</a></li>
+				</ul>
+			</div>
+		</div>
+		<!-- //ApPLAY 하위메뉴 -->
+	
+		<!-- Shop 하위메뉴 -->
+		<div class="subMenu subMenu06 "><!-- subMenuOn 클래스 붙이면 노출됨 -->
+			<div class="topEtcDepth2">
+				<ul>
+					<li class='on'><a href="/shop/shopMain.kt">추천</a> |</li><!-- 현재 페이지 표시는 li 태그에 on 클래스 붙이면 됨 -->
+					<li ><a href="/shop/shopMain.kt?shopfg=comment">스티콘</a> |</li>
+					<li ><a href="/shop/shopMain.kt?shopfg=name">네임콘</a></li>
+				</ul>
+			</div>
+		</div>
+		<!-- //Shop 하위메뉴 -->
+		
+		
+	</div>
+	
+	<div class="com_popup_bglayer"></div><!-- 팝업 배경 레이어 -->
+<!-- 	<div class="namecon_event_popup" style="height:inherit;display: none;left: 35%;top:60px;position: absolute;width: 540px;z-index: 1001;">
+		<img src="/images/pc/event/20140717/pop_web1.jpg" class="com_popup_bglayer_img" width="540" height="713" alt="" />
+		<a href="#" style="position:absolute; bottom:25px; left:25px; border:0;width:490px;height:36px" class="namecon_event_popup_close"><img src="/images/pc/event/20140717/btn_view.png?dt=20150112" width="490" height="36" alt="닫기" /></a>
+	</div> -->
+	<!-- ### //header ### -->
+
+	<!-- ### container ### -->
+	<div id="container">
+		<h2 class="hidden">본문영역</h2>
+
+		<!-- layout_left -->
+		<div class="layout_left">
+			<!-- 연재 작품 -->
+			<div class="toon_author_list">
+				<!-- 작품 -->
+				<div class="list_cont">
+					<img src="http://webtoonimg.kthcorp.com/download/thumb/2014/05/27/1401160238621.jpg" alt="고삼무쌍" class="thumb" />
+					
+					
+					<span class="bg_img"></span>
+					<div class="thumbEtc">
+						<div class="main_tit" style="padding-top:2px;">
+							
+							고삼무쌍
+							
+						</div>
+						
+						<ul>
+							<li>
+								<span class="tit author">작가</span>
+								
+								<span class="wr">정회주
+									 
+									<a href="/toon/authorDetail.kt?authorseq=63" class="bt_type_intro" onclick="adobeTrackClicks('웹툰', '^웹툰^TOON^회차리스트^고삼무쌍^작품소개^작가소개');">작가소개</a>
+									
+								</span>
+								
+								
+								
+								
+								<br />
+							</li>
+							<li>
+								<span class="tit genre">장르</span>
+								<span class="wr">
+									개그
+									/판타지
+									/액션
+								</span>
+							
+							</li>
+							<li>
+								<span class="tit update">연재일</span>
+								<span class="wr">
+									
+									
+									
+									
+									
+									토
+									
+								</span>
+								<br />
+							</li>
+							
+							
+						</ul>
+						<div class="cont">새로운 교권을 세우기 위한 고교영웅들의 대 서사시</div>
+						<div class="btn">
+							<a href="/toon/timesDetail.kt?timesseq=2336&webtoonseq=62" class="bt_type_view1st" onclick="adobeTrackClicks('웹툰', '^웹툰^TOON^회차리스트^고삼무쌍^작품소개^첫화보기');">첫회보기</a>
+							<a href="#" onclick="javascript:fncSetFavorites();return false;" class="bt_type_favor">즐겨찾기</a>
+							<a href="javascript:fncSocialShare('1')" class="bt_type_fb">facebook</a>
+							<a href="javascript:fncSocialShare('2')" class="bt_type_twit">twitter</a>
+							<!-- <a href="#" class="bt_type_band">band</a> -->
+							<a href="#" class="bt_type_copy">URL 복사</a>
+						</div>
+					</div>
+				</div>
+				<!-- //작품 -->
+			</div>
+			<!-- 연재 작품 -->
+
+			<!-- toon_work_list -->
+			<div class="toon_work_list">
+				<div class="list_tit"><img src="/images/pc/tit_toon_worklist.gif" alt="전체목록" /></div>
+				<!-- 리스트 -->
+				
+				<div class="list_epi">
+				
+					<a href="#" onclick="javascript:fncChkAdult(62, 8125); return false;">
+									
+						<span class="thumb">
+							<img src="http://webtoonimg.kthcorp.com/download/thumb/2015/08/14/1439542791294.jpg" alt="70화" />
+							<span class="bg_img"></span>
+							
+							
+						</span>
+						<span class="thumbEtc">
+							<span class="top_wr">
+								<span class="tit">70화</span>
+								
+								
+								
+								<span class="rate">
+									<img src="/images/common/sticker/icn_star_on.png" style="height:15px;width:15px;" alt="" />
+									220
+								</span>
+							</span>
+							<span class="date">2015.08.15</span>
+						</span>
+						<span class="thumbBtn">
+						
+						</span>
+					</a>
+				</div>
+				
+				<div class="list_epi">
+				
+					<a href="#" onclick="javascript:fncChkAdult(62, 8042); return false;">
+									
+						<span class="thumb">
+							<img src="http://webtoonimg.kthcorp.com/download/thumb/2015/08/07/1438936189417.jpg" alt="69화" />
+							<span class="bg_img"></span>
+							
+							
+						</span>
+						<span class="thumbEtc">
+							<span class="top_wr">
+								<span class="tit">69화</span>
+								
+								
+								
+								<span class="rate">
+									<img src="/images/common/sticker/icn_star_on.png" style="height:15px;width:15px;" alt="" />
+									260
+								</span>
+							</span>
+							<span class="date">2015.08.08</span>
+						</span>
+						<span class="thumbBtn">
+						
+						</span>
+					</a>
+				</div>
+				
+				<div class="list_epi">
+				
+					<a href="#" onclick="javascript:fncChkAdult(62, 7953); return false;">
+									
+						<span class="thumb">
+							<img src="http://webtoonimg.kthcorp.com/download/thumb/2015/07/31/1438335699322.jpg" alt="68화" />
+							<span class="bg_img"></span>
+							
+							
+						</span>
+						<span class="thumbEtc">
+							<span class="top_wr">
+								<span class="tit">68화</span>
+								
+								
+								
+								<span class="rate">
+									<img src="/images/common/sticker/icn_star_on.png" style="height:15px;width:15px;" alt="" />
+									195
+								</span>
+							</span>
+							<span class="date">2015.08.01</span>
+						</span>
+						<span class="thumbBtn">
+						
+						</span>
+					</a>
+				</div>
+				
+				<div class="list_epi">
+				
+					<a href="#" onclick="javascript:fncChkAdult(62, 7864); return false;">
+									
+						<span class="thumb">
+							<img src="http://webtoonimg.kthcorp.com/download/thumb/2015/07/24/1437730559255.jpg" alt="67화" />
+							<span class="bg_img"></span>
+							
+							
+						</span>
+						<span class="thumbEtc">
+							<span class="top_wr">
+								<span class="tit">67화</span>
+								
+								
+								
+								<span class="rate">
+									<img src="/images/common/sticker/icn_star_on.png" style="height:15px;width:15px;" alt="" />
+									314
+								</span>
+							</span>
+							<span class="date">2015.07.25</span>
+						</span>
+						<span class="thumbBtn">
+						
+						</span>
+					</a>
+				</div>
+				
+				<div class="list_epi">
+				
+					<a href="#" onclick="javascript:fncChkAdult(62, 7765); return false;">
+									
+						<span class="thumb">
+							<img src="http://webtoonimg.kthcorp.com/download/thumb/2015/07/17/1437119659027.jpg" alt="66화" />
+							<span class="bg_img"></span>
+							
+							
+						</span>
+						<span class="thumbEtc">
+							<span class="top_wr">
+								<span class="tit">66화</span>
+								
+								
+								
+								<span class="rate">
+									<img src="/images/common/sticker/icn_star_on.png" style="height:15px;width:15px;" alt="" />
+									260
+								</span>
+							</span>
+							<span class="date">2015.07.18</span>
+						</span>
+						<span class="thumbBtn">
+						
+						</span>
+					</a>
+				</div>
+				
+				<div class="list_epi">
+				
+					<a href="#" onclick="javascript:fncChkAdult(62, 7657); return false;">
+									
+						<span class="thumb">
+							<img src="http://webtoonimg.kthcorp.com/download/thumb/2015/07/10/1436523653054.jpg" alt="65화" />
+							<span class="bg_img"></span>
+							
+							
+						</span>
+						<span class="thumbEtc">
+							<span class="top_wr">
+								<span class="tit">65화</span>
+								
+								
+								
+								<span class="rate">
+									<img src="/images/common/sticker/icn_star_on.png" style="height:15px;width:15px;" alt="" />
+									320
+								</span>
+							</span>
+							<span class="date">2015.07.11</span>
+						</span>
+						<span class="thumbBtn">
+						
+						</span>
+					</a>
+				</div>
+				
+				<div class="list_epi">
+				
+					<a href="#" onclick="javascript:fncChkAdult(62, 7562); return false;">
+									
+						<span class="thumb">
+							<img src="http://webtoonimg.kthcorp.com/download/thumb/2015/07/03/1435916761671.jpg" alt="64화" />
+							<span class="bg_img"></span>
+							
+							
+						</span>
+						<span class="thumbEtc">
+							<span class="top_wr">
+								<span class="tit">64화</span>
+								
+								
+								
+								<span class="rate">
+									<img src="/images/common/sticker/icn_star_on.png" style="height:15px;width:15px;" alt="" />
+									324
+								</span>
+							</span>
+							<span class="date">2015.07.04</span>
+						</span>
+						<span class="thumbBtn">
+						
+						</span>
+					</a>
+				</div>
+				
+				<div class="list_epi">
+				
+					<a href="#" onclick="javascript:fncChkAdult(62, 7468); return false;">
+									
+						<span class="thumb">
+							<img src="http://webtoonimg.kthcorp.com/download/thumb/2015/06/26/1435308713835.png" alt="63화" />
+							<span class="bg_img"></span>
+							
+							
+						</span>
+						<span class="thumbEtc">
+							<span class="top_wr">
+								<span class="tit">63화</span>
+								
+								
+								
+								<span class="rate">
+									<img src="/images/common/sticker/icn_star_on.png" style="height:15px;width:15px;" alt="" />
+									365
+								</span>
+							</span>
+							<span class="date">2015.06.27</span>
+						</span>
+						<span class="thumbBtn">
+						
+						</span>
+					</a>
+				</div>
+				
+				<div class="list_epi">
+				
+					<a href="#" onclick="javascript:fncChkAdult(62, 7371); return false;">
+									
+						<span class="thumb">
+							<img src="http://webtoonimg.kthcorp.com/download/thumb/2015/06/19/1434702641664.jpg" alt="62화" />
+							<span class="bg_img"></span>
+							
+							
+						</span>
+						<span class="thumbEtc">
+							<span class="top_wr">
+								<span class="tit">62화</span>
+								
+								
+								
+								<span class="rate">
+									<img src="/images/common/sticker/icn_star_on.png" style="height:15px;width:15px;" alt="" />
+									425
+								</span>
+							</span>
+							<span class="date">2015.06.20</span>
+						</span>
+						<span class="thumbBtn">
+						
+						</span>
+					</a>
+				</div>
+				
+				<div class="list_epi">
+				
+					<a href="#" onclick="javascript:fncChkAdult(62, 7266); return false;">
+									
+						<span class="thumb">
+							<img src="http://webtoonimg.kthcorp.com/download/thumb/2015/06/12/1434100345843.jpg" alt="61화" />
+							<span class="bg_img"></span>
+							
+							
+						</span>
+						<span class="thumbEtc">
+							<span class="top_wr">
+								<span class="tit">61화</span>
+								
+								
+								
+								<span class="rate">
+									<img src="/images/common/sticker/icn_star_on.png" style="height:15px;width:15px;" alt="" />
+									394
+								</span>
+							</span>
+							<span class="date">2015.06.13</span>
+						</span>
+						<span class="thumbBtn">
+						
+						</span>
+					</a>
+				</div>
+				
+				<!-- //리스트 -->
+				
+			</div>
+			<!-- //toon_work_list -->
+
+			<!-- 페이징 -->
+			<div id="pagingDiv" class="com_paging"></div>
+			<!-- //페이징 -->
+			
+		
+
+			<!-- 광고  -->
+			
+
+
+
+
+
+
+
+			<!-- //광고 --> 
+
+
+		</div>
+		<!-- //layout_left -->
+
+		<!-- layout_right -->
+		
+
+
+
+
+
+		<div class="layout_right">
+
+			
+			
+			<!-- 광고  -->
+			
+
+
+
+
+
+
+
+
+				
+			
+			
+			
+			
+			
+			
+			<a href="http://webtoon.olleh.com/yoyozine/main.kt"  onclick="javascript:adTrackClicks('3', '[0720 서브랙탱글] 하우스배너_요요진');return false;"> 
+			<img src="https://webtoonimg.kthcorp.com/download/ad/2015/07/17/1437119209037.jpg" alt="[0720 서브랙탱글] 하우스배너_요요진" style="width:292px;height:240px"  /></a>
+				
+						
+			
+			
+			
+			
+							
+			
+						
+						
+			<script type="text/javascript">adobeAdAnalytics('537', 'subR', 'http://webtoon.olleh.com/yoyozine/main.kt');</script>
+			
+<script type="text/javascript" >
+	function adTrackClicks(type, title){
+		
+		var link = "^www";
+		
+		if(type == "1"){
+			link += "^배너^리더보드^" + cfSubStr(title, 10);
+		}else if(type == "2"){
+			link += "^배너^메인랙탱글^" + cfSubStr(title, 10);
+		}else if(type == "3"){
+			link += "^배너^서브랙탱글^" + cfSubStr(title, 10);
+		}else if(type == "4"){
+			link += "^배너^스폰서_전체^" + cfSubStr(title, 10);
+		}else if(type == "7"){
+			link += "^배너^스폰서_작품^" + cfSubStr(title, 10);
+		}else if(type == "8"){
+			link += "^배너^스폰서_회차^" + cfSubStr(title, 10);
+		}else if(type == "5"){
+			link += "^배너^로그인^" + cfSubStr(title, 10);
+		}else{
+			link += "^배너^bottom^" + cfSubStr(title, 10); 
+		}
+		
+		adobeAdClicks('웹툰', link, 'N', '537', 'subR', 'http://webtoon.olleh.com/yoyozine/main.kt');
+	}
+</script>
+			<!-- //광고 --> 
+			
+			
+
+
+
+
+
+
+
+
+
+
+<script type="text/javascript" >
+$(document).ready(function(){
+
+});
+</script>
+	
+	<div class="m_weekly_ranking">
+	<div class="tit">
+		<img src="/images/pc/main_tit_rank.gif" alt="월간 랭킹" />
+	</div>
+	<ol class="list">
+		 
+		<li class='first'>
+			<a href="/toon/timesList.kt?webtoonseq=15" class="listA">
+				<div class="thumb">
+					<span class="order o01">1</span>
+					<img src="https://webtoonimg.kthcorp.com/download/thumb/2014/05/27/1401160612300.jpg" alt="냄새를 보는 소녀" class="thum01" />
+					<span class="bg_thum01"></span>
+				</div>
+				<div class="cont">
+					<div class="name">냄새를 보는 소녀</div>
+					<div class="cntEtc">
+						<span class="author">만취  </span>
+					</div>
+					<div class="viewDt">연재일 : 
+					
+					화
+					
+					
+					
+					토
+					 
+					</div>
+				</div>
+			</a>
+			<div class="story">
+				<span>우리의 소녀는 더위에도 지치지않고 1위. 냉방으로 인한 코막힘 주의!</span>
+			</div>
+		</li>
+		 
+		<li >
+			<a href="/toon/timesList.kt?webtoonseq=59" class="listA">
+				<div class="thumb">
+					<span class="order o02">2</span>
+					<img src="https://webtoonimg.kthcorp.com/download/thumb/2014/05/27/1401160183571.JPG" alt="악마도 의무교육 받습니다!" class="thum" />
+					<span class="bg_thum"></span>
+				</div>
+				<div class="cont">
+					<div class="name">악마도 의무교육 받습니다!</div>
+					<div class="cntEtc">
+						<span class="author">쿨싴  </span>
+					</div>
+					<div class="viewDt">연재일 : 
+					
+					
+					
+					
+					
+					
+					일 
+					</div>
+				</div>
+			</a>
+			<div class="story">
+				<span>악의받 1위되면 눈에서 꿀 나오겠네~</span>
+			</div>
+		</li>
+		 
+		<li >
+			<a href="/toon/timesList.kt?webtoonseq=28" class="listA">
+				<div class="thumb">
+					<span class="order o03">3</span>
+					<img src="https://webtoonimg.kthcorp.com/download/thumb/2014/05/27/1401158788100.jpg" alt="수상한 그녀의 밥상" class="thum" />
+					<span class="bg_thum"></span>
+				</div>
+				<div class="cont">
+					<div class="name">수상한 그녀의 밥상</div>
+					<div class="cntEtc">
+						<span class="author">두순  </span>
+					</div>
+					<div class="viewDt">연재일 : 
+					
+					
+					
+					
+					금
+					
+					 
+					</div>
+				</div>
+			</a>
+			<div class="story">
+				<span>수그밥 그들의 사이다 같은 로맨스를 기대해봄</span>
+			</div>
+		</li>
+		
+	</ol>
+	<div class="more">
+		<a href="/ranking/monthList.kt">더보기</a>
+	</div>
+</div>
+	
+		<!-- 앱 광고 -->
+	
+		<!-- //앱 광고 -->
+		
+		<!-- m_custom_banner2 -->
+	
+		<!-- //m_custom_banner2 -->
+
+		
+		<!-- m_main_notice -->
+		<div class="m_main_notice">
+			<div class="tit"><img src="/images/pc/main_tit_notice.gif" alt="공지사항" /></div>
+			<ul class="newestnotice">
+			
+				<li><a href="/support/noticeDetail.kt?noticeseq=175" onclick="adobeTrackClicks('웹툰', '^웹툰^공통^RNB^공지사항^상세');">[신작 공지] 2015년 8월 웹툰 신작 안내! <후서유기> </a></li>
+			
+				<li><a href="/support/noticeDetail.kt?noticeseq=173" onclick="adobeTrackClicks('웹툰', '^웹툰^공통^RNB^공지사항^상세');">[신작 공지] 2015년 7월 웹소설 신작 안내! <아스트랄 러브></a></li>
+			
+				<li><a href="/support/noticeDetail.kt?noticeseq=172" onclick="adobeTrackClicks('웹툰', '^웹툰^공통^RNB^공지사항^상세');">[공지] <제주 날라리 배낭자> 프리미엄웹툰 전환 안내</a></li>
+			
+				<li><a href="/support/noticeDetail.kt?noticeseq=171" onclick="adobeTrackClicks('웹툰', '^웹툰^공통^RNB^공지사항^상세');">[신작 공지] 2015년 7월 웹툰 신작 안내! 프리미엄웹툰 <쌀롱 드 빌리어드></a></li>
+			
+				<li><a href="/support/noticeDetail.kt?noticeseq=170" onclick="adobeTrackClicks('웹툰', '^웹툰^공통^RNB^공지사항^상세');">[공지] 유료 웹툰 가격 및 감상기간 조정 안내</a></li>
+				
+			</ul>
+			<div class="more"><a href="/support/noticeList.kt" onclick="adobeTrackClicks('웹툰', '^웹툰^공통^RNB^공지사항^더보기');">더보기</a></div>
+		</div>
+		<!-- //m_main_notice -->
+		
+		
+		<!-- mytoon_quickbtn -->
+		<div class="mytoon_quickbtn">
+			<a href="/support/faqList.kt" class="faq">FAQ 자주 묻는 질문</a>
+			<a href="https://webtoon.olleh.com/support/qnaRegist.kt" class="qna">1:1 문의</a>
+		</div>
+		<!-- //mytoon_quickbtn -->
+
+		</div>
+	
+		<!-- //layout_right -->
+	</div>
+	<!-- ### //container ### -->
+
+	<!-- ### footer ### -->
+	
+
+
+
+
+
+	
+	<!-- //wrap -->
+	<!-- url 복사 팝업 -->
+	<div class="popup_copyURL" style="position:fixed;">
+		<div class="copy_txt">
+			아래 URL을 복사(Ctrl+C)해서 블로그, 게시판 등 원하시는 곳에<br />붙여넣기(Ctrl+V) 넣으세요.
+		</div>
+		<div class="copy_box">
+			 <textarea class="txt" id="copy_box_txt" readonly="readonly"></textarea>
+		</div>
+		<div class="copy_btn">
+			<button type="button" class="bt_normal_confirm">확인</button>
+		</div>
+		<div class="copy_close">
+			<a href="#"><img src="/images/pc/btn_close02.png" alt="close" /></a>
+		</div>
+	</div>
+	<!-- //url 복사 팝업 -->
+	
+	<!-- 20141107 수정 -->
+	<div class="com_popup_bglayer"></div><!-- 팝업 배경 레이어 -->
+	<!--블루멤버십 고객전용 알림-->
+	<!-- <div class="com_popup_layout popup_alarm_guide bmpop">
+		<div class="popup_tit02">블루멤버십 고객전용 알림</div>
+		<div class="popup_com_cont">
+			<p class="p_tp">
+				블루멤버십 고객님,<br />
+				보유하신 베리가 부족해요~ 베리를 충전해 주세요.<br />
+				[확인] 누르시면 베리 충전소로 슝~
+			</p>
+			<div class="btn_tp">
+				<button type="button" class="bt_normal_confirm" id="confirm">확인</button>
+				<button type="button" class="bt_normal_cancel">취소</button>
+			</div>
+		</div>
+		<div class="popup_close02">
+			<a href="#"><img src="/images/pc/btn_close02.png" alt="close" /></a>
+		</div>
+	</div> -->
+	<!--//블루멤버십 고객전용 알림-->
+	<!-- /20141107 수정 -->
+
+
+
+	<div id="footer">
+		<h2 class="hidden">하단영역</h2>
+		<ul class="footerMenu">
+			<li><a href="http://www.kt.com/main.jsp" target="_blank">회사소개</a> |</li>
+			<li><a href="http://webtoon.olleh.com/support/rule.kt?tab=1">이용약관</a> |</li>
+			<li><strong><a href="http://webtoon.olleh.com/support/rule.kt?tab=2">개인정보취급방침</a></strong> |</li>
+			<li><a href="http://webtoon.olleh.com/support/rule.kt?tab=3">청소년 보호정책</a></li>
+		</ul>
+		<div class="footerCopy">
+			㈜케이티 대표이사 황창규 · 사업자등록번호 : 102-81-42945 · 통신판매업신고 : 2002-경기성남-0048<br />
+			463-711 경기도 성남시 분당구 불정로 90(정자동 206번지) · Tel 국번없이 100  Copyright © 2011 kt corp. all rights reserved.
+		</div>
+	</div>
+	<iframe name="blankIfrm" id="blankIfrm" style="height:0px;width:0px; display:none"></iframe>
+	<!-- ### //footer ### -->
+</div>
+
+<div class="com_popup_bglayer"></div><!-- 팝업 배경 레이어 -->
+<!-- 회차 감상 팝업 -->
+<!-- <div class="com_popup_layout spopup_toon_view">
+	<div class="popup_tit02">회차감상</div>
+	<div class="popup_com_cont">
+		<div class="spop_tvTop">
+			<strong>30화 – 안괜찮아yo</strong>
+			<span class="rd" id="timesprice">00 베리</span>로 해당 회차를 <span class="rd" id="timesterm">00일간</span> 감상합니다.
+		</div>
+		<div class="spop_tvBtm">
+			<button type="button" class="bt_viewToon">감상하기</button>
+			<button type="button" class="bt_normal_cancel">취소</button>
+		</div>
+	</div>
+	<div class="popup_close02">
+		<a href="#"><img src="/images/pc/btn_close02.png" alt="close" /></a>
+	</div>
+</div> -->
+<!-- //회차 감상 팝업 -->
+
+<!-- 회차 감상 팝업 20140718 -->
+<div class="com_popup_layout spopup_toon_view">
+	<div class="popup_tit02">회차감상</div>
+	<div class="popup_com_cont">
+		<div class="spop_tvTop">
+			<strong>33화 - 이타미 준과 안도 타다다오 “제주 날라리 배낭자”</strong>를 선택하셨습니다.
+		</div>
+
+		<table class="table_list01">
+			<thead>
+				<tr>
+					<th scope="col" class="first">선택</th>
+					<th scope="col">소요 베리</th>
+					<th scope="col">이용기간</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr id="times_purchase">
+					<td class="first left">
+						<input type="radio" name="prdfg" id="radio01" value="times" checked/>
+						<label for="radio01" id="timesPrdnm">33화 - 이타미 준과 안도 타다다오 “제주 날라리 배낭자”</label>
+					</td>
+					<td class="left" id="timesPrice">5 베리</td>
+					<td id="timesTerm">3일</td>
+				</tr>
+				
+			</tbody>
+		</table>
+
+		<div class="spop_tvBtm" id="btnarea">
+			<button type="button" class="bt_viewToon">감상하기</button>
+			<button type="button" class="bt_normal_cancel">취소</button>
+		</div>
+	</div>
+	<div class="popup_close02">
+		<a href="#"><img src="/images/pc/btn_close02.png" alt="close" /></a>
+	</div>
+</div>
+<!-- //회차 감상 팝업 20140718 -->
+<div class="com_popup_layout spopup_buy_toon">
+	<div class="popup_tit02">구매하기</div>
+	<div class="popup_com_cont">
+		<div style="" class="sbt_top" id="mixPrdTitle">[스티콘] 아기자기 표정이 가득</div>
+		<ul class="sbt_list mb10">
+			<li>소요 베리 : <span class="bk" id="mixPrdPrice">0 베리</span></li>
+			<li>이용기간 : <span class="bk" id="mixPrdTerm"></span></li>
+		</ul>
+		
+		<ul class="sbt_calcBox mb10" id="priceInputBox">
+			<li>
+				<div class="tit_b"><span class="ico_bberry">블루베리</span> 0베리</div>
+				<div class="ipt_b"><input type="tel" class="basic_ipt" id="blueberry" maxlength="8" onkeypress="return telValidate(event);" style="width:58px;" value="" /> 베리</div>
+			</li>
+			<li>
+				<div class="tit_b"><span class="ico_berry">베리</span> 0베리</div>
+				<div class="ipt_b"><input type="tel" class="basic_ipt" id="berry" maxlength="8" onkeypress="return telValidate(event);" style="width:58px;" value="" /> 베리</div>
+			</li>
+		</ul>
+		
+		<div class="sbt_box sbt_priceBox" id="priceBox">
+			<span class="ico_bberry">블루베리</span> <span class="bl"  id="mixBberry"></span> +
+			<span class="ico_berry">베리</span> <span class="rd" id="mixBerry"></span>
+		</div>
+		
+		<!-- <div class="sbt_box sbt_totalBox" id="useberry">
+		총 소요 베리 0 베리
+		</div> -->
+
+		<div class="sbt_btn" id="btnarea">
+			<button type="button" class="bt_viewToon">감상하기</button>
+			<button type="button" class="bt_normal_cancel">취소</button>
+		</div>
+	</div>
+	<div class="popup_close02">
+		<a href="#"><img src="/images/pc/btn_close02.png" alt="close" /></a>
+	</div>
+</div>
+
+</body>
+</html>

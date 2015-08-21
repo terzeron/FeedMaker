@@ -29,7 +29,7 @@ sub extract_urls
 	if ($user_agent ne "") {
 		$option .= " --ua '$user_agent'";
 	}
-	my $cmd = qq(wget.sh $option "$url" | extract_element.py collection 2>&1 | $item_capture_script);
+	my $cmd = qq(wget.sh $option "$url" | extract_element.py collection | $item_capture_script);
 	print "# $cmd\n";
 	my $result = `$cmd`;
 	if ($CHILD_ERROR != 0) {
