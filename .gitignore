@@ -6,8 +6,9 @@ __pycache__
 *.xml.old
 error.log
 run.log
-!conf.xml
 *.xml
+!conf.xml
+!test/*.xml
 newlist/
 html/
 cookie.txt
