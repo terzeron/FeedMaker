@@ -1,3 +1,4 @@
+<!-- wget.sh --header-gzip "http://global.apis.naver.com/lineWebtoon/webtoon/motiontoonJson.json?seq=161&hashValue=c94e340054ad4770af0592b54691696b&motionToonType=MOTION_TOON" utf8 | gunzip -->
 <img src='http://terzeron.net/xml/img/test/80d598e5cba662145513100a6312ab09.jpg'/>
 <img src='http://terzeron.net/xml/img/test/64da949561e89eec2726acad65172fef.jpg'/>
 <img src='http://terzeron.net/xml/img/test/1ef319fe5e8d3aa0741048ac6b479ee4.jpg'/>

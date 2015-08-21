@@ -1,3 +1,4 @@
+<!-- wget.sh --header-gzip "http://global.apis.naver.com/lineWebtoon/webtoon/motiontoonJson.json?seq=161&hashValue=c94e340054ad4770af0592b54691696b&motionToonType=MOTION_TOON" utf8 | gunzip -->
 <img src='http://ewebtoon.phinf.naver.net/motiontoon/187_c94e340054ad4770af0592b54691696b/assets/still/000-100.jpg' width='100%'/>
 <img src='http://ewebtoon.phinf.naver.net/motiontoon/187_c94e340054ad4770af0592b54691696b/assets/still/000-999.jpg' width='100%'/>
 <img src='http://ewebtoon.phinf.naver.net/motiontoon/187_c94e340054ad4770af0592b54691696b/assets/still/001-100.jpg' width='100%'/>
