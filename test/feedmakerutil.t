@@ -34,7 +34,7 @@ class XPathTest(unittest.TestCase):
 		self.assertEqual(token, (None, "img", "2", "", True))
 
 	def test_get_node_with_path(self):
-		soup = BeautifulSoup('<html><body><div>hello</div><div id="ct"><span>text</span></div></body></html>', from_encoding="utf-8")
+		soup = BeautifulSoup('<html><body><div>hello</div><div id="ct"><span>text</span></div></body></html>', 'html5lib', from_encoding="utf-8")
 
 		target_node = get_node_with_path(soup.body, '//span')
 		self.assertEqual(target_node[0].name, "span")
