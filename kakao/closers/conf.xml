@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 	<collection>
-		<is_completed>true</is_completed>
+		<is_completed>false</is_completed>
 		<sort_field_pattern><![CDATA[productId=(\d+)]]></sort_field_pattern>
 		<unit_size_per_day>4</unit_size_per_day>
 		<list_url_list>
 			<list_url><![CDATA[http://page.kakao.com/home/47080388]]></list_url>
-			<list_url><![CDATA[http://page.kakao.com/home/47080388?page=2]]></list_url>
-			<list_url><![CDATA[http://page.kakao.com/home/47080388?page=3]]></list_url>
 		</list_url_list>
 		<element_id>kakaopage_home_list</element_id>
 		<item_capture_script>../capture_item_kakaowebtoon.pl</item_capture_script>

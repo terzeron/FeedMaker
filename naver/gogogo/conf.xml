@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 	<collection>
-		<is_completed>true</is_completed>
+		<is_completed>false</is_completed>
 		<unit_size_per_day>2</unit_size_per_day>
 		<sort_field_pattern><![CDATA[no=(\d+)]]></sort_field_pattern>
 		<list_url_list>
