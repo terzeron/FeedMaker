@@ -61,6 +61,9 @@ sub read_config
 	my $config = shift;
 
 	my $xml = new XML::Simple;
+	if (exists $ENV{'FEED_MAKER_CONF_FILE'}) {
+		$config_file = $ENV{'FEED_MAKER_CONF_FILE'};
+	}
 	$$config = $xml->XMLin($config_file);
 	if ($@) {
 		confess "Error: can't read the configuration file, parse error!, "; 

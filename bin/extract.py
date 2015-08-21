@@ -65,12 +65,12 @@ def extract_content(args):
 		#print "# element_path:", path_list
 		#print "# encoding:", encoding
 	else:
-		print html
+		print html,
 		return True
 
 	# sanitize
-	html = re.sub(r'alt="(.*)<br>(.*)"', r'alt="\1 \2"', html);
-	html = re.sub(r'<br>', r'<br/>', html);
+	html = re.sub(r'alt="(.*)<br>(.*)"', r'alt="\1 \2"', html)
+	html = re.sub(r'<br>', r'<br/>', html)
 	html = re.sub(r'<\?xml[^>]+>', r'', html)
 	html = re.sub(r'/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/', r'', html)
 
@@ -123,7 +123,9 @@ def traverse_element(element, url, encoding):
 		return ret
 	elif not hasattr(element, 'name') or element.name == None: 
 		# text or self-close element (<br/>)
-		sys.stdout.write("%s" % cgi.escape(str(element)))
+		p = re.compile("^\s*$")
+		if not p.match(str(element)):
+			sys.stdout.write("%s" % cgi.escape(str(element)))
 		ret = 1
 		return ret
 	else: 
@@ -144,12 +146,12 @@ def traverse_element(element, url, encoding):
 
 		open_close_tag = False
 		if element.name == "p":
-			print "<p>\n";
+			print "<p>"
 			for e in element.contents:
 				ret = traverse_element(e, url, encoding)
 			# 하위 노드를 처리하고 return하지 않으면, 텍스트를 직접 
 			# 감싸고 있는 <p>의 경우, 중복된 내용이 노출될 수 있음
-			print "</p>\n";
+			print "</p>"
 			ret = 1
 			return ret
 		elif element.name == "img":
@@ -236,7 +238,7 @@ def traverse_element(element, url, encoding):
 						link_href = child["href"]
 					if child.has_attr("alt"):
 						link_title = child["alt"]
-					print "<br/><br/><strong><a href='%s'>%s</a></strong><br/><br/>\n" % (link_href, link_title)
+					print "<br/><br/><strong><a href='%s'>%s</a></strong><br/><br/>" % (link_href, link_title)
 					ret = 1
 				elif element.name in ("o:p", "st1:time"):
 					# skip unknown element 
@@ -251,7 +253,7 @@ def traverse_element(element, url, encoding):
 			if check_element_class(element, "div", "paginate_v1"):
 				# <div class="paginate">...
 				# ajax로 받아오는 페이지들을 미리 요청
-				result = re.search(r"change_page\('([^' ]+)/literature_module/(\d+)/literature_(\d+)_(\d+)\.html'", str(element));
+				result = re.search(r"change_page\('([^' ]+)/literature_module/(\d+)/literature_(\d+)_(\d+)\.html'", str(element))
 				if result:
 					url_prefix = result.group(1)
 					leaf_id = result.group(2)
@@ -259,7 +261,7 @@ def traverse_element(element, url, encoding):
 					page_num = result.group(4)
 					cmd = "collect_ajax_pages.pl " + leaf_id + " " + article_num + " " + page_num + " " + encoding
 					output = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
-					print output
+					print output,
 					ret = 1
 				return ret
 			elif check_element_class(element, "div", "view_option option_top"):
@@ -309,8 +311,8 @@ def traverse_element(element, url, encoding):
 
 
 def print_usage(program_name):
-	print "Usage:\t%s\t<file or url> <html file>\n" % program_name
-	print ""
+	print "Usage:\t%s\t<file or url> <html file>" % program_name
+	print
 
 
 if __name__ == "__main__":
