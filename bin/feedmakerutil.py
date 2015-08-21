@@ -1,12 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os
 import sys
 import re
 from bs4 import BeautifulSoup, Comment
-
-
-config_file = "conf.xml"
 
 
 def get_first_token_from_path(path_str):
@@ -127,6 +125,10 @@ def read_file(file):
 
 def read_config():
 	import xml.dom.minidom
+	if 'FEED_MAKER_CONF_FILE' in os.environ:
+		config_file = os.environ['FEED_MAKER_CONF_FILE']
+	else:
+		config_file = "conf.xml"
 	return xml.dom.minidom.parse(config_file)
 
 
@@ -188,3 +190,8 @@ def concatenate_url(full_url, url2):
 	return url1 + url2
 
 
+def get_md5_name(str):
+	import md5
+	m = md5.new()
+	m.update(str)
+	return m.hexdigest()

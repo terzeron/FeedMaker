@@ -97,12 +97,15 @@ sub main
 	mkpath($path_prefix);
 
 	while (my $line = <STDIN>) {
+		chomp $line;
 		if ($line =~ m!(.*)<img src=(?:["'])([^"']+)(?:["']) width='\d+%?'/?>(.*)!) {
 			my $pre_text = $1;
 			my $img_url = $2;
 			my $post_text = $3;
 
-			print $pre_text . "\n";
+			if ($pre_text !~ m!^\s*$!) {
+				print $pre_text . "\n";
+			}
 
 			# download
 			if (download_image($path_prefix, $img_url, $img_ext, $url) < 0) {
@@ -115,7 +118,9 @@ sub main
 			#print "<!-- $img_url -> $cache_file / $cache_url -->\n";
 			print "<img src='$cache_url'/>\n";
 
-			print $post_text . "\n";
+			if ($post_text !~ m!^\s*$!) {
+				print $post_text . "\n";
+			}
 		} else {
 			print $line . "\n";
 		}
