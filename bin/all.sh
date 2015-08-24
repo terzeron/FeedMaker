@@ -42,9 +42,6 @@ function execute_job
 echo "deleting old or zero-size image files..."
 find /Users/terzeron/public_html/xml/img \( -mtime +20d -o -size 0 \) -exec rm -rf "{}" \; -ls
 
-cd ${FEED_MAKER_HOME}
-pwd
-
 dirs=( $(find . -type d -path "./*/*" -not \( -path "./.git/*" -o -path "./_*/*" -o -path "./*/_*" -o -name newlist -o -name html \) | perl -MList::Util=shuffle -e 'print shuffle <STDIN>') )
 for i in $(seq 0 5 $max_idx); do
 #for i in $(seq 0 1 $max_idx); do
