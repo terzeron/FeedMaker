@@ -23,14 +23,15 @@ Requirements
 Usage
 -----
 
-1. cd feedmaker
-1. . bin/setup.sh
-1. cd \<sitedir\>/\<feeddir\>
-1. run.sh 
+1. . \<feedmaker dir\>/bin/setup.sh
+    * ex) . $HOME/workspace/FeedMaker/bin/setup.sh
+1. cd \<application dir\>/\<sitedir\>/\<feeddir\>
+    * ex) cd $HOME/workspace/FeedMakerApplications/naver/navercast.118
+1. run.sh
 
 Test
 ----
 
+1. . \<feedmaker dir\>/bin/setup.sh
 1. cd test
-1. ./FeedMaker.t
-1. ./feedmakerutil.t
+1. make test
