@@ -23,6 +23,8 @@ else
 fi
 export FEED_MAKER_HOME=$(echo $path | gsed -r 's/((fm|[Ff]eed[Mm]aker)[^\/]*).*/\1/')
 echo FEED_MAKER_HOME=${FEED_MAKER_HOME}
+export FEED_MAKER_CWD=$(pwd | gsed -r 's/(FeedMakerApplications[^\/]*).*/\1/')
+echo FEED_MAKER_CWD=${FEED_MAKER_CWD}
 
 BIN_DIR=${FEED_MAKER_HOME}/bin
 export PATH=~/bin:.:${BIN_DIR}:/usr/local/bin/:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin:${PATH}
