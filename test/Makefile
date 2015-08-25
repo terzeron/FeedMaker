@@ -1,4 +1,4 @@
-TESTCASES= feedmakerutil.t FeedMaker.t
+TESTCASES= feedmakerutil.t FeedMaker.t remove_duplicate_line.t upload.t
 .PHONY: test
 
 test: $(TESTCASES)
