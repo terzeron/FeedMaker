@@ -195,3 +195,18 @@ def get_md5_name(str):
 	m = md5.new()
 	m.update(str)
 	return m.hexdigest()
+
+
+def err(msg):
+	print >> sys.stderr, "Error:", msg
+
+
+def die(msg):
+	print >> sys.stderr, "Error:", msg
+	sys.exit(-1)
+	
+
+def warn(msg):
+	print >> sys.stderr, "Warning:", msg
+
+

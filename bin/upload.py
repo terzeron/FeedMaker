@@ -6,6 +6,7 @@ import os.path
 import sys
 import subprocess
 import re
+from feedmakerutil import *
 
 
 def main(rssFile):
@@ -30,16 +31,16 @@ def main(rssFile):
 		# 과거 파일이 존재하지 않고 신규 파일만 존재하면 업로드
 		doUpload = True
 	else:
-		print >> sys.stderr, "Error: don't replace the RSS file due to the same old RSS file"
+		err("Error: don't replace the RSS file due to the same old RSS file")
 		return False
 		
 	if doUpload == True:
 		cmd = "cp %s %s" % (rssFile, dir)
-		print cmd
+		#print cmd
 		for i in range(0, maxTryCount):
 			result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
 			if result != False:
-				print result
+				#print result
 				print "Upload: success!\n"
 				return True
 	else:

@@ -28,8 +28,7 @@ def extract_content(config_item):
 	if config_item in ("collection", "extraction"):
 		conf_node = get_config_node(config, config_item)
 		if conf_node == None:
-			print >> sys.stderr, "can't find '%s' element from configuration" %config_item
-			sys.exit(-1)
+			die("can't find '%s' element from configuration" % config_item)
 		id_str = get_config_value(conf_node, "element_id")
 		class_str = get_config_value(conf_node, "element_class")
 		path_str = get_config_value(conf_node, "element_path")

@@ -46,7 +46,7 @@ sub get_recent_list
 
 	my $date_str = get_date_str(time());
 	my $newlist_file_name = get_list_file_name($list_dir, $date_str);
-	my $post_process_cmd = qq(| remove_duplicate_link.pl "$newlist_file_name");
+	my $post_process_cmd = qq(| remove_duplicate_line.pl > "$newlist_file_name");
 	my $config = ();
 	if (FeedMaker::read_config(\$config)) {
 		my $collection_config = $config->{"collection"};
