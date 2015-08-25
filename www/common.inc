@@ -2,7 +2,8 @@
 error_reporting(E_ALL ^ E_NOTICE);
 
 $home_dir = "/Users/terzeron";
-$work_dir = $home_dir . "/workspace/FeedMaker";
+$work_dir = $home_dir . "/workspace/FeedMakerApplications";
+$engine_dir = $home_dir . "/workspace/FeedMaker";
 $www_dir = $home_dir . "/public_html";
 
 function txt2html($content)
