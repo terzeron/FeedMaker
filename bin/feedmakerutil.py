@@ -207,6 +207,6 @@ def die(msg):
 	
 
 def warn(msg):
-	print >> sys.stderr, "Warning:", msg
+	print "Warning:", msg
 
 
