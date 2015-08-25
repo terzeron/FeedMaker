@@ -1,4 +1,4 @@
-TESTCASES= feedmakerutil.t FeedMaker.t collection.t extraction.t
+TESTCASES= feedmakerutil.t FeedMaker.t
 .PHONY: test
 
 test: $(TESTCASES)
