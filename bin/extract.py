@@ -10,7 +10,7 @@ import urllib
 import copy
 import signal
 import cgi
-from feedmakerutil import read_config, get_config_node, get_config_value, get_all_config_values, concatenate_url, get_url_prefix, read_file, get_node_with_path
+from feedmakerutil import *
 
 
 # recursion으로 구현된 traverse_element()의 여러 레벨에서 조회하는 변수
@@ -38,13 +38,13 @@ def extract_content(args):
 		return -1
 	rss = get_config_node(config, "rss")
 	if rss == None:
-		print >> sys.stderr, "can't find 'rss' element from configuration"
+		err("can't find 'rss' element from configuration")
 	description = get_config_value(rss, "description")
 	if description == None:
-		print >> sys.stderr, "can't find 'rss' element from configuration"
+		err("can't find 'rss' element from configuration")
 	feed_url = get_config_value(rss, "feed_url")
 	if feed_url == None:
-		print >> sys.stderr, "can't find 'rss' element from configuration"
+		err("can't find 'rss' element from configuration")
 	extraction = get_config_node(config, "extraction")
 
 	# read html contents
@@ -53,7 +53,7 @@ def extract_content(args):
 	if extraction != None:
 		element_list = get_config_node(extraction, "element_list")
 		if element_list == None:
-			print >> sys.stderr, "can't find 'element_list' element from configuration"
+			err("can't find 'element_list' element from configuration")
 		class_list = get_all_config_values(element_list, "element_class")
 		id_list = get_all_config_values(element_list, "element_id")
 		path_list = get_all_config_values(element_list, "element_path")
