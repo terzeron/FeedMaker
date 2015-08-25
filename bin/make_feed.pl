@@ -632,7 +632,7 @@ sub main
 	}
 	
 	# upload RSS feed file
-	my $cmd = qq(upload.pl $rss_file_name);
+	my $cmd = qq(upload.py $rss_file_name);
 	print "# $cmd\n";
 	my $result = qx($cmd);
 	print $result;
