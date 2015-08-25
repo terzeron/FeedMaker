@@ -5,11 +5,9 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<meta name="viewport" content="width=device-width" />
 	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
-	<script src="jquery-ui-1.10.3/jquery-1.9.1.js"></script>
-	<script src="jquery-ui-1.10.3/ui/minified/jquery-ui.min.js"></script>
-	<!--script src="jquery-ui-1.10.3/ui/minified/jquery.ui.tabs.min.js"></script-->
-	<!--link rel="stylesheet" href="jquery-ui-1.10.3/demos/demos.css" /-->
-	<link rel="stylesheet" href="jquery-ui-1.10.3/themes/base/minified/jquery-ui.min.css" />
+	<script src="jquery-2.1.4.min.js"></script>
+	<script src="jquery-ui-1.11.4/jquery-ui.min.js"></script>
+	<link rel="stylesheet" href="jquery-ui-1.11.4/jquery-ui.min.css" />
 	<link rel="stylesheet" href="style.css"/>
 	<title>FeedMaker 관리</title>
   </head>
