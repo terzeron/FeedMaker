@@ -97,7 +97,7 @@ function lint($feed_name)
 
 function extract_data($parent_name, $feed_name)
 {
-	global $home_dir, $work_dir, $www_dir, $dir, $message;
+	global $home_dir, $engine_dir, $work_dir, $www_dir, $dir, $message;
 
 	mkdir("${work_dir}/${parent_name}/${feed_name}");
 	chdir("${work_dir}/${parent_name}/${feed_name}");
@@ -106,12 +106,20 @@ function extract_data($parent_name, $feed_name)
 		return -1;
 	}
 
-	$cmd = ". ${home_dir}/.bashrc; export FEED_MAKER_HOME=/Users/terzeron/workspace/FeedMaker; export FEED_MAKER_CWD=/Users/terzeron/workspace/FeedMakerApplications; export PATH=~/bin:.:\${FEED_MAKER_HOME}/bin:/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin:\${PATH}; export PYTHONPATH=\${FEED_MAKER_HOME}/bin:/usr/local/lib/python2.7/site-packages:\${PYTHONPATH}; export PERLBREW_ROOT=/Users/terzeron/perl5/perlbrew; . \${PERLBREW_ROOT}/etc/bashrc; PERL_INSTALLED_VERSION=5.23.1; export PERL5LIB=\${PERLBREW_ROOT}/perls/perl-\${PERL_INSTALLED_VERSION}/lib/site_perl/\${PERL_INSTALLED_VERSION}:.:\${FEED_MAKER_HOME}/bin; . \"`brew --prefix grc`/etc/grc.bashrc\"; is_completed=\$(grep \"<is_completed>true\" conf.xml); recent_collection_list=\$(find newlist -type f -mmin 144); if [ \"\$is_completed\" != \"\" -a \"\$recent_collection_list\" == \"\" ]; then run.sh -c; else run.sh; fi";
+	$cmd = "(export PATH=\$PATH:/usr/local/bin:/usr/bin:/bin; \
+		. $engine_dir/bin/setup.sh; \
+		is_completed=\$(grep \"<is_completed>true\" conf.xml); \
+		recent_collection_list=\$([ -e newlist ] && find newlist -type f -mtime +144); \
+		if [ \"\$is_completed\" != \"\" -a \"\$recent_collection_list\" == \"\" ]; then run.sh -c; fi; \
+		run.sh) \
+		> $work_dir/$parent_name/$feed_name/run.log \
+		2> $work_dir/$parent_name/$feed_name/run.log";
 	$result = shell_exec($cmd);
 	if (preg_match("/Error:/", $result)) {
 		$message = "can't execute extract command '$cmd', $result";
 		return -1;
 	}
+	$message = $cmd . "," . $result;
 	
 	return 0;
 }
