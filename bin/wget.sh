@@ -47,7 +47,7 @@ done
 url="'$1'"
 
 if [ "$render_js" == true ]; then
-	cmd="phantomjs ../../bin/render_js.js $url"
+	cmd="phantomjs %s/bin/render_js.js $url" % os.environ["FEED_MAKER_HOME"]
 else
 	cmd="wget -q -O - $header_opt $timeout_opt $ua_opt $cert_opt $cookie_opt $referer_opt $url"
 fi
