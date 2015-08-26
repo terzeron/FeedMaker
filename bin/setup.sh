@@ -1,9 +1,9 @@
 # You should change this environment variables according to your environment.
 
 # engine directory
-export FEED_MAKER_HOME=/Users/terzeron/workspace/FeedMaker
+export FEED_MAKER_HOME=/Users/terzeron/workspace/fm
 # feed working directory
-export FEED_MAKER_CWD=/Users/terzeron/workspace/FeedMakerApplications
+export FEED_MAKER_CWD=/Users/terzeron/workspace/fma
 # admin console web page directory
 export FEED_MAKER_WWW_ADMIN=/Users/terzeron/public_html/fm
 # feed directory public to feed crawlers
