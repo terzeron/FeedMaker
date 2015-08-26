@@ -2,6 +2,7 @@
 #-*- coding: utf-8 -*-
 
 
+import os
 import os.path
 import sys
 import subprocess
@@ -10,7 +11,7 @@ from feedmakerutil import *
 
 
 def main(rssFile):
-	dir = "/Users/terzeron/public_html/xml"
+	dir = os.environ["FEED_MAKER_WWW_FEEDS"]
 	dataFileList = []
 	doUpload = False
 	maxTryCount = 3

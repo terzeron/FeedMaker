@@ -10,6 +10,7 @@ use FeedMaker qw(get_md5_name);
 use Getopt::Std;
 use File::Path;
 use Cwd;
+use Env qw(FEED_MAKER_WWW_FEEDS);
 
 
 sub main
@@ -17,7 +18,7 @@ sub main
 	my $link = $ARGV[0];
 	my $id = get_md5_name($link);
 	my $video_file = $id . ".avi";
-	my $img_dir = "/Users/terzeron/public_html/xml/img/thegoodmovie";
+	my $img_dir = $FEED_MAKER_WWW_FEEDS . "/img/thegoodmovie";
 	my $img_url_prefix = "http://terzeron.net/xml/img/thegoodmovie";
 	my $cmd;
 	my $result;

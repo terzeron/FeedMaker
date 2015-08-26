@@ -1,10 +1,10 @@
-if [ "${FEED_MAKER_HOME}" == "" ]; then
+if [ "$FEED_MAKER_HOME" == "" ]; then
 	echo "FEED_MAKER_HOME is not set"
 	exit -1
 fi
-work_dir=${FEED_MAKER_HOME}
-public_html_dir=/Users/terzeron/public_html/xml
-codediff_dir=${FEED_MAKER_HOME}/../coderev
+work_dir=$FEED_MAKER_HOME
+public_html_dir=$FEED_MAKER_WWW_FEEDS
+codediff_dir=$FEED_MAKER_HOME/../coderev
 
 cd ${work_dir}
 

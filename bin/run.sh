@@ -29,7 +29,7 @@ fi
 
 PKGID=`basename $PWD`
 RESULT_XML=$PKGID.xml
-IMG_DIR="/Users/terzeron/public_html/xml/img/${PKGID}"
+IMG_DIR=$FEED_MAKER_WWW_FEEDS"img/${PKGID}"
 is_completed=$(grep -q "<is_completed>true</is_completed>" conf.xml && echo 1 || echo 0)
 
 # html 디렉토리에서 20일 이상 오래된 파일을 삭제함

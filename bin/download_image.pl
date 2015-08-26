@@ -10,6 +10,7 @@ use FeedMaker qw(get_md5_name);
 use Getopt::Std;
 use File::Path;
 use Cwd;
+use Env qw(FEED_MAKER_WWW_FEEDS);
 
 
 sub get_cache_url
@@ -83,7 +84,7 @@ sub main
 	my $feed_name = qx(basename $cwd);
 	chomp $feed_name;
 	my $img_url_prefix = "http://terzeron.net/xml/img/$feed_name";
-	my $path_prefix = "/Users/terzeron/public_html/xml/img/$feed_name";
+	my $path_prefix = $FEED_MAKER_WWW_FEEDS . "/img/$feed_name";
 
 	my $img_prefix = "";
 	my $img_index = -1;
