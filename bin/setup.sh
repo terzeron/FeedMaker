@@ -14,13 +14,17 @@ function realpath() {
 # determine the feedmaker home from current working directory
 # ex) /home1/terzeron/work/fm.dev/naver --> /home1/terzeron/work/fm.dev
 # ex) /Users/terzeron/FeedMaker/cnn/news -> /Users/terzeron/FeedMaker
-if [ "$0" != "-bash" ]; then
+#if [ "$0" != "-bash" ]; then
 	# ex) called from all.sh
-	path=$(dirname $0)
-else
-	script_dir=$(dirname $BASH_SOURCE)
-	path=$(realpath $script_dir)
-fi
+	#path=$(dirname $0)
+#else
+	#script_dir=$(dirname $BASH_SOURCE)
+	#path=$(realpath $script_dir)
+#fi
+
+script_dir=$(dirname $BASH_SOURCE)
+path=$(realpath $script_dir)
+
 export FEED_MAKER_HOME=$(echo $path | gsed -r 's/((fm|[Ff]eed[Mm]aker)[^\/]*).*/\1/')
 echo FEED_MAKER_HOME=${FEED_MAKER_HOME}
 export FEED_MAKER_CWD=$(pwd | gsed -r 's/(FeedMakerApplications[^\/]*).*/\1/')
@@ -37,6 +41,4 @@ export PERLBREW_ROOT=/Users/terzeron/perl5/perlbrew
 . ${PERLBREW_ROOT}/etc/bashrc
 PERL_INSTALLED_VERSION=5.23.1
 export PERL5LIB=${PERLBREW_ROOT}/perls/perl-${PERL_INSTALLED_VERSION}/lib/site_perl/${PERL_INSTALLED_VERSION}:.:${BIN_DIR}
-
-. "`brew --prefix grc`/etc/grc.bashrc"
 
