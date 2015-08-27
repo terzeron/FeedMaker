@@ -2,7 +2,7 @@ if [ "$FEED_MAKER_HOME" == "" ]; then
 	echo "FEED_MAKER_HOME is not set"
 	exit -1
 fi
-work_dir=$FEED_MAKER_HOME
+work_dir=$FEED_MAKER_CWD
 public_html_dir=$FEED_MAKER_WWW_FEEDS
 codediff_dir=$FEED_MAKER_HOME/../coderev
 
@@ -57,13 +57,13 @@ done
 
 echo
 echo "===== check the garbage feeds ====="
-feedmaker_file="log/feedmaker.txt"
-find */ -maxdepth 2 -name "*.xml" \! \( -name conf.xml -o -name _conf.xml \) | grep -v /_ | xargs basename | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $feedmaker_file
+feedmaker_file=$FEED_MAKER_CWD"/log/feedmaker.txt"
+find */ -maxdepth 2 -name "*.xml" \! \( -name conf.xml -o -name _conf.xml -o  -name "*.conf.xml" \) | grep -v /_ | xargs basename | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $feedmaker_file
 period_file_list=""
 for i in {0..30}; do
 	period_file_list="${period_file_list} /Applications/MAMP/logs/apache_access.log.$(date -v-${i}d +'%Y%m%d')"
 done
-feed_access_file="log/feed_access.txt"
+feed_access_file=$FEED_MAKER_CWD"/log/feed_access.txt"
 echo "--- $feed_access_file ---"
 perl -e '
 my %name_date_map = ();
@@ -145,10 +145,10 @@ foreach my $name (keys %name_status_map) {
 
 echo
 echo "===== inconsistent registration ====="
-feedly_file="log/feedly.txt"
-public_html_xml_file="log/public_html_xml.txt"
-htaccess1_xml_file="log/htaccess1_xml.txt"
-htaccess2_xml_file="log/htaccess2_xml.txt"
+feedly_file=$FEED_MAKER_CWD"/log/feedly.txt"
+public_html_xml_file=$FEED_MAKER_CWD"/log/public_html_xml.txt"
+htaccess1_xml_file=$FEED_MAKER_CWD"/log/htaccess1_xml.txt"
+htaccess2_xml_file=$FEED_MAKER_CWD"/log/htaccess2_xml.txt"
 find ${public_html_dir} -name "*.xml" | grep -v /_ | xargs basename | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $public_html_xml_file
 perl -ne 'if (m!^RewriteRule\s+\^(\S*)\\\.xml\$?\s+xml/(\S+)\\\.xml!) { print $1 . "\n"; }' ~/public_html/.htaccess | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $htaccess1_xml_file
 perl -ne 'if (m!^RewriteRule\s+\^(\S*)\\\.xml\$?\s+xml/(\S+)\\\.xml!) { print $2 . "\n"; }' ~/public_html/.htaccess | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $htaccess2_xml_file
