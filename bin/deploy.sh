@@ -1,7 +1,7 @@
 #!/bin/bash
 
-FEED_MAKER_HOME=/Users/terzeron/fm
-FEED_MAKER_HOME_DEV=/Users/terzeron/fmd
+FEED_MAKER_HOME=/Users/terzeron/workspace/fm
+FEED_MAKER_HOME_DEV=/Users/terzeron/workspace/fmd
 
 cd $FEED_MAKER_HOME_DEV
 git checkout master
