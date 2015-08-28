@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 from bs4 import BeautifulSoup, Comment
@@ -6,7 +6,7 @@ import re
 import subprocess
 import os
 import sys
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 import socket
 import copy
 import signal
@@ -50,42 +50,42 @@ def extract_content(config_item):
 	html = re.sub(r'<!--.*-->', r'', html)
 
 	if (class_str == None or class_str == "") and (id_str == None or id_str == "") and (path_str == None or path_str == ""):
-		print html
+		print(html)
 		return
 	
 	ret = 0
 	for parser in [ "html5lib", "lxml" ]:
-		soup = BeautifulSoup(html, parser, from_encoding='utf-8')
+		soup = BeautifulSoup(html, parser)
 		if soup == None:
-			print "can't parse html"
-			print html
+			print("can't parse html")
+			print(html)
 			sys.exit(-1)	
 	
 		if id_str != None and id_str != "":
 			divs = soup.find_all(attrs={"id":id_str})
 			if divs:
 				for div in divs:
-					print div
+					print(div)
 					ret = 1
 		if class_str != None and class_str != "":
 			divs = soup.find_all(class_=class_str)
 			if divs:
 				for div in divs:
-					print div
+					print(div)
 					ret = 1
 		if path_str != None and path_str != "":
 			divs = get_node_with_path(soup, path_str)
 			if divs:
 				for div in divs:
-					print div
+					print(div)
 					ret = 1
 		if ret > 0:
 			break
 
 
 def print_usage(program_name):
-	print "Usage:\t%s\t<config item>\n" % program_name
-	print ""
+	print(("Usage:\t%s\t<config item>\n" % program_name))
+	print("")
 
 
 if __name__ == "__main__":

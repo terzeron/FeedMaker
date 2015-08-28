@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 from bs4 import BeautifulSoup, Comment
@@ -6,7 +6,7 @@ import re
 import subprocess
 import os
 import sys
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import copy
 import signal
 import cgi
@@ -17,13 +17,13 @@ from feedmakerutil import *
 footnote_num = 0
 	
 def print_header():
-	print "<meta http-equiv='Content-Type' content='text/html; charset=UTF-8'/>"
-	print '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, minimum-scal#e=0.5, user-scalable=yes" />'
-	print "<style>img { max-width: 100%; margin-top: 0px; margin-bottom: 0px; }</style>"
+	print("<meta http-equiv='Content-Type' content='text/html; charset=UTF-8'/>")
+	print('<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, minimum-scal#e=0.5, user-scalable=yes" />')
+	print("<style>img { max-width: 100%; margin-top: 0px; margin-bottom: 0px; }</style>")
 
 
 def print_trailer():
-	print "<p/>"
+	print("<p/>")
 
 
 def extract_content(args):
@@ -60,12 +60,12 @@ def extract_content(args):
 		encoding = get_config_value(element_list, "encoding")
 		if encoding == None or encoding == "":
 			encoding = "utf8"
-		#print "# element_id:", id_list
-		#print "# element_class:", class_list
-		#print "# element_path:", path_list
-		#print "# encoding:", encoding
+		#print("# element_id:", id_list)
+		#print("# element_class:", class_list)
+		#print("# element_path:", path_list)
+		#print("# encoding:", encoding)
 	else:
-		print html,
+		print(html, end='')
 		return True
 
 	# sanitize
@@ -80,7 +80,7 @@ def extract_content(args):
 	# main article sections
 	ret = 0
 	for parser in [ "html5lib", "lxml" ]:
-		soup = BeautifulSoup(html, parser, from_encoding='utf-8')
+		soup = BeautifulSoup(html, parser)
 		for a_class in class_list:
 			divs = soup.find_all(attrs={"class": a_class})
 			if divs:
@@ -146,12 +146,12 @@ def traverse_element(element, url, encoding):
 
 		open_close_tag = False
 		if element.name == "p":
-			print "<p>"
+			print("<p>")
 			for e in element.contents:
 				ret = traverse_element(e, url, encoding)
 			# 하위 노드를 처리하고 return하지 않으면, 텍스트를 직접 
 			# 감싸고 있는 <p>의 경우, 중복된 내용이 노출될 수 있음
-			print "</p>"
+			print("</p>")
 			ret = 1
 			return ret
 		elif element.name == "img":
@@ -214,18 +214,18 @@ def traverse_element(element, url, encoding):
 				src = element["src"]
 				if "video_player.nhn" in src or ".swf" in src or "getCommonPlayer.nhn" in src:
 					# flash 파일은 [IFRAME with Flash]라고 표시
-					print "[Flash Player]<br/>"
-					print "<%s src='%s'></%s><br/>" % (element.name, src, element.name)
-					print "<a href='%s'>%s</a><br/>" % (src, src)
+					print("[Flash Player]<br/>")
+					print("<%s src='%s'></%s><br/>" % (element.name, src, element.name))
+					print("<a href='%s'>%s</a><br/>" % (src, src))
 				else:
 					sys.stdout.write("%s\n" % str(element))
 				ret = 1
 		elif element.name in ("param", "object"):
 			if element.has_attr("name") and element["name"] == "Src" and element.has_attr("value") and ".swf" in element["value"]:
 				src = element["value"]
-				print "[Flash Player]<br/>"
-				print "<video src='%s'></video><br/>" % (src)
-				print "<a href='%s'>%s</a><br/>" % (src, src)
+				print("[Flash Player]<br/>")
+				print("<video src='%s'></video><br/>" % (src))
+				print("<a href='%s'>%s</a><br/>" % (src, src))
 			ret = 1
 		elif element.name == "map":
 			# image map
@@ -238,7 +238,7 @@ def traverse_element(element, url, encoding):
 						link_href = child["href"]
 					if child.has_attr("alt"):
 						link_title = child["alt"]
-					print "<br/><br/><strong><a href='%s'>%s</a></strong><br/><br/>" % (link_href, link_title)
+					print("<br/><br/><strong><a href='%s'>%s</a></strong><br/><br/>" % (link_href, link_title))
 					ret = 1
 				elif element.name in ("o:p", "st1:time"):
 					# skip unknown element 
@@ -261,7 +261,7 @@ def traverse_element(element, url, encoding):
 					page_num = result.group(4)
 					cmd = "collect_ajax_pages.pl " + leaf_id + " " + article_num + " " + page_num + " " + encoding
 					output = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
-					print output,
+					print(output, end='')
 					ret = 1
 				return ret
 			elif check_element_class(element, "div", "view_option option_top"):
@@ -311,8 +311,8 @@ def traverse_element(element, url, encoding):
 
 
 def print_usage(program_name):
-	print "Usage:\t%s\t<file or url> <html file>" % program_name
-	print
+	print("Usage:\t%s\t<file or url> <html file>" % program_name)
+	print()
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import os
@@ -24,7 +24,7 @@ def get_first_token_from_path(path_str):
 			break
 
 	# 해당 토큰에 대해 정규식 매칭 시도
- 	pattern = re.compile(r"((?P<name>\w+)(?:\[(?P<idx>\d+)\])?|\*\[@id=\"(?P<id>\w+)\"\])")
+	pattern = re.compile(r"((?P<name>\w+)(?:\[(?P<idx>\d+)\])?|\*\[@id=\"(?P<id>\w+)\"\])")
 	m = pattern.match(token)
 	if m != None:
 		id = m.group("id")
@@ -52,10 +52,10 @@ def get_node_with_path(node, path_str):
 		nodes = node.find_all(attrs={"id":node_id})
 		#print "nodes=", nodes
 		if nodes == None or nodes == []:
-			print "error, no id matched"
+			print("error, no id matched")
 			sys.exit(-1)
 		if len(nodes) > 1:
-			print "error, two or more id matched"
+			print("error, two or more id matched")
 			sys.exit(-1)
 		#print "found! node=%s" % (nodes[0].name)
 		node_list.append(nodes[0])
@@ -94,7 +94,7 @@ def get_node_with_path(node, path_str):
 					if idx != None and i == idx:
 						break
 					# 이름이 일치했을 때만 i를 증가시킴
- 					i = i + 1
+					i = i + 1
 				if is_anywhere == True:
 					#print "can be anywhere"
 					result_node_list = get_node_with_path(child, name)
@@ -198,15 +198,39 @@ def get_md5_name(str):
 
 
 def err(msg):
-	print >> sys.stderr, "Error:", msg
+	sys.stderr.write("Error: %s\n" % msg)
 
 
 def die(msg):
-	print >> sys.stderr, "Error:", msg
+	sys.stderr.write("Error: %s\n", msg)
 	sys.exit(-1)
 	
 
 def warn(msg):
-	print "Warning:", msg
+	sys.stderr.write("Warning: %s\n" % msg)
 
 
+def execCmd(cmd):
+	import subprocess
+	try:
+		result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
+	except subprocess.SubprocessError:
+		return False
+	return result.decode(encoding="utf-8")
+
+
+def removeFile(filePath):
+	if os.path.isfile(filePath):
+		os.remove(filePath)
+
+
+def readFile(filePath):
+	lineList = []
+	result = ""
+	with open(filePath, 'r') as f:
+		lineList = f.readlines()
+		f.close()
+
+		result = ''.join(lineList)
+		return result
+		

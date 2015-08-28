@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 from BeautifulSoup import BeautifulSoup, Comment
@@ -27,16 +27,16 @@ def extract_content(file):
 	if text == None:
 		#sys.stderr.write("can't identify the DOM hierarchy of '%s'\n" % file)
 		sys.exit(-1);
-	print text
+	print(text)
 
 def traverse_element(element):
 	prev_href = None
 	for a in element.findAll('a'): 
 		img = a.find('img')
 		if prev_href != a['href']:
-			print "%s\t%s" % (a['href'].encode("utf-8"), img['alt'].encode("utf-8")),
+			print("%s\t%s" % (a['href'].encode("utf-8"), img['alt'].encode("utf-8")), end='')
 		else:
-			print "- %s" % img['alt'].encode("utf-8")
+			print("- %s" % img['alt'].encode("utf-8"))
 
 		prev_href = a['href']
  

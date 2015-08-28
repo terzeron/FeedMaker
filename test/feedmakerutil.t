@@ -1,5 +1,5 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
+#-*- coding: utf-8 -*-
 
 import sys
 import unittest
@@ -34,7 +34,7 @@ class XPathTest(unittest.TestCase):
 		self.assertEqual(token, (None, "img", "2", "", True))
 
 	def test_get_node_with_path(self):
-		soup = BeautifulSoup('<html><body><div>hello</div><div id="ct"><span>text</span></div></body></html>', 'html5lib', from_encoding="utf-8")
+		soup = BeautifulSoup('<html><body><div>hello</div><div id="ct"><span>text</span></div></body></html>', 'html5lib')
 
 		target_node = get_node_with_path(soup.body, '//span')
 		self.assertEqual(target_node[0].name, "span")
@@ -82,28 +82,28 @@ class IOTest(unittest.TestCase):
 		list_url_list = get_config_node(collection, "list_url_list")
 		list_url = get_config_node(list_url_list, "list_url")
 		v = get_value_from_config(list_url)
-		self.assertEquals(v, "http://m.navercast.naver.com/homeMain.nhn?page=")
+		self.assertEqual(v, "http://m.navercast.naver.com/homeMain.nhn?page=")
 		extraction = get_config_node(config, "extraction")
 		element_list = get_config_node(extraction, "element_list")
 		element_id = get_config_node(element_list, "element_id")
 		v = get_value_from_config(element_id)
-		self.assertEquals(v, "ct")
+		self.assertEqual(v, "ct")
 
 
 class UtilTest(unittest.TestCase):
 	def test_get_url_prefix(self):
 		prefix = get_url_prefix("http://www.naver.com/movie/hello/test.nhn?query=test")
-		self.assertEquals(prefix, "http://www.naver.com/movie/hello/");
+		self.assertEqual(prefix, "http://www.naver.com/movie/hello/");
 
 	def test_get_url_domain(self):
 		domain = get_url_domain("http://www.naver.com/movie/hello/test.nhn?query=test")
-		self.assertEquals(domain, "http://www.naver.com/")
+		self.assertEqual(domain, "http://www.naver.com/")
 
 	def test_concatenate_url(self):
 		url = concatenate_url("http://www.naver.com/movie", "hello")
-		self.assertEquals(url, "http://www.naver.com/hello")
+		self.assertEqual(url, "http://www.naver.com/hello")
 		url = concatenate_url("http://www.naver.com/movie/", "hello")
-		self.assertEquals(url, "http://www.naver.com/movie/hello")
+		self.assertEqual(url, "http://www.naver.com/movie/hello")
 
 
 if __name__ == "__main__":

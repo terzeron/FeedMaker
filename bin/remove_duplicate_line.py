@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 
 import os
@@ -27,7 +27,7 @@ def main():
 
 	totalList.sort()
 	for item in totalList:
-		print item,
+		print(item, end='')
 
 
 if __name__ == "__main__":

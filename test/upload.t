@@ -1,10 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #-*- coding: utf-8 -*-
 
 import os
 import sys
 import unittest
 import subprocess
+import feedmakerutil
 
 
 class UploadScriptTest(unittest.TestCase):
@@ -14,52 +15,51 @@ class UploadScriptTest(unittest.TestCase):
 	wwwDir = os.environ["HOME"] + "/public_html/xml"
 	uploadedFilePath = wwwDir + "/" + rssFileName
 
-	def removeUploadedFile(self):
-		if os.path.isfile(self.uploadedFilePath):
-			os.remove(self.uploadedFilePath)
-
 		
 	def setUp(self):
-		self.removeUploadedFile()
+		feedmakerutil.removeFile(self.uploadedFilePath)
 			
 			
 	def test_uploadFirst(self):
 		cmd = "upload.py %s" % self.rssFileName
-		result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
+		result = feedmakerutil.execCmd(cmd)
 
-		self.assertTrue(result != None and result != "")
-		self.assertTrue(result.find("success") > 0)
+		self.assertTrue(result and result != "")
+		self.assertTrue("success" in result)
 		self.assertTrue(os.path.isfile(self.uploadedFilePath))
 		
 
 	def test_uploadUnchanged(self):
 		cmd = "cp %s %s" % (self.rssFileName, self.oldRssFileName)
-		result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
+		result = feedmakerutil.execCmd(cmd)
+		#print(cmd)
 
-		cmd = "upload.py %s" % self.rssFileName
-		result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
+		cmd = "upload.py %s 2>&1" % self.rssFileName
+		result = feedmakerutil.execCmd(cmd)
+		#print(cmd)
+		#print(result)
 
-		self.assertTrue(result != None and result != "")
-		self.assertTrue(result.find("failed") > 0 and result.find("No change") > 0)
+		self.assertTrue(result)
+		self.assertTrue("failed" in result)
+		self.assertTrue("No change" in result)
 		self.assertFalse(os.path.isfile(self.uploadedFilePath))
 
 		
 	def test_uploadChanged(self):
 		cmd = "cp %s %s" % (self.differentRssFileName, self.oldRssFileName)
-		result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
-
+		result = feedmakerutil.execCmd(cmd)
+		
 		cmd = "upload.py %s" % self.rssFileName
-		result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
-
-		self.assertTrue(result != None and result != "")
-		self.assertTrue(result.find("success") > 0)
+		result = feedmakerutil.execCmd(cmd)
+		
+		self.assertTrue(result and result != "")
+		self.assertTrue("success" in result)
 		self.assertTrue(os.path.isfile(self.uploadedFilePath))
 		
 		
 	def tearDown(self):
-		self.removeUploadedFile()
-		if os.path.isfile(self.oldRssFileName):
-			os.remove(self.oldRssFileName)
+		feedmakerutil.removeFile(self.uploadedFilePath)
+		feedmakerutil.removeFile(self.oldRssFileName)
 
 		
 if __name__ == "__main__":

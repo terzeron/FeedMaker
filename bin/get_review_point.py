@@ -1,11 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import sys
 import signal
 import subprocess
 import re
-from urllib import urlencode
+from urllib.parse import urlencode
 from bs4 import BeautifulSoup, Comment
 
 
@@ -69,7 +69,7 @@ def get_first_search_result(config, type, keyword, year):
 
 
 def print_usage(program):
-	print "usage: %s\t <book|movie|game> <keyword> [ <year> ]\n\n" % (program);
+	print("usage: %s\t <book|movie|game> <keyword> [ <year> ]\n\n" % (program));
 
 	
 if __name__ == "__main__":
@@ -88,6 +88,6 @@ if __name__ == "__main__":
 	config = get_default_config(type)
 	point = get_first_search_result(config, type, keyword, year)
 	if point:
-		print point
+		print(point)
 
 	
