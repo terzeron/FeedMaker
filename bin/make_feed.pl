@@ -626,7 +626,7 @@ sub main
 		}
 	}
 
-	if ($force_collect != 0) {
+	if ($force_collect == 0) {
 		# generate RSS feed
 		if (generate_rss_feed($config, \@feed_list, $rss_file_name) < 0) {
 			return -1;
