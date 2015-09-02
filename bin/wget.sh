@@ -22,7 +22,7 @@ referer_opt=$default_referer_opt
 render_js=$default_render_js
 header_opt=$default_header_opt
 
-encoding=$(perl -e 'use FeedMaker qw(get_encoding_from_config); print get_encoding_from_config();')
+encoding=$(perl -e 'use FeedMaker; print FeedMaker::getEncodingFromConfig();')
 cookie_opt="--keep-session-cookies --load-cookies cookie.txt --save-cookies cookie.txt"
 timeout_opt="--timeout=5"
 cert_opt="--no-check-certificate"

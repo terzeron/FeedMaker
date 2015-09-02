@@ -3,7 +3,7 @@
 package FeedMaker;
 
 use base 'Exporter';
-our @EXPORT = qw(read_config get_config_value print_items print_all_hash_items get_date_str get_list_file_name get_md5_name utf8_decode utf8_encode xml_escape get_encoding_from_config);
+our @EXPORT = qw(readConfig getConfigValue printAllHashItems getDateStr getListFileName getMd5Name utf8Encode xmlEscape getEncodingFromConfig);
 
 use English;
 use warnings;
@@ -14,57 +14,56 @@ use Encode;
 use XML::Simple;
 use POSIX qw(strftime locale_h);
 
-my $config_file = "conf.xml";
+my $configFile = "conf.xml";
 
 setlocale(LC_CTYPE, "ko_KR.utf8");
 setlocale(LC_TIME, "C");
 
-sub utf8_encode { return encode("utf-8", shift); }
-sub utf8_decode { return decode("utf-8", shift); }
-sub cp949_decode { return decode("cp949", shift); }
+sub utf8Encode { return encode("utf-8", shift); }
+sub utf8Decode { return decode("utf-8", shift); }
 
 
-sub get_md5_name
+sub getMd5Name
 {
 	use Digest::MD5;
 	return Digest::MD5::md5_hex(shift);
 }
 
 
-sub get_date_str
+sub getDateStr
 {
 	my $ts = shift;
 	return strftime("%Y%m%d", localtime($ts));
 }
 
 
-sub get_list_file_name
+sub getListFileName
 {
-	my $list_dir = shift;
-	my $date_str = shift;
+	my $listDir = shift;
+	my $dateStr = shift;
 
-	return $list_dir . "/${date_str}.txt";
+	return $listDir . "/${dateStr}.txt";
 }
 
 
-sub xml_escape
+sub xmlEscape
 {
 	my $str = shift;
-	$str = utf8_decode($str);
+	$str = utf8Decode($str);
 
 	return "<![CDATA[" . $str . "]]>";
 }
 
 
-sub read_config
+sub readConfig
 {
 	my $config = shift;
 
 	my $xml = new XML::Simple;
 	if (exists $ENV{'FEED_MAKER_CONF_FILE'}) {
-		$config_file = $ENV{'FEED_MAKER_CONF_FILE'};
+		$configFile = $ENV{'FEED_MAKER_CONF_FILE'};
 	}
-	$$config = $xml->XMLin($config_file);
+	$$config = $xml->XMLin($configFile);
 	if ($@) {
 		confess "Error: can't read the configuration file, parse error!, "; 
 		return -1;
@@ -73,92 +72,51 @@ sub read_config
 }
 
 
-sub get_config_value
+sub getConfigValue
 {
 	my $config = shift;
-	my $is_compulsory = shift;
-	my $default_value = shift;
-	my @config_path = @_;
+	my $isCompulsory = shift;
+	my $defaultValue = shift;
+	my @configPath = @_;
 
-	if (not defined $default_value) {
-		$default_value = "";
+	if (not defined $defaultValue) {
+		$defaultValue = "";
 	}
 
 	if (defined $config) {
 		my $c = $config;
-		for my $name (@config_path) {
+		for my $name (@configPath) {
 			$c = $c->{$name};
 			if (not defined $c) {
-				if ($is_compulsory == 1) {
+				if ($isCompulsory == 1) {
 					carp "Warning: can't find '$name' element from config\n";
-					return $default_value;
+					return $defaultValue;
 				}
-				return $default_value;
+				return $defaultValue;
 			}
 		}
 		return $c;
 	}
-	return $default_value;
+	return $defaultValue;
 }
 
 
-sub print_items
-{
-	my $value = shift;
-	my $prefix = shift;
-
-	if (UNIVERSAL::isa($value, 'ARRAY')) {
-		foreach my $item (@$value) {
-			print "# " . $prefix . $item . "\n";
-		}
-	} elsif (UNIVERSAL::isa($value, 'HASH')) {
-		foreach my $key (keys %$value) {
-			print "# " . $prefix . $key . " --> " . utf8_encode($value->{$key}) . "\n";
-		}
-	} elsif ($value ne "") {
-		print "# " . $prefix . $value . "\n";
-	}
-}
-
-
-sub print_all_hash_items
+sub printAllHashItems
 {
 	my $hash = shift;
 	my $prefix = shift;
 
 	foreach my $key (keys %$hash) {
-		print "# " . $prefix . $key . " --> " . utf8_encode($hash->{$key}) . "\n";
+		print "# " . $prefix . $key . " --> " . utf8Encode($hash->{$key}) . "\n";
 	}
 }
 
 
-sub print_all_array_items
-{
-	my $arr = shift;
-	my $prefix = shift;
-
-	foreach my $item (@$arr) {
-		print "# " . $prefix . $item . "\n";
-	}
-}
-
-
-sub get_user_input
-{
-	my $question = shift;
-
-	print $question;
-	my $answer = <>;
-	chomp $answer;
-	return $answer
-}
-
-
-sub get_encoding_from_config
+sub getEncodingFromConfig
 {
 	my $config = ();
 
-	if (not FeedMaker::read_config(\$config)) {
+	if (not FeedMaker::readConfig(\$config)) {
 		confess "Error: can't read configuration!, ";
 		return -1;
 	}
