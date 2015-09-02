@@ -12,7 +12,7 @@ use Getopt::Std;
 use Digest::MD5;
 use File::Path;
 use XML::RSS;
-use FeedMaker qw(utf8_encode utf8_decode xml_escape get_date_str get_md5_name get_config_value get_list_file_name);
+use FeedMaker;
 use POSIX qw(strftime);
 
 
@@ -34,7 +34,7 @@ sub get_new_file_name
 {
 	my $url = shift;
 
-	return "html/" . get_md5_name($url) . ".html";
+	return "html/" . FeedMaker::getMd5Name($url) . ".html";
 }
 
 
@@ -44,14 +44,14 @@ sub get_recent_list
 
 	print "# get_recent_list($list_dir)\n";
 
-	my $date_str = get_date_str(time());
-	my $newlist_file_name = get_list_file_name($list_dir, $date_str);
+	my $date_str = FeedMaker::getDateStr(time());
+	my $newlist_file_name = FeedMaker::getListFileName($list_dir, $date_str);
 	my $post_process_cmd = qq(| remove_duplicate_line.py > "$newlist_file_name");
 	my $config = ();
-	if (FeedMaker::read_config(\$config)) {
+	if (FeedMaker::readConfig(\$config)) {
 		my $collection_config = $config->{"collection"};
 		if ($collection_config) {
-			my $post_process_script = get_config_value($config, 0, "", ("collection", "post_process_script"));
+			my $post_process_script = FeedMaker::getConfigValue($config, 0, "", ("collection", "post_process_script"));
 			if ($post_process_script) {
 				$post_process_cmd = qq(| $post_process_script "$newlist_file_name");
 			}
@@ -59,7 +59,7 @@ sub get_recent_list
 	}
 
 	my $cmd = qq(collect_new_list.pl ) . $post_process_cmd;
-	print "# " . utf8_encode($cmd) . "\n";
+	print "# " . FeedMaker::utf8Encode($cmd) . "\n";
 	my $result = qx($cmd);
 	if ($CHILD_ERROR != 0) {
 		confess "Error: can't collect new list from the page,";
@@ -99,8 +99,8 @@ sub read_old_list_from_file
 		my $i = 0;
 		# 과거까지 리스트가 존재하는지 확인
 		for ($i = 1; $i <= $max_num_days; $i++) {
-			my $date_str = get_date_str($ts - $i * $SECONDS_PER_DAY);
-			$list_file = get_list_file_name($list_dir, $date_str);
+			my $date_str = FeedMaker::getDateStr($ts - $i * $SECONDS_PER_DAY);
+			$list_file = FeedMaker::getListFileName($list_dir, $date_str);
 			print "$list_file\n";
 			# 오늘에 가장 가까운 리스트가 존재하면 탈출
 			if (-e $list_file) {
@@ -163,30 +163,30 @@ sub generate_rss_feed
 		confess "Error: missing rss configuration\n";
 		return -1;
 	}
-	my $rss_title = utf8_encode(get_config_value($config, 1, "", ("rss", "title")));
-	my $rss_description = utf8_encode(get_config_value($config, 1, "", ("rss", "description")));
-	my $rss_generator = utf8_encode(get_config_value($config, 1, "", ("rss", "generator")));
-	my $rss_copyright = utf8_encode(get_config_value($config, 1, "", ("rss", "copyright")));
-	my $rss_link = utf8_encode(get_config_value($config, 1, "", ("rss", "link")));
-	my $rss_language = utf8_encode(get_config_value($config, 1, "", ("rss", "language")));
-	my $rss_no_item_desc = get_config_value($config, 0, "", ("rss", "no_item_desc"));
+	my $rss_title = FeedMaker::utf8Encode(FeedMaker::getConfigValue($config, 1, "", ("rss", "title")));
+	my $rss_description = FeedMaker::utf8Encode(FeedMaker::getConfigValue($config, 1, "", ("rss", "description")));
+	my $rss_generator = FeedMaker::utf8Encode(FeedMaker::getConfigValue($config, 1, "", ("rss", "generator")));
+	my $rss_copyright = FeedMaker::utf8Encode(FeedMaker::getConfigValue($config, 1, "", ("rss", "copyright")));
+	my $rss_link = FeedMaker::utf8Encode(FeedMaker::getConfigValue($config, 1, "", ("rss", "link")));
+	my $rss_language = FeedMaker::utf8Encode(FeedMaker::getConfigValue($config, 1, "", ("rss", "language")));
+	my $rss_no_item_desc = FeedMaker::getConfigValue($config, 0, "", ("rss", "no_item_desc"));
 
 	print "# generate_rss_feed($rss_file_name)\n";
 
-	my $date_str = get_date_str(time());
+	my $date_str = FeedMaker::getDateStr(time());
 	my $pub_date_str = get_rss_date_str(time());
 	my $last_build_date_str = get_rss_date_str(time());
 	my $temp_rss_file_name = $rss_file_name . "." . $date_str;
 
 	my $rss = XML::RSS->new(version => "2.0");
-	$rss->channel(title => xml_escape($rss_title),
-				  link => xml_escape($rss_link),
+	$rss->channel(title => FeedMaker::xmlEscape($rss_title),
+				  link => FeedMaker::xmlEscape($rss_link),
 				  languauge => $rss_language,
-				  description => xml_escape($rss_description),
-				  copyright => xml_escape($rss_copyright),
-				  pubDate => xml_escape($pub_date_str),
-				  lastBuildDate => xml_escape($last_build_date_str),
-				  generator => xml_escape($rss_generator),
+				  description => FeedMaker::xmlEscape($rss_description),
+				  copyright => FeedMaker::xmlEscape($rss_copyright),
+				  pubDate => FeedMaker::xmlEscape($pub_date_str),
+				  lastBuildDate => FeedMaker::xmlEscape($last_build_date_str),
+				  generator => FeedMaker::xmlEscape($rss_generator),
 			  );
 
 	for my $feed_item (@feed_list) {
@@ -196,10 +196,10 @@ sub generate_rss_feed
 		# notice!
 		if (defined $rss_no_item_desc and $rss_no_item_desc =~ m!yes|true!) {
 			# skip the content of the feed
-			$rss->add_item(title => xml_escape($article_title),
-						   link => xml_escape($article_url),
-						   guid => xml_escape($article_url),
-						   pubDate => xml_escape($pub_date_str));
+			$rss->add_item(title => FeedMaker::xmlEscape($article_title),
+						   link => FeedMaker::xmlEscape($article_url),
+						   guid => FeedMaker::xmlEscape($article_url),
+						   pubDate => FeedMaker::xmlEscape($pub_date_str));
 		} else {
 			# general case
 			my $content = "";
@@ -219,11 +219,11 @@ sub generate_rss_feed
 				}
 			}
 			close(IN);
-			$rss->add_item(title => xml_escape($article_title),
-						   link => xml_escape($article_url),
-						   guid => xml_escape($article_url),
-						   pubDate => xml_escape($pub_date_str),
-						   description => xml_escape($content));
+			$rss->add_item(title => FeedMaker::xmlEscape($article_title),
+						   link => FeedMaker::xmlEscape($article_url),
+						   guid => FeedMaker::xmlEscape($article_url),
+						   pubDate => FeedMaker::xmlEscape($pub_date_str),
+						   description => FeedMaker::xmlEscape($content));
 		}
 	}
 	$rss->save($temp_rss_file_name);
@@ -296,7 +296,7 @@ sub append_item_to_result
 
 		my $post_process_cmd = "";
 		my $config = ();
-		if (not FeedMaker::read_config(\$config)) {
+		if (not FeedMaker::readConfig(\$config)) {
 			confess "Error: can't read configuration!, ";
 			return -1;
 		}
@@ -306,23 +306,23 @@ sub append_item_to_result
 			return -1;
 		}
 
-		my $post_process_script = get_config_value($config, 0, "", ("extraction", "post_process_script"));
+		my $post_process_script = FeedMaker::getConfigValue($config, 0, "", ("extraction", "post_process_script"));
 		if ($post_process_script) {
 			$post_process_cmd = qq(| $post_process_script "$url");
-			my $post_process2_script = get_config_value($config, 0, "", ("extraction", "post_process2_script"));
+			my $post_process2_script = FeedMaker::getConfigValue($config, 0, "", ("extraction", "post_process2_script"));
 			if ($post_process2_script) {
 				$post_process_cmd .= qq( | $post_process2_script "$url");
 			}
 		}
 		
-		my $render_js = get_config_value($config, 0, 0, ("extraction", "render_js"));
+		my $render_js = FeedMaker::getConfigValue($config, 0, 0, ("extraction", "render_js"));
 		my $option = "";
 		if (defined $render_js and $render_js =~ m!yes|true!i) {
 			$option = "--render-js";
 		}
-		my $force_sleep_between_articles = get_config_value($config, 0, 0, ("extraction", "force_sleep_between_articles"));
-		my $bypass_element_extraction = get_config_value($config, 0, 0, ("extraction", "bypass_element_extraction"));
-		my $review_point_threshold = get_config_value($config, 0, "", ("extraction", "review_point_threshold"));
+		my $force_sleep_between_articles = FeedMaker::getConfigValue($config, 0, 0, ("extraction", "force_sleep_between_articles"));
+		my $bypass_element_extraction = FeedMaker::getConfigValue($config, 0, 0, ("extraction", "bypass_element_extraction"));
+		my $review_point_threshold = FeedMaker::getConfigValue($config, 0, "", ("extraction", "review_point_threshold"));
 	
 		#print "title=$title, review_point=$review_point, review_point_threshold=$review_point_threshold\n";
 		if (defined $review_point and $review_point ne "" and 
@@ -346,7 +346,7 @@ sub append_item_to_result
 			confess "Error: can't extract HTML elements,";
 			return -1;
 		}
-		my $md5_name = get_md5_name($url);
+		my $md5_name = FeedMaker::getMd5Name($url);
 		$size = -s $new_file_name;
 		if ($size > 0) {
 			$cmd = qq(echo "<img src='http://terzeron.net/img/1x1.jpg?feed=${rss_file_name}&item=${md5_name}'/>" >> "${new_file_name}");
@@ -518,11 +518,11 @@ sub main
 
 	# from configuration
 	my $config = ();
-	if (not FeedMaker::read_config(\$config)) {
+	if (not FeedMaker::readConfig(\$config)) {
 		confess "Error: can't read configuration!,";
 	}
 
-	my $ignore_old_list = get_config_value($config, 0, 0, ("collection", "ignore_old_list"));
+	my $ignore_old_list = FeedMaker::getConfigValue($config, 0, 0, ("collection", "ignore_old_list"));
 	if (defined $ignore_old_list and $ignore_old_list =~ m!yes|true!i) {
 		$ignore_old_list = 1;
 	} else {
@@ -530,7 +530,7 @@ sub main
 	}
 	#print "ignore_old_list:" . $ignore_old_list . "\n";
 
-	my $is_completed = get_config_value($config, 0, "", ("collection", "is_completed"));
+	my $is_completed = FeedMaker::getConfigValue($config, 0, "", ("collection", "is_completed"));
 	if (not defined $is_completed or $is_completed eq "") {
 		$is_completed = 0;
 	} else {
@@ -575,8 +575,8 @@ sub main
 		# moneytoday: nViewSeq 파라미터 값
 		my @feed_id_sf_list = ();
 		my %feed_item_existence_map = ();
-		my $sort_field_pattern = get_config_value($config, 1, "", ("collection", "sort_field_pattern"));
-		my $unit_size_per_day = get_config_value($config, 1, "", ("collection", "unit_size_per_day"));
+		my $sort_field_pattern = FeedMaker::getConfigValue($config, 1, "", ("collection", "sort_field_pattern"));
+		my $unit_size_per_day = FeedMaker::getConfigValue($config, 1, "", ("collection", "unit_size_per_day"));
 
 		for (my $i = 0; $i < scalar @old_list; $i++) {
 			my $sf = "";
@@ -644,10 +644,10 @@ sub main
 
 	if ($result =~ m!Upload: success! and $force_collect == 0) {
 		# email notification
-		my $email = get_config_value($config, 0, "", ("notification", "email"));
+		my $email = FeedMaker::getConfigValue($config, 0, "", ("notification", "email"));
 		if (defined $email and $email ne "") {
-			my $recipient = get_config_value($config, 1, "", ("notification", "email", "recipient"));
-			my $subject = get_config_value($config, 1, "", ("notification", "email", "subject"));
+			my $recipient = FeedMaker::getConfigValue($config, 1, "", ("notification", "email", "recipient"));
+			my $subject = FeedMaker::getConfigValue($config, 1, "", ("notification", "email", "subject"));
 			open(OUT, "| mail -s '$subject' '$recipient'");
 			for my $feed (@recent_list) {
 				print OUT $feed . "\n";

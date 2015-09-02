@@ -7,28 +7,28 @@ import re
 
 
 def removeDuplicates(seq):
-	seen = set()
-	seenAdd = seen.add
-	return [ x for x in seq if not (x in seen or seenAdd(x))]
+    seen = set()
+    seenAdd = seen.add
+    return [ x for x in seq if not (x in seen or seenAdd(x))]
 
 
 def main():
-	totalList = []
+    totalList = []
 
-	for line in sys.stdin:
-		p = re.compile(r'^\#')
-		match = p.match(line)
-		if match:
-			# skip comments
-			continue
-		totalList.append(line)
+    for line in sys.stdin:
+        p = re.compile(r'^\#')
+        match = p.match(line)
+        if match:
+            # skip comments
+            continue
+        totalList.append(line)
 
-	totalList = removeDuplicates(totalList)
+    totalList = removeDuplicates(totalList)
 
-	totalList.sort()
-	for item in totalList:
-		print(item, end='')
+    totalList.sort()
+    for item in totalList:
+        print(item, end='')
 
 
 if __name__ == "__main__":
-	main()
+    main()

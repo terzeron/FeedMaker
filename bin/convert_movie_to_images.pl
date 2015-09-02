@@ -6,7 +6,7 @@ use warnings;
 use Carp;
 use Modern::Perl;
 use Digest::MD5;
-use FeedMaker qw(get_md5_name);
+use FeedMaker;
 use Getopt::Std;
 use File::Path;
 use Cwd;
@@ -16,7 +16,7 @@ use Env qw(FEED_MAKER_WWW_FEEDS);
 sub main
 {
 	my $link = $ARGV[0];
-	my $id = get_md5_name($link);
+	my $id = FeedMaker::getMd5Name($link);
 	my $video_file = $id . ".avi";
 	my $img_dir = $FEED_MAKER_WWW_FEEDS . "/img/thegoodmovie";
 	my $img_url_prefix = "http://terzeron.net/xml/img/thegoodmovie";
