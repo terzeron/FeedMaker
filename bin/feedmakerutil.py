@@ -110,19 +110,18 @@ def readStdin():
     lineList = []
     for line in inputStream:
         lineList.append(line)
-        
     return "".join(lineList)
 
 
-def readFile(file):
-    if file != "":
-        fp = open(file, "r")
-    else:
-        fp = sys.stdin
-    lineList = []
-    lineList = fp.readlines()
-    fp.close()
-    return "".join(lineList)
+def readFile(file = None):
+    import codecs
+    if file == None or file == "":
+        return readStdin()
+
+    with codecs.open(file, 'rb', encoding="utf-8", errors="ignore") as f:
+        lineList = f.readlines()
+        f.close()
+        return "".join(lineList)
 
 
 def readConfig():
