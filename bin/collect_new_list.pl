@@ -115,6 +115,9 @@ sub main
 	my $item_capture_script = FeedMaker::getConfigValue($config, 0, "", ("collection", "item_capture_script"));
 	if (not defined $item_capture_script or $item_capture_script eq "") {
 		$item_capture_script = "./capture_item_link_title.pl";
+        if (not -e $item_capture_script) {
+            $item_capture_script = "./capture_item_link_title.py";
+        }
 	}
 	print "# item_capture_script: $item_capture_script\n";
 	my ($item_capture_script_program,) = split /\s+/, $item_capture_script;
