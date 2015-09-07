@@ -488,8 +488,8 @@ sub cmp_int_or_str
 {
 	if ($a->{"sf"} =~ m!^\d+$! and $b->{"sf"} =~ m!^\d+$!) { 
 		return (int($a->{"sf"}) <=> int($b->{"sf"}));
-	} else { 
-		return ($a->{"sf"} <=> $b->{"sf"});
+	} else {
+		return ($a->{"sf"} cmp $b->{"sf"});
 	}
 }
 

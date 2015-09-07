@@ -105,12 +105,17 @@ def getNodeWithPath(node, pathStr):
 
 
 def readStdin():
+    lineList = readStdinAsLineList()
+    return "".join(lineList)
+
+
+def readStdinAsLineList():
     import io
     inputStream = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8", errors="ignore")
     lineList = []
     for line in inputStream:
         lineList.append(line)
-    return "".join(lineList)
+    return lineList
 
 
 def readFile(file = None):
