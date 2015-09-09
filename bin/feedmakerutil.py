@@ -119,14 +119,20 @@ def readStdinAsLineList():
 
 
 def readFile(file = None):
-    import codecs
     if file == None or file == "":
         return readStdin()
+           
+    lineList = readFileAsLineList(file)
+    return "".join(lineList)
+
+
+def readFileAsLineList(file):
+    import codecs
 
     with codecs.open(file, 'rb', encoding="utf-8", errors="ignore") as f:
         lineList = f.readlines()
         f.close()
-        return "".join(lineList)
+        return lineList
 
 
 def readConfig():
