@@ -144,5 +144,5 @@ foreach my $name (keys %name_status_map) {
 
 echo
 echo "===== inconsistent registration ====="
-make_xml_status.py > $public_html_dir/fm/diff.html
+make_xml_status.py > $FEED_MAKER_WWW_ADMIN/diff.html
 
