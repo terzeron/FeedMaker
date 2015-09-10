@@ -3,12 +3,15 @@
 
 import os
 import sys
+import re
 import feedmakerutil
 
 
 def main():
     cmd = "markdown"
-    print(feedmakerutil.execCmd(cmd))
+    html = feedmakerutil.execCmd(cmd)
+    html = re.sub(r'(?P<url>https?://[^"\'\<\>]+)', r'<a href="\g<url>">\g<url></a>', html)
+    print(html)
     
 
 if __name__ == "__main__":
