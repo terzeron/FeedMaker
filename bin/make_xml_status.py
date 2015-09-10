@@ -23,7 +23,7 @@ feedMakerPath = os.environ["FEED_MAKER_CWD"]
 def createXmlStatusTable(c):
     queryStr = "DROP TABLE IF EXISTS %s" % (statusTable)
     c.execute(queryStr)
-    queryStr = "CREATE TABLE %s (feed_alias VARCHAR(256) PRIMARY KEY, http_request INT NOT NULL DEFAULT 0, htaccess INT NOT NULL DEFAULT 0, public_html INT NOT NULL DEFAULT 0, feedmaker INT NOT NULL DEFAULT 0)" % (statusTable)
+    queryStr = "CREATE TABLE %s (feed_alias VARCHAR(256) PRIMARY KEY, http_request INT NOT NULL DEFAULT 0, htaccess INT NOT NULL DEFAULT 0, public_html INT NOT NULL DEFAULT 0, feedmaker INT NOT NULL DEFAULT 0, last_request_date date)" % (statusTable)
     c.execute(queryStr)
 
     queryStr = "DROP TABLE IF EXISTS %s" % (aliasMapTable)
@@ -54,22 +54,21 @@ def updateHtaccessStatus(c):
             c.execute(queryStr)
 
 
-
 def updateFeedAccessStatus(c):
     lineList = feedmakerutil.readFileAsLineList(feedAccessFile)
     for line in lineList:
         m = re.search(r'(?P<date>\d+)\t(?P<feed_name>[^\t]+)\t(?P<http_status>\d+)', line)
         if m:
-            #date = m.group("date")
+            date = m.group("date")
             feedName = m.group("feed_name")
             #httpStatus = m.group("http_status")
             #print("http_request: ", feedName)
             
             for row in c.execute("SELECT feed_alias FROM feed_alias_name WHERE feed_name = '%s'" % (feedName)):
                 feedAlias = row[0]
-                queryStr = "INSERT OR IGNORE INTO %s (feed_alias, http_request) VALUES ('%s', %d)" % (statusTable, feedAlias, 1)
+                queryStr = "INSERT OR IGNORE INTO %s (feed_alias, http_request, last_request_date) VALUES ('%s', %d, '%s')" % (statusTable, feedAlias, 1, date)
                 c.execute(queryStr)
-                queryStr = "UPDATE %s SET http_request = %d WHERE feed_alias = '%s'" % (statusTable, 1, feedAlias)
+                queryStr = "UPDATE %s SET http_request = %d, last_request_date = '%s' WHERE feed_alias = '%s'" % (statusTable, 1, date, feedAlias)
                 c.execute(queryStr)
 
             
@@ -110,8 +109,21 @@ def updateFeedMakerStatus(c):
 
 
 def printMismatchFeeds(c):
-    queryStr = "SELECT s.feed_alias, feed_name, http_request, htaccess, public_html, feedmaker FROM xml_status s JOIN feed_alias_name a ON s.feed_alias = a.feed_alias WHERE http_request != 1 OR htaccess != 1 OR public_html != 1 OR feedmaker != 1 ORDER BY http_request, htaccess, public_html, feedmaker"
+    queryStr = "SELECT s.feed_alias, feed_name, http_request, htaccess, public_html, feedmaker, last_request_date FROM xml_status s JOIN feed_alias_name a ON s.feed_alias = a.feed_alias WHERE http_request != 1 OR htaccess != 1 OR public_html != 1 OR feedmaker != 1 ORDER BY http_request, htaccess, public_html, feedmaker"
+    print("<div class='block'>")
     print("<table>")
+
+    print("<tr>")
+    print("<th>외부</th>")
+    print("<th>내부</th>")
+    print("<th>http request</th>")
+    print("<th>htaccess</th>")
+    print("<th>public_html</th>")
+    print("<th>feedmaker</th>")
+    print("<th>last request date</th>")
+    print("</tr>")
+    
+    print("<tr>")
     for row in c.execute(queryStr):
         feedAlias = row[0]
         feedName = row[1]
@@ -119,6 +131,13 @@ def printMismatchFeeds(c):
         htaccess = row[3]
         publicHtml = row[4]
         feedmaker = row[5]
+        last_request_date = row[6]
+
+        if feedAlias == feedName:
+            feedAlias = ""
+        if not last_request_date:
+            last_request_date = ""
+        
         print("<tr>")
         print("<td>%s</td>" % feedAlias)
         print("<td>%s</td>" % feedName)
@@ -126,8 +145,11 @@ def printMismatchFeeds(c):
         print("<td>%d</td>" % htaccess)
         print("<td>%d</td>" % publicHtml)
         print("<td>%d</td>" % feedmaker)
+        print("<td>%s</td>" % last_request_date)
         print("</tr>")
     print("</table>")
+    print("</div>")
+
             
 def main():
     conn = sqlite3.connect(dbName)
