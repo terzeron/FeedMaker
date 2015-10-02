@@ -139,12 +139,12 @@ def printMismatchFeeds(c):
             last_request_date = ""
         
         print("<tr>")
-        print("<td>%s</td>" % feedAlias)
-        print("<td>%s</td>" % feedName)
-        print("<td>%d</td>" % httpRequest)
-        print("<td>%d</td>" % htaccess)
-        print("<td>%d</td>" % publicHtml)
-        print("<td>%d</td>" % feedmaker)
+        print("<td><a href='http://terzeron.net/%s.xml' target='_blank'>%s</a></td>" % (feedAlias, feedAlias))
+        print("<td><a href='http://terzeron.net/xml/%s.xml' target='_blank'>%s</a></td>" % (feedName, feedName))
+        print("<td>%s</td>" % (httpRequest == 1 and "O" or "X"))
+        print("<td>%s</td>" % (htaccess == 1 and "O" or "X"))
+        print("<td>%s</td>" % (publicHtml == 1 and "O" or "X"))
+        print("<td>%s</td>" % (feedmaker == 1 and "O" or "X"))
         print("<td>%s</td>" % last_request_date)
         print("</tr>")
     print("</table>")
