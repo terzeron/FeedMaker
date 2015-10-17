@@ -20,7 +20,8 @@ sub extract_urls
 	my $url = shift;
 	my $item_capture_script = shift;
 	my $user_agent = shift;
-	#print "# extract_urls($url, $item_capture_script, $user_agent)\n";
+    my $referer = shift;
+	#print "# extract_urls($url, $item_capture_script, $user_agent, $referer)\n";
 
 	my $option = "";
 	if ($render_js == 1) {
@@ -29,6 +30,9 @@ sub extract_urls
 	if ($user_agent ne "") {
 		$option .= " --ua '$user_agent'";
 	}
+    if ($referer ne "") {
+        $option = "--referer '$referer'";
+    }
 	my $cmd = qq(wget.sh $option "$url" | extract_element.py collection | $item_capture_script);
 	print "# $cmd\n";
 	my $result = `$cmd`;
@@ -59,13 +63,14 @@ sub compose_url_list
 	my $list_url_list = shift ;
 	my $item_capture_script = shift;
 	my $user_agent = shift;
+    my $referer = shift;
 	my $total_list = shift;
 
 	if (not defined $list_url_list) {
 		$list_url_list = "";
 	} 
 
-	print "# compose_url_list($render_js, $list_url_list, $item_capture_script, $total_list)\n";
+	print "# compose_url_list($render_js, $list_url_list, $item_capture_script, $referer, $total_list)\n";
 
 	foreach my $key (keys %$list_url_list) {
 		my $value = $list_url_list->{$key};
@@ -73,13 +78,13 @@ sub compose_url_list
 			# list_url_list 아래 list_url이 여러 개 존재하는 경우
 			foreach my $url (@$value) {
 				my $a_url = $url;
-				my @url_list = extract_urls($render_js, $a_url, $item_capture_script, $user_agent);
+				my @url_list = extract_urls($render_js, $a_url, $item_capture_script, $user_agent, $referer);
 				push @$total_list, @url_list;
 			}
 		} else {
             # list_url_list 아래 list_url이 하나 존재하는 경우
 			my $a_url = $value;
-			my @url_list = extract_urls($render_js, $a_url, $item_capture_script, $user_agent);
+			my @url_list = extract_urls($render_js, $a_url, $item_capture_script, $user_agent, $referer);
 			push @$total_list, @url_list;
 		}
 	}
@@ -128,9 +133,11 @@ sub main
 
 	my $user_agent = FeedMaker::getConfigValue($config, 0, "", ("collection", "user_agent"));
 
+    my $referer = FeedMaker::getConfigValue($config, 0, "", ("collection", "referer"));
+
 	# collect items from specified url list
 	print "# collecting items from specified url list...\n";
-	compose_url_list($render_js, $list_url_list, $item_capture_script, $user_agent, \@total_list);
+	compose_url_list($render_js, $list_url_list, $item_capture_script, $user_agent, $referer, \@total_list);
 
 	foreach my $item (@total_list) {
 		print $item . "\n";
