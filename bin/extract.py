@@ -57,7 +57,9 @@ def extract_content(args):
         class_list = feedmakerutil.getAllConfigValues(element_list, "element_class")
         id_list = feedmakerutil.getAllConfigValues(element_list, "element_id")
         path_list = feedmakerutil.getAllConfigValues(element_list, "element_path")
+
         encoding = feedmakerutil.getConfigValue(element_list, "encoding")
+
         if encoding == None or encoding == "":
             encoding = "utf8"
         #print("# element_id:", id_list)
@@ -67,12 +69,12 @@ def extract_content(args):
     else:
         print(html, end='')
         return True
-
+    
     # sanitize
     html = re.sub(r'alt="(.*)<br>(.*)"', r'alt="\1 \2"', html)
     html = re.sub(r'<br>', r'<br/>', html)
     html = re.sub(r'<\?xml[^>]+>', r'', html)
-    html = re.sub(r'/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/', r'', html)
+    #html = re.sub(r'/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/', r'', html)
 
     # header
     #print_header()
