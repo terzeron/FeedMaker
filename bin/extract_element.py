@@ -47,7 +47,6 @@ def extract_content(config_item):
 	html = re.sub(r'alt="(.*)<br>(.*)"', r'alt="\1 \2"', html);
 	html = re.sub(r'<br>', r'<br/>', html)
 	html = re.sub(r'<\?xml[^>]+>', r'', html)
-	html = re.sub(r'<!--.*-->', r'', html)
 
 	if (class_str == None or class_str == "") and (id_str == None or id_str == "") and (path_str == None or path_str == ""):
 		print(html)
