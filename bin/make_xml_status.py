@@ -121,6 +121,7 @@ def printMismatchFeeds(c):
     print("<th>public_html</th>")
     print("<th>feedmaker</th>")
     print("<th>last request date</th>")
+    print("<th>관리</th>")
     print("</tr>")
     
     print("<tr>")
@@ -146,6 +147,7 @@ def printMismatchFeeds(c):
         print("<td>%s</td>" % (publicHtml == 1 and "O" or "X"))
         print("<td>%s</td>" % (feedmaker == 1 and "O" or "X"))
         print("<td>%s</td>" % last_request_date)
+        print("<td><a href='add_feed.php?feed_name=%s'>%s</a></td>" % (feedName, feedName))
         print("</tr>")
     print("</table>")
     print("</div>")
