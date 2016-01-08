@@ -159,27 +159,27 @@ def traverse_element(element, url, encoding):
         elif element.name == "img":
             if element.has_attr("data-lazy-src"):
                 data_lazy_src = element["data-lazy-src"]
-                if data_lazy_src[:7] != "http://":
+                if data_lazy_src[:7] != "http://" and data_lazy_src[:8] != "https://":
                     data_lazy_src = feedmakerutil.concatenateUrl(url, data_lazy_src)
                 src = data_lazy_src
             elif element.has_attr("lazysrc"):
                 lazy_src = element["lazysrc"]
-                if lazy_src[:7] != "http://":
+                if lazy_src[:7] != "http://" and lazy_src[:8] != "https://":
                     lazy_src = feedmakerutil.concatenateUrl(url, lazy_src)
                 src = lazy_src
             elif element.has_attr("data-src"):
                 data_src = element["data-src"]
-                if data_src[:7] != "http://":
+                if data_src[:7] != "http://" and data_src[:8] != "https://":
                     data_src = feedmakerutil.concatenateUrl(url, data_src)
                 src = data_src
             elif element.has_attr("data-original"):
                 data_src = element["data-original"]
-                if data_src[:7] != "http://":
+                if data_src[:7] != "http://" and data_src[:8] != "https://":
                     data_src = feedmakerutil.concatenateUrl(url, data_src)
                 src = data_src
             elif element.has_attr("src"):
                 src = element["src"]
-                if src[:7] != "http://":
+                if src[:7] != "http://" and src[:8] != "https://":
                     src = feedmakerutil.concatenateUrl(url, src)
                 if "ncc.phinf.naver.net" in src and ("/17.jpg" in src or "/8_17px.jpg" in src or "/7px.jpg" in src or "/20px.jpg" in src):
                     # 외부에서 접근 불가능한 이미지 제거
@@ -201,7 +201,7 @@ def traverse_element(element, url, encoding):
             if element.has_attr("href"):
                 # complementing href value
                 href = element["href"]
-                if href != "" and href[:7] != "http://":
+                if href != "" and href[:7] != "http://" and href[:8] != "https://":
                     href = feedmakerutil.concatenateUrl(url, href)
                 # A tag는 href와 target attribute를 출력해줘야 함
                 sys.stdout.write("<a href='%s'" % href)
