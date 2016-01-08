@@ -29,7 +29,7 @@ sub get_cache_url
 	if (defined $index and $index ne "") {
 		$index_str = "." . $index;
 	}
-	if ($img_url =~ m!^http://! and defined $img_ext) {
+	if ($img_url =~ m!^https?://! and defined $img_ext) {
 		return $url_prefix . "/" . FeedMaker::getMd5Name($img_url) . $postfix_str . $index_str . "." . $img_ext;
 	}
 	return $url_prefix . "/" . $img_url;
@@ -52,7 +52,7 @@ sub get_cache_file_name
     if (defined $index and $index ne "") {
         $index_str = "." . $index;
     }                     
-	if ($img_url =~ m!^http://! and defined $img_ext) {
+	if ($img_url =~ m!^https?://! and defined $img_ext) {
 		return $path_prefix . "/" . FeedMaker::getMd5Name($img_url) . $postfix_str . $index_str . "." . $img_ext;
 	} 
 	return $path_prefix . "/" . $img_url;
