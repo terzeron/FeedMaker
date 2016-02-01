@@ -83,6 +83,12 @@ def extract_content(args):
     ret = 0
     for parser in [ "html5lib", "lxml" ]:
         soup = BeautifulSoup(html, parser)
+        '''
+        comments = soup.findAll(text=lambda text: isinstance(text, Comment))
+        for comment in comments:
+            comment.extract()
+        '''
+        
         for a_class in class_list:
             divs = soup.find_all(attrs={"class": a_class})
             if divs:
@@ -120,10 +126,11 @@ def traverse_element(element, url, encoding):
     global footnote_num
     ret = -1
     
-    #print "# traverse_element()"
+    #print("# traverse_element()")
     if isinstance(element, Comment):
+        # skip sub-elements
         return ret
-    elif not hasattr(element, 'name') or element.name == None: 
+    elif not hasattr(element, 'name') or element.name == None:
         # text or self-close element (<br/>)
         p = re.compile("^\s*$")
         if not p.match(str(element)):
@@ -132,7 +139,7 @@ def traverse_element(element, url, encoding):
         return ret
     else: 
         # element
-        #print "#%s#" % element.name
+        #print("#%s#" % element.name)
 
         # 원칙
         # 모든 element는 그 안에 다른 element나 text를 포함한다.
@@ -246,10 +253,13 @@ def traverse_element(element, url, encoding):
                     # skip unknown element 
                     return ret
         elif element.name in ("script"):
-            # skip this element
+            # skip sub-element
             return ret
         elif element.name in ("v:shapetype", "qksdmssnfl", "qksdmssnfl<span"):
             # skip malformed element
+            return ret
+        elif element.name in ("style", "table", "tbody", "tr", "td", "th", "font", "st1:personname", "script"):
+            # skip sub-elements
             return ret
         else:
             if check_element_class(element, "div", "paginate_v1"):
@@ -284,9 +294,6 @@ def traverse_element(element, url, encoding):
                         return ret
                     #else:
                         #print str(element)
-            elif element.name in ("style", "table", "tbody", "tr", "td", "th", "font", "st1:personname", "script"):
-                # skip this element 
-                None
             else:               
                 sys.stdout.write("<%s>\n" % element.name)
                 open_close_tag = True
