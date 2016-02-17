@@ -16,8 +16,8 @@ echo "===== check the validity of configuration file ====="
 #echo "--- the number of occurrence of each element ---"
 #find . -name conf.xml -exec perl -ne 'while (/\<(\w+)\>/g) { if ($1 !~ /encoding|collection|extraction|copyright|configuration|element_list|description|language|link|list_url_list|rss|title|list_url|element_class|element_id|element_path|feed_url|generator/) { print $1 . "\n"; } }' "{}" \; |sort | uniq -c | sort -n | perl -ne 'if (/^\s*(\d+)\s+/) { print; }'
 
-echo "--- spaces instead of tab ---"
-find . -name conf.xml -exec grep -l "	 " "{}" \;
+echo "--- should use spaces instead of tab ---"
+find . -name conf.xml -exec grep -l "	" "{}" \;
 
 
 echo 
