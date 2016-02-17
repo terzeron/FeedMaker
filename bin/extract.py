@@ -88,7 +88,7 @@ def extract_content(args):
         for comment in comments:
             comment.extract()
         '''
-        
+
         for a_class in class_list:
             divs = soup.find_all(attrs={"class": a_class})
             if divs:
@@ -258,7 +258,7 @@ def traverse_element(element, url, encoding):
         elif element.name in ("v:shapetype", "qksdmssnfl", "qksdmssnfl<span"):
             # skip malformed element
             return ret
-        elif element.name in ("style", "table", "tbody", "tr", "td", "th", "font", "st1:personname", "script"):
+        elif element.name in ("style", "st1:personname", "script"):
             # skip sub-elements
             return ret
         else:
