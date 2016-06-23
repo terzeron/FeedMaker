@@ -198,6 +198,16 @@ def traverse_element(element, url, encoding):
                 sys.stdout.write(" width='%s'" % element["width"])
             sys.stdout.write("/>\n")
             ret = 1
+        elif element.name == "canvas":
+            src = ""
+            if element.has_attr("data-original"):
+                src = element["data-original"]
+            if src and src != "":
+                sys.stdout.write("<img src='%s'" % src)
+            if element.has_attr("width"):
+                sys.stdout.write(" width='%s'" % element["width"])
+            sys.stdout.write("/>\n")
+            ret = 1
         elif element.name == "a":
             if element.has_attr("onclick"):
                 # 주석레이어 제거
