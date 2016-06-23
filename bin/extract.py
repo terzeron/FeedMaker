@@ -164,6 +164,7 @@ def traverse_element(element, url, encoding):
             ret = 1
             return ret
         elif element.name == "img":
+            src = ""
             if element.has_attr("data-lazy-src"):
                 data_lazy_src = element["data-lazy-src"]
                 if data_lazy_src[:7] != "http://" and data_lazy_src[:8] != "https://":
@@ -191,7 +192,18 @@ def traverse_element(element, url, encoding):
                 if "ncc.phinf.naver.net" in src and ("/17.jpg" in src or "/8_17px.jpg" in src or "/7px.jpg" in src or "/20px.jpg" in src):
                     # 외부에서 접근 불가능한 이미지 제거
                     return ret
-            sys.stdout.write("<img src='%s'" % src)
+            if src and src != "":
+                sys.stdout.write("<img src='%s'" % src)
+            if element.has_attr("width"):
+                sys.stdout.write(" width='%s'" % element["width"])
+            sys.stdout.write("/>\n")
+            ret = 1
+        elif element.name == "canvas":
+            src = ""
+            if element.has_attr("data-original"):
+                src = element["data-original"]
+            if src and src != "":
+                sys.stdout.write("<img src='%s'" % src)
             if element.has_attr("width"):
                 sys.stdout.write(" width='%s'" % element["width"])
             sys.stdout.write("/>\n")
