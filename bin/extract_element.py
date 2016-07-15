@@ -53,7 +53,7 @@ def extract_content(config_item):
 		return
 	
 	ret = 0
-	for parser in [ "html5lib", "lxml" ]:
+	for parser in [ "html.parser", "lxml" ]:
 		soup = BeautifulSoup(html, parser)
 		if soup == None:
 			print("can't parse html")
