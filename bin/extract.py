@@ -81,7 +81,7 @@ def extract_content(args):
 
     # main article sections
     ret = 0
-    for parser in [ "lxml" ]:
+    for parser in [ "html.parser", "html5lib", "lxml" ]:
         soup = BeautifulSoup(html, parser)
         '''
         comments = soup.findAll(text=lambda text: isinstance(text, Comment))
