@@ -198,16 +198,26 @@ def traverse_element(element, url, encoding):
                 sys.stdout.write(" width='%s'" % element["width"])
             sys.stdout.write("/>\n")
             ret = 1
+        elif element.name in ("input"):
+            if check_element_class(element, "input", "originSrc"):
+                if element.has_attr("value"):
+                    value = element["value"]
+                    if value[:7] != "http://" and value[:8] != "https://":
+                        value = feedmakerutil.concatenateUrl(url, value)
+                    sys.stdout.write("<img src='%s'/>\n" % value)
+                    ret = 1
         elif element.name == "canvas":
             src = ""
             if element.has_attr("data-original"):
                 src = element["data-original"]
+            elif element.has_attr("data-src"):
+                src = element["data-src"]
             if src and src != "":
                 sys.stdout.write("<img src='%s'" % src)
-            if element.has_attr("width"):
-                sys.stdout.write(" width='%s'" % element["width"])
-            sys.stdout.write("/>\n")
-            ret = 1
+                if element.has_attr("width"):
+                    sys.stdout.write(" width='%s'" % element["width"])
+                sys.stdout.write("/>\n")
+                ret = 1
         elif element.name == "a":
             if element.has_attr("onclick"):
                 # 주석레이어 제거
