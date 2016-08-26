@@ -604,7 +604,7 @@ sub main
 			}
 			$i++;
 		}
-		my $increment_size = int((int(time) - $mtime) * int($unit_size_per_day) / 86400);
+		my $increment_size = int(((int(time) - $mtime) * $unit_size_per_day) / 86400);
 		print "# start_idx=$start_idx, end_idx=$end_idx, current time=" . int(time) . ", mtime=$mtime, window_size=$window_size, increment_size=$increment_size\n";
 		if ($increment_size > 0) {
 			write_next_start_idx($idx_file, $start_idx + $increment_size);
