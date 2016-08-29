@@ -13,7 +13,7 @@ import feedmakerutil
 dbName = "problems.db"
 statusTable = "xml_status"
 aliasMapTable = "feed_alias_name"
-feedAccessFile = os.environ["FEED_MAKER_CWD"] + "/log/feed_access.txt"
+feedAccessFile = os.environ["FEED_MAKER_CWD"] + "/logs/feed_access.txt"
 htaccessFile = os.environ["FEED_MAKER_WWW_FEEDS"] + "/../.htaccess"
 publicHtmlPath = os.environ["FEED_MAKER_WWW_FEEDS"]
 feedMakerPath = os.environ["FEED_MAKER_CWD"]

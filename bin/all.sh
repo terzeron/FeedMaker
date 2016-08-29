@@ -61,7 +61,7 @@ if [ "$list" != "" ]; then
 	send_error_msg "$list"
 fi
 
-find_problems.sh > log/find_problems.log 2>&1
+find_problems.sh > logs/find_problems.log 2>&1
 
 date
 end_ts=`date +"%s"`
