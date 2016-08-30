@@ -110,7 +110,6 @@ def updateFeedMakerStatus(c):
 
 def printMismatchFeeds(c):
     queryStr = "SELECT s.feed_alias, feed_name, http_request, htaccess, public_html, feedmaker, last_request_date FROM xml_status s JOIN feed_alias_name a ON s.feed_alias = a.feed_alias WHERE http_request != 1 OR htaccess != 1 OR public_html != 1 OR feedmaker != 1 ORDER BY http_request, htaccess, public_html, feedmaker"
-    print("<div class='block'>")
     print("<table>")
 
     print("<tr>")
@@ -150,6 +149,7 @@ def printMismatchFeeds(c):
         print("<td><a href='add_feed.php?feed_name=%s'>%s</a></td>" % (feedName, feedName))
         print("</tr>")
     print("</table>")
+    print("</div>")
     print("</div>")
 
             
