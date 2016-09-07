@@ -60,7 +60,7 @@ feedmaker_file=$FEED_MAKER_CWD"/logs/feedmaker.txt"
 find */ -maxdepth 2 -name "*.xml" \! \( -name conf.xml -o -name _conf.xml -o  -name "*.conf.xml" \) | grep -v /_ | xargs basename | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $feedmaker_file
 period_file_list=""
 for i in {0..30}; do
-	period_file_list="${period_file_list} /Users/terzeron/apps/httpd/logs/apache_access.log.$(date -v-${i}d +'%Y%m%d')"
+	period_file_list="${period_file_list} /Users/terzeron/apps/httpd/logs/access.log.$(date -v-${i}d +'%Y%m%d')"
 done
 feed_access_file=$FEED_MAKER_CWD"/logs/feed_access.txt"
 echo "--- $feed_access_file ---"
