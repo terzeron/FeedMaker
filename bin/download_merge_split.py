@@ -187,7 +187,7 @@ def splitImageFile(imgFile, numUnits, bgcolorOption, orientationOption):
     #
     # split the image
     #
-    cmd = "../../../CartoonSplit/split.py -n %d -b 10 %s %s %s" % (numUnits, orientationOption, bgcolorOption, imgFile)
+    cmd = "../../../CartoonSplit/split.py -b 10 -t 0 -n %d -i %s %s %s" % (numUnits, orientationOption, bgcolorOption, imgFile)
     debug_print(cmd)
     result = feedmakerutil.execCmd(cmd)
     debug_print(result)
