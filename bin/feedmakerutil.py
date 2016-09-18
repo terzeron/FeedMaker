@@ -7,6 +7,22 @@ import re
 from bs4 import BeautifulSoup, Comment
 
 
+def makePath(path):
+    try:
+        os.makedirs(path)
+    except FileExistsError:
+        # ignore
+        None
+
+
+def execCmd(cmd):
+	try:
+		result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
+	except subprocess.SubprocessError:
+		return False
+	return result.decode(encoding="utf-8")
+
+
 def getFirstTokenFromPath(pathStr):
     #print "getFirstTokenFromPath(pathStr='%s')" % (pathStr)
     isAnywhere = False
