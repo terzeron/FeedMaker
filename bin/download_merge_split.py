@@ -187,7 +187,7 @@ def splitImageFile(imgFile, numUnits, bgcolorOption, orientationOption):
     #
     # split the image
     #
-    cmd = "../../../CartoonSplit/split.py -b 10 -t 0.01 -n %d -i %s %s %s" % (numUnits, orientationOption, bgcolorOption, imgFile)
+    cmd = "../../../CartoonSplit/split.py -b 10 -t 0.03 -n %d -i %s %s %s" % (numUnits, orientationOption, bgcolorOption, imgFile)
     debug_print(cmd)
     result = feedmakerutil.execCmd(cmd)
     debug_print(result)
@@ -208,7 +208,7 @@ def printImageFiles(numUnits, pathPrefix, imgUrlPrefix, imgUrl, imgExt, num, doF
             debug_print("splitImgFile=" + splitImgFile)
             if os.path.exists(splitImgFile):
                 splitImgUrl = getCacheUrl(imgUrlPrefix, imgUrl, imgExt, num, i + 1)
-                print("<img src='%s' width='100%%'/>" % (splitImgUrl))
+                print("<img src='%s''/>" % (splitImgUrl))
 
 
 def main():
