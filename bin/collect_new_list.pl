@@ -25,13 +25,13 @@ sub extract_urls
 
 	my $option = "";
 	if ($render_js == 1) {
-		$option = "--render-js";
+		$option .= " --render-js";
 	}
 	if ($user_agent ne "") {
 		$option .= " --ua '$user_agent'";
 	}
     if ($referer ne "") {
-        $option = "--referer '$referer'";
+        $option .= " --referer '$referer'";
     }
 	my $cmd = qq(wget.sh $option "$url" | extract_element.py collection | $item_capture_script);
 	print "# $cmd\n";
@@ -110,6 +110,7 @@ sub main
 	} else {
 		$render_js = 0;
 	}
+    print "# render_js: $render_js\n";
 
 	my $list_url_list = $config->{"collection"}->{"list_url_list"};
 	if (defined $list_url_list) {
