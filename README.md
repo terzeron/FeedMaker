@@ -8,8 +8,6 @@ Requirements
 
 1. Python3 & modules
   1. bs4
-  1. urllib
-  1. sqlite3
 1. Perl & modules
   1. Modern::Perl
   1. Digest::MD5
