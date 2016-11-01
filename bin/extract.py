@@ -283,6 +283,8 @@ def traverse_element(element, url, encoding):
         elif element.name in ("style", "st1:personname", "script"):
             # skip sub-elements
             return ret
+        elif element.name == "xmp":
+            ret = 1
         else:
             if check_element_class(element, "div", "paginate_v1"):
                 # <div class="paginate">...
