@@ -218,7 +218,7 @@ def main():
     debug_print(cmd);
     feedName = feedmakerutil.execCmd(cmd).rstrip()
     debug_print("<!-- feedName=%s -->" % (feedName))
-    pathPrefix = os.environ["FEED_MAKER_WWW_FEEDS"] + "/img/" + feedName;
+    pathPrefix = os.environ["FEED_MAKER_WWW_FEEDS"] + "/img/" + feedName
     debug_print("<!--- pathPrefix=%s -->" % (pathPrefix))
     feedmakerutil.makePath(pathPrefix)
 
