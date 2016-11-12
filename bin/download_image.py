@@ -38,9 +38,9 @@ def getCacheFileName(pathPrefix, imgUrl, imgExt, postfix=None, index=None):
 def downloadImage(pathPrefix, imgUrl, imgExt, pageUrl):
     cacheFile = getCacheFileName(pathPrefix, imgUrl, imgExt)
     cmd = '[ -f "%s" -a -s "%s" ] || wget.sh --download "%s" --referer "%s" "%s"' % (cacheFile, cacheFile, cacheFile, pageUrl, imgUrl)
-    #print("<!-- cmd -->")
+    #print("<!-- %s -->" % (cmd))
     result = feedmakerutil.execCmd(cmd)
-    #print("<!-- result -->")
+    #print("<!-- %s -->" % (result))
     return result
 
 
@@ -63,6 +63,7 @@ def main():
 
     lineList = feedmakerutil.readStdinAsLineList()
     for line in lineList:
+        line = line.rstrip()
         m = re.search(r'''
         (?P<preText>.*)
         <img 
