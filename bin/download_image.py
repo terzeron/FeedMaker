@@ -3,21 +3,8 @@
 import sys
 import os
 import re
+from feedmakerutil import debug_print
 import feedmakerutil
-
-def getCacheUrl(urlPrefix, imgUrl, imgExt, postfix=None, index=None):
-    postfixStr = ""
-    if postfix:
-        postfixStr = "_" + postfix
-    
-    indexStr = ""
-    if index:
-        indexStr = "." + index
-    
-    if re.search(r'^https?://', imgUrl) and imgExt:
-        return urlPrefix + "/" + feedmakerutil.getMd5Name(imgUrl) + postfixStr + indexStr + "." + imgExt
-
-    return urlPrefix + "/" + imgUrl
 
 
 def getCacheFileName(pathPrefix, imgUrl, imgExt, postfix=None, index=None):
@@ -37,11 +24,15 @@ def getCacheFileName(pathPrefix, imgUrl, imgExt, postfix=None, index=None):
 
 def downloadImage(pathPrefix, imgUrl, imgExt, pageUrl):
     cacheFile = getCacheFileName(pathPrefix, imgUrl, imgExt)
-    cmd = '[ -f "%s" -a -s "%s" ] || wget.sh --download "%s" --referer "%s" "%s"' % (cacheFile, cacheFile, cacheFile, pageUrl, imgUrl)
-    #print("<!-- %s -->" % (cmd))
+    if os.path.isfile(cacheFile) and os.stat(cacheFile).st_size > 0:
+        return True
+    cmd = 'wget.sh --download "%s" --referer "%s" "%s"' % (cacheFile, pageUrl, imgUrl)
+    debug_print("<!-- %s -->" % (cmd))
     result = feedmakerutil.execCmd(cmd)
-    #print("<!-- %s -->" % (result))
-    return result
+    debug_print("<!-- %s -->" % (result))
+    if os.path.isfile(cacheFile) and os.stat(cacheFile).st_size > 0:
+        return cacheFile
+    return False
 
 
 def main():
@@ -86,13 +77,13 @@ def main():
                 print(preText)
 
             # download
-            if downloadImage(pathPrefix, imgUrl, imgExt, url) == False:
-                continue
-            
-            cacheFile = getCacheFileName(pathPrefix, imgUrl, imgExt)
-            cacheUrl = getCacheUrl(imgUrlPrefix, imgUrl, imgExt)
-            #print("<!-- imgUrl -> cacheFile / cacheUrl -->")
-            print("<img src='%s'/>" % (cacheUrl))
+            cacheFile = downloadImage(pathPrefix, imgUrl, imgExt, url)
+            if cacheFile:
+                cacheUrl = feedmakerutil.getCacheUrl(imgUrlPrefix, imgUrl, imgExt)
+                debug_print("<!-- %s -> %s / %s -->" % (imgUrl, cacheFile, cacheUrl))
+                print("<img src='%s'/>" % (cacheUrl))
+            else:
+                print("<img src='%s' alt='not exist or size 0'/>" % (imgUrl))
 
             m = re.search(r'^\s*$', postText)
             if not m:

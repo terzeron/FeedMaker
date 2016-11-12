@@ -5,58 +5,21 @@ import os
 import sys
 import re
 import getopt
+from feedmakerutil import debug_print
 import feedmakerutil
-
-
-isDebugMode = False
-
-def debug_print(a):
-    if isDebugMode:
-        print(a)
-
-
-def getCacheUrl(urlPrefix, url, imgExt, postfix=None, index=None):
-    debug_print("# getCacheUrl(%s, %s, %s, %s, %d)" % (urlPrefix, url, imgExt, postfix, index if index else 0))
-    resultStr = ""
-    postfixStr = ""
-    if postfix and postfix != "":
-        postfixStr = "_" + str(postfix)
-    indexStr = ""
-    if index and index != "":
-        indexStr = "." + str(index)
-    m = re.search(r'http://', url)
-    if m and imgExt:
-        resultStr = urlPrefix + "/" + feedmakerutil.getMd5Name(url) + postfixStr + indexStr + "." + imgExt
-    else:
-        resultStr = urlPrefix + "/" + imgUrl
-    return resultStr
-
-
-def getCacheFileName(pathPrefix, url, imgExt, postfix=None, index=None):
-    debug_print("# getCacheFileName(%s, %s, %s, %s, %d)" % (pathPrefix, url, imgExt, postfix, index if index else 0))
-    resultStr = ""
-    postfixStr = "" 
-    if postfix and postfix != "":
-        postfixStr = "_" + str(postfix)
-    indexStr = ""
-    if index and index != "":
-        indexStr = "." + str(index)
-    m = re.search(r'http://', url)
-    if m and imgExt:
-        resultStr = pathPrefix + "/" + feedmakerutil.getMd5Name(url) + postfixStr + indexStr + "." + imgExt
-    else:
-        resultStr = pathPrefix + "/" + imgUrl
-    debug_print("resultStr=" + resultStr)
-    return resultStr
 
 
 def downloadImage(pathPrefix, imgUrl, imgExt, pageUrl):
     debug_print("# downloadImage(%s, %s, %s, %s)" % (pathPrefix, imgUrl, imgExt, pageUrl))
-    cacheFile = getCacheFileName(pathPrefix, imgUrl, imgExt)
-    cmd = '[ -f "%s" -a -s "%s" ] || wget.sh --download "%s" --referer "%s" "%s"' % (cacheFile, cacheFile, cacheFile, pageUrl, imgUrl)
-    debug_print(cmd)
+    cacheFile = feedmakerutil.getCacheFileName(pathPrefix, imgUrl, imgExt)
+    if os.path.isfile(cacheFile) and os.stat(cacheFile).st_size > 0:
+        return True
+    cmd = 'wget.sh --download "%s" --referer "%s" "%s"' % (cacheFile, pageUrl, imgUrl)
+    debug_print("<!-- %s -->" % (cmd))
     result = feedmakerutil.execCmd(cmd)
-    debug_print(result)
+    debug_print("<!-- %s -->" % (result))
+    if os.path.isfile(cacheFile) and os.stat(cacheFile).st_size > 0:
+        return result
     if result == False:
         return False
     return cacheFile
@@ -140,7 +103,7 @@ def mergeImageFiles(imgFileList, pathPrefix, imgUrl, imgExt, num):
     #
     # merge mode
     #
-    mergedImgFile = getCacheFileName(pathPrefix, imgUrl, imgExt, num)
+    mergedImgFile = feedmakerutil.getCacheFileName(pathPrefix, imgUrl, imgExt, num)
     cmd  = "../../../CartoonSplit/merge.py " + mergedImgFile + " "
     for cacheFile in imgFileList:
         cmd = cmd + cacheFile + " "
@@ -204,10 +167,10 @@ def printImageFiles(numUnits, pathPrefix, imgUrlPrefix, imgUrl, imgExt, num, doF
     else:
         customRange = reversed(range(numUnits))
         for i in customRange:
-            splitImgFile = getCacheFileName(pathPrefix, imgUrl, imgExt, num, i + 1)
+            splitImgFile = feedmakerutil.getCacheFileName(pathPrefix, imgUrl, imgExt, num, i + 1)
             debug_print("splitImgFile=" + splitImgFile)
             if os.path.exists(splitImgFile):
-                splitImgUrl = getCacheUrl(imgUrlPrefix, imgUrl, imgExt, num, i + 1)
+                splitImgUrl = feedmakerutil.getCacheUrl(imgUrlPrefix, imgUrl, imgExt, num, i + 1)
                 print("<img src='%s''/>" % (splitImgUrl))
 
 
