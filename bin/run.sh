@@ -69,7 +69,7 @@ if [ "$is_completed" != "1" ]; then
     perl -e '
     my %img_map = ();
     while (my $line = <ARGV>) {
-        if ($line =~ m!<img src=.http://terzeron\.net/xml/img/[^/]+/(.+\.jpg)!) {
+        if ($line =~ m!img src=.http://terzeron\.net/xml/img/[^/]+/(.+\.jpg)!) {
             $img_map{$1} = 1;
         }
     }
