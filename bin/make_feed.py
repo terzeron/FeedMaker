@@ -263,7 +263,7 @@ def appendItemToResult(config, feedList, item, rssFileName):
         feedList.append(item)
     else:
         # 파일이 존재하지 않거나 크기가 작으니 다시 생성 시도
-        (postProcessScript, postProcessScript2, doRenderJs, doForceSleepBetweenArticles, doBypassElementExtraction, reviewPointThreshold) = getExtractionConfigs(config)
+        (postProcessScript, postProcess2Script, doRenderJs, doForceSleepBetweenArticles, doBypassElementExtraction, reviewPointThreshold) = getExtractionConfigs(config)
         
         cmd = ""
         postProcessCmd = ""
