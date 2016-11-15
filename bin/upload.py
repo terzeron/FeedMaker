@@ -8,6 +8,7 @@ import sys
 import subprocess
 import re
 import feedmakerutil
+from feedmakerutil import die, err, warn
 
 
 def main(rssFile):

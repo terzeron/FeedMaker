@@ -100,7 +100,7 @@ def extract_content(args):
                 for div in divs:
                     ret = traverse_element(div, item_url, encoding)
         for an_path in path_list:
-            divs = get_node_with_path(soup.body, an_path)
+            divs = feedmakerutil.getNodeWithPath(soup.body, an_path)
             if divs:
                 for div in divs:
                     ret = traverse_element(div, item_url, encoding)
@@ -287,17 +287,19 @@ def traverse_element(element, url, encoding):
             ret = 1
         else:
             if check_element_class(element, "div", "paginate_v1"):
-                # <div class="paginate">...
+                # <div class="paginate_v1">...
                 # ajax로 받아오는 페이지들을 미리 요청
-                result = re.search(r"change_page\('([^' ]+)/literature_module/(\d+)/literature_(\d+)_(\d+)\.html'", str(element))
-                if result:
-                    url_prefix = result.group(1)
-                    leaf_id = result.group(2)
-                    article_num = result.group(3)
-                    page_num = result.group(4)
-                    cmd = "collect_ajax_pages.pl " + leaf_id + " " + article_num + " " + page_num + " " + encoding
-                    output = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
-                    print(output, end='')
+                matches = re.findall(r"change_page\('[^']+/literature_module/(\d+)/literature_(\d+)_(\d+)\.html'", str(element))
+                for match in matches:
+                    leafId = int(match[0])
+                    articleNum = int(match[1])
+                    pageNum = int(match[2])
+                    url = "http://navercast.naver.com/ncc_request.nhn?url=http://data.navercast.naver.com/literature_module/%d/literature_%d_%d.html" % (leafId, articleNum, pageNum)
+                    cmd = "wget.sh '%s' | extract_literature.py" % (url)
+                    #print(cmd)
+                    result = feedmakerutil.execCmd(cmd)
+                    if result:
+                        print(result)
                     ret = 1
                 return ret
             elif check_element_class(element, "div", "view_option option_top"):

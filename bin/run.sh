@@ -39,7 +39,7 @@ fi
 
 # -r 옵션이 켜져 있으면 일부 파일을 미리 삭제함
 if [ ${REMOVE_HTMLS} -eq 1 ]; then
-    find ${IMG_DIR} -type f -delete
+    [ -d "${IMG_DIR}" ] && find ${IMG_DIR} -type f -delete
     rm -rf newlist html start_idx.txt
 fi
 
@@ -60,7 +60,7 @@ for f in `[ -d html ] && find html -name "*.html" -exec grep -q "<img src=.http:
     fi
 done
 
-make_feed.pl $FORCE_COLLECT_OPT $RESULT_XML
+make_feed.py $FORCE_COLLECT_OPT $RESULT_XML
 
 # 불필요한 파일 삭제
 rm -f cookie.txt nohup.out

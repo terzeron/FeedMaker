@@ -33,8 +33,8 @@ def get_default_config(type):
 
 def get_page(url, encoding):
     cmd = "wget.sh \"%s\"" % (url)
-    html = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
-    return html
+    result = feedmakerutil.execCmd(cmd)
+    return result
 
 
 def get_first_search_result(config, type, keyword, year):

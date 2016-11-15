@@ -4,7 +4,16 @@
 import os
 import sys
 import re
+import subprocess
 from bs4 import BeautifulSoup, Comment
+
+
+isDebugMode = False
+
+
+def debug_print(a):
+    if isDebugMode:
+        print(a)
 
 
 def makePath(path):
@@ -16,11 +25,17 @@ def makePath(path):
 
 
 def execCmd(cmd):
-	try:
-		result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
-	except subprocess.SubprocessError:
-		return False
-	return result.decode(encoding="utf-8")
+    try:
+        p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+        ret = p.wait()
+        if ret != 0:
+            return False
+        result = p.communicate()[0]
+    except subprocess.CalledProcessError:
+        return False
+    except subprocess.SubprocessError:
+        return False
+    return result.decode(encoding="utf-8")
 
 
 def getFirstTokenFromPath(pathStr):
@@ -238,17 +253,35 @@ def warn(msg):
     sys.stderr.write("Warning: %s\n" % msg)
 
 
-def execCmd(cmd):
-    import subprocess
-    try:
-        result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
-    except subprocess.SubprocessError:
-        return False
-    return result.decode(encoding="utf-8")
-
-
 def removeFile(filePath):
     if os.path.isfile(filePath):
         os.remove(filePath)
 
 
+
+def getCacheInfoCommon(prefix, imgUrl, imgExt, postfix=None, index=None):
+    postfixStr = ""
+    if postfix and postfix != "":
+        postfixStr = "_" + str(postfix)
+
+    indexStr = ""
+    if index and index != "":
+        indexStr = "." + str(index)
+
+    resultStr = ""
+    if re.search(r'https?://', imgUrl) and imgExt:
+        resultStr = prefix + "/" + getMd5Name(imgUrl) + postfixStr + indexStr + "." + imgExt
+    else:
+        resultStr = prefix + "/" + imgUrl
+    debug_print("resultStr=" + resultStr)
+    return resultStr
+
+
+def getCacheUrl(urlPrefix, imgUrl, imgExt, postfix=None, index=None):
+    debug_print("# getCacheUrl(%s, %s, %s, %s, %d)" % (urlPrefix, imgUrl, imgExt, postfix, index if index else 0))
+    return getCacheInfoCommon(urlPrefix, imgUrl, imgExt,  postfix)
+
+
+def getCacheFileName(pathPrefix, imgUrl, imgExt, postfix=None, index=None):
+    debug_print("# getCacheFileName(%s, %s, %s, %s, %d)" % (pathPrefix, imgUrl, imgExt, postfix, index if index else 0))
+    return getCacheInfoCommon(pathPrefix, imgUrl, imgExt, postfix)
