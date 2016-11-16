@@ -19,12 +19,12 @@ MAX_NUM_DAYS = 7
 
 
 def getRssDateStr(ts):
-    localtime = datetime.date.fromtimestamp(ts)
-    return localtime.strftime("%a, %d %b %Y %H:%M:%S %z")
+    dt = datetime.datetime.fromtimestamp(float(ts))
+    return dt.strftime("%a, %d %b %Y %H:%M:%S %z")
 
 
 def getDateStr(ts):
-    dt = datetime.date.fromtimestamp(ts)
+    dt = datetime.datetime.fromtimestamp(float(ts))
     return dt.strftime("%Y%m%d")
 
 
@@ -37,39 +37,35 @@ def getNewFileName(url):
 
 
 def getCollectionConfigs(config):
-    collectionConfig = feedmakerutil.getConfigNode(config, "collection")
-    if collectionConfig == None:
+    collectionConf = feedmakerutil.getConfigNode(config, "collection")
+    if collectionConf == None:
         die("can't get collection element")
-
-    doIgnoreOldList = feedmakerutil.getConfigValue(collectionConfig, "do_ignore_old_list")
+    doIgnoreOldList = feedmakerutil.getConfigValue(collectionConf, "do_ignore_old_list")
     if "true" == doIgnoreOldList:
         doIgnoreOldList = True
     else:
         doIgnoreOldList = False
-
-    isCompleted = feedmakerutil.getConfigValue(collectionConfig, "isCompleted")
+    isCompleted = feedmakerutil.getConfigValue(collectionConf, "is_completed")
     if "true" == isCompleted:
         isCompleted = True
     else:
         isCompleted = False
-    sortFieldPattern = feedmakerutil.getConfigValue(collectionConfig, "sortFieldPattern")
-    unitSizePerDay = feedmakerutil.getConfigValue(collectionConfig, "unitSizePerDay")
-    postProcessScript = feedmakerutil.getConfigValue(collectionConfig, "post_process_script")
-
-    return (doIgnoreOldList, isCompleted, postProcessScript)
+    sortFieldPattern = feedmakerutil.getConfigValue(collectionConf, "sort_field_pattern")
+    unitSizePerDay = int(feedmakerutil.getConfigValue(collectionConf, "unit_size_per_day"))
+    postProcessScript = feedmakerutil.getConfigValue(collectionConf, "post_process_script")
+    return (doIgnoreOldList, isCompleted, sortFieldPattern, unitSizePerDay, postProcessScript)
 
 
 def getExtractionConfigs(config):
-    extractionConfig = feedmakerutil.getConfigNode(config, "extraction")
-    if extractionConfig == None:
+    extractionConf = feedmakerutil.getConfigNode(config, "extraction")
+    if extractionConf == None:
         die("can't get extraction element")
-    postProcessScript = feedmakerutil.getConfigValue(extractionConfig, "post_process_script")
-    postProcess2Script = feedmakerutil.getConfigValue(extractionConfig, "post_process2_script")
-    doRenderJs = feedmakerutil.getConfigValue(extractionConfig, "render_js")
-    doForceSleepBetweenArticles = feedmakerutil.getConfigValue(extractionConfig, "force_sleep_between_articles")
-    doBypassElementExtraction = feedmakerutil.getConfigValue(extractionConfig, "bypass_element_extraction")
-    reviewPointThreshold = feedmakerutil.getConfigValue(extractionConfig, "review_point_threshold")
-
+    postProcessScript = feedmakerutil.getConfigValue(extractionConf, "post_process_script")
+    postProcess2Script = feedmakerutil.getConfigValue(extractionConf, "post_process2_script")
+    doRenderJs = feedmakerutil.getConfigValue(extractionConf, "render_js")
+    doForceSleepBetweenArticles = feedmakerutil.getConfigValue(extractionConf, "force_sleep_between_articles")
+    doBypassElementExtraction = feedmakerutil.getConfigValue(extractionConf, "bypass_element_extraction")
+    reviewPointThreshold = feedmakerutil.getConfigValue(extractionConf, "review_point_threshold")
     return (postProcessScript, postProcess2Script, doRenderJs, doForceSleepBetweenArticles, doBypassElementExtraction, reviewPointThreshold)
 
 
@@ -77,8 +73,8 @@ def getNotificationConfigs(config):
     config = feedmakerutil.readConfig()
     if config == None:
         die("can't get config element")
-    notificationConfig = feedmakerutil.getConfigNode(config, "notification")
-    email = feedmakerutil.getConfigNode(notification, "email")
+    notiConf = feedmakerutil.getConfigNode(config, "notification")
+    email = feedmakerutil.getConfigNode(notiConf, "email")
     recipient = feedmakerutil.getConfigValue(email, "recipient")
     subject = feedmakerutil.getConfigValue(email, "subject")
     return (email, recipient, subject)
@@ -87,7 +83,8 @@ def getNotificationConfigs(config):
 def getRecentList(listDir, postProcessScript):
     print("# getRecentList(%s)" % (listDir))
 
-    dateStr = getDateStr(time.time())
+    ts = datetime.datetime.now().timestamp()
+    dateStr = getDateStr(ts)
     newListFileName = getListFileName(listDir, dateStr)
     if postProcessScript:
         postProcessCmd = '%s "%s"' % (postProcessScript, newListFileName)
@@ -95,12 +92,10 @@ def getRecentList(listDir, postProcessScript):
         postProcessCmd = 'remove_duplicate_line.py > "%s"' % (newListFileName)
 
     cmd = "collect_new_list.pl | " + postProcessCmd
-    print("# %s" % (cmd))
+    print(cmd)
     result = feedmakerutil.execCmd(cmd)
     if result == False:
         die("can't collect new list from the page")
-    
-    print(result)
 
     with open(newListFileName, 'r', encoding='utf-8') as inFile:
         uniqList = []
@@ -112,11 +107,11 @@ def getRecentList(listDir, postProcessScript):
 
 
 def readOldListFromFile(listDir, isCompleted):
-    print("# readOldListFromFile(%s, %r)" % (listDir, isCompleted))
+    print("# readOldListFromFile(listDir=%s, isCompleted=%r)" % (listDir, isCompleted))
 
-    list = []
-    ts = time.time()
-    if not isCompleted:
+    resultList = []
+    ts = datetime.datetime.now().timestamp()
+    if isCompleted == False:
         # 아직 진행 중인 피드에 대해서는 현재 날짜에 가장 가까운
         # 과거 리스트 파일 1개를 찾아서 그 안에 기록된 리스트를 꺼냄
 
@@ -133,10 +128,9 @@ def readOldListFromFile(listDir, isCompleted):
                 with open(listFile, 'r', encoding='utf-8') as inFile:
                     for line in inFile:
                         line = line.rstrip()
-                        list.append(line)
+                        resultList.append(line)
     else:
         # 이미 완료된 피드에 대해서는 기존 리스트를 모두 취합함
-        existenceCheckSet = {}
         for entry in os.scandir(listDir):
             if entry.name.startswith(".") and entry.is_file():
                 continue
@@ -145,11 +139,8 @@ def readOldListFromFile(listDir, isCompleted):
             with open(filePath, 'r', encoding='utf-8') as inFile:
                 for line in inFile:
                     line = line.rstrip()
-                    (url, title) = line.split('\t')
-                    if url not in existenceCheckSet:
-                        existenceCheckSet.add(url)
-                        list.append(line)
-    return list
+                    resultList.append(line)
+    return list(set(resultList))
 
 
 def getRssConfigValues(rssConfig):
@@ -172,7 +163,7 @@ def generateRssFeed(config, feedList, rssFileName):
     
     (rssTitle, rssDescription, rssGenerator, rssCopyright, rssLink, rssLanguage, rssNoItemDesc) = getRssConfigValues(rssConfig)
 
-    ts = time.time()
+    ts = datetime.datetime.now().timestamp()
     dateStr = getDateStr(ts)
     pubDateStr = getRssDateStr(ts)
     lastBuildDateStr = getRssDateStr(ts)
@@ -228,19 +219,19 @@ def generateRssFeed(config, feedList, rssFileName):
         # 이전 파일을 old 파일로 이름 바꾸기
         if os.path.isfile(rssFileName):
             cmd = 'mv -f "%s" "%s.old"' % (rssFileName, rssFileName)
-            print("# %s" % (cmd))
+            print(cmd)
             result = feedmakerutil.execCmd(cmd)
             if result == False:
                 return False
         # 이번에 만들어진 파일을 정식 파일 이름으로 바꾸기
         if os.path.isfile(tempRssFileName):
             cmd = 'mv -f "%s" "%s"' % (tempRssFileName, rssFileName)
-            print("# %s" % (cmd))
+            print(cmd)
             result = feedmakerutil.execCmd(cmd)
     else:
         # 이번에 만들어진 파일을 지우기
         cmd = 'rm -f "%s"' % (tempRssFileName)
-        print("# %s" % (cmd))
+        print(cmd)
         result = feedmakerutil.execCmd(cmd)
 
     if result == False:
@@ -289,7 +280,7 @@ def appendItemToResult(config, feedList, item, rssFileName):
             extractionCmd = ""
 
         cmd = 'wget.sh %s "%s" %s %s > "%s"' % (option, url, extractionCmd, postProcessCmd, newFileName) 
-        print("# %s" % (cmd))
+        print(cmd)
         result = feedmakerutil.execCmd(cmd)
         if result == False:
             die("can't extract HTML elements")
@@ -298,7 +289,7 @@ def appendItemToResult(config, feedList, item, rssFileName):
         size = os.stat(newFileName).st_size
         if size > 0:
             cmd = 'echo "<img src=\'http://terzeron.net/img/1x1.jpg?feed=%s&item=%s\'/>" >> "%s"' % (rssFileName, md5Name, newFileName)
-            print("# %s" % (cmd))
+            print(cmd)
             result = feedmakerutil.execCmd(cmd)
             if result == False:
                 die("can't append page view logging tag")
@@ -318,13 +309,11 @@ def appendItemToResult(config, feedList, item, rssFileName):
 
 
 def diffOldAndRecent(config, recentList, oldList, feedList, rssFileName):
-    print("# diffOldAndRecent(%s)" % (rssFileName))
+    print("# diffOldAndRecent(len(recentList)=%d, len(oldList)=%d), len(feedList)=%d, rssFileName=%s" % (len(recentList), len(oldList), len(feedList), rssFileName))
     oldMap = {}
     for old in oldList:
-        m = re.search(r'^\#', old)
-        if m:
+        if re.search(r'^\#', old):
             continue
-        
         (url, title) = old.split('\t')
         oldMap[url] = title
     #print(len(oldList))
@@ -332,8 +321,7 @@ def diffOldAndRecent(config, recentList, oldList, feedList, rssFileName):
     # differentiate
     resultList = []
     for recent in recentList:
-        m = re.search(r'^\#', recent)
-        if m:
+        if re.search(r'^\#', recent):
             continue
         
         (url, title) = recent.split('\t')
@@ -346,15 +334,13 @@ def diffOldAndRecent(config, recentList, oldList, feedList, rssFileName):
     # collect items to be generated as RSS feed
     print("Appending %d new items to the feed list" % (len(resultList)))
     for newItem in reversed(resultList):
-        m = re.search(r'^\#', newItem)
-        if m:
+        if re.search(r'^\#', newItem):
             continue
         appendItemToResult(config, feedList, newItem, rssFileName)
     
     print("Appending %d old items to the feed list" % (len(oldList)))
     for oldItem in reversed(oldList):
-        m = re.search(r'^\#', oldItem)
-        if m:
+        if re.search(r'^\#', oldItem):
             continue
         appendItemToResult(config, feedList, oldItem, rssFileName)
 
@@ -367,31 +353,33 @@ def diffOldAndRecent(config, recentList, oldList, feedList, rssFileName):
 def getStartIdx(fileName):
     print("# getStartIdx(%s)" % (fileName))
 
-    if not open(IN, fileName):
-        writeNextStartIdx(fileName, 0)
-        return (0, int(time))
-    
-    line = sys.stdin.readline()
-    startIdx = 0
-    mtime = 0
-    m = re.search(r'(?P<startIdx>\d+)\t(?P<mtime>\d+)', line)
-    if m:
-        startIdx = int(m.group("startIdx"))
-        mtime = m.group("mtime")
-    close(IN)
+    if os.path.isfile(fileName):
+        with open(fileName, 'r', encoding='utf-8') as inFile:
+            line = inFile.readline()
+            startIdx = 0
+            mtime = 0
+            m = re.search(r'(?P<startIdx>\d+)\t(?P<mtime>\d+)', line)
+            if m:
+                startIdx = int(m.group("startIdx"))
+                mtime = int(m.group("mtime"))
+                
+                print("start index: %d" % (startIdx))
+                print("last modified time: %d, %s" % (mtime, getRssDateStr(mtime)))
+                return (startIdx, mtime)
 
-    print("start index: %d" % (startIdx))
-    print("last modified time: %d, %s" % (mtime, localtime(mtime)))
-    return (startIdx, mtime)
+    # 처음 생성 시
+    writeNextStartIdx(fileName, 0)
+    ts = datetime.datetime.now().timestamp()
+    return (0, int(ts))
 
 
 def writeNextStartIdx(fileName, nextStartIdx):
     print("# writeNextStartIdx(%s, %d)" % (fileName, nextStartIdx))
 
-    ts = time.time()
+    ts = datetime.datetime.now().timestamp()
     with open(fileName, 'w', encoding='utf-8') as outFile:
         print("next start index: %d" % (nextStartIdx))
-        print("current time: %d, %s" % (ts, localtime(ts)))
+        print("current time: %d, %s" % (ts, getRssDateStr(ts)))
         outFile.write("%d\t%d\n" % (int(nextStartIdx), int(ts)))
 
 
@@ -407,6 +395,25 @@ def cmpIntOrStr(a, b):
         return (int(a["sf"]) < int(b["sf"]))
     else:
         return (a["sf"] < b["sf"])
+
+
+def cmpToKey(mycmp):
+    class K:
+        def __init__(self, obj, *args):
+            self.obj = obj
+        def __lt__(self, other):
+            return mycmp(self.obj, other.obj) < 0
+        def __gt__(self, other):
+            return mycmp(self.obj, other.obj) > 0
+        def __eq__(self, other):
+            return mycmp(self.obj, other.obj) == 0
+        def __le__(self, other):
+            return mycmp(self.obj, other.obj) <= 0
+        def __ge__(self, other):
+            return mycmp(self.obj, other.obj) >= 0
+        def __ne__(self, other):
+            return mycmp(self.obj, other.obj) != 0
+    return K
 
     
 def main():
@@ -430,7 +437,8 @@ def main():
     config = feedmakerutil.readConfig()
     if config == None:
         die("can't get config element")
-    (doIgnoreOldList, isCompleted, postProcessScript) = getCollectionConfigs(config)
+    (doIgnoreOldList, isCompleted, sortFieldPattern, unitSizePerDay, postProcessScript) = getCollectionConfigs(config)
+    print("doIgnoreOldList=%r, isCompleted=%r, sortFieldPatter=%s, unitSizePerDay=%d, postProcessScript=%s" % (doIgnoreOldList, isCompleted, sortFieldPattern, unitSizePerDay, postProcessScript))
     
     # -c 옵션이 지정된 경우, 설정의 isCompleted 값 무시
     if doCollectByForce == True:
@@ -453,22 +461,24 @@ def main():
 
         # 오름차순 정렬
         feedIdSortFieldList = []
-        feedItemExistenceSet = {}
+        feedItemExistenceSet = set([])
 
         for i, oldItem in enumerate(oldList):
             sortField = ""
             m = re.search(sortFieldPattern, oldItem)
             if m:
-                sortField = True
+                sortField = m.group(1)
             else:
                 warn("can't match the pattern /%s/" % (sortFieldPattern))
             
             if oldItem not in feedItemExistenceSet:
-                feedIdSortField = {"id": i, "sf": sortField}
+                feedIdSortField = {}
+                feedIdSortField["id"] = i
+                feedIdSortField["sf"] = sortField
                 feedItemExistenceSet.add(oldItem)
                 feedIdSortFieldList.append(feedIdSortField)
-        
-        sortedFeedList = sort(feedIdSortFieldList, cmp=cmpIntOrStr)
+
+        sortedFeedList = sorted(feedIdSortFieldList, key=cmpToKey(cmpIntOrStr))
         idxFile = "startIdx.txt"
         windowSize = 10; # feedly initial max window size
         (startIdx, mtime) = getStartIdx(idxFile)
@@ -477,9 +487,10 @@ def main():
             if i >= startIdx and i < endIdx:
                 feedList.append(oldList[feed["id"]])
                 print(oldList[feed["id"]])
-        
-        incrementSize = int(((int(time) - mtime) * unitSizePerDay) / 86400)
-        print("# startIdx=%d, endIdx=%d, current time=%d, mtime=%d, windowSize=%d, incrementSize=%d" % (starIdx, endIdx, int(time), mtime, windowSize, incrementSize))
+
+        ts = datetime.datetime.now().timestamp()
+        incrementSize = int(((int(ts) - mtime) * unitSizePerDay) / 86400)
+        print("# startIdx=%d, endIdx=%d, current time=%d, mtime=%d, windowSize=%d, incrementSize=%d" % (startIdx, endIdx, int(ts), mtime, windowSize, incrementSize))
         if incrementSize > 0:
             writeNextStartIdx(idxFile, startIdx + incrementSize)
     else:
@@ -496,21 +507,21 @@ def main():
         if diffOldAndRecent(config, recentList, oldList, feedList, rssFileName) == False:
             return -1
 
-    if not doCollectByForce:
+    if doCollectByForce == False:
         # generate RSS feed
         if generateRssFeed(config, feedList, rssFileName) == False:
             return -1
     
     # upload RSS feed file
     cmd = 'upload.py %s' % (rssFileName)
-    print("# %s" % (cmd))
+    print(cmd)
     result = feedmakerutil.execCmd(cmd)
     print(result)
     if result == False:
         return -1
 
     m = re.search(r'Upload: success', result)
-    if m and not doCollectByForce:
+    if m and doCollectByForce == False:
         # email notification
         (email, recipient, subject) = getNotificationConfigs(config)
         if email and recipient and subject:
