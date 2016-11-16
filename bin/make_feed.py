@@ -479,7 +479,6 @@ def main():
                 feedIdSortFieldList.append(feedIdSortField)
 
         sortedFeedList = sorted(feedIdSortFieldList, key=cmpToKey(cmpIntOrStr))
-        print(sortedFeedList)
         idxFile = "start_idx.txt"
         windowSize = 10; # feedly initial max window size
         (startIdx, mtime) = getStartIdx(idxFile)
