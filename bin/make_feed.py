@@ -392,9 +392,9 @@ def cmpIntOrStr(a, b):
     m1 = re.search(r'^\d+$', a["sf"])
     m2 = re.search(r'^\d+$', b["sf"])
     if m1 and m2:
-        return (int(a["sf"]) < int(b["sf"]))
+        return (int(a["sf"]) - int(b["sf"]))
     else:
-        return (a["sf"] < b["sf"])
+        return (a["sf"] - b["sf"])
 
 
 def cmpToKey(mycmp):
@@ -479,7 +479,8 @@ def main():
                 feedIdSortFieldList.append(feedIdSortField)
 
         sortedFeedList = sorted(feedIdSortFieldList, key=cmpToKey(cmpIntOrStr))
-        idxFile = "startIdx.txt"
+        print(sortedFeedList)
+        idxFile = "start_idx.txt"
         windowSize = 10; # feedly initial max window size
         (startIdx, mtime) = getStartIdx(idxFile)
         endIdx = startIdx + windowSize
