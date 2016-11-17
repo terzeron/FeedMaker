@@ -6,9 +6,9 @@ import re
 import time
 import datetime
 import getopt
-from feedmakerutil import debug_print, err, warn, die
+import subprocess
+from feedmakerutil import warn, die
 import feedmakerutil
-import datetime
 import PyRSS2Gen
 
 
@@ -41,17 +41,12 @@ def getCollectionConfigs(config):
     if collectionConf == None:
         die("can't get collection element")
     doIgnoreOldList = feedmakerutil.getConfigValue(collectionConf, "do_ignore_old_list")
-    if "true" == doIgnoreOldList:
-        doIgnoreOldList = True
-    else:
-        doIgnoreOldList = False
+    doIgnoreOldList = bool("true" == doIgnoreOldList)
     isCompleted = feedmakerutil.getConfigValue(collectionConf, "is_completed")
-    if "true" == isCompleted:
-        isCompleted = True
-    else:
-        isCompleted = False
+    isCompleted = bool("true" == isCompleted)
     sortFieldPattern = feedmakerutil.getConfigValue(collectionConf, "sort_field_pattern")
-    unitSizePerDay = int(feedmakerutil.getConfigValue(collectionConf, "unit_size_per_day"))
+    unitSizePerDay = feedmakerutil.getConfigValue(collectionConf, "unit_size_per_day")
+    unitSizePerDay = int(unitSizePerDay) if unitSizePerDay else None
     postProcessScript = feedmakerutil.getConfigValue(collectionConf, "post_process_script")
     return (doIgnoreOldList, isCompleted, sortFieldPattern, unitSizePerDay, postProcessScript)
 
@@ -181,24 +176,24 @@ def generateRssFeed(config, feedList, rssFileName):
                 content += line
                 # restrict big contents
                 if len(content) >= MAX_CONTENT_LENGTH:
-                    content = "<strong>본문이 너무 길어서 전문을 싣지 않았습니다. 다음의 원문 URL을 참고해주세요.</strong><br/>" + content; 
+                    content = "<strong>본문이 너무 길어서 전문을 싣지 않았습니다. 다음의 원문 URL을 참고해주세요.</strong><br/>" + content
                     break
             rssItems.append(
                 PyRSS2Gen.RSSItem(
-                    title = articleTitle,
-                    link = articleUrl,
-                    guid = articleUrl,
-                    pubDate = pubDateStr,
-                    description = content
+                    title=articleTitle,
+                    link=articleUrl,
+                    guid=articleUrl,
+                    pubDate=pubDateStr,
+                    description=content
                 )
             )
 
     rss = PyRSS2Gen.RSS2(
-        title = rssTitle,
-        link = rssLink,
-        description = rssDescription,
-        lastBuildDate = lastBuildDateStr,
-        items = rssItems
+        title=rssTitle,
+        link=rssLink,
+        description=rssDescription,
+        lastBuildDate=lastBuildDateStr,
+        items=rssItems
     )
     rss.write_xml(open(tempRssFileName, 'w'), encoding='utf-8')
 
@@ -438,7 +433,7 @@ def main():
     if config == None:
         die("can't get config element")
     (doIgnoreOldList, isCompleted, sortFieldPattern, unitSizePerDay, postProcessScript) = getCollectionConfigs(config)
-    print("doIgnoreOldList=%r, isCompleted=%r, sortFieldPatter=%s, unitSizePerDay=%d, postProcessScript=%s" % (doIgnoreOldList, isCompleted, sortFieldPattern, unitSizePerDay, postProcessScript))
+    print("doIgnoreOldList=%r, isCompleted=%r, sortFieldPatter=%s, unitSizePerDay=%d, postProcessScript=%s" % (doIgnoreOldList, isCompleted, sortFieldPattern, unitSizePerDay if unitSizePerDay else -1, postProcessScript))
     
     # -c 옵션이 지정된 경우, 설정의 isCompleted 값 무시
     if doCollectByForce == True:
@@ -480,7 +475,7 @@ def main():
 
         sortedFeedList = sorted(feedIdSortFieldList, key=cmpToKey(cmpIntOrStr))
         idxFile = "start_idx.txt"
-        windowSize = 10; # feedly initial max window size
+        windowSize = 10 # feedly initial max window size
         (startIdx, mtime) = getStartIdx(idxFile)
         endIdx = startIdx + windowSize
         for i, feed in enumerate(sortedFeedList):
