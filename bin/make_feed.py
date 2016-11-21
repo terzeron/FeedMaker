@@ -83,7 +83,7 @@ def getRecentList(listDir, postProcessScript):
     else:
         postProcessCmd = 'remove_duplicate_line.py > "%s"' % (newListFileName)
 
-    cmd = "collect_new_list.pl | " + postProcessCmd
+    cmd = "collect_new_list.py | " + postProcessCmd
     print(cmd)
     result = feedmakerutil.execCmd(cmd)
     if result == False:
