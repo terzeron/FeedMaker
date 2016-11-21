@@ -8,12 +8,7 @@ Requirements
 
 1. Python3 & modules
   1. bs4
-1. Perl & modules
-  1. Modern::Perl
-  1. Digest::MD5
-  1. XML::RSS
-  1. Text::Levenshtein
-  1. HTML::Parser
+  1. PyRSS2Gen
 
 Usage
 -----
