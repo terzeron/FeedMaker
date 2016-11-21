@@ -389,7 +389,12 @@ def cmpIntOrStr(a, b):
     if m1 and m2:
         return (int(a["sf"]) - int(b["sf"]))
     else:
-        return (a["sf"] - b["sf"])
+        if a["sf"] < b["sf"]:
+            return -1
+        elif a["sf"] > b["sf"]:
+            return 1
+        else:
+            return 0
 
 
 def cmpToKey(mycmp):
