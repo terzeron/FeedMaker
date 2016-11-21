@@ -245,7 +245,7 @@ def err(msg):
 
 
 def die(msg):
-    sys.stderr.write("Error: %s\n", msg)
+    sys.stderr.write("Error: %s\n" % msg)
     sys.exit(-1)
     
 

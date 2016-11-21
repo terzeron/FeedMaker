@@ -11,23 +11,24 @@ import copy
 import signal
 import cgi
 import feedmakerutil
+from feedmakerutil import die, err, warn
 
 
-# recursion으로 구현된 traverse_element()의 여러 레벨에서 조회하는 변수
-footnote_num = 0
+# recursion으로 구현된 traverseElement()의 여러 레벨에서 조회하는 변수
+footnoteNum = 0
     
-def print_header():
+def printHeader():
     print("<meta http-equiv='Content-Type' content='text/html; charset=UTF-8'/>")
     print('<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, minimum-scal#e=0.5, user-scalable=yes" />')
     print("<style>img { max-width: 100%; margin-top: 0px; margin-bottom: 0px; }</style>")
 
 
-def print_trailer():
+def printTrailer():
     print("<p/>")
 
 
-def extract_content(args):
-    item_url = args[0]
+def extractContent(args):
+    itemUrl = args[0]
     file = ""
     if len(args) > 1:
         file = args[1]
@@ -42,8 +43,8 @@ def extract_content(args):
     description = feedmakerutil.getConfigValue(rss, "description")
     if description == None:
         err("can't find 'rss' element from configuration")
-    feed_url = feedmakerutil.getConfigValue(rss, "feed_url")
-    if feed_url == None:
+    feedUrl = feedmakerutil.getConfigValue(rss, "feed_url")
+    if feedUrl == None:
         err("can't find 'rss' element from configuration")
     extraction = feedmakerutil.getConfigNode(config, "extraction")
 
@@ -51,20 +52,20 @@ def extract_content(args):
     html = feedmakerutil.readFile(file)
 
     if extraction != None:
-        element_list = feedmakerutil.getConfigNode(extraction, "element_list")
-        if element_list == None:
-            err("can't find 'element_list' element from configuration")
-        class_list = feedmakerutil.getAllConfigValues(element_list, "element_class")
-        id_list = feedmakerutil.getAllConfigValues(element_list, "element_id")
-        path_list = feedmakerutil.getAllConfigValues(element_list, "element_path")
+        elementList = feedmakerutil.getConfigNode(extraction, "element_list")
+        if elementList == None:
+            die("can't find 'element_list' element from configuration")
+        classList = feedmakerutil.getAllConfigValues(elementList, "element_class")
+        idList = feedmakerutil.getAllConfigValues(elementList, "element_id")
+        pathList = feedmakerutil.getAllConfigValues(elementList, "element_path")
 
-        encoding = feedmakerutil.getConfigValue(element_list, "encoding")
+        encoding = feedmakerutil.getConfigValue(elementList, "encoding")
 
         if encoding == None or encoding == "":
             encoding = "utf8"
-        #print("# element_id:", id_list)
-        #print("# element_class:", class_list)
-        #print("# element_path:", path_list)
+        #print("# element_id:", idList)
+        #print("# element_class:", classList)
+        #print("# element_path:", pathList)
         #print("# encoding:", encoding)
     else:
         print(html, end='')
@@ -77,7 +78,7 @@ def extract_content(args):
     #html = re.sub(r'/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/', r'', html)
 
     # header
-    #print_header()
+    #printHeader()
 
     # main article sections
     ret = 0
@@ -89,44 +90,44 @@ def extract_content(args):
             comment.extract()
         '''
 
-        for a_class in class_list:
-            divs = soup.find_all(attrs={"class": a_class})
+        for aClass in classList:
+            divs = soup.find_all(attrs={"class": aClass})
             if divs:
                 for div in divs:
-                    ret = traverse_element(div, item_url, encoding)
-        for an_id in id_list:
-            divs = soup.find_all(attrs={"id": an_id})
+                    ret = traverseElement(div, itemUrl, encoding)
+        for anId in idList:
+            divs = soup.find_all(attrs={"id": anId})
             if divs:
                 for div in divs:
-                    ret = traverse_element(div, item_url, encoding)
-        for an_path in path_list:
-            divs = feedmakerutil.getNodeWithPath(soup.body, an_path)
+                    ret = traverseElement(div, itemUrl, encoding)
+        for anPath in pathList:
+            divs = feedmakerutil.getNodeWithPath(soup.body, anPath)
             if divs:
                 for div in divs:
-                    ret = traverse_element(div, item_url, encoding)
+                    ret = traverseElement(div, itemUrl, encoding)
         if ret > 0:
             break
                 
-    if (class_list == None or class_list == []) and (id_list == None or id_list == []) and (path_list == None or path_list == []):
-        ret = traverse_element(soup.body, item_url, encoding)
+    if (classList == None or classList == []) and (idList == None or idList == []) and (pathList == None or pathList == []):
+        ret = traverseElement(soup.body, itemUrl, encoding)
 
     # trailer
-    #print_trailer()
+    #printTrailer()
 
     return True
 
 
-def check_element_class(element, element_name, class_name):
-    if element.name == element_name and element.has_attr("class") and class_name in element["class"]:
+def checkElementClass(element, elementName, className):
+    if element.name == elementName and element.has_attr("class") and className in element["class"]:
         return True
     return False
 
 
-def traverse_element(element, url, encoding):
-    global footnote_num
+def traverseElement(element, url, encoding):
+    global footnoteNum
     ret = -1
     
-    #print("# traverse_element()")
+    #print("# traverseElement()")
     if isinstance(element, Comment):
         # skip sub-elements
         return ret
@@ -153,11 +154,11 @@ def traverse_element(element, url, encoding):
         # 자바스크립트?
         # flash?
 
-        open_close_tag = False
+        openCloseTag = False
         if element.name == "p":
             print("<p>")
             for e in element.contents:
-                ret = traverse_element(e, url, encoding)
+                ret = traverseElement(e, url, encoding)
             # 하위 노드를 처리하고 return하지 않으면, 텍스트를 직접 
             # 감싸고 있는 <p>의 경우, 중복된 내용이 노출될 수 있음
             print("</p>")
@@ -166,25 +167,25 @@ def traverse_element(element, url, encoding):
         elif element.name == "img":
             src = ""
             if element.has_attr("data-lazy-src"):
-                data_lazy_src = element["data-lazy-src"]
-                if data_lazy_src[:7] != "http://" and data_lazy_src[:8] != "https://":
-                    data_lazy_src = feedmakerutil.concatenateUrl(url, data_lazy_src)
-                src = data_lazy_src
+                dataLazySrc = element["data-lazy-src"]
+                if dataLazySrc[:7] != "http://" and dataLazySrc[:8] != "https://":
+                    dataLazySrc = feedmakerutil.concatenateUrl(url, dataLazySrc)
+                src = dataLazySrc
             elif element.has_attr("lazysrc"):
-                lazy_src = element["lazysrc"]
-                if lazy_src[:7] != "http://" and lazy_src[:8] != "https://":
-                    lazy_src = feedmakerutil.concatenateUrl(url, lazy_src)
-                src = lazy_src
+                lazySrc = element["lazysrc"]
+                if lazySrc[:7] != "http://" and lazySrc[:8] != "https://":
+                    lazySrc = feedmakerutil.concatenateUrl(url, lazySrc)
+                src = lazySrc
             elif element.has_attr("data-src"):
-                data_src = element["data-src"]
-                if data_src[:7] != "http://" and data_src[:8] != "https://":
-                    data_src = feedmakerutil.concatenateUrl(url, data_src)
-                src = data_src
+                dataSrc = element["data-src"]
+                if dataSrc[:7] != "http://" and dataSrc[:8] != "https://":
+                    dataSrc = feedmakerutil.concatenateUrl(url, dataSrc)
+                src = dataSrc
             elif element.has_attr("data-original"):
-                data_src = element["data-original"]
-                if data_src[:7] != "http://" and data_src[:8] != "https://":
-                    data_src = feedmakerutil.concatenateUrl(url, data_src)
-                src = data_src
+                dataSrc = element["data-original"]
+                if dataSrc[:7] != "http://" and dataSrc[:8] != "https://":
+                    dataSrc = feedmakerutil.concatenateUrl(url, dataSrc)
+                src = dataSrc
             elif element.has_attr("src"):
                 src = element["src"]
                 if src[:7] != "http://" and src[:8] != "https://":
@@ -199,7 +200,7 @@ def traverse_element(element, url, encoding):
             sys.stdout.write("/>\n")
             ret = 1
         elif element.name in ("input"):
-            if check_element_class(element, "input", "originSrc"):
+            if checkElementClass(element, "input", "originSrc"):
                 if element.has_attr("value"):
                     value = element["value"]
                     if value[:7] != "http://" and value[:8] != "https://":
@@ -223,9 +224,9 @@ def traverse_element(element, url, encoding):
                 # 주석레이어 제거
                 m = re.search(r"(open|close)FootnoteLayer\('(\d+)'", element["onclick"])
                 if m:
-                    open_or_close = m.group(1)
-                    if open_or_close == "open":
-                        footnote_num = m.group(2)
+                    openOrClose = m.group(1)
+                    if openOrClose == "open":
+                        footnoteNum = m.group(2)
                     return ret
             if element.has_attr("href"):
                 # complementing href value
@@ -239,7 +240,7 @@ def traverse_element(element, url, encoding):
                 else:
                     sys.stdout.write(">")
                 ret = 1
-                open_close_tag = True
+                openCloseTag = True
         elif element.name in ("iframe", "embed"):
             if element.has_attr("src"):
                 src = element["src"]
@@ -263,13 +264,13 @@ def traverse_element(element, url, encoding):
             # extract only link information from area element
             for child in element.contents:
                 if hasattr(child, "name") and child.name == "area":
-                    link_href = "#"
-                    link_title = "empty link title"
+                    linkHref = "#"
+                    linkTitle = "empty link title"
                     if child.has_attr("href"):
-                        link_href = child["href"]
+                        linkHref = child["href"]
                     if child.has_attr("alt"):
-                        link_title = child["alt"]
-                    print("<br/><br/><strong><a href='%s'>%s</a></strong><br/><br/>" % (link_href, link_title))
+                        linkTitle = child["alt"]
+                    print("<br/><br/><strong><a href='%s'>%s</a></strong><br/><br/>" % (linkHref, linkTitle))
                     ret = 1
                 elif element.name in ("o:p", "st1:time"):
                     # skip unknown element 
@@ -286,7 +287,7 @@ def traverse_element(element, url, encoding):
         elif element.name == "xmp":
             ret = 1
         else:
-            if check_element_class(element, "div", "paginate_v1"):
+            if checkElementClass(element, "div", "paginate_v1"):
                 # <div class="paginate_v1">...
                 # ajax로 받아오는 페이지들을 미리 요청
                 matches = re.findall(r"change_page\('[^']+/literature_module/(\d+)/literature_(\d+)_(\d+)\.html'", str(element))
@@ -302,27 +303,27 @@ def traverse_element(element, url, encoding):
                         print(result)
                     ret = 1
                 return ret
-            elif check_element_class(element, "div", "view_option option_top"):
+            elif checkElementClass(element, "div", "view_option option_top"):
                 # "오늘의 문학"에서 폰트크기와 책갈피 이미지 영역 제거
                 return ret
-            elif check_element_class(element, "span", "page_prev") or check_element_class(element, "span", "page_next"):
+            elif checkElementClass(element, "span", "page_prev") or checkElementClass(element, "span", "page_next"):
                 # <span class="page_prev">... or <span class="page_next">...
                 # 이전/다음 페이지 화살표 링크 영역 제거
                 return ret
-            elif check_element_class(element, "dl", "designlist"):
+            elif checkElementClass(element, "dl", "designlist"):
                 # <dl class="designlist">...
                 # skip this element and sub-elements
                 return ret
-            elif check_element_class(element, "div", "na_ly_cmt"):
+            elif checkElementClass(element, "div", "na_ly_cmt"):
                 # <a onclick="openFootnoteLayer('번호'...)의 번호와 비교
                 if hasattr(element, "id"):
-                    if element["id"] != "footnoteLayer" + str(footnote_num):
+                    if element["id"] != "footnoteLayer" + str(footnoteNum):
                         return ret
                     #else:
                         #print str(element)
             else:               
                 sys.stdout.write("<%s>\n" % element.name)
-                open_close_tag = True
+                openCloseTag = True
                 ret = 1
 
         if hasattr(element, 'contents'):
@@ -330,7 +331,7 @@ def traverse_element(element, url, encoding):
                 if e == "\n":
                     continue
                 else:
-                    ret = traverse_element(e, url, encoding)
+                    ret = traverseElement(e, url, encoding)
         elif isinstance(element, Comment):
             return ret
         else:
@@ -338,21 +339,21 @@ def traverse_element(element, url, encoding):
             ret = 1
             return ret
 
-        if open_close_tag == True:
+        if openCloseTag == True:
             sys.stdout.write("</%s>\n" % element.name)
             ret = 1
 
     return ret
 
 
-def print_usage(program_name):
-    print("Usage:\t%s\t<file or url> <html file>" % program_name)
+def printUsage(programName):
+    print("Usage:\t%s\t<file or url> <html file>" % programName)
     print()
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print_usage(sys.argv[0])
+        printUsage(sys.argv[0])
         sys.exit(-1)
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)
-    extract_content(sys.argv[1:])
+    extractContent(sys.argv[1:])
