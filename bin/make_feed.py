@@ -65,9 +65,6 @@ def getExtractionConfigs(config):
 
 
 def getNotificationConfigs(config):
-    config = feedmakerutil.readConfig()
-    if config == None:
-        die("can't get config element")
     notiConf = feedmakerutil.getConfigNode(config, "notification")
     email = feedmakerutil.getConfigNode(notiConf, "email")
     recipient = feedmakerutil.getConfigValue(email, "recipient")
@@ -86,7 +83,7 @@ def getRecentList(listDir, postProcessScript):
     else:
         postProcessCmd = 'remove_duplicate_line.py > "%s"' % (newListFileName)
 
-    cmd = "collect_new_list.pl | " + postProcessCmd
+    cmd = "collect_new_list.py | " + postProcessCmd
     print(cmd)
     result = feedmakerutil.execCmd(cmd)
     if result == False:
@@ -389,7 +386,12 @@ def cmpIntOrStr(a, b):
     if m1 and m2:
         return (int(a["sf"]) - int(b["sf"]))
     else:
-        return (a["sf"] - b["sf"])
+        if a["sf"] < b["sf"]:
+            return -1
+        elif a["sf"] > b["sf"]:
+            return 1
+        else:
+            return 0
 
 
 def cmpToKey(mycmp):
@@ -431,7 +433,7 @@ def main():
 
     config = feedmakerutil.readConfig()
     if config == None:
-        die("can't get config element")
+        die("can't find conf.xml file nor get config element")
     (doIgnoreOldList, isCompleted, sortFieldPattern, unitSizePerDay, postProcessScript) = getCollectionConfigs(config)
     print("doIgnoreOldList=%r, isCompleted=%r, sortFieldPatter=%s, unitSizePerDay=%d, postProcessScript=%s" % (doIgnoreOldList, isCompleted, sortFieldPattern, unitSizePerDay if unitSizePerDay else -1, postProcessScript))
     
