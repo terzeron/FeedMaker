@@ -65,9 +65,6 @@ def getExtractionConfigs(config):
 
 
 def getNotificationConfigs(config):
-    config = feedmakerutil.readConfig()
-    if config == None:
-        die("can't get config element")
     notiConf = feedmakerutil.getConfigNode(config, "notification")
     email = feedmakerutil.getConfigNode(notiConf, "email")
     recipient = feedmakerutil.getConfigValue(email, "recipient")
@@ -436,7 +433,7 @@ def main():
 
     config = feedmakerutil.readConfig()
     if config == None:
-        die("can't get config element")
+        die("can't find conf.xml file nor get config element")
     (doIgnoreOldList, isCompleted, sortFieldPattern, unitSizePerDay, postProcessScript) = getCollectionConfigs(config)
     print("doIgnoreOldList=%r, isCompleted=%r, sortFieldPatter=%s, unitSizePerDay=%d, postProcessScript=%s" % (doIgnoreOldList, isCompleted, sortFieldPattern, unitSizePerDay if unitSizePerDay else -1, postProcessScript))
     
