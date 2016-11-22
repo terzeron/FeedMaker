@@ -13,9 +13,9 @@ def extractUrls(doRenderJs, url, itemCaptureScript, userAgent, referer):
     option = ""
     if doRenderJs == "true":
         option += " --render-js"
-    if userAgent != "":
+    if userAgent:
         option += " --ua '%s'" % (userAgent)
-    if referer != "":
+    if referer:
         option += " --referer '%s'" % (referer)
     cmd = "wget.sh %s '%s' | extract_element.py collection | %s" % (option, url, itemCaptureScript)
     print("# %s" % (cmd))
