@@ -26,11 +26,10 @@ def makePath(path):
 
 def execCmd(cmd):
     try:
-        p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-        ret = p.wait()
-        if ret != 0:
+        p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (result, error) = p.communicate()
+        if error:
             return False
-        result = p.communicate()[0]
     except subprocess.CalledProcessError:
         return False
     except subprocess.SubprocessError:
