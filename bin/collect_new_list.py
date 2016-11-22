@@ -70,7 +70,7 @@ def main():
         if not os.path.isfile(itemCaptureScript):
             itemCaptureScript = "./capture_item_link_title.py"
     print("# item_capture_script: %s" % (itemCaptureScript))
-    itemCaptureScriptProgram = itemCaptureScript.split("\s+")[0]
+    itemCaptureScriptProgram = itemCaptureScript.split(" ")[0]
     if not itemCaptureScriptProgram or not os.path.isfile(itemCaptureScriptProgram) or not os.access(itemCaptureScriptProgram, os.X_OK):
         die("can't execute '%s'" % (itemCaptureScriptProgram))
 
