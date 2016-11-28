@@ -29,7 +29,8 @@ def execCmd(cmd):
         p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (result, error) = p.communicate()
         if error:
-            return False
+            if not error.startswith(b"_RegisterApplication(), FAILED TO establish the default connection to the WindowServer"):
+                return False
     except subprocess.CalledProcessError:
         return False
     except subprocess.SubprocessError:
