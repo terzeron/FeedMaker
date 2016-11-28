@@ -1,7 +1,7 @@
 if [ $# -lt 1 ]; then
 	echo "Usage: $0 [ <option> ... <option> ] <url>"
 	echo "Options"
-	echo "	--try:	no download, just trying"
+	echo "	--spider:	no download, just trying"
 	echo "	--download: download as a file, instead of stdout"
 	echo "	--render-js: phantomjs rendering"
 	echo "	--ua <user agent string>"
@@ -53,7 +53,9 @@ else
 fi
 
 
-if [ "${download_file}" != "" ]; then
+if [ "${spider_opt}" != "" ]; then
+    cmd="$cmd > /dev/null"
+elif [ "${download_file}" != "" ]; then
 	cmd="$cmd > '$download_file'"
 else
 	if [ "${encoding}" != "utf8" ]; then
