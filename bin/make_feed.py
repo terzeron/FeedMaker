@@ -18,9 +18,16 @@ MAX_CONTENT_LENGTH = 64 * 1024
 MAX_NUM_DAYS = 7
 
 
-def getRssDateStr(fileName=None, ts=datetime.datetime.now().timestamp()):
-    if fileName:
+def getPubDateStr(fileName):
+    if os.path.isfile(fileName):
         ts = os.stat(fileName).st_mtime
+    else:
+        ts = datetime.datetime.now().timestamp()
+    dt = datetime.datetime.fromtimestamp(float(ts))
+    return dt.strftime("%a, %d %b %Y %H:%M:%S %z")
+
+
+def getRssDateStr(ts=datetime.datetime.now().timestamp()):
     dt = datetime.datetime.fromtimestamp(float(ts))
     return dt.strftime("%a, %d %b %Y %H:%M:%S %z")
 
@@ -165,7 +172,7 @@ def generateRssFeed(config, feedList, rssFileName):
         (articleUrl, articleTitle) = feedItem.split('\t')
         newFileName = getNewFileName(articleUrl)
         guid = feedmakerutil.getShortMd5Name(articleUrl)
-        pubDateStr = getRssDateStr(newFileName)
+        pubDateStr = getPubDateStr(newFileName)
         
         content = ""
         with open(newFileName, 'r', encoding='utf-8') as inFile:
