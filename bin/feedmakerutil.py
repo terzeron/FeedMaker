@@ -235,9 +235,9 @@ def concatenateUrl(fullUrl, url2):
     return url1 + url2
 
 
-def getMd5Name(str):
+def getShortMd5Name(str):
     import hashlib
-    return hashlib.md5(str.encode()).hexdigest()
+    return hashlib.md5(str.encode()).hexdigest()[:7]
 
 
 def err(msg):
@@ -270,7 +270,7 @@ def getCacheInfoCommon(prefix, imgUrl, imgExt, postfix=None, index=None):
 
     resultStr = ""
     if re.search(r'https?://', imgUrl) and imgExt:
-        resultStr = prefix + "/" + getMd5Name(imgUrl) + postfixStr + indexStr + "." + imgExt
+        resultStr = prefix + "/" + getShortMd5Name(imgUrl) + postfixStr + indexStr + "." + imgExt
     else:
         resultStr = prefix + "/" + imgUrl
     debug_print("resultStr=" + resultStr)

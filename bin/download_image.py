@@ -17,7 +17,7 @@ def getCacheFileName(pathPrefix, imgUrl, imgExt, postfix=None, index=None):
         indexStr = "." + index
                          
     if re.search(r'^https?://', imgUrl) and imgExt:
-        return pathPrefix + "/" + feedmakerutil.getMd5Name(imgUrl) + postfixStr + indexStr + "." + imgExt
+        return pathPrefix + "/" + feedmakerutil.getShortMd5Name(imgUrl) + postfixStr + indexStr + "." + imgExt
      
     return pathPrefix + "/" + imgUrl
 

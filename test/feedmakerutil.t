@@ -105,8 +105,8 @@ class UtilTest(unittest.TestCase):
         url = feedmakerutil.concatenateUrl("http://www.naver.com/movie/", "hello")
         self.assertEqual(url, "http://www.naver.com/movie/hello")
 
-    def test_getMd5Name(self):
-        self.assertEqual(feedmakerutil.getMd5Name("http://terzeron.net"), "e0ad2990478243cf18b932f47bb4e636")
+    def test_getShortMd5Name(self):
+        self.assertEqual(feedmakerutil.getShortMd5Name("http://terzeron.net"), "e0ad299")
 
 
 if __name__ == "__main__":
