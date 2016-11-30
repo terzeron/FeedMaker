@@ -9,7 +9,7 @@ import feedmakerutil
 
 def main():
     link = sys.argv[1]
-    id = feedmakerutil.getMd5Name(link)
+    id = feedmakerutil.getShortMd5Name(link)
     videoFile = id + ".avi"
     imgDir = os.environ["FEED_MAKER_WWW_FEEDS"] + "/img/thegoodmovie"
     imgUrlPrefix = "http://terzeron.net/xml/img/thegoodmovie"

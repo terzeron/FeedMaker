@@ -18,12 +18,14 @@ MAX_CONTENT_LENGTH = 64 * 1024
 MAX_NUM_DAYS = 7
 
 
-def getRssDateStr(ts):
+def getRssDateStr(fileName=None, ts=datetime.datetime.now().timestamp()):
+    if fileName:
+        ts = os.stat(fileName).st_mtime
     dt = datetime.datetime.fromtimestamp(float(ts))
     return dt.strftime("%a, %d %b %Y %H:%M:%S %z")
 
 
-def getDateStr(ts):
+def getDateStr(ts=datetime.datetime.now().timestamp()):
     dt = datetime.datetime.fromtimestamp(float(ts))
     return dt.strftime("%Y%m%d")
 
@@ -33,7 +35,7 @@ def getListFileName(listDir, dateStr):
 
 
 def getNewFileName(url):
-    return "html/" + feedmakerutil.getMd5Name(url) + ".html"
+    return "html/" + feedmakerutil.getShortMd5Name(url) + ".html"
 
 
 def getCollectionConfigs(config):
@@ -75,8 +77,7 @@ def getNotificationConfigs(config):
 def getRecentList(listDir, postProcessScript):
     print("# getRecentList(%s)" % (listDir))
 
-    ts = datetime.datetime.now().timestamp()
-    dateStr = getDateStr(ts)
+    dateStr = getDateStr()
     newListFileName = getListFileName(listDir, dateStr)
     if postProcessScript:
         postProcessCmd = '%s "%s"' % (postProcessScript, newListFileName)
@@ -155,17 +156,17 @@ def generateRssFeed(config, feedList, rssFileName):
     
     (rssTitle, rssDescription, rssGenerator, rssCopyright, rssLink, rssLanguage, rssNoItemDesc) = getRssConfigValues(rssConfig)
 
-    ts = datetime.datetime.now().timestamp()
-    dateStr = getDateStr(ts)
-    pubDateStr = getRssDateStr(ts)
-    lastBuildDateStr = getRssDateStr(ts)
+    lastBuildDateStr = getRssDateStr()
+    dateStr = getDateStr()
     tempRssFileName = rssFileName + "." + dateStr
 
     rssItems = []
     for feedItem in feedList:
         (articleUrl, articleTitle) = feedItem.split('\t')
         newFileName = getNewFileName(articleUrl)
-
+        guid = feedmakerutil.getShortMd5Name(articleUrl)
+        pubDateStr = getRssDateStr(newFileName)
+        
         content = ""
         with open(newFileName, 'r', encoding='utf-8') as inFile:
             print("adding '%s' to the result" % (newFileName))
@@ -179,7 +180,7 @@ def generateRssFeed(config, feedList, rssFileName):
                 PyRSS2Gen.RSSItem(
                     title=articleTitle,
                     link=articleUrl,
-                    guid=articleUrl,
+                    guid=guid,
                     pubDate=pubDateStr,
                     description=content
                 )
@@ -277,7 +278,7 @@ def appendItemToResult(config, feedList, item, rssFileName):
         if result == False:
             die("can't extract HTML elements")
         
-        md5Name = feedmakerutil.getMd5Name(url)
+        md5Name = feedmakerutil.getShortMd5Name(url)
         size = os.stat(newFileName).st_size
         if size > 0:
             cmd = 'echo "<img src=\'http://terzeron.net/img/1x1.jpg?feed=%s&item=%s\'/>" >> "%s"' % (rssFileName, md5Name, newFileName)
