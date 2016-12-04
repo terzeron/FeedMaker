@@ -168,32 +168,34 @@ def traverseElement(element, url, encoding):
             src = ""
             if element.has_attr("data-lazy-src"):
                 dataLazySrc = element["data-lazy-src"]
-                if dataLazySrc[:7] != "http://" and dataLazySrc[:8] != "https://":
+                if not re.search(r'(https?:)?//', dataLazySrc):
                     dataLazySrc = feedmakerutil.concatenateUrl(url, dataLazySrc)
                 src = dataLazySrc
             elif element.has_attr("lazysrc"):
                 lazySrc = element["lazysrc"]
-                if lazySrc[:7] != "http://" and lazySrc[:8] != "https://":
+                if not re.search(r'(https?:)?//', lazySrc):
                     lazySrc = feedmakerutil.concatenateUrl(url, lazySrc)
                 src = lazySrc
             elif element.has_attr("data-src"):
                 dataSrc = element["data-src"]
-                if dataSrc[:7] != "http://" and dataSrc[:8] != "https://":
+                if not re.search(r'(https?:)?//', dataSrc):
                     dataSrc = feedmakerutil.concatenateUrl(url, dataSrc)
                 src = dataSrc
             elif element.has_attr("data-original"):
                 dataSrc = element["data-original"]
-                if dataSrc[:7] != "http://" and dataSrc[:8] != "https://":
+                if not re.search(r'(https?:)?//', dataSrc):
                     dataSrc = feedmakerutil.concatenateUrl(url, dataSrc)
                 src = dataSrc
             elif element.has_attr("src"):
                 src = element["src"]
-                if src[:7] != "http://" and src[:8] != "https://":
+                if not re.search(r'(https?:)?//', src):
                     src = feedmakerutil.concatenateUrl(url, src)
                 if "ncc.phinf.naver.net" in src and ("/17.jpg" in src or "/8_17px.jpg" in src or "/7px.jpg" in src or "/20px.jpg" in src):
                     # 외부에서 접근 불가능한 이미지 제거
                     return ret
             if src and src != "":
+                if re.search(r'^//', src):
+                    src = re.sub(r'^//', 'http://', src)
                 sys.stdout.write("<img src='%s'" % src)
             if element.has_attr("width"):
                 sys.stdout.write(" width='%s'" % element["width"])
@@ -203,7 +205,7 @@ def traverseElement(element, url, encoding):
             if checkElementClass(element, "input", "originSrc"):
                 if element.has_attr("value"):
                     value = element["value"]
-                    if value[:7] != "http://" and value[:8] != "https://":
+                    if not re.search(r'(https?:)?//', value):
                         value = feedmakerutil.concatenateUrl(url, value)
                     sys.stdout.write("<img src='%s'/>\n" % value)
                     ret = 1
@@ -231,7 +233,7 @@ def traverseElement(element, url, encoding):
             if element.has_attr("href"):
                 # complementing href value
                 href = element["href"]
-                if href != "" and href[:7] != "http://" and href[:8] != "https://":
+                if not re.search(r'(https?:)?//', href):
                     href = feedmakerutil.concatenateUrl(url, href)
                 # A tag는 href와 target attribute를 출력해줘야 함
                 sys.stdout.write("<a href='%s'" % href)
