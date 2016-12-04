@@ -491,7 +491,9 @@ def main():
         for i, feed in enumerate(sortedFeedList):
             if i >= startIdx and i < endIdx:
                 feedList.append(oldList[feed["id"]])
-                print(oldList[feed["id"]])
+                (url, title) = oldList[feed["id"]].split("\t")
+                guid = feedmakerutil.getShortMd5Name(url)
+                print("%s\t%s\t%s" % (url, title, guid))
 
         ts = datetime.datetime.now().timestamp()
         incrementSize = int(((int(ts) - mtime) * unitSizePerDay) / 86400)
