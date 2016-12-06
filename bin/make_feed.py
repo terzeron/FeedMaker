@@ -187,7 +187,7 @@ def generateRssFeed(config, feedList, rssFileName):
                 PyRSS2Gen.RSSItem(
                     title=articleTitle,
                     link=articleUrl,
-                    guid=guid,
+                    guid=articleUrl,
                     pubDate=pubDateStr,
                     description=content
                 )
