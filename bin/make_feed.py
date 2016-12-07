@@ -172,7 +172,7 @@ def generateRssFeed(config, feedList, rssFileName):
         (articleUrl, articleTitle) = feedItem.split('\t')
         newFileName = getNewFileName(articleUrl)
         guid = feedmakerutil.getShortMd5Name(articleUrl)
-        pubDateStr = getPubDateStr(newFileName)
+        pubDateStr = getRssDateStr()
         
         content = ""
         with open(newFileName, 'r', encoding='utf-8') as inFile:
