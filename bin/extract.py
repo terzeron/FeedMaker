@@ -73,7 +73,8 @@ def extractContent(args):
     
     # sanitize
     html = re.sub(r'alt="(.*)<br>(.*)"', r'alt="\1 \2"', html)
-    html = re.sub(r'<br>', r'<br/>', html)
+    html = re.sub(r'<br>', '<br/>', html)
+    html = re.sub('\x08', '', html)
     html = re.sub(r'<\?xml[^>]+>', r'', html)
     #html = re.sub(r'/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/', r'', html)
 
