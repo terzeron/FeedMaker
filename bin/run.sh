@@ -44,7 +44,7 @@ if [ ${REMOVE_HTMLS} -eq 1 ]; then
 fi
 
 # 다운로드 안 된 이미지를 포함한 html을 지움
-for f in `[ -d html ] && find html -name "*.html" -exec grep -q "<img src=.http://terzeron\.net/xml/img/" "{}" \; -print`; do
+for f in `[ -d html ] && find html -name "*.html" -exec egrep -q "<img.*https?://terzeron\.net/xml/img/" "{}" \; -print`; do
     b=0
     for i in `perl -ne 'if (m!<img src=.http://terzeron\.net/xml/img/[^/]+/(.+\.jpg)!) { print $1 . "\n"; }' $f`; do
         if [ ! -e ${IMG_DIR}/"$i" ]; then
