@@ -57,7 +57,7 @@ def main():
     if config == None:
         die("can't find conf.xml nor get config element")
     collectionConf = feedmakerutil.getConfigNode(config, "collection")
-    doRenderJs = feedmakerutil.getConfigNode(collectionConf, "render_js")
+    doRenderJs = feedmakerutil.getConfigValue(collectionConf, "render_js")
     print("# render_js: ", doRenderJs)
 
     listUrlList = feedmakerutil.getConfigNode(collectionConf, "list_url_list")
