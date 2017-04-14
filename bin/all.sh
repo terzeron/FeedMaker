@@ -29,16 +29,16 @@ echo "deleting old or zero-size image files..."
 find $FEED_MAKER_WWW_FEEDS/img \( -mtime +20d -o -size 0 \) -exec rm -rf "{}" \; -ls
 
 dirs=( $(find . -type d -path "./*/*" -not \( -path "./.git/*" -o -path "./_*/*" -o -path "./*/_*" -o -name newlist -o -name html \) | perl -MList::Util=shuffle -e 'print shuffle <STDIN>') )
-for i in $(seq 0 5 $max_idx); do
-#for i in $(seq 0 1 $max_idx); do
+#for i in $(seq 0 5 $max_idx); do
+for i in $(seq 0 1 $max_idx); do
 	if [ "${dirs[$i]}" == "" ]; then
 		break
 	fi
 	execute_job ${dirs[$((i+0))]} &
-	execute_job ${dirs[$((i+1))]} &
-	execute_job ${dirs[$((i+2))]} &
-	execute_job ${dirs[$((i+3))]} &
-	execute_job ${dirs[$((i+4))]} &
+	#execute_job ${dirs[$((i+1))]} &
+	#execute_job ${dirs[$((i+2))]} &
+	#execute_job ${dirs[$((i+3))]} &
+	#execute_job ${dirs[$((i+4))]} &
 	wait
 	#execute_job ${dirs[$i]}	
 done
