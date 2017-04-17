@@ -131,22 +131,22 @@ def printMismatchFeeds(c):
         htaccess = row[3]
         publicHtml = row[4]
         feedmaker = row[5]
-        last_request_date = row[6]
+        lastRequestDate = row[6]
 
         if feedAlias == feedName:
             feedAlias = ""
-        if not last_request_date:
-            last_request_date = ""
+        if not lastRequestDate:
+            lastRequestDate = ""
         
         print("<tr>")
-        print("<td><a href='http://terzeron.net/%s.xml' target='_blank'>%s</a></td>" % (feedAlias, feedAlias))
-        print("<td><a href='http://terzeron.net/xml/%s.xml' target='_blank'>%s</a></td>" % (feedName, feedName))
-        print("<td>%s</td>" % (httpRequest == 1 and "O" or "X"))
-        print("<td>%s</td>" % (htaccess == 1 and "O" or "X"))
-        print("<td>%s</td>" % (publicHtml == 1 and "O" or "X"))
-        print("<td>%s</td>" % (feedmaker == 1 and "O" or "X"))
-        print("<td>%s</td>" % last_request_date)
-        print("<td><a href='add_feed.php?feed_name=%s'>%s</a></td>" % (feedName, feedName))
+        print("<td class='external'><a href='https://terzeron.net/%s.xml' target='_blank'>%s</a></td>" % (feedAlias, feedAlias))
+        print("<td class='internal'><a href='https://terzeron.net/xml/%s.xml' target='_blank'>%s</a></td>" % (feedName, feedName))
+        print("<td class='http_request'>%s</td>" % (httpRequest == 1 and "O" or "X"))
+        print("<td class='htaccess'>%s</td>" % (htaccess == 1 and "O" or "X"))
+        print("<td class='public_html'>%s</td>" % (publicHtml == 1 and "O" or "X"))
+        print("<td class='feedmaker'>%s</td>" % (feedmaker == 1 and "O" or "X"))
+        print("<td class='last_request_date'>%s</td>" % lastRequestDate)
+        print("<td class='management'><a href='add_feed.php?feed_name=%s'>%s</a></td>" % (feedName, feedName))
         print("</tr>")
     print("</table>")
     print("</div>")

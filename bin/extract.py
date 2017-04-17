@@ -37,15 +37,6 @@ def extractContent(args):
     config = feedmakerutil.readConfig()
     if config == None:
         return -1
-    rss = feedmakerutil.getConfigNode(config, "rss")
-    if rss == None:
-        err("can't find 'rss' element from configuration")
-    description = feedmakerutil.getConfigValue(rss, "description")
-    if description == None:
-        err("can't find 'rss' element from configuration")
-    feedUrl = feedmakerutil.getConfigValue(rss, "feed_url")
-    if feedUrl == None:
-        err("can't find 'rss' element from configuration")
     extraction = feedmakerutil.getConfigNode(config, "extraction")
 
     # read html contents
