@@ -6,7 +6,18 @@ runlog=run.log
 errorlog=error.log
 
 function send_error_msg() {
-	echo "$1" | mail -s "FeedMaker error" 5jkfokr6ggh8@bxc.io
+    curl -X POST \
+         -H 'Content-Type:application/json' \
+         -H 'Authorization: Bearer gdrao6YPr50SCzwqb7By40yqwOotDdo9a/+nGYmFkL3xMUA1P3OPJO7aKlNTnN12tz0BzJ5C/TX+gTZiIUFeXIa8X1reFHNXPcJ/hlZysxTkBOkSzbEI/TUbBVDjves+lDqDwVicBisE3/MelN5QrAdB04t89/1O/w1cDnyilFU=' \
+         -d '{
+             "to": "U52aa71b262aa645ba5f3e4786949ef23",
+             "messages":[    
+             {
+                "type":"text",
+                "text":"'"$1"'"
+             }
+             ]
+             }' https://api.line.me/v2/bot/message/push
 }
 
 function execute_job() {
