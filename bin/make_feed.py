@@ -55,7 +55,7 @@ def getCollectionConfigs(config):
     isCompleted = bool("true" == isCompleted)
     sortFieldPattern = feedmakerutil.getConfigValue(collectionConf, "sort_field_pattern")
     unitSizePerDay = feedmakerutil.getConfigValue(collectionConf, "unit_size_per_day")
-    unitSizePerDay = int(unitSizePerDay) if unitSizePerDay else None
+    unitSizePerDay = float(unitSizePerDay) if unitSizePerDay else None
     postProcessScript = feedmakerutil.getConfigValue(collectionConf, "post_process_script")
     return (doIgnoreOldList, isCompleted, sortFieldPattern, unitSizePerDay, postProcessScript)
 
@@ -443,7 +443,7 @@ def main():
     if config == None:
         die("can't find conf.xml file nor get config element")
     (doIgnoreOldList, isCompleted, sortFieldPattern, unitSizePerDay, postProcessScript) = getCollectionConfigs(config)
-    print("doIgnoreOldList=%r, isCompleted=%r, sortFieldPatter=%s, unitSizePerDay=%d, postProcessScript=%s" % (doIgnoreOldList, isCompleted, sortFieldPattern, unitSizePerDay if unitSizePerDay else -1, postProcessScript))
+    print("doIgnoreOldList=%r, isCompleted=%r, sortFieldPatter=%s, unitSizePerDay=%f, postProcessScript=%s" % (doIgnoreOldList, isCompleted, sortFieldPattern, unitSizePerDay if unitSizePerDay else -1, postProcessScript))
     
     # -c 옵션이 지정된 경우, 설정의 isCompleted 값 무시
     if doCollectByForce == True:
