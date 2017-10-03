@@ -11,7 +11,7 @@ def extractUrls(doRenderJs, url, itemCaptureScript, userAgent, referer):
     #print("# extractUrls(%s, %s, %s, %s) % (url, itemCaptureScript, userAgent, referer))
 
     option = ""
-    if doRenderJs == "true":
+    if "true" == doRenderJs:
         option += " --render-js"
     if userAgent:
         option += " --ua '%s'" % (userAgent)

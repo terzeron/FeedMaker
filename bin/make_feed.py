@@ -70,7 +70,9 @@ def getExtractionConfigs(config):
     doForceSleepBetweenArticles = feedmakerutil.getConfigValue(extractionConf, "force_sleep_between_articles")
     doBypassElementExtraction = feedmakerutil.getConfigValue(extractionConf, "bypass_element_extraction")
     reviewPointThreshold = feedmakerutil.getConfigValue(extractionConf, "review_point_threshold")
-    return (postProcessScript, postProcess2Script, doRenderJs, doForceSleepBetweenArticles, doBypassElementExtraction, reviewPointThreshold)
+    userAgent = feedmakerutil.getConfigValue(extractionConf, "user_agent")
+    referer = feedmakerutil.getConfigValue(extractionConf, "referer")
+    return (postProcessScript, postProcess2Script, doRenderJs, doForceSleepBetweenArticles, doBypassElementExtraction, reviewPointThreshold, userAgent, referer)
 
 
 def getNotificationConfigs(config):
@@ -254,7 +256,7 @@ def appendItemToResult(config, feedList, item, rssFileName):
         feedList.append(item)
     else:
         # 파일이 존재하지 않거나 크기가 작으니 다시 생성 시도
-        (postProcessScript, postProcess2Script, doRenderJs, doForceSleepBetweenArticles, doBypassElementExtraction, reviewPointThreshold) = getExtractionConfigs(config)
+        (postProcessScript, postProcess2Script, doRenderJs, doForceSleepBetweenArticles, doBypassElementExtraction, reviewPointThreshold, userAgent, referer) = getExtractionConfigs(config)
         
         cmd = ""
         postProcessCmd = ""
@@ -263,10 +265,14 @@ def appendItemToResult(config, feedList, item, rssFileName):
             postProcessCmd = '| %s "%s"' % (postProcessScript, url)
             if postProcess2Script:
                 postProcessCmd += ' | %s "%s"' % (postProcess2Script, url)
-        
+
         option = ""
         if "true" == doRenderJs:
-            option = "--render-js"
+            option += " --render-js"
+        if userAgent:
+            option += " --ua '%s'" % (userAgent)
+        if referer:
+            option += " --referer '%s'" % (referer)
         
         #print("title=%s, reviewPoint=%d, reviewPointThreshold=%f" % (title, reviewPoint, reviewPointThreshold))
         if reviewPoint and reviewPointThreshold and reviewPoint > reviewPointThreshold:
