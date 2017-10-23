@@ -45,17 +45,21 @@ for i in $(seq 0 1 $max_idx); do
 	if [ "${dirs[$i]}" == "" ]; then
 		break
 	fi
-	execute_job ${dirs[$((i+0))]} &
+	#execute_job ${dirs[$((i+0))]} &
 	#execute_job ${dirs[$((i+1))]} &
 	#execute_job ${dirs[$((i+2))]} &
 	#execute_job ${dirs[$((i+3))]} &
 	#execute_job ${dirs[$((i+4))]} &
-	wait
-	#execute_job ${dirs[$i]}	
+	#wait
+	execute_job ${dirs[$i]}	
 done
 echo 
 
-for d in $dirs; do 
+for i in $(seq 0 1 $max_idx); do
+    if [ "${dirs[$i]}" == "" ]; then
+        break
+    fi
+    d=${dirs[$i]}
 	if [ -d "$d" -a -f "$d/conf.xml" ]; then
 		if [ -s $d/$errorlog ]; then
 			echo "===================="
