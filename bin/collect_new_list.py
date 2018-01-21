@@ -7,12 +7,14 @@ import feedmakerutil
 from feedmakerutil import die, err, warn
 
 
-def extractUrls(doRenderJs, url, itemCaptureScript, userAgent, referer):
+def extractUrls(doRenderJs, doUncompressGzip, url, itemCaptureScript, userAgent, referer):
     #print("# extractUrls(%s, %s, %s, %s) % (url, itemCaptureScript, userAgent, referer))
 
     option = ""
     if "true" == doRenderJs:
         option += " --render-js"
+    if "true" == doUncompressGzip:
+        option += " --uncompress-gzip"
     if userAgent:
         option += " --ua '%s'" % (userAgent)
     if referer:
@@ -38,13 +40,13 @@ def extractUrls(doRenderJs, url, itemCaptureScript, userAgent, referer):
     return resultList
 
 
-def composeUrlList(doRenderJs, listUrlList, itemCaptureScript, userAgent, referer):
-    #print("# composeUrlList(%s, %s, %s, %s)" % (doRenderJs, listUrlList, itemCaptureScript, referer))
+def composeUrlList(doRenderJs, doUncompressGzip, listUrlList, itemCaptureScript, userAgent, referer):
+    #print("# composeUrlList(%s, %s, %s, %s, %s)" % (doRenderJs, doUncompressGzip, listUrlList, itemCaptureScript, referer))
     resultList = []
     
     listUrls = feedmakerutil.getAllConfigValues(listUrlList, "list_url")
     for listUrl in listUrls:
-        urlList = extractUrls(doRenderJs, listUrl, itemCaptureScript, userAgent, referer)
+        urlList = extractUrls(doRenderJs, doUncompressGzip, listUrl, itemCaptureScript, userAgent, referer)
         resultList.extend(urlList)
     return resultList
 
@@ -57,8 +59,12 @@ def main():
     if config == None:
         die("can't find conf.xml nor get config element")
     collectionConf = feedmakerutil.getConfigNode(config, "collection")
+
     doRenderJs = feedmakerutil.getConfigValue(collectionConf, "render_js")
     print("# render_js: ", doRenderJs)
+
+    doUncompressGzip = feedmakerutil.getConfigValue(collectionConf, "uncompress_gzip")
+    print("# uncompress_gzip: ", doUncompressGzip)
 
     listUrlList = feedmakerutil.getConfigNode(collectionConf, "list_url_list")
     if listUrlList:
@@ -79,7 +85,7 @@ def main():
 
     # collect items from specified url list
     print("# collecting items from specified url list...")
-    totalList = composeUrlList(doRenderJs, listUrlList, itemCaptureScript, userAgent, referer)
+    totalList = composeUrlList(doRenderJs, doUncompressGzip, listUrlList, itemCaptureScript, userAgent, referer)
     for (link, title) in totalList:
         print("%s\t%s" % (link, title))
 
