@@ -19,7 +19,7 @@ footnoteNum = 0
     
 def printHeader():
     print("<meta http-equiv='Content-Type' content='text/html; charset=UTF-8'/>")
-    print('<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, minimum-scal#e=0.5, user-scalable=yes" />')
+    print('<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />')
     print("<style>img { max-width: 100%; margin-top: 0px; margin-bottom: 0px; }</style>")
 
 
