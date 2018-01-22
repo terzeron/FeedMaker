@@ -22,7 +22,7 @@ referer_opt=$default_referer_opt
 render_js=$default_render_js
 header_opt=$default_header_opt
 
-encoding=$(python -c 'import feedmakerutil as fmu; encoding = fmu.getConfigValue(fmu.getConfigNode(fmu.readConfig(), "collection"), "encoding"); print(encoding if encoding else "utf-8")')
+encoding=$(python -c 'import feedmakerutil as fmu; encoding = fmu.get_config_value(fmu.get_config_node(fmu.read_config(), "collection"), "encoding"); print(encoding if encoding else "utf-8")')
 cookie_opt="--cookie-jar cookie.txt"
 timeout_opt="--connect-timeout 5"
 cert_opt="--insecure"

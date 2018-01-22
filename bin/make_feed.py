@@ -290,7 +290,8 @@ def appendItemToResult(config, feedList, item, rssFileName):
     else:
         # 파일이 존재하지 않거나 크기가 작으니 다시 생성 시도
         options = getExtractionConfigs(config)
-        
+
+        postProcessCmd = ""
         if options["post_process_script"]:
             postProcessCmd = '| %s "%s"' % (options["post_process_script"], url)
             if options["post_process2_script"]:
