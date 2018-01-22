@@ -29,7 +29,7 @@ def traverse_element(element):
 
         
 def main():
-    html = feedmakerutil.readStdin()
+    html = feedmakerutil.read_stdin()
     soup = BeautifulSoup(html, 'html.parser')
     text = soup.find(attrs={"id": "navercast_div"})
     if text:

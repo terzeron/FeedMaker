@@ -16,15 +16,15 @@ def debug_print(a):
         print(a)
 
 
-def makePath(path):
+def make_path(path):
     try:
         os.makedirs(path)
-    except FileExistsError:
+    except _fileExistsError:
         # ignore
         None
 
 
-def execCmd(cmd):
+def exec_cmd(cmd):
     try:
         p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (result, error) = p.communicate()
@@ -38,12 +38,12 @@ def execCmd(cmd):
     return result.decode(encoding="utf-8")
 
 
-def getFirstTokenFromPath(pathStr):
-    #print "getFirstTokenFromPath(pathStr='%s')" % (pathStr)
+def get_first_token_from_path(path_str):
+    #print "get_first_token_from_path(path_str='%s')" % (path_str)
     isAnywhere = False
-    if pathStr[0:2] == "//":
+    if path_str[0:2] == "//":
         isAnywhere = True
-    tokens = pathStr.split("/")
+    tokens = path_str.split("/")
     i = 0
     for token in tokens:
         #print "tokens[%d]='%s'" % (i, token)
@@ -68,14 +68,14 @@ def getFirstTokenFromPath(pathStr):
     return (id, name, idx, "/".join(tokens[i:]), isAnywhere)
 
 
-def getNodeWithPath(node, pathStr):
+def get_node_with_path(node, path_str):
     if node == None:
         return None
-    #print "\n# getNodeWithPath(node='%s', pathStr='%s')" % (node.name, pathStr)
-    nodeList = []
+    #print "\n# get_node_with_path(node='%s', path_str='%s')" % (node.name, path_str)
+    node_list = []
 
-    (nodeId, name, idx, nextPathStr, isAnywhere) = getFirstTokenFromPath(pathStr)
-    #print "nodeId='%s', name='%s', idx=%s, nextPathStr='%s', isAnywhere=%s" % (nodeId, name, idx, nextPathStr, isAnywhere)
+    (nodeId, name, idx, next_path_str, isAnywhere) = get_first_token_from_path(path_str)
+    #print "nodeId='%s', name='%s', idx=%s, next_path_str='%s', isAnywhere=%s" % (nodeId, name, idx, next_path_str, isAnywhere)
 
     if nodeId != None:
         #print "searching with id"
@@ -89,10 +89,10 @@ def getNodeWithPath(node, pathStr):
             print("error, two or more id matched")
             sys.exit(-1)
         #print "found! node=%s" % (nodes[0].name)
-        nodeList.append(nodes[0])
-        resultNodeList = getNodeWithPath(nodes[0], nextPathStr)
-        if resultNodeList != None:
-            nodeList = resultNodeList
+        node_list.append(nodes[0])
+        result_node_list = get_node_with_path(nodes[0], next_path_str)
+        if result_node_list != None:
+            node_list = result_node_list
     else:
         #print "searching with name and index"
         nodeId = ""
@@ -111,101 +111,101 @@ def getNodeWithPath(node, pathStr):
                     #print "name matched! i=%d child='%s', idx=%s" % (i, child.name, idx)
                     if idx == None or i == idx:
                         # 인덱스가 지정되지 않았거나, 지정되었고 인덱스가 일치할 때
-                        if nextPathStr == "":
+                        if next_path_str == "":
                             # 단말 노드이면 현재 일치한 노드를 반환
                             #print "*** append! child='%s'" % (child.name)
-                            nodeList.append(child)
+                            node_list.append(child)
                         else:
                             # 중간 노드이면 recursion
                             #print "*** recursion ***"
-                            resultNodeList = getNodeWithPath(child, nextPathStr)
-                            #print "\n*** extend! #resultNodeList=", len(resultNodeList)
-                            if resultNodeList != None:
-                                nodeList.extend(resultNodeList)
+                            result_node_list = get_node_with_path(child, next_path_str)
+                            #print "\n*** extend! #result_node_list=", len(result_node_list)
+                            if result_node_list != None:
+                                node_list.extend(result_node_list)
                     if idx != None and i == idx:
                         break
                     # 이름이 일치했을 때만 i를 증가시킴
                     i = i + 1
                 if isAnywhere == True:
                     #print "can be anywhere"
-                    resultNodeList = getNodeWithPath(child, name)
-                    if resultNodeList != None:
-                        nodeList.extend(resultNodeList)
-                    #print "nodeList=", nodeList
-    return nodeList
+                    result_node_list = get_node_with_path(child, name)
+                    if result_node_list != None:
+                        node_list.extend(result_node_list)
+                    #print "node_list=", node_list
+    return node_list
 
 
-def readStdin():
-    lineList = readStdinAsLineList()
-    return "".join(lineList)
+def read_stdin():
+    line_list = read_stdin_as_line_list()
+    return "".join(line_list)
 
 
-def readStdinAsLineList():
+def read_stdin_as_line_list():
     import io
-    inputStream = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8", errors="ignore")
-    lineList = []
-    for line in inputStream:
-        lineList.append(line)
-    return lineList
+    input_stream = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8", errors="ignore")
+    line_list = []
+    for line in input_stream:
+        line_list.append(line)
+    return line_list
 
 
-def readFile(file = None):
+def read_file(file = None):
     if file == None or file == "":
-        return readStdin()
+        return read_stdin()
            
-    lineList = readFileAsLineList(file)
-    return "".join(lineList)
+    line_list = read_fileAsLine_list(file)
+    return "".join(line_list)
 
 
-def readFileAsLineList(file):
+def read_fileAsLine_list(file):
     import codecs
 
     with codecs.open(file, 'rb', encoding="utf-8", errors="ignore") as f:
-        lineList = f.readlines()
+        line_list = f.readlines()
         f.close()
-        return lineList
+        return line_list
 
 
-def readConfig():
+def read_config():
     import xml.dom.minidom
     if 'FEED_MAKER_CONF_FILE' in os.environ:
-        configFile = os.environ['FEED_MAKER_CONF_FILE']
+        config_file = os.environ['FEED_MAKER_CONF_FILE']
     else:
-        configFile = "conf.xml"
-    return xml.dom.minidom.parse(configFile)
+        config_file = "conf.xml"
+    return xml.dom.minidom.parse(config_file)
 
 
-def getAllConfigNodes(node, key):
+def get_all_config_nodes(node, key):
     return node.getElementsByTagName(key);
 
 
-def getConfigNode(node, key):
-    nodes = getAllConfigNodes(node, key)
+def get_config_node(node, key):
+    nodes = get_all_config_nodes(node, key)
     if not nodes:
         return None
     return nodes[0]
 
 
-def getValueFromConfig(node):
+def get_value_from_config(node):
     if node and node.childNodes:
         return node.childNodes[0].nodeValue
     return None
 
 
-def getConfigValue(node, key):
-    return getValueFromConfig(getConfigNode(node, key))
+def get_config_value(node, key):
+    return get_value_from_config(get_config_node(node, key))
 
 
-def getAllConfigValues(node, key):
+def get_all_config_values(node, key):
     result = []
-    for item in getAllConfigNodes(node, key):
-        itemValue = getValueFromConfig(item)
-        if itemValue != None:
-            result.append(itemValue)
+    for item in get_all_config_nodes(node, key):
+        item_value = get_value_from_config(item)
+        if item_value != None:
+            result.append(item_value)
     return result
 
 
-def getUrlPrefix(url):
+def get_url_prefix(url):
     protocol = "http://"
     protocolLen = len(protocol)
     if url[:protocolLen] == protocol:
@@ -215,7 +215,7 @@ def getUrlPrefix(url):
     return ""
 
 
-def getUrlDomain(url):
+def get_url_domain(url):
     protocol = "http://"
     protocolLen = len(protocol)
     if url[:protocolLen] == protocol:
@@ -224,18 +224,18 @@ def getUrlDomain(url):
     return ""
 
 
-def concatenateUrl(fullUrl, url2):
+def concatenate_url(full_url, url2):
     if len(url2) > 0 and url2[0] == '/':
-        url1 = getUrlDomain(fullUrl)
+        url1 = get_url_domain(full_url)
     else:
-        url1 = getUrlPrefix(fullUrl)
+        url1 = get_url_prefix(full_url)
     if len(url1) > 0 and len(url2) > 0:
         if url1[-1] == '/' and url2[0] == '/':
             return url1 + url2[1:]
     return url1 + url2
 
 
-def getShortMd5Name(str):
+def get_short_md5_name(str):
     import hashlib
     return hashlib.md5(str.encode()).hexdigest()[:7]
 
@@ -253,35 +253,35 @@ def warn(msg):
     sys.stderr.write("Warning: %s\n" % msg)
 
 
-def removeFile(filePath):
-    if os.path.isfile(filePath):
-        os.remove(filePath)
+def remove_file(file_path):
+    if os.path.isfile(file_path):
+        os.remove(file_path)
 
 
 
-def getCacheInfoCommon(prefix, imgUrl, imgExt, postfix=None, index=None):
-    postfixStr = ""
+def get_cache_info_common(prefix, img_url, img_ext, postfix=None, index=None):
+    postfix_str = ""
     if postfix and postfix != "":
-        postfixStr = "_" + str(postfix)
+        postfix_str = "_" + str(postfix)
 
-    indexStr = ""
+    index_str = ""
     if index and index != "":
-        indexStr = "." + str(index)
+        index_str = "." + str(index)
 
-    resultStr = ""
-    if re.search(r'https?://', imgUrl) and imgExt:
-        resultStr = prefix + "/" + getShortMd5Name(imgUrl) + postfixStr + indexStr + "." + imgExt
+    result_str = ""
+    if re.search(r'https?://', img_url) and img_ext:
+        result_str = prefix + "/" + get_short_md5_name(img_url) + postfix_str + index_str + "." + img_ext
     else:
-        resultStr = prefix + "/" + imgUrl
-    debug_print("resultStr=" + resultStr)
-    return resultStr
+        result_str = prefix + "/" + img_url
+    debug_print("result_str=" + result_str)
+    return result_str
 
 
-def getCacheUrl(urlPrefix, imgUrl, imgExt, postfix=None, index=None):
-    debug_print("# getCacheUrl(%s, %s, %s, %s, %d)" % (urlPrefix, imgUrl, imgExt, postfix, index if index else 0))
-    return getCacheInfoCommon(urlPrefix, imgUrl, imgExt,  postfix)
+def get_cache_url(url_prefix, img_url, img_ext, postfix=None, index=None):
+    debug_print("# get_cache_url(%s, %s, %s, %s, %d)" % (url_prefix, img_url, img_ext, postfix, index if index else 0))
+    return get_cache_info_common(url_prefix, img_url, img_ext,  postfix)
 
 
-def getCacheFileName(pathPrefix, imgUrl, imgExt, postfix=None, index=None):
-    debug_print("# getCacheFileName(%s, %s, %s, %s, %d)" % (pathPrefix, imgUrl, imgExt, postfix, index if index else 0))
-    return getCacheInfoCommon(pathPrefix, imgUrl, imgExt, postfix)
+def get_cache_file_name(path_prefix, img_url, img_ext, postfix=None, index=None):
+    debug_print("# get_cache_file_name(%s, %s, %s, %s, %d)" % (path_prefix, img_url, img_ext, postfix, index if index else 0))
+    return get_cache_info_common(path_prefix, img_url, img_ext, postfix)

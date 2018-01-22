@@ -35,7 +35,7 @@ def main():
     # and make line number & link mapping table
     with open(intermediateFile, 'w', encoding='utf-8') as outFile:
         lineNum = 1
-        for line in feedmakerutil.readStdinAsLineList():
+        for line in feedmakerutil.read_stdin_as_line_list():
             if re.search(r"^\#", line):
                 continue
             line = line.rstrip()
@@ -55,7 +55,7 @@ def main():
     clusterDir = os.environ["FEED_MAKER_HOME"] + "/../HierarchicalClustering"
     cmd = "%s/hcluster -t '%f' -s stop_words.txt '%s' '%s'" % (clusterDir, threshold, intermediateFile, tempOutputFile)
     print(cmd)
-    result = feedmakerutil.execCmd(cmd)
+    result = feedmakerutil.exec_cmd(cmd)
     #print(result)
 
     # convert & extract temporary output file

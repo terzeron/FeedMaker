@@ -35,7 +35,7 @@ def createXmlStatusTable(c):
     
     
 def updateHtaccessStatus(c):
-    lineList = feedmakerutil.readFileAsLineList(htaccessFile)
+    lineList = feedmakerutil.read_file_as_line_list(htaccessFile)
     for line in lineList:
         m = re.search(r'^RewriteRule\s+\^(?P<feed_alias>[^\t]+)\\\.xml\$\s+xml/(?P<feed_name>[^\t]+)\\\.xml\s*$', line)
         if m:
@@ -55,7 +55,7 @@ def updateHtaccessStatus(c):
 
 
 def updateFeedAccessStatus(c):
-    lineList = feedmakerutil.readFileAsLineList(feedAccessFile)
+    lineList = feedmakerutil.read_file_as_line_list(feedAccessFile)
     for line in lineList:
         m = re.search(r'(?P<date>\d+)\t(?P<feed_name>[^\t]+)\t(?P<http_status>\d+)', line)
         if m:

@@ -42,36 +42,36 @@ def getListFileName(listDir, dateStr):
 
 
 def getNewFileName(url):
-    return "html/" + feedmakerutil.getShortMd5Name(url) + ".html"
+    return "html/" + feedmakerutil.get_short_md5_name(url) + ".html"
 
 
 def getCollectionConfigs(config):
-    collectionConf = feedmakerutil.getConfigNode(config, "collection")
+    collectionConf = feedmakerutil.get_config_node(config, "collection")
     if collectionConf == None:
         die("can't get collection element")
-    doIgnoreOldList = feedmakerutil.getConfigValue(collectionConf, "do_ignore_old_list")
+    doIgnoreOldList = feedmakerutil.get_config_value(collectionConf, "do_ignore_old_list")
     doIgnoreOldList = bool("true" == doIgnoreOldList)
-    isCompleted = feedmakerutil.getConfigValue(collectionConf, "is_completed")
+    isCompleted = feedmakerutil.get_config_value(collectionConf, "is_completed")
     isCompleted = bool("true" == isCompleted)
-    sortFieldPattern = feedmakerutil.getConfigValue(collectionConf, "sort_field_pattern")
-    unitSizePerDay = feedmakerutil.getConfigValue(collectionConf, "unit_size_per_day")
+    sortFieldPattern = feedmakerutil.get_config_value(collectionConf, "sort_field_pattern")
+    unitSizePerDay = feedmakerutil.get_config_value(collectionConf, "unit_size_per_day")
     unitSizePerDay = float(unitSizePerDay) if unitSizePerDay else None
-    postProcessScript = feedmakerutil.getConfigValue(collectionConf, "post_process_script")
+    postProcessScript = feedmakerutil.get_config_value(collectionConf, "post_process_script")
     return (doIgnoreOldList, isCompleted, sortFieldPattern, unitSizePerDay, postProcessScript)
 
 
 def getExtractionConfigs(config):
-    extractionConf = feedmakerutil.getConfigNode(config, "extraction")
+    extractionConf = feedmakerutil.get_config_node(config, "extraction")
     if extractionConf == None:
         die("can't get extraction element")
-    postProcessScript = feedmakerutil.getConfigValue(extractionConf, "post_process_script")
-    postProcess2Script = feedmakerutil.getConfigValue(extractionConf, "post_process2_script")
-    doRenderJs = feedmakerutil.getConfigValue(extractionConf, "render_js")
-    doForceSleepBetweenArticles = feedmakerutil.getConfigValue(extractionConf, "force_sleep_between_articles")
-    doBypassElementExtraction = feedmakerutil.getConfigValue(extractionConf, "bypass_element_extraction")
-    reviewPointThreshold = feedmakerutil.getConfigValue(extractionConf, "review_point_threshold")
-    userAgent = feedmakerutil.getConfigValue(extractionConf, "user_agent")
-    referer = feedmakerutil.getConfigValue(extractionConf, "referer")
+    postProcessScript = feedmakerutil.get_config_value(extractionConf, "post_process_script")
+    postProcess2Script = feedmakerutil.get_config_value(extractionConf, "post_process2_script")
+    doRenderJs = feedmakerutil.get_config_value(extractionConf, "render_js")
+    doForceSleepBetweenArticles = feedmakerutil.get_config_value(extractionConf, "force_sleep_between_articles")
+    doBypassElementExtraction = feedmakerutil.get_config_value(extractionConf, "bypass_element_extraction")
+    reviewPointThreshold = feedmakerutil.get_config_value(extractionConf, "review_point_threshold")
+    userAgent = feedmakerutil.get_config_value(extractionConf, "user_agent")
+    referer = feedmakerutil.get_config_value(extractionConf, "referer")
 
     options = {
         "post_process_script": postProcessScript,
@@ -88,10 +88,10 @@ def getExtractionConfigs(config):
 
 
 def getNotificationConfigs(config):
-    notiConf = feedmakerutil.getConfigNode(config, "notification")
-    email = feedmakerutil.getConfigNode(notiConf, "email")
-    recipient = feedmakerutil.getConfigValue(email, "recipient")
-    subject = feedmakerutil.getConfigValue(email, "subject")
+    notiConf = feedmakerutil.get_config_node(config, "notification")
+    email = feedmakerutil.get_config_node(notiConf, "email")
+    recipient = feedmakerutil.get_config_value(email, "recipient")
+    subject = feedmakerutil.get_config_value(email, "subject")
     return (email, recipient, subject)
 
     
@@ -107,7 +107,7 @@ def getRecentList(listDir, postProcessScript):
 
     cmd = "collect_new_list.py | " + postProcessCmd
     print(cmd)
-    result = feedmakerutil.execCmd(cmd)
+    result = feedmakerutil.exec_cmd(cmd)
     if result == False:
         die("can't collect new list from the page")
 
@@ -158,20 +158,20 @@ def readOldListFromFile(listDir, isCompleted):
 
 
 def getRssConfigValues(rssConfig):
-    rssTitle = feedmakerutil.getConfigValue(rssConfig, "title")
-    rssDescription = feedmakerutil.getConfigValue(rssConfig, "description")
-    rssGenerator = feedmakerutil.getConfigValue(rssConfig, "generator")
-    rssCopyright = feedmakerutil.getConfigValue(rssConfig, "copyright")
-    rssLink = feedmakerutil.getConfigValue(rssConfig, "link")
-    rssLanguage = feedmakerutil.getConfigValue(rssConfig, "language")
-    rssNoItemDesc = feedmakerutil.getConfigValue(rssConfig, "no_item_desc")
+    rssTitle = feedmakerutil.get_config_value(rssConfig, "title")
+    rssDescription = feedmakerutil.get_config_value(rssConfig, "description")
+    rssGenerator = feedmakerutil.get_config_value(rssConfig, "generator")
+    rssCopyright = feedmakerutil.get_config_value(rssConfig, "copyright")
+    rssLink = feedmakerutil.get_config_value(rssConfig, "link")
+    rssLanguage = feedmakerutil.get_config_value(rssConfig, "language")
+    rssNoItemDesc = feedmakerutil.get_config_value(rssConfig, "no_item_desc")
     return (rssTitle, rssDescription, rssGenerator, rssCopyright, rssLink, rssLanguage, rssNoItemDesc)
     
 
 def generateRssFeed(config, feedList, rssFileName):
     print("# generateRssFeed(%s)" % (rssFileName))
 
-    rssConfig = feedmakerutil.getConfigNode(config, "rss")
+    rssConfig = feedmakerutil.get_config_node(config, "rss")
     if rssConfig == None:
         die("can't get rss element")
     
@@ -185,7 +185,7 @@ def generateRssFeed(config, feedList, rssFileName):
     for feedItem in feedList:
         (articleUrl, articleTitle) = feedItem.split('\t')
         newFileName = getNewFileName(articleUrl)
-        guid = feedmakerutil.getShortMd5Name(articleUrl)
+        guid = feedmakerutil.get_short_md5_name(articleUrl)
         pubDateStr = getRssDateStr()
         
         content = ""
@@ -221,7 +221,7 @@ def generateRssFeed(config, feedList, rssFileName):
     if os.path.isfile(rssFileName):
         cmd = 'diff "%s" "%s" | grep -v -Ee \"(^(<|>) <(pubDate|lastBuildDate))|(^---\$)|(^[0-9,]+[a-z][0-9,]+\$)\" | wc -c' % (tempRssFileName, rssFileName)
         print(cmd)
-        result = feedmakerutil.execCmd(cmd)
+        result = feedmakerutil.exec_cmd(cmd)
         print(result)
         m = re.search(r'^\s*(?P<numOfDifferentLines>\d+)\s*$', result)
         if m and m.group("numOfDifferentLines") != "0":
@@ -234,19 +234,19 @@ def generateRssFeed(config, feedList, rssFileName):
         if os.path.isfile(rssFileName):
             cmd = 'mv -f "%s" "%s.old"' % (rssFileName, rssFileName)
             print(cmd)
-            result = feedmakerutil.execCmd(cmd)
+            result = feedmakerutil.exec_cmd(cmd)
             if result == False:
                 return False
         # 이번에 만들어진 파일을 정식 파일 이름으로 바꾸기
         if os.path.isfile(tempRssFileName):
             cmd = 'mv -f "%s" "%s"' % (tempRssFileName, rssFileName)
             print(cmd)
-            result = feedmakerutil.execCmd(cmd)
+            result = feedmakerutil.exec_cmd(cmd)
     else:
         # 이번에 만들어진 파일을 지우기
         cmd = 'rm -f "%s"' % (tempRssFileName)
         print(cmd)
-        result = feedmakerutil.execCmd(cmd)
+        result = feedmakerutil.exec_cmd(cmd)
 
     if result == False:
         return False
@@ -304,16 +304,16 @@ def appendItemToResult(config, feedList, item, rssFileName):
             
         cmd = 'crawler.sh %s "%s" %s %s > "%s"' % (option_str, url, extractionCmd, postProcessCmd, newFileName) 
         print(cmd)
-        result = feedmakerutil.execCmd(cmd)
+        result = feedmakerutil.exec_cmd(cmd)
         if result == False:
             die("can't extract HTML elements")
         
-        md5Name = feedmakerutil.getShortMd5Name(url)
+        md5Name = feedmakerutil.get_short_md5_name(url)
         size = os.stat(newFileName).st_size
         if size > 0:
             cmd = 'echo "<img src=\'http://terzeron.net/img/1x1.jpg?feed=%s&item=%s\'/>" >> "%s"' % (rssFileName, md5Name, newFileName)
             print(cmd)
-            result = feedmakerutil.execCmd(cmd)
+            result = feedmakerutil.exec_cmd(cmd)
             if result == False:
                 die("can't append page view logging tag")
         
@@ -462,7 +462,7 @@ def main():
                
     rssFileName = args[0]
 
-    config = feedmakerutil.readConfig()
+    config = feedmakerutil.read_config()
     if config == None:
         die("can't find conf.xml file nor get config element")
     (doIgnoreOldList, isCompleted, sortFieldPattern, unitSizePerDay, postProcessScript) = getCollectionConfigs(config)
@@ -473,8 +473,8 @@ def main():
         isCompleted = False
 
     listDir = "newlist"
-    feedmakerutil.makePath(listDir)
-    feedmakerutil.makePath("html")
+    feedmakerutil.make_path(listDir)
+    feedmakerutil.make_path("html")
 
     # 과거 피드항목 리스트를 가져옴
     feedList = []
@@ -515,7 +515,7 @@ def main():
             if i >= startIdx and i < endIdx:
                 feedList.append(oldList[feed["id"]])
                 (url, title) = oldList[feed["id"]].split("\t")
-                guid = feedmakerutil.getShortMd5Name(url)
+                guid = feedmakerutil.get_short_md5_name(url)
                 print("%s\t%s\t%s" % (url, title, guid))
 
         ts = datetime.datetime.now().timestamp()
@@ -545,7 +545,7 @@ def main():
     # upload RSS feed file
     cmd = 'upload.py %s' % (rssFileName)
     print(cmd)
-    result = feedmakerutil.execCmd(cmd)
+    result = feedmakerutil.exec_cmd(cmd)
     print(result)
     if result == False:
         return -1

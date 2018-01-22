@@ -26,7 +26,7 @@ def extractUrls(url, options):
     option_str = determine_crawler_options(options)
     cmd = "crawler.sh %s '%s' | extract_element.py collection | %s" % (option_str, url, options["item_capture_script"])
     print("# %s" % (cmd))
-    result = feedmakerutil.execCmd(cmd)
+    result = feedmakerutil.exec_cmd(cmd)
     if not result:
         die("can't execute '%s'" % (cmd))
 
@@ -49,7 +49,7 @@ def composeUrlList(listUrlList, options):
     #print("# composeUrlList(%s, %s, %s, %s)" % (listUrlList, options["render_js"], options["item_capture_script"], options["referer"]))
     resultList = []
     
-    listUrls = feedmakerutil.getAllConfigValues(listUrlList, "list_url")
+    listUrls = feedmakerutil.get_all_config_values(listUrlList, "list_url")
     for listUrl in listUrls:
         urlList = extractUrls(listUrl, options)
         resultList.extend(urlList)
@@ -61,19 +61,19 @@ def main():
     options = {}
 
     # configuration
-    config = feedmakerutil.readConfig()
+    config = feedmakerutil.read_config()
     if config == None:
         die("can't find conf.xml nor get config element")
-    collectionConf = feedmakerutil.getConfigNode(config, "collection")
+    collectionConf = feedmakerutil.get_config_node(config, "collection")
 
-    listUrlList = feedmakerutil.getConfigNode(collectionConf, "list_url_list")
+    listUrlList = feedmakerutil.get_config_node(collectionConf, "list_url_list")
     if listUrlList:
         print("# list_url_list: ", listUrlList)
 
-    doRenderJs = feedmakerutil.getConfigValue(collectionConf, "render_js")
+    doRenderJs = feedmakerutil.get_config_value(collectionConf, "render_js")
     print("# render_js: ", doRenderJs)
 
-    itemCaptureScript = feedmakerutil.getConfigValue(collectionConf, "item_capture_script")
+    itemCaptureScript = feedmakerutil.get_config_value(collectionConf, "item_capture_script")
     if not itemCaptureScript or itemCaptureScript == "":
         itemCaptureScript = "./capture_item_link_title.pl"
         if not os.path.isfile(itemCaptureScript):
@@ -83,9 +83,9 @@ def main():
     if not itemCaptureScriptProgram or not os.path.isfile(itemCaptureScriptProgram) or not os.access(itemCaptureScriptProgram, os.X_OK):
         die("can't execute '%s'" % (itemCaptureScriptProgram))
 
-    userAgent = feedmakerutil.getConfigValue(collectionConf, "user_agent")
+    userAgent = feedmakerutil.get_config_value(collectionConf, "user_agent")
 
-    referer = feedmakerutil.getConfigValue(collectionConf, "referer")
+    referer = feedmakerutil.get_config_value(collectionConf, "referer")
 
     options = {
         "render_js": doRenderJs,

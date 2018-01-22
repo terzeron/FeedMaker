@@ -22,7 +22,7 @@ def main(rssFile):
 		# 과거 파일이 존재하면 비교해보고 다른 경우에만 업로드
 		cmd = "diff '%s' '%s' | egrep -v \"(^(<|>) <(pubDate|lastBuildDate))|(^---\$)|(^[0-9,]+[a-z][0-9,]+\$)\" | wc -c" % (rssFile, oldRssFile)
 		#print(cmd)
-		result = feedmakerutil.execCmd(cmd)
+		result = feedmakerutil.exec_cmd(cmd)
 		if result != False:
 			#print(result)
 			match = re.search(r"^\s*(\d+)\s*$", result)
@@ -39,7 +39,7 @@ def main(rssFile):
 		cmd = "cp %s %s" % (rssFile, dir)
 		#print(cmd)
 		for i in range(0, maxTryCount):
-			result = feedmakerutil.execCmd(cmd)
+			result = feedmakerutil.exec_cmd(cmd)
 			#print(result)
 			if result != False:
 				print("Upload success!\n")
