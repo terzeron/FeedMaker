@@ -11,12 +11,12 @@ import feedmakerutil
 
 def downloadImage(pathPrefix, imgUrl, imgExt, pageUrl):
     debug_print("# downloadImage(%s, %s, %s, %s)" % (pathPrefix, imgUrl, imgExt, pageUrl))
-    cacheFile = feedmakerutil.getCacheFileName(pathPrefix, imgUrl, imgExt)
+    cacheFile = feedmakerutil.get_cache_file_name(pathPrefix, imgUrl, imgExt)
     if os.path.isfile(cacheFile) and os.stat(cacheFile).st_size > 0:
         return True
-    cmd = 'wget.sh --download "%s" --referer "%s" "%s"' % (cacheFile, pageUrl, imgUrl)
+    cmd = 'crawler.sh --download "%s" --referer "%s" "%s"' % (cacheFile, pageUrl, imgUrl)
     debug_print("<!-- %s -->" % (cmd))
-    result = feedmakerutil.execCmd(cmd)
+    result = feedmakerutil.exec_cmd(cmd)
     debug_print("<!-- %s -->" % (result))
     if os.path.isfile(cacheFile) and os.stat(cacheFile).st_size > 0:
         return result
@@ -52,7 +52,7 @@ def downloadImageAndReadMetadata(pathPrefix, imgExt, pageUrl):
     imgFileList = []
     imgUrlList = []
     imgSizeList = []
-    lineList = feedmakerutil.readStdinAsLineList()
+    lineList = feedmakerutil.read_stdin_as_line_list()
     for line in lineList:
         m1 = re.search(r"<img src=(?:[\"'])(?P<imgUrl>[^\"']+)(?:[\"'])( width='\d+%?')?/?>", line)
         if m1:
@@ -68,7 +68,7 @@ def downloadImageAndReadMetadata(pathPrefix, imgExt, pageUrl):
             debug_print("<!-- %s -> %s -->" % (imgUrl, cacheFile))
             cmd = "../../../CartoonSplit/size.py " + cacheFile
             debug_print(cmd)
-            result = feedmakerutil.execCmd(cmd)
+            result = feedmakerutil.exec_cmd(cmd)
             if result == False:
                 sys.stderr.write("Error: can't get the size of image file '%s', cmd='%s'\n" % (cacheFile, cmd))
                 sys.exit(-1)
@@ -103,12 +103,12 @@ def mergeImageFiles(imgFileList, pathPrefix, imgUrl, imgExt, num):
     #
     # merge mode
     #
-    mergedImgFile = feedmakerutil.getCacheFileName(pathPrefix, imgUrl, imgExt, num)
+    mergedImgFile = feedmakerutil.get_cache_file_name(pathPrefix, imgUrl, imgExt, num)
     cmd  = "../../../CartoonSplit/merge.py " + mergedImgFile + " "
     for cacheFile in imgFileList:
         cmd = cmd + cacheFile + " "
     debug_print(cmd)
-    result = feedmakerutil.execCmd(cmd)
+    result = feedmakerutil.exec_cmd(cmd)
     debug_print(result)
     if result == False:
         sys.stderr.write("Error: can't merge the image files, cmd='%s'\n" % (cmd))
@@ -123,7 +123,7 @@ def cropImageFile(imgFile):
     #
     cmd = "innercrop -f 4 -m crop \"%s\" \"%s.temp\" && mv -f \"%s.temp\" \"%s\"" % (imgFile, imgFile, imgFile, imgFile)
     debug_print(cmd)
-    result = feedmakerutil.execCmd(cmd)
+    result = feedmakerutil.exec_cmd(cmd)
     if result == False:
         sys.stderr.write("Error: can't crop the image file '%s', cmd='%s'\n" % (imgFile, cmd))
         sys.exit(-1)
@@ -138,7 +138,7 @@ def removeImageFiles(imgFileList):
     for cacheFile in imgFileList:
         cmd = cmd + "'" + cacheFile + "' "
     debug_print(cmd)
-    result = feedmakerutil.execCmd(cmd)
+    result = feedmakerutil.exec_cmd(cmd)
     debug_print(result)
     if result == False:
         return False
@@ -152,7 +152,7 @@ def splitImageFile(imgFile, numUnits, bgcolorOption, orientationOption):
     #
     cmd = "../../../CartoonSplit/split.py -b 10 -t 0.03 -n %d %s %s %s" % (numUnits, orientationOption, bgcolorOption, imgFile)
     debug_print(cmd)
-    result = feedmakerutil.execCmd(cmd)
+    result = feedmakerutil.exec_cmd(cmd)
     debug_print(result)
     if result == False:
         sys.stderr.write("Error: can't split the image file, cmd='%s'\n" % (cmd))
@@ -167,10 +167,10 @@ def printImageFiles(numUnits, pathPrefix, imgUrlPrefix, imgUrl, imgExt, num, doF
     else:
         customRange = reversed(range(numUnits))
         for i in customRange:
-            splitImgFile = feedmakerutil.getCacheFileName(pathPrefix, imgUrl, imgExt, num, i + 1)
+            splitImgFile = feedmakerutil.get_cache_file_name(pathPrefix, imgUrl, imgExt, num, i + 1)
             debug_print("splitImgFile=" + splitImgFile)
             if os.path.exists(splitImgFile):
-                splitImgUrl = feedmakerutil.getCacheUrl(imgUrlPrefix, imgUrl, imgExt, num, i + 1)
+                splitImgUrl = feedmakerutil.get_cache_url(imgUrlPrefix, imgUrl, imgExt, num, i + 1)
                 print("<img src='%s''/>" % (splitImgUrl))
 
 
@@ -179,11 +179,11 @@ def main():
     
     cmd = "basename " + os.getcwd()
     debug_print(cmd);
-    feedName = feedmakerutil.execCmd(cmd).rstrip()
+    feedName = feedmakerutil.exec_cmd(cmd).rstrip()
     debug_print("<!-- feedName=%s -->" % (feedName))
     pathPrefix = os.environ["FEED_MAKER_WWW_FEEDS"] + "/img/" + feedName
     debug_print("<!--- pathPrefix=%s -->" % (pathPrefix))
-    feedmakerutil.makePath(pathPrefix)
+    feedmakerutil.make_path(pathPrefix)
 
     imgUrlPrefix = "http://terzeron.net/xml/img/" + feedName
     imgPrefix = ""

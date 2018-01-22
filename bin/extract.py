@@ -34,23 +34,23 @@ def extractContent(args):
         file = args[1]
 
     # configuration
-    config = feedmakerutil.readConfig()
+    config = feedmakerutil.read_config()
     if config == None:
         return -1
-    extraction = feedmakerutil.getConfigNode(config, "extraction")
+    extraction = feedmakerutil.get_config_node(config, "extraction")
 
     # read html contents
-    html = feedmakerutil.readFile(file)
+    html = feedmakerutil.read_file(file)
 
     if extraction != None:
-        elementList = feedmakerutil.getConfigNode(extraction, "element_list")
+        elementList = feedmakerutil.get_config_node(extraction, "element_list")
         if elementList == None:
             die("can't find 'element_list' element from configuration")
-        classList = feedmakerutil.getAllConfigValues(elementList, "element_class")
-        idList = feedmakerutil.getAllConfigValues(elementList, "element_id")
-        pathList = feedmakerutil.getAllConfigValues(elementList, "element_path")
+        classList = feedmakerutil.get_all_config_values(elementList, "element_class")
+        idList = feedmakerutil.get_all_config_values(elementList, "element_id")
+        pathList = feedmakerutil.get_all_config_values(elementList, "element_path")
 
-        encoding = feedmakerutil.getConfigValue(elementList, "encoding")
+        encoding = feedmakerutil.get_config_value(elementList, "encoding")
 
         if encoding == None or encoding == "":
             encoding = "utf8"
@@ -93,7 +93,7 @@ def extractContent(args):
                 for div in divs:
                     ret = traverseElement(div, itemUrl, encoding)
         for anPath in pathList:
-            divs = feedmakerutil.getNodeWithPath(soup.body, anPath)
+            divs = feedmakerutil.get_node_with_path(soup.body, anPath)
             if divs:
                 for div in divs:
                     ret = traverseElement(div, itemUrl, encoding)
@@ -161,27 +161,27 @@ def traverseElement(element, url, encoding):
             if element.has_attr("data-lazy-src"):
                 dataLazySrc = element["data-lazy-src"]
                 if not re.search(r'(https?:)?//', dataLazySrc):
-                    dataLazySrc = feedmakerutil.concatenateUrl(url, dataLazySrc)
+                    dataLazySrc = feedmakerutil.concatenate_url(url, dataLazySrc)
                 src = dataLazySrc
             elif element.has_attr("lazysrc"):
                 lazySrc = element["lazysrc"]
                 if not re.search(r'(https?:)?//', lazySrc):
-                    lazySrc = feedmakerutil.concatenateUrl(url, lazySrc)
+                    lazySrc = feedmakerutil.concatenate_url(url, lazySrc)
                 src = lazySrc
             elif element.has_attr("data-src"):
                 dataSrc = element["data-src"]
                 if not re.search(r'(https?:)?//', dataSrc):
-                    dataSrc = feedmakerutil.concatenateUrl(url, dataSrc)
+                    dataSrc = feedmakerutil.concatenate_url(url, dataSrc)
                 src = dataSrc
             elif element.has_attr("data-original"):
                 dataSrc = element["data-original"]
                 if not re.search(r'(https?:)?//', dataSrc):
-                    dataSrc = feedmakerutil.concatenateUrl(url, dataSrc)
+                    dataSrc = feedmakerutil.concatenate_url(url, dataSrc)
                 src = dataSrc
             elif element.has_attr("src"):
                 src = element["src"]
                 if not re.search(r'(https?:)?//', src):
-                    src = feedmakerutil.concatenateUrl(url, src)
+                    src = feedmakerutil.concatenate_url(url, src)
                 if "ncc.phinf.naver.net" in src and ("/17.jpg" in src or "/8_17px.jpg" in src or "/7px.jpg" in src or "/20px.jpg" in src):
                     # 외부에서 접근 불가능한 이미지 제거
                     return ret
@@ -198,7 +198,7 @@ def traverseElement(element, url, encoding):
                 if element.has_attr("value"):
                     value = element["value"]
                     if not re.search(r'(https?:)?//', value):
-                        value = feedmakerutil.concatenateUrl(url, value)
+                        value = feedmakerutil.concatenate_url(url, value)
                     sys.stdout.write("<img src='%s'/>\n" % value)
                     ret = 1
         elif element.name == "canvas":
@@ -226,7 +226,7 @@ def traverseElement(element, url, encoding):
                 # complementing href value
                 href = element["href"]
                 if not re.search(r'(https?:)?//', href):
-                    href = feedmakerutil.concatenateUrl(url, href)
+                    href = feedmakerutil.concatenate_url(url, href)
                 # A tag는 href와 target attribute를 출력해줘야 함
                 sys.stdout.write("<a href='%s'" % href)
                 if element.has_attr("target"):
@@ -292,7 +292,7 @@ def traverseElement(element, url, encoding):
                     url = "http://navercast.naver.com/ncc_request.nhn?url=http://data.navercast.naver.com/literature_module/%d/literature_%d_%d.html" % (leafId, articleNum, pageNum)
                     cmd = "wget.sh '%s' | extract_literature.py" % (url)
                     #print(cmd)
-                    result = feedmakerutil.execCmd(cmd)
+                    result = feedmakerutil.exec_cmd(cmd)
                     if result:
                         print(result)
                     ret = 1

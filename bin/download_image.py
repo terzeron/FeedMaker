@@ -7,7 +7,7 @@ from feedmakerutil import debug_print
 import feedmakerutil
 
 
-def getCacheFileName(pathPrefix, imgUrl, imgExt, postfix=None, index=None):
+def get_cache_file_name(pathPrefix, imgUrl, imgExt, postfix=None, index=None):
     postfixStr = ""; 
     if postfix:
         postfixStr = "_" + postfix
@@ -17,18 +17,18 @@ def getCacheFileName(pathPrefix, imgUrl, imgExt, postfix=None, index=None):
         indexStr = "." + index
                          
     if re.search(r'^https?://', imgUrl) and imgExt:
-        return pathPrefix + "/" + feedmakerutil.getShortMd5Name(imgUrl) + postfixStr + indexStr + "." + imgExt
+        return pathPrefix + "/" + feedmakerutil.get_short_md5_name(imgUrl) + postfixStr + indexStr + "." + imgExt
      
     return pathPrefix + "/" + imgUrl
 
 
 def downloadImage(pathPrefix, imgUrl, imgExt, pageUrl):
-    cacheFile = getCacheFileName(pathPrefix, imgUrl, imgExt)
+    cacheFile = get_cache_file_name(pathPrefix, imgUrl, imgExt)
     if os.path.isfile(cacheFile) and os.stat(cacheFile).st_size > 0:
         return True
-    cmd = 'wget.sh --download "%s" --referer "%s" "%s"' % (cacheFile, pageUrl, imgUrl)
+    cmd = 'crawler.sh --download "%s" --referer "%s" "%s"' % (cacheFile, pageUrl, imgUrl)
     debug_print("<!-- %s -->" % (cmd))
-    result = feedmakerutil.execCmd(cmd)
+    result = feedmakerutil.exec_cmd(cmd)
     debug_print("<!-- %s -->" % (result))
     if os.path.isfile(cacheFile) and os.stat(cacheFile).st_size > 0:
         return cacheFile
@@ -37,7 +37,7 @@ def downloadImage(pathPrefix, imgUrl, imgExt, pageUrl):
 
 def main():
     cmd = "basename " + os.getcwd()
-    feedName = feedmakerutil.execCmd(cmd).rstrip()
+    feedName = feedmakerutil.exec_cmd(cmd).rstrip()
     imgUrlPrefix = "http://terzeron.net/xml/img/" + feedName
     pathPrefix = os.environ["FEED_MAKER_WWW_FEEDS"] + "/img/" + feedName
 
@@ -50,9 +50,9 @@ def main():
     cmd = ""
     result = ""
 
-    feedmakerutil.makePath(pathPrefix)
+    feedmakerutil.make_path(pathPrefix)
 
-    lineList = feedmakerutil.readStdinAsLineList()
+    lineList = feedmakerutil.read_stdin_as_line_list()
     for line in lineList:
         line = line.rstrip()
         m = re.search(r'''
@@ -79,7 +79,7 @@ def main():
             # download
             cacheFile = downloadImage(pathPrefix, imgUrl, imgExt, url)
             if cacheFile:
-                cacheUrl = feedmakerutil.getCacheUrl(imgUrlPrefix, imgUrl, imgExt)
+                cacheUrl = feedmakerutil.get_cache_url(imgUrlPrefix, imgUrl, imgExt)
                 debug_print("<!-- %s -> %s / %s -->" % (imgUrl, cacheFile, cacheUrl))
                 print("<img src='%s'/>" % (cacheUrl))
             else:

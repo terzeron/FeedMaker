@@ -9,104 +9,104 @@ import xml.dom.minidom
 import feedmakerutil
 
 
-class XPathTest(unittest.TestCase):
-    def test_getFirstTokenFromPath(self):
+class X_pathTest(unittest.TestCase):
+    def test_get_first_token_from_path(self):
         # id, name, idx, remainder of path, isAnywhere
-        token = feedmakerutil.getFirstTokenFromPath("")
+        token = feedmakerutil.get_first_token_from_path("")
         self.assertEqual(token, (None, None, None, None, False))
-        token = feedmakerutil.getFirstTokenFromPath("/html/body")
+        token = feedmakerutil.get_first_token_from_path("/html/body")
         self.assertEqual(token, (None, "body", None, "", False))
-        token = feedmakerutil.getFirstTokenFromPath("/html/body/div")
+        token = feedmakerutil.get_first_token_from_path("/html/body/div")
         self.assertEqual(token, (None, "div", None, "", False))
-        token = feedmakerutil.getFirstTokenFromPath('//*[@id="Text_Contents"]')
+        token = feedmakerutil.get_first_token_from_path('//*[@id="Text_Contents"]')
         self.assertEqual(token, ("Text_Contents", None, None, "", True))
-        token = feedmakerutil.getFirstTokenFromPath('//*[@id="Text_Contents"]/form/select')
+        token = feedmakerutil.get_first_token_from_path('//*[@id="Text_Contents"]/form/select')
         self.assertEqual(token, ("Text_Contents", None, None, "form/select", True))
-        token = feedmakerutil.getFirstTokenFromPath('/form/select')
+        token = feedmakerutil.get_first_token_from_path('/form/select')
         self.assertEqual(token, (None, "form", None, "select", False))
-        token = feedmakerutil.getFirstTokenFromPath('//select')
+        token = feedmakerutil.get_first_token_from_path('//select')
         self.assertEqual(token, (None, "select", None, "", True))
-        token = feedmakerutil.getFirstTokenFromPath("/html/body/div[3]")
+        token = feedmakerutil.get_first_token_from_path("/html/body/div[3]")
         self.assertEqual(token, (None, "div", "3", "", False))
-        token = feedmakerutil.getFirstTokenFromPath("/html/body/div[3]/img[2]")
+        token = feedmakerutil.get_first_token_from_path("/html/body/div[3]/img[2]")
         self.assertEqual(token, (None, "div", "3", "img[2]", False))
-        token = feedmakerutil.getFirstTokenFromPath("//img[2]")
+        token = feedmakerutil.get_first_token_from_path("//img[2]")
         self.assertEqual(token, (None, "img", "2", "", True))
 
-    def test_getNodeWithPath(self):
+    def test_get_node_with_path(self):
         soup = BeautifulSoup('<html><body><div>hello</div><div id="ct"><span>text</span></div></body></html>', 'html.parser')
 
-        targetNode = feedmakerutil.getNodeWithPath(soup.body, '//span')
-        self.assertEqual(targetNode[0].name, "span")
-        self.assertEqual(targetNode[0].contents[0], "text")
+        target_node = feedmakerutil.get_node_with_path(soup.body, '//span')
+        self.assertEqual(target_node[0].name, "span")
+        self.assertEqual(target_node[0].contents[0], "text")
 
-        targetNode = feedmakerutil.getNodeWithPath(soup.body, '//*[@id="ct"]')
-        self.assertEqual(targetNode[0].name, "div")
-        self.assertEqual(targetNode[0].contents[0].contents[0], "text")
+        target_node = feedmakerutil.get_node_with_path(soup.body, '//*[@id="ct"]')
+        self.assertEqual(target_node[0].name, "div")
+        self.assertEqual(target_node[0].contents[0].contents[0], "text")
 
-        targetNode = feedmakerutil.getNodeWithPath(soup.body, '/html/body/div')
-        self.assertEqual(targetNode[0].name, "div")
-        self.assertEqual(targetNode[0].contents[0], "hello")
+        target_node = feedmakerutil.get_node_with_path(soup.body, '/html/body/div')
+        self.assertEqual(target_node[0].name, "div")
+        self.assertEqual(target_node[0].contents[0], "hello")
 
-        targetNode = feedmakerutil.getNodeWithPath(soup.body, '/div[2]')
-        self.assertEqual(targetNode[0].name, "div")
-        self.assertEqual(targetNode[0].contents[0].contents[0], "text")
+        target_node = feedmakerutil.get_node_with_path(soup.body, '/div[2]')
+        self.assertEqual(target_node[0].name, "div")
+        self.assertEqual(target_node[0].contents[0].contents[0], "text")
 
-        targetNode = feedmakerutil.getNodeWithPath(soup.body, '//*[@id="ct"]/span')
-        self.assertEqual(targetNode[0].name, "span")
-        self.assertEqual(targetNode[0].contents[0], "text")
+        target_node = feedmakerutil.get_node_with_path(soup.body, '//*[@id="ct"]/span')
+        self.assertEqual(target_node[0].name, "span")
+        self.assertEqual(target_node[0].contents[0], "text")
 
-        targetNode = feedmakerutil.getNodeWithPath(soup.body, '/div[2]/span')
-        self.assertEqual(targetNode[0].name, "span")
-        self.assertEqual(targetNode[0].contents[0], "text")
+        target_node = feedmakerutil.get_node_with_path(soup.body, '/div[2]/span')
+        self.assertEqual(target_node[0].name, "span")
+        self.assertEqual(target_node[0].contents[0], "text")
 
 
 class IOTest(unittest.TestCase):
-    def test_readConfig(self):
-        config = feedmakerutil.readConfig()
+    def test_read_config(self):
+        config = feedmakerutil.read_config()
         self.assertTrue(config != None)
         self.assertTrue(isinstance(config, xml.dom.minidom.Document))
         
-    def test_getConfigNode(self):
-        config = feedmakerutil.readConfig()
-        collection = feedmakerutil.getConfigNode(config, "collection")
+    def test_get_config_node(self):
+        config = feedmakerutil.read_config()
+        collection = feedmakerutil.get_config_node(config, "collection")
         self.assertTrue(collection)
-        listUrlList = feedmakerutil.getConfigNode(collection, "list_url_list")
-        self.assertTrue(listUrlList)
-        listUrl = feedmakerutil.getConfigNode(listUrlList, "list_url")
-        self.assertTrue(listUrl)
+        list_url_list = feedmakerutil.get_config_node(collection, "list_url_list")
+        self.assertTrue(list_url_list)
+        list_url = feedmakerutil.get_config_node(list_url_list, "list_url")
+        self.assertTrue(list_url)
 
-    def test_getValueFromConfig(self):
-        config = feedmakerutil.readConfig()
-        collection = feedmakerutil.getConfigNode(config, "collection")
-        listUrlList = feedmakerutil.getConfigNode(collection, "list_url_list")
-        listUrl = feedmakerutil.getConfigNode(listUrlList, "list_url")
-        v = feedmakerutil.getValueFromConfig(listUrl)
+    def test_get_value_from_config(self):
+        config = feedmakerutil.read_config()
+        collection = feedmakerutil.get_config_node(config, "collection")
+        list_url_list = feedmakerutil.get_config_node(collection, "list_url_list")
+        list_url = feedmakerutil.get_config_node(list_url_list, "list_url")
+        v = feedmakerutil.get_value_from_config(list_url)
         self.assertEqual(v, "http://m.navercast.naver.com/homeMain.nhn?page=")
-        extraction = feedmakerutil.getConfigNode(config, "extraction")
-        elementList = feedmakerutil.getConfigNode(extraction, "element_list")
-        elementId = feedmakerutil.getConfigNode(elementList, "element_id")
-        v = feedmakerutil.getValueFromConfig(elementId)
+        extraction = feedmakerutil.get_config_node(config, "extraction")
+        element_list = feedmakerutil.get_config_node(extraction, "element_list")
+        elementId = feedmakerutil.get_config_node(element_list, "element_id")
+        v = feedmakerutil.get_value_from_config(elementId)
         self.assertEqual(v, "ct")
 
 
 class UtilTest(unittest.TestCase):
-    def test_getUrlPrefix(self):
-        prefix = feedmakerutil.getUrlPrefix("http://www.naver.com/movie/hello/test.nhn?query=test")
+    def test_get_url_prefix(self):
+        prefix = feedmakerutil.get_url_prefix("http://www.naver.com/movie/hello/test.nhn?query=test")
         self.assertEqual(prefix, "http://www.naver.com/movie/hello/");
 
-    def test_getUrlDomain(self):
-        domain = feedmakerutil.getUrlDomain("http://www.naver.com/movie/hello/test.nhn?query=test")
+    def test_get_url_domain(self):
+        domain = feedmakerutil.get_url_domain("http://www.naver.com/movie/hello/test.nhn?query=test")
         self.assertEqual(domain, "http://www.naver.com/")
 
-    def test_concatenateUrl(self):
-        url = feedmakerutil.concatenateUrl("http://www.naver.com/movie", "hello")
+    def test_concatenate_url(self):
+        url = feedmakerutil.concatenate_url("http://www.naver.com/movie", "hello")
         self.assertEqual(url, "http://www.naver.com/hello")
-        url = feedmakerutil.concatenateUrl("http://www.naver.com/movie/", "hello")
+        url = feedmakerutil.concatenate_url("http://www.naver.com/movie/", "hello")
         self.assertEqual(url, "http://www.naver.com/movie/hello")
 
-    def test_getShortMd5Name(self):
-        self.assertEqual(feedmakerutil.getShortMd5Name("http://terzeron.net"), "e0ad299")
+    def test_get_short_md5_name(self):
+        self.assertEqual(feedmakerutil.get_short_md5_name("http://terzeron.net"), "e0ad299")
 
 
 if __name__ == "__main__":
