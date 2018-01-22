@@ -11,7 +11,7 @@ if [ $# -lt 1 ]; then
 fi
 
 default_spider_opt=""
-default_ua_opt="-U 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.37 (KHTML, like Gecko) Chrome/31.0.1650.58 Safari/537.37'"
+default_ua_opt="--user-agent 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.37 (KHTML, like Gecko) Chrome/31.0.1650.58 Safari/537.37'"
 default_referer_opt=""
 default_render_js=false
 default_header_opt=""
@@ -23,9 +23,9 @@ render_js=$default_render_js
 header_opt=$default_header_opt
 
 encoding=$(python -c 'import feedmakerutil as fmu; encoding = fmu.getConfigValue(fmu.getConfigNode(fmu.readConfig(), "collection"), "encoding"); print(encoding if encoding else "utf-8")')
-cookie_opt="--keep-session-cookies --load-cookies cookie.txt --save-cookies cookie.txt"
-timeout_opt="--timeout=5"
-cert_opt="--no-check-certificate"
+cookie_opt="--cookie-jar cookie.txt"
+timeout_opt="--connect-timeout 5"
+cert_opt="--insecure"
 
 OPTS=`/usr/local/bin/getopt -o v --long spider,download:,render-js,ua:,referer:,header-gzip -- "$@"`
 
@@ -34,12 +34,12 @@ eval set -- "$OPTS"
 while :; do
 	case "$1" in
 		-v) verbose_opt="-v"; shift;;
-		--spider) spider_opt="--spider"; shift;;
+		--spider) spider_opt="--head"; shift;;
 		--download) download_file="$2"; shift 2;;
 		--render-js) render_js=true; shift;;
-		--ua) ua_opt="-U '$2'"; shift 2;;
-		--referer) referer_opt="--referer='$2'"; shift 2;;
-		--header-gzip) header_opt="--header='Accept-Encoding: gzip'"; shift;;
+		--ua) ua_opt="--user-agent '$2'"; shift 2;;
+		--referer) referer_opt="--referer '$2'"; shift 2;;
+		--header-gzip) header_opt="--header 'Accept-Encoding: gzip'"; shift;;
 		--) shift; break;
 	esac
 done
@@ -49,7 +49,7 @@ url="'$1'"
 if [ "$render_js" == true ]; then
 	cmd="phantomjs $FEED_MAKER_HOME/bin/render_js.js $url"
 else
-	cmd="wget -q -O - $header_opt $timeout_opt $ua_opt $cert_opt $cookie_opt $referer_opt $url"
+	cmd="curl --silent $header_opt $timeout_opt $ua_opt $cert_opt $cookie_opt $referer_opt $url"
 fi
 
 

@@ -72,7 +72,19 @@ def getExtractionConfigs(config):
     reviewPointThreshold = feedmakerutil.getConfigValue(extractionConf, "review_point_threshold")
     userAgent = feedmakerutil.getConfigValue(extractionConf, "user_agent")
     referer = feedmakerutil.getConfigValue(extractionConf, "referer")
-    return (postProcessScript, postProcess2Script, doRenderJs, doForceSleepBetweenArticles, doBypassElementExtraction, reviewPointThreshold, userAgent, referer)
+
+    options = {
+        "post_process_script": postProcessScript,
+        "post_process2_script": postProcess2Script,
+        "render_js": doRenderJs,
+        "force_sleep_between_articles": doForceSleepBetweenArticles,
+        "bypass_element_extraction": doBypassElementExtraction,
+        "review_point_threshold": reviewPointThreshold,
+        "user_agent": userAgent,
+        "referer": referer
+    }
+    
+    return options
 
 
 def getNotificationConfigs(config):
@@ -241,6 +253,27 @@ def generateRssFeed(config, feedList, rssFileName):
     return True
 
 
+def determine_crawler_options(options):
+    option_str = ""
+    if "true" == options["render_js"]:
+        option_str += " --render-js"
+    if options["user_agent"]:
+        option_str += " --ua '%s'" % (options["user_agent"])
+    if options["referer"]:
+        option_str += " --referer '%s'" % (options["referer"])
+
+    '''
+    #print("title=%s, reviewPoint=%d, reviewPointThreshold=%f" % (title, reviewPoint, reviewPointThreshold))
+    if reviewPoint and reviewPointThreshold and reviewPoint > reviewPointThreshold:
+        # 일반적으로 평점이 사용되지 않는 경우나
+        # 평점이 기준치를 초과하는 경우에만 추출
+        warn("ignore an article due to the low score")
+        return 0
+    '''
+    
+    return option_str
+    
+
 def appendItemToResult(config, feedList, item, rssFileName):
     fields = item.split('\t')
     reviewPoint = None
@@ -256,36 +289,20 @@ def appendItemToResult(config, feedList, item, rssFileName):
         feedList.append(item)
     else:
         # 파일이 존재하지 않거나 크기가 작으니 다시 생성 시도
-        (postProcessScript, postProcess2Script, doRenderJs, doForceSleepBetweenArticles, doBypassElementExtraction, reviewPointThreshold, userAgent, referer) = getExtractionConfigs(config)
+        options = getExtractionConfigs(config)
         
-        cmd = ""
-        postProcessCmd = ""
-
-        if postProcessScript:
-            postProcessCmd = '| %s "%s"' % (postProcessScript, url)
-            if postProcess2Script:
-                postProcessCmd += ' | %s "%s"' % (postProcess2Script, url)
-
-        option = ""
-        if "true" == doRenderJs:
-            option += " --render-js"
-        if userAgent:
-            option += " --ua '%s'" % (userAgent)
-        if referer:
-            option += " --referer '%s'" % (referer)
-        
-        #print("title=%s, reviewPoint=%d, reviewPointThreshold=%f" % (title, reviewPoint, reviewPointThreshold))
-        if reviewPoint and reviewPointThreshold and reviewPoint > reviewPointThreshold:
-            # 일반적으로 평점이 사용되지 않는 경우나
-            # 평점이 기준치를 초과하는 경우에만 추출
-            warn("ignore an article due to the low score")
-            return 0
+        if options["post_process_script"]:
+            postProcessCmd = '| %s "%s"' % (options["post_process_script"], url)
+            if options["post_process2_script"]:
+                postProcessCmd += ' | %s "%s"' % (options["post_process2_script"], url)
 
         extractionCmd = '| extract.py "%s"' % (url)
-        if "true" == doBypassElementExtraction:
+        if "true" == options["bypass_element_extraction"]:
             extractionCmd = ""
 
-        cmd = 'wget.sh %s "%s" %s %s > "%s"' % (option, url, extractionCmd, postProcessCmd, newFileName) 
+        option_str = determine_crawler_options(options)
+            
+        cmd = 'crawler.sh %s "%s" %s %s > "%s"' % (option_str, url, extractionCmd, postProcessCmd, newFileName) 
         print(cmd)
         result = feedmakerutil.execCmd(cmd)
         if result == False:
@@ -310,7 +327,7 @@ def appendItemToResult(config, feedList, item, rssFileName):
             print("Success: %s: %s --> %s: %d" % (title, url, newFileName, size))
             feedList.append(item)
 
-        if "true" == doForceSleepBetweenArticles:
+        if "true" == options["force_sleep_between_articles"]:
             time.sleep(1)
 
 

@@ -14,7 +14,7 @@ def downloadImage(pathPrefix, imgUrl, imgExt, pageUrl):
     cacheFile = feedmakerutil.getCacheFileName(pathPrefix, imgUrl, imgExt)
     if os.path.isfile(cacheFile) and os.stat(cacheFile).st_size > 0:
         return True
-    cmd = 'wget.sh --download "%s" --referer "%s" "%s"' % (cacheFile, pageUrl, imgUrl)
+    cmd = 'crawler.sh --download "%s" --referer "%s" "%s"' % (cacheFile, pageUrl, imgUrl)
     debug_print("<!-- %s -->" % (cmd))
     result = feedmakerutil.execCmd(cmd)
     debug_print("<!-- %s -->" % (result))

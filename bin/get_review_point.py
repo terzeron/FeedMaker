@@ -32,7 +32,7 @@ def get_default_config(type):
 
 
 def get_page(url, encoding):
-    cmd = "wget.sh \"%s\"" % (url)
+    cmd = "crawler.sh \"%s\"" % (url)
     result = feedmakerutil.execCmd(cmd)
     return result
 
