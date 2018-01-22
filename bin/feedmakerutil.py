@@ -153,7 +153,7 @@ def read_file(file = None):
     if file == None or file == "":
         return read_stdin()
            
-    line_list = read_fileAsLine_list(file)
+    line_list = read_file_as_line_list(file)
     return "".join(line_list)
 
 
