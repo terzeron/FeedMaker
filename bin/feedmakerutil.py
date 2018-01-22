@@ -157,7 +157,7 @@ def read_file(file = None):
     return "".join(line_list)
 
 
-def read_fileAsLine_list(file):
+def read_file_as_line_list(file):
     import codecs
 
     with codecs.open(file, 'rb', encoding="utf-8", errors="ignore") as f:
@@ -256,7 +256,6 @@ def warn(msg):
 def remove_file(file_path):
     if os.path.isfile(file_path):
         os.remove(file_path)
-
 
 
 def get_cache_info_common(prefix, img_url, img_ext, postfix=None, index=None):
