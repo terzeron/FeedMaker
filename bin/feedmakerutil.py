@@ -19,7 +19,7 @@ def debug_print(a):
 def make_path(path):
     try:
         os.makedirs(path)
-    except _fileExistsError:
+    except FileExistsError:
         # ignore
         None
 
