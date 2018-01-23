@@ -3,60 +3,54 @@
 
 from bs4 import BeautifulSoup, Comment
 import re
-import subprocess
 import os
 import sys
-import urllib.request, urllib.parse, urllib.error
-import copy
 import signal
 import cgi
+import getopt
 import feedmakerutil
 from feedmakerutil import die, err, warn
 
 
-# recursion으로 구현된 traverseElement()의 여러 레벨에서 조회하는 변수
-footnoteNum = 0
+# recursion으로 구현된 traverse_element()의 여러 레벨에서 조회하는 변수
+footnote_num = 0
     
-def printHeader():
-    print("<meta http-equiv='Content-Type' content='text/html; charset=UTF-8'/>")
+def print_header():
+    print("<meta http-equiv='_content-Type' content='text/html; charset=UTF-8'/>")
     print('<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, minimum-scal#e=0.5, user-scalable=yes" />')
     print("<style>img { max-width: 100%; margin-top: 0px; margin-bottom: 0px; }</style>")
 
 
-def printTrailer():
-    print("<p/>")
-
-
-def extractContent(args):
-    itemUrl = args[0]
+def extract_content(args):
+    item_url = args[0]
     file = ""
     if len(args) > 1:
         file = args[1]
-
+        
     # configuration
     config = feedmakerutil.read_config()
     if config == None:
         return -1
-    extraction = feedmakerutil.get_config_node(config, "extraction")
+    extraction_conf = feedmakerutil.get_config_node(config, "extraction")
 
     # read html contents
     html = feedmakerutil.read_file(file)
 
-    if extraction != None:
-        elementList = feedmakerutil.get_config_node(extraction, "element_list")
-        if elementList == None:
+    if extraction_conf:
+        element_list = feedmakerutil.get_config_node(extraction_conf, "element_list")
+        if not element_list:
             die("can't find 'element_list' element from configuration")
-        classList = feedmakerutil.get_all_config_values(elementList, "element_class")
-        idList = feedmakerutil.get_all_config_values(elementList, "element_id")
-        pathList = feedmakerutil.get_all_config_values(elementList, "element_path")
+        class_list = feedmakerutil.get_all_config_values(element_list, "element_class")
+        id_list = feedmakerutil.get_all_config_values(element_list, "element_id")
+        path_list = feedmakerutil.get_all_config_values(element_list, "element_path")
 
-        encoding = feedmakerutil.get_config_value(elementList, "encoding")
+        encoding = feedmakerutil.get_config_value(element_list, "encoding")
 
-        if encoding == None or encoding == "":
+        if not encoding:
             encoding = "utf8"
-        #print("# element_id:", idList)
-        #print("# element_class:", classList)
-        #print("# element_path:", pathList)
+        #print("# element_id:", id_list)
+        #print("# element_class:", class_list)
+        #print("# element_path:", path_list)
         #print("# encoding:", encoding)
     else:
         print(html, end='')
@@ -70,8 +64,8 @@ def extractContent(args):
     #html = re.sub(r'/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/', r'', html)
 
     # header
-    #printHeader()
-
+    print_header()
+    
     # main article sections
     ret = 0
     for parser in [ "html.parser", "html5lib", "lxml" ]:
@@ -82,44 +76,41 @@ def extractContent(args):
             comment.extract()
         '''
 
-        for aClass in classList:
-            divs = soup.find_all(attrs={"class": aClass})
+        for a_class in class_list:
+            divs = soup.find_all(attrs={"class": a_class})
             if divs:
                 for div in divs:
-                    ret = traverseElement(div, itemUrl, encoding)
-        for anId in idList:
-            divs = soup.find_all(attrs={"id": anId})
+                    ret = traverse_element(div, item_url, encoding)
+        for id in id_list:
+            divs = soup.find_all(attrs={"id": id})
             if divs:
                 for div in divs:
-                    ret = traverseElement(div, itemUrl, encoding)
-        for anPath in pathList:
-            divs = feedmakerutil.get_node_with_path(soup.body, anPath)
+                    ret = traverse_element(div, item_url, encoding)
+        for path in path_list:
+            divs = feedmakerutil.get_node_with_path(soup.body, path)
             if divs:
                 for div in divs:
-                    ret = traverseElement(div, itemUrl, encoding)
+                    ret = traverse_element(div, item_url, encoding)
         if ret > 0:
             break
                 
-    if (classList == None or classList == []) and (idList == None or idList == []) and (pathList == None or pathList == []):
-        ret = traverseElement(soup.body, itemUrl, encoding)
-
-    # trailer
-    #printTrailer()
+    if (class_list == None or class_list == []) and (id_list == None or id_list == []) and (path_list == None or path_list == []):
+        ret = traverse_element(soup.body, item_url, encoding)
 
     return True
 
 
-def checkElementClass(element, elementName, className):
-    if element.name == elementName and element.has_attr("class") and className in element["class"]:
+def check_element_class(element, element_name, class_name):
+    if element.name == element_name and element.has_attr("class") and class_name in element["class"]:
         return True
     return False
 
 
-def traverseElement(element, url, encoding):
-    global footnoteNum
+def traverse_element(element, url, encoding):
+    global footnote_num
     ret = -1
     
-    #print("# traverseElement()")
+    #print("# traverse_element()")
     if isinstance(element, Comment):
         # skip sub-elements
         return ret
@@ -146,11 +137,11 @@ def traverseElement(element, url, encoding):
         # 자바스크립트?
         # flash?
 
-        openCloseTag = False
+        open_close_tag = False
         if element.name == "p":
             print("<p>")
             for e in element.contents:
-                ret = traverseElement(e, url, encoding)
+                ret = traverse_element(e, url, encoding)
             # 하위 노드를 처리하고 return하지 않으면, 텍스트를 직접 
             # 감싸고 있는 <p>의 경우, 중복된 내용이 노출될 수 있음
             print("</p>")
@@ -159,25 +150,25 @@ def traverseElement(element, url, encoding):
         elif element.name == "img":
             src = ""
             if element.has_attr("data-lazy-src"):
-                dataLazySrc = element["data-lazy-src"]
-                if not re.search(r'(https?:)?//', dataLazySrc):
-                    dataLazySrc = feedmakerutil.concatenate_url(url, dataLazySrc)
-                src = dataLazySrc
+                data_lazy_src = element["data-lazy-src"]
+                if not re.search(r'(https?:)?//', data_lazy_src):
+                    data_lazy_src = feedmakerutil.concatenate_url(url, data_lazy_src)
+                src = data_lazy_src
             elif element.has_attr("lazysrc"):
-                lazySrc = element["lazysrc"]
-                if not re.search(r'(https?:)?//', lazySrc):
-                    lazySrc = feedmakerutil.concatenate_url(url, lazySrc)
-                src = lazySrc
+                lazy_src = element["lazysrc"]
+                if not re.search(r'(https?:)?//', lazy_src):
+                    lazy_src = feedmakerutil.concatenate_url(url, lazy_src)
+                src = lazy_src
             elif element.has_attr("data-src"):
-                dataSrc = element["data-src"]
-                if not re.search(r'(https?:)?//', dataSrc):
-                    dataSrc = feedmakerutil.concatenate_url(url, dataSrc)
-                src = dataSrc
+                data_src = element["data-src"]
+                if not re.search(r'(https?:)?//', data_src):
+                    data_src = feedmakerutil.concatenate_url(url, data_src)
+                src = data_src
             elif element.has_attr("data-original"):
-                dataSrc = element["data-original"]
-                if not re.search(r'(https?:)?//', dataSrc):
-                    dataSrc = feedmakerutil.concatenate_url(url, dataSrc)
-                src = dataSrc
+                data_src = element["data-original"]
+                if not re.search(r'(https?:)?//', data_src):
+                    data_src = feedmakerutil.concatenate_url(url, data_src)
+                src = data_src
             elif element.has_attr("src"):
                 src = element["src"]
                 if not re.search(r'(https?:)?//', src):
@@ -194,7 +185,7 @@ def traverseElement(element, url, encoding):
             sys.stdout.write("/>\n")
             ret = 1
         elif element.name in ("input"):
-            if checkElementClass(element, "input", "originSrc"):
+            if check_element_class(element, "input", "origin_src"):
                 if element.has_attr("value"):
                     value = element["value"]
                     if not re.search(r'(https?:)?//', value):
@@ -218,9 +209,9 @@ def traverseElement(element, url, encoding):
                 # 주석레이어 제거
                 m = re.search(r"(open|close)FootnoteLayer\('(\d+)'", element["onclick"])
                 if m:
-                    openOrClose = m.group(1)
-                    if openOrClose == "open":
-                        footnoteNum = m.group(2)
+                    open_or_close = m.group(1)
+                    if open_or_close == "open":
+                        footnote_num = m.group(2)
                     return ret
             if element.has_attr("href"):
                 # complementing href value
@@ -234,7 +225,7 @@ def traverseElement(element, url, encoding):
                 else:
                     sys.stdout.write(">")
                 ret = 1
-                openCloseTag = True
+                open_close_tag = True
         elif element.name in ("iframe", "embed"):
             if element.has_attr("src"):
                 src = element["src"]
@@ -258,13 +249,13 @@ def traverseElement(element, url, encoding):
             # extract only link information from area element
             for child in element.contents:
                 if hasattr(child, "name") and child.name == "area":
-                    linkHref = "#"
-                    linkTitle = "empty link title"
+                    link_href = "#"
+                    link_title = "empty link title"
                     if child.has_attr("href"):
-                        linkHref = child["href"]
+                        link_href = child["href"]
                     if child.has_attr("alt"):
-                        linkTitle = child["alt"]
-                    print("<br/><br/><strong><a href='%s'>%s</a></strong><br/><br/>" % (linkHref, linkTitle))
+                        link_title = child["alt"]
+                    print("<br/><br/><strong><a href='%s'>%s</a></strong><br/><br/>" % (link_href, link_title))
                     ret = 1
                 elif element.name in ("o:p", "st1:time"):
                     # skip unknown element 
@@ -281,15 +272,15 @@ def traverseElement(element, url, encoding):
         elif element.name in ("xmp", "form"):
             ret = 1
         else:
-            if checkElementClass(element, "div", "paginate_v1"):
+            if check_element_class(element, "div", "paginate_v1"):
                 # <div class="paginate_v1">...
                 # ajax로 받아오는 페이지들을 미리 요청
                 matches = re.findall(r"change_page\('[^']+/literature_module/(\d+)/literature_(\d+)_(\d+)\.html'", str(element))
                 for match in matches:
-                    leafId = int(match[0])
-                    articleNum = int(match[1])
-                    pageNum = int(match[2])
-                    url = "http://navercast.naver.com/ncc_request.nhn?url=http://data.navercast.naver.com/literature_module/%d/literature_%d_%d.html" % (leafId, articleNum, pageNum)
+                    leaf_id = int(match[0])
+                    article_num = int(match[1])
+                    page_num = int(match[2])
+                    url = "http://navercast.naver.com/ncc_request.nhn?url=http://data.navercast.naver.com/literature_module/%d/literature_%d_%d.html" % (leaf_id, article_num, page_num)
                     cmd = "wget.sh '%s' | extract_literature.py" % (url)
                     #print(cmd)
                     result = feedmakerutil.exec_cmd(cmd)
@@ -297,27 +288,27 @@ def traverseElement(element, url, encoding):
                         print(result)
                     ret = 1
                 return ret
-            elif checkElementClass(element, "div", "view_option option_top"):
+            elif check_element_class(element, "div", "view_option option_top"):
                 # "오늘의 문학"에서 폰트크기와 책갈피 이미지 영역 제거
                 return ret
-            elif checkElementClass(element, "span", "page_prev") or checkElementClass(element, "span", "page_next"):
+            elif check_element_class(element, "span", "page_prev") or check_element_class(element, "span", "page_next"):
                 # <span class="page_prev">... or <span class="page_next">...
                 # 이전/다음 페이지 화살표 링크 영역 제거
                 return ret
-            elif checkElementClass(element, "dl", "designlist"):
+            elif check_element_class(element, "dl", "designlist"):
                 # <dl class="designlist">...
                 # skip this element and sub-elements
                 return ret
-            elif checkElementClass(element, "div", "na_ly_cmt"):
+            elif check_element_class(element, "div", "na_ly_cmt"):
                 # <a onclick="openFootnoteLayer('번호'...)의 번호와 비교
                 if hasattr(element, "id"):
-                    if element["id"] != "footnoteLayer" + str(footnoteNum):
+                    if element["id"] != "footnoteLayer" + str(footnote_num):
                         return ret
                     #else:
                         #print str(element)
             else:               
                 sys.stdout.write("<%s>\n" % element.name)
-                openCloseTag = True
+                open_close_tag = True
                 ret = 1
 
         if hasattr(element, 'contents'):
@@ -325,7 +316,7 @@ def traverseElement(element, url, encoding):
                 if e == "\n":
                     continue
                 else:
-                    ret = traverseElement(e, url, encoding)
+                    ret = traverse_element(e, url, encoding)
         elif isinstance(element, Comment):
             return ret
         else:
@@ -333,21 +324,22 @@ def traverseElement(element, url, encoding):
             ret = 1
             return ret
 
-        if openCloseTag == True:
+        if open_close_tag == True:
             sys.stdout.write("</%s>\n" % element.name)
             ret = 1
 
     return ret
 
 
-def printUsage(programName):
-    print("Usage:\t%s\t<file or url> <html file>" % programName)
+def print_usage(program_name):
+    print("_usage:\t%s\t[ <option> ] <file or url> <html file>" % program_name)
     print()
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        printUsage(sys.argv[0])
+    if len(sys.argv) < 1:
+        print_usage()
         sys.exit(-1)
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)
-    extractContent(sys.argv[1:])
+    extract_content(sys.argv[1:])
+
