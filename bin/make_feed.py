@@ -141,7 +141,8 @@ def get_recent_list(list_dir, post_process_script_list):
         uniq_list = []
         for line in in_file:
             line = line.rstrip()
-            uniq_list.append(line)
+            if not line.startswith("# "):
+                uniq_list.append(line)
 
     return uniq_list
 
@@ -168,7 +169,8 @@ def read_old_list_from_file(list_dir, is_completed):
                 with open(list_file, 'r', encoding='utf-8') as in_file:
                     for line in in_file:
                         line = line.rstrip()
-                        result_list.append(line)
+                        if not line.startswith("# "):
+                            result_list.append(line)
     else:
         # 이미 완료된 피드에 대해서는 기존 리스트를 모두 취합함
         for entry in os.scandir(list_dir):
@@ -179,7 +181,8 @@ def read_old_list_from_file(list_dir, is_completed):
             with open(file_path, 'r', encoding='utf-8') as in_file:
                 for line in in_file:
                     line = line.rstrip()
-                    result_list.append(line)
+                    if not line.startswith("# "):
+                        result_list.append(line)
     return list(set(result_list))
 
 
@@ -360,9 +363,12 @@ def determine_cmd_template(options):
     return cmd
             
 
-def diff_old_and_recent( recent_list, old_list, feed_list, rss_file_name, options):
+def diff_old_and_recent(config, recent_list, old_list, feed_list, rss_file_name):
     print("# diff_old_and_recent(len(recent_list)=%d, len(old_list)=%d), len(feed_list)=%d, rss_file_name=%s" % (len(recent_list), len(old_list), len(feed_list), rss_file_name))
 
+    options = get_extraction_configs(config)
+    print("extraction options=", options)
+        
     old_map = {}
     for old in old_list:
         if re.search(r'^\#', old):
@@ -567,14 +573,12 @@ def main():
             old_list = []
             feed_list = recent_list
         
-        options = get_extraction_configs(config)
-        print("extraction options=", options)
-        if diff_old_and_recent(recent_list, old_list, feed_list, rss_file_name, options) == False:
+        if not diff_old_and_recent(config, recent_list, old_list, feed_list, rss_file_name):
             return -1
 
     if not do_collect_by_force:
         # generate RSS feed
-        if generate_rss_feed(config, feed_list, rss_file_name) == False:
+        if not generate_rss_feed(config, feed_list, rss_file_name):
             return -1
     
     # upload RSS feed file
