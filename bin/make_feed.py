@@ -83,7 +83,7 @@ def get_extraction_configs(config):
     render_js = feedmakerutil.get_config_value(extraction_conf, "render_js")
     render_js = bool("true" == render_js)
     force_sleep_between_articles = feedmakerutil.get_config_value(extraction_conf, "force_sleep_between_articles")
-    force_sleep_between_articles = bool("true" == force_sleep_between_articles)
+    force_sleep_between_articles = bool(force_sleep_between_articles and "true" == force_sleep_between_articles)
     bypass_element_extraction = feedmakerutil.get_config_value(extraction_conf, "bypass_element_extraction")
     bypass_element_extraction = bool("true" == bypass_element_extraction)
     review_point_threshold = feedmakerutil.get_config_value(extraction_conf, "review_point_threshold")
@@ -298,9 +298,9 @@ def determine_crawler_options(options):
     '''
     
     return option_str
-    
 
-def append_item_to_result(config, feed_list, item, rss_file_name):
+
+def append_item_to_result(feed_list, item, rss_file_name, cmd_template, options):
     fields = item.split('\t')
     review_point = None
     if len(fields) == 2:
@@ -309,28 +309,14 @@ def append_item_to_result(config, feed_list, item, rss_file_name):
         (url, title, review_point) = fields
     new_file_name = get_new_file_name(url)
     size = 0
+    
     if os.path.isfile(new_file_name) and os.stat(new_file_name).st_size >= MIN_CONTENT_LENGTH:
         # 이미 성공적으로 만들어져 있으니까 피드 리스트에 추가
         print("Success: %s: %s --> %s: %d" % (title, url, new_file_name, os.stat(new_file_name).st_size))
         feed_list.append(item)
     else:
         # 파일이 존재하지 않거나 크기가 작으니 다시 생성 시도
-        options = get_extraction_configs(config)
-
-        post_process_cmd = ""
-        for script in options["post_process_script_list"]:
-            post_process_cmd += ' | %s "%s"' % (script, url)
-
-        if options["bypass_element_extraction"]:
-            extraction_cmd = ""
-        else:
-            extraction_cmd = ' | extract.py "%s"' % (url)
-
-        option_str = determine_crawler_options(options)
-            
-        cmd = 'crawler.sh %s "%s" %s %s > "%s"' % (option_str, url, extraction_cmd, post_process_cmd, new_file_name) 
-        print(cmd)
-        result = feedmakerutil.exec_cmd(cmd)
+        result = feedmakerutil.exec_cmd(cmd_template % (url, new_file_name))
         if result == False:
             die("can't extract HTML elements")
         
@@ -353,12 +339,30 @@ def append_item_to_result(config, feed_list, item, rss_file_name):
             print("Success: %s: %s --> %s: %d" % (title, url, new_file_name, size))
             feed_list.append(item)
 
-        if "true" == options["force_sleep_between_articles"]:
+        if options["force_sleep_between_articles"]:
             time.sleep(1)
 
 
-def diff_old_and_recent(config, recent_list, old_list, feed_list, rss_file_name):
+def determine_cmd_template(options):
+    post_process_cmd = ""
+    for script in options["post_process_script_list"]:
+        post_process_cmd += ' | %s "%%s"' % (script)
+
+    if options["bypass_element_extraction"]:
+        extraction_cmd = ""
+    else:
+        extraction_cmd = ' | extract.py "%%s"'
+
+    option_str = determine_crawler_options(options)
+    cmd = 'crawler.sh %s "%%s" %s %s > "%%s"' % (option_str, extraction_cmd, post_process_cmd) 
+    print(cmd)
+
+    return cmd
+            
+
+def diff_old_and_recent( recent_list, old_list, feed_list, rss_file_name, options):
     print("# diff_old_and_recent(len(recent_list)=%d, len(old_list)=%d), len(feed_list)=%d, rss_file_name=%s" % (len(recent_list), len(old_list), len(feed_list), rss_file_name))
+
     old_map = {}
     for old in old_list:
         if re.search(r'^\#', old):
@@ -380,18 +384,21 @@ def diff_old_and_recent(config, recent_list, old_list, feed_list, rss_file_name)
         else:
             print("exists %s" % (recent))
 
+    # determine command
+    cmd_template = determine_cmd_template(options)
+            
     # collect items to be generated as RSS feed
     print("Appending %d new items to the feed list" % (len(result_list)))
     for new_item in reversed(result_list):
         if re.search(r'^\#', new_item):
             continue
-        append_item_to_result(config, feed_list, new_item, rss_file_name)
+        append_item_to_result(feed_list, new_item, rss_file_name, cmd_template, options)
     
     print("Appending %d old items to the feed list" % (len(old_list)))
     for old_item in reversed(old_list):
         if re.search(r'^\#', old_item):
             continue
-        append_item_to_result(config, feed_list, old_item, rss_file_name)
+        append_item_to_result(feed_list, old_item, rss_file_name, cmd_template, options)
 
     if len(feed_list) == 0:
         print("_notice: 새로 추가된 feed가 없으므로 결과 파일을 변경하지 않음")
@@ -492,8 +499,7 @@ def main():
     if config == None:
         die("can't find conf.xml file nor get config element")
     options = get_collection_configs(config)
-    print("ignore_old_list=%r, is_completed=%r, sort_field_pattern=%s, unit_size_per_day=%f" % (options["ignore_old_list"], options["is_completed"], options["sort_field_pattern"], options["unit_size_per_day"] if "unit_size_per_day" in options else -1))
-    print("post_process_script_list=", options["post_process_script_list"])
+    print("collection options=", options)
 
     # -c 옵션이 지정된 경우, 설정의 is_completed 값 무시
     if do_collect_by_force:
@@ -524,7 +530,7 @@ def main():
             if m:
                 sort_field = m.group(1)
             else:
-                warn("can't match the pattern /%s/" % (sort_field_pattern))
+                warn("can't match the pattern /%s/" % (options["sort_field_pattern"]))
             
             if old_item not in feed_item_existence_set:
                 feed_id_sort_field = {}
@@ -561,7 +567,9 @@ def main():
             old_list = []
             feed_list = recent_list
         
-        if diff_old_and_recent(config, recent_list, old_list, feed_list, rss_file_name) == False:
+        options = get_extraction_configs(config)
+        print("extraction options=", options)
+        if diff_old_and_recent(recent_list, old_list, feed_list, rss_file_name, options) == False:
             return -1
 
     if not do_collect_by_force:
