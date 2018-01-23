@@ -168,8 +168,8 @@ def read_file_as_line_list(file):
 
 def read_config():
     import xml.dom.minidom
-    if 'FEED_MAKER_CONF_FILE' in os.environ:
-        config_file = os.environ['FEED_MAKER_CONF_FILE']
+    if "FEED_MAKER_CONF_FILE" in os.environ and os.environ["FEED_MAKER_CONF_FILE"]:
+        config_file = os.environ["FEED_MAKER_CONF_FILE"]
     else:
         config_file = "conf.xml"
     return xml.dom.minidom.parse(config_file)

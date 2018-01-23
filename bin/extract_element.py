@@ -33,10 +33,10 @@ def extract_content(config_item):
         class_str = feedmakerutil.get_config_value(conf_node, "element_class")
         path_str = feedmakerutil.get_config_value(conf_node, "element_path")
         enc = feedmakerutil.get_config_value(conf_node, "encoding")
-        #print "# element_id:", id_str
-        #print "# element_class:", class_str
-        #print "# element_path:", path_str
-        #print "# encoding:", enc
+        #print("# element_id:", id_str)
+        #print("# element_class:", class_str)
+        #print("# element_path:", path_str)
+        #print("# encoding:", enc)
     else:
         return -1
     
