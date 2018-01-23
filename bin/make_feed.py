@@ -564,7 +564,7 @@ def main():
         if diff_old_and_recent(config, recent_list, old_list, feed_list, rss_file_name) == False:
             return -1
 
-    if do_collect_by_force:
+    if not do_collect_by_force:
         # generate RSS feed
         if generate_rss_feed(config, feed_list, rss_file_name) == False:
             return -1
