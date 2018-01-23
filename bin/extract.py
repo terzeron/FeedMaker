@@ -64,7 +64,8 @@ def extract_content(args):
     #html = re.sub(r'/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/', r'', html)
 
     # header
-    print_header()
+    if html:
+        print_header()
     
     # main article sections
     ret = 0
