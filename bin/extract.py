@@ -19,6 +19,12 @@ def print_header():
     print("<meta http-equiv='_content-Type' content='text/html; charset=UTF-8'/>")
     print('<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, minimum-scal#e=0.5, user-scalable=yes" />')
     print("<style>img { max-width: 100%; margin-top: 0px; margin-bottom: 0px; }</style>")
+    print("")
+    print("<body>")
+
+
+def print_trailer():
+    print("</body>")
 
 
 def extract_content(args):
@@ -98,6 +104,9 @@ def extract_content(args):
     if (class_list == None or class_list == []) and (id_list == None or id_list == []) and (path_list == None or path_list == []):
         ret = traverse_element(soup.body, item_url, encoding)
 
+    if html:
+        print_trailer()
+        
     return True
 
 
