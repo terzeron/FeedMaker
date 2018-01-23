@@ -5,7 +5,11 @@ FEED_MAKER_HOME_DEV=/Users/terzeron/workspace/fmd
 
 cd $FEED_MAKER_HOME_DEV
 pwd
+<<<<<<< HEAD
 echo 
+=======
+echo
+>>>>>>> develop
 
 echo "--------------------"
 echo "git checkout master"
@@ -18,7 +22,11 @@ git pull
 git merge develop --no-edit
 git pull
 git push
+<<<<<<< HEAD
 echo 
+=======
+echo
+>>>>>>> develop
 
 echo "--------------------"
 echo "git checkout develop"
