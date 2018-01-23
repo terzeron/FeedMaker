@@ -303,7 +303,7 @@ def determine_crawler_options(options):
     return option_str
 
 
-def append_item_to_result(feed_list, item, rss_file_name, cmd_template, options):
+def append_item_to_result(feed_list, item, rss_file_name, options):
     fields = item.split('\t')
     review_point = None
     if len(fields) == 2:
@@ -319,7 +319,9 @@ def append_item_to_result(feed_list, item, rss_file_name, cmd_template, options)
         feed_list.append(item)
     else:
         # 파일이 존재하지 않거나 크기가 작으니 다시 생성 시도
-        result = feedmakerutil.exec_cmd(cmd_template % (url, new_file_name))
+        cmd = determine_cmd(options, url, new_file_name)
+        print(cmd)
+        result = feedmakerutil.exec_cmd(cmd)
         if result == False:
             die("can't extract HTML elements")
         
@@ -346,19 +348,18 @@ def append_item_to_result(feed_list, item, rss_file_name, cmd_template, options)
             time.sleep(1)
 
 
-def determine_cmd_template(options):
+def determine_cmd(options, url, new_file_name):
     post_process_cmd = ""
     for script in options["post_process_script_list"]:
-        post_process_cmd += ' | %s "%%s"' % (script)
+        post_process_cmd += ' | %s "%s"' % (script, url)
 
     if options["bypass_element_extraction"]:
         extraction_cmd = ""
     else:
-        extraction_cmd = ' | extract.py "%%s"'
+        extraction_cmd = ' | extract.py "%s"' % url
 
     option_str = determine_crawler_options(options)
-    cmd = 'crawler.sh %s "%%s" %s %s > "%%s"' % (option_str, extraction_cmd, post_process_cmd) 
-    print(cmd)
+    cmd = 'crawler.sh %s "%s" %s %s > "%s"' % (option_str, url, extraction_cmd, post_process_cmd, new_file_name) 
 
     return cmd
             
@@ -390,21 +391,18 @@ def diff_old_and_recent(config, recent_list, old_list, feed_list, rss_file_name)
         else:
             print("exists %s" % (recent))
 
-    # determine command
-    cmd_template = determine_cmd_template(options)
-            
     # collect items to be generated as RSS feed
     print("Appending %d new items to the feed list" % (len(result_list)))
     for new_item in reversed(result_list):
         if re.search(r'^\#', new_item):
             continue
-        append_item_to_result(feed_list, new_item, rss_file_name, cmd_template, options)
+        append_item_to_result(feed_list, new_item, rss_file_name, options)
     
     print("Appending %d old items to the feed list" % (len(old_list)))
     for old_item in reversed(old_list):
         if re.search(r'^\#', old_item):
             continue
-        append_item_to_result(feed_list, old_item, rss_file_name, cmd_template, options)
+        append_item_to_result(feed_list, old_item, rss_file_name, options)
 
     if len(feed_list) == 0:
         print("_notice: 새로 추가된 feed가 없으므로 결과 파일을 변경하지 않음")
