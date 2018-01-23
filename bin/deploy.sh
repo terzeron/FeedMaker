@@ -3,6 +3,7 @@
 FEED_MAKER_HOME=/Users/terzeron/workspace/fm
 FEED_MAKER_HOME_DEV=/Users/terzeron/workspace/fmd
 
+echo "--------------------"
 cd $FEED_MAKER_HOME_DEV
 pwd
 echo
@@ -15,8 +16,15 @@ echo
 echo "--------------------"
 echo "git pull"
 git pull
+echo
+
+echo "--------------------"
+echo "git merge develop"
 git merge develop --no-edit
-git pull
+echo
+
+echo "--------------------"
+echo "git push"
 git push
 echo
 
@@ -24,6 +32,7 @@ echo "--------------------"
 echo "git checkout develop"
 git checkout develop
 
+echo "--------------------"
 cd $FEED_MAKER_HOME
 pwd
 echo
