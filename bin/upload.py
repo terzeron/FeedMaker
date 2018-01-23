@@ -32,7 +32,7 @@ def main(rssFile):
 		# 과거 파일이 존재하지 않고 신규 파일만 존재하면 업로드
 		doUpload = True
 	else:
-		err("Error: Upload failed! the same old RSS file")
+		err("Upload failed! the same old RSS file")
 		return False
 		
 	if doUpload == True:
