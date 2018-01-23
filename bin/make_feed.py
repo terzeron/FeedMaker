@@ -49,39 +49,61 @@ def get_collection_configs(config):
     collection_conf = feedmakerutil.get_config_node(config, "collection")
     if collection_conf == None:
         die("can't get collection element")
-    do_ignore_old_list = feedmakerutil.get_config_value(collection_conf, "do_ignore_old_list")
-    do_ignore_old_list = bool("true" == do_ignore_old_list)
+
+    ignore_old_list = feedmakerutil.get_config_value(collection_conf, "ignore_old_list")
+    ignore_old_list = bool("true" == ignore_old_list)
     is_completed = feedmakerutil.get_config_value(collection_conf, "is_completed")
     is_completed = bool("true" == is_completed)
     sort_field_pattern = feedmakerutil.get_config_value(collection_conf, "sort_field_pattern")
     unit_size_per_day = feedmakerutil.get_config_value(collection_conf, "unit_size_per_day")
     unit_size_per_day = float(unit_size_per_day) if unit_size_per_day else None
-    post_Process_script = feedmakerutil.get_config_value(collection_conf, "post_process_script")
-    return (do_ignore_old_list, is_completed, sort_field_pattern, unit_size_per_day, post_Process_script)
+
+    post_process_script_list_conf = feedmakerutil.get_config_node(collection_conf, "post_process_script_list")
+    if post_process_script_list_conf:
+        post_process_script_list = feedmakerutil.get_all_config_values(post_process_script_list_conf, "post_process_script")
+    else:
+        post_process_script_list = []
+
+    options = {
+        "ignore_old_list": ignore_old_list,
+        "is_completed": is_completed,
+        "sort_field_pattern": sort_field_pattern,
+        "unit_size_per_day": unit_size_per_day,
+        "post_process_script_list": post_process_script_list
+    }
+    
+    return options
 
 
 def get_extraction_configs(config):
     extraction_conf = feedmakerutil.get_config_node(config, "extraction")
     if extraction_conf == None:
         die("can't get extraction element")
-    post_Process_script = feedmakerutil.get_config_value(extraction_conf, "post_process_script")
-    post_Process2_script = feedmakerutil.get_config_value(extraction_conf, "post_process2_script")
-    do_render_js = feedmakerutil.get_config_value(extraction_conf, "render_js")
-    do_force_sleep_between_articles = feedmakerutil.get_config_value(extraction_conf, "force_sleep_between_articles")
-    do_bypass_element_extraction = feedmakerutil.get_config_value(extraction_conf, "bypass_element_extraction")
+
+    render_js = feedmakerutil.get_config_value(extraction_conf, "render_js")
+    render_js = bool("true" == render_js)
+    force_sleep_between_articles = feedmakerutil.get_config_value(extraction_conf, "force_sleep_between_articles")
+    force_sleep_between_articles = bool("true" == force_sleep_between_articles)
+    bypass_element_extraction = feedmakerutil.get_config_value(extraction_conf, "bypass_element_extraction")
+    bypass_element_extraction = bool("true" == bypass_element_extraction)
     review_point_threshold = feedmakerutil.get_config_value(extraction_conf, "review_point_threshold")
     user_agent = feedmakerutil.get_config_value(extraction_conf, "user_agent")
     referer = feedmakerutil.get_config_value(extraction_conf, "referer")
 
+    post_process_script_list_conf = feedmakerutil.get_config_node(extraction_conf, "post_process_script_list")
+    if post_process_script_list_conf:
+        post_process_script_list = feedmakerutil.get_all_config_values(post_process_script_list_conf, "post_process_script")
+    else:
+        post_process_script_list = []
+
     options = {
-        "post_process_script": post_Process_script,
-        "post_process2_script": post_Process2_script,
-        "render_js": do_render_js,
-        "force_sleep_between_articles": do_force_sleep_between_articles,
-        "bypass_element_extraction": do_bypass_element_extraction,
+        "render_js": render_js,
+        "force_sleep_between_articles": force_sleep_between_articles,
+        "bypass_element_extraction": bypass_element_extraction,
         "review_point_threshold": review_point_threshold,
         "user_agent": user_agent,
-        "referer": referer
+        "referer": referer,
+        "post_process_script_list": post_process_script_list,
     }
     
     return options
@@ -95,17 +117,21 @@ def get_notification_configs(config):
     return (email, recipient, subject)
 
     
-def get_recent_list(list_dir, post_Process_script):
+def get_recent_list(list_dir, post_process_script_list):
     print("# get_recent_list(%s)" % (list_dir))
 
     date_str = get_date_str()
     new_list_file_name = get_list_file_name(list_dir, date_str)
-    if post_Process_script:
-        post_Process_cmd = '%s "%s"' % (post_Process_script, new_list_file_name)
-    else:
-        post_Process_cmd = 'remove_duplicate_line.py > "%s"' % (new_list_file_name)
+    post_process_cmd = ""
+    for script in post_process_script_list:
+        if post_process_cmd:
+            post_process_cmd += " |"
+        post_process_cmd += ' %s "%s"' % (post_process_script, new_list_file_name)
+    if post_process_cmd:
+        post_process_cmd += " |"
+    post_process_cmd += ' remove_duplicate_line.py > "%s"' % (new_list_file_name)
 
-    cmd = "collect_new_list.py | " + post_Process_cmd
+    cmd = "collect_new_list.py" + post_process_cmd
     print(cmd)
     result = feedmakerutil.exec_cmd(cmd)
     if result == False:
@@ -291,19 +317,18 @@ def append_item_to_result(config, feed_list, item, rss_file_name):
         # 파일이 존재하지 않거나 크기가 작으니 다시 생성 시도
         options = get_extraction_configs(config)
 
-        post_Process_cmd = ""
-        if options["post_process_script"]:
-            post_Process_cmd = '| %s "%s"' % (options["post_process_script"], url)
-            if options["post_process2_script"]:
-                post_Process_cmd += ' | %s "%s"' % (options["post_process2_script"], url)
+        post_process_cmd = ""
+        for script in options["post_process_script_list"]:
+            post_process_cmd += ' | %s "%s"' % (script, url)
 
-        extraction_cmd = '| extract.py "%s"' % (url)
-        if "true" == options["bypass_element_extraction"]:
+        if options["bypass_element_extraction"]:
             extraction_cmd = ""
+        else:
+            extraction_cmd = ' | extract.py "%s"' % (url)
 
         option_str = determine_crawler_options(options)
             
-        cmd = 'crawler.sh %s "%s" %s %s > "%s"' % (option_str, url, extraction_cmd, post_Process_cmd, new_file_name) 
+        cmd = 'crawler.sh %s "%s" %s %s > "%s"' % (option_str, url, extraction_cmd, post_process_cmd, new_file_name) 
         print(cmd)
         result = feedmakerutil.exec_cmd(cmd)
         if result == False:
@@ -466,11 +491,12 @@ def main():
     config = feedmakerutil.read_config()
     if config == None:
         die("can't find conf.xml file nor get config element")
-    (do_ignore_old_list, is_completed, sort_field_pattern, unit_size_per_day, post_Process_script) = get_collection_configs(config)
-    print("do_ignore_old_list=%r, is_completed=%r, sort_field_pattern=%s, unit_size_per_day=%f, post_Process_script=%s" % (do_ignore_old_list, is_completed, sort_field_pattern, unit_size_per_day if unit_size_per_day else -1, post_Process_script))
-    
+    options = get_collection_configs(config)
+    print("ignore_old_list=%r, is_completed=%r, sort_field_pattern=%s, unit_size_per_day=%f" % (options["ignore_old_list"], options["is_completed"], options["sort_field_pattern"], options["unit_size_per_day"] if "unit_size_per_day" in options else -1))
+    print("post_process_script_list=", options["post_process_script_list"])
+
     # -c 옵션이 지정된 경우, 설정의 is_completed 값 무시
-    if do_collect_by_force == True:
+    if do_collect_by_force:
         is_completed = False
 
     list_dir = "newlist"
@@ -479,13 +505,13 @@ def main():
 
     # 과거 피드항목 리스트를 가져옴
     feed_list = []
-    old_list = read_old_list_from_file(list_dir, is_completed)
+    old_list = read_old_list_from_file(list_dir, options["is_completed"])
     if not old_list:
         warn("can't get old list!")
 
     # 완결여부 설정값 판단 
     recent_list = []
-    if is_completed == True:
+    if options["is_completed"]:
         # 완결된 피드는 적재된 리스트에서 일부 피드항목을 꺼내옴
 
         # 오름차순 정렬
@@ -526,19 +552,19 @@ def main():
             write_next_start_idx(idx_file, start_idx + increment_size)
     else:
         # 피딩 중인 피드는 최신 피드항목을 받아옴
-        recent_list = get_recent_list(list_dir, post_Process_script)
+        recent_list = get_recent_list(list_dir, options["post_process_script_list"])
         if not recent_list:
             die("can't get recent list!")
         
         # 과거 피드항목 리스트와 최근 피드항목 리스트를 비교함
-        if do_ignore_old_list:
+        if options["ignore_old_list"]:
             old_list = []
             feed_list = recent_list
         
         if diff_old_and_recent(config, recent_list, old_list, feed_list, rss_file_name) == False:
             return -1
 
-    if do_collect_by_force == False:
+    if do_collect_by_force:
         # generate RSS feed
         if generate_rss_feed(config, feed_list, rss_file_name) == False:
             return -1
