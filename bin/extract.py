@@ -281,7 +281,7 @@ def traverse_element(element, url, encoding):
                     article_num = int(match[1])
                     page_num = int(match[2])
                     url = "http://navercast.naver.com/ncc_request.nhn?url=http://data.navercast.naver.com/literature_module/%d/literature_%d_%d.html" % (leaf_id, article_num, page_num)
-                    cmd = "wget.sh '%s' | extract_literature.py" % (url)
+                    cmd = "crawler.sh '%s' | extract_literature.py" % (url)
                     #print(cmd)
                     result = feedmakerutil.exec_cmd(cmd)
                     if result:
