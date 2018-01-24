@@ -52,7 +52,7 @@ url="'$1'"
 if [ "$render_js" == true ]; then
 	cmd="phantomjs $FEED_MAKER_HOME/bin/render_js.js $url"
 else
-	cmd="curl --silent $header_opt $timeout_opt $ua_opt $cert_opt $cookie_opt $referer_opt $url"
+	cmd="curl --silent --location $header_opt $timeout_opt $ua_opt $cert_opt $cookie_opt $referer_opt $url"
 fi
 
 if [ "${spider_opt}" != "" ]; then
