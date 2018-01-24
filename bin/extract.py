@@ -20,11 +20,10 @@ def print_header():
     print('<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, minimum-scal#e=0.5, user-scalable=yes" />')
     print("<style>img { max-width: 100%; margin-top: 0px; margin-bottom: 0px; }</style>")
     print("")
-    print("<body>")
 
 
 def print_trailer():
-    print("</body>")
+    None
 
 
 def extract_content(args):
