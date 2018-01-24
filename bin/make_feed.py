@@ -46,6 +46,7 @@ def get_new_file_name(url):
 
 
 def get_collection_configs(config):
+    print("# get_collection_configs()")
     collection_conf = feedmakerutil.get_config_node(config, "collection")
     if collection_conf == None:
         die("can't get collection element")
@@ -76,6 +77,7 @@ def get_collection_configs(config):
 
 
 def get_extraction_configs(config):
+    print("# get_extraciton_configs()")
     extraction_conf = feedmakerutil.get_config_node(config, "extraction")
     if extraction_conf == None:
         die("can't get extraction element")
@@ -110,6 +112,7 @@ def get_extraction_configs(config):
 
 
 def get_notification_configs(config):
+    print("# get_notification_configs()")
     noti_conf = feedmakerutil.get_config_node(config, "notification")
     email = feedmakerutil.get_config_node(noti_conf, "email")
     recipient = feedmakerutil.get_config_value(email, "recipient")
@@ -186,7 +189,12 @@ def read_old_list_from_file(list_dir, is_completed):
     return list(set(result_list))
 
 
-def get_rss_config_values(rss_config):
+def get_rss_configs(config):
+    print("# get_rss_configs()")
+    rss_config = feedmakerutil.get_config_node(config, "rss")
+    if rss_config == None:
+        die("can't get rss element")
+    
     rss_title = feedmakerutil.get_config_value(rss_config, "title")
     rss_description = feedmakerutil.get_config_value(rss_config, "description")
     rss_generator = feedmakerutil.get_config_value(rss_config, "generator")
@@ -194,17 +202,23 @@ def get_rss_config_values(rss_config):
     rss_link = feedmakerutil.get_config_value(rss_config, "link")
     rss_language = feedmakerutil.get_config_value(rss_config, "language")
     rss_no_item_desc = feedmakerutil.get_config_value(rss_config, "no_item_desc")
-    return (rss_title, rss_description, rss_generator, rss_copyright, rss_link, rss_language, rss_no_item_desc)
+    options = {
+        "rss_title": rss_title,
+        "rss_description": rss_description,
+        "rss_generator": rss_generator,
+        "rss_copyright": rss_copyright,
+        "rss_link": rss_link,
+        "rss_language": rss_language,
+        "rss_no_item_desc": rss_no_item_desc
+    }
+    return options
     
 
 def generate_rss_feed(config, feed_list, rss_file_name):
     print("# generate_rss_feed(%s)" % (rss_file_name))
 
-    rss_config = feedmakerutil.get_config_node(config, "rss")
-    if rss_config == None:
-        die("can't get rss element")
-    
-    (rss_title, rss_description, rss_generator, rss_copyright, rss_link, rss_language, rss_no_item_desc) = get_rss_config_values(rss_config)
+    options = get_rss_configs(config)
+    print("rss options=", options)
 
     last_build_date_str = get_rss_date_str()
     date_str = get_date_str()
@@ -237,9 +251,9 @@ def generate_rss_feed(config, feed_list, rss_file_name):
             )
 
     rss = PyRSS2Gen.RSS2(
-        title=rss_title,
-        link=rss_link,
-        description=rss_description,
+        title=options["rss_title"],
+        link=options["rss_link"],
+        description=options["rss_description"],
         lastBuildDate=last_build_date_str,
         items=rss_items
     )
@@ -283,6 +297,8 @@ def generate_rss_feed(config, feed_list, rss_file_name):
 
 
 def determine_crawler_options(options):
+    print("# determine_crawler_options()")
+    
     option_str = ""
     if "true" == options["render_js"]:
         option_str += " --render-js"
@@ -507,7 +523,7 @@ def main():
 
     # -c 옵션이 지정된 경우, 설정의 is_completed 값 무시
     if do_collect_by_force:
-        is_completed = False
+        options["is_completed"] = False
 
     list_dir = "newlist"
     feedmakerutil.make_path(list_dir)
