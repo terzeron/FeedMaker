@@ -59,11 +59,14 @@ def get_collection_configs(config):
     unit_size_per_day = feedmakerutil.get_config_value(collection_conf, "unit_size_per_day")
     unit_size_per_day = float(unit_size_per_day) if unit_size_per_day else None
 
+    post_process_script_list = []
     post_process_script_list_conf = feedmakerutil.get_config_node(collection_conf, "post_process_script_list")
     if post_process_script_list_conf:
         post_process_script_list = feedmakerutil.get_all_config_values(post_process_script_list_conf, "post_process_script")
     else:
-        post_process_script_list = []
+        post_process_script = feedmakerutil.get_config_value(collection_conf, "post_process_script")
+        if post_process_script:
+            post_process_script_list.append(post_process_script)
 
     options = {
         "ignore_old_list": ignore_old_list,
@@ -92,11 +95,14 @@ def get_extraction_configs(config):
     user_agent = feedmakerutil.get_config_value(extraction_conf, "user_agent")
     referer = feedmakerutil.get_config_value(extraction_conf, "referer")
 
+    post_process_script_list = []
     post_process_script_list_conf = feedmakerutil.get_config_node(extraction_conf, "post_process_script_list")
     if post_process_script_list_conf:
         post_process_script_list = feedmakerutil.get_all_config_values(post_process_script_list_conf, "post_process_script")
     else:
-        post_process_script_list = []
+        post_process_script = feedmakerutil.get_config_value(extraction_conf, "post_process_script")
+        if post_process_script:
+            post_process_script_list.append(post_process_script)
 
     options = {
         "render_js": render_js,
