@@ -42,7 +42,7 @@ echo "===== check the incremental feeding ====="
 #find . -name conf.xml -exec grep -l "<is_completed>true" "{}" \; 
 
 echo "--- start_idx vs # of items ---"
-for f in $(find . -name conf.xml -exec grep -l "<is_completed>true" "{}" \; | xargs -L1 dirname | grep -v /_); do 
+for f in $(find . -name conf.xml -exec grep -l "<is_completed>true" "{}" \; | xargs -I % dirname % | grep -v /_); do 
 	if [ -d "$f" ]; then
 		(
 			cd $f; idx=$(cut -f1 start_idx.txt); 
