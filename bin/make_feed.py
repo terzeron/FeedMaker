@@ -349,22 +349,20 @@ def append_item_to_result(feed_list, item, rss_file_name, options):
         
         md5_name = feedmakerutil.get_short_md5_name(url)
         size = os.stat(new_file_name).st_size
-        if size > 0:
+        if size > len(feedmakerutil.header_str) + 1:
             cmd = 'echo "<img src=\'http://terzeron.net/img/1x1.jpg?feed=%s&item=%s\'/>" >> "%s"' % (rss_file_name, md5_name, new_file_name)
             print(cmd)
             result = feedmakerutil.exec_cmd(cmd)
             if result == False:
                 die("can't append page view logging tag")
-        
-        size = os.stat(new_file_name).st_size
-        if size < MIN_CONTENT_LENGTH:
-            # 피드 리스트에서 제외
-            warn("%s: %s --> %s: %d (< %d byte)" % (title, url, new_file_name, size, MIN_CONTENT_LENGTH))
-            return 0
-        else:
+
             # 피드 리스트에 추가
             print("Success: %s: %s --> %s: %d" % (title, url, new_file_name, size))
             feed_list.append(item)
+        else:
+            # 피드 리스트에서 제외
+            warn("%s: %s --> %s: %d (< %d byte of header)" % (title, url, new_file_name, size, len(feedmakerutil.header_str)))
+            return 0
 
         if options["force_sleep_between_articles"]:
             time.sleep(1)
