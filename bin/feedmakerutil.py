@@ -89,11 +89,11 @@ def get_node_with_path(node, path_str):
         nodes = node.find_all(attrs={"id":nodeId})
         #print "nodes=", nodes
         if nodes == None or nodes == []:
-            print("error, no id matched")
-            sys.exit(-1)
+            #print("error, no id matched")
+            return None
         if len(nodes) > 1:
-            print("error, two or more id matched")
-            sys.exit(-1)
+            #print("error, two or more id matched")
+            return None
         #print "found! node=%s" % (nodes[0].name)
         node_list.append(nodes[0])
         result_node_list = get_node_with_path(nodes[0], next_path_str)
