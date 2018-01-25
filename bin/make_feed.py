@@ -306,7 +306,7 @@ def determine_crawler_options(options):
     print("# determine_crawler_options()")
     
     option_str = ""
-    if "true" == options["render_js"]:
+    if options["render_js"]:
         option_str += " --render-js"
     if options["user_agent"]:
         option_str += " --ua '%s'" % (options["user_agent"])
