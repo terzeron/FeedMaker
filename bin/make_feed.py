@@ -13,7 +13,6 @@ import PyRSS2Gen
 
 
 SECONDS_PER_DAY = 60 * 60 * 24
-MIN_CONTENT_LENGTH = 64
 MAX_CONTENT_LENGTH = 64 * 1024
 MAX_NUM_DAYS = 7
 
@@ -333,11 +332,14 @@ def append_item_to_result(feed_list, item, rss_file_name, options):
     elif len(fields) == 3:
         (url, title, review_point) = fields
     new_file_name = get_new_file_name(url)
-    size = 0
-    
-    if os.path.isfile(new_file_name) and os.stat(new_file_name).st_size >= MIN_CONTENT_LENGTH:
+    if os.path.isfile(new_file_name):
+        size = os.stat(new_file_name).st_size
+    else:
+        size = 0
+
+    if os.path.isfile(new_file_name) and size > len(feedmakerutil.header_str) + 1:
         # 이미 성공적으로 만들어져 있으니까 피드 리스트에 추가
-        print("Success: %s: %s --> %s: %d" % (title, url, new_file_name, os.stat(new_file_name).st_size))
+        print("Success: %s: %s --> %s: %d" % (title, url, new_file_name, size))
         feed_list.append(item)
     else:
         # 파일이 존재하지 않거나 크기가 작으니 다시 생성 시도
@@ -348,7 +350,6 @@ def append_item_to_result(feed_list, item, rss_file_name, options):
             die("can't extract HTML elements")
         
         md5_name = feedmakerutil.get_short_md5_name(url)
-        size = os.stat(new_file_name).st_size
         if size > len(feedmakerutil.header_str) + 1:
             cmd = 'echo "<img src=\'http://terzeron.net/img/1x1.jpg?feed=%s&item=%s\'/>" >> "%s"' % (rss_file_name, md5_name, new_file_name)
             print(cmd)
