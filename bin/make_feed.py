@@ -348,7 +348,11 @@ def append_item_to_result(feed_list, item, rss_file_name, options):
         result = feedmakerutil.exec_cmd(cmd)
         if result == False:
             die("can't extract HTML elements")
-        
+
+        if os.path.isfile(new_file_name):
+            size = os.stat(new_file_name).st_size
+        else:
+            size = 0
         md5_name = feedmakerutil.get_short_md5_name(url)
         if size > len(feedmakerutil.header_str) + 1:
             cmd = 'echo "<img src=\'http://terzeron.net/img/1x1.jpg?feed=%s&item=%s\'/>" >> "%s"' % (rss_file_name, md5_name, new_file_name)
