@@ -7,50 +7,50 @@ from feedmakerutil import debug_print
 import feedmakerutil
 
 
-def get_cache_file_name(pathPrefix, imgUrl, imgExt, postfix=None, index=None):
-    postfixStr = ""; 
+def get_cache_file_name(path_prefix, img_url, img_ext, postfix=None, index=None):
+    postfix_str = ""; 
     if postfix:
-        postfixStr = "_" + postfix
+        postfix_str = "_" + postfix
     
-    indexStr = ""
+    index_str = ""
     if index:
-        indexStr = "." + index
+        index_str = "." + index
                          
-    if re.search(r'^https?://', imgUrl) and imgExt:
-        return pathPrefix + "/" + feedmakerutil.get_short_md5_name(imgUrl) + postfixStr + indexStr + "." + imgExt
+    if re.search(r'^https?://', img_url) and img_ext:
+        return path_prefix + "/" + feedmakerutil.get_short_md5_name(img_url) + postfix_str + index_str + "." + img_ext
      
-    return pathPrefix + "/" + imgUrl
+    return path_prefix + "/" + img_url
 
 
-def downloadImage(pathPrefix, imgUrl, imgExt, pageUrl):
-    cacheFile = get_cache_file_name(pathPrefix, imgUrl, imgExt)
-    if os.path.isfile(cacheFile) and os.stat(cacheFile).st_size > 0:
+def download_image(path_prefix, img_url, img_ext, page_url):
+    cache_file = get_cache_file_name(path_prefix, img_url, img_ext)
+    if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
         return True
-    cmd = 'crawler.sh --download "%s" --referer "%s" "%s"' % (cacheFile, pageUrl, imgUrl)
+    cmd = 'crawler.sh --download "%s" --referer "%s" "%s"' % (cache_file, page_url, img_url)
     debug_print("<!-- %s -->" % (cmd))
     result = feedmakerutil.exec_cmd(cmd)
     debug_print("<!-- %s -->" % (result))
-    if os.path.isfile(cacheFile) and os.stat(cacheFile).st_size > 0:
-        return cacheFile
+    if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
+        return cache_file
     return False
 
 
 def main():
     cmd = "basename " + os.getcwd()
     feedName = feedmakerutil.exec_cmd(cmd).rstrip()
-    imgUrlPrefix = "http://terzeron.net/xml/img/" + feedName
-    pathPrefix = os.environ["FEED_MAKER_WWW_FEEDS"] + "/img/" + feedName
+    img_url_prefix = "http://terzeron.net/xml/img/" + feedName
+    path_prefix = os.environ["FEED_MAKER_WWW_FEEDS"] + "/img/" + feedName
 
-    imgPrefix = ""
+    img_prefix = ""
     img_index = -1
-    imgExt = "jpg"
+    img_ext = "jpg"
     num_units = 25
 
-    url = sys.argv[1]
+    _url = sys.argv[1]
     cmd = ""
     result = ""
 
-    feedmakerutil.make_path(pathPrefix)
+    feedmakerutil.make_path(path_prefix)
 
     lineList = feedmakerutil.read_stdin_as_line_list()
     for line in lineList:
@@ -61,7 +61,7 @@ def main():
         \s*
         src=
         (["\'])
-        (?P<imgUrl>[^"\']+)
+        (?P<img_url>[^"\']+)
         (["\'])
         (\s*width=["\']\d+%?["\'])?
         /?>
@@ -69,7 +69,7 @@ def main():
         ''', line, re.VERBOSE)
         if m:
             preText = m.group("preText")
-            imgUrl = m.group("imgUrl")
+            img_url = m.group("img_url")
             postText = m.group("postText")
             
             m = re.search(r'^\s*$', preText)
@@ -77,13 +77,13 @@ def main():
                 print(preText)
 
             # download
-            cacheFile = downloadImage(pathPrefix, imgUrl, imgExt, url)
-            if cacheFile:
-                cacheUrl = feedmakerutil.get_cache_url(imgUrlPrefix, imgUrl, imgExt)
-                debug_print("<!-- %s -> %s / %s -->" % (imgUrl, cacheFile, cacheUrl))
-                print("<img src='%s'/>" % (cacheUrl))
+            cache_file = download_image(path_prefix, img_url, img_ext, _url)
+            if cache_file:
+                cache_url = feedmakerutil.get_cache_url(img_url_prefix, img_url, img_ext)
+                debug_print("<!-- %s -> %s / %s -->" % (img_url, cache_file, cache_url))
+                print("<img src='%s'/>" % (cache_url))
             else:
-                print("<img src='%s' alt='not exist or size 0'/>" % (imgUrl))
+                print("<img src='%s' alt='not exist or size 0'/>" % (img_url))
 
             m = re.search(r'^\s*$', postText)
             if not m:
