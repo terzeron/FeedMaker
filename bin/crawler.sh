@@ -12,7 +12,8 @@ if [ $# -lt 1 ]; then
 fi
 
 default_spider_opt=""
-default_ua_opt="--user-agent 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.37 (KHTML, like Gecko) Chrome/31.0.1650.58 Safari/537.37'"
+#default_ua_opt="--user-agent 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.37 (KHTML, like Gecko) Chrome/31.0.1650.58 Safari/537.37'"
+default_ua_opt=""
 default_referer_opt=""
 default_render_js=false
 default_uncompress_gzip=false
