@@ -26,7 +26,7 @@ render_js=$default_render_js
 uncompress_gzip=$default_uncompress_gzip
 header_opt=$default_header_opt
 
-encoding=$(python -c 'import feedmakerutil as fmu; encoding = fmu.get_config_value(fmu.get_config_node(fmu.read_config(), "collection"), "encoding"); print(encoding if encoding else "utf-8")')
+encoding=$(python -c 'import feedmakerutil as fmu; encoding = fmu.get_config_value(fmu.get_config_node(fmu.read_config(), "collection"), "encoding"); print(encoding if encoding else "utf8")')
 cookie_opt="--cookie-jar cookie.txt"
 timeout_opt="--connect-timeout 5"
 cert_opt="--insecure"
@@ -51,7 +51,7 @@ done
 url="'$1'"
 
 if [ "$render_js" == true ]; then
-	cmd="phantomjs $FEED_MAKER_HOME/bin/render_js.js $url"
+	cmd="phantomjs $FEED_MAKER_HOME/bin/render_js.js $url | grep -v '^Unable to access the page'"
 else
 	cmd="curl --silent --location $header_opt $timeout_opt $ua_opt $cert_opt $cookie_opt $referer_opt $url"
 fi
