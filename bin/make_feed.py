@@ -7,7 +7,7 @@ import time
 import datetime
 import getopt
 import subprocess
-from feedmakerutil import warn, die
+from feedmakerutil import warn, err, die
 import feedmakerutil
 import PyRSS2Gen
 
@@ -128,6 +128,7 @@ def get_notification_configs(config):
 def get_recent_list(list_dir, post_process_script_list):
     print("# get_recent_list(%s)" % (list_dir))
 
+    error_log_file_name = "collector.error.log"
     date_str = get_date_str()
     new_list_file_name = get_list_file_name(list_dir, date_str)
     post_process_cmd = ""
@@ -137,12 +138,13 @@ def get_recent_list(list_dir, post_process_script_list):
         post_process_cmd += ' %s "%s"' % (post_process_script, new_list_file_name)
     if post_process_cmd:
         post_process_cmd += " |"
-    post_process_cmd += ' remove_duplicate_line.py > "%s"' % (new_list_file_name)
+    post_process_cmd += ' remove_duplicate_line.py > "%s" 2> "%s"' % (new_list_file_name, error_log_file_name)
 
     cmd = "collect_new_list.py" + post_process_cmd
     print(cmd)
     result = feedmakerutil.exec_cmd(cmd)
-    if result == False:
+    if not result:
+        sys.stderr.write(feedmakerutil.exec_cmd("cat %s" % (error_log_file_name)))
         die("can't collect new list from the page")
 
     with open(new_list_file_name, 'r', encoding='utf-8') as in_file:

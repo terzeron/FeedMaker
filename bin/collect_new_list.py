@@ -28,7 +28,23 @@ def extractUrls(url, options):
     print("# %s" % (cmd))
     result = feedmakerutil.exec_cmd(cmd)
     if not result:
-        die("can't execute '%s'" % (cmd))
+        sys.stderr.write(cmd . "\n")
+        sys.stderr.write(result)
+        cmd = "crawler.sh %s '%s' | extract_element.py collection" % (option_str, url)
+        print("# %s" % (cmd))
+        result = feedmakerutil.exec_cmd(cmd)
+        if not result:
+            sys.stderr.write(cmd . "\n")
+            sys.stderr.write(result)
+            cmd = "crawler.sh %s '%s'" % (option_str, url)
+            print("# %s" % (cmd))
+            result = feedmakerutil.exec_cmd(cmd)
+            if not result:
+                sys.stderr.write(cmd . "\n")
+                sys.stderr.write(result)
+                die("can't get result from crawler script")
+            die("can't get result from extract script")
+        die("can't get result from capture script")
 
     # check the result
     resultList = []
