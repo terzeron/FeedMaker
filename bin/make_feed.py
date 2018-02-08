@@ -128,25 +128,29 @@ def get_notification_configs(config):
 def get_recent_list(list_dir, post_process_script_list):
     print("# get_recent_list(%s)" % (list_dir))
 
-    error_log_file_name = "collector.error.log"
     date_str = get_date_str()
     new_list_file_name = get_list_file_name(list_dir, date_str)
-    post_process_cmd = ""
+    cmd = "collect_new_list.py"
     for script in post_process_script_list:
-        if post_process_cmd:
-            post_process_cmd += " |"
-        post_process_cmd += ' %s "%s"' % (post_process_script, new_list_file_name)
-    if post_process_cmd:
-        post_process_cmd += " |"
-    post_process_cmd += ' remove_duplicate_line.py > "%s" 2> "%s"' % (new_list_file_name, error_log_file_name)
+        if cmd:
+            cmd += " |"
+        cmd += ' %s "%s"' % (post_process_script, new_list_file_name)
+    if cmd:
+        cmd += " |"
+    cmd += ' remove_duplicate_line.py'
 
-    cmd = "collect_new_list.py" + post_process_cmd
     print(cmd)
     result = feedmakerutil.exec_cmd(cmd)
     if not result:
-        sys.stderr.write(feedmakerutil.exec_cmd("cat %s" % (error_log_file_name)))
+        error_log_file_name = "collector.error.log"
+        with open(error_log_file_name, 'r', encoding='utf-8') as error_file:
+            for line in error_file:
+                sys.stderr.write(line)
         die("can't collect new list from the page")
 
+    with open(new_list_file_name, 'w', encoding='utf-8') as out_file:
+        out_file.write(result)
+        
     with open(new_list_file_name, 'r', encoding='utf-8') as in_file:
         uniq_list = []
         for line in in_file:

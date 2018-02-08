@@ -7,6 +7,9 @@ import feedmakerutil
 from feedmakerutil import die, err, warn
 
 
+error_log_file_name = "collector.error.log"
+
+
 def determine_crawler_options(options):
     option_str = ""
 
@@ -27,24 +30,26 @@ def extractUrls(url, options):
     cmd = "crawler.sh %s '%s' | extract_element.py collection | %s" % (option_str, url, options["item_capture_script"])
     print("# %s" % (cmd))
     result = feedmakerutil.exec_cmd(cmd)
-    if not result:
-        sys.stderr.write(cmd + "\n")
-        sys.stderr.write(result)
-        cmd = "crawler.sh %s '%s' | extract_element.py collection" % (option_str, url)
-        print("# %s" % (cmd))
-        result = feedmakerutil.exec_cmd(cmd)
+    with open(error_log_file_name, 'w', encoding='utf-8') as error_file:
         if not result:
-            sys.stderr.write(cmd + "\n")
-            sys.stderr.write(result)
-            cmd = "crawler.sh %s '%s'" % (option_str, url)
-            print("# %s" % (cmd))
+            error_file.write(cmd + "\n" + str(result) + "\n")
+            sys.stderr.write(cmd + "\n" + str(result) + "\n")
+            cmd = "crawler.sh %s '%s' | extract_element.py collection" % (option_str, url)
             result = feedmakerutil.exec_cmd(cmd)
-            if not result:
-                sys.stderr.write(cmd + "\n")
-                sys.stderr.write(result)
-                die("can't get result from crawler script")
-            die("can't get result from extract script")
-        die("can't get result from capture script")
+            if not result: 
+                error_file.write(cmd + "\n" + str(result) + "\n")
+                sys.stderr.write(cmd + "\n" + str(result) + "\n")
+                cmd = "crawler.sh %s '%s'" % (option_str, url)
+                result = feedmakerutil.exec_cmd(cmd)
+                if not result:
+                    error_file.write(cmd + "\n" + str(result) + "\n")
+                    sys.stderr.write(cmd + "\n" + str(result) + "\n")
+                    error_file.write("can't get result from crawler script\n")
+                    die("can't get result from crawler script")
+                error_file.write("can't get result from extract script\n")
+                die("can't get result from extract script")
+            error_file.write("can't get result from capture script\n")
+            die("can't get result from capture script")
 
     # check the result
     resultList = []
@@ -91,12 +96,12 @@ def main():
 
     itemCaptureScript = feedmakerutil.get_config_value(collectionConf, "item_capture_script")
     if not itemCaptureScript or itemCaptureScript == "":
-        itemCaptureScript = "./capture_item_link_title.pl"
-        if not os.path.isfile(itemCaptureScript):
-            itemCaptureScript = "./capture_item_link_title.py"
+        itemCaptureScript = "./capture_item_link_title.py"
     print("# item_capture_script: %s" % (itemCaptureScript))
     itemCaptureScriptProgram = itemCaptureScript.split(" ")[0]
     if not itemCaptureScriptProgram or not os.path.isfile(itemCaptureScriptProgram) or not os.access(itemCaptureScriptProgram, os.X_OK):
+        with open(error_log_file_name, 'w', encoding='utf-8') as error_file:
+            error_file.write("can't execute '%s'\n" % (itemCaptureScriptProgram))
         die("can't execute '%s'" % (itemCaptureScriptProgram))
 
     userAgent = feedmakerutil.get_config_value(collectionConf, "user_agent")
