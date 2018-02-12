@@ -109,5 +109,24 @@ class UtilTest(unittest.TestCase):
         self.assertEqual(feedmakerutil.get_short_md5_name("http://terzeron.net"), "e0ad299")
 
 
+class ExecCmdTest(unittest.TestCase):
+    def test_exec_cmd(self):
+        valid_cmd = "ls feedmakerutil.t"
+        (result, error) = feedmakerutil.exec_cmd(valid_cmd)
+        self.assertTrue(result)
+        self.assertEqual(error, "")
+        self.assertTrue("feedmakerutil.t" in result)
+        
+        invalid_cmd = "ls non_existent_file"
+        (result, error) = feedmakerutil.exec_cmd(invalid_cmd)
+        self.assertFalse(result)
+        self.assertTrue("ls: non_existent_file: No such file or directory" in error)
+
+        invalid_cmd = "lslslsls non_existent_file"
+        (result, error) = feedmakerutil.exec_cmd(invalid_cmd)
+        self.assertFalse(result)
+        self.assertTrue("/bin/sh: lslslsls: command not found" in error)
+
+
 if __name__ == "__main__":
     unittest.main()

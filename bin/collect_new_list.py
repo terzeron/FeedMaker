@@ -23,24 +23,24 @@ def determine_crawler_options(options):
     return option_str
 
 
-def extractUrls(url, options):
-    #print("# extractUrls(%s, %s, %s, %s) % (url, options["item_capture_script", options["user_agent"], options["referer"]))
+def extract_urls(url, options):
+    #print("# extract_urls(%s, %s, %s, %s) % (url, options["item_capture_script", options["user_agent"], options["referer"]))
 
     option_str = determine_crawler_options(options)
     cmd = "crawler.sh %s '%s' | extract_element.py collection | %s" % (option_str, url, options["item_capture_script"])
     print("# %s" % (cmd))
-    result = feedmakerutil.exec_cmd(cmd)
+    (result, error) = feedmakerutil.exec_cmd(cmd)
     with open(error_log_file_name, 'w', encoding='utf-8') as error_file:
         if not result:
             error_file.write(cmd + "\n" + str(result) + "\n")
             sys.stderr.write(cmd + "\n" + str(result) + "\n")
             cmd = "crawler.sh %s '%s' | extract_element.py collection" % (option_str, url)
-            result = feedmakerutil.exec_cmd(cmd)
+            (result, error) = feedmakerutil.exec_cmd(cmd)
             if not result: 
                 error_file.write(cmd + "\n" + str(result) + "\n")
                 sys.stderr.write(cmd + "\n" + str(result) + "\n")
                 cmd = "crawler.sh %s '%s'" % (option_str, url)
-                result = feedmakerutil.exec_cmd(cmd)
+                (result, error) = feedmakerutil.exec_cmd(cmd)
                 if not result:
                     error_file.write(cmd + "\n" + str(result) + "\n")
                     sys.stderr.write(cmd + "\n" + str(result) + "\n")
@@ -52,7 +52,7 @@ def extractUrls(url, options):
             die("can't get result from capture script")
 
     # check the result
-    resultList = []
+    result_list = []
     for line in result.rstrip().split("\n"):
         line = line.rstrip()
         if re.search(r'^\#', line) or re.search(r'^\s*$', line):
@@ -62,63 +62,63 @@ def extractUrls(url, options):
         title = " ".join(items[1:])
         if link == None or link == "" or title == None or title == "":
             die("can't get the link and title from '%s'," % (link))
-        resultList.append((link, title))
-    return resultList
+        result_list.append((link, title))
+    return result_list
 
 
-def composeUrlList(listUrlList, options):
-    #print("# composeUrlList(%s, %s, %s, %s)" % (listUrlList, options["render_js"], options["item_capture_script"], options["referer"]))
-    resultList = []
+def compose_url_list(list_url_list, options):
+    #print("# compose_url_list(%s, %s, %s, %s)" % (list_url_list, options["render_js"], options["item_capture_script"], options["referer"]))
+    result_list = []
     
-    listUrls = feedmakerutil.get_all_config_values(listUrlList, "list_url")
-    for listUrl in listUrls:
-        urlList = extractUrls(listUrl, options)
-        resultList.extend(urlList)
-    return resultList
+    list_urls = feedmakerutil.get_all_config_values(list_url_list, "list_url")
+    for list_url in list_urls:
+        url_list = extract_urls(list_url, options)
+        result_list.extend(url_list)
+    return result_list
 
 
 def main():
-    totalList = []
+    total_list = []
     options = {}
 
     # configuration
     config = feedmakerutil.read_config()
     if config == None:
         die("can't find conf.xml nor get config element")
-    collectionConf = feedmakerutil.get_config_node(config, "collection")
+    collection_conf = feedmakerutil.get_config_node(config, "collection")
 
-    listUrlList = feedmakerutil.get_config_node(collectionConf, "list_url_list")
-    if listUrlList:
-        print("# list_url_list: ", listUrlList)
+    list_url_list = feedmakerutil.get_config_node(collection_conf, "list_url_list")
+    if list_url_list:
+        print("# list_url_list: ", list_url_list)
 
-    doRenderJs = feedmakerutil.get_config_value(collectionConf, "render_js")
-    print("# render_js: ", doRenderJs)
+    do_render_js = feedmakerutil.get_config_value(collection_conf, "render_js")
+    print("# render_js: ", do_render_js)
 
-    itemCaptureScript = feedmakerutil.get_config_value(collectionConf, "item_capture_script")
-    if not itemCaptureScript or itemCaptureScript == "":
-        itemCaptureScript = "./capture_item_link_title.py"
-    print("# item_capture_script: %s" % (itemCaptureScript))
-    itemCaptureScriptProgram = itemCaptureScript.split(" ")[0]
-    if not itemCaptureScriptProgram or not os.path.isfile(itemCaptureScriptProgram) or not os.access(itemCaptureScriptProgram, os.X_OK):
+    item_capture_script = feedmakerutil.get_config_value(collection_conf, "item_capture_script")
+    if not item_capture_script or item_capture_script == "":
+        item_capture_script = "./capture_item_link_title.py"
+    print("# item_capture_script: %s" % (item_capture_script))
+    item_capture_script_program = item_capture_script.split(" ")[0]
+    if not item_capture_script_program or not os.path.isfile(item_capture_script_program) or not os.access(item_capture_script_program, os.X_OK):
         with open(error_log_file_name, 'w', encoding='utf-8') as error_file:
-            error_file.write("can't execute '%s'\n" % (itemCaptureScriptProgram))
-        die("can't execute '%s'" % (itemCaptureScriptProgram))
+            error_file.write("can't execute '%s'\n" % (item_capture_script_program))
+        die("can't execute '%s'" % (item_capture_script_program))
 
-    userAgent = feedmakerutil.get_config_value(collectionConf, "user_agent")
+    user_agent = feedmakerutil.get_config_value(collection_conf, "user_agent")
 
-    referer = feedmakerutil.get_config_value(collectionConf, "referer")
+    referer = feedmakerutil.get_config_value(collection_conf, "referer")
 
     options = {
-        "render_js": doRenderJs,
-        "item_capture_script": itemCaptureScript,
-        "user_agent": userAgent,
+        "render_js": do_render_js,
+        "item_capture_script": item_capture_script,
+        "user_agent": user_agent,
         "referer": referer
     }
 
     # collect items from specified url list
     print("# collecting items from specified url list...")
-    totalList = composeUrlList(listUrlList, options)
-    for (link, title) in totalList:
+    total_list = compose_url_list(list_url_list, options)
+    for (link, title) in total_list:
         print("%s\t%s" % (link, title))
 
     return 0

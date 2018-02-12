@@ -8,7 +8,7 @@ import subprocess
 from bs4 import BeautifulSoup, Comment
 
 
-isDebugMode = False
+is_debug_mode = False
 
 header_str = '''<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no"/>
@@ -18,7 +18,7 @@ header_str = '''<meta http-equiv="Content-Type" content="text/html; charset=UTF-
 
 
 def debug_print(a):
-    if isDebugMode:
+    if is_debug_mode:
         print(a)
 
 
@@ -36,24 +36,24 @@ def exec_cmd(cmd):
         (result, error) = p.communicate()
         if error:
             if not error.startswith(b"_RegisterApplication(), FAILED TO establish the default connection to the WindowServer"):
-                return False
+                return (False, str(error))
     except subprocess.CalledProcessError:
-        return False
+        return (False, str(error))
     except subprocess.SubprocessError:
-        return False
-    return result.decode(encoding="utf-8")
+        return (False, str(error))
+    return (result.decode(encoding="utf-8"), "")
 
 
 def get_first_token_from_path(path_str):
     #print "get_first_token_from_path(path_str='%s')" % (path_str)
-    isAnywhere = False
+    is_anywhere = False
     if path_str[0:2] == "//":
-        isAnywhere = True
+        is_anywhere = True
     tokens = path_str.split("/")
     i = 0
     for token in tokens:
         #print "tokens[%d]='%s'" % (i, token)
-        i = i + 1
+        i += 1
         if token in ("", "html", "body"):
             continue
         else:
@@ -70,8 +70,8 @@ def get_first_token_from_path(path_str):
     else:
         return (None, None, None, None, False)
 
-    # id, name, idx, path의 나머지 부분, isAnywhere을 반환
-    return (id, name, idx, "/".join(tokens[i:]), isAnywhere)
+    # id, name, idx, path의 나머지 부분, is_anywhere을 반환
+    return (id, name, idx, "/".join(tokens[i:]), is_anywhere)
 
 
 def get_node_with_path(node, path_str):
@@ -80,13 +80,13 @@ def get_node_with_path(node, path_str):
     #print "\n# get_node_with_path(node='%s', path_str='%s')" % (node.name, path_str)
     node_list = []
 
-    (nodeId, name, idx, next_path_str, isAnywhere) = get_first_token_from_path(path_str)
-    #print "nodeId='%s', name='%s', idx=%s, next_path_str='%s', isAnywhere=%s" % (nodeId, name, idx, next_path_str, isAnywhere)
+    (node_id, name, idx, next_path_str, is_anywhere) = get_first_token_from_path(path_str)
+    #print "node_id='%s', name='%s', idx=%s, next_path_str='%s', is_anywhere=%s" % (node_id, name, idx, next_path_str, is_anywhere)
 
-    if nodeId != None:
+    if node_id != None:
         #print "searching with id"
         # 특정 id로 노드를 찾아서 현재 노드에 대입
-        nodes = node.find_all(attrs={"id":nodeId})
+        nodes = node.find_all(attrs={"id":node_id})
         #print "nodes=", nodes
         if nodes == None or nodes == []:
             #print("error, no id matched")
@@ -101,7 +101,7 @@ def get_node_with_path(node, path_str):
             node_list = result_node_list
     else:
         #print "searching with name and index"
-        nodeId = ""
+        node_id = ""
         if name == None:
             return None
         if idx != None:
@@ -132,7 +132,7 @@ def get_node_with_path(node, path_str):
                         break
                     # 이름이 일치했을 때만 i를 증가시킴
                     i = i + 1
-                if isAnywhere == True:
+                if is_anywhere == True:
                     #print "can be anywhere"
                     result_node_list = get_node_with_path(child, name)
                     if result_node_list != None:
@@ -213,19 +213,19 @@ def get_all_config_values(node, key):
 
 def get_url_prefix(url):
     protocol = "http://"
-    protocolLen = len(protocol)
-    if url[:protocolLen] == protocol:
+    protocol_len = len(protocol)
+    if url[:protocol_len] == protocol:
         # http:// 뒷쪽부터 /의 마지막 위치를 찾아냄
-        index = url.rfind('/', protocolLen)
+        index = url.rfind('/', protocol_len)
         return url[:index + 1]
     return ""
 
 
 def get_url_domain(url):
     protocol = "http://"
-    protocolLen = len(protocol)
-    if url[:protocolLen] == protocol:
-        index = url.find('/', protocolLen)
+    protocol_len = len(protocol)
+    if url[:protocol_len] == protocol:
+        index = url.find('/', protocol_len)
         return url[:index + 1]
     return ""
 

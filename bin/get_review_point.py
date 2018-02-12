@@ -33,7 +33,7 @@ def get_default_config(type):
 
 def get_page(url, encoding):
     cmd = "crawler.sh \"%s\"" % (url)
-    result = feedmakerutil.exec_cmd(cmd)
+    (result, error) = feedmakerutil.exec_cmd(cmd)
     return result
 
 

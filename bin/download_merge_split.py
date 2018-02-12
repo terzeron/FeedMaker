@@ -9,20 +9,20 @@ from feedmakerutil import debug_print
 import feedmakerutil
 
 
-def downloadImage(pathPrefix, imgUrl, imgExt, pageUrl):
-    debug_print("# downloadImage(%s, %s, %s, %s)" % (pathPrefix, imgUrl, imgExt, pageUrl))
-    cacheFile = feedmakerutil.get_cache_file_name(pathPrefix, imgUrl, imgExt)
-    if os.path.isfile(cacheFile) and os.stat(cacheFile).st_size > 0:
+def download_image(path_prefix, img_url, img_ext, page_url):
+    debug_print("# download_image(%s, %s, %s, %s)" % (path_prefix, img_url, img_ext, page_url))
+    cache_file = feedmakerutil.get_cache_file_name(path_prefix, img_url, img_ext)
+    if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
         return True
-    cmd = 'crawler.sh --download "%s" --referer "%s" "%s"' % (cacheFile, pageUrl, imgUrl)
+    cmd = 'crawler.sh --download "%s" --referer "%s" "%s"' % (cache_file, page_url, img_url)
     debug_print("<!-- %s -->" % (cmd))
-    result = feedmakerutil.exec_cmd(cmd)
+    (result, error) = feedmakerutil.exec_cmd(cmd)
     debug_print("<!-- %s -->" % (result))
-    if os.path.isfile(cacheFile) and os.stat(cacheFile).st_size > 0:
+    if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
         return result
     if result == False:
         return False
-    return cacheFile
+    return cache_file
 
 
 def chunks(l, n):
@@ -30,226 +30,227 @@ def chunks(l, n):
         yield l[i:i+n]
 
 
-def getTotalHeight(imgSizeList):
-    debug_print("# getTotalHeight()")
+def get_total_height(img_size_list):
+    debug_print("# get_total_height()")
     #
     # calculate the total height
     #
-    totalHeight = 0
-    for dimension in imgSizeList:
+    total_height = 0
+    for dimension in img_size_list:
         (width, height) = dimension.split("\t")
-        totalHeight = totalHeight + int(height)
-    debug_print("<!-- totalHeight=%d -->" % (totalHeight))
-    return totalHeight
+        total_height = total_height + int(height)
+    debug_print("<!-- total_height=%d -->" % (total_height))
+    return total_height
 
 
-def downloadImageAndReadMetadata(pathPrefix, imgExt, pageUrl):
-    debug_print("# downloadImageAndReadMetadata(%s, %s, %s)" % (pathPrefix, imgExt, pageUrl))
+def download_image_and_read_metadata(path_prefix, img_ext, page_url):
+    debug_print("# download_image_and_read_metadata(%s, %s, %s)" % (path_prefix, img_ext, page_url))
     #
     # read input and collect image files into the list
     # (file name, url and dimension)
     #
-    imgFileList = []
-    imgUrlList = []
-    imgSizeList = []
-    lineList = feedmakerutil.read_stdin_as_line_list()
-    for line in lineList:
-        m1 = re.search(r"<img src=(?:[\"'])(?P<imgUrl>[^\"']+)(?:[\"'])( width='\d+%?')?/?>", line)
+    img_file_list = []
+    img_url_list = []
+    img_size_list = []
+    line_list = feedmakerutil.read_stdin_as_line_list()
+    for line in line_list:
+        m1 = re.search(r"<img src=(?:[\"'])(?P<img_url>[^\"']+)(?:[\"'])( width='\d+%?')?/?>", line)
         if m1:
-            imgUrl = m1.group("imgUrl")
-            debug_print(imgUrl)
+            img_url = m1.group("img_url")
+            debug_print(img_url)
             # download
-            cacheFile = downloadImage(pathPrefix, imgUrl, imgExt, pageUrl)
-            if not cacheFile:
-                sys.stderr.write("Error: can't download the image from '%s'\n" % (imgUrl))
+            cache_file = download_image(path_prefix, img_url, img_ext, page_url)
+            if not cache_file:
+                sys.stderr.write("Error: can't download the image from '%s'\n" % (img_url))
                 continue
-            imgFileList.append(cacheFile)
-            imgUrlList.append(imgUrl)
-            debug_print("<!-- %s -> %s -->" % (imgUrl, cacheFile))
-            cmd = "../../../CartoonSplit/size.py " + cacheFile
+            img_file_list.append(cache_file)
+            img_url_list.append(img_url)
+            debug_print("<!-- %s -> %s -->" % (img_url, cache_file))
+            cmd = "../../../CartoonSplit/size.py " + cache_file
             debug_print(cmd)
-            result = feedmakerutil.exec_cmd(cmd)
+            (result, error) = feedmakerutil.exec_cmd(cmd)
             if result == False:
-                sys.stderr.write("Error: can't get the size of image file '%s', cmd='%s'\n" % (cacheFile, cmd))
+                sys.stderr.write("Error: can't get the size of image file '%s', cmd='%s'\n" % (cache_file, cmd))
                 sys.exit(-1)
 
             m2 = re.search(r"^(?P<width>\d+)\s+(?P<height>\d+)", result)
             if m2:
                 width = m2.group("width")
                 height = m2.group("height")
-                imgSizeList.append("%s\t%s" % (width, height))
-                debug_print("<!-- cacheFile=cacheFile, imgUrl=imgUrl, width=width, height=height -->")
+                img_size_list.append("%s\t%s" % (width, height))
+                debug_print("<!-- cache_file=cache_file, img_url=img_url, width=width, height=height -->")
         else:
             debug_print(line)
-    return (imgFileList, imgUrlList, imgSizeList)
+    return (img_file_list, img_url_list, img_size_list)
 
 
-def splitImageList(imgFileList):
-    debug_print("# splitImageList()")
+def split_image_list(img_file_list):
+    debug_print("# split_image_list()")
     #
     # split array into 4 sub-array
     #
-    imgFilePartitionList = []
-    partitionSize = int((len(imgFileList) + 3) / 4) 
-    debug_print("<!-- length=%d, partitionSize=%d -->" % (len(imgFileList), partitionSize))
-    for i in range(int(len(imgFileList) / partitionSize)):
-        imgFilePartitionList.append(imgFileList[i * partitionSize : (i+1) * partitionSize])
-    debug_print(imgFilePartitionList)
-    return imgFilePartitionList
+    img_file_partition_list = []
+    partition_size = int((len(img_file_list) + 3) / 4) 
+    debug_print("<!-- length=%d, partition_size=%d -->" % (len(img_file_list), partition_size))
+    for i in range(int(len(img_file_list) / partition_size)):
+        img_file_partition_list.append(img_file_list[i * partition_size : (i+1) * partition_size])
+    debug_print(img_file_partition_list)
+    return img_file_partition_list
 
 
-def mergeImageFiles(imgFileList, pathPrefix, imgUrl, imgExt, num):
-    debug_print("# mergeImageFiles()")
+def merge_image_files(img_file_list, path_prefix, img_url, img_ext, num):
+    debug_print("# merge_image_files()")
     #
     # merge mode
     #
-    mergedImgFile = feedmakerutil.get_cache_file_name(pathPrefix, imgUrl, imgExt, num)
-    cmd  = "../../../CartoonSplit/merge.py " + mergedImgFile + " "
-    for cacheFile in imgFileList:
-        cmd = cmd + cacheFile + " "
+    merged_img_file = feedmakerutil.get_cache_file_name(path_prefix, img_url, img_ext, num)
+    cmd  = "../../../CartoonSplit/merge.py " + merged_img_file + " "
+    for cache_file in img_file_list:
+        cmd = cmd + cache_file + " "
     debug_print(cmd)
-    result = feedmakerutil.exec_cmd(cmd)
+    (result, error) = feedmakerutil.exec_cmd(cmd)
     debug_print(result)
     if result == False:
         sys.stderr.write("Error: can't merge the image files, cmd='%s'\n" % (cmd))
         sys.exit(-1)
-    return mergedImgFile
+    return merged_img_file
 
 
-def cropImageFile(imgFile):
-    debug_print("# cropImagefile()")
+def crop_image_file(img_file):
+    debug_print("# crop_imagefile()")
     #
     # crop mode (optional)
     #
-    cmd = "innercrop -f 4 -m crop \"%s\" \"%s.temp\" && mv -f \"%s.temp\" \"%s\"" % (imgFile, imgFile, imgFile, imgFile)
+    cmd = "innercrop -f 4 -m crop \"%s\" \"%s.temp\" && mv -f \"%s.temp\" \"%s\"" % (img_file, img_file, img_file, img_file)
     debug_print(cmd)
-    result = feedmakerutil.exec_cmd(cmd)
+    (result, error) = feedmakerutil.exec_cmd(cmd)
     if result == False:
-        sys.stderr.write("Error: can't crop the image file '%s', cmd='%s'\n" % (imgFile, cmd))
+        sys.stderr.write("Error: can't crop the image file '%s', cmd='%s'\n" % (img_file, cmd))
         sys.exit(-1)
 
 
-def removeImageFiles(imgFileList):
-    debug_print("# removeImageFiles()")
+def remove_image_files(img_file_list):
+    debug_print("# remove_image_files()")
     #
     # remove the original image
     # 
     cmd = "rm -f "
-    for cacheFile in imgFileList:
-        cmd = cmd + "'" + cacheFile + "' "
+    for cache_file in img_file_list:
+        cmd = cmd + "'" + cache_file + "' "
     debug_print(cmd)
-    result = feedmakerutil.exec_cmd(cmd)
+    (result, error) = feedmakerutil.exec_cmd(cmd)
     debug_print(result)
     if result == False:
         return False
     return True
         
 
-def splitImageFile(imgFile, numUnits, bgcolorOption, orientationOption):
-    debug_print("# splitImageFile(%s, %d, %s, %s)" % (imgFile, numUnits, bgcolorOption, orientationOption))
+def split_image_file(img_file, num_units, bgcolor_option, orientation_option):
+    debug_print("# split_image_file(%s, %d, %s, %s)" % (img_file, num_units, bgcolor_option, orientation_option))
     #
     # split the image
     #
-    cmd = "../../../CartoonSplit/split.py -b 10 -t 0.03 -n %d %s %s %s" % (numUnits, orientationOption, bgcolorOption, imgFile)
+    cmd = "../../../CartoonSplit/split.py -b 10 -t 0.03 -n %d %s %s %s" % (num_units, orientation_option, bgcolor_option, img_file)
     debug_print(cmd)
-    result = feedmakerutil.exec_cmd(cmd)
+    (result, error) = feedmakerutil.exec_cmd(cmd)
     debug_print(result)
     if result == False:
         sys.stderr.write("Error: can't split the image file, cmd='%s'\n" % (cmd))
         sys.exit(-1)
 
 
-def printImageFiles(numUnits, pathPrefix, imgUrlPrefix, imgUrl, imgExt, num, doFlipRightToLeft):
-    debug_print("# printImageFiles(%d, %s, %s, %s, %s, %d, %s)" % (numUnits, pathPrefix, imgUrlPrefix, imgUrl, imgExt, num if num else 0, doFlipRightToLeft))
+def print_image_files(num_units, path_prefix, img_url_prefix, img_url, img_ext, num, do_flip_right_to_left):
+    debug_print("# print_image_files(%d, %s, %s, %s, %s, %d, %s)" % (num_units, path_prefix, img_url_prefix, img_url, img_ext, num if num else 0, do_flip_right_to_left))
     # print the split images
-    if not doFlipRightToLeft:
-        customRange = range(numUnits)
+    if not do_flip_right_to_left:
+        custom_range = range(num_units)
     else:
-        customRange = reversed(range(numUnits))
-        for i in customRange:
-            splitImgFile = feedmakerutil.get_cache_file_name(pathPrefix, imgUrl, imgExt, num, i + 1)
-            debug_print("splitImgFile=" + splitImgFile)
-            if os.path.exists(splitImgFile):
-                splitImgUrl = feedmakerutil.get_cache_url(imgUrlPrefix, imgUrl, imgExt, num, i + 1)
-                print("<img src='%s''/>" % (splitImgUrl))
+        custom_range = reversed(range(num_units))
+        for i in custom_range:
+            split_img_file = feedmakerutil.get_cache_file_name(path_prefix, img_url, img_ext, num, i + 1)
+            debug_print("split_img_file=" + split_img_file)
+            if os.path.exists(split_img_file):
+                split_img_url = feedmakerutil.get_cache_url(img_url_prefix, img_url, img_ext, num, i + 1)
+                print("<img src='%s''/>" % (split_img_url))
 
 
 def main():
-    global isDebugMode
+    global is_debug_mode
     
     cmd = "basename " + os.getcwd()
     debug_print(cmd);
-    feedName = feedmakerutil.exec_cmd(cmd).rstrip()
-    debug_print("<!-- feedName=%s -->" % (feedName))
-    pathPrefix = os.environ["FEED_MAKER_WWW_FEEDS"] + "/img/" + feedName
-    debug_print("<!--- pathPrefix=%s -->" % (pathPrefix))
-    feedmakerutil.make_path(pathPrefix)
+    (result, error) = feedmakerutil.exec_cmd(cmd)
+    feed_name = result.rstrip()
+    debug_print("<!-- feed_name=%s -->" % (feed_name))
+    path_prefix = os.environ["FEED_MAKER_WWW_FEEDS"] + "/img/" + feed_name
+    debug_print("<!--- path_prefix=%s -->" % (path_prefix))
+    feedmakerutil.make_path(path_prefix)
 
-    imgUrlPrefix = "http://terzeron.net/xml/img/" + feedName
-    imgPrefix = ""
-    imgIndex = -1
-    imgExt = "jpg"
-    numUnits = 25
+    img_url_prefix = "http://terzeron.net/xml/img/" + feed_name
+    img_prefix = ""
+    img_index = -1
+    img_ext = "jpg"
+    num_units = 25
     cmd = ""
     result = ""
 
     # options
-    bgcolorOption = ""
-    doMerge = False
-    doInnercrop = False
-    orientationOption = ""
-    doFlipRightToLeft = False
+    bgcolor_option = ""
+    do_merge = False
+    do_innercrop = False
+    orientation_option = ""
+    do_flip_right_to_left = False
     optlist, args = getopt.getopt(sys.argv[1:], "c:milvd")
     for o, a in optlist:
         if o == "-c":
-            bgcolorOption = "-c " + a
+            bgcolor_option = "-c " + a
         elif o == "-m":
-            doMerge = True
+            do_merge = True
         elif o == "-i":
-            doInnercrop = True
+            do_innercrop = True
         elif o == "-l":
-            doFlipRightToLeft = True
+            do_flip_right_to_left = True
         elif o == "-v":
-            orientationOption = "-v"
-            numUnits = 3
+            orientation_option = "-v"
+            num_units = 3
         elif o == "-d":
-            isDebugMode = True
+            is_debug_mode = True
             
-    pageUrl = args[0]
-    (imgFileList, imgUrlList, imgSizeList) = downloadImageAndReadMetadata(pathPrefix, imgExt, pageUrl)
-    debug_print(imgFileList)
-    if len(imgFileList) == 0:
+    page_url = args[0]
+    (img_file_list, img_url_list, img_size_list) = download_image_and_read_metadata(path_prefix, img_ext, page_url)
+    debug_print(img_file_list)
+    if len(img_file_list) == 0:
         sys.exit(0)
 
-    if doMerge:
+    if do_merge:
         # merge-split mode
-        totalHeight = getTotalHeight(imgSizeList)
-        imgFilePartitionList = splitImageList(imgFileList)
+        total_height = get_total_height(img_size_list)
+        img_file_partition_list = split_image_list(img_file_list)
     
         num = 1
-        for imgFileList in imgFilePartitionList:
-            if len(imgFileList) == 0:
+        for img_file_list in img_file_partition_list:
+            if len(img_file_list) == 0:
                 continue
 
-            mergedImgFile = mergeImageFiles(imgFileList, pathPrefix, pageUrl, imgExt, num)
+            merged_img_file = merge_image_files(img_file_list, path_prefix, page_url, img_ext, num)
 
-            if doInnercrop:
-                cropImageFile(mergedImgFile)
+            if do_innercrop:
+                crop_image_file(merged_img_file)
                 
-            removeImageFiles(imgFileList)
-            splitImageFile(mergedImgFile, numUnits, bgcolorOption, orientationOption)
-            removeImageFiles([mergedImgFile])
-            printImageFiles(numUnits, pathPrefix, imgUrlPrefix, pageUrl, imgExt, num, doFlipRightToLeft)
+            remove_image_files(img_file_list)
+            split_image_file(merged_img_file, num_units, bgcolor_option, orientation_option)
+            remove_image_files([merged_img_file])
+            print_image_files(num_units, path_prefix, img_url_prefix, page_url, img_ext, num, do_flip_right_to_left)
             num = num + 1
     else:
         # only split mode
-        for i in range(len(imgFileList)):
-            imgFile = imgFileList[i]
-            imgUrl = imgUrlList[i]
-            debug_print("imgFile=" + imgFile)
-            debug_print("imgUrl=" + imgUrl)
-            splitImageFile(imgFile, numUnits, bgcolorOption, orientationOption)
-            printImageFiles(numUnits, pathPrefix, imgUrlPrefix, imgUrl, imgExt, None, doFlipRightToLeft)
+        for i in range(len(img_file_list)):
+            img_file = img_file_list[i]
+            img_url = img_url_list[i]
+            debug_print("img_file=" + img_file)
+            debug_print("img_url=" + img_url)
+            split_image_file(img_file, num_units, bgcolor_option, orientation_option)
+            print_image_files(num_units, path_prefix, img_url_prefix, img_url, img_ext, None, do_flip_right_to_left)
                 
 
                                  

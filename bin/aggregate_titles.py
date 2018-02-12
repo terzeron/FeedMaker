@@ -9,8 +9,8 @@ import subprocess
 import feedmakerutil
 
 
-def printUsage():
-    print("Usage: %s\t[ -t <threshold> ] <output file>\n" % (sys.argv[0]))
+def print_usage():
+    print("_usage: %s\t[ -t <threshold> ] <output file>\n" % (sys.argv[0]))
 
 
 def main():
@@ -21,52 +21,52 @@ def main():
             print("%f" % threshold)
 
     if len(args) < 1:
-        printUsage()
+        print_usage()
         return -1
 
-    filePrefix = args[0]
-    intermediateFile = filePrefix + ".intermediate"
-    tempOutputFile = filePrefix + ".temp"
-    outputFile = filePrefix + ".output"
-    lineNumLinkMap = {}
-    titleExistenceSet = set([])
+    file_prefix = args[0]
+    intermediate_file = file_prefix + ".intermediate"
+    temp_output_file = file_prefix + ".temp"
+    output_file = file_prefix + ".output"
+    line_num_link_map = {}
+    title_existence_set = set([])
 
     # split link and title into two separate files
     # and make line number & link mapping table
-    with open(intermediateFile, 'w', encoding='utf-8') as outFile:
-        lineNum = 1
+    with open(intermediate_file, 'w', encoding='utf-8') as out_file:
+        line_num = 1
         for line in feedmakerutil.read_stdin_as_line_list():
             if re.search(r"^\#", line):
                 continue
             line = line.rstrip()
             (link, title) = line.split("\t")        
-            lineNumLinkMap[lineNum] = link + "\t" + title
+            line_num_link_map[line_num] = link + "\t" + title
         
-            cleanTitle = title.lower()
-            cleanTitle = re.sub(r'[\s\!-\/\:-\@\[-\`]*', '', cleanTitle)
-            if cleanTitle in titleExistenceSet:
+            clean_title = title.lower()
+            clean_title = re.sub(r'[\s\!-\/\:-\@\[-\`]*', '', clean_title)
+            if clean_title in title_existence_set:
                 continue
             else:
-                titleExistenceSet.add(cleanTitle)
-            outFile.write("%s\n" % (title))
-            lineNum += 1
+                title_existence_set.add(clean_title)
+            out_file.write("%s\n" % (title))
+            line_num += 1
 
     # hierarchical clustering
-    clusterDir = os.environ["FEED_MAKER_HOME"] + "/../HierarchicalClustering"
-    cmd = "%s/hcluster -t '%f' -s stop_words.txt '%s' '%s'" % (clusterDir, threshold, intermediateFile, tempOutputFile)
+    cluster_dir = os.environ["FEED_MAKER_HOME"] + "/../HierarchicalClustering"
+    cmd = "%s/hcluster -t '%f' -s stop_words.txt '%s' '%s'" % (cluster_dir, threshold, intermediate_file, temp_output_file)
     print(cmd)
-    result = feedmakerutil.exec_cmd(cmd)
+    (result, error) = feedmakerutil.exec_cmd(cmd)
     #print(result)
 
     # convert & extract temporary output file
-    cmd = "awk -F'\\t' '$2 >= 3 { for (i = 3; i < NF; i += 2) { print $(i) FS $(i + 1) } }' '%s'" % (tempOutputFile)
+    cmd = "awk -F'\\t' '$2 >= 3 { for (i = 3; i < NF; i += 2) { print $(i) FS $(i + 1) } }' '%s'" % (temp_output_file)
     print(cmd)
     with subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) as p:
-        with open(outputFile, 'w', encoding='utf-8') as outFile:
+        with open(output_file, 'w', encoding='utf-8') as out_file:
             for line in p.stdout:
                 line = line.rstrip()
-                (lineNum, title) = line.split("\t")
-                outFile.write("%d\n" % (lineNumLinkMap[lineNum]))
+                (line_num, title) = line.split("\t")
+                out_file.write("%d\n" % (line_num_link_map[line_num]))
 
 
 if __name__ == "__main__":

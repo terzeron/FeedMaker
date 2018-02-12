@@ -16,7 +16,7 @@ class PostProcessOnlyForImagesScriptTest(unittest.TestCase):
     def test_process(self):
         cmd = "cat %s | %s" % (self.original_file, os.environ['FEED_MAKER_HOME'] + '/bin/post_process_only_for_images.py')
         #print(cmd)
-        result = feedmakerutil.exec_cmd(cmd)
+        (result, error) = feedmakerutil.exec_cmd(cmd)
         expected = feedmakerutil.read_file(self.processed_file)
         self.assertEqual(expected, result)
         

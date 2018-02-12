@@ -140,7 +140,7 @@ def get_recent_list(list_dir, post_process_script_list):
     cmd += ' remove_duplicate_line.py'
 
     print(cmd)
-    result = feedmakerutil.exec_cmd(cmd)
+    (result, error) = feedmakerutil.exec_cmd(cmd)
     if not result:
         error_log_file_name = "collector.error.log"
         with open(error_log_file_name, 'r', encoding='utf-8') as error_file:
@@ -275,7 +275,7 @@ def generate_rss_feed(config, feed_list, rss_file_name):
     if os.path.isfile(rss_file_name):
         cmd = 'diff "%s" "%s" | grep -v -Ee \"(^(<|>) <(pub_date|last_build_date))|(^---\$)|(^[0-9,]+[a-z][0-9,]+\$)\" | wc -c' % (temp_rss_file_name, rss_file_name)
         print(cmd)
-        result = feedmakerutil.exec_cmd(cmd)
+        (result, error) = feedmakerutil.exec_cmd(cmd)
         print(result)
         m = re.search(r'^\s*(?P<num_of_different_lines>\d+)\s*$', result)
         if m and m.group("num_of_different_lines") != "0":
@@ -288,19 +288,19 @@ def generate_rss_feed(config, feed_list, rss_file_name):
         if os.path.isfile(rss_file_name):
             cmd = 'mv -f "%s" "%s.old"' % (rss_file_name, rss_file_name)
             print(cmd)
-            result = feedmakerutil.exec_cmd(cmd)
+            (result, error) = feedmakerutil.exec_cmd(cmd)
             if result == False:
                 return False
         # 이번에 만들어진 파일을 정식 파일 이름으로 바꾸기
         if os.path.isfile(temp_rss_file_name):
             cmd = 'mv -f "%s" "%s"' % (temp_rss_file_name, rss_file_name)
             print(cmd)
-            result = feedmakerutil.exec_cmd(cmd)
+            (result, error) = feedmakerutil.exec_cmd(cmd)
     else:
         # 이번에 만들어진 파일을 지우기
         cmd = 'rm -f "%s"' % (temp_rss_file_name)
         print(cmd)
-        result = feedmakerutil.exec_cmd(cmd)
+        (result, error) = feedmakerutil.exec_cmd(cmd)
 
     if result == False:
         return False
@@ -351,7 +351,7 @@ def append_item_to_result(feed_list, item, rss_file_name, options):
         # 파일이 존재하지 않거나 크기가 작으니 다시 생성 시도
         cmd = determine_cmd(options, url, new_file_name)
         print(cmd)
-        result = feedmakerutil.exec_cmd(cmd)
+        (result, error) = feedmakerutil.exec_cmd(cmd)
         if result == False:
             die("can't extract HTML elements")
 
@@ -363,7 +363,7 @@ def append_item_to_result(feed_list, item, rss_file_name, options):
         if size > len(feedmakerutil.header_str) + 1:
             cmd = 'echo "<img src=\'http://terzeron.net/img/1x1.jpg?feed=%s&item=%s\'/>" >> "%s"' % (rss_file_name, md5_name, new_file_name)
             print(cmd)
-            result = feedmakerutil.exec_cmd(cmd)
+            (result, error) = feedmakerutil.exec_cmd(cmd)
             if result == False:
                 die("can't append page view logging tag")
 
@@ -613,7 +613,7 @@ def main():
     # upload RSS feed file
     cmd = 'upload.py %s' % (rss_file_name)
     print(cmd)
-    result = feedmakerutil.exec_cmd(cmd)
+    (result, error) = feedmakerutil.exec_cmd(cmd)
     print(result)
     if result == False:
         return -1

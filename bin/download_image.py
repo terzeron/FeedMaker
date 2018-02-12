@@ -28,7 +28,7 @@ def download_image(path_prefix, img_url, img_ext, page_url):
         return True
     cmd = 'crawler.sh --download "%s" --referer "%s" "%s"' % (cache_file, page_url, img_url)
     debug_print("<!-- %s -->" % (cmd))
-    result = feedmakerutil.exec_cmd(cmd)
+    (result, error) = feedmakerutil.exec_cmd(cmd)
     debug_print("<!-- %s -->" % (result))
     if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
         return cache_file
@@ -37,9 +37,10 @@ def download_image(path_prefix, img_url, img_ext, page_url):
 
 def main():
     cmd = "basename " + os.getcwd()
-    feedName = feedmakerutil.exec_cmd(cmd).rstrip()
-    img_url_prefix = "http://terzeron.net/xml/img/" + feedName
-    path_prefix = os.environ["FEED_MAKER_WWW_FEEDS"] + "/img/" + feedName
+    (result, error) = feedmakerutil.exec_cmd(cmd)
+    feed_name = result.rstrip()
+    img_url_prefix = "http://terzeron.net/xml/img/" + feed_name
+    path_prefix = os.environ["FEED_MAKER_WWW_FEEDS"] + "/img/" + feed_name
 
     img_prefix = ""
     img_index = -1
@@ -52,11 +53,11 @@ def main():
 
     feedmakerutil.make_path(path_prefix)
 
-    lineList = feedmakerutil.read_stdin_as_line_list()
-    for line in lineList:
+    line_list = feedmakerutil.read_stdin_as_line_list()
+    for line in line_list:
         line = line.rstrip()
         m = re.search(r'''
-        (?P<preText>.*)
+        (?P<pre_text>.*)
         <img 
         \s*
         src=
@@ -65,16 +66,16 @@ def main():
         (["\'])
         (\s*width=["\']\d+%?["\'])?
         /?>
-        (?P<postText>.*)
+        (?P<post_text>.*)
         ''', line, re.VERBOSE)
         if m:
-            preText = m.group("preText")
+            pre_text = m.group("pre_text")
             img_url = m.group("img_url")
-            postText = m.group("postText")
+            post_text = m.group("post_text")
             
-            m = re.search(r'^\s*$', preText)
+            m = re.search(r'^\s*$', pre_text)
             if not m:
-                print(preText)
+                print(pre_text)
 
             # download
             cache_file = download_image(path_prefix, img_url, img_ext, _url)
@@ -85,9 +86,9 @@ def main():
             else:
                 print("<img src='%s' alt='not exist or size 0'/>" % (img_url))
 
-            m = re.search(r'^\s*$', postText)
+            m = re.search(r'^\s*$', post_text)
             if not m:
-                print(postText)
+                print(post_text)
         else:
             print(line)
 

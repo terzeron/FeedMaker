@@ -6,14 +6,14 @@ import sys
 import re
 
 
-def removeDuplicates(seq):
+def remove_duplicates(seq):
     seen = set()
-    seenAdd = seen.add
-    return [ x for x in seq if not (x in seen or seenAdd(x))]
+    seen_add = seen.add
+    return [ x for x in seq if not (x in seen or seen_add(x))]
 
 
 def main():
-    totalList = []
+    total_list = []
 
     for line in sys.stdin:
         p = re.compile(r'^\#')
@@ -21,12 +21,12 @@ def main():
         if match:
             # skip comments
             continue
-        totalList.append(line)
+        total_list.append(line)
 
-    totalList = removeDuplicates(totalList)
+    total_list = remove_duplicates(total_list)
 
-    totalList.sort()
-    for item in totalList:
+    total_list.sort()
+    for item in total_list:
         print(item, end='')
 
 

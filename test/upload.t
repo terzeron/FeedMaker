@@ -20,37 +20,40 @@ class UploadScriptTest(unittest.TestCase):
         feedmakerutil.remove_file(self.uploaded_file_path)
             
             
-    def test_upload_first(self):
+    def test_0_upload_first(self):
         cmd = "upload.py %s" % self.rss_file_name
-        result = feedmakerutil.exec_cmd(cmd)
-
-        self.assertTrue(result and result != "")
+        (result, error) = feedmakerutil.exec_cmd(cmd)
+        #print(cmd)
+        #print(result)
+        #print(error)
+        
+        self.assertTrue(result)
         self.assertTrue("success" in result)
         self.assertTrue(os.path.isfile(self.uploaded_file_path))
         
 
-    def test_upload_unchanged(self):
+    def test_1_upload_unchanged(self):
         cmd = "cp %s %s" % (self.rss_file_name, self.old_rss_file_name)
-        result = feedmakerutil.exec_cmd(cmd)
+        (result, error) = feedmakerutil.exec_cmd(cmd)
         #print(cmd)
-
-        cmd = "upload.py %s 2>&1" % self.rss_file_name
-        result = feedmakerutil.exec_cmd(cmd)
+        
+        cmd = "upload.py %s" % self.rss_file_name
+        (result, error) = feedmakerutil.exec_cmd(cmd)
         #print(cmd)
         #print(result)
+        #print(error)
 
-        self.assertTrue(result)
-        self.assertTrue("failed" in result)
-        self.assertTrue("No change" in result)
+        self.assertFalse(result)
+        self.assertTrue("Upload failed! No change from the previous RSS file" in error)
         self.assertFalse(os.path.isfile(self.uploaded_file_path))
 
         
-    def test_upload_changed(self):
+    def test_2_upload_changed(self):
         cmd = "cp %s %s" % (self.different_rss_file_name, self.old_rss_file_name)
-        result = feedmakerutil.exec_cmd(cmd)
+        (result, error) = feedmakerutil.exec_cmd(cmd)
         
         cmd = "upload.py %s" % self.rss_file_name
-        result = feedmakerutil.exec_cmd(cmd)
+        (result, error) = feedmakerutil.exec_cmd(cmd)
         
         self.assertTrue(result and result != "")
         self.assertTrue("success" in result)
