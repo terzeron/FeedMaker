@@ -4,6 +4,7 @@ start_ts=`date +"%s"`
 max_idx=1000
 runlog=run.log
 errorlog=error.log
+collectorerrorlog=collector.error.log
 
 function send_error_msg() {
     curl -X POST \
@@ -24,10 +25,10 @@ function execute_job() {
 	dir=$1
 	#echo $dir
 	if [ -d "$dir" -a -f "$dir/conf.xml" ]; then
-		echo -n $dir "  "
+		echo $dir "  "
 		is_completed=$(grep "<is_completed>true" $dir/conf.xml)
 		recent_collection_list=$([ -e "$dir/newlist" ] && find $dir/newlist -type f -mtime +72)
-		rm -f $runlog $errorlog
+		rm -f $runlog $errorlog $collectorerrorlog
 		if [ "$is_completed" != "" -a "$recent_collection_list" == "" ]; then
 			(cd $dir; run.sh -c > $runlog 2> $errorlog; run.sh >> $runlog 2>> $errorlog)
 		else
