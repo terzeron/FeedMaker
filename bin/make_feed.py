@@ -86,13 +86,25 @@ def get_extraction_configs(config):
 
     render_js = feedmakerutil.get_config_value(extraction_conf, "render_js")
     render_js = bool("true" == render_js)
+    uncompress_gzip = feedmakerutil.get_config_value(extraction_conf, "uncompress_gzip")
+    uncompress_gzip = bool("true" == uncompress_gzip)
     force_sleep_between_articles = feedmakerutil.get_config_value(extraction_conf, "force_sleep_between_articles")
     force_sleep_between_articles = bool(force_sleep_between_articles and "true" == force_sleep_between_articles)
     bypass_element_extraction = feedmakerutil.get_config_value(extraction_conf, "bypass_element_extraction")
     bypass_element_extraction = bool("true" == bypass_element_extraction)
+    
     review_point_threshold = feedmakerutil.get_config_value(extraction_conf, "review_point_threshold")
     user_agent = feedmakerutil.get_config_value(extraction_conf, "user_agent")
     referer = feedmakerutil.get_config_value(extraction_conf, "referer")
+
+    header_list = []
+    header_list_conf = feedmakerutil.get_config_node(extraction_conf, "header_list")
+    if header_list_conf:
+        header_list = feedmakerutil.get_all_config_values(header_list_conf, "header")
+    else:
+        header = feedmakerutil.get_config_value(extraction_conf, "header")
+        if header:
+            header_list.append(header)
 
     post_process_script_list = []
     post_process_script_list_conf = feedmakerutil.get_config_node(extraction_conf, "post_process_script_list")
@@ -105,11 +117,13 @@ def get_extraction_configs(config):
 
     options = {
         "render_js": render_js,
+        "uncompress_gzip": uncompress_gzip,
         "force_sleep_between_articles": force_sleep_between_articles,
         "bypass_element_extraction": bypass_element_extraction,
         "review_point_threshold": review_point_threshold,
         "user_agent": user_agent,
         "referer": referer,
+        "header_list": header_list,
         "post_process_script_list": post_process_script_list,
     }
     
@@ -313,10 +327,15 @@ def determine_crawler_options(options):
     option_str = ""
     if options["render_js"]:
         option_str += " --render-js"
+    if options["uncompress_gzip"]:
+        option_str += " --uncompress-gzip"
     if options["user_agent"]:
         option_str += " --ua '%s'" % (options["user_agent"])
     if options["referer"]:
         option_str += " --referer '%s'" % (options["referer"])
+    if options["header_list"]:
+        for header in options["header_list"]:
+            option_str += " --header '%s'" % (header)
 
     '''
     #print("title=%s, review_point=%d, review_point_threshold=%f" % (title, review_point, review_point_threshold))

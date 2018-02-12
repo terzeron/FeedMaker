@@ -6,32 +6,24 @@ if [ $# -lt 1 ]; then
 	echo "	--render-js: phantomjs rendering"
 	echo "	--ua <user agent string>"
 	echo "	--referer <referer>"
-	echo "	--header-gzip: set request header with 'Accept-Encoding: gzip'"
 	echo "	--uncompress-gzip: uncompress content with gzip"
+    echo "  --header <header string>: specify header string"
 	exit 0
 fi
 
-default_spider_opt=""
-#default_ua_opt="--user-agent 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.37 (KHTML, like Gecko) Chrome/31.0.1650.58 Safari/537.37'"
-default_ua_opt=""
-default_referer_opt=""
-default_render_js=false
-default_uncompress_gzip=false
-default_header_opt=""
-
-spider_opt=$default_spider_opt
-ua_opt=$default_ua_opt
-referer_opt=$default_referer_opt
-render_js=$default_render_js
-uncompress_gzip=$default_uncompress_gzip
-header_opt=$default_header_opt
+spider_opt=""
+#ua_opt="--user-agent 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.37 (KHTML, like Gecko) Chrome/31.0.1650.58 Safari/537.37'"
+referer_opt=""
+render_js=false
+uncompress_gzip=false
+header_opt=""
 
 encoding=$(python -c 'import feedmakerutil as fmu; encoding = fmu.get_config_value(fmu.get_config_node(fmu.read_config(), "collection"), "encoding"); print(encoding if encoding else "utf8")')
-cookie_opt="--cookie-jar cookie.txt"
-timeout_opt="--connect-timeout 5"
+#cookie_opt="--cookie-jar cookie.txt"
+timeout_opt="--connect-timeout 10"
 cert_opt="--insecure"
 
-OPTS=`/usr/local/bin/getopt -o v --long spider,download:,render-js,uncompress-gzip,ua:,referer:,header-gzip -- "$@"`
+OPTS=`/usr/local/bin/getopt -o v --long spider,render-js,uncompress-gzip,download:,ua:,referer:,header: -- "$@"`
 
 eval set -- "$OPTS"
 
@@ -39,11 +31,12 @@ while :; do
 	case "$1" in
 		-v) verbose_opt="-v"; shift;;
 		--spider) spider_opt="--head"; shift;;
-		--download) download_file="$2"; shift 2;;
 		--render-js) render_js=true; shift;;
+        --uncompress-gzip) uncompress_gzip=true; shift;;
+		--download) download_file="$2"; shift 2;;
 		--ua) ua_opt="--user-agent '$2'"; shift 2;;
 		--referer) referer_opt="--referer '$2'"; shift 2;;
-		--header-gzip) header_opt="--header 'Accept-Encoding: gzip'"; shift;;
+        --header) header_opt="$header_opt --header '$2'"; shift 2;;
 		--) shift; break;
 	esac
 done
@@ -73,7 +66,7 @@ if [ "${encoding}" != "utf8" ]; then
 fi
     
 if [ "$verbose_opt" == "-v" ]; then
-	echo "$cmd"
+    echo "$cmd"
 fi
 
 eval "${cmd}"
