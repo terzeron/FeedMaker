@@ -31,17 +31,17 @@ def extract_urls(url, options):
     print("# %s" % (cmd))
     (result, error) = feedmakerutil.exec_cmd(cmd)
     with open(error_log_file_name, 'w', encoding='utf-8') as error_file:
-        if not result:
+        if error:
             error_file.write(cmd + "\n" + str(result) + "\n")
             sys.stderr.write(cmd + "\n" + str(result) + "\n")
             cmd = "crawler.sh %s '%s' | extract_element.py collection" % (option_str, url)
             (result, error) = feedmakerutil.exec_cmd(cmd)
-            if not result: 
+            if error: 
                 error_file.write(cmd + "\n" + str(result) + "\n")
                 sys.stderr.write(cmd + "\n" + str(result) + "\n")
                 cmd = "crawler.sh %s '%s'" % (option_str, url)
                 (result, error) = feedmakerutil.exec_cmd(cmd)
-                if not result:
+                if error:
                     error_file.write(cmd + "\n" + str(result) + "\n")
                     sys.stderr.write(cmd + "\n" + str(result) + "\n")
                     error_file.write("can't get result from crawler script\n")

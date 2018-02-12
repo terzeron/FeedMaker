@@ -290,7 +290,7 @@ def traverse_element(element, url, encoding):
                     cmd = "crawler.sh '%s' | extract_literature.py" % (url)
                     #print(cmd)
                     (result, error) = feedmakerutil.exec_cmd(cmd)
-                    if result:
+                    if not error:
                         print(result)
                     ret = 1
                 return ret

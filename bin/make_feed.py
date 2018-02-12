@@ -141,7 +141,7 @@ def get_recent_list(list_dir, post_process_script_list):
 
     print(cmd)
     (result, error) = feedmakerutil.exec_cmd(cmd)
-    if not result:
+    if error:
         error_log_file_name = "collector.error.log"
         with open(error_log_file_name, 'r', encoding='utf-8') as error_file:
             for line in error_file:
@@ -289,7 +289,7 @@ def generate_rss_feed(config, feed_list, rss_file_name):
             cmd = 'mv -f "%s" "%s.old"' % (rss_file_name, rss_file_name)
             print(cmd)
             (result, error) = feedmakerutil.exec_cmd(cmd)
-            if result == False:
+            if error:
                 return False
         # 이번에 만들어진 파일을 정식 파일 이름으로 바꾸기
         if os.path.isfile(temp_rss_file_name):
@@ -302,7 +302,7 @@ def generate_rss_feed(config, feed_list, rss_file_name):
         print(cmd)
         (result, error) = feedmakerutil.exec_cmd(cmd)
 
-    if result == False:
+    if error:
         return False
     return True
 
@@ -352,7 +352,7 @@ def append_item_to_result(feed_list, item, rss_file_name, options):
         cmd = determine_cmd(options, url, new_file_name)
         print(cmd)
         (result, error) = feedmakerutil.exec_cmd(cmd)
-        if result == False:
+        if error:
             die("can't extract HTML elements")
 
         if os.path.isfile(new_file_name):
@@ -364,7 +364,7 @@ def append_item_to_result(feed_list, item, rss_file_name, options):
             cmd = 'echo "<img src=\'http://terzeron.net/img/1x1.jpg?feed=%s&item=%s\'/>" >> "%s"' % (rss_file_name, md5_name, new_file_name)
             print(cmd)
             (result, error) = feedmakerutil.exec_cmd(cmd)
-            if result == False:
+            if error:
                 die("can't append page view logging tag")
 
             # 피드 리스트에 추가
@@ -615,7 +615,7 @@ def main():
     print(cmd)
     (result, error) = feedmakerutil.exec_cmd(cmd)
     print(result)
-    if result == False:
+    if error:
         return -1
 
     m = re.search(r'Upload: success', result)

@@ -22,7 +22,7 @@ def main(rss_file):
         cmd = "diff '%s' '%s' | egrep -v \"(^(<|>) <(pubDate|lastBuildDate))|(^---\$)|(^[0-9,]+[a-z][0-9,]+\$)\" | wc -c" % (rss_file, old_rss_file)
         #print(cmd)
         (result, error) = feedmakerutil.exec_cmd(cmd)
-        if result:
+        if not error:
             #print(result)
             match = re.search(r"^\s*(\d+)\s*$", result)
             if match and match.group(1) != "0":

@@ -20,7 +20,7 @@ def download_image(path_prefix, img_url, img_ext, page_url):
     debug_print("<!-- %s -->" % (result))
     if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
         return result
-    if result == False:
+    if error:
         return False
     return cache_file
 
@@ -69,7 +69,7 @@ def download_image_and_read_metadata(path_prefix, img_ext, page_url):
             cmd = "../../../CartoonSplit/size.py " + cache_file
             debug_print(cmd)
             (result, error) = feedmakerutil.exec_cmd(cmd)
-            if result == False:
+            if error:
                 sys.stderr.write("Error: can't get the size of image file '%s', cmd='%s'\n" % (cache_file, cmd))
                 sys.exit(-1)
 
@@ -110,7 +110,7 @@ def merge_image_files(img_file_list, path_prefix, img_url, img_ext, num):
     debug_print(cmd)
     (result, error) = feedmakerutil.exec_cmd(cmd)
     debug_print(result)
-    if result == False:
+    if error:
         sys.stderr.write("Error: can't merge the image files, cmd='%s'\n" % (cmd))
         sys.exit(-1)
     return merged_img_file
@@ -124,7 +124,7 @@ def crop_image_file(img_file):
     cmd = "innercrop -f 4 -m crop \"%s\" \"%s.temp\" && mv -f \"%s.temp\" \"%s\"" % (img_file, img_file, img_file, img_file)
     debug_print(cmd)
     (result, error) = feedmakerutil.exec_cmd(cmd)
-    if result == False:
+    if error:
         sys.stderr.write("Error: can't crop the image file '%s', cmd='%s'\n" % (img_file, cmd))
         sys.exit(-1)
 
@@ -140,7 +140,7 @@ def remove_image_files(img_file_list):
     debug_print(cmd)
     (result, error) = feedmakerutil.exec_cmd(cmd)
     debug_print(result)
-    if result == False:
+    if error:
         return False
     return True
         
@@ -154,7 +154,7 @@ def split_image_file(img_file, num_units, bgcolor_option, orientation_option):
     debug_print(cmd)
     (result, error) = feedmakerutil.exec_cmd(cmd)
     debug_print(result)
-    if result == False:
+    if error:
         sys.stderr.write("Error: can't split the image file, cmd='%s'\n" % (cmd))
         sys.exit(-1)
 
