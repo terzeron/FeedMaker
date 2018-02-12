@@ -73,7 +73,7 @@ def update_feed_access_status(c):
 
             
 def update_public_html_status(c):
-    p = pathlib._path(public_html_path)
+    p = pathlib.Path(public_html_path)
     feed_list = list(p.glob('*.xml'))
     for feed in feed_list:
         if re.search(r'(^_|^conf.xml$)', feed.name):
@@ -90,7 +90,7 @@ def update_public_html_status(c):
 
 
 def update_feedmaker_status(c):
-    p = pathlib._path(feedmaker_path)
+    p = pathlib.Path(feedmaker_path)
     feed_list = list(p.glob('*/*/*.xml'))
     for feed in feed_list:
         if re.search(r'(^_|^conf.xml$)', feed.name):
