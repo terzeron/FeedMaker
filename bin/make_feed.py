@@ -578,14 +578,16 @@ def main():
         feed_id_sort_field_list = []
         feed_item_existence_set = set([])
 
+        matched_count = 0
         for i, old_item in enumerate(old_list):
             sort_field = ""
             m = re.search(options["sort_field_pattern"], old_item)
             if m:
                 sort_field = m.group(1)
+                matched_count += 1
             else:
-                warn("can't match the pattern /%s/" % (options["sort_field_pattern"]))
-            
+                sort_field = "0"
+
             if old_item not in feed_item_existence_set:
                 feed_id_sort_field = {}
                 feed_id_sort_field["id"] = i
@@ -593,6 +595,10 @@ def main():
                 feed_item_existence_set.add(old_item)
                 feed_id_sort_field_list.append(feed_id_sort_field)
 
+        # 전체 리스트 중 절반 이상의 정렬필드를 검출하지 못하면 경고
+        if matched_count < len(old_list) / 2:
+            warn("can't match the pattern /%s/" % (options["sort_field_pattern"]))
+            
         sorted_feed_list = sorted(feed_id_sort_field_list, key=cmp_to_key(cmp_int_or_str))
         idx_file = "start_idx.txt"
         window_size = 10 # feedly initial max window size
