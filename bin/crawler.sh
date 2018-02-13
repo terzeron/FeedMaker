@@ -18,7 +18,7 @@ render_js=false
 uncompress_gzip=false
 header_opt=""
 
-encoding=$(python -c 'import feedmakerutil as fmu; encoding = fmu.get_config_value(fmu.get_config_node(fmu.read_config(), "collection"), "encoding"); print(encoding if encoding else "utf8")')
+encoding=$(python -c 'from feedmakerutil import Config; encoding = Config.get_config_value(Config.get_config_node(Config.read_config(), "collection"), "encoding"); print(encoding if encoding else "utf8")')
 #cookie_opt="--cookie-jar cookie.txt"
 timeout_opt="--connect-timeout 10"
 cert_opt="--insecure"

@@ -3,8 +3,9 @@
 import sys
 import os
 import re
-from feedmakerutil import debug_print
 import feedmakerutil
+from feedmakerutil import debug_print
+from feedmakerutil import IO, URL, Cache
 
 
 def get_cache_file_name(path_prefix, img_url, img_ext, postfix=None, index=None):
@@ -17,7 +18,7 @@ def get_cache_file_name(path_prefix, img_url, img_ext, postfix=None, index=None)
         index_str = "." + index
                          
     if re.search(r'^https?://', img_url) and img_ext:
-        return path_prefix + "/" + feedmakerutil.get_short_md5_name(img_url) + postfix_str + index_str + "." + img_ext
+        return path_prefix + "/" + URL.get_short_md5_name(img_url) + postfix_str + index_str + "." + img_ext
      
     return path_prefix + "/" + img_url
 
@@ -53,7 +54,7 @@ def main():
 
     feedmakerutil.make_path(path_prefix)
 
-    line_list = feedmakerutil.read_stdin_as_line_list()
+    line_list = IO.read_stdin_as_line_list()
     for line in line_list:
         line = line.rstrip()
         m = re.search(r'''
@@ -80,7 +81,7 @@ def main():
             # download
             cache_file = download_image(path_prefix, img_url, img_ext, _url)
             if cache_file:
-                cache_url = feedmakerutil.get_cache_url(img_url_prefix, img_url, img_ext)
+                cache_url = Cache.get_cache_url(img_url_prefix, img_url, img_ext)
                 debug_print("<!-- %s -> %s / %s -->" % (img_url, cache_file, cache_url))
                 print("<img src='%s'/>" % (cache_url))
             else:

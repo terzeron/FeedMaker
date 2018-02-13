@@ -10,6 +10,9 @@ import cgi
 import getopt
 import feedmakerutil
 from feedmakerutil import die, err, warn
+from feedmakerutil import Config
+from feedmakerutil import URL
+from feedmakerutil import IO
 
 
 # recursion으로 구현된 traverse_element()의 여러 레벨에서 조회하는 변수
@@ -30,23 +33,23 @@ def extract_content(args):
         file = args[1]
         
     # configuration
-    config = feedmakerutil.read_config()
+    config = Config.read_config()
     if config == None:
         return -1
-    extraction_conf = feedmakerutil.get_config_node(config, "extraction")
+    extraction_conf = Config.get_config_node(config, "extraction")
 
     # read html contents
-    html = feedmakerutil.read_file(file)
+    html = IO.read_file(file)
 
     if extraction_conf:
-        element_list = feedmakerutil.get_config_node(extraction_conf, "element_list")
+        element_list = Config.get_config_node(extraction_conf, "element_list")
         if not element_list:
             die("can't find 'element_list' element from configuration")
-        class_list = feedmakerutil.get_all_config_values(element_list, "element_class")
-        id_list = feedmakerutil.get_all_config_values(element_list, "element_id")
-        path_list = feedmakerutil.get_all_config_values(element_list, "element_path")
+        class_list = Config.get_all_config_values(element_list, "element_class")
+        id_list = Config.get_all_config_values(element_list, "element_id")
+        path_list = Config.get_all_config_values(element_list, "element_path")
 
-        encoding = feedmakerutil.get_config_value(element_list, "encoding")
+        encoding = Config.get_config_value(element_list, "encoding")
 
         if not encoding:
             encoding = "utf8"
@@ -158,27 +161,27 @@ def traverse_element(element, url, encoding):
             if element.has_attr("data-lazy-src"):
                 data_lazy_src = element["data-lazy-src"]
                 if not re.search(r'(https?:)?//', data_lazy_src):
-                    data_lazy_src = feedmakerutil.concatenate_url(url, data_lazy_src)
+                    data_lazy_src = URL.concatenate_url(url, data_lazy_src)
                 src = data_lazy_src
             elif element.has_attr("lazysrc"):
                 lazy_src = element["lazysrc"]
                 if not re.search(r'(https?:)?//', lazy_src):
-                    lazy_src = feedmakerutil.concatenate_url(url, lazy_src)
+                    lazy_src = URL.concatenate_url(url, lazy_src)
                 src = lazy_src
             elif element.has_attr("data-src"):
                 data_src = element["data-src"]
                 if not re.search(r'(https?:)?//', data_src):
-                    data_src = feedmakerutil.concatenate_url(url, data_src)
+                    data_src = URL.concatenate_url(url, data_src)
                 src = data_src
             elif element.has_attr("data-original"):
                 data_src = element["data-original"]
                 if not re.search(r'(https?:)?//', data_src):
-                    data_src = feedmakerutil.concatenate_url(url, data_src)
+                    data_src = URL.concatenate_url(url, data_src)
                 src = data_src
             elif element.has_attr("src"):
                 src = element["src"]
                 if not re.search(r'(https?:)?//', src):
-                    src = feedmakerutil.concatenate_url(url, src)
+                    src = URL.concatenate_url(url, src)
                 if "ncc.phinf.naver.net" in src and ("/17.jpg" in src or "/8_17px.jpg" in src or "/7px.jpg" in src or "/20px.jpg" in src):
                     # 외부에서 접근 불가능한 이미지 제거
                     return ret
@@ -195,7 +198,7 @@ def traverse_element(element, url, encoding):
                 if element.has_attr("value"):
                     value = element["value"]
                     if not re.search(r'(https?:)?//', value):
-                        value = feedmakerutil.concatenate_url(url, value)
+                        value = URL.concatenate_url(url, value)
                     sys.stdout.write("<img src='%s'/>\n" % value)
                     ret = 1
         elif element.name == "canvas":
@@ -223,7 +226,7 @@ def traverse_element(element, url, encoding):
                 # complementing href value
                 href = element["href"]
                 if not re.search(r'(https?:)?//', href):
-                    href = feedmakerutil.concatenate_url(url, href)
+                    href = URL.concatenate_url(url, href)
                 # A tag는 href와 target attribute를 출력해줘야 함
                 sys.stdout.write("<a href='%s'" % href)
                 if element.has_attr("target"):

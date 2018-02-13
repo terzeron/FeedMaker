@@ -11,6 +11,8 @@ import socket
 import copy
 import signal
 import feedmakerutil
+from feedmakerutil import Config
+from feedmakerutil import IO
 
 
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
@@ -22,17 +24,17 @@ def extract_content(config_item):
     class_str = ""
     id_str = ""
     path_str = ""
-    config = feedmakerutil.read_config()
+    config = Config.read_config()
     if config == None:
         return -1
     if config_item in ("collection", "extraction"):
-        conf_node = feedmakerutil.get_config_node(config, config_item)
+        conf_node = Config.get_config_node(config, config_item)
         if conf_node == None:
             die("can't find '%s' element from configuration" % config_item)
-        id_str = feedmakerutil.get_config_value(conf_node, "element_id")
-        class_str = feedmakerutil.get_config_value(conf_node, "element_class")
-        path_str = feedmakerutil.get_config_value(conf_node, "element_path")
-        enc = feedmakerutil.get_config_value(conf_node, "encoding")
+        id_str = Config.get_config_value(conf_node, "element_id")
+        class_str = Config.get_config_value(conf_node, "element_class")
+        path_str = Config.get_config_value(conf_node, "element_path")
+        enc = Config.get_config_value(conf_node, "encoding")
         #print("# element_id:", id_str)
         #print("# element_class:", class_str)
         #print("# element_path:", path_str)
@@ -41,7 +43,7 @@ def extract_content(config_item):
         return -1
     
     # read html contents
-    html = feedmakerutil.read_stdin()
+    html = IO.read_stdin()
 
     # sanitize
     html = re.sub(r'alt="(.*)<br>(.*)"', r'alt="\1 \2"', html);

@@ -6,6 +6,7 @@ import sys
 import unittest
 import subprocess
 import feedmakerutil
+from feedmakerutil import IO as fmutilio
 
 
 class PostProcessOnlyForImagesScriptTest(unittest.TestCase):
@@ -17,7 +18,7 @@ class PostProcessOnlyForImagesScriptTest(unittest.TestCase):
         cmd = "cat %s | %s" % (self.original_file, os.environ['FEED_MAKER_HOME'] + '/bin/post_process_only_for_images.py')
         #print(cmd)
         (result, error) = feedmakerutil.exec_cmd(cmd)
-        expected = feedmakerutil.read_file(self.processed_file)
+        expected = fmutilio.read_file(self.processed_file)
         self.assertEqual(expected, result)
         
         

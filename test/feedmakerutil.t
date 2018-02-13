@@ -7,6 +7,8 @@ from bs4 import BeautifulSoup, Comment
 import pprint
 import xml.dom.minidom
 import feedmakerutil
+from feedmakerutil import Config as fmutilconfig
+from feedmakerutil import URL as fmutilurl
 
 
 class X_pathTest(unittest.TestCase):
@@ -63,50 +65,50 @@ class X_pathTest(unittest.TestCase):
 
 class IOTest(unittest.TestCase):
     def test_read_config(self):
-        config = feedmakerutil.read_config()
+        config = fmutilconfig.read_config()
         self.assertTrue(config != None)
         self.assertTrue(isinstance(config, xml.dom.minidom.Document))
         
     def test_get_config_node(self):
-        config = feedmakerutil.read_config()
-        collection = feedmakerutil.get_config_node(config, "collection")
+        config = fmutilconfig.read_config()
+        collection = fmutilconfig.get_config_node(config, "collection")
         self.assertTrue(collection)
-        list_url_list = feedmakerutil.get_config_node(collection, "list_url_list")
+        list_url_list = fmutilconfig.get_config_node(collection, "list_url_list")
         self.assertTrue(list_url_list)
-        list_url = feedmakerutil.get_config_node(list_url_list, "list_url")
+        list_url = fmutilconfig.get_config_node(list_url_list, "list_url")
         self.assertTrue(list_url)
 
     def test_get_value_from_config(self):
-        config = feedmakerutil.read_config()
-        collection = feedmakerutil.get_config_node(config, "collection")
-        list_url_list = feedmakerutil.get_config_node(collection, "list_url_list")
-        list_url = feedmakerutil.get_config_node(list_url_list, "list_url")
-        v = feedmakerutil.get_value_from_config(list_url)
+        config = fmutilconfig.read_config()
+        collection = fmutilconfig.get_config_node(config, "collection")
+        list_url_list = fmutilconfig.get_config_node(collection, "list_url_list")
+        list_url = fmutilconfig.get_config_node(list_url_list, "list_url")
+        v = fmutilconfig.get_value_from_config(list_url)
         self.assertEqual(v, "http://m.navercast.naver.com/homeMain.nhn?page=")
-        extraction = feedmakerutil.get_config_node(config, "extraction")
-        element_list = feedmakerutil.get_config_node(extraction, "element_list")
-        elementId = feedmakerutil.get_config_node(element_list, "element_id")
-        v = feedmakerutil.get_value_from_config(elementId)
+        extraction = fmutilconfig.get_config_node(config, "extraction")
+        element_list = fmutilconfig.get_config_node(extraction, "element_list")
+        elementId = fmutilconfig.get_config_node(element_list, "element_id")
+        v = fmutilconfig.get_value_from_config(elementId)
         self.assertEqual(v, "ct")
 
 
 class UtilTest(unittest.TestCase):
     def test_get_url_prefix(self):
-        prefix = feedmakerutil.get_url_prefix("http://www.naver.com/movie/hello/test.nhn?query=test")
+        prefix = fmutilurl.get_url_prefix("http://www.naver.com/movie/hello/test.nhn?query=test")
         self.assertEqual(prefix, "http://www.naver.com/movie/hello/");
 
     def test_get_url_domain(self):
-        domain = feedmakerutil.get_url_domain("http://www.naver.com/movie/hello/test.nhn?query=test")
+        domain = fmutilurl.get_url_domain("http://www.naver.com/movie/hello/test.nhn?query=test")
         self.assertEqual(domain, "http://www.naver.com/")
 
     def test_concatenate_url(self):
-        url = feedmakerutil.concatenate_url("http://www.naver.com/movie", "hello")
+        url = fmutilurl.concatenate_url("http://www.naver.com/movie", "hello")
         self.assertEqual(url, "http://www.naver.com/hello")
-        url = feedmakerutil.concatenate_url("http://www.naver.com/movie/", "hello")
+        url = fmutilurl.concatenate_url("http://www.naver.com/movie/", "hello")
         self.assertEqual(url, "http://www.naver.com/movie/hello")
 
     def test_get_short_md5_name(self):
-        self.assertEqual(feedmakerutil.get_short_md5_name("http://terzeron.net"), "e0ad299")
+        self.assertEqual(fmutilurl.get_short_md5_name("http://terzeron.net"), "e0ad299")
 
 
 class ExecCmdTest(unittest.TestCase):

@@ -7,8 +7,10 @@ import time
 import datetime
 import getopt
 import subprocess
-from feedmakerutil import warn, err, die
 import feedmakerutil
+from feedmakerutil import warn, err, die
+from feedmakerutil import Config
+from feedmakerutil import URL
 import PyRSS2Gen
 
 
@@ -41,94 +43,9 @@ def get_list_file_name(list_dir, date_str):
 
 
 def get_new_file_name(url):
-    return "html/" + feedmakerutil.get_short_md5_name(url) + ".html"
+    return "html/" + URL.get_short_md5_name(url) + ".html"
 
 
-def get_collection_configs(config):
-    print("# get_collection_configs()")
-    collection_conf = feedmakerutil.get_config_node(config, "collection")
-    if collection_conf == None:
-        die("can't get collection element")
-
-    ignore_old_list = feedmakerutil.get_config_value(collection_conf, "ignore_old_list")
-    ignore_old_list = bool("true" == ignore_old_list)
-    is_completed = feedmakerutil.get_config_value(collection_conf, "is_completed")
-    is_completed = bool("true" == is_completed)
-    sort_field_pattern = feedmakerutil.get_config_value(collection_conf, "sort_field_pattern")
-    unit_size_per_day = feedmakerutil.get_config_value(collection_conf, "unit_size_per_day")
-    unit_size_per_day = float(unit_size_per_day) if unit_size_per_day else None
-
-    options = {
-        "ignore_old_list": ignore_old_list,
-        "is_completed": is_completed,
-        "sort_field_pattern": sort_field_pattern,
-        "unit_size_per_day": unit_size_per_day,
-    }
-    
-    return options
-
-
-def get_extraction_configs(config):
-    print("# get_extraciton_configs()")
-    extraction_conf = feedmakerutil.get_config_node(config, "extraction")
-    if extraction_conf == None:
-        die("can't get extraction element")
-
-    render_js = feedmakerutil.get_config_value(extraction_conf, "render_js")
-    render_js = bool("true" == render_js)
-    uncompress_gzip = feedmakerutil.get_config_value(extraction_conf, "uncompress_gzip")
-    uncompress_gzip = bool("true" == uncompress_gzip)
-    force_sleep_between_articles = feedmakerutil.get_config_value(extraction_conf, "force_sleep_between_articles")
-    force_sleep_between_articles = bool(force_sleep_between_articles and "true" == force_sleep_between_articles)
-    bypass_element_extraction = feedmakerutil.get_config_value(extraction_conf, "bypass_element_extraction")
-    bypass_element_extraction = bool("true" == bypass_element_extraction)
-    
-    review_point_threshold = feedmakerutil.get_config_value(extraction_conf, "review_point_threshold")
-    user_agent = feedmakerutil.get_config_value(extraction_conf, "user_agent")
-    referer = feedmakerutil.get_config_value(extraction_conf, "referer")
-
-    header_list = []
-    header_list_conf = feedmakerutil.get_config_node(extraction_conf, "header_list")
-    if header_list_conf:
-        header_list = feedmakerutil.get_all_config_values(header_list_conf, "header")
-    else:
-        header = feedmakerutil.get_config_value(extraction_conf, "header")
-        if header:
-            header_list.append(header)
-
-    post_process_script_list = []
-    post_process_script_list_conf = feedmakerutil.get_config_node(extraction_conf, "post_process_script_list")
-    if post_process_script_list_conf:
-        post_process_script_list = feedmakerutil.get_all_config_values(post_process_script_list_conf, "post_process_script")
-    else:
-        post_process_script = feedmakerutil.get_config_value(extraction_conf, "post_process_script")
-        if post_process_script:
-            post_process_script_list.append(post_process_script)
-
-    options = {
-        "render_js": render_js,
-        "uncompress_gzip": uncompress_gzip,
-        "force_sleep_between_articles": force_sleep_between_articles,
-        "bypass_element_extraction": bypass_element_extraction,
-        "review_point_threshold": review_point_threshold,
-        "user_agent": user_agent,
-        "referer": referer,
-        "header_list": header_list,
-        "post_process_script_list": post_process_script_list,
-    }
-    
-    return options
-
-
-def get_notification_configs(config):
-    print("# get_notification_configs()")
-    noti_conf = feedmakerutil.get_config_node(config, "notification")
-    email = feedmakerutil.get_config_node(noti_conf, "email")
-    recipient = feedmakerutil.get_config_value(email, "recipient")
-    subject = feedmakerutil.get_config_value(email, "subject")
-    return (email, recipient, subject)
-
-    
 def get_recent_list(list_dir, post_process_script_list):
     print("# get_recent_list(%s)" % (list_dir))
 
@@ -204,35 +121,10 @@ def read_old_list_from_file(list_dir, is_completed):
     return list(set(result_list))
 
 
-def get_rss_configs(config):
-    print("# get_rss_configs()")
-    rss_config = feedmakerutil.get_config_node(config, "rss")
-    if rss_config == None:
-        die("can't get rss element")
-    
-    rss_title = feedmakerutil.get_config_value(rss_config, "title")
-    rss_description = feedmakerutil.get_config_value(rss_config, "description")
-    rss_generator = feedmakerutil.get_config_value(rss_config, "generator")
-    rss_copyright = feedmakerutil.get_config_value(rss_config, "copyright")
-    rss_link = feedmakerutil.get_config_value(rss_config, "link")
-    rss_language = feedmakerutil.get_config_value(rss_config, "language")
-    rss_no_item_desc = feedmakerutil.get_config_value(rss_config, "no_item_desc")
-    options = {
-        "rss_title": rss_title,
-        "rss_description": rss_description,
-        "rss_generator": rss_generator,
-        "rss_copyright": rss_copyright,
-        "rss_link": rss_link,
-        "rss_language": rss_language,
-        "rss_no_item_desc": rss_no_item_desc
-    }
-    return options
-    
-
 def generate_rss_feed(config, feed_list, rss_file_name):
     print("# generate_rss_feed(%s)" % (rss_file_name))
 
-    options = get_rss_configs(config)
+    options = Config.get_rss_configs(config)
     print("rss options=", options)
 
     last_build_date_str = get_rss_date_str()
@@ -243,7 +135,7 @@ def generate_rss_feed(config, feed_list, rss_file_name):
     for feed_item in feed_list:
         (article_url, article_title) = feed_item.split('\t')
         new_file_name = get_new_file_name(article_url)
-        guid = feedmakerutil.get_short_md5_name(article_url)
+        guid = URL.get_short_md5_name(article_url)
         pub_date_str = get_rss_date_str()
         
         content = ""
@@ -340,7 +232,7 @@ def append_item_to_result(feed_list, item, rss_file_name, options):
             size = os.stat(new_file_name).st_size
         else:
             size = 0
-        md5_name = feedmakerutil.get_short_md5_name(url)
+        md5_name = URL.get_short_md5_name(url)
         if size > len(feedmakerutil.header_str) + 1:
             cmd = 'echo "<img src=\'http://terzeron.net/img/1x1.jpg?feed=%s&item=%s\'/>" >> "%s"' % (rss_file_name, md5_name, new_file_name)
             print(cmd)
@@ -379,7 +271,7 @@ def determine_cmd(options, url, new_file_name):
 def diff_old_and_recent(config, recent_list, old_list, feed_list, rss_file_name):
     print("# diff_old_and_recent(len(recent_list)=%d, len(old_list)=%d), len(feed_list)=%d, rss_file_name=%s" % (len(recent_list), len(old_list), len(feed_list), rss_file_name))
 
-    options = get_extraction_configs(config)
+    options = Config.get_extraction_configs(config)
     print("extraction options=", options)
         
     old_map = {}
@@ -511,10 +403,10 @@ def main():
                
     rss_file_name = args[0]
 
-    config = feedmakerutil.read_config()
+    config = Config.read_config()
     if config == None:
         die("can't find conf.xml file nor get config element")
-    options = get_collection_configs(config)
+    options = Config.get_collection_configs(config)
     print("collection options=", options)
 
     # -c 옵션이 지정된 경우, 설정의 is_completed 값 무시
@@ -570,7 +462,7 @@ def main():
             if i >= start_idx and i < end_idx:
                 feed_list.append(old_list[feed["id"]])
                 (url, title) = old_list[feed["id"]].split("\t")
-                guid = feedmakerutil.get_short_md5_name(url)
+                guid = URL.get_short_md5_name(url)
                 print("%s\t%s\t%s" % (url, title, guid))
 
         ts = datetime.datetime.now().timestamp()
@@ -608,7 +500,7 @@ def main():
     m = re.search(r'Upload: success', result)
     if m and do_collect_by_force == False:
         # email notification
-        (email, recipient, subject) = get_notification_configs(config)
+        (email, recipient, subject) = Config.get_notification_configs(config)
         if email and recipient and subject:
             cmd = "| mail -s '%s' '%s'" % (subject, recipient)
             with subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE) as p:

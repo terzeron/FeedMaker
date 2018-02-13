@@ -5,13 +5,14 @@ import os
 import sys
 import re
 import getopt
-from feedmakerutil import debug_print
 import feedmakerutil
+from feedmakerutil import debug_print
+from feedmakerutil import Cache
 
 
 def download_image(path_prefix, img_url, img_ext, page_url):
     debug_print("# download_image(%s, %s, %s, %s)" % (path_prefix, img_url, img_ext, page_url))
-    cache_file = feedmakerutil.get_cache_file_name(path_prefix, img_url, img_ext)
+    cache_file = Cache.get_cache_file_name(path_prefix, img_url, img_ext)
     if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
         return True
     cmd = 'crawler.sh --download "%s" --referer "%s" "%s"' % (cache_file, page_url, img_url)
@@ -52,7 +53,7 @@ def download_image_and_read_metadata(path_prefix, img_ext, page_url):
     img_file_list = []
     img_url_list = []
     img_size_list = []
-    line_list = feedmakerutil.read_stdin_as_line_list()
+    line_list = IO.read_stdin_as_line_list()
     for line in line_list:
         m1 = re.search(r"<img src=(?:[\"'])(?P<img_url>[^\"']+)(?:[\"'])( width='\d+%?')?/?>", line)
         if m1:
@@ -103,7 +104,7 @@ def merge_image_files(img_file_list, path_prefix, img_url, img_ext, num):
     #
     # merge mode
     #
-    merged_img_file = feedmakerutil.get_cache_file_name(path_prefix, img_url, img_ext, num)
+    merged_img_file = Cache.get_cache_file_name(path_prefix, img_url, img_ext, num)
     cmd  = "../../../CartoonSplit/merge.py " + merged_img_file + " "
     for cache_file in img_file_list:
         cmd = cmd + cache_file + " "
@@ -167,10 +168,10 @@ def print_image_files(num_units, path_prefix, img_url_prefix, img_url, img_ext, 
     else:
         custom_range = reversed(range(num_units))
         for i in custom_range:
-            split_img_file = feedmakerutil.get_cache_file_name(path_prefix, img_url, img_ext, num, i + 1)
+            split_img_file = Cache.get_cache_file_name(path_prefix, img_url, img_ext, num, i + 1)
             debug_print("split_img_file=" + split_img_file)
             if os.path.exists(split_img_file):
-                split_img_url = feedmakerutil.get_cache_url(img_url_prefix, img_url, img_ext, num, i + 1)
+                split_img_url = Cache.get_cache_url(img_url_prefix, img_url, img_ext, num, i + 1)
                 print("<img src='%s''/>" % (split_img_url))
 
 

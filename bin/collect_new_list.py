@@ -5,14 +5,15 @@ import os
 import re
 import feedmakerutil
 from feedmakerutil import die, err, warn
-
+from feedmakerutil import Config
 
 error_log_file_name = "collector.error.log"
 
 
 def extract_urls(url, options):
     #print("# extract_urls(%s, %s, %s, %s) % (url, options["item_capture_script", options["user_agent"], options["referer"]))
-
+    print("# options=", options)
+    
     option_str = feedmakerutil.determine_crawler_options(options)
 
     with open(error_log_file_name, 'w', encoding='utf-8') as error_file:
@@ -59,12 +60,11 @@ def extract_urls(url, options):
     return result_list
 
 
-def compose_url_list(list_url_list, options):
+def compose_url_list(conf, options):
     #print("# compose_url_list(%s, %s, %s, %s)" % (list_url_list, options["render_js"], options["item_capture_script"], options["referer"]))
     result_list = []
-    
-    list_urls = feedmakerutil.get_all_config_values(list_url_list, "list_url")
-    for list_url in list_urls:
+
+    for list_url in options["list_url_list"]:
         url_list = extract_urls(list_url, options)
         result_list.extend(url_list)
     return result_list
@@ -72,45 +72,13 @@ def compose_url_list(list_url_list, options):
 
 def main():
     total_list = []
-    options = {}
 
-    # configuration
-    config = feedmakerutil.read_config()
-    if config == None:
-        die("can't find conf.xml nor get config element")
-    collection_conf = feedmakerutil.get_config_node(config, "collection")
-
-    list_url_list = feedmakerutil.get_config_node(collection_conf, "list_url_list")
-    if list_url_list:
-        print("# list_url_list: ", list_url_list)
-
-    do_render_js = feedmakerutil.get_config_value(collection_conf, "render_js")
-    print("# render_js: ", do_render_js)
-
-    item_capture_script = feedmakerutil.get_config_value(collection_conf, "item_capture_script")
-    if not item_capture_script or item_capture_script == "":
-        item_capture_script = "./capture_item_link_title.py"
-    print("# item_capture_script: %s" % (item_capture_script))
-    item_capture_script_program = item_capture_script.split(" ")[0]
-    if not item_capture_script_program or not os.path.isfile(item_capture_script_program) or not os.access(item_capture_script_program, os.X_OK):
-        with open(error_log_file_name, 'w', encoding='utf-8') as error_file:
-            error_file.write("can't execute '%s'\n" % (item_capture_script_program))
-        die("can't execute '%s'" % (item_capture_script_program))
-
-    user_agent = feedmakerutil.get_config_value(collection_conf, "user_agent")
-
-    referer = feedmakerutil.get_config_value(collection_conf, "referer")
-
-    options = {
-        "render_js": do_render_js,
-        "item_capture_script": item_capture_script,
-        "user_agent": user_agent,
-        "referer": referer
-    }
+    conf = Config.read_config()
+    options = Config.get_collection_configs(conf)
 
     # collect items from specified url list
     print("# collecting items from specified url list...")
-    total_list = compose_url_list(list_url_list, options)
+    total_list = compose_url_list(conf, options)
     for (link, title) in total_list:
         print("%s\t%s" % (link, title))
 
