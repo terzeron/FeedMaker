@@ -30,10 +30,13 @@ def make_path(path):
         None
 
 
-def exec_cmd(cmd):
+def exec_cmd(cmd, input=None):
     try:
-        p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        (result, error) = p.communicate()
+        p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if input:
+            (result, error) = p.communicate(input.encode("utf-8"))
+        else:
+            (result, error) = p.communicate()
         if error:
             if not error.startswith(b"_RegisterApplication(), FAILED TO establish the default connection to the WindowServer"):
                 return (False, str(error))
@@ -290,3 +293,33 @@ def get_cache_url(url_prefix, img_url, img_ext, postfix=None, index=None):
 def get_cache_file_name(path_prefix, img_url, img_ext, postfix=None, index=None):
     debug_print("# get_cache_file_name(%s, %s, %s, %s, %d)" % (path_prefix, img_url, img_ext, postfix, index if index else 0))
     return get_cache_info_common(path_prefix, img_url, img_ext, postfix)
+
+
+def determine_crawler_options(options):
+    print("# determine_crawler_options()")
+    
+    option_str = ""
+    if "render_js" in options:
+        option_str += " --render-js"
+    if "uncompress_gzip" in options:
+        option_str += " --uncompress-gzip"
+    if "user_agent" in options:
+        option_str += " --ua '%s'" % (options["user_agent"])
+    if "referer" in options:
+        option_str += " --referer '%s'" % (options["referer"])
+    if "header_list" in options:
+        for header in options["header_list"]:
+            option_str += " --header '%s'" % (header)
+
+    '''
+    #print("title=%s, review_point=%d, review_point_threshold=%f" % (title, review_point, review_point_threshold))
+    if review_point and review_point_threshold and review_point > review_point_threshold:
+        # 일반적으로 평점이 사용되지 않는 경우나
+        # 평점이 기준치를 초과하는 경우에만 추출
+        warn("ignore an article due to the low score")
+        return 0
+    '''
+    
+    return option_str
+
+

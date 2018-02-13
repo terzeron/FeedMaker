@@ -58,21 +58,11 @@ def get_collection_configs(config):
     unit_size_per_day = feedmakerutil.get_config_value(collection_conf, "unit_size_per_day")
     unit_size_per_day = float(unit_size_per_day) if unit_size_per_day else None
 
-    post_process_script_list = []
-    post_process_script_list_conf = feedmakerutil.get_config_node(collection_conf, "post_process_script_list")
-    if post_process_script_list_conf:
-        post_process_script_list = feedmakerutil.get_all_config_values(post_process_script_list_conf, "post_process_script")
-    else:
-        post_process_script = feedmakerutil.get_config_value(collection_conf, "post_process_script")
-        if post_process_script:
-            post_process_script_list.append(post_process_script)
-
     options = {
         "ignore_old_list": ignore_old_list,
         "is_completed": is_completed,
         "sort_field_pattern": sort_field_pattern,
         "unit_size_per_day": unit_size_per_day,
-        "post_process_script_list": post_process_script_list
     }
     
     return options
@@ -321,34 +311,6 @@ def generate_rss_feed(config, feed_list, rss_file_name):
     return True
 
 
-def determine_crawler_options(options):
-    print("# determine_crawler_options()")
-    
-    option_str = ""
-    if options["render_js"]:
-        option_str += " --render-js"
-    if options["uncompress_gzip"]:
-        option_str += " --uncompress-gzip"
-    if options["user_agent"]:
-        option_str += " --ua '%s'" % (options["user_agent"])
-    if options["referer"]:
-        option_str += " --referer '%s'" % (options["referer"])
-    if options["header_list"]:
-        for header in options["header_list"]:
-            option_str += " --header '%s'" % (header)
-
-    '''
-    #print("title=%s, review_point=%d, review_point_threshold=%f" % (title, review_point, review_point_threshold))
-    if review_point and review_point_threshold and review_point > review_point_threshold:
-        # 일반적으로 평점이 사용되지 않는 경우나
-        # 평점이 기준치를 초과하는 경우에만 추출
-        warn("ignore an article due to the low score")
-        return 0
-    '''
-    
-    return option_str
-
-
 def append_item_to_result(feed_list, item, rss_file_name, options):
     fields = item.split('\t')
     review_point = None
@@ -408,7 +370,7 @@ def determine_cmd(options, url, new_file_name):
     else:
         extraction_cmd = ' | extract.py "%s"' % url
 
-    option_str = determine_crawler_options(options)
+    option_str = feedmakerutil.determine_crawler_options(options)
     cmd = 'crawler.sh %s "%s" %s %s > "%s"' % (option_str, url, extraction_cmd, post_process_cmd, new_file_name) 
 
     return cmd

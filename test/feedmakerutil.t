@@ -127,6 +127,13 @@ class ExecCmdTest(unittest.TestCase):
         self.assertFalse(result)
         self.assertTrue("/bin/sh: lslslsls: command not found" in error)
 
+        bidirectional_cmd = "cat"
+        input = "hello world"
+        (result, error) = feedmakerutil.exec_cmd(bidirectional_cmd, input)
+        self.assertTrue(result)
+        self.assertEqual(error, "")
+        self.assertTrue("hello world" in result)
+
 
 if __name__ == "__main__":
     unittest.main()
