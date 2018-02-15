@@ -8,6 +8,7 @@ if [ $# -lt 1 ]; then
 	echo "	--referer <referer>"
 	echo "	--uncompress-gzip: uncompress content with gzip"
     echo "  --header <header string>: specify header string"
+    echo "  --encoding <encoding>: specify encoding of content"
 	exit 0
 fi
 
@@ -18,12 +19,11 @@ render_js=false
 uncompress_gzip=false
 header_opt=""
 
-encoding=$(python -c 'from feedmakerutil import Config; encoding = Config.get_config_value(Config.get_config_node(Config.read_config(), "collection"), "encoding"); print(encoding if encoding else "utf8")')
 #cookie_opt="--cookie-jar cookie.txt"
 timeout_opt="--connect-timeout 10"
 cert_opt="--insecure"
 
-OPTS=`/usr/local/bin/getopt -o v --long spider,render-js,uncompress-gzip,download:,ua:,referer:,header: -- "$@"`
+OPTS=`/usr/local/bin/getopt -o v --long spider,render-js,uncompress-gzip,download:,encoding:,ua:,referer:,header: -- "$@"`
 
 eval set -- "$OPTS"
 
@@ -34,6 +34,7 @@ while :; do
 		--render-js) render_js=true; shift;;
         --uncompress-gzip) uncompress_gzip=true; shift;;
 		--download) download_file="$2"; shift 2;;
+        --encoding) encoding="$2"; shift 2;;
 		--ua) ua_opt="--user-agent '$2'"; shift 2;;
 		--referer) referer_opt="--referer '$2'"; shift 2;;
         --header) header_opt="$header_opt --header '$2'"; shift 2;;
@@ -61,7 +62,7 @@ if [ "$uncompress_gzip" == true ]; then
     cmd="$cmd | gzip -cd"
 fi
 
-if [ "${encoding}" != "utf8" ]; then
+if [ "${encoding}" != ""  ]; then
 	cmd="$cmd | iconv -c -f $encoding -t utf8"
 fi
     
