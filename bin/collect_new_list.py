@@ -15,35 +15,47 @@ def extract_urls(url, options):
     print("# options=", options)
     
     option_str = feedmakerutil.determine_crawler_options(options)
-
+    whole_cmd = ""
+    
     with open(error_log_file_name, 'w', encoding='utf-8') as error_file:
         cmd = "crawler.sh %s '%s'" % (option_str, url)
-        print("# %s" % (cmd))
+        if whole_cmd:
+            whole_cmd += " | " + cmd
+        else:
+            whole_cmd += cmd
+        print("# %s" % (whole_cmd))
         (result, error) = feedmakerutil.exec_cmd(cmd)
         if error:
-            error_file.write(cmd + "\n" + str(result) + "\n")
-            sys.stderr.write(cmd + "\n" + str(result) + "\n")
+            error_file.write(whole_cmd + "\n" + str(result) + "\n")
+            sys.stderr.write(whole_cmd + "\n" + str(result) + "\n")
             error_file.write("can't get result from crawler script\n")
             die("can't get result from crawler script")
 
         cmd = "extract_element.py collection"
-        print("# %s" % (cmd))
+        if whole_cmd:
+            whole_cmd += " | " + cmd
+        else:
+            whole_cmd += cmd
+        print("# %s" % (whole_cmd))
         (result, error) = feedmakerutil.exec_cmd(cmd, result)
         if error: 
-            error_file.write(cmd + "\n" + str(result) + "\n")
-            sys.stderr.write(cmd + "\n" + str(result) + "\n")
+            error_file.write(whole_cmd + "\n" + str(result) + "\n")
+            sys.stderr.write(whole_cmd + "\n" + str(result) + "\n")
             error_file.write("can't get result from extract script\n")
             die("can't get result from extract script")
 
         cmd = options["item_capture_script"]
-        print("# %s" % (cmd))
+        if whole_cmd:
+            whole_cmd += " | " + cmd
+        else:
+            whole_cmd += cmd
+        print("# %s" % (whole_cmd))
         (result, error) = feedmakerutil.exec_cmd(cmd, result)
         if error:
-            error_file.write(cmd + "\n" + str(result) + "\n")
-            sys.stderr.write(cmd + "\n" + str(result) + "\n")
+            error_file.write(whole_cmd + "\n" + str(result) + "\n")
+            sys.stderr.write(whole_cmd + "\n" + str(result) + "\n")
             error_file.write("can't get result from capture script\n")
             die("can't get result from capture script")
-
 
     # check the result
     result_list = []
