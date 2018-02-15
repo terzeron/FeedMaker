@@ -7,7 +7,7 @@ import sys
 import re
 import pathlib
 import sqlite3
-import feedmakerutil
+from feedmakerutil import IO
 
 
 db_name = "problems.db"
@@ -35,7 +35,7 @@ def create_xml_status_table(c):
     
     
 def update_htaccess_status(c):
-    line_list = feedmakerutil.read_file_as_line_list(htaccess_file)
+    line_list = IO.read_file_as_line_list(htaccess_file)
     for line in line_list:
         m = re.search(r'^RewriteRule\s+\^(?P<feed_alias>[^\t]+)\\\.xml\$\s+xml/(?P<feed_name>[^\t]+)\\\.xml\s*$', line)
         if m:
@@ -55,7 +55,7 @@ def update_htaccess_status(c):
 
 
 def update_feed_access_status(c):
-    line_list = feedmakerutil.read_file_as_line_list(feed_access_file)
+    line_list = IO.read_file_as_line_list(feed_access_file)
     for line in line_list:
         m = re.search(r'(?P<date>\d+)\t(?P<feed_name>[^\t]+)\t(?P<http_status>\d+)', line)
         if m:
