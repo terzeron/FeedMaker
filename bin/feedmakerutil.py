@@ -272,6 +272,7 @@ class Config:
         unit_size_per_day = Config.get_config_value(conf, "unit_size_per_day")
         unit_size_per_day = float(unit_size_per_day) if unit_size_per_day else None
         user_agent = Config.get_config_value(conf, "user_agent")
+        encoding = Config.get_config_value(conf, "encoding")
         
         list_url_list = Config.get_config_values_as_list("list_url_list", "list_url", conf)
         post_process_script_list = Config.get_config_values_as_list("post_process_script_list", "post_process_script", conf)
@@ -284,6 +285,7 @@ class Config:
             "sort_field_pattern": sort_field_pattern,
             "unit_size_per_day": unit_size_per_day,
             "user_agent": user_agent,
+            "encoding": encoding,
             "post_process_script_list": post_process_script_list,
         }
     
@@ -307,6 +309,7 @@ class Config:
         
         review_point_threshold = Config.get_config_value(conf, "review_point_threshold")
         user_agent = Config.get_config_value(conf, "user_agent")
+        encoding = Config.get_config_value(conf, "encoding")
         referer = Config.get_config_value(conf, "referer")
         
         header_list = Config.get_config_values_as_list("header_list", "header", conf)
@@ -319,6 +322,7 @@ class Config:
             "bypass_element_extraction": bypass_element_extraction,
             "review_point_threshold": review_point_threshold,
             "user_agent": user_agent,
+            "encoding": encoding,
             "referer": referer,
             "header_list": header_list,
             "post_process_script_list": post_process_script_list,
@@ -463,6 +467,8 @@ def determine_crawler_options(options):
         option_str += " --ua '%s'" % (options["user_agent"])
     if "referer" in options and options["referer"]:
         option_str += " --referer '%s'" % (options["referer"])
+    if "encoding" in options and options["encoding"]:
+        option_str += " --encoding '%s'" % (options["encoding"])
     if "header_list" in options and options["header_list"]:
         for header in options["header_list"]:
             option_str += " --header '%s'" % (header)
