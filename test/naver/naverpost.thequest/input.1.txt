@@ -1,0 +1,1896 @@
+		<div id="SEDOC-1464160845310-793056631" class="se_doc_viewer se_body_wrap se_theme_default " data-docversion="1.0">
+
+<div class="se_doc_header_start" id="SEDOC-1464160845310-793056631_se_doc_header_start"></div>
+
+<!-- SE_DOC_HEADER_START -->
+
+<div id="SEDOC-1464160845310-793056631_viewer_head" class="se_viewer_head"></div>
+
+<div class="se_component_wrap">
+
+<div class="se_component se_documentTitle default  is-fill">
+
+    <div class="se_sectionArea is-fill se_align-left">
+
+        <!-- $SE3-TITLE_TOP Post Service placeholder --><a href="/my/series/detail.nhn?seriesNo=148576&memberNo=24850609&prevVolumeNo=4279413" onclick="mug.common.nclick(this, 'tit.series');"><div class="se_series"><i class="se_ico_series" style="display:none">스타에디터3</i><i class="se_ico_series" style="">시리즈</i><i class="se_ico_groupseries" style="display:none">콜라보</i>더퀘스트 오늘의 책</div></a><!-- $SE3-TITLE_TOP Post Service placeholder -->
+
+        <!-- SE_DOC_HEADER_TITLE_TOP-->
+
+     	<div id="SEDOC-1464160845310-793056631_se_doc_title_top" class="se_doc_title_top"></div>
+
+        <div class="se_editArea">
+
+        	<div class="se_viewArea se_ff_nanumgothic se_fs_D1">
+
+	            <div class="se_editView se_title">
+
+	                <div class="se_textView">
+
+                        <h3 class="se_textarea">
+
+                            
+
+                            빌 게이츠 추천, 2016 여름 휴가에 꼭 읽어야 할 책들 5
+
+                        </h3>
+
+	                </div>
+
+	            </div>
+
+	        </div>
+
+        </div><!-- SE_DOC_HEADER_TITLE_MIDDLE-->
+
+        <div id="SEDOC-1464160845310-793056631_se_doc_title_middle" class="se_doc_title_middle"></div>
+
+        <!-- SE_DOC_HEADER_CONTENTS_START -->
+
+        <!-- $SE3-TITLE_CONTENTS Post Service placeholder --><div class="se_container"><a href="/my.nhn?memberNo=24850609" onclick="mug.common.nclick(this, 'tit.profile');" class="se_thumbnail"><img  src="http://static.post.naver.net/image/m/im/bg_white.png" data-src="http://post.phinf.naver.net/20151118_133/thequestbook_1447822876075M8wBc_JPEG/thequestbook_3107210539992188330.jpg?type=f120_120" onerror="this.onerror=null;this.src='http://static.post.naver.net/image/im/img_default.gif'" alt="더퀘스트님의 프로필 사진"></a><div class="se_group"><div class="se_author_area"><p><a href="/my.nhn?memberNo=24850609" onclick="mug.common.nclick(this, 'tit.name');"><span class="se_author">더퀘스트</span></a></p><p style=""><span class="ico_official"><i class="blind">공식</i></span></p><p><i class="se_divide_dot" style=""></i><span class="se_follower" style="">3만 팔로워</span></p></div><p class="se_detail"><span class="se_publishDate">2016.05.18. 16:18</span><i class="se_divide_line"></i><span class="se_view" style="">27,663 읽음 </span><span class="se_secret" style="display:none">비밀글</span></p></div><div class="flw_area"><a href="#" class="btn_stats __se3_stat_btn" style="display:none" onclick="mug.common.nclick(this, 'tit.stat');" target="_blank"><span>통계</span></a>
+
+</div></div><!-- $SE3-TITLE_CONTENTS Post Service placeholder -->
+
+        <!-- SE_DOC_HEADER_CONTENTS_END -->
+
+        <!-- SE_DOC_HEADER_TITLE_BOTTOM-->
+
+        <div id="SEDOC-1464160845310-793056631_se_doc_title_bottom" class="se_doc_title_bottom"></div>
+
+    </div>
+
+</div>
+
+
+
+</div>
+
+<!-- {{{$SE3-CONTENTS_HEADER}}} -->
+
+<!-- SE_DOC_HEADER_END -->
+
+<div class="se_doc_header_end" id="SEDOC-1464160845310-793056631_se_doc_header_end"></div>
+
+<div class="se_doc_contents_start" id="SEDOC-1464160845310-793056631_se_doc_contents_start"></div>
+
+<!-- SE_DOC_CONTENTS_START -->
+
+<div class="se_component_wrap sect_dsc __se_component_area">
+
+    
+
+
+
+
+
+<div class="se_component se_image default">
+
+    <div class="se_sectionArea se_align-justify">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea" >
+
+                <a href="#" onclick="return false;" class="se_mediaArea __se_image_link __se_link" data-linktype="img" data-linkdata='{"imgId" : "SEDOC-1464160845310-793056631_image_0_img", "src" : "http://post.phinf.naver.net/20160518_200/1463539775212flbr3_JPEG/summer-books_2016_article_1200x564_v1.jpg", "linkUse" : "false","link" : ""}'>
+
+                    <img  src="http://static.post.naver.net/image/m/im/bg_white.png" data-src="http://post.phinf.naver.net/20160518_200/1463539775212flbr3_JPEG/summer-books_2016_article_1200x564_v1.jpg?type=w1200" width="1200" height="564" data-attachment-id="IKpU9RUQGv68McWvcIqrvJRZpLTI" alt="" class="se_mediaImage __se_img_el" id="SEDOC-1464160845310-793056631_image_0_img">
+
+                </a>
+
+                <div class="se_editView">
+
+                    <div class="se_textView se_mediaCaption">
+
+                        <span class="se_textarea">사진 출처 : 게이츠 노트(https://www.gatesnotes.com)</span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_paragraph default">
+
+    <div class="se_sectionArea">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_ff_nanumgothic">
+
+                <div class="se_editView">
+
+                    <div class="se_textView se_fs_T3">
+
+                        <p class="se_textarea" style="text-align:left "><!-- SE3-TEXT { --><span>3년 연속 세계에서 가장 존경받는 남성 1위인 빌 게이츠!<br></span><span><br></span><span>얼마 전 그의 서평 블로그인 '게이츠 노트(gatesnotes)'에 여름 맞이 추천 책이자, </span><span>그에게 생각의 전환을 도와주는 책의 소개글이 올라왔습니다.<br></span><span><br></span><span>오늘은 그가 소개한 5가지 책을 소개해드립니다.</span><!-- } SE3-TEXT --></p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_paragraph default">
+
+    <div class="se_sectionArea">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_ff_nanumgothic">
+
+                <div class="se_editView">
+
+                    <div class="se_textView se_fs_T3">
+
+                        <p class="se_textarea" style="text-align:left "><!-- SE3-TEXT { --><span>(포스트 내용에 참고가된 빌 게이츠의 블로그 글입니다.)<br></span><!-- } SE3-TEXT --></p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_oglink og_bSize">
+
+    <div class="se_sectionArea se_align-center">
+
+        <div class="se_editArea" id="SEDOC-1464160845310-793056631_oglink_0">
+
+            <div class="se_viewArea se_og_wrap">
+
+                <!-- <div class="se_og_box"> -->
+
+                <a class="se_og_box" href="https://www.gatesnotes.com/About-Bill-Gates/Summer-Books-2016" target="_blank">
+
+                    <div class="se_og_txt">
+
+                        <div class="se_og_tit">5 Books to Read This Summer</div>
+
+                        <div class="se_og_desc">Bill Gates shares his list of five great books to read this summer.</div>
+
+                        <div class="se_og_cp">www.gatesnotes.com</div>
+
+                    </div>
+
+                <!-- </div> -->
+
+                </a>
+
+                    <!-- <a href="https://www.gatesnotes.com/About-Bill-Gates/Summer-Books-2016" target="_blank" class="se_og_link">본문으로 이동</a> -->
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!--script type="text/data" class="__se_module_data" data-module='{"type":"v1_oglink", "docVersion" : "1.0", "id" :"SEDOC-1464160845310-793056631_oglink_0" , "data" : {"viewId" : "SEDOC-1464160845310-793056631_oglink_0", "link" : "https://www.gatesnotes.com/About-Bill-Gates/Summer-Books-2016", "isVideo" : "false", "thumbnail" : ""}}'></script-->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+<div class="se_component se_horizontalLine default">
+
+    <div class="se_sectionArea">
+
+        <div class="se_editArea">
+
+            <div class="viewArea">
+
+                <div class="se_horizontalLineView">
+
+                    <div class="se_hr"><hr></div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_sectionTitle ">
+
+    <div class="se_sectionArea se_align-center">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_ff_nanumgothic se_fs_H2 se_fw_bold"
+
+            			style="color: ;
+
+                        text-decoration: inherit;
+
+                        font-style: inherit;">
+
+                <div class="se_editView" >
+
+                    <div class="se_textView">
+
+                        <h5 class="se_textarea"><!-- SE3-TEXT { -->1. 틀리지 않는 법/ 조던 엘렌버그<!-- } SE3-TEXT --></h5>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_subjectMatter subjectMatter_book " id="SEDOC-1464160845310-793056631_material_0" data-attachment-id= "TFlwsheIQtkw72D7BQw5PEnnWSrY">
+
+    <div class="se_sectionArea se_align-center">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea">                
+
+                    
+
+                    
+
+                    <div class="subjectMatter_item_content __se_material_contents">
+
+                        <div class="subjectMatterArea">
+
+                            <!-- [D] 썸네일 없을 때-->
+
+                            
+
+                            <div class="subjectMatter_thumb __se_material_thumbnail_wrapper">
+
+                                    <img  src="http://static.post.naver.net/image/m/im/bg_white.png" data-src="http://bookthumb.phinf.naver.net/cover/105/038/10503850.jpg?type=w150&udate=20160517" class="__se_material_thumbnail" onerror="this.onerror='';this.parentNode.className+=' no_thumb';var elSpan=document.createElement('span');elSpan.className='blind';elSpan.innerHTML='이미지 준비중';this.parentNode.replaceChild(elSpan,this);"/>
+
+                            </div>
+
+                            <div class="subjectMatter_info_wrap">
+
+                                <dl class="subjectMatter_info">
+
+                                    <dt class="subjectMatter_title">
+
+                                        <strong class="subjectMatter_title_text __se_material_title">틀리지 않는 법 </strong>
+
+                                    </dt>
+
+                                    <dd class="subjectMatter_info_detail">
+
+                                                                               <p class="subjectMatter_info_item __se_material_labelname_author" >
+
+                                            <strong class="subjectMatter_info_title __se_material_label">저자</strong>
+
+                                            <span class="subjectMatter_info_text __se_material_value">조던 엘렌버그</span>
+
+                                        </p>
+
+                                                                               <p class="subjectMatter_info_item __se_material_labelname_publisher" >
+
+                                            <strong class="subjectMatter_info_title __se_material_label">출판</strong>
+
+                                            <span class="subjectMatter_info_text __se_material_value">열린책들</span>
+
+                                        </p>
+
+                                                                               <p class="subjectMatter_info_item __se_material_labelname_publishDay" >
+
+                                            <strong class="subjectMatter_info_title __se_material_label">발매</strong>
+
+                                            <span class="subjectMatter_info_text __se_material_value">2016.04.25.</span>
+
+                                        </p>
+
+                                        
+
+                                    </dd>
+
+                                </dl>
+
+                            </div>
+
+                      </div>
+
+                   </div>
+
+                   <a class="subjectMatter_item_link __se_material_link" href="http://book.naver.com/bookdb/book_detail.php?bid=10503850" target="_blank"><span class="blind">상세보기</span></a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_paragraph default">
+
+    <div class="se_sectionArea">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_ff_nanumgothic">
+
+                <div class="se_editView">
+
+                    <div class="se_textView se_fs_T3">
+
+                        <p class="se_textarea" style="text-align:left "><!-- SE3-TEXT { --><span>'도대체 수학을 왜 공부해야 하는 걸까? 이걸 배워서 어디다가 써 먹을 수 있을까?'<br></span><span><br></span><span><span style="color: rgb(0, 0, 0); display: inline !important">학창 시절에 어려운 수학 문제를 마주했을 때 늘 들었던 이러한&nbsp;</span></span><span>의문들, <br></span><span><br></span><span>다들 한 번 쯤 해본 적 있으신가요? (저는 문과라서 늘 했습니다만)<br></span><span><br></span><span>이 책은 그러한 우리의 질문에 대답과도 같은 책이 되어줄 것입니다.<br></span><span><br></span><span>단순히 수학의 흥미성을 이끈다기보다는 수학의 필요성에 대해서 설명하고 있는 책입니다.</span><!-- } SE3-TEXT --></p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+<div class="se_component se_horizontalLine default">
+
+    <div class="se_sectionArea">
+
+        <div class="se_editArea">
+
+            <div class="viewArea">
+
+                <div class="se_horizontalLineView">
+
+                    <div class="se_hr"><hr></div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_sectionTitle ">
+
+    <div class="se_sectionArea se_align-center">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_ff_nanumgothic se_fs_H2 se_fw_bold"
+
+            			style="color: ;
+
+                        text-decoration: inherit;
+
+                        font-style: inherit;">
+
+                <div class="se_editView" >
+
+                    <div class="se_textView">
+
+                        <h5 class="se_textarea"><!-- SE3-TEXT { -->2. 사피엔스 / 유발 하라리<!-- } SE3-TEXT --></h5>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_subjectMatter subjectMatter_book " id="SEDOC-1464160845310-793056631_material_1" data-attachment-id= "TLZEthHUmH6TLruW190KCi9lSwLo">
+
+    <div class="se_sectionArea se_align-center">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea">                
+
+                    
+
+                    
+
+                    <div class="subjectMatter_item_content __se_material_contents">
+
+                        <div class="subjectMatterArea">
+
+                            <!-- [D] 썸네일 없을 때-->
+
+                            
+
+                            <div class="subjectMatter_thumb __se_material_thumbnail_wrapper">
+
+                                    <img  src="http://static.post.naver.net/image/m/im/bg_white.png" data-src="http://bookthumb.phinf.naver.net/cover/097/807/09780781.jpg?type=w150&udate=20160506" class="__se_material_thumbnail" onerror="this.onerror='';this.parentNode.className+=' no_thumb';var elSpan=document.createElement('span');elSpan.className='blind';elSpan.innerHTML='이미지 준비중';this.parentNode.replaceChild(elSpan,this);"/>
+
+                            </div>
+
+                            <div class="subjectMatter_info_wrap">
+
+                                <dl class="subjectMatter_info">
+
+                                    <dt class="subjectMatter_title">
+
+                                        <strong class="subjectMatter_title_text __se_material_title">사피엔스 </strong>
+
+                                    </dt>
+
+                                    <dd class="subjectMatter_info_detail">
+
+                                                                               <p class="subjectMatter_info_item __se_material_labelname_author" >
+
+                                            <strong class="subjectMatter_info_title __se_material_label">저자</strong>
+
+                                            <span class="subjectMatter_info_text __se_material_value">유발 하라리</span>
+
+                                        </p>
+
+                                                                               <p class="subjectMatter_info_item __se_material_labelname_publisher" >
+
+                                            <strong class="subjectMatter_info_title __se_material_label">출판</strong>
+
+                                            <span class="subjectMatter_info_text __se_material_value">김영사</span>
+
+                                        </p>
+
+                                                                               <p class="subjectMatter_info_item __se_material_labelname_publishDay" >
+
+                                            <strong class="subjectMatter_info_title __se_material_label">발매</strong>
+
+                                            <span class="subjectMatter_info_text __se_material_value">2015.11.24.</span>
+
+                                        </p>
+
+                                        
+
+                                    </dd>
+
+                                </dl>
+
+                            </div>
+
+                      </div>
+
+                   </div>
+
+                   <a class="subjectMatter_item_link __se_material_link" href="http://book.naver.com/bookdb/book_detail.php?bid=9780781" target="_blank"><span class="blind">상세보기</span></a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_paragraph default">
+
+    <div class="se_sectionArea">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_ff_nanumgothic">
+
+                <div class="se_editView">
+
+                    <div class="se_textView se_fs_T3">
+
+                        <p class="se_textarea" style="text-align:left "><!-- SE3-TEXT { --><span>인류 전체의 역사를 단 한 권, 400페이지에 소개해 놓은 책!<br></span><span><br></span><span>그리고 더불어 인공지능과 유전기술, 그 외 다양한 기술들이 우리 삶을 어떻게 바꾸어 놓을 것인지 </span><span>유발 하라리의 통찰력이 돋보이는 책입니다.<br></span><span><br></span><span>&lt;총,균,쇠&gt;의 저자인 제레드 다이아몬드, 마크 저커버그에 이어 빌게이츠도 이 책을 추천했네요.</span><span><br></span><span></span><!-- } SE3-TEXT --></p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+<div class="se_component se_horizontalLine default">
+
+    <div class="se_sectionArea">
+
+        <div class="se_editArea">
+
+            <div class="viewArea">
+
+                <div class="se_horizontalLineView">
+
+                    <div class="se_hr"><hr></div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_sectionTitle ">
+
+    <div class="se_sectionArea se_align-center">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_ff_nanumgothic se_fs_H2 se_fw_bold"
+
+            			style="color: ;
+
+                        text-decoration: inherit;
+
+                        font-style: inherit;">
+
+                <div class="se_editView" >
+
+                    <div class="se_textView">
+
+                        <h5 class="se_textarea"><!-- SE3-TEXT { -->3. Seveneves / Neal Stephenson <!-- } SE3-TEXT --></h5>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+<div class="se_component se_image default">
+
+    <div class="se_sectionArea se_align-center">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea" style="max-width:241px">
+
+                <a href="#" onclick="return false;" class="se_mediaArea __se_image_link __se_link" data-linktype="img" data-linkdata='{"imgId" : "SEDOC-1464160845310-793056631_image_1_img", "src" : "http://post.phinf.naver.net/20160518_109/1463539550403783F4_JPEG/seveneves.jpg", "linkUse" : "false","link" : ""}'>
+
+                    <img  src="http://static.post.naver.net/image/m/im/bg_white.png" data-src="http://post.phinf.naver.net/20160518_109/1463539550403783F4_JPEG/seveneves.jpg?type=w1200" width="241" height="289" data-attachment-id="Iurw-ZeAR9IuyXBphfCyE9YqFpes" alt="" class="se_mediaImage __se_img_el" id="SEDOC-1464160845310-793056631_image_1_img">
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_paragraph default">
+
+    <div class="se_sectionArea">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_ff_nanumgothic">
+
+                <div class="se_editView">
+
+                    <div class="se_textView se_fs_T3">
+
+                        <p class="se_textarea" style="text-align:left "><!-- SE3-TEXT { --><span>10년 넘게 과학 소설을 읽지 않았던 빌 게이츠가 선택한 책!<br></span><span><br></span><span>유성우로 인해 인류를 포함한 지구상의 모든 생물의 종말을 예측한 인류, 그리고 그들의 선택.<br></span><span><br></span><span>바로 그들이 오랫동안 생존해왔던 지구를 떠나는 것입니다.<br></span><span><br></span><span>마치 진짜 같은 느낌이 들도록 기술적인 묘사가 살아 있는 것이 특징입니다.<br></span><span><br></span><span></span><!-- } SE3-TEXT --></p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+<div class="se_component se_horizontalLine default">
+
+    <div class="se_sectionArea">
+
+        <div class="se_editArea">
+
+            <div class="viewArea">
+
+                <div class="se_horizontalLineView">
+
+                    <div class="se_hr"><hr></div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_sectionTitle ">
+
+    <div class="se_sectionArea se_align-center">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_ff_nanumgothic se_fs_H2 se_fw_bold"
+
+            			style="color: ;
+
+                        text-decoration: inherit;
+
+                        font-style: inherit;">
+
+                <div class="se_editView" >
+
+                    <div class="se_textView">
+
+                        <h5 class="se_textarea"><!-- SE3-TEXT { -->4. The Vital Question / Nick Lane<!-- } SE3-TEXT --></h5>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+<div class="se_component se_image default">
+
+    <div class="se_sectionArea se_align-center">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea" style="max-width:240px">
+
+                <a href="#" onclick="return false;" class="se_mediaArea __se_image_link __se_link" data-linktype="img" data-linkdata='{"imgId" : "SEDOC-1464160845310-793056631_image_2_img", "src" : "http://post.phinf.naver.net/20160518_273/1463539596050en2Em_JPEG/the_vital_question.jpg", "linkUse" : "false","link" : ""}'>
+
+                    <img  src="http://static.post.naver.net/image/m/im/bg_white.png" data-src="http://post.phinf.naver.net/20160518_273/1463539596050en2Em_JPEG/the_vital_question.jpg?type=w1200" width="240" height="289" data-attachment-id="I08OTcjxuN5tG8Xl62rEXuQ00XbI" alt="" class="se_mediaImage __se_img_el" id="SEDOC-1464160845310-793056631_image_2_img">
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_paragraph default">
+
+    <div class="se_sectionArea">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_ff_nanumgothic">
+
+                <div class="se_editView">
+
+                    <div class="se_textView se_fs_T3">
+
+                        <p class="se_textarea" style="text-align:left "><!-- SE3-TEXT { --><span>인류의 시작을 떠올려보면 많은 사람들이 다윈의 종의 기원에 빗대어 유인원부터 떠올리기 마련입니다.<br></span><span><br></span><span>하지만 그보다 더 원초적으로 돌아가보면 어떨까요?<br></span><span><br></span><span>한 세포의 출현, 그것으로부터의 생명 탄생, 그리고 생명이 더 복잡화 되어서 현재의 우리가 있다는 그런 </span><span>원초적인 부분말입니다. <br></span><span><br></span><span>이 책은 우리가 그러한 원초적인 힘에 대해서 생각해 볼 수 있게 하는 책입니다.<br></span><span><br></span><span>그리고 그러한 힘, 에너지(energy)가 우리를 앞으로 어디로 이끌어 갈 것인가에 대한 고찰을 나눕니다.</span><!-- } SE3-TEXT --></p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+<div class="se_component se_horizontalLine default">
+
+    <div class="se_sectionArea">
+
+        <div class="se_editArea">
+
+            <div class="viewArea">
+
+                <div class="se_horizontalLineView">
+
+                    <div class="se_hr"><hr></div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_sectionTitle ">
+
+    <div class="se_sectionArea se_align-center">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_ff_nanumgothic se_fs_H2 se_fw_bold"
+
+            			style="color: ;
+
+                        text-decoration: inherit;
+
+                        font-style: inherit;">
+
+                <div class="se_editView" >
+
+                    <div class="se_textView">
+
+                        <h5 class="se_textarea"><!-- SE3-TEXT { -->5. The Power to Compete / Ryoichi Mikitani and Hiroshi Mikitani<!-- } SE3-TEXT --></h5>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+<div class="se_component se_image default">
+
+    <div class="se_sectionArea se_align-center">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea" style="max-width:239px">
+
+                <a href="#" onclick="return false;" class="se_mediaArea __se_image_link __se_link" data-linktype="img" data-linkdata='{"imgId" : "SEDOC-1464160845310-793056631_image_3_img", "src" : "http://post.phinf.naver.net/20160518_4/1463539671325oysyz_JPEG/the_power_to_compete.jpg", "linkUse" : "false","link" : ""}'>
+
+                    <img  src="http://static.post.naver.net/image/m/im/bg_white.png" data-src="http://post.phinf.naver.net/20160518_4/1463539671325oysyz_JPEG/the_power_to_compete.jpg?type=w1200" width="239" height="290" data-attachment-id="IQnO8mR5PdB4orgm_q96grDVLOtU" alt="" class="se_mediaImage __se_img_el" id="SEDOC-1464160845310-793056631_image_3_img">
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_paragraph default">
+
+    <div class="se_sectionArea">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_ff_nanumgothic">
+
+                <div class="se_editView">
+
+                    <div class="se_textView se_fs_T3">
+
+                        <p class="se_textarea" style="text-align:left "><!-- SE3-TEXT { --><span><span style="color: rgb(0, 0, 0); display: inline !important">부자가 쓴 일본 경제에 대한 이야기!</span><br></span><span><br></span><span>일본의 경제학자 미키타니 료이치와 그의 아들이자 일본 온라인 쇼핑몰 '라쿠텐(rakuten)'의 창립자인 미키타니 히로시.<br></span><span><br></span><span>한국과 중국 경제에 어느새 밀려버린 일본 경제가 다시 세계 경제 흐름에 도약할 수 있을 지 그들의 생각</span><span>들과 전망이 재미있습니다.</span><!-- } SE3-TEXT --></p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+<div class="se_component se_horizontalLine line1">
+
+    <div class="se_sectionArea">
+
+        <div class="se_editArea">
+
+            <div class="viewArea">
+
+                <div class="se_horizontalLineView">
+
+                    <div class="se_hr"><hr></div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+<div class="se_component se_image default">
+
+    <div class="se_sectionArea se_align-justify">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea" >
+
+                <a href="#" onclick="return false;" class="se_mediaArea __se_image_link __se_link" data-linktype="img" data-linkdata='{"imgId" : "SEDOC-1464160845310-793056631_image_4_img", "src" : "http://post.phinf.naver.net/20160525_178/1464160842408axN2G_PNG/%B4%F5%C4%F9%BD%BA%C6%AE_%B9%E8%B3%CA_%BD%C3%BE%C85.png", "linkUse" : "true","link" : "http://post.naver.com/my.nhn?memberNo=24850609&amp;autoFollow=true"}'>
+
+                    <img  src="http://static.post.naver.net/image/m/im/bg_white.png" data-src="http://post.phinf.naver.net/20160525_178/1464160842408axN2G_PNG/%B4%F5%C4%F9%BD%BA%C6%AE_%B9%E8%B3%CA_%BD%C3%BE%C85.png?type=w1200" width="720" height="300" data-attachment-id="IldZn_BTEDGpf9TQUpOsRApINL1A" alt="" class="se_mediaImage __se_img_el" id="SEDOC-1464160845310-793056631_image_4_img">
+
+                </a>
+
+                <div class="se_editView">
+
+                    <div class="se_textView se_mediaCaption">
+
+                        <span class="se_textarea">클릭 하시면 좋은 책을 매일 추천 받으실수 있습니다.</span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_paragraph default">
+
+    <div class="se_sectionArea">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_ff_nanumgothic">
+
+                <div class="se_editView">
+
+                    <div class="se_textView se_fs_T3">
+
+                        <p class="se_textarea" style="text-align:left "><!-- SE3-TEXT { --><!-- } SE3-TEXT --></p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</div>
+
+<!-- SE_DOC_CONTENTS_END -->
+
+<div class="__se_doc_title_end" id="se_doc_contents_end"></div>
+
+<div id="SEDOC-1464160845310-793056631_se_doc_footer" class="se_doc_footer"></div>
+
+</div>
+
