@@ -56,9 +56,6 @@ def get_recent_list(list_dir, post_process_script_list):
         if cmd:
             cmd += " |"
         cmd += ' %s "%s"' % (post_process_script, new_list_file_name)
-    if cmd:
-        cmd += " |"
-    cmd += ' remove_duplicate_line.py'
 
     print(cmd)
     (result, error) = feedmakerutil.exec_cmd(cmd)

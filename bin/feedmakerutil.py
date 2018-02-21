@@ -485,3 +485,13 @@ def determine_crawler_options(options):
     return option_str
 
 
+def remove_duplicates(list):
+    unique_list = []
+    for item in list:
+        if re.search(r'^\#', item):
+            continue
+        unique_list.append(item)
+    seen = set()
+    seen_add = seen.add
+    return [ x for x in unique_list if not (x in seen or seen_add(x)) ]
+    

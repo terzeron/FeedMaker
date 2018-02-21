@@ -83,6 +83,8 @@ def compose_url_list(conf, options):
     for list_url in options["list_url_list"]:
         url_list = extract_urls(list_url, options)
         result_list.extend(url_list)
+
+    result_list = feedmakerutil.remove_duplicates(result_list)
     return result_list
 
 
