@@ -501,9 +501,9 @@ def main():
         logger.info("Uploaded file '%s'" % (rss_file_name))
         if do_collect_by_force == False:
             # email notification
-            (email, recipient, subject) = Config.get_notification_configs(config)
-            if email and recipient and subject:
-                cmd = "| mail -s '%s' '%s'" % (subject, recipient)
+            options = Config.get_notification_configs(config)
+            if options:
+                cmd = "| mail -s '%s' '%s'" % (options["email_subject"], options["email_recipient"])
                 with subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE) as p:
                     for feed in recent_list:
                         p.write(feed + "\n")
