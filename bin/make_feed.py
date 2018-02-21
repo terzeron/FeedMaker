@@ -226,7 +226,10 @@ def append_item_to_result(feed_list, item, rss_file_name, options):
         print(cmd)
         (result, error) = feedmakerutil.exec_cmd(cmd)
         if error:
-            die("can't extract HTML elements")
+            time.sleep(5)
+            (result, error) = feedmakerutil.exec_cmd(cmd)
+            if error:
+                die("can't extract HTML elements")
 
         if os.path.isfile(new_file_name):
             size = os.stat(new_file_name).st_size

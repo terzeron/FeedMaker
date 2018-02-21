@@ -5,6 +5,7 @@ import os
 import sys
 import re
 import getopt
+import time
 import feedmakerutil
 from feedmakerutil import debug_print
 from feedmakerutil import Cache
@@ -19,11 +20,14 @@ def download_image(path_prefix, img_url, img_ext, page_url):
     debug_print("<!-- %s -->" % (cmd))
     (result, error) = feedmakerutil.exec_cmd(cmd)
     debug_print("<!-- %s -->" % (result))
+    if error:
+        time.sleep(5)
+        (result, error) = feedmakerutil.exec_cmd(cmd)
+        if error:
+            return False
     if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
         return result
-    if error:
-        return False
-    return cache_file
+    return False
 
 
 def chunks(l, n):
