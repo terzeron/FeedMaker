@@ -3,6 +3,7 @@
 import sys
 import os
 import re
+import time
 import feedmakerutil
 from feedmakerutil import die, err, warn
 from feedmakerutil import Config
@@ -26,11 +27,14 @@ def extract_urls(url, options):
         print("# %s" % (whole_cmd))
         (result, error) = feedmakerutil.exec_cmd(cmd)
         if error:
-            error_file.write(whole_cmd + "\n" + str(result) + "\n")
-            sys.stderr.write(whole_cmd + "\n" + str(result) + "\n")
-            error_file.write("can't get result from crawler script\n")
-            die("can't get result from crawler script")
-
+            time.sleep(5)
+            (result, error) = feedmakerutil.exec_cmd(cmd)
+            if error:
+                error_file.write(whole_cmd + "\n" + str(result) + "\n")
+                sys.stderr.write(whole_cmd + "\n" + str(result) + "\n")
+                error_file.write("can't get result from crawler script\n")
+                die("can't get result from crawler script")
+                
         cmd = "extract_element.py collection"
         if whole_cmd:
             whole_cmd += " | " + cmd
