@@ -5,8 +5,11 @@ import os
 import re
 import time
 import feedmakerutil
-from feedmakerutil import debug_print
 from feedmakerutil import IO, URL, Cache
+from logger import Logger
+
+
+logger = Logger("download_image.py")
 
 
 def get_cache_file_name(path_prefix, img_url, img_ext, postfix=None, index=None):
@@ -29,9 +32,9 @@ def download_image(path_prefix, img_url, img_ext, page_url):
     if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
         return True
     cmd = 'crawler.sh --download "%s" --referer "%s" "%s"' % (cache_file, page_url, img_url)
-    debug_print("<!-- %s -->" % (cmd))
+    logger.debug("<!-- %s -->" % (cmd))
     (result, error) = feedmakerutil.exec_cmd(cmd)
-    debug_print("<!-- %s -->" % (result))
+    logger.debug("<!-- %s -->" % (result))
     if error:
         time.sleep(5)
         (result, error) = feedmakerutil.exec_cmd(cmd)
@@ -88,7 +91,7 @@ def main():
             cache_file = download_image(path_prefix, img_url, img_ext, _url)
             if cache_file:
                 cache_url = Cache.get_cache_url(img_url_prefix, img_url, img_ext)
-                debug_print("<!-- %s -> %s / %s -->" % (img_url, cache_file, cache_url))
+                logger.debug("<!-- %s -> %s / %s -->" % (img_url, cache_file, cache_url))
                 print("<img src='%s'/>" % (cache_url))
             else:
                 print("<img src='%s' alt='not exist or size 0'/>" % (img_url))

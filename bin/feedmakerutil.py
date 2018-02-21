@@ -9,18 +9,12 @@ from bs4 import BeautifulSoup, Comment
 from logger import Logger
 
 
-is_debug_mode = False
+logger = Logger("feedmakerutil.py")
 header_str = '''<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no"/>
 <style>img { max-width: 100%; margin-top: 0px; margin-bottom: 0px; }</style>
 
 '''
-logger = Logger()
-
-
-def debug_print(a):
-    if is_debug_mode:
-        print(a)
 
 
 def make_path(path):
@@ -42,9 +36,9 @@ def exec_cmd(cmd, input=None):
             if not error.startswith(b"_RegisterApplication(), FAILED TO establish the default connection to the WindowServer"):
                 return (False, str(error))
     except subprocess.CalledProcessError:
-        return (False, str(error))
+        return (False, "Error with non-zero exit status in execution of subprocess")
     except subprocess.SubprocessError:
-        return (False, str(error))
+        return (False, "Error in execution of subprocess")
     return (result.decode(encoding="utf-8"), "")
 
 
@@ -249,7 +243,7 @@ class Config:
 
     @staticmethod
     def get_collection_configs(config):
-        print("# get_collection_configs()")
+        logger.debug("# get_collection_configs()")
         conf = Config.get_config_node(config, "collection")
         if conf == None:
             die("can't get collection element")
@@ -293,7 +287,7 @@ class Config:
 
 
     def get_extraction_configs(config):
-        print("# get_extraciton_configs()")
+        logger.debug("# get_extraciton_configs()")
         conf = Config.get_config_node(config, "extraction")
         if conf == None:
             die("can't get extraction element")
@@ -332,7 +326,7 @@ class Config:
 
 
     def get_notification_configs(config):
-        print("# get_notification_configs()")
+        logger.debug("# get_notification_configs()")
         conf = Config.get_config_node(config, "notification")
         email = Config.get_config_node(conf, "email")
         recipient = Config.get_config_value(email, "recipient")
@@ -341,7 +335,7 @@ class Config:
 
     
     def get_rss_configs(config):
-        print("# get_rss_configs()")
+        logger.debug("# get_rss_configs()")
         conf = Config.get_config_node(config, "rss")
         if conf == None:
             die("can't get rss element")
@@ -406,16 +400,16 @@ class URL:
 
 
 def err(msg):
-    sys.stderr.write("Error: %s\n" % msg)
+    logger.err(msg)
 
 
 def die(msg):
-    sys.stderr.write("Error: %s\n" % msg)
+    logger.err(msg)
     sys.exit(-1)
     
 
 def warn(msg):
-    sys.stderr.write("Warning: %s\n" % msg)
+    logger.warn(msg)
 
 
 def remove_file(file_path):
@@ -439,24 +433,24 @@ class Cache:
             result_str = prefix + "/" + URL.get_short_md5_name(img_url) + postfix_str + index_str + "." + img_ext
         else:
             result_str = prefix + "/" + img_url
-        debug_print("result_str=" + result_str)
+        logger.debug("result_str=" + result_str)
         return result_str
 
 
     @staticmethod
     def get_cache_url(url_prefix, img_url, img_ext, postfix=None, index=None):
-        debug_print("# get_cache_url(%s, %s, %s, %s, %d)" % (url_prefix, img_url, img_ext, postfix, index if index else 0))
+        logger.debug("# get_cache_url(%s, %s, %s, %s, %d)" % (url_prefix, img_url, img_ext, postfix, index if index else 0))
         return Cache.get_cache_info_common(url_prefix, img_url, img_ext,  postfix)
 
 
     @staticmethod
     def get_cache_file_name(path_prefix, img_url, img_ext, postfix=None, index=None):
-        debug_print("# get_cache_file_name(%s, %s, %s, %s, %d)" % (path_prefix, img_url, img_ext, postfix, index if index else 0))
+        logger.debug("# get_cache_file_name(%s, %s, %s, %s, %d)" % (path_prefix, img_url, img_ext, postfix, index if index else 0))
         return Cache.get_cache_info_common(path_prefix, img_url, img_ext, postfix)
 
 
 def determine_crawler_options(options):
-    print("# determine_crawler_options()")
+    logger.debug("# determine_crawler_options()")
     
     option_str = ""
     if "render_js" in options and options["render_js"]:
@@ -474,7 +468,7 @@ def determine_crawler_options(options):
             option_str += " --header '%s'" % (header)
 
     '''
-    #print("title=%s, review_point=%d, review_point_threshold=%f" % (title, review_point, review_point_threshold))
+    logger.debug("title=%s, review_point=%d, review_point_threshold=%f" % (title, review_point, review_point_threshold))
     if review_point and review_point_threshold and review_point > review_point_threshold:
         # 일반적으로 평점이 사용되지 않는 경우나
         # 평점이 기준치를 초과하는 경우에만 추출
@@ -486,12 +480,7 @@ def determine_crawler_options(options):
 
 
 def remove_duplicates(list):
-    unique_list = []
-    for item in list:
-        if re.search(r'^\#', item):
-            continue
-        unique_list.append(item)
     seen = set()
     seen_add = seen.add
-    return [ x for x in unique_list if not (x in seen or seen_add(x)) ]
+    return [ x for x in list if not (x in seen or seen_add(x)) ]
     

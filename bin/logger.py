@@ -2,6 +2,7 @@
 # -*- encoding: utf-8 -*-
 
 
+import sys
 import os
 import getpass
 import logging
@@ -15,19 +16,31 @@ class Logger:
         self.logger = logging.getLogger(name)
         self.logger.setLevel(logging.DEBUG)
 
-        file_logging_level = logging.INFO
-        mail_logging_level = logging.WARN
+        total_log_file_logging_level = logging.WARN
+        feed_file_logging_level = logging.DEBUG
+        stream_logging_level = logging.INFO
 
         path_prefix: str = ""
         if os.getenv("FEED_MAKER_CWD"):
             path_prefix = os.getenv("FEED_MAKER_CWD") + "/logs/"
-        fh = logging.FileHandler(path_prefix + "feedmaker.log")
-        fh.setLevel(file_logging_level)
-        kid = getpass.getuser()
-        formatter = logging.Formatter("[%(asctime)s][%(name)s][%(levelname)s][" + kid + "] %(message)s")
-        fh.setFormatter(formatter)
-        self.logger.addHandler(fh)
 
+        tfh = logging.FileHandler(path_prefix + "feedmaker.log")
+        tfh.setLevel(total_log_file_logging_level)
+        tfh_formatter = logging.Formatter("[%(asctime)s][%(name)s][%(levelname)s] %(message)s")
+        tfh.setFormatter(tfh_formatter)
+        self.logger.addHandler(tfh)
+
+        ffh = logging.FileHandler("run.log")
+        ffh.setLevel(feed_file_logging_level)
+        ffh_formatter = logging.Formatter("[%(asctime)s][%(name)s][%(levelname)s] %(message)s")
+        ffh.setFormatter(ffh_formatter)
+        self.logger.addHandler(ffh)
+
+        sh = logging.StreamHandler(sys.stdout)
+        sh.setLevel(stream_logging_level)
+        sh_formatter = logging.Formatter("%(message)s")
+        sh.setFormatter(sh_formatter)
+        self.logger.addHandler(sh)
 
     def __del__(self) -> None:
         del self.logger
@@ -38,12 +51,12 @@ class Logger:
     def info(self, msg: str, *args: Any, **kwargs: Any) -> None:
         self.logger.info(msg, *args, **kwargs)
 
-    def warning(self, msg: str, *args: Any, **kwargs: Any) -> None:
+    def warn(self, msg: str, *args: Any, **kwargs: Any) -> None:
         self.logger.warning(msg, *args, **kwargs)
 
-    def error(self, msg: str, *args: Any, **kwargs: Any) -> None:
+    def err(self, msg: str, *args: Any, **kwargs: Any) -> None:
         self.logger.error(msg, *args, **kwargs)
 
-    def critical(self, msg: str, *args: Any, **kwargs: Any) -> None:
+    def crit(self, msg: str, *args: Any, **kwargs: Any) -> None:
         self.logger.critical(msg, *args, **kwargs)
 
