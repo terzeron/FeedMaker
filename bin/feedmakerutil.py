@@ -327,11 +327,19 @@ class Config:
 
     def get_notification_configs(config):
         logger.debug("# get_notification_configs()")
+        options = None
         conf = Config.get_config_node(config, "notification")
-        email = Config.get_config_node(conf, "email")
-        recipient = Config.get_config_value(email, "recipient")
-        subject = Config.get_config_value(email, "subject")
-        return (email, recipient, subject)
+        if conf:
+            email = Config.get_config_node(conf, "email")
+            if email:
+                recipient = Config.get_config_value(email, "recipient")
+                subject = Config.get_config_value(email, "subject")
+
+                options = {
+                    "email_recipient": recipient,
+                    "email_subject": subject,
+                }
+        return options
 
     
     def get_rss_configs(config):
