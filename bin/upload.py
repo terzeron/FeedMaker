@@ -32,19 +32,19 @@ def main(rss_file):
         do_upload = True
     else:
         err("Upload failed! the same old RSS file")
-        return False
+        return -1
         
     if do_upload == True:
         cmd = "cp %s %s" % (rss_file, dir)
         #print(cmd)
         (result, error) = feedmakerutil.exec_cmd(cmd)
         if not error:
-            print("Upload success!\n")
-            return True
+            print("Upload success!")
+            return 0
             
     warn("Upload failed! No change from the previous RSS file")
-    return False
+    return 0
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    sys.exit(main(sys.argv[1]))

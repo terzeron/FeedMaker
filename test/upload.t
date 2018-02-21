@@ -23,9 +23,6 @@ class UploadScriptTest(unittest.TestCase):
     def test_0_upload_first(self):
         cmd = "upload.py %s" % self.rss_file_name
         (result, error) = feedmakerutil.exec_cmd(cmd)
-        #print(cmd)
-        #print(result)
-        #print(error)
         
         self.assertTrue(result)
         self.assertTrue("success" in result)
@@ -35,16 +32,12 @@ class UploadScriptTest(unittest.TestCase):
     def test_1_upload_unchanged(self):
         cmd = "cp %s %s" % (self.rss_file_name, self.old_rss_file_name)
         (result, error) = feedmakerutil.exec_cmd(cmd)
-        #print(cmd)
         
         cmd = "upload.py %s" % self.rss_file_name
         (result, error) = feedmakerutil.exec_cmd(cmd)
-        #print(cmd)
-        #print(result)
-        #print(error)
-
-        self.assertFalse(result)
-        self.assertTrue("Upload failed! No change from the previous RSS file" in error)
+        
+        self.assertTrue(result)
+        self.assertTrue("Upload failed! No change from the previous RSS file" in result)
         self.assertFalse(os.path.isfile(self.uploaded_file_path))
 
         
