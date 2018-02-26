@@ -43,6 +43,7 @@ def extract_urls(url, options):
     (result, error) = feedmakerutil.exec_cmd(cmd, result)
     if error: 
         logger.debug(whole_cmd + "\n" + str(result) + "\n")
+        logger.err(error)
         die("can't get result from extract script")
 
     cmd = options["item_capture_script"]

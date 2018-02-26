@@ -13,11 +13,14 @@ from feedmakerutil import die, err, warn
 from feedmakerutil import Config
 from feedmakerutil import URL
 from feedmakerutil import IO
+from logger import Logger
 
 
+logger = Logger("extract.py")
 # recursion으로 구현된 traverse_element()의 여러 레벨에서 조회하는 변수
 footnote_num = 0
-    
+
+
 def print_header():
     print(feedmakerutil.header_str)
 
@@ -53,10 +56,10 @@ def extract_content(args):
 
         if not encoding:
             encoding = "utf8"
-        #print("# element_id:", id_list)
-        #print("# element_class:", class_list)
-        #print("# element_path:", path_list)
-        #print("# encoding:", encoding)
+        logger.debug("# element_id: %s" % id_list)
+        logger.debug("# element_class: %s" % class_list)
+        logger.debug("# element_path: %s" % path_list)
+        logger.debug("# encoding: %s" % encoding)
     else:
         print(html, end='')
         return True
@@ -119,7 +122,7 @@ def traverse_element(element, url, encoding):
     global footnote_num
     ret = -1
     
-    #print("# traverse_element()")
+    logger.debug("# traverse_element()")
     if isinstance(element, Comment):
         # skip sub-elements
         return ret
@@ -132,7 +135,7 @@ def traverse_element(element, url, encoding):
         return ret
     else: 
         # element
-        #print("#%s#" % element.name)
+        logger.debug("#%s#" % element.name)
 
         # 원칙
         # 모든 element는 그 안에 다른 element나 text를 포함한다.
@@ -291,7 +294,7 @@ def traverse_element(element, url, encoding):
                     page_num = int(match[2])
                     url = "http://navercast.naver.com/ncc_request.nhn?url=http://data.navercast.naver.com/literature_module/%d/literature_%d_%d.html" % (leaf_id, article_num, page_num)
                     cmd = "crawler.sh '%s' | extract_literature.py" % (url)
-                    #print(cmd)
+                    logger.debug(cmd)
                     (result, error) = feedmakerutil.exec_cmd(cmd)
                     if not error:
                         print(result)
@@ -314,7 +317,7 @@ def traverse_element(element, url, encoding):
                     if element["id"] != "footnoteLayer" + str(footnote_num):
                         return ret
                     #else:
-                        #print str(element)
+                        logger.debug(str(element))
             else:               
                 sys.stdout.write("<%s>\n" % element.name)
                 open_close_tag = True

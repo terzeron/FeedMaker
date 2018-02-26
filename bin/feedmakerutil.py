@@ -34,7 +34,7 @@ def exec_cmd(cmd, input=None):
             (result, error) = p.communicate()
         if error:
             if not error.startswith(b"_RegisterApplication(), FAILED TO establish the default connection to the WindowServer"):
-                return (False, str(error))
+                return (False, error.decode("utf-8"))
     except subprocess.CalledProcessError:
         return (False, "Error with non-zero exit status in execution of subprocess")
     except subprocess.SubprocessError:

@@ -2,6 +2,10 @@
 
 import sys
 import feedmakerutil
+from logger import Logger
+
+
+logger = Logger("prepend_meta_header.py")
 
 
 def main():

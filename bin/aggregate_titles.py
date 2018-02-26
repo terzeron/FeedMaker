@@ -7,6 +7,10 @@ import re
 import getopt
 import subprocess
 import feedmakerutil
+from logger import Logger
+
+
+logger = Logger("aggregate_titles.py")
 
 
 def print_usage():
@@ -54,13 +58,13 @@ def main():
     # hierarchical clustering
     cluster_dir = os.environ["FEED_MAKER_HOME"] + "/../HierarchicalClustering"
     cmd = "%s/hcluster -t '%f' -s stop_words.txt '%s' '%s'" % (cluster_dir, threshold, intermediate_file, temp_output_file)
-    print(cmd)
+    logger.debug(cmd)
     (result, error) = feedmakerutil.exec_cmd(cmd)
-    #print(result)
+    logger.debug(result)
 
     # convert & extract temporary output file
     cmd = "awk -F'\\t' '$2 >= 3 { for (i = 3; i < NF; i += 2) { print $(i) FS $(i + 1) } }' '%s'" % (temp_output_file)
-    print(cmd)
+    logger.debug(cmd)
     with subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) as p:
         with open(output_file, 'w', encoding='utf-8') as out_file:
             for line in p.stdout:
