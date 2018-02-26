@@ -13,13 +13,15 @@ import signal
 import feedmakerutil
 from feedmakerutil import Config
 from feedmakerutil import IO
+from logger import Logger
 
 
+logger = Logger("extract_element.py")
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 
 def extract_content(config_item):
-    #print "# extract_content()"
+    logger.debug("# extract_content()")
     # configuration
     class_str = ""
     id_str = ""
@@ -35,10 +37,10 @@ def extract_content(config_item):
         class_str = Config.get_config_value(conf_node, "element_class")
         path_str = Config.get_config_value(conf_node, "element_path")
         enc = Config.get_config_value(conf_node, "encoding")
-        #print("# element_id:", id_str)
-        #print("# element_class:", class_str)
-        #print("# element_path:", path_str)
-        #print("# encoding:", enc)
+        logger.debug("# element_id: %s" % id_str)
+        logger.debug("# element_class: %s" % class_str)
+        logger.debug("# element_path: %s" % path_str)
+        logger.debug("# encoding: %s" % enc)
     else:
         return -1
     

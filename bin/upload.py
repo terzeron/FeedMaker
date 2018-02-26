@@ -9,6 +9,10 @@ import subprocess
 import re
 import feedmakerutil
 from feedmakerutil import die, err, warn
+from logger import Logger
+
+
+logger = Logger("upload.py")
 
 
 def main(rss_file):
@@ -20,10 +24,10 @@ def main(rss_file):
     if os.path.isfile(old_rss_file):
         # 과거 파일이 존재하면 비교해보고 다른 경우에만 업로드
         cmd = "diff '%s' '%s' | egrep -v \"(^(<|>) <(pubDate|lastBuildDate))|(^---\$)|(^[0-9,]+[a-z][0-9,]+\$)\" | wc -c" % (rss_file, old_rss_file)
-        #print(cmd)
+        logger.debug(cmd)
         (result, error) = feedmakerutil.exec_cmd(cmd)
         if not error:
-            #print(result)
+            logger.debug(result)
             match = re.search(r"^\s*(\d+)\s*$", result)
             if match and match.group(1) != "0":
                 do_upload = True
@@ -36,10 +40,10 @@ def main(rss_file):
         
     if do_upload == True:
         cmd = "cp %s %s" % (rss_file, dir)
-        #print(cmd)
+        logger.debug(cmd)
         (result, error) = feedmakerutil.exec_cmd(cmd)
         if not error:
-            print("Upload success!")
+            logger.info("Upload success!")
             return 0
             
     warn("Upload failed! No change from the previous RSS file")
