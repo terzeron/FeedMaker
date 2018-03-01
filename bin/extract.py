@@ -122,7 +122,6 @@ def traverse_element(element, url, encoding):
     global footnote_num
     ret = -1
     
-    logger.debug("# traverse_element()")
     if isinstance(element, Comment):
         # skip sub-elements
         return ret
@@ -135,7 +134,6 @@ def traverse_element(element, url, encoding):
         return ret
     else: 
         # element
-        logger.debug("#%s#" % element.name)
 
         # 원칙
         # 모든 element는 그 안에 다른 element나 text를 포함한다.
