@@ -24,13 +24,13 @@ class Logger:
         if os.getenv("FEED_MAKER_CWD"):
             path_prefix = os.getenv("FEED_MAKER_CWD") + "/logs/"
 
-        tfh = logging.FileHandler(path_prefix + "feedmaker.log")
+        tfh = logging.handlers.TimedRotatingFileHandler(path_prefix + "feedmaker.log", when="D", interval=1, backupCount=1)
         tfh.setLevel(total_log_file_logging_level)
         tfh_formatter = logging.Formatter("[%(asctime)s][%(name)s][%(levelname)s] %(message)s")
         tfh.setFormatter(tfh_formatter)
         self.logger.addHandler(tfh)
 
-        ffh = logging.FileHandler("run.log")
+        ffh = logging.handlers.TimedRotatingFileHandler("run.log", when="D", interval=1, backupCount=1)
         ffh.setLevel(feed_file_logging_level)
         ffh_formatter = logging.Formatter("[%(asctime)s][%(name)s][%(levelname)s] %(message)s")
         ffh.setFormatter(ffh_formatter)
