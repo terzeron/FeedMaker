@@ -436,7 +436,9 @@ def main():
             sort_field = ""
             m = re.search(options["sort_field_pattern"], old_item)
             if m:
-                sort_field = m.group(1)
+                sort_field = "%09s" % (m.group(1))
+                if m.group(2):
+                    sort_field += "%09s" % (m.group(2))
                 matched_count += 1
             else:
                 sort_field = "0"
