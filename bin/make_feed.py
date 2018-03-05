@@ -437,8 +437,10 @@ def main():
             m = re.search(options["sort_field_pattern"], old_item)
             if m:
                 sort_field = "%09s" % (m.group(1))
-                if m.group(2):
+                try:
                     sort_field += "%09s" % (m.group(2))
+                except IndexError:
+                    None
                 matched_count += 1
             else:
                 sort_field = "0"
