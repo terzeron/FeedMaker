@@ -26,7 +26,7 @@ class Logger:
 
         tfh = logging.handlers.TimedRotatingFileHandler(path_prefix + "feedmaker.log", when="D", interval=1, backupCount=1)
         tfh.setLevel(total_log_file_logging_level)
-        tfh_formatter = logging.Formatter("[%(asctime)s][%(name)s][%(levelname)s] %(message)s")
+        tfh_formatter = logging.Formatter("[%(asctime)s][%(name)s:%(lineno)d][%(levelname)s] %(message)s")
         tfh.setFormatter(tfh_formatter)
         self.logger.addHandler(tfh)
 
