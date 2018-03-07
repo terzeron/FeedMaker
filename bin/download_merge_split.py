@@ -6,9 +6,9 @@ import sys
 import re
 import getopt
 import time
+import pprint
 import feedmakerutil
-from feedmakerutil import Cache
-from feedmakerutil import IO
+from feedmakerutil import Cache, IO
 from logger import Logger
 from typing import List, Tuple, Optional
 
@@ -22,17 +22,17 @@ def download_image(path_prefix: str, img_url: str, img_ext: str, page_url: str) 
     if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
         return cache_file
     cmd: str = 'crawler.sh --download "%s" --referer "%s" "%s"' % (cache_file, page_url, img_url)
-    logger.debug("<!-- %s -->" % (cmd))
+    logger.debug("<!-- cmd: %s -->" % cmd)
     (result, error) = feedmakerutil.exec_cmd(cmd)
-    logger.debug("<!-- %s -->" % (result))
+    logger.debug("<!-- result: %s -->" % result)
     if error:
         time.sleep(5)
         (result, error) = feedmakerutil.exec_cmd(cmd)
         if error:
-            return False
+            return None
     if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
         return cache_file
-    return False
+    return None
 
 
 def chunks(l, n):
@@ -40,7 +40,7 @@ def chunks(l, n):
         yield l[i:i+n]
 
 
-def get_total_height(img_size_list: List[int]) -> int:
+def get_total_height(img_size_list: List[str]) -> int:
     logger.debug("# get_total_height()")
     #
     # calculate the total height
@@ -49,7 +49,7 @@ def get_total_height(img_size_list: List[int]) -> int:
     for dimension in img_size_list:
         (width, height) = dimension.split("\t")
         total_height = total_height + int(height)
-    logger.debug("<!-- total_height=%d -->" % (total_height))
+    logger.debug("<!-- total_height=%d -->" % total_height)
     return total_height
 
 
@@ -71,7 +71,7 @@ def download_image_and_read_metadata(path_prefix: str, img_ext: str, page_url: s
             # download
             cache_file: str = download_image(path_prefix, img_url, img_ext, page_url)
             if not cache_file:
-                logger.err("can't download the image from '%s'" % (img_url))
+                logger.err("can't download the image from '%s'" % img_url)
                 continue
             img_file_list.append(cache_file)
             img_url_list.append(img_url)
@@ -91,7 +91,7 @@ def download_image_and_read_metadata(path_prefix: str, img_ext: str, page_url: s
                 logger.debug("<!-- cache_file=cache_file, img_url=img_url, width=width, height=height -->")
         else:
             logger.debug(line)
-    return (img_file_list, img_url_list, img_size_list)
+    return img_file_list, img_url_list, img_size_list
 
 
 def split_image_list(img_file_list: List[str]) -> List[List[str]]:
@@ -104,7 +104,7 @@ def split_image_list(img_file_list: List[str]) -> List[List[str]]:
     logger.debug("<!-- length=%d, partition_size=%d -->" % (len(img_file_list), partition_size))
     for i in range(int(len(img_file_list) / partition_size)):
         img_file_partition_list.append(img_file_list[i * partition_size: (i+1) * partition_size])
-    logger.debug(img_file_partition_list)
+    logger.debug(pprint.pformat(img_file_partition_list))
     return img_file_partition_list
 
 
@@ -116,18 +116,18 @@ def merge_image_files(img_file_list: List[str], path_prefix: str, img_url: str, 
     merged_img_file: str = Cache.get_cache_file_name(path_prefix, img_url, img_ext, num)
     cmd: str = "../../../CartoonSplit/merge.py " + merged_img_file + " "
     for cache_file in img_file_list:
-        cmd: str = cmd + cache_file + " "
+        cmd = cmd + cache_file + " "
     logger.debug(cmd)
     (result, error) = feedmakerutil.exec_cmd(cmd)
     logger.debug(result)
     if error:
-        logger.err("can't merge the image files, cmd='%s'" % (cmd))
+        logger.err("can't merge the image files, cmd='%s'" % cmd)
         sys.exit(-1)
     return merged_img_file
 
 
 def crop_image_file(img_file: str) -> None:
-    logger.debug("# crop_imagefile()")
+    logger.debug("# crop_image_file()")
     #
     # crop mode (optional)
     #
@@ -155,7 +155,7 @@ def remove_image_files(img_file_list: List[str]) -> bool:
     # remove the original image
     cmd: str = "rm -f "
     for cache_file in img_file_list:
-        cmd: str = cmd + "'" + cache_file + "' "
+        cmd = cmd + "'" + cache_file + "' "
     logger.debug(cmd)
     (result, error) = feedmakerutil.exec_cmd(cmd)
     logger.debug(result)
@@ -172,7 +172,7 @@ def split_image_file(img_file: str, num_units: int, bgcolor_option: str, orienta
     (result, error) = feedmakerutil.exec_cmd(cmd)
     logger.debug(result)
     if error:
-        logger.err("can't split the image file, cmd='%s'" % (cmd))
+        logger.err("can't split the image file, cmd='%s'" % cmd)
         sys.exit(-1)
 
 
@@ -180,19 +180,19 @@ def print_image_files(num_units: int, path_prefix: str, img_url_prefix: str, img
     logger.debug("# print_image_files(%d, %s, %s, %s, %s, %d, %s)" % (num_units, path_prefix, img_url_prefix, img_url, img_ext, num if num else 0, do_flip_right_to_left))
     # print some split images
     if not do_flip_right_to_left:
-        custom_range = range(num_units)
+        custom_range = list(range(num_units))
     else:
-        custom_range = reversed(range(num_units))
+        custom_range = list(reversed(range(num_units)))
     for i in custom_range:
-        split_img_file: str = Cache.get_cache_file_name(path_prefix, img_url, img_ext, None, i + 1)
+        split_img_file: str = Cache.get_cache_file_name(path_prefix, img_url, img_ext, str(num), i + 1)
         logger.debug("split_img_file=" + split_img_file)
         if os.path.exists(split_img_file):
-            split_img_url: str = Cache.get_cache_url(img_url_prefix, img_url, img_ext, None, i + 1)
-            print("<img src='%s'/>" % (split_img_url))
+            split_img_url: str = Cache.get_cache_url(img_url_prefix, img_url, img_ext, str(num), i + 1)
+            print("<img src='%s'/>" % split_img_url)
 
 
 def print_usage(program_name: str) -> None:
-    print("Usage: %s\t" % (program_name))
+    print("Usage: %s\t" % program_name)
     print("\t\t-c <color>: specify background color")
     print("\t\t\t\t(ex. 'white' or 'blackorwhite', 'dominant', 'fuzzy', '#135fd8')")
     print("\t\t-m: merge")
@@ -209,9 +209,9 @@ def main() -> int:
     logger.debug(cmd)
     (result, error) = feedmakerutil.exec_cmd(cmd)
     feed_name: str = result.rstrip()
-    logger.debug("<!-- feed_name=%s -->" % (feed_name))
+    logger.debug("<!-- feed_name=%s -->" % feed_name)
     path_prefix: str = os.environ["FEED_MAKER_WWW_FEEDS"] + "/img/" + feed_name
-    logger.debug("<!--- path_prefix=%s -->" % (path_prefix))
+    logger.debug("<!--- path_prefix=%s -->" % path_prefix)
     feedmakerutil.make_path(path_prefix)
 
     img_url_prefix: str = "http://terzeron.net/xml/img/" + feed_name
@@ -242,7 +242,7 @@ def main() -> int:
             
     page_url: str = args[0]
     (img_file_list, img_url_list, img_size_list) = download_image_and_read_metadata(path_prefix, img_ext, page_url)
-    logger.debug(img_file_list)
+    logger.debug(pprint.pformat(img_file_list))
     if len(img_file_list) == 0:
         return 0
 
