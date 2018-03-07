@@ -8,6 +8,7 @@ __pycache__
 *.xml.old
 error.log
 run.log
+run.log.*
 *.xml
 !conf.xml
 !test/*.xml
