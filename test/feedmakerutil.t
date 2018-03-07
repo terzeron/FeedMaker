@@ -11,7 +11,7 @@ from feedmakerutil import Config as fmutilconfig
 from feedmakerutil import URL as fmutilurl
 
 
-class X_pathTest(unittest.TestCase):
+class XPathTest(unittest.TestCase):
     def test_get_first_token_from_path(self):
         # id, name, idx, remainder of path, isAnywhere
         token = feedmakerutil.get_first_token_from_path("")
