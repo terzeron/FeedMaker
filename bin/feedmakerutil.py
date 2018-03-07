@@ -428,6 +428,7 @@ def remove_file(file_path):
 class Cache:
     @staticmethod
     def get_cache_info_common(prefix, img_url, img_ext, postfix=None, index=None):
+        logger.debug("# get_cache_info_common(%s, %s, %s, %s, %d)" % (prefix, img_url, img_ext, postfix if postfix else "None", index if index else -1))
         postfix_str = ""
         if postfix and postfix != "":
             postfix_str = "_" + str(postfix)
@@ -439,22 +440,23 @@ class Cache:
         result_str = ""
         if re.search(r'https?://', img_url) and img_ext:
             result_str = prefix + "/" + URL.get_short_md5_name(img_url) + postfix_str + index_str + "." + img_ext
+            logger.debug("result_str=" + result_str)
         else:
             result_str = prefix + "/" + img_url
-        logger.debug("result_str=" + result_str)
+            logger.debug("result_str=" + result_str)
         return result_str
 
 
     @staticmethod
     def get_cache_url(url_prefix, img_url, img_ext, postfix=None, index=None):
-        logger.debug("# get_cache_url(%s, %s, %s, %s, %d)" % (url_prefix, img_url, img_ext, postfix, index if index else 0))
-        return Cache.get_cache_info_common(url_prefix, img_url, img_ext,  postfix)
+        logger.debug("# get_cache_url(%s, %s, %s, %s, %d)" % (url_prefix, img_url, img_ext, postfix if postfix else "None", index if index else -1))
+        return Cache.get_cache_info_common(url_prefix, img_url, img_ext, postfix, index)
 
 
     @staticmethod
     def get_cache_file_name(path_prefix, img_url, img_ext, postfix=None, index=None):
-        logger.debug("# get_cache_file_name(%s, %s, %s, %s, %d)" % (path_prefix, img_url, img_ext, postfix, index if index else 0))
-        return Cache.get_cache_info_common(path_prefix, img_url, img_ext, postfix)
+        logger.debug("# get_cache_file_name(%s, %s, %s, %s, %d)" % (path_prefix, img_url, img_ext, postfix if postfix else "None", index if index else -1))
+        return Cache.get_cache_info_common(path_prefix, img_url, img_ext, postfix, index)
 
 
 def determine_crawler_options(options):
