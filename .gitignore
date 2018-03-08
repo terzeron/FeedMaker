@@ -8,6 +8,7 @@ __pycache__
 *.xml.old
 error.log
 run.log
+run.log.*
 *.xml
 !conf.xml
 !test/*.xml
@@ -21,3 +22,5 @@ log/
 www/jquery*
 www/work
 result.*.temp
+.mypy_cache/
+.idea/

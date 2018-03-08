@@ -11,7 +11,7 @@ from feedmakerutil import Config as fmutilconfig
 from feedmakerutil import URL as fmutilurl
 
 
-class X_pathTest(unittest.TestCase):
+class XPathTest(unittest.TestCase):
     def test_get_first_token_from_path(self):
         # id, name, idx, remainder of path, isAnywhere
         token = feedmakerutil.get_first_token_from_path("")
@@ -29,11 +29,11 @@ class X_pathTest(unittest.TestCase):
         token = feedmakerutil.get_first_token_from_path('//select')
         self.assertEqual(token, (None, "select", None, "", True))
         token = feedmakerutil.get_first_token_from_path("/html/body/div[3]")
-        self.assertEqual(token, (None, "div", "3", "", False))
+        self.assertEqual(token, (None, "div", 3, "", False))
         token = feedmakerutil.get_first_token_from_path("/html/body/div[3]/img[2]")
-        self.assertEqual(token, (None, "div", "3", "img[2]", False))
+        self.assertEqual(token, (None, "div", 3, "img[2]", False))
         token = feedmakerutil.get_first_token_from_path("//img[2]")
-        self.assertEqual(token, (None, "img", "2", "", True))
+        self.assertEqual(token, (None, "img", 2, "", True))
 
     def test_get_node_with_path(self):
         soup = BeautifulSoup('<html><body><div>hello</div><div id="ct"><span>text</span></div></body></html>', 'html.parser')
