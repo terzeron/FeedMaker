@@ -7,6 +7,7 @@ import re
 import subprocess
 from logger import Logger
 from typing import List, Any, Dict, Tuple, Optional, Set
+from xml.dom import minidom, Node
 
 
 logger: Logger = Logger("feedmakerutil.py")
@@ -42,109 +43,170 @@ def exec_cmd(cmd: str, input=None) -> Tuple[Optional[str], str]:
     return (result.decode(encoding="utf-8"), "")
 
 
+def determine_crawler_options(options: Dict[str, Any]) -> str:
+    logger.debug("# determine_crawler_options()")
 
-def get_first_token_from_path(path_str: str) -> Tuple[Optional[str], Optional[str], Optional[int], Optional[str], bool]:
-    #print "get_first_token_from_path(path_str='%s')" % (path_str)
-    is_anywhere: bool = False
-    if path_str[0:2] == "//":
-        is_anywhere = True
-    tokens: List[str] = path_str.split("/")
-    i: int = 0
-    for token in tokens:
-        #print "tokens[%d]='%s'" % (i, token)
-        i += 1
-        if token in ("", "html", "body"):
-            continue
+    option_str: str = ""
+    if "render_js" in options and options["render_js"]:
+        option_str += " --render-js"
+    if "uncompress_gzip" in options and options["uncompress_gzip"]:
+        option_str += " --uncompress-gzip"
+    if "user_agent" in options and options["user_agent"]:
+        option_str += " --ua '%s'" % (options["user_agent"])
+    if "referer" in options and options["referer"]:
+        option_str += " --referer '%s'" % (options["referer"])
+    if "encoding" in options and options["encoding"]:
+        option_str += " --encoding '%s'" % (options["encoding"])
+    if "header_list" in options and options["header_list"]:
+        for header in options["header_list"]:
+            option_str += " --header '%s'" % (header)
+
+    '''
+    logger.debug("title=%s, review_point=%d, review_point_threshold=%f" % (title, review_point, review_point_threshold))
+    if review_point and review_point_threshold and review_point > review_point_threshold:
+        # 일반적으로 평점이 사용되지 않는 경우나
+        # 평점이 기준치를 초과하는 경우에만 추출
+        warn("ignore an article due to the low score")
+        return 0
+    '''
+
+    return option_str
+
+
+def remove_duplicates(list: List[Any]) -> List[Any]:
+    seen: Set[Any] = set()
+    result: List[Any] = []
+    for item in list:
+        if item not in seen:
+            seen.add(item)
+            result.append(item)
+    return result
+
+
+def err(msg: str) -> None:
+    logger.err(msg)
+
+
+def die(msg: str) -> None:
+    logger.err(msg)
+    sys.exit(-1)
+
+
+def warn(msg: str) -> None:
+    logger.warn(msg)
+
+
+def remove_file(file_path: str) -> None:
+    if os.path.isfile(file_path):
+        os.remove(file_path)
+
+
+class HTMLExtractor:
+    @staticmethod
+    def get_first_token_from_path(path_str: str) -> Tuple[Optional[str], Optional[str], Optional[int], Optional[str], bool]:
+        #print "get_first_token_from_path(path_str='%s')" % (path_str)
+        is_anywhere: bool = False
+        if path_str[0:2] == "//":
+            is_anywhere = True
+        tokens: List[str] = path_str.split("/")
+        i: int = 0
+        valid_token: str = ""
+        for token in tokens:
+            valid_token = token
+            #print "tokens[%d]='%s'" % (i, token)
+            i += 1
+            if token in ("", "html", "body"):
+                continue
+            else:
+                # 첫번째 유효한 토큰만 꺼내옴
+                break
+
+        # 해당 토큰에 대해 정규식 매칭 시도
+        pattern = re.compile(r"""
+        (
+          (?P<name>\w+)
+          (?:\[
+            (?P<idx>\d+)
+          \])?
+        |
+          \*\[@id=\"(?P<id>\w+)\"\]
+        )
+        """, re.VERBOSE)
+        m = pattern.match(valid_token)
+        if m:
+            name = m.group("name")
+            idx = int(m.group("idx")) if m.group("idx") else None
+            id = m.group("id")
         else:
-            # 첫번째 유효한 토큰만 꺼내옴
-            break
+            return (None, None, None, None, False)
 
-    # 해당 토큰에 대해 정규식 매칭 시도
-    pattern = re.compile(r"""
-    (
-      (?P<name>\w+)
-      (?:\[
-        (?P<idx>\d+)
-      \])?
-    |
-      \*\[@id=\"(?P<id>\w+)\"\]
-    )
-    """, re.VERBOSE)
-    m = pattern.match(token)
-    if m:
-        name = m.group("name")
-        idx = int(m.group("idx")) if m.group("idx") else None
-        id = m.group("id")
-    else:
-        return (None, None, None, None, False)
+        # id, name, idx, path의 나머지 부분, is_anywhere을 반환
+        return (id, name, idx, "/".join(tokens[i:]), is_anywhere)
 
-    # id, name, idx, path의 나머지 부분, is_anywhere을 반환
-    return (id, name, idx, "/".join(tokens[i:]), is_anywhere)
-
-
-def get_node_with_path(node, path_str: str) -> List[Any]:
-    if not node:
-        return None
-    #print "\n# get_node_with_path(node='%s', path_str='%s')" % (node.name, path_str)
-    node_list = []
-
-    (node_id, name, idx, next_path_str, is_anywhere) = get_first_token_from_path(path_str)
-    #print "node_id='%s', name='%s', idx=%d, next_path_str='%s', is_anywhere=%s" % (node_id, name, idx, next_path_str, is_anywhere)
-
-    if node_id:
-        #print "searching with id"
-        # 특정 id로 노드를 찾아서 현재 노드에 대입
-        nodes = node.find_all(attrs={"id": node_id})
-        #print "nodes=", nodes
-        if not nodes or nodes == []:
-            #print("error, no id matched")
+    @staticmethod
+    def get_node_with_path(node, path_str: str) -> List[Any]:
+        if not node:
             return None
-        if len(nodes) > 1:
-            #print("error, two or more id matched")
-            return None
-        #print "found! node=%s" % (nodes[0].name)
-        node_list.append(nodes[0])
-        result_node_list = get_node_with_path(nodes[0], next_path_str)
-        if result_node_list:
-            node_list = result_node_list
-    else:
-        #print "searching with name and index"
-        node_id = ""
-        if not name:
-            return None
+        #print "\n# get_node_with_path(node='%s', path_str='%s')" % (node.name, path_str)
+        node_list = []
 
-        #print "#children=%d" % (len(node.contents))
-        i = 1
-        for child in node.contents:
-            if hasattr(child, 'name'):
-                #print "i=%d child='%s', idx=%s" % (i, child.name, idx)
-                # 이름이 일치하거나 //로 시작한 경우
-                if child.name == name:
-                    #print "name matched! i=%d child='%s', idx=%d" % (i, child.name, idx)
-                    if not idx or i == idx:
-                        # 인덱스가 지정되지 않았거나, 지정되었고 인덱스가 일치할 때
-                        if next_path_str == "":
-                            # 단말 노드이면 현재 일치한 노드를 반환
-                            #print "*** append! child='%s'" % (child.name)
-                            node_list.append(child)
-                        else:
-                            # 중간 노드이면 recursion
-                            #print "*** recursion ***"
-                            result_node_list = get_node_with_path(child, next_path_str)
-                            #print "\n*** extend! #result_node_list=", len(result_node_list)
-                            if result_node_list:
-                                node_list.extend(result_node_list)
-                    if idx and i == idx:
-                        break
-                    # 이름이 일치했을 때만 i를 증가시킴
-                    i = i + 1
-                if is_anywhere:
-                    #print "can be anywhere"
-                    result_node_list = get_node_with_path(child, name)
-                    if result_node_list:
-                        node_list.extend(result_node_list)
-                    #print "node_list=", node_list
-    return node_list
+        (node_id, name, idx, next_path_str, is_anywhere) = HTMLExtractor.get_first_token_from_path(path_str)
+        #print "node_id='%s', name='%s', idx=%d, next_path_str='%s', is_anywhere=%s" % (node_id, name, idx, next_path_str, is_anywhere)
+
+        if node_id:
+            #print "searching with id"
+            # 특정 id로 노드를 찾아서 현재 노드에 대입
+            nodes = node.find_all(attrs={"id": node_id})
+            #print "nodes=", nodes
+            if not nodes or nodes == []:
+                #print("error, no id matched")
+                return None
+            if len(nodes) > 1:
+                #print("error, two or more id matched")
+                return None
+            #print "found! node=%s" % (nodes[0].name)
+            node_list.append(nodes[0])
+            result_node_list = HTMLExtractor.get_node_with_path(nodes[0], next_path_str)
+            if result_node_list:
+                node_list = result_node_list
+        else:
+            #print "searching with name and index"
+            node_id = ""
+            if not name:
+                return None
+
+            #print "#children=%d" % (len(node.contents))
+            i = 1
+            for child in node.contents:
+                if hasattr(child, 'name'):
+                    #print "i=%d child='%s', idx=%s" % (i, child.name, idx)
+                    # 이름이 일치하거나 //로 시작한 경우
+                    if child.name == name:
+                        #print "name matched! i=%d child='%s', idx=%d" % (i, child.name, idx)
+                        if not idx or i == idx:
+                            # 인덱스가 지정되지 않았거나, 지정되었고 인덱스가 일치할 때
+                            if next_path_str == "":
+                                # 단말 노드이면 현재 일치한 노드를 반환
+                                #print "*** append! child='%s'" % (child.name)
+                                node_list.append(child)
+                            else:
+                                # 중간 노드이면 recursion
+                                #print "*** recursion ***"
+                                result_node_list = HTMLExtractor.get_node_with_path(child, next_path_str)
+                                #print "\n*** extend! #result_node_list=", len(result_node_list)
+                                if result_node_list:
+                                    node_list.extend(result_node_list)
+                        if idx and i == idx:
+                            break
+                        # 이름이 일치했을 때만 i를 증가시킴
+                        i = i + 1
+                    if is_anywhere:
+                        #print "can be anywhere"
+                        result_node_list = HTMLExtractor.get_node_with_path(child, name)
+                        if result_node_list:
+                            node_list.extend(result_node_list)
+                        #print "node_list=", node_list
+        return node_list
 
 
 class IO:
@@ -185,49 +247,42 @@ class IO:
 
 class Config:
     @staticmethod
-    def read_config() -> Any:
-        from xml.dom import minidom
+    def read_config() -> Node:
         if "FEED_MAKER_CONF_FILE" in os.environ and os.environ["FEED_MAKER_CONF_FILE"]:
             config_file = os.environ["FEED_MAKER_CONF_FILE"]
         else:
             config_file = "conf.xml"
         return minidom.parse(config_file)
 
-
     @staticmethod
-    def get_all_config_nodes(node, key: str) -> Any:
+    def get_all_config_nodes(node: Node, key: str) -> Node:
         return node.getElementsByTagName(key)
 
-
     @staticmethod
-    def get_config_node(node, key: str) -> Any:
+    def get_config_node(node: Node, key: str) -> Node:
         nodes = Config.get_all_config_nodes(node, key)
         if not nodes:
             return None
         return nodes[0]
 
-
     @staticmethod
-    def get_value_from_config(node) -> str:
+    def get_value_from_config(node: Node) -> str:
         if node and node.childNodes:
             return node.childNodes[0].nodeValue
         return None
 
-
     @staticmethod
-    def get_config_value(node, key: str) -> str:
+    def get_config_value(node: Node, key: str) -> str:
         return Config.get_value_from_config(Config.get_config_node(node, key))
 
-
     @staticmethod
-    def get_all_config_values(node, key: str) -> List[str]:
-        result = []
+    def get_all_config_values(node: Node, key: str) -> List[str]:
+        result: List[str] = []
         for item in Config.get_all_config_nodes(node, key):
             item_value = Config.get_value_from_config(item)
             if item_value:
                 result.append(item_value)
         return result
-
 
     @staticmethod
     def get_config_values_as_list(list_item_name: str, single_item_name: str, parent_conf_node) -> List[str]:
@@ -248,9 +303,8 @@ class Config:
                 list.append(item)
         return list
 
-
     @staticmethod
-    def get_collection_configs(config: Any) -> Dict[str, Any]:
+    def get_collection_configs(config: Node) -> Dict[str, Node]:
         logger.debug("# get_collection_configs()")
         conf = Config.get_config_node(config, "collection")
         if not conf:
@@ -288,8 +342,8 @@ class Config:
 
         return options
 
-
-    def get_extraction_configs(config: Any) -> Dict[str, Any]:
+    @staticmethod
+    def get_extraction_configs(config: Node) -> Dict[str, Node]:
         logger.debug("# get_extraciton_configs()")
         conf = Config.get_config_node(config, "extraction")
         if not conf:
@@ -323,8 +377,8 @@ class Config:
 
         return options
 
-
-    def get_notification_configs(config: Any) -> Dict[str, Any]:
+    @staticmethod
+    def get_notification_configs(config: Node) -> Optional[Dict[str, Node]]:
         logger.debug("# get_notification_configs()")
         options = None
         conf = Config.get_config_node(config, "notification")
@@ -340,8 +394,8 @@ class Config:
                 }
         return options
 
-
-    def get_rss_configs(config: Any) -> Dict[str, Any]:
+    @staticmethod
+    def get_rss_configs(config: Node) -> Dict[str, Node]:
         logger.debug("# get_rss_configs()")
         conf = Config.get_config_node(config, "rss")
         if not conf:
@@ -407,24 +461,6 @@ class URL:
         return hashlib.md5(str.encode()).hexdigest()[:7]
 
 
-def err(msg: str) -> None:
-    logger.err(msg)
-
-
-def die(msg: str) -> None:
-    logger.err(msg)
-    sys.exit(-1)
-
-
-def warn(msg: str) -> None:
-    logger.warn(msg)
-
-
-def remove_file(file_path: str) -> None:
-    if os.path.isfile(file_path):
-        os.remove(file_path)
-
-
 class Cache:
     @staticmethod
     def get_cache_info_common(prefix: str, img_url: str, img_ext: str, postfix=None, index=None) -> str:
@@ -458,42 +494,3 @@ class Cache:
         logger.debug("# get_cache_file_name(%s, %s, %s, %s, %d)" % (path_prefix, img_url, img_ext, postfix if postfix else "None", index if index else -1))
         return Cache.get_cache_info_common(path_prefix, img_url, img_ext, postfix, index)
 
-
-def determine_crawler_options(options: Dict[str, Any]) -> str:
-    logger.debug("# determine_crawler_options()")
-
-    option_str = ""
-    if "render_js" in options and options["render_js"]:
-        option_str += " --render-js"
-    if "uncompress_gzip" in options and options["uncompress_gzip"]:
-        option_str += " --uncompress-gzip"
-    if "user_agent" in options and options["user_agent"]:
-        option_str += " --ua '%s'" % (options["user_agent"])
-    if "referer" in options and options["referer"]:
-        option_str += " --referer '%s'" % (options["referer"])
-    if "encoding" in options and options["encoding"]:
-        option_str += " --encoding '%s'" % (options["encoding"])
-    if "header_list" in options and options["header_list"]:
-        for header in options["header_list"]:
-            option_str += " --header '%s'" % (header)
-
-    '''
-    logger.debug("title=%s, review_point=%d, review_point_threshold=%f" % (title, review_point, review_point_threshold))
-    if review_point and review_point_threshold and review_point > review_point_threshold:
-        # 일반적으로 평점이 사용되지 않는 경우나
-        # 평점이 기준치를 초과하는 경우에만 추출
-        warn("ignore an article due to the low score")
-        return 0
-    '''
-
-    return option_str
-
-
-def remove_duplicates(list: List[Any]) -> List[Any]:
-    seen: Set[Any] = set()
-    result: List[Any] = []
-    for item in list:
-        if item not in seen:
-            seen.add(item)
-            result.append(item)
-    return result

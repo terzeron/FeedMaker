@@ -19,8 +19,7 @@ public_html_path = os.environ["FEED_MAKER_WWW_FEEDS"]
 feedmaker_path = os.environ["FEED_MAKER_CWD"]
 
 
-
-def create_xml_status_table(c):
+def create_xml_status_table(c) -> None:
     query_str = "DROP TABLE IF EXISTS %s" % (status_table)
     c.execute(query_str)
     query_str = "CREATE TABLE %s (feed_alias VARCHAR(256) PRIMARY KEY, http_request INT NOT NULL DEFAULT 0, htaccess INT NOT NULL DEFAULT 0, public_html INT NOT NULL DEFAULT 0, feedmaker INT NOT NULL DEFAULT 0, last_request_date date)" % (status_table)
@@ -34,7 +33,7 @@ def create_xml_status_table(c):
     c.execute(query_str)
     
     
-def update_htaccess_status(c):
+def update_htaccess_status(c) -> None:
     line_list = IO.read_file_as_line_list(htaccess_file)
     for line in line_list:
         m = re.search(r'^RewriteRule\s+\^(?P<feed_alias>[^\t]+)\\\.xml\$\s+xml/(?P<feed_name>[^\t]+)\\\.xml\s*$', line)
@@ -54,7 +53,7 @@ def update_htaccess_status(c):
             c.execute(query_str)
 
 
-def update_feed_access_status(c):
+def update_feed_access_status(c) -> None:
     line_list = IO.read_file_as_line_list(feed_access_file)
     for line in line_list:
         m = re.search(r'(?P<date>\d+)\t(?P<feed_name>[^\t]+)\t(?P<http_status>\d+)', line)
@@ -72,7 +71,7 @@ def update_feed_access_status(c):
                 c.execute(query_str)
 
             
-def update_public_html_status(c):
+def update_public_html_status(c) -> None:
     p = pathlib.Path(public_html_path)
     feed_list = list(p.glob('*.xml'))
     for feed in feed_list:
@@ -89,7 +88,7 @@ def update_public_html_status(c):
             c.execute(query_str)
 
 
-def update_feedmaker_status(c):
+def update_feedmaker_status(c) -> None:
     p = pathlib.Path(feedmaker_path)
     feed_list = list(p.glob('*/*/*.xml'))
     for feed in feed_list:
@@ -108,7 +107,7 @@ def update_feedmaker_status(c):
                 c.execute(query_str)
 
 
-def print_mismatch_feeds(c):
+def print_mismatch_feeds(c) -> None:
     query_str = "SELECT s.feed_alias, feed_name, http_request, htaccess, public_html, feedmaker, last_request_date FROM xml_status s JOIN feed_alias_name a ON s.feed_alias = a.feed_alias WHERE http_request != 1 OR htaccess != 1 OR public_html != 1 OR feedmaker != 1 ORDER BY http_request, htaccess, public_html, feedmaker"
     print("<table>")
 
@@ -133,27 +132,30 @@ def print_mismatch_feeds(c):
         feedmaker = row[5]
         last_request_date = row[6]
 
-        if feed_alias == feed_name:
-            feed_alias = ""
         if not last_request_date:
             last_request_date = ""
         
         print("<tr>")
-        print("<td class='external'><a href='https://terzeron.net/%s.xml' target='_blank'>%s</a></td>" % (feed_alias, feed_alias))
+        print("<td class='external'><a href='https://terzeron.net/%s.xml' target='_blank'>" % feed_alias)
+        if feed_alias != feed_name:
+            print("<strong><i>%s</i></strong>" % feed_alias)
+        else:
+            print(feed_alias)
+        print("</a></td>")
         print("<td class='internal'><a href='https://terzeron.net/xml/%s.xml' target='_blank'>%s</a></td>" % (feed_name, feed_name))
         print("<td class='http_request'>%s</td>" % (http_request == 1 and "O" or "X"))
         print("<td class='htaccess'>%s</td>" % (htaccess == 1 and "O" or "X"))
         print("<td class='public_html'>%s</td>" % (public_html == 1 and "O" or "X"))
         print("<td class='feedmaker'>%s</td>" % (feedmaker == 1 and "O" or "X"))
         print("<td class='last_request_date'>%s</td>" % last_request_date)
-        print("<td class='management'><a href='add_feed.php?feed_name=%s'>%s</a></td>" % (feed_name, feed_name))
+        print("<td class='management'><a href='exec.php?command=view&feed_name=%s'>%s</a></td>" % (feed_name, feed_name))
         print("</tr>")
     print("</table>")
     print("</div>")
     print("</div>")
 
             
-def main():
+def main() -> int:
     conn = sqlite3.connect(db_name)
     c = conn.cursor()
 
@@ -168,7 +170,8 @@ def main():
     print_mismatch_feeds(c)
 
     conn.close()
+    return 0
 
     
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
