@@ -1,18 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from bs4 import BeautifulSoup, Comment
+from bs4 import BeautifulSoup
 import re
-import subprocess
-import os
 import sys
-import urllib.request, urllib.error, urllib.parse
-import socket
-import copy
 import signal
-import feedmakerutil
-from feedmakerutil import Config
-from feedmakerutil import IO
+from feedmakerutil import Config, IO, HTMLExtractor, die
 from logger import Logger
 
 
@@ -20,7 +13,7 @@ logger = Logger("extract_element.py")
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 
-def extract_content(config_item):
+def extract_content(config_item: str) -> None:
     logger.debug("# extract_content()")
     # configuration
     class_str = ""
@@ -57,7 +50,7 @@ def extract_content(config_item):
         print(html)
         return
     
-    ret = 0
+    ret = -1
     for parser in [ "html.parser", "html5lib", "lxml" ]:
         soup = BeautifulSoup(html, parser)
         if soup == None:
@@ -70,30 +63,35 @@ def extract_content(config_item):
             if divs:
                 for div in divs:
                     print(div)
-                    ret = 1
+                    ret = 0
         if class_str != None and class_str != "":
             divs = soup.find_all(class_=class_str)
             if divs:
                 for div in divs:
                     print(div)
-                    ret = 1
+                    ret = 0
         if path_str != None and path_str != "":
-            divs = get_node_with_path(soup, path_str)
+            divs = HTMLExtractor.get_node_with_path(soup, path_str)
             if divs:
                 for div in divs:
                     print(div)
-                    ret = 1
-        if ret > 0:
+                    ret = 0
+        if ret == 0:
             break
+    return ret
 
 
-def print_usage(program_name):
+def print_usage(program_name: str) -> None:
     print(("Usage:\t%s\t<config item>\n" % program_name))
     print("")
 
 
-if __name__ == "__main__":
+def main() -> int:
     if len(sys.argv) < 2:
         print_usage(sys.argv[0])
         sys.exit(-1)
-    extract_content(sys.argv[1])
+    return extract_content(sys.argv[1])
+
+
+if __name__ == "__main__":
+    sys.exit(main())

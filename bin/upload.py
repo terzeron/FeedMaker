@@ -15,15 +15,14 @@ from logger import Logger
 logger = Logger("upload.py")
 
 
-def main(rss_file):
-    dir = os.environ["FEED_MAKER_WWW_FEEDS"]
-    data_file_list = []
-    do_upload = False
-    old_rss_file = rss_file + ".old"
+def main(rss_file: str) -> int:
+    dir: str = os.environ["FEED_MAKER_WWW_FEEDS"]
+    do_upload: bool = False
+    old_rss_file: str = rss_file + ".old"
 
     if os.path.isfile(old_rss_file):
         # 과거 파일이 존재하면 비교해보고 다른 경우에만 업로드
-        cmd = "diff '%s' '%s' | egrep -v \"(^(<|>) <(pubDate|lastBuildDate))|(^---\$)|(^[0-9,]+[a-z][0-9,]+\$)\" | wc -c" % (rss_file, old_rss_file)
+        cmd: str = "diff '%s' '%s' | egrep -v \"(^(<|>) <(pubDate|lastBuildDate))|(^---\$)|(^[0-9,]+[a-z][0-9,]+\$)\" | wc -c" % (rss_file, old_rss_file)
         logger.debug(cmd)
         (result, error) = feedmakerutil.exec_cmd(cmd)
         if not error:
