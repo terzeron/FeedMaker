@@ -38,7 +38,8 @@ function execute_job() {
 }
 
 echo "deleting old or zero-size image files..."
-find $FEED_MAKER_WWW_FEEDS/img \( -mtime +20d -o -size 0 \) -exec rm -rf "{}" \; -ls
+count=$(find $FEED_MAKER_WWW_FEEDS/img \( -mtime +60d -o -size 0 \) -delete | wc -l)
+echo "$count files deleted"
 
 dirs=( $(find . -type d -path "./*/*" -not \( -path "./.git/*" -o -path "./_*/*" -o -path "./*/_*" -o -name newlist -o -name html \) | perl -MList::Util=shuffle -e 'print shuffle <STDIN>') )
 #for i in $(seq 0 5 $max_idx); do
