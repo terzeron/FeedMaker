@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
-import sys
 import unittest
-from bs4 import BeautifulSoup, Comment
-import pprint
+from bs4 import BeautifulSoup
 import xml.dom.minidom
 import feedmakerutil
 from feedmakerutil import Config, URL, HTMLExtractor
@@ -63,38 +61,53 @@ class HTMLExtractorTest(unittest.TestCase):
 
 
 class ConfigTest(unittest.TestCase):
+    def setUp(self):
+        self.config = Config.read_config()
+
+    def tearDown(self):
+        self.config = None
+        
     def test_read_config(self):
-        config = Config.read_config()
-        self.assertTrue(config != None)
-        self.assertTrue(isinstance(config, xml.dom.minidom.Document))
+        self.assertNotEqual(self.config, None)
+        self.assertTrue(isinstance(self.config, xml.dom.minidom.Document))
         
     def test_get_config_node(self):
-        config = Config.read_config()
-        collection = Config.get_config_node(config, "collection")
+        collection = Config.get_config_node(self.config, "collection")
         self.assertTrue(collection)
         list_url_list = Config.get_config_node(collection, "list_url_list")
         self.assertTrue(list_url_list)
         list_url = Config.get_config_node(list_url_list, "list_url")
         self.assertTrue(list_url)
 
-    def test_get_value_from_config(self):
-        config = Config.read_config()
-        collection = Config.get_config_node(config, "collection")
-        list_url_list = Config.get_config_node(collection, "list_url_list")
-        list_url = Config.get_config_node(list_url_list, "list_url")
-        v = Config.get_value_from_config(list_url)
-        self.assertEqual(v, "http://m.navercast.naver.com/homeMain.nhn?page=")
-        extraction = Config.get_config_node(config, "extraction")
-        element_list = Config.get_config_node(extraction, "element_list")
-        elementId = Config.get_config_node(element_list, "element_id")
-        v = Config.get_value_from_config(elementId)
-        self.assertEqual(v, "ct")
+    def test_get_all_config_values(self):
+        extraction_config = Config.get_config_node(self.config, "extraction")
+        self.assertTrue(extraction_config)
+        element_list = Config.get_all_config_values(extraction_config, "element_id")
+        self.assertEqual(element_list, ["ct", "content"])
 
+    def test_get_config_value(self):
+        extraction_config = Config.get_config_node(self.config, "extraction")
+        self.assertTrue(extraction_config)
+        post_process_script = Config.get_config_value(extraction_config, "post_process_script")
+        self.assertEqual(post_process_script, "post_process_script_for_navercast.py")
+
+    def test_get_collection_configs(self):
+        pass
+    
+    def test_get_extraction_configs(self):
+        pass
+
+    def test_get_notification_configs(self):
+        pass
+
+    def test_get_rss_configs(self):
+        pass
+    
 
 class UtilTest(unittest.TestCase):
     def test_get_url_prefix(self):
         prefix = URL.get_url_prefix("http://www.naver.com/movie/hello/test.nhn?query=test")
-        self.assertEqual(prefix, "http://www.naver.com/movie/hello/");
+        self.assertEqual(prefix, "http://www.naver.com/movie/hello/")
 
     def test_get_url_domain(self):
         domain = URL.get_url_domain("http://www.naver.com/movie/hello/test.nhn?query=test")

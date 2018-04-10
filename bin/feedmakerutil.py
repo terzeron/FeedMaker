@@ -255,37 +255,37 @@ class Config:
         return minidom.parse(config_file)
 
     @staticmethod
-    def get_all_config_nodes(node: Node, key: str) -> Node:
+    def _get_all_config_nodes(node: Node, key: str) -> Node:
         return node.getElementsByTagName(key)
 
     @staticmethod
     def get_config_node(node: Node, key: str) -> Node:
-        nodes = Config.get_all_config_nodes(node, key)
+        nodes = Config._get_all_config_nodes(node, key)
         if not nodes:
             return None
         return nodes[0]
 
     @staticmethod
-    def get_value_from_config(node: Node) -> str:
+    def _get_value_from_config(node: Node) -> str:
         if node and node.childNodes:
             return node.childNodes[0].nodeValue
         return None
 
     @staticmethod
     def get_config_value(node: Node, key: str) -> str:
-        return Config.get_value_from_config(Config.get_config_node(node, key))
+        return Config._get_value_from_config(Config.get_config_node(node, key))
 
     @staticmethod
     def get_all_config_values(node: Node, key: str) -> List[str]:
         result: List[str] = []
-        for item in Config.get_all_config_nodes(node, key):
-            item_value = Config.get_value_from_config(item)
+        for item in Config._get_all_config_nodes(node, key):
+            item_value = Config._get_value_from_config(item)
             if item_value:
                 result.append(item_value)
         return result
 
     @staticmethod
-    def get_config_values_as_list(list_item_name: str, single_item_name: str, parent_conf_node) -> List[str]:
+    def _get_config_values_as_list(list_item_name: str, single_item_name: str, parent_conf_node) -> List[str]:
         list: List[str] = []
         conf_node = Config.get_config_node(parent_conf_node, list_item_name)
         if conf_node:
@@ -325,8 +325,8 @@ class Config:
         user_agent = Config.get_config_value(conf, "user_agent")
         encoding = Config.get_config_value(conf, "encoding")
 
-        list_url_list = Config.get_config_values_as_list("list_url_list", "list_url", conf)
-        post_process_script_list = Config.get_config_values_as_list("post_process_script_list", "post_process_script", conf)
+        list_url_list = Config._get_config_values_as_list("list_url_list", "list_url", conf)
+        post_process_script_list = Config._get_config_values_as_list("post_process_script_list", "post_process_script", conf)
 
         options = {
             "item_capture_script": item_capture_script,
@@ -359,8 +359,8 @@ class Config:
         encoding = Config.get_config_value(conf, "encoding")
         referer = Config.get_config_value(conf, "referer")
 
-        header_list = Config.get_config_values_as_list("header_list", "header", conf)
-        post_process_script_list = Config.get_config_values_as_list("post_process_script_list", "post_process_script", conf)
+        header_list = Config._get_config_values_as_list("header_list", "header", conf)
+        post_process_script_list = Config._get_config_values_as_list("post_process_script_list", "post_process_script", conf)
 
         options = {
             "render_js": render_js,
