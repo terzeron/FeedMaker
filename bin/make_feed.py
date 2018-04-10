@@ -9,9 +9,10 @@ import getopt
 import subprocess
 import pprint
 import feedmakerutil
-from feedmakerutil import warn, err, die
+from feedmakerutil import warn, die
 from feedmakerutil import Config
 from feedmakerutil import URL
+from typing import List, Dict, Any, Tuple
 from logger import Logger
 import PyRSS2Gen
 
@@ -22,7 +23,7 @@ MAX_CONTENT_LENGTH = 64 * 1024
 MAX_NUM_DAYS = 7
 
 
-def get_pub_date_str(file_name):
+def get_pub_date_str(file_name: str) -> str:
     if os.path.isfile(file_name):
         ts = os.stat(file_name).st_mtime
     else:
@@ -31,31 +32,31 @@ def get_pub_date_str(file_name):
     return dt.strftime("%a, %d %b %Y %H:%M:%S %z")
 
 
-def get_rss_date_str(ts=datetime.datetime.now().timestamp()):
+def get_rss_date_str(ts=datetime.datetime.now().timestamp()) -> str:
     dt = datetime.datetime.fromtimestamp(float(ts))
     return dt.strftime("%a, %d %b %Y %H:%M:%S %z")
 
 
-def get_date_str(ts=datetime.datetime.now().timestamp()):
+def get_date_str(ts=datetime.datetime.now().timestamp()) -> str:
     dt = datetime.datetime.fromtimestamp(float(ts))
     return dt.strftime("%Y%m%d")
 
 
-def get_list_file_name(list_dir, date_str):
+def get_list_file_name(list_dir: str, date_str: str) -> str:
     return "%s/%s.txt" % (list_dir, date_str)
 
 
-def get_new_file_name(url):
+def get_new_file_name(url: str) -> str:
     return "html/" + URL.get_short_md5_name(url) + ".html"
 
 
-def get_recent_list(list_dir, post_process_script_list):
+def get_recent_list(list_dir: str, post_process_script_list: List[str]) -> List[str]:
     logger.debug("# get_recent_list(%s)" % (list_dir))
 
     date_str = get_date_str()
     new_list_file_name = get_list_file_name(list_dir, date_str)
     cmd = "collect_new_list.py"
-    for script in post_process_script_list:
+    for post_process_script in post_process_script_list:
         if cmd:
             cmd += " |"
         cmd += ' %s "%s"' % (post_process_script, new_list_file_name)
@@ -69,7 +70,7 @@ def get_recent_list(list_dir, post_process_script_list):
         out_file.write(result)
         
     with open(new_list_file_name, 'r', encoding='utf-8') as in_file:
-        uniq_list = []
+        uniq_list: List[str] = []
         for line in in_file:
             line = line.rstrip()
             if not line.startswith("# "):
@@ -78,12 +79,12 @@ def get_recent_list(list_dir, post_process_script_list):
     return uniq_list
 
 
-def read_old_list_from_file(list_dir, is_completed):
+def read_old_list_from_file(list_dir: str, is_completed: bool) -> List[str]:
     logger.debug("# read_old_list_from_file(list_dir=%s, is_completed=%r)" % (list_dir, is_completed))
 
-    result_list = []
+    result_list: List[str] = []
     ts = datetime.datetime.now().timestamp()
-    if is_completed == False:
+    if not is_completed:
         # 아직 진행 중인 피드에 대해서는 현재 날짜에 가장 가까운
         # 과거 리스트 파일 1개를 찾아서 그 안에 기록된 리스트를 꺼냄
 
@@ -117,7 +118,7 @@ def read_old_list_from_file(list_dir, is_completed):
     return list(set(result_list))
 
 
-def generate_rss_feed(config, feed_list, rss_file_name):
+def generate_rss_feed(config, feed_list: List[str], rss_file_name: str) -> bool:
     logger.debug("# generate_rss_feed(%s)" % (rss_file_name))
 
     options = Config.get_rss_configs(config)
@@ -127,13 +128,12 @@ def generate_rss_feed(config, feed_list, rss_file_name):
     date_str = get_date_str()
     temp_rss_file_name = rss_file_name + "." + date_str
 
-    rss_items = []
+    rss_items: List[str] = []
     for feed_item in feed_list:
         (article_url, article_title) = feed_item.split('\t')
         new_file_name = get_new_file_name(article_url)
-        guid = URL.get_short_md5_name(article_url)
         pub_date_str = get_rss_date_str()
-        
+
         content = ""
         with open(new_file_name, 'r', encoding='utf-8') as in_file:
             logger.info("adding '%s' to the result" % (new_file_name))
@@ -175,7 +175,7 @@ def generate_rss_feed(config, feed_list, rss_file_name):
     else:
         is_different = True
 
-    if is_different == True:
+    if is_different:
         # 이전 파일을 old 파일로 이름 바꾸기
         if os.path.isfile(rss_file_name):
             cmd = 'mv -f "%s" "%s.old"' % (rss_file_name, rss_file_name)
@@ -199,9 +199,9 @@ def generate_rss_feed(config, feed_list, rss_file_name):
     return True
 
 
-def append_item_to_result(feed_list, item, rss_file_name, options):
+def append_item_to_result(feed_list: List[str], item: str, rss_file_name: str, options: Dict[str, Any]) -> None:
     fields = item.split('\t')
-    review_point = None
+    review_point: int = None
     if len(fields) == 2:
         (url, title) = fields
     elif len(fields) == 3:
@@ -245,13 +245,13 @@ def append_item_to_result(feed_list, item, rss_file_name, options):
         else:
             # 피드 리스트에서 제외
             warn("%s: %s --> %s: %d (< %d byte of header)" % (title, url, new_file_name, size, len(feedmakerutil.header_str)))
-            return 0
+            return
 
         if options["force_sleep_between_articles"]:
             time.sleep(1)
 
 
-def determine_cmd(options, url, new_file_name):
+def determine_cmd(options: Dict[str, Any], url: str, new_file_name: str) -> str:
     post_process_cmd = ""
     for script in options["post_process_script_list"]:
         post_process_cmd += ' | %s "%s"' % (script, url)
@@ -267,13 +267,13 @@ def determine_cmd(options, url, new_file_name):
     return cmd
             
 
-def diff_old_and_recent(config, recent_list, old_list, feed_list, rss_file_name):
+def diff_old_and_recent(config, recent_list: List[str], old_list: List[str], feed_list: List[str], rss_file_name: str) -> None:
     logger.debug("# diff_old_and_recent(len(recent_list)=%d, len(old_list)=%d), len(feed_list)=%d, rss_file_name=%s" % (len(recent_list), len(old_list), len(feed_list), rss_file_name))
 
     options = Config.get_extraction_configs(config)
     logger.debug("extraction options=%s" % pprint.pformat(options))
         
-    old_map = {}
+    old_map: Dict[str, str] = {}
     for old in old_list:
         if re.search(r'^\#', old):
             continue
@@ -282,7 +282,7 @@ def diff_old_and_recent(config, recent_list, old_list, feed_list, rss_file_name)
     logger.debug(len(old_list))
 
     # differentiate
-    result_list = []
+    result_list: List[str] = []
     for recent in recent_list:
         if re.search(r'^\#', recent):
             continue
@@ -313,7 +313,7 @@ def diff_old_and_recent(config, recent_list, old_list, feed_list, rss_file_name)
     return True
 
     
-def get_start_idx(file_name):
+def get_start_idx(file_name: str) -> Tuple[int, int]:
     logger.debug("# get_start_idx(%s)" % (file_name))
 
     if os.path.isfile(file_name):
@@ -336,7 +336,7 @@ def get_start_idx(file_name):
     return (0, int(ts))
 
 
-def write_next_start_idx(file_name, next_start_idx):
+def write_next_start_idx(file_name: str, next_start_idx: int) -> None:
     logger.debug("# write_next_start_idx(%s, %d)" % (file_name, next_start_idx))
 
     ts = datetime.datetime.now().timestamp()
@@ -346,12 +346,12 @@ def write_next_start_idx(file_name, next_start_idx):
         out_file.write("%d\t%d\n" % (int(next_start_idx), int(ts)))
 
 
-def print_usage():
+def print_usage() -> None:
     print("usage:\t%s\t<config file> <rss file>" % (sys.argv[0]))
     print()
 
 
-def cmp_int_or_str(a, b):
+def cmp_int_or_str(a: str, b: str) -> int:
     m1 = re.search(r'^\d+$', a["sf"])
     m2 = re.search(r'^\d+$', b["sf"])
     if m1 and m2:
@@ -369,16 +369,22 @@ def cmp_to_key(mycmp):
     class K:
         def __init__(self, obj, *args):
             self.obj = obj
+            
         def __lt__(self, other):
             return mycmp(self.obj, other.obj) < 0
+        
         def __gt__(self, other):
             return mycmp(self.obj, other.obj) > 0
+        
         def __eq__(self, other):
             return mycmp(self.obj, other.obj) == 0
+        
         def __le__(self, other):
             return mycmp(self.obj, other.obj) <= 0
+        
         def __ge__(self, other):
             return mycmp(self.obj, other.obj) >= 0
+        
         def __ne__(self, other):
             return mycmp(self.obj, other.obj) != 0
     return K
@@ -403,7 +409,7 @@ def main():
     rss_file_name = args[0]
 
     config = Config.read_config()
-    if config == None:
+    if not config:
         die("can't find conf.xml file nor get config element")
     options = Config.get_collection_configs(config)
     logger.info("collection options=%s" % pprint.pformat(options))
@@ -417,18 +423,18 @@ def main():
     feedmakerutil.make_path("html")
 
     # 과거 피드항목 리스트를 가져옴
-    feed_list = []
+    feed_list: List[str] = []
     old_list = read_old_list_from_file(list_dir, options["is_completed"])
     if not old_list:
         warn("can't get old list!")
 
     # 완결여부 설정값 판단 
-    recent_list = []
+    recent_list: List[str] = []
     if options["is_completed"]:
         # 완결된 피드는 적재된 리스트에서 일부 피드항목을 꺼내옴
 
         # 오름차순 정렬
-        feed_id_sort_field_list = []
+        feed_id_sort_field_list: List[str] = []
         feed_item_existence_set = set([])
 
         matched_count = 0
@@ -446,7 +452,7 @@ def main():
                 sort_field = "0"
 
             if old_item not in feed_item_existence_set:
-                feed_id_sort_field = {}
+                feed_id_sort_field: Dict[str, str] = {}
                 feed_id_sort_field["id"] = i
                 feed_id_sort_field["sf"] = sort_field
                 feed_item_existence_set.add(old_item)
@@ -458,7 +464,7 @@ def main():
             
         sorted_feed_list = sorted(feed_id_sort_field_list, key=cmp_to_key(cmp_int_or_str))
         idx_file = "start_idx.txt"
-        window_size = 10 # feedly initial max window size
+        window_size = 10  # feedly initial max window size
         (start_idx, mtime) = get_start_idx(idx_file)
         end_idx = start_idx + window_size
         for i, feed in enumerate(sorted_feed_list):
@@ -481,7 +487,7 @@ def main():
         
         # 과거 피드항목 리스트와 최근 피드항목 리스트를 비교함
         if options["ignore_old_list"]:
-            old_list = []
+            old_list: List[str] = []
             feed_list = recent_list
         
         if not diff_old_and_recent(config, recent_list, old_list, feed_list, rss_file_name):
@@ -503,7 +509,7 @@ def main():
     m = re.search(r'Upload success', result)
     if m:
         logger.info("Uploaded file '%s'" % (rss_file_name))
-        if do_collect_by_force == False:
+        if not do_collect_by_force:
             # email notification
             options = Config.get_notification_configs(config)
             if options:
