@@ -38,12 +38,10 @@ def main(rss_file: str) -> int:
     if do_upload:
         cmd = "cp %s %s" % (rss_file, d)
         logger.debug(cmd)
-        '''
-        (result, error) = feedmakerutil.exec_cmd(cmd)
+        result, error = feedmakerutil.exec_cmd(cmd)
         if not error:
             logger.info("Upload success!")
             return 0
-        '''
     warn("Upload failed! No change from the previous RSS file")
     return 0
 
