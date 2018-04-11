@@ -3,7 +3,7 @@
 
 import unittest
 from bs4 import BeautifulSoup
-import xml.dom.minidom
+import collections
 import feedmakerutil
 from feedmakerutil import Config, URL, HTMLExtractor
 
@@ -62,47 +62,51 @@ class HTMLExtractorTest(unittest.TestCase):
 
 class ConfigTest(unittest.TestCase):
     def setUp(self):
-        self.config = Config.read_config()
+        self.config = Config()
 
     def tearDown(self):
         self.config = None
         
-    def test_read_config(self):
+    def test_init(self):
         self.assertNotEqual(self.config, None)
-        self.assertTrue(isinstance(self.config, xml.dom.minidom.Document))
+        self.assertTrue(isinstance(self.config, feedmakerutil.Config))
         
-    def test_get_config_node(self):
-        collection = Config.get_config_node(self.config, "collection")
-        self.assertTrue(collection)
-        list_url_list = Config.get_config_node(collection, "list_url_list")
-        self.assertTrue(list_url_list)
-        list_url = Config.get_config_node(list_url_list, "list_url")
-        self.assertTrue(list_url)
-
-    def test_get_all_config_values(self):
-        extraction_config = Config.get_config_node(self.config, "extraction")
-        self.assertTrue(extraction_config)
-        element_list = Config.get_all_config_values(extraction_config, "element_id")
-        self.assertEqual(element_list, ["ct", "content"])
-
-    def test_get_config_value(self):
-        extraction_config = Config.get_config_node(self.config, "extraction")
-        self.assertTrue(extraction_config)
-        post_process_script = Config.get_config_value(extraction_config, "post_process_script")
-        self.assertEqual(post_process_script, "post_process_script_for_navercast.py")
-
     def test_get_collection_configs(self):
-        pass
+        configs = self.config.get_collection_configs()
+        self.assertTrue(isinstance(configs, dict))
+        self.assertEqual(configs["item_capture_script"], "./capture_item_link_title.py")
+        self.assertFalse(configs["ignore_old_list"])
+        self.assertEqual(configs["sort_field_pattern"], None)
+        self.assertEqual(configs["unit_size_per_day"], None)
+        self.assertEqual(configs["list_url_list"], ["http://m.navercast.naver.com/homeMain.nhn?page=1", "http://m.navercast.naver.com/homeMain.nhn?page=2"])
+        self.assertEqual(configs["element_id_list"], ["hello"])
+        self.assertEqual(configs["element_class_list"], ["cst_m", "cst_m2"])
+        self.assertEqual(configs["element_path_list"], [])
+        self.assertEqual(configs["post_process_script_list"], [])
     
     def test_get_extraction_configs(self):
-        pass
+        configs = self.config.get_extraction_configs()
+        self.assertTrue(isinstance(configs, dict))
+        self.assertFalse(configs["render_js"])
+        self.assertEqual(configs["review_point_threshold"], None)
+        self.assertNotEqual(configs["user_agent"], None)
+        self.assertEqual(configs["element_id_list"], ["ct", "content"])
+        self.assertEqual(configs["element_class_list"], ["content_view"])
+        self.assertEqual(configs["element_path_list"], [])
+        self.assertEqual(configs["post_process_script_list"], ["post_process_script_for_navercast.py"])
+        self.assertEqual(configs["header_list"], [])
 
     def test_get_notification_configs(self):
-        pass
+        configs = self.config.get_notification_configs()
+        self.assertTrue(isinstance(configs, dict))
+        self.assertEqual(configs["email_recipient"], "terzeron@gmail.com")
+        self.assertEqual(configs["email_subject"], "Success in navercast")
 
     def test_get_rss_configs(self):
-        pass
-    
+        configs = self.config.get_rss_configs()
+        self.assertTrue(isinstance(configs, dict))
+        self.assertEqual(configs["rss_title"], "네이버캐스트 모바일")
+
 
 class UtilTest(unittest.TestCase):
     def test_get_url_prefix(self):

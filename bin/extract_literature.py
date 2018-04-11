@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 
 
-import re
 import sys
-from bs4 import BeautifulSoup, Comment
-import feedmakerutil
+from bs4 import BeautifulSoup
+from feedmakerutil import IO
+
 
 def read_file(file):
     fp = open(file)
@@ -18,7 +18,7 @@ def read_file(file):
 
 def traverse_element(element):
     prev_href = None
-    for a in element.findAll('a'): 
+    for a in element.findAll('a'):
         img = a.find('img')
         if prev_href != a['href']:
             print("%s\t%s" % (a['href'].encode("utf-8"), img['alt'].encode("utf-8")), end='')
@@ -27,9 +27,9 @@ def traverse_element(element):
 
         prev_href = a['href']
 
-        
+
 def main():
-    html = feedmakerutil.read_stdin()
+    html = IO.read_stdin()
     soup = BeautifulSoup(html, 'html.parser')
     text = soup.find(attrs={"id": "navercast_div"})
     if text:

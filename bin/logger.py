@@ -2,13 +2,11 @@
 # -*- encoding: utf-8 -*-
 
 
-import sys
-import os
-import getpass
 import logging
 import logging.handlers
-from smtplib import SMTP
-from typing import Any, List, Dict, no_type_check
+import os
+import sys
+from typing import Any
 
 
 class Logger:
@@ -26,13 +24,13 @@ class Logger:
 
         tfh = logging.handlers.TimedRotatingFileHandler(path_prefix + "feedmaker.log", when="D", interval=1, backupCount=2)
         tfh.setLevel(total_log_file_logging_level)
-        tfh_formatter = logging.Formatter("[%(asctime)s][%(name)s:%(lineno)d][%(levelname)s] %(message)s")
+        tfh_formatter = logging.Formatter("[%(asctime)s][%(levelname)s][%(name)s:%(lineno)d] %(message)s")
         tfh.setFormatter(tfh_formatter)
         self.logger.addHandler(tfh)
 
         ffh = logging.handlers.TimedRotatingFileHandler("run.log", when="D", interval=1, backupCount=2)
         ffh.setLevel(feed_file_logging_level)
-        ffh_formatter = logging.Formatter("[%(asctime)s][%(name)s:%(lineno)d][%(levelname)s] %(message)s")
+        ffh_formatter = logging.Formatter("[%(asctime)s][%(levelname)s][%(name)s:%(lineno)d] %(message)s")
         ffh.setFormatter(ffh_formatter)
         self.logger.addHandler(ffh)
 

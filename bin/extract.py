@@ -3,18 +3,12 @@
 
 from bs4 import BeautifulSoup, Comment
 import re
-import os
 import sys
 import signal
-import cgi
-import getopt
+import html
 import feedmakerutil
-from feedmakerutil import die, err, warn
-from feedmakerutil import Config
-from feedmakerutil import URL
-from feedmakerutil import IO
+from feedmakerutil import die, Config, URL, IO, HTMLExtractor
 from logger import Logger
-
 
 logger = Logger("extract.py")
 # recursion으로 구현된 traverse_element()의 여러 레벨에서 조회하는 변수
@@ -26,7 +20,7 @@ def print_header():
 
 
 def print_trailer():
-    None
+    pass
 
 
 def extract_content(args):
@@ -34,82 +28,75 @@ def extract_content(args):
     file = ""
     if len(args) > 1:
         file = args[1]
-        
+
     # configuration
-    config = Config.read_config()
-    if config == None:
-        return -1
-    extraction_conf = Config.get_config_node(config, "extraction")
+    config = Config()
+    if not config:
+        die("can't read configuration")
+    extraction_conf = config.get_extraction_configs()
 
     # read html contents
-    html = IO.read_file(file)
+    html_content = IO.read_file(file)
 
     if extraction_conf:
-        element_list = Config.get_config_node(extraction_conf, "element_list")
-        if not element_list:
-            die("can't find 'element_list' element from configuration")
-        class_list = Config.get_all_config_values(element_list, "element_class")
-        id_list = Config.get_all_config_values(element_list, "element_id")
-        path_list = Config.get_all_config_values(element_list, "element_path")
-
-        encoding = Config.get_config_value(element_list, "encoding")
-
-        if not encoding:
-            encoding = "utf8"
+        class_list = extraction_conf["element_class_list"]
+        id_list = extraction_conf["element_id_list"]
+        path_list = extraction_conf["element_path_list"]
+        encoding = extraction_conf["encoding"]
         logger.debug("# element_id: %s" % id_list)
         logger.debug("# element_class: %s" % class_list)
         logger.debug("# element_path: %s" % path_list)
         logger.debug("# encoding: %s" % encoding)
     else:
-        print(html, end='')
+        print(html_content, end='')
         return True
-    
+
     # sanitize
-    html = re.sub(r'alt="(.*)<br>(.*)"', r'alt="\1 \2"', html)
-    html = re.sub(r'<br>', '<br/>', html)
-    html = re.sub(r'[\x01\x08]', '', html, re.LOCALE)
-    html = re.sub(r'<\?xml[^>]+>', r'', html)
-    #html = re.sub(r'/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/', r'', html)
+    html_content = re.sub(r'alt="(.*)<br>(.*)"', r'alt="\1 \2"', html_content)
+    html_content = re.sub(r'<br>', '<br/>', html_content)
+    html_content = re.sub(r'[\x01\x08]', '', html_content, re.LOCALE)
+    html_content = re.sub(r'<\?xml[^>]+>', r'', html_content)
+    # html = re.sub(r'/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/', r'', html)
 
     # header
-    if html:
+    if html_content:
         print_header()
-    
+
     # main article sections
-    ret = 0
-    for parser in [ "html.parser", "html5lib", "lxml" ]:
-        soup = BeautifulSoup(html, parser)
+    ret = True
+    for parser in ["html.parser", "html5lib", "lxml"]:
+        soup = BeautifulSoup(html_content, parser)
         '''
         comments = soup.findAll(text=lambda text: isinstance(text, Comment))
         for comment in comments:
             comment.extract()
         '''
 
-        for a_class in class_list:
-            divs = soup.find_all(attrs={"class": a_class})
+        for class_str in class_list:
+            divs = soup.find_all(attrs={"class": class_str})
             if divs:
                 for div in divs:
                     ret = traverse_element(div, item_url, encoding)
-        for id in id_list:
-            divs = soup.find_all(attrs={"id": id})
+        for id_str in id_list:
+            divs = soup.find_all(attrs={"id": id_str})
             if divs:
                 for div in divs:
                     ret = traverse_element(div, item_url, encoding)
-        for path in path_list:
-            divs = feedmakerutil.get_node_with_path(soup.body, path)
+        for path_str in path_list:
+            divs = HTMLExtractor.get_node_with_path(soup.body, path_str)
             if divs:
                 for div in divs:
                     ret = traverse_element(div, item_url, encoding)
         if ret > 0:
             break
-                
-    if (class_list == None or class_list == []) and (id_list == None or id_list == []) and (path_list == None or path_list == []):
+
+    if class_list and id_list and path_list:
         ret = traverse_element(soup.body, item_url, encoding)
 
-    if html:
+    if html_content:
         print_trailer()
-        
-    return True
+
+    return ret
 
 
 def check_element_class(element, element_name, class_name):
@@ -121,18 +108,18 @@ def check_element_class(element, element_name, class_name):
 def traverse_element(element, url, encoding):
     global footnote_num
     ret = -1
-    
+
     if isinstance(element, Comment):
         # skip sub-elements
         return ret
-    elif not hasattr(element, 'name') or element.name == None:
+    elif not hasattr(element, 'name') or not element.name:
         # text or self-close element (<br/>)
         p = re.compile("^\s*$")
         if not p.match(str(element)):
-            sys.stdout.write("%s" % cgi.escape(str(element)))
+            sys.stdout.write("%s" % html.escape(str(element)))
         ret = 1
         return ret
-    else: 
+    else:
         # element
 
         # 원칙
@@ -151,12 +138,11 @@ def traverse_element(element, url, encoding):
         if element.name == "p":
             print("<p>")
             for e in element.contents:
-                ret = traverse_element(e, url, encoding)
+                traverse_element(e, url, encoding)
             # 하위 노드를 처리하고 return하지 않으면, 텍스트를 직접 
             # 감싸고 있는 <p>의 경우, 중복된 내용이 노출될 수 있음
             print("</p>")
-            ret = 1
-            return ret
+            return 1
         elif element.name == "img":
             src = ""
             if element.has_attr("data-lazy-src"):
@@ -183,7 +169,8 @@ def traverse_element(element, url, encoding):
                 src = element["src"]
                 if not re.search(r'(https?:)?//', src):
                     src = URL.concatenate_url(url, src)
-                if "ncc.phinf.naver.net" in src and ("/17.jpg" in src or "/8_17px.jpg" in src or "/7px.jpg" in src or "/20px.jpg" in src):
+                if "ncc.phinf.naver.net" in src and (
+                        "/17.jpg" in src or "/8_17px.jpg" in src or "/7px.jpg" in src or "/20px.jpg" in src):
                     # 외부에서 접근 불가능한 이미지 제거
                     return ret
             if src and src != "":
@@ -194,7 +181,7 @@ def traverse_element(element, url, encoding):
                 sys.stdout.write(" width='%s'" % element["width"])
             sys.stdout.write("/>\n")
             ret = 1
-        elif element.name in ("input"):
+        elif element.name in ["input"]:
             if check_element_class(element, "input", "origin_src"):
                 if element.has_attr("value"):
                     value = element["value"]
@@ -236,7 +223,7 @@ def traverse_element(element, url, encoding):
                     sys.stdout.write(">")
                 ret = 1
                 open_close_tag = True
-        elif element.name in ("iframe", "embed"):
+        elif element.name in ["iframe", "embed"]:
             if element.has_attr("src"):
                 src = element["src"]
                 if "video_player.nhn" in src or ".swf" in src or "getCommonPlayer.nhn" in src:
@@ -247,11 +234,12 @@ def traverse_element(element, url, encoding):
                 else:
                     sys.stdout.write("%s\n" % str(element))
                 ret = 1
-        elif element.name in ("param", "object"):
-            if element.has_attr("name") and element["name"] == "Src" and element.has_attr("value") and ".swf" in element["value"]:
+        elif element.name in ["param", "object"]:
+            if element.has_attr("name") and element["name"] == "Src" and element.has_attr("value") and ".swf" in \
+                    element["value"]:
                 src = element["value"]
                 print("[Flash Player]<br/>")
-                print("<video src='%s'></video><br/>" % (src))
+                print("<video src='%s'></video><br/>" % src)
                 print("<a href='%s'>%s</a><br/>" % (src, src))
             ret = 1
         elif element.name == "map":
@@ -267,31 +255,33 @@ def traverse_element(element, url, encoding):
                         link_title = child["alt"]
                     print("<br/><br/><strong><a href='%s'>%s</a></strong><br/><br/>" % (link_href, link_title))
                     ret = 1
-                elif element.name in ("o:p", "st1:time"):
+                elif element.name in ["o:p", "st1:time"]:
                     # skip unknown element 
                     return ret
-        elif element.name in ("script"):
+        elif element.name in ["script"]:
             # skip sub-element
             return ret
-        elif element.name in ("v:shapetype", "qksdmssnfl", "qksdmssnfl<span"):
+        elif element.name in ["v:shapetype", "qksdmssnfl", "qksdmssnfl<span"]:
             # skip malformed element
             return ret
-        elif element.name in ("style", "st1:personname", "script"):
+        elif element.name in ["style", "st1:personname", "script"]:
             # skip sub-elements
             return ret
-        elif element.name in ("xmp", "form"):
+        elif element.name in ["xmp", "form"]:
             ret = 1
         else:
             if check_element_class(element, "div", "paginate_v1"):
                 # <div class="paginate_v1">...
                 # ajax로 받아오는 페이지들을 미리 요청
-                matches = re.findall(r"change_page\('[^']+/literature_module/(\d+)/literature_(\d+)_(\d+)\.html'", str(element))
+                matches = re.findall(r"change_page\('[^']+/literature_module/(\d+)/literature_(\d+)_(\d+)\.html'",
+                                     str(element))
                 for match in matches:
                     leaf_id = int(match[0])
                     article_num = int(match[1])
                     page_num = int(match[2])
-                    url = "http://navercast.naver.com/ncc_request.nhn?url=http://data.navercast.naver.com/literature_module/%d/literature_%d_%d.html" % (leaf_id, article_num, page_num)
-                    cmd = "crawler.sh '%s' | extract_literature.py" % (url)
+                    url = "http://navercast.naver.com/ncc_request.nhn?url=http://data.navercast.naver.com/literature_module/%d/literature_%d_%d.html" % (
+                        leaf_id, article_num, page_num)
+                    cmd = "crawler.sh '%s' | extract_literature.py" % url
                     logger.debug(cmd)
                     (result, error) = feedmakerutil.exec_cmd(cmd)
                     if not error:
@@ -314,9 +304,7 @@ def traverse_element(element, url, encoding):
                 if hasattr(element, "id"):
                     if element["id"] != "footnoteLayer" + str(footnote_num):
                         return ret
-                    #else:
-                        logger.debug(str(element))
-            else:               
+            else:
                 sys.stdout.write("<%s>\n" % element.name)
                 open_close_tag = True
                 ret = 1
@@ -334,15 +322,15 @@ def traverse_element(element, url, encoding):
             ret = 1
             return ret
 
-        if open_close_tag == True:
+        if open_close_tag:
             sys.stdout.write("</%s>\n" % element.name)
             ret = 1
 
     return ret
 
 
-def print_usage(program_name):
-    print("_usage:\t%s\t[ <option> ] <file or url> <html file>" % program_name)
+def print_usage():
+    print("_usage:\t%s\t[ <option> ] <file or url> <html file>" % sys.argv[0])
     print()
 
 
@@ -352,4 +340,3 @@ if __name__ == "__main__":
         sys.exit(-1)
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)
     extract_content(sys.argv[1:])
-

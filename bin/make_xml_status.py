@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 
 import os
@@ -8,7 +8,6 @@ import re
 import pathlib
 import sqlite3
 from feedmakerutil import IO
-
 
 db_name = "problems.db"
 status_table = "xml_status"
@@ -20,19 +19,19 @@ feedmaker_path = os.environ["FEED_MAKER_CWD"]
 
 
 def create_xml_status_table(c) -> None:
-    query_str = "DROP TABLE IF EXISTS %s" % (status_table)
+    query_str = "DROP TABLE IF EXISTS %s" % status_table
     c.execute(query_str)
-    query_str = "CREATE TABLE %s (feed_alias VARCHAR(256) PRIMARY KEY, http_request INT NOT NULL DEFAULT 0, htaccess INT NOT NULL DEFAULT 0, public_html INT NOT NULL DEFAULT 0, feedmaker INT NOT NULL DEFAULT 0, last_request_date date)" % (status_table)
+    query_str = "CREATE TABLE %s (feed_alias VARCHAR(256) PRIMARY KEY, http_request INT NOT NULL DEFAULT 0, htaccess INT NOT NULL DEFAULT 0, public_html INT NOT NULL DEFAULT 0, feedmaker INT NOT NULL DEFAULT 0, last_request_date date)" % status_table
     c.execute(query_str)
 
-    query_str = "DROP TABLE IF EXISTS %s" % (alias_map_table)
+    query_str = "DROP TABLE IF EXISTS %s" % alias_map_table
     c.execute(query_str)
-    query_str = "CREATE TABLE %s (feed_alias VARCHAR(256) PRIMARY KEY, feed_name VARCHAR(256) NOT NULL DEFAULT '')" % (alias_map_table)
+    query_str = "CREATE TABLE %s (feed_alias VARCHAR(256) PRIMARY KEY, feed_name VARCHAR(256) NOT NULL DEFAULT '')" % alias_map_table
     c.execute(query_str)
-    query_str = "CREATE INDEX feed_name_idx on %s (feed_name)" % (alias_map_table)
+    query_str = "CREATE INDEX feed_name_idx on %s (feed_name)" % alias_map_table
     c.execute(query_str)
-    
-    
+
+
 def update_htaccess_status(c) -> None:
     line_list = IO.read_file_as_line_list(htaccess_file)
     for line in line_list:
@@ -40,14 +39,17 @@ def update_htaccess_status(c) -> None:
         if m:
             feed_alias = re.sub(r'\\\.', '.', m.group("feed_alias"))
             feed_name = re.sub(r'\\\.', '.', m.group("feed_name"))
-            #print("htaccess: ", feed_alias, feed_name)
-            
-            query_str = "INSERT OR IGNORE INTO %s (feed_alias, feed_name) VALUES ('%s', '%s')" % (alias_map_table, feed_alias, feed_name)
+            # print("htaccess: ", feed_alias, feed_name)
+
+            query_str = "INSERT OR IGNORE INTO %s (feed_alias, feed_name) VALUES ('%s', '%s')" % (
+                alias_map_table, feed_alias, feed_name)
             c.execute(query_str)
-            query_str = "UPDATE %s SET feed_name = '%s' WHERE feed_alias = '%s'" % (alias_map_table, feed_name, feed_alias)
+            query_str = "UPDATE %s SET feed_name = '%s' WHERE feed_alias = '%s'" % (
+                alias_map_table, feed_name, feed_alias)
             c.execute(query_str)
 
-            query_str = "INSERT OR IGNORE INTO %s (feed_alias, htaccess) VALUES ('%s', %d)" % (status_table, feed_alias, 1)
+            query_str = "INSERT OR IGNORE INTO %s (feed_alias, htaccess) VALUES ('%s', %d)" % (
+                status_table, feed_alias, 1)
             c.execute(query_str)
             query_str = "UPDATE %s SET htaccess = %d WHERE feed_alias = '%s'" % (status_table, 1, feed_alias)
             c.execute(query_str)
@@ -60,17 +62,19 @@ def update_feed_access_status(c) -> None:
         if m:
             date = m.group("date")
             feed_name = m.group("feed_name")
-            #http_status = m.group("http_status")
-            #print("http_request: ", feed_name)
-            
-            for row in c.execute("SELECT feed_alias FROM feed_alias_name WHERE feed_name = '%s'" % (feed_name)):
+            # http_status = m.group("http_status")
+            # print("http_request: ", feed_name)
+
+            for row in c.execute("SELECT feed_alias FROM feed_alias_name WHERE feed_name = '%s'" % feed_name):
                 feed_alias = row[0]
-                query_str = "INSERT OR IGNORE INTO %s (feed_alias, http_request, last_request_date) VALUES ('%s', %d, '%s')" % (status_table, feed_alias, 1, date)
+                query_str = "INSERT OR IGNORE INTO %s (feed_alias, http_request, last_request_date) VALUES ('%s', %d, '%s')" % (
+                    status_table, feed_alias, 1, date)
                 c.execute(query_str)
-                query_str = "UPDATE %s SET http_request = %d, last_request_date = '%s' WHERE feed_alias = '%s'" % (status_table, 1, date, feed_alias)
+                query_str = "UPDATE %s SET http_request = %d, last_request_date = '%s' WHERE feed_alias = '%s'" % (
+                    status_table, 1, date, feed_alias)
                 c.execute(query_str)
 
-            
+
 def update_public_html_status(c) -> None:
     p = pathlib.Path(public_html_path)
     feed_list = list(p.glob('*.xml'))
@@ -78,11 +82,12 @@ def update_public_html_status(c) -> None:
         if re.search(r'(^_|^conf.xml$)', feed.name):
             continue
         feed_name = re.sub(r'\.xml', '', feed.name)
-        #print("public_html: ", feed_name)
+        # print("public_html: ", feed_name)
 
-        for row in c.execute("SELECT feed_alias FROM feed_alias_name WHERE feed_name = '%s'" % (feed_name)):
+        for row in c.execute("SELECT feed_alias FROM feed_alias_name WHERE feed_name = '%s'" % feed_name):
             feed_alias = row[0]
-            query_str = "INSERT OR IGNORE INTO %s (feed_alias, public_html) VALUES ('%s', %d)" % (status_table, feed_alias, 1)
+            query_str = "INSERT OR IGNORE INTO %s (feed_alias, public_html) VALUES ('%s', %d)" % (
+                status_table, feed_alias, 1)
             c.execute(query_str)
             query_str = "UPDATE %s SET public_html = %d WHERE feed_alias = '%s'" % (status_table, 1, feed_alias)
             c.execute(query_str)
@@ -97,11 +102,12 @@ def update_feedmaker_status(c) -> None:
         m = re.match(r'(?P<feed_name>\S+)\.xml', feed.name)
         if m:
             feed_name = m.group("feed_name")
-            #print("feed_maker: ", feed_name)
+            # print("feed_maker: ", feed_name)
 
-            for row in c.execute("SELECT feed_alias FROM feed_alias_name WHERE feed_name = '%s'" % (feed_name)):
+            for row in c.execute("SELECT feed_alias FROM feed_alias_name WHERE feed_name = '%s'" % feed_name):
                 feed_alias = row[0]
-                query_str = "INSERT OR IGNORE INTO %s (feed_alias, feedmaker) VALUES ('%s', %d)" % (status_table, feed_alias, 1)
+                query_str = "INSERT OR IGNORE INTO %s (feed_alias, feedmaker) VALUES ('%s', %d)" % (
+                    status_table, feed_alias, 1)
                 c.execute(query_str)
                 query_str = "UPDATE %s SET feedmaker = %d WHERE feed_alias = '%s'" % (status_table, 1, feed_alias)
                 c.execute(query_str)
@@ -121,7 +127,7 @@ def print_mismatch_feeds(c) -> None:
     print("<th>last request date</th>")
     print("<th>관리</th>")
     print("</tr>")
-    
+
     print("<tr>")
     for row in c.execute(query_str):
         feed_alias = row[0]
@@ -134,7 +140,7 @@ def print_mismatch_feeds(c) -> None:
 
         if not last_request_date:
             last_request_date = ""
-        
+
         print("<tr>")
         print("<td class='external'><a href='https://terzeron.net/%s.xml' target='_blank'>" % feed_alias)
         if feed_alias != feed_name:
@@ -154,7 +160,7 @@ def print_mismatch_feeds(c) -> None:
     print("</div>")
     print("</div>")
 
-            
+
 def main() -> int:
     conn = sqlite3.connect(db_name)
     c = conn.cursor()
@@ -166,12 +172,12 @@ def main() -> int:
     update_public_html_status(c)
     update_feedmaker_status(c)
     conn.commit()
-    
+
     print_mismatch_feeds(c)
 
     conn.close()
     return 0
 
-    
+
 if __name__ == "__main__":
     sys.exit(main())

@@ -7,6 +7,7 @@ import re
 import getopt
 import subprocess
 import feedmakerutil
+from feedmakerutil import IO
 from logger import Logger
 
 
@@ -18,6 +19,7 @@ def print_usage():
 
 
 def main():
+    threshold = 0
     optlist, args = getopt.getopt(sys.argv[1:], "t:")
     for o, a in optlist:
         if o == "-t":
@@ -39,20 +41,20 @@ def main():
     # and make line number & link mapping table
     with open(intermediate_file, 'w', encoding='utf-8') as out_file:
         line_num = 1
-        for line in feedmakerutil.read_stdin_as_line_list():
-            if re.search(r"^\#", line):
+        for line in IO.read_stdin_as_line_list():
+            if re.search(r"^#", line):
                 continue
             line = line.rstrip()
             (link, title) = line.split("\t")        
             line_num_link_map[line_num] = link + "\t" + title
         
             clean_title = title.lower()
-            clean_title = re.sub(r'[\s\!-\/\:-\@\[-\`]*', '', clean_title)
+            clean_title = re.sub(r'[\s!-/:-@\[-`]*', '', clean_title)
             if clean_title in title_existence_set:
                 continue
             else:
                 title_existence_set.add(clean_title)
-            out_file.write("%s\n" % (title))
+            out_file.write("%s\n" % title)
             line_num += 1
 
     # hierarchical clustering
@@ -63,7 +65,7 @@ def main():
     logger.debug(result)
 
     # convert & extract temporary output file
-    cmd = "awk -F'\\t' '$2 >= 3 { for (i = 3; i < NF; i += 2) { print $(i) FS $(i + 1) } }' '%s'" % (temp_output_file)
+    cmd = "awk -F'\\t' '$2 >= 3 { for (i = 3; i < NF; i += 2) { print $(i) FS $(i + 1) } }' '%s'" % temp_output_file
     logger.debug(cmd)
     with subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) as p:
         with open(output_file, 'w', encoding='utf-8') as out_file:
