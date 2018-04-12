@@ -1,7 +1,7 @@
 #!/bin/bash
 
 FEED_MAKER_HOME=/Users/terzeron/workspace/fm
-FEED_MAKER_HOME_DEV=/Users/terzeron/workspace/fmd
+FEED_MAKER_HOME_DEV=/Users/terzeron/workspace/fm.dev
 
 echo "--------------------"
 cd $FEED_MAKER_HOME_DEV
