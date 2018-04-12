@@ -5,15 +5,27 @@
 			<list_url><![CDATA[http://m.navercast.naver.com/homeMain.nhn?page=1]]></list_url>
 			<list_url><![CDATA[http://m.navercast.naver.com/homeMain.nhn?page=2]]></list_url>
 		</list_url_list>
-		<element_class>cst_m</element_class>
+        <element_id>hello</element_id>
+	    <element_list>
+		    <element_class>cst_m</element_class>
+		    <element_class>cst_m2</element_class>
+	    </element_list>
 	</collection>
 	<extraction>
 		<element_list>
 			<element_id>ct</element_id>
-			<element_class>content</element_class>
+			<element_id>content</element_id>
+			<element_class>content_view</element_class>
 		</element_list>
         <post_process_script>post_process_script_for_navercast.py</post_process_script>
+        <user_agent>Mozilla</user_agent>
 	</extraction>
+    <notification>
+        <email>
+            <recipient><![CDATA[terzeron@gmail.com]]></recipient>
+            <subject><![CDATA[Success in navercast]]></subject>
+        </email>
+    </notification>
 	<rss>
 		<title><![CDATA[네이버캐스트 모바일]]></title>
 		<description><![CDATA[네이버캐스트 모바일 RSS Feed]]></description>

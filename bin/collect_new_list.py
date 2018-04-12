@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
 
-import sys
-import os
-import re
-import time
 import pprint
-import feedmakerutil
-from feedmakerutil import die, err, warn
-from feedmakerutil import Config
-from logger import Logger
+import re
+import sys
+import time
+from collections import OrderedDict
+from typing import Dict
 
+import feedmakerutil
+from feedmakerutil import Config
+from feedmakerutil import die
+from logger import Logger
 
 logger = Logger("collect_new_list.py")
 
 
 def extract_urls(url, options):
-    logger.debug("# extract_urls(%s)" % (url))
+    logger.debug("# extract_urls(%s)" % url)
     
     option_str = feedmakerutil.determine_crawler_options(options)
     whole_cmd = ""
@@ -25,7 +26,7 @@ def extract_urls(url, options):
         whole_cmd += " | " + cmd
     else:
         whole_cmd += cmd
-    logger.debug("# %s" % (whole_cmd))
+    logger.debug("# %s" % whole_cmd)
     (result, error) = feedmakerutil.exec_cmd(cmd)
     if error:
         time.sleep(5)
@@ -39,7 +40,7 @@ def extract_urls(url, options):
         whole_cmd += " | " + cmd
     else:
         whole_cmd += cmd
-    logger.debug("# %s" % (whole_cmd))
+    logger.debug("# %s" % whole_cmd)
     (result, error) = feedmakerutil.exec_cmd(cmd, result)
     if error: 
         logger.debug(whole_cmd + "\n" + str(result) + "\n")
@@ -51,7 +52,7 @@ def extract_urls(url, options):
         whole_cmd += " | " + cmd
     else:
         whole_cmd += cmd
-    logger.debug("# %s" % (whole_cmd))
+    logger.debug("# %s" % whole_cmd)
     (result, error) = feedmakerutil.exec_cmd(cmd, result)
     if error:
         logger.debug(whole_cmd + "\n" + str(result) + "\n")
@@ -61,23 +62,23 @@ def extract_urls(url, options):
     result_list = []
     for line in result.rstrip().split("\n"):
         line = line.rstrip()
-        if re.search(r'^\#', line) or re.search(r'^\s*$', line):
+        if re.search(r'^#', line) or re.search(r'^\s*$', line):
             continue
         items = line.split("\t")
         link = items[0]
         title = " ".join(items[1:])
-        if link == None or link == "" or title == None or title == "":
-            die("can't get the link and title from '%s'," % (link))
+        if not link or not title:
+            die("can't get the link and title from '%s'," % link)
         result_list.append((link, title))
     return result_list
 
 
-def compose_url_list(conf, options):
+def compose_url_list(collection_conf: Dict[str, OrderedDict]):
     logger.debug("# compose_url_list()")
     result_list = []
 
-    for list_url in options["list_url_list"]:
-        url_list = extract_urls(list_url, options)
+    for list_url in collection_conf["list_url_list"]:
+        url_list = extract_urls(list_url, collection_conf)
         result_list.extend(url_list)
 
     result_list = feedmakerutil.remove_duplicates(result_list)
@@ -85,15 +86,13 @@ def compose_url_list(conf, options):
 
 
 def main():
-    total_list = []
-
-    conf = Config.read_config()
-    options = Config.get_collection_configs(conf)
-    logger.debug("# options=%s" % pprint.pformat(options))
+    config = Config()
+    collection_conf = config.get_collection_configs()
+    logger.debug("# collection_conf=%s" % pprint.pformat(collection_conf))
 
     # collect items from specified url list
     logger.debug("# collecting items from specified url list...")
-    total_list = compose_url_list(conf, options)
+    total_list = compose_url_list(collection_conf)
     for (link, title) in total_list:
         logger.info("%s\t%s" % (link, title))
 

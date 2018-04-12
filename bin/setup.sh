@@ -11,5 +11,4 @@ export FEED_MAKER_WWW_FEEDS=/Users/terzeron/public_html/xml
 
 export PATH=$FEED_MAKER_HOME/bin:$PATH
 export PYTHONPATH=$FEED_MAKER_HOME/bin:$PYTHONPATH
-export PERL5LIB=$FEED_MAKER_HOME/bin:$PERL5LIB
 

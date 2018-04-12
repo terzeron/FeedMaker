@@ -8,89 +8,70 @@ import signal
 from feedmakerutil import Config, IO, HTMLExtractor, die
 from logger import Logger
 
-
 logger = Logger("extract_element.py")
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 
-def extract_content(config_item: str) -> None:
+def main() -> int:
     logger.debug("# extract_content()")
     # configuration
-    class_str = ""
-    id_str = ""
-    path_str = ""
-    config = Config.read_config()
-    if config == None:
-        return -1
-    if config_item in ("collection", "extraction"):
-        conf_node = Config.get_config_node(config, config_item)
-        if conf_node == None:
-            die("can't find '%s' element from configuration" % config_item)
-        id_str = Config.get_config_value(conf_node, "element_id")
-        class_str = Config.get_config_value(conf_node, "element_class")
-        path_str = Config.get_config_value(conf_node, "element_path")
-        enc = Config.get_config_value(conf_node, "encoding")
-        logger.debug("# element_id: %s" % id_str)
-        logger.debug("# element_class: %s" % class_str)
-        logger.debug("# element_path: %s" % path_str)
-        logger.debug("# encoding: %s" % enc)
-    else:
-        return -1
-    
+    config = Config()
+    if not config:
+        die("can't read configuration")
+
+    collection_conf = config.get_collection_configs()
+    if not collection_conf:
+        die("can't get collection configuration")
+
+    id_list = collection_conf["element_id_list"]
+    class_list = collection_conf["element_class_list"]
+    path_list = collection_conf["element_path_list"]
+    encoding = collection_conf["encoding"]
+    logger.debug("# element_id: %r" % id_list)
+    logger.debug("# element_class: %r" % class_list)
+    logger.debug("# element_path: %r" % path_list)
+    logger.debug("# encoding: %r" % encoding)
+
     # read html contents
     html = IO.read_stdin()
 
     # sanitize
-    html = re.sub(r'alt="(.*)<br>(.*)"', r'alt="\1 \2"', html);
+    html = re.sub(r'alt="(.*)<br>(.*)"', r'alt="\1 \2"', html)
     html = re.sub(r'<br>', r'<br/>', html)
     html = re.sub(r'[\x01\x08]', '', html, re.LOCALE)
     html = re.sub(r'<\?xml[^>]+>', r'', html)
 
-    if (class_str == None or class_str == "") and (id_str == None or id_str == "") and (path_str == None or path_str == ""):
+    if not id_list and not class_list and not path_list:
         print(html)
-        return
-    
+        return 0
+
     ret = -1
-    for parser in [ "html.parser", "html5lib", "lxml" ]:
+    for parser in ["html.parser", "html5lib", "lxml"]:
         soup = BeautifulSoup(html, parser)
-        if soup == None:
-            print("can't parse html")
-            print(html)
-            sys.exit(-1)    
-    
-        if id_str != None and id_str != "":
-            divs = soup.find_all(attrs={"id":id_str})
+        if not soup:
+            die("can't parse HTML")
+
+        for id_str in id_list:
+            divs = soup.find_all(attrs={"id": id_str})
             if divs:
                 for div in divs:
                     print(div)
                     ret = 0
-        if class_str != None and class_str != "":
+
+        for class_str in class_list:
             divs = soup.find_all(class_=class_str)
             if divs:
                 for div in divs:
                     print(div)
                     ret = 0
-        if path_str != None and path_str != "":
+
+        for path_str in path_list:
             divs = HTMLExtractor.get_node_with_path(soup, path_str)
             if divs:
                 for div in divs:
                     print(div)
                     ret = 0
-        if ret == 0:
-            break
     return ret
-
-
-def print_usage(program_name: str) -> None:
-    print(("Usage:\t%s\t<config item>\n" % program_name))
-    print("")
-
-
-def main() -> int:
-    if len(sys.argv) < 2:
-        print_usage(sys.argv[0])
-        sys.exit(-1)
-    return extract_content(sys.argv[1])
 
 
 if __name__ == "__main__":

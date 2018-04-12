@@ -12,7 +12,6 @@ from feedmakerutil import Cache, IO
 from logger import Logger
 from typing import List, Tuple, Optional
 
-
 logger = Logger("download_merge_split.py")
 
 
@@ -37,7 +36,7 @@ def download_image(path_prefix: str, img_url: str, img_ext: str, page_url: str) 
 
 def chunks(l, n):
     for i in range(0, len(l), n):
-        yield l[i:i+n]
+        yield l[i:i + n]
 
 
 def get_total_height(img_size_list: List[str]) -> int:
@@ -103,7 +102,7 @@ def split_image_list(img_file_list: List[str]) -> List[List[str]]:
     partition_size: int = int((len(img_file_list) + 3) / 4)
     logger.debug("<!-- length=%d, partition_size=%d -->" % (len(img_file_list), partition_size))
     for i in range(int(len(img_file_list) / partition_size)):
-        img_file_partition_list.append(img_file_list[i * partition_size: (i+1) * partition_size])
+        img_file_partition_list.append(img_file_list[i * partition_size: (i + 1) * partition_size])
     logger.debug(pprint.pformat(img_file_partition_list))
     return img_file_partition_list
 
@@ -135,8 +134,8 @@ def crop_image_file(img_file: str) -> None:
     logger.debug(cmd)
     (result, error) = feedmakerutil.exec_cmd(cmd)
     if error:
-        #logger.err("can't crop the image file '%s', cmd='%s'" % (img_file, cmd))
-        #sys.exit(-1)
+        # logger.err("can't crop the image file '%s', cmd='%s'" % (img_file, cmd))
+        # sys.exit(-1)
         return
 
 
@@ -162,7 +161,7 @@ def remove_image_files(img_file_list: List[str]) -> bool:
     if error:
         return False
     return True
-        
+
 
 def split_image_file(img_file: str, num_units: int, bgcolor_option: str, orientation_option: str) -> None:
     logger.debug("# split_image_file(%s, %d, %s, %s)" % (img_file, num_units, bgcolor_option, orientation_option))
@@ -202,7 +201,7 @@ def print_usage(program_name: str) -> None:
     print("\t\t-d: debug mode")
     print()
     sys.exit(0)
-    
+
 
 def main() -> int:
     cmd: str = "basename " + os.getcwd()
@@ -239,7 +238,7 @@ def main() -> int:
             num_units = 3
         elif o == "-h":
             print_usage(sys.argv[0])
-            
+
     page_url: str = args[0]
     (img_file_list, img_url_list, img_size_list) = download_image_and_read_metadata(path_prefix, img_ext, page_url)
     logger.debug(pprint.pformat(img_file_list))
@@ -249,7 +248,7 @@ def main() -> int:
     if do_merge:
         # merge-split mode
         img_file_partition_list: List[List[str]] = split_image_list(img_file_list)
-    
+
         num: int = 1
         for img_file_list in img_file_partition_list:
             if len(img_file_list) == 0:
@@ -259,7 +258,7 @@ def main() -> int:
 
             if do_innercrop:
                 crop_image_file(merged_img_file)
-                
+
             remove_image_files(img_file_list)
             split_image_file(merged_img_file, num_units, bgcolor_option, orientation_option)
             remove_image_files([merged_img_file])
@@ -279,6 +278,6 @@ def main() -> int:
 
     return 0
 
-                                 
+
 if __name__ == "__main__":
     sys.exit(main())

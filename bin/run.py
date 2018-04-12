@@ -31,8 +31,8 @@ def send_error_msg(msg: str) -> bool:
             }
         ]
     }' https://api.line.me/v2/bot/message/push
-    ''' % msg).split("\n"))
-    #print(cmd)
+    ''' % msg[:1999]).split("\n"))
+    print(cmd)
     result, error = feedmakerutil.exec_cmd(cmd)
     if error:
         logger.err(error)
@@ -41,25 +41,31 @@ def send_error_msg(msg: str) -> bool:
     return True
 
 
-def execute_job(dir: str, runlog: str, errorlog: str, list_archiving_period: int) -> bool:
-    print(dir)
-    os.chdir(dir)
-    if os.path.isdir(dir) and os.path.isfile(os.path.join(dir, "conf.xml")):
+def execute_job(feed_dir: str, runlog: str, errorlog: str, list_archiving_period: int) -> bool:
+    print(feed_dir)
+    os.chdir(feed_dir)
+    if os.path.isdir(feed_dir) and os.path.isfile(os.path.join(feed_dir, "conf.xml")):
         do_exist_old_list_file = False
-        for list_file in os.listdir("newlist"):
-            if os.path.isfile(list_file):
-                if os.stat(os.path.join("newlist", list_file)).st_mtime + list_archiving_period * 24 * 60 * 60 < time.time():
-                    do_exist_old_list_file = True
+        if os.path.isdir("newlist"):
+            for list_file in os.listdir("newlist"):
+                if os.path.isfile(list_file):
+                    if os.stat(os.path.join("newlist", list_file)).st_mtime + list_archiving_period * 24 * 60 * 60 < time.time():
+                        do_exist_old_list_file = True
                     break
 
-        conf = Config.read_config()
-        collection_conf = Config.get_collection_configs(conf)
+        config = Config()
+        collection_conf = config.get_collection_configs()
         if collection_conf["is_completed"] and not do_exist_old_list_file:
             cmd = "run.py -c > %s 2> %s" % (runlog, errorlog)
-        else:
-            cmd = "run.py > %s 2> %s" % (runlog, errorlog)
+            result, error = feedmakerutil.exec_cmd(cmd)
+            if error:
+                return False
+        
+        cmd = "run.py > %s 2> %s" % (runlog, errorlog)
         result, error = feedmakerutil.exec_cmd(cmd)
-    return (not error)
+        if error:
+            return False
+    return True
         
 
 def print_usage() -> None:
@@ -130,7 +136,8 @@ def remove_all_files(feed_xml_file: str) -> None:
         if os.path.isfile(file_path):
             os.remove(file_path)
     for file in ["start_idx.txt", feed_xml_file, feed_xml_file + ".old", "error.log", "collector.error.log", "run.log"]:
-        os.remove(file)
+        if os.path.isfile(file):
+            os.remove(file)
 
 
 def remove_old_html_files(archiving_period: int) -> None:
@@ -175,12 +182,15 @@ def remove_temporary_files() -> None:
 
 
 def remove_unused_img_files(feed_xml_file: str, img_dir: str) -> None:
+    if not os.path.isfile(feed_xml_file):
+        return
+    
     img_set_in_img_dir = get_img_set_in_img_dir(img_dir)
     img_set_in_xml_file = set([])
 
     with open(feed_xml_file) as f:
         for line in f:
-            m = re.search(r'img src=[\"\']https?://terzeron\.net\/xml/img/[^/]+/(?P<img>[^\'\"]+\.jpg)[\"\']', line)
+            m = re.search(r'img src=[\"\']https?://terzeron\.net/xml/img/[^/]+/(?P<img>[^\'\"]+\.jpg)[\"\']', line)
             if m:
                 img_file = m.group("img")
                 img_set_in_xml_file.add(img_file)
@@ -195,8 +205,8 @@ def make_single_feed(feed_name: str, img_dir: str, archiving_period: int, do_rem
     logger.info(feed_name)
     feed_xml_file = feed_name + ".xml"
 
-    conf = Config.read_config()
-    collection_conf = Config.get_collection_configs(conf)
+    config = Config()
+    collection_conf = config.get_collection_configs()
 
     if do_remove_all_files:
         # -r 옵션 사용하면 html 디렉토리의 파일들, newlist 디렉토리의 파일들, 각종 로그 파일, feed xml 파일들을 삭제
@@ -244,9 +254,9 @@ def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
     feed_dir_path_list: List[str] = []
     for path, dirs, files in os.walk(feed_maker_cwd):
         if "/_" not in path:
-            for dir in dirs:
-                dir_path = os.path.join(path, dir)
-                if not dir.startswith("_") and os.path.isdir(dir_path) and os.path.isfile(os.path.join(dir_path, "conf.xml")):
+            for d in dirs:
+                dir_path = os.path.join(path, d)
+                if not d.startswith("_") and os.path.isdir(dir_path) and os.path.isfile(os.path.join(dir_path, "conf.xml")):
                     feed_dir_path_list.append(dir_path)
 
     random.shuffle(feed_dir_path_list)
@@ -257,16 +267,21 @@ def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
             feed = future_to_feed[future]
             try:
                 result = future.result()
+                if not result:
+                    print(feed, result)
+                    failed_feed_list.append(os.path.basename(feed))
             except Exception as e:
-                failed_feed_list.append(feed)
+                print(feed, e)
+                failed_feed_list.append(os.path.basename(feed))
 
     if len(failed_feed_list) > 0:
         send_error_msg(", ".join(failed_feed_list))
 
     cmd = "find_problems.sh > %s/find_problems.log 2>&1" % log_dir
-    result, error = feedmakerutil.exec_cmd(cmd)
+    res, error = feedmakerutil.exec_cmd(cmd)
     if error:
         send_error_msg(error)
+    return not error
 
 
 def main() -> int:
