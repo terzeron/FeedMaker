@@ -462,7 +462,11 @@ def main():
         for i, feed in enumerate(sorted_feed_list):
             if start_idx <= i < end_idx:
                 feed_list.append(old_list[feed["id"]])
-                url, title = old_list[feed["id"]]
+                try:
+                    url, title = old_list[feed["id"]].split("\t")
+                except ValueError:
+                    print("feed['id']=%r, old_list[feed['id']]=%r" % (feed["id"], old_list[feed["id"]]))
+                    die("can't read old list")
                 guid = URL.get_short_md5_name(url)
                 logger.info("%s\t%s\t%s" % (url, title, guid))
 
