@@ -24,7 +24,7 @@ Test
 
 1. . \<feedmaker dir\>/bin/setup.sh
 	or you can set some environment variables for debugging.
-	* export FEED_MAKER_HOME=/Users/terzeron/workspace/fmd
+	* export FEED_MAKER_HOME=/Users/terzeron/workspace/fm.dev
 	* export FEED_MAKER_WWW_ADMIN=/Users/terzeron/public_html/fm
 	* export FEED_MAKER_WWW_FEEDS=/Users/terzeron/public_html/xml
 	* export FEED_MAKER_CWD=/Users/terzeron/workspace/fma
