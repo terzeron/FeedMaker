@@ -56,12 +56,12 @@ def execute_job(feed_dir: str, runlog: str, errorlog: str, list_archiving_period
         config = Config()
         collection_conf = config.get_collection_configs()
         if collection_conf["is_completed"] and not do_exist_old_list_file:
-            cmd = "run.py -c > %s 2> %s" % (runlog, errorlog)
+            cmd = "run.py -c"
             result, error = feedmakerutil.exec_cmd(cmd)
             if error:
                 return False
         
-        cmd = "run.py > %s 2> %s" % (runlog, errorlog)
+        cmd = "run.py"
         result, error = feedmakerutil.exec_cmd(cmd)
         if error:
             return False
