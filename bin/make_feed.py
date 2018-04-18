@@ -451,10 +451,12 @@ def main():
                 feed_id_sort_field_list.append(feed_id_sort_field)
 
         # 전체 리스트 중 절반 이상의 정렬필드를 검출하지 못하면 경고
-        if matched_count < len(old_list) / 2:
+        if matched_count > len(old_list) / 2:
+            sorted_feed_list = sorted(feed_id_sort_field_list, key=cmp_to_key(cmp_int_or_str))
+        else:
             warn("can't match the pattern /%s/" % (collection_conf["sort_field_pattern"]))
+            sorted_feed_list = feed_id_sort_field_list
             
-        sorted_feed_list = sorted(feed_id_sort_field_list, key=cmp_to_key(cmp_int_or_str))
         idx_file = "start_idx.txt"
         window_size = 10  # feedly initial max window size
         start_idx, mtime = get_start_idx(idx_file)
