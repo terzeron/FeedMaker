@@ -51,8 +51,6 @@ def determine_crawler_options(options: Dict[str, Any]) -> str:
     option_str: str = ""
     if "render_js" in options and options["render_js"]:
         option_str += " --render-js"
-    if "uncompress_gzip" in options and options["uncompress_gzip"]:
-        option_str += " --uncompress-gzip"
     if "user_agent" in options and options["user_agent"]:
         option_str += " --ua '%s'" % (options["user_agent"])
     if "referer" in options and options["referer"]:
@@ -318,7 +316,7 @@ class Config:
             sort_field_pattern = Config._get_str_config_value(collection_conf, "sort_field_pattern")
             unit_size_per_day = Config._get_float_config_value(collection_conf, "unit_size_per_day")
             user_agent = Config._get_str_config_value(collection_conf, "user_agent")
-            encoding = Config._get_str_config_value(collection_conf, "encoding")
+            encoding = Config._get_str_config_value(collection_conf, "encoding", "utf-8")
 
             list_url_list = Config._get_config_value_list(collection_conf, "list_url", [])
             element_id_list = Config._get_config_value_list(collection_conf, "element_id", [])
@@ -348,7 +346,6 @@ class Config:
             extraction_conf = self.config["extraction"]
 
             render_js = Config._get_bool_config_value(extraction_conf, "render_js")
-            uncompress_gzip = Config._get_bool_config_value(extraction_conf, "uncompress_gzip")
             bypass_element_extraction = Config._get_bool_config_value(extraction_conf, "bypass_element_extraction")
             force_sleep_between_articles = Config._get_bool_config_value(extraction_conf,
                                                                          "force_sleep_between_articles")
@@ -364,7 +361,6 @@ class Config:
             header_list = Config._get_config_value_list(extraction_conf, "header", [])
             conf = {
                 "render_js": render_js,
-                "uncompress_gzip": uncompress_gzip,
                 "bypass_element_extraction": bypass_element_extraction,
                 "force_sleep_between_articles": force_sleep_between_articles,
                 "review_point_threshold": review_point_threshold,
