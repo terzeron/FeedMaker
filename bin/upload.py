@@ -20,7 +20,7 @@ def main(rss_file: str) -> int:
 
     if os.path.isfile(old_rss_file):
         # 과거 파일이 존재하면 비교해보고 다른 경우에만 업로드
-        cmd: str = "diff '%s' '%s' | egrep -v \"(^(<|>) <(pubDate|lastBuildDate))|(^---\$)|(^[0-9,]+[a-z][0-9,]+\$)\" | wc -c" % (rss_file, old_rss_file)
+        cmd: str = "diff '%s' '%s' | egrep -v \"(^(<|>) <(pubDate|lastBuildDate))|(^---$)|(^[0-9,]+[a-z][0-9,]+$)\" | wc -c" % (rss_file, old_rss_file)
         logger.debug(cmd)
         (result, error) = feedmakerutil.exec_cmd(cmd)
         if not error:

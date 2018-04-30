@@ -261,7 +261,7 @@ def determine_cmd(extraction_conf: Dict[str, Any], url: str, new_file_name: str)
         extraction_cmd = ' | extract.py "%s"' % url
 
     option_str = feedmakerutil.determine_crawler_options(extraction_conf)
-    cmd = 'crawler.sh %s "%s" %s %s > "%s"' % (option_str, url, extraction_cmd, post_process_cmd, new_file_name) 
+    cmd = 'crawler.py %s "%s" %s %s > "%s"' % (option_str, url, extraction_cmd, post_process_cmd, new_file_name) 
 
     return cmd
             
