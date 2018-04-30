@@ -19,7 +19,7 @@ def download_image(path_prefix: str, img_url: str, img_ext: str, page_url: str) 
     cache_file = Cache.get_cache_file_name(path_prefix, img_url, img_ext)
     if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
         return cache_file
-    cmd = 'crawler.sh --download "%s" --referer "%s" "%s"' % (cache_file, page_url, img_url)
+    cmd = 'crawler.py --download "%s" --referer "%s" "%s"' % (cache_file, page_url, img_url)
     logger.debug("<!-- %s -->" % cmd)
     (result, error) = feedmakerutil.exec_cmd(cmd)
     logger.debug("<!-- %s -->" % result)

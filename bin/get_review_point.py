@@ -31,7 +31,7 @@ def get_default_config(type_name):
 
 
 def get_page(url):
-    cmd = "crawler.sh \"%s\"" % url
+    cmd = "crawler.py \"%s\"" % url
     (result, error) = feedmakerutil.exec_cmd(cmd)
     return result
 
