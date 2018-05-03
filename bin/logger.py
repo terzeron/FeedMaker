@@ -14,7 +14,7 @@ class Logger:
         self.logger = logging.getLogger(name)
         self.logger.setLevel(logging.DEBUG)
 
-        total_log_file_logging_level = logging.WARN
+        total_log_file_logging_level = logging.INFO
         feed_file_logging_level = logging.DEBUG
         stream_logging_level = logging.INFO
 
