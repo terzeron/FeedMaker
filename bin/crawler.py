@@ -51,7 +51,7 @@ class Crawler():
         self.timeout = timeout
         self.do_render_js = do_render_js
         self.headers = headers
-        self.headers.update({"Accept-Encoding": "gzip, deflate"})
+        self.headers.update({"Accept-Encoding": "gzip, deflate", "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36"})
         self.download_file = download_file
         self.encoding = encoding
 
