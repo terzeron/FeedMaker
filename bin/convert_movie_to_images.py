@@ -22,12 +22,12 @@ def main():
             image_file_name = "%s/%s_0001.jpg" % (img_dir, id_str)
             if not os.path.isfile(image_file_name):
                 if not os.path.isfile(video_file):
-                    cmd = "/Users/terzeron/workspace/rtmpdump/rtmpdump -q -r '%s' > %s" % (movie_url, video_file)
+                    cmd = "$HOME/workspace/rtmpdump/rtmpdump -q -r '%s' > %s" % (movie_url, video_file)
                     print("<!-- %s -->" % cmd)
                     (result, error) = feedmakerutil.exec_cmd(cmd)
                     print("<!-- %s -->" % result)
 
-                cmd = "/Users/terzeron/bin/extract_images_from_video.sh '%s' '%s/%s_' > /dev/null 2>&1" % (
+                cmd = "$HOME/bin/extract_images_from_video.sh '%s' '%s/%s_' > /dev/null 2>&1" % (
                     video_file, img_dir, id_str)
                 print("<!-- %s -->" % cmd)
                 (result, error) = feedmakerutil.exec_cmd(cmd)
