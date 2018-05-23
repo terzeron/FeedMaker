@@ -1,11 +1,11 @@
 #!/bin/bash
 
-if [ -z "${FEED_MAKER_HOME}" ]; then
-	echo "FEED_MAKER_HOME environment variable is not declared"
+if [ -z "${FEED_MAKER_HOME_DIR}" ]; then
+	echo "FEED_MAKER_HOME_DIR environment variable is not declared"
 	exit -1
 fi
 
-cd $FEED_MAKER_HOME
+cd $FEED_MAKER_HOME_DIR
 find . \( \
 	-name "*.html" -o \
 	-name "*.txt" -o \

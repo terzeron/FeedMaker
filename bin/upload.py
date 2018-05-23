@@ -14,7 +14,7 @@ logger = Logger("upload.py")
 
 
 def main(rss_file: str) -> int:
-    d = os.environ["FEED_MAKER_WWW_FEEDS"]
+    d = os.environ["FEED_MAKER_WWW_FEEDS_DIR"]
     do_upload = False
     old_rss_file = rss_file + ".old"
 

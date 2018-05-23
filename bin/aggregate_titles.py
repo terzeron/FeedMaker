@@ -58,7 +58,7 @@ def main():
             line_num += 1
 
     # hierarchical clustering
-    cluster_dir = os.environ["FEED_MAKER_HOME"] + "/../HierarchicalClustering"
+    cluster_dir = os.environ["FEED_MAKER_HOME_DIR"] + "/../HierarchicalClustering"
     cmd = "%s/hcluster -t '%f' -s stop_words.txt '%s' '%s'" % (cluster_dir, threshold, intermediate_file, temp_output_file)
     logger.debug(cmd)
     (result, error) = feedmakerutil.exec_cmd(cmd)

@@ -12,7 +12,7 @@ def main():
     link = sys.argv[1]
     id_str = URL.get_short_md5_name(link)
     video_file = id_str + ".avi"
-    img_dir = os.environ["FEED_MAKER_WWW_FEEDS"] + "/img/thegoodmovie"
+    img_dir = os.environ["FEED_MAKER_WWW_FEEDS_DIR"] + "/img/thegoodmovie"
     img_url_prefix = "http://terzeron.net/xml/img/thegoodmovie"
 
     for line in IO.read_stdin_as_line_list():
@@ -22,13 +22,12 @@ def main():
             image_file_name = "%s/%s_0001.jpg" % (img_dir, id_str)
             if not os.path.isfile(image_file_name):
                 if not os.path.isfile(video_file):
-                    cmd = "$HOME/workspace/rtmpdump/rtmpdump -q -r '%s' > %s" % (movie_url, video_file)
+                    cmd = "rtmpdump -q -r '%s' > %s" % (movie_url, video_file)
                     print("<!-- %s -->" % cmd)
                     (result, error) = feedmakerutil.exec_cmd(cmd)
                     print("<!-- %s -->" % result)
 
-                cmd = "$HOME/bin/extract_images_from_video.sh '%s' '%s/%s_' > /dev/null 2>&1" % (
-                    video_file, img_dir, id_str)
+                cmd = "extract_images_from_video.sh '%s' '%s/%s_' > /dev/null 2>&1" % (video_file, img_dir, id_str)
                 print("<!-- %s -->" % cmd)
                 (result, error) = feedmakerutil.exec_cmd(cmd)
                 print("<!-- %s -->" % result)
