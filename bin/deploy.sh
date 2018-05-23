@@ -1,10 +1,10 @@
 #!/bin/bash
 
-FEED_MAKER_HOME=/Users/terzeron/workspace/fm
-FEED_MAKER_HOME_DEV=/Users/terzeron/workspace/fm.dev
+FEED_MAKER_HOME_DIR=$HOME/workspace/fm
+FEED_MAKER_HOME_DEV_DIR=$HOME/workspace/fm.dev
 
 echo "--------------------"
-cd $FEED_MAKER_HOME_DEV
+cd $FEED_MAKER_HOME_DEV_DIR
 pwd
 echo
 
@@ -33,7 +33,7 @@ echo "git checkout develop"
 git checkout develop
 
 echo "--------------------"
-cd $FEED_MAKER_HOME
+cd $FEED_MAKER_HOME_DIR
 pwd
 echo
 

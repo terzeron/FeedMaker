@@ -19,8 +19,8 @@ class Logger:
         stream_logging_level = logging.INFO
 
         path_prefix: str = ""
-        if os.getenv("FEED_MAKER_CWD"):
-            path_prefix = os.getenv("FEED_MAKER_CWD") + "/logs/"
+        if os.getenv("FEED_MAKER_WORK_DIR"):
+            path_prefix = os.getenv("FEED_MAKER_WORK_DIR") + "/logs/"
 
         tfh = logging.handlers.TimedRotatingFileHandler(path_prefix + "feedmaker.log", when="D", interval=1, backupCount=2)
         tfh.setLevel(total_log_file_logging_level)

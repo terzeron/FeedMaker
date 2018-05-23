@@ -298,13 +298,13 @@ def main() -> int:
         os.chdir(args[0])
 
     if options["do_make_all_feeds"]:
-        feed_maker_cwd = os.getenv("FEED_MAKER_CWD")
+        feed_maker_cwd = os.getenv("FEED_MAKER_WORK_DIR")
         log_dir = os.path.join(feed_maker_cwd, "logs")
-        img_dir = os.path.join(os.getenv("FEED_MAKER_WWW_FEEDS"), "img")
+        img_dir = os.path.join(os.getenv("FEED_MAKER_WWW_FEEDS_DIR"), "img")
         result = make_all_feeds(feed_maker_cwd, log_dir, img_dir)
     else:
         feed_name = os.path.basename(os.getcwd())
-        img_dir = os.path.join(os.getenv("FEED_MAKER_WWW_FEEDS"), "img", feed_name)
+        img_dir = os.path.join(os.getenv("FEED_MAKER_WWW_FEEDS_DIR"), "img", feed_name)
         result = make_single_feed(feed_name, img_dir, archiving_period, options["do_remove_all_files"], options["force_collection_opt"])
         
     end_ts = time.time()

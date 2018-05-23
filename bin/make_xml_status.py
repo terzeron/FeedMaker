@@ -12,10 +12,10 @@ from feedmakerutil import IO
 db_name = "problems.db"
 status_table = "xml_status"
 alias_map_table = "feed_alias_name"
-feed_access_file = os.environ["FEED_MAKER_CWD"] + "/logs/feed_access.txt"
-htaccess_file = os.environ["FEED_MAKER_WWW_FEEDS"] + "/../.htaccess"
-public_html_path = os.environ["FEED_MAKER_WWW_FEEDS"]
-feedmaker_path = os.environ["FEED_MAKER_CWD"]
+feed_access_file = os.environ["FEED_MAKER_WORK_DIR"] + "/logs/feed_access.txt"
+htaccess_file = os.environ["FEED_MAKER_WWW_FEEDS_DIR"] + "/../.htaccess"
+public_html_path = os.environ["FEED_MAKER_WWW_FEEDS_DIR"]
+feedmaker_path = os.environ["FEED_MAKER_WORK_DIR"]
 
 
 def create_xml_status_table(c) -> None:

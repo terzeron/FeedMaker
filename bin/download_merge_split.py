@@ -209,7 +209,7 @@ def main() -> int:
     (result, error) = feedmakerutil.exec_cmd(cmd)
     feed_name = result.rstrip()
     logger.debug("<!-- feed_name=%s -->" % feed_name)
-    path_prefix = os.environ["FEED_MAKER_WWW_FEEDS"] + "/img/" + feed_name
+    path_prefix = os.environ["FEED_MAKER_WWW_FEEDS_DIR"] + "/img/" + feed_name
     logger.debug("<!--- path_prefix=%s -->" % path_prefix)
     feedmakerutil.make_path(path_prefix)
 

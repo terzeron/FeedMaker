@@ -45,7 +45,7 @@ done
 url="'$1'"
 
 if [ "$render_js" == true ]; then
-	cmd="phantomjs $FEED_MAKER_HOME/bin/render_js.js $url | grep -v '^Unable to access the page'"
+	cmd="phantomjs $FEED_MAKER_HOME_DIR/bin/render_js.js $url | grep -v '^Unable to access the page'"
 else
 	cmd="curl --silent --location $header_opt $timeout_opt $ua_opt $cert_opt $cookie_opt $referer_opt $url"
 fi

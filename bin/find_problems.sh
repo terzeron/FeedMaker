@@ -1,20 +1,20 @@
-if [ "$FEED_MAKER_HOME" == "" ]; then
-	echo "FEED_MAKER_HOME is not set"
+if [ "$FEED_MAKER_HOME_DIR" == "" ]; then
+	echo "FEED_MAKER_HOME_DIR is not set"
 	exit -1
 fi
-work_dir=$FEED_MAKER_CWD
-public_html_dir=$FEED_MAKER_WWW_FEEDS
+work_dir=$FEED_MAKER_WORK_DIR
+public_html_dir=$FEED_MAKER_WWW_FEEDS_DIR
 
 cd ${work_dir}
 
 echo
 echo "===== check the validity of configuration file ====="
 
-#echo "--- the number of <list_url> element ---"
-#find . -name conf.xml -exec grep -c "<list_url>" "{}" \; -print | perl -ne 'if (/^(\d+)$/ and $1 > 1) { $count = $1; } if (/^(\..+\.xml)$/) { if ($count > 1) { s/\/conf\.xml//; print $count . "\t" . $_; $count = 0; } }' | sort -n
+echo "--- the number of <list_url> element ---"
+find . -name conf.xml -print0 | xargs -0 grep -c "<list_url>" | grep -v "/_" | perl -ne 'if (/^(\d+)$/ and $1 > 1) { $count = $1; } if (/^(\..+\.xml)$/) { if ($count > 1) { s/\/conf\.xml//; print $count . "\t" . $_; $count = 0; } }' | sort -n
 
-#echo "--- the number of occurrence of each element ---"
-#find . -name conf.xml -exec perl -ne 'while (/\<(\w+)\>/g) { if ($1 !~ /encoding|collection|extraction|copyright|configuration|element_list|description|language|link|list_url_list|rss|title|list_url|element_class|element_id|element_path|feed_url|generator/) { print $1 . "\n"; } }' "{}" \; |sort | uniq -c | sort -n | perl -ne 'if (/^\s*(\d+)\s+/) { print; }'
+echo "--- the number of occurrence of each element ---"
+find . -name conf.xml | grep -v "/_" | perl -ne 'while (/\<(\w+)\>/g) { if ($1 !~ /encoding|collection|extraction|copyright|configuration|element_list|description|language|link|list_url_list|rss|title|list_url|element_class|element_id|element_path|feed_url|generator/) { print $1 . "\n"; } }' | sort | uniq -c | sort -n | perl -ne 'if (/^\s*(\d+)\s+/) { print; }'
 
 echo "--- should use spaces instead of tab ---"
 find . -name conf.xml -exec grep -l "	" "{}" \;
@@ -24,10 +24,10 @@ echo
 echo "===== check the size and time of result file ====="
 
 echo "--- old xml files in ${public_html_dir} ---"
-find ${public_html_dir} -name "*.xml" -mtime +10d -print
+find ${public_html_dir} -name "*.xml" -mtime +240 -print
 
 echo "--- too small html file ---"
-find . -name "*.html" -maxdepth 3 -size -50c -print | grep -v warfareafterschool
+find . -maxdepth 3 -name "*.html" -size -50c -print | grep -v warfareafterschool
 
 #echo "--- html files containing iframe element ---"
 #find . -name "*.html" -exec grep -l "<iframe" "{}" \; | cut -d/ -f3 | uniq -c | sort -n
@@ -56,13 +56,13 @@ done
 
 echo
 echo "===== check the garbage feeds ====="
-feedmaker_file=$FEED_MAKER_CWD"/logs/feedmaker.txt"
-find */ -maxdepth 2 -name "*.xml" \! \( -name conf.xml -o -name _conf.xml -o  -name "*.conf.xml" \) | grep -v /_ | xargs basename | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $feedmaker_file
+feedmaker_file=$FEED_MAKER_WORK_DIR"/logs/feedmaker.txt"
+find */ -maxdepth 2 -name "*.xml" \! \( -name conf.xml -o -name _conf.xml -o  -name "*.conf.xml" \) | grep -v /_ | xargs -I % basename % | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $feedmaker_file
 period_file_list=""
 for i in {0..30}; do
-	period_file_list="${period_file_list} /Users/terzeron/apps/httpd/logs/access.log.$(date -v-${i}d +'%Y%m%d')"
+	period_file_list="${period_file_list} /var/log/apache2/access.log.$(date +'%y%m%d' -d $i' days ago')"
 done
-feed_access_file=$FEED_MAKER_CWD"/logs/feed_access.txt"
+feed_access_file=$FEED_MAKER_WORK_DIR"/logs/feed_access.txt"
 echo "--- $feed_access_file ---"
 perl -e '
 my %name_date_map = ();
@@ -76,73 +76,12 @@ foreach my $name (sort { $name_date_map{$b} <=> $name_date_map{$a} } keys %name_
 	my ($date, $status) = split /\t/, $name_date_map{$name};
 	print "$date\t$name\t$status\n";
 }' $period_file_list > $feed_access_file
-#wc -l $feed_access_file
-#echo "--- check the existence of requested feed ---"
-#perl -e '
-#use HTTP::Status qw(status_message);
-#my %feed_map = ();
-#open(FM, $ARGV[0]);
-#while (my $line = <FM>) {
-	#if ($line =~ m!(.+)!) {	
-		#$feed_map{$1} = $1;
-	#}
-#}
-#close(FM);
-#open(LASTREQ, $ARGV[1]);
-#while (my $line = <LASTREQ>) { 
-	#if ($line =~ m!(\d+)\t([\w\.\_]+)\t(\d+)!) {
-		#my $date = $1;
-		#my $name = $2;
-		#my $status = $3;
-		#my $exist = "";
-		#if (exists $feed_map{$name} or $name eq "index") {
-			#$exist = "o";
-		#} else {
-			#$exist = "x";
-		#}
-		#if ($exist eq "x" and ($status == 200 or $status == 304)) { 
-			#$color = 31;
-			#printf("%s %-25s %s \033[1;%dm%d\033[0m %s\n", $date, $name, $exist, $color, $status, status_message($status));
-		#} elsif ($exist eq "o" and ($status == 404 or $status == 410)) {
-			#$color = 34;
-			#printf("%s %-25s %s \033[1;%dm%d\033[0m %s\n", $date, $name, $exist, $color, $status, status_message($status));
-		#} else {
-			#$color = 39;
-		#}
-	#}
-#}
-#close(LASTREQ);' $feedmaker_file $feed_access_file
+
 echo "--- false path (${public_html_dir}) of recent days ---"
-perl -e '
-use HTTP::Status qw(status_message); 
-use DateTime; 
-my $now = DateTime->now();
-my $format = "%d/%b/%Y";
-my $today = $now->strftime($format);
-%name_status_map = ();
-while (<>) { 
-	if (m!\[$today:\d+:\d+:\d+ \+\d+\] "GET /xml/(.+)\.xml HTTP\S+" (\d+)!s) { 
-		my $name = $1;
-		my $status = $2;
-		$name_status_map{$name} = $status;
-	}
-}
-foreach my $name (keys %name_status_map) {
-	my $status = $name_status_map{$name};
-	if ($status eq "200") { 
-		$color = 34;
-	} elsif ($status eq "304") {
-		$color = 31;
-	} elsif ($status eq "404") {
-		$color = 32;
-	} elsif ($status eq "410") {
-		$color = 39;
-	}
-	printf("%-25s \033[1;%dm%d\033[0m %s\n", $name, $color, $status, status_message($status)); 
-}' $period_file_list | sort -u
+find_requests_to_false_path.py $period_file_list
 
 
 echo
 echo "===== inconsistent registration ====="
-make_xml_status.py > $FEED_MAKER_WWW_ADMIN/diff.html
+make_xml_status.py > $FEED_MAKER_WWW_ADMIN_DIR/diff.html
 
