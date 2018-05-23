@@ -1,11 +1,13 @@
-if [ "$FEED_MAKER_HOME_DIR" == "" ]; then
-	echo "FEED_MAKER_HOME_DIR is not set"
+#!/bin/bash
+
+if [ "$FEED_MAKER_WORK_DIR" == "" -o "$FEED_MAKER_WWW_FEEDS_DIR" == "" ]; then
+	echo "You should declare FEED_MAKER_WORK_DIR and FEED_MAKER_WWW_FEEDS_DIR."
 	exit -1
 fi
 work_dir=$FEED_MAKER_WORK_DIR
 public_html_dir=$FEED_MAKER_WWW_FEEDS_DIR
 
-cd ${work_dir}
+cd $work_dir
 
 echo
 echo "===== check the validity of configuration file ====="
