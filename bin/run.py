@@ -261,7 +261,7 @@ def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
 
     random.shuffle(feed_dir_path_list)
     failed_feed_list: List[str] = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         future_to_feed = {executor.submit(execute_job, feed_dir_path, runlog, errorlog, list_archiving_period): feed_dir_path for feed_dir_path in feed_dir_path_list}
         for future in concurrent.futures.as_completed(future_to_feed):
             feed = future_to_feed[future]
