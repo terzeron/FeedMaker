@@ -61,7 +61,7 @@ echo "===== check the garbage feeds ====="
 feedmaker_file=$FEED_MAKER_WORK_DIR"/logs/feedmaker.txt"
 find */ -maxdepth 2 -name "*.xml" \! \( -name conf.xml -o -name _conf.xml -o  -name "*.conf.xml" \) | grep -v /_ | xargs -I % basename % | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $feedmaker_file
 period_file_list=""
-for i in {0..30}; do
+for i in {0..60}; do
 	period_file_list="${period_file_list} $HOME/apps/logs/access.log.$(date +'%y%m%d' -d $i' days ago')"
 done
 feed_access_file=$FEED_MAKER_WORK_DIR"/logs/feed_access.txt"
@@ -85,5 +85,5 @@ find_requests_to_false_path.py $period_file_list
 
 echo
 echo "===== inconsistent registration ====="
-make_xml_status.py > $FEED_MAKER_WWW_ADMIN_DIR/diff.html
+make_feed_status.py > $FEED_MAKER_WWW_ADMIN_DIR/status.json
 
