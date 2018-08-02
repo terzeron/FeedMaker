@@ -7,10 +7,13 @@ import sys
 import re
 import pathlib
 import sqlite3
+import json
 from feedmakerutil import IO
+from typing import List, Dict
+
 
 db_name = "problems.db"
-status_table = "xml_status"
+status_table = "feed_status"
 alias_map_table = "feed_alias_name"
 feed_access_file = os.environ["FEED_MAKER_WORK_DIR"] + "/logs/feed_access.txt"
 htaccess_file = os.environ["FEED_MAKER_WWW_FEEDS_DIR"] + "/../.htaccess"
@@ -18,7 +21,7 @@ public_html_path = os.environ["FEED_MAKER_WWW_FEEDS_DIR"]
 feedmaker_path = os.environ["FEED_MAKER_WORK_DIR"]
 
 
-def create_xml_status_table(c) -> None:
+def create_feed_status_table(c) -> None:
     query_str = "DROP TABLE IF EXISTS %s" % status_table
     c.execute(query_str)
     query_str = "CREATE TABLE %s (feed_alias VARCHAR(256) PRIMARY KEY, http_request INT NOT NULL DEFAULT 0, htaccess INT NOT NULL DEFAULT 0, public_html INT NOT NULL DEFAULT 0, feedmaker INT NOT NULL DEFAULT 0, last_request_date date)" % status_table
@@ -114,21 +117,8 @@ def update_feedmaker_status(c) -> None:
 
 
 def print_mismatch_feeds(c) -> None:
-    query_str = "SELECT s.feed_alias, feed_name, http_request, htaccess, public_html, feedmaker, last_request_date FROM xml_status s JOIN feed_alias_name a ON s.feed_alias = a.feed_alias WHERE http_request != 1 OR htaccess != 1 OR public_html != 1 OR feedmaker != 1 ORDER BY http_request, htaccess, public_html, feedmaker"
-    print("<table>")
-
-    print("<tr>")
-    print("<th>외부</th>")
-    print("<th>내부</th>")
-    print("<th>http request</th>")
-    print("<th>htaccess</th>")
-    print("<th>public_html</th>")
-    print("<th>feedmaker</th>")
-    print("<th>last request date</th>")
-    print("<th>관리</th>")
-    print("</tr>")
-
-    print("<tr>")
+    query_str = "SELECT s.feed_alias, feed_name, http_request, htaccess, public_html, feedmaker, last_request_date FROM feed_status s JOIN feed_alias_name a ON s.feed_alias = a.feed_alias WHERE http_request != 1 OR htaccess != 1 OR public_html != 1 OR feedmaker != 1 ORDER BY http_request, htaccess, public_html, feedmaker"
+    result_list: List[Dict[Str, Str]] = []
     for row in c.execute(query_str):
         feed_alias = row[0]
         feed_name = row[1]
@@ -141,13 +131,23 @@ def print_mismatch_feeds(c) -> None:
         if not last_request_date:
             last_request_date = ""
 
-        print("<tr>")
+        result = {
+            "feed_alias": row[0],
+            "feed_name": row[1],
+            "http_request": row[2],
+            "htaccess": row[3],
+            "public_html": row[4],
+            "feedmaker": row[5],
+            "last_request_date": row[6]
+        }
+        result_list.append(result)
+
+        '''
         print("<td class='external'><a href='https://terzeron.net/%s.xml' target='_blank'>" % feed_alias)
         if feed_alias != feed_name:
             print("<strong><i>%s</i></strong>" % feed_alias)
         else:
             print(feed_alias)
-        print("</a></td>")
         print("<td class='internal'><a href='https://terzeron.net/xml/%s.xml' target='_blank'>%s</a></td>" % (feed_name, feed_name))
         print("<td class='http_request'>%s</td>" % (http_request == 1 and "O" or "X"))
         print("<td class='htaccess'>%s</td>" % (htaccess == 1 and "O" or "X"))
@@ -155,17 +155,15 @@ def print_mismatch_feeds(c) -> None:
         print("<td class='feedmaker'>%s</td>" % (feedmaker == 1 and "O" or "X"))
         print("<td class='last_request_date'>%s</td>" % last_request_date)
         print("<td class='management'><a href='exec.php?command=view&feed_name=%s'>%s</a></td>" % (feed_name, feed_name))
-        print("</tr>")
-    print("</table>")
-    print("</div>")
-    print("</div>")
-
-
+        '''
+    print(json.dumps(result_list))
+    
+        
 def main() -> int:
     conn = sqlite3.connect(db_name)
     c = conn.cursor()
 
-    create_xml_status_table(c)
+    create_feed_status_table(c)
 
     update_htaccess_status(c)
     update_feed_access_status(c)
