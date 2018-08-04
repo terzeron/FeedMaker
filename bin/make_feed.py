@@ -243,7 +243,7 @@ def append_item_to_result(feed_list: List[str], item: str, rss_file_name: str, e
             feed_list.append(item)
         else:
             # 피드 리스트에서 제외
-            warn("%s: %s --> %s: %d (< %d byte of header)" % (title, url, new_file_name, size, len(feedmakerutil.header_str)))
+            warn("%s: %s --> %s: %d (<= %d byte of header)" % (title, url, new_file_name, size, len(feedmakerutil.header_str) + 1))
             return
 
         if extraction_conf["force_sleep_between_articles"]:
