@@ -51,7 +51,6 @@ class Crawler():
         self.timeout = timeout
         self.do_render_js = do_render_js
         self.headers = headers
-        self.headers.update({"Accept-Encoding": "gzip, deflate", "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36"})
         self.download_file = download_file
         self.encoding = encoding
 
@@ -115,7 +114,7 @@ def print_usage():
     
 def main():
     method = Method.GET
-    headers: Dict[str, str] = {}
+    headers = {"Accept-Encoding": "gzip, deflate", "User-Agent": "Mozillla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36", "Accept": "*/*", "Connection": "Keep-Alive"}
     timeout = 10
     do_render_js = False
     download_file: Optional[str] = None
