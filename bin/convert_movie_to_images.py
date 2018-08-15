@@ -13,7 +13,7 @@ def main():
     id_str = URL.get_short_md5_name(link)
     video_file = id_str + ".avi"
     img_dir = os.environ["FEED_MAKER_WWW_FEEDS_DIR"] + "/img/thegoodmovie"
-    img_url_prefix = "http://terzeron.net/xml/img/thegoodmovie"
+    img_url_prefix = "https://terzeron.net/xml/img/thegoodmovie"
 
     for line in IO.read_stdin_as_line_list():
         m = re.search(r"<video src='[^']*videoPath=(rtmp://[^&]*)[^']*'>", line)
