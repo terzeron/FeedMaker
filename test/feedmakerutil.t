@@ -124,7 +124,7 @@ class UtilTest(unittest.TestCase):
         self.assertEqual(url, "http://www.naver.com/movie/hello")
 
     def test_get_short_md5_name(self):
-        self.assertEqual(URL.get_short_md5_name("http://terzeron.net"), "e0ad299")
+        self.assertEqual(URL.get_short_md5_name("https://terzeron.com"), "e0ad299")
 
 
 class ExecCmdTest(unittest.TestCase):
