@@ -40,7 +40,7 @@ def main() -> int:
         return -1
 
     feed_name = result.rstrip()
-    img_url_prefix = "https://terzeron.net/xml/img/" + feed_name
+    img_url_prefix = "https://terzeron.com/xml/img/" + feed_name
     path_prefix = os.environ["FEED_MAKER_WWW_FEEDS_DIR"] + "/img/" + feed_name
     img_ext = "jpg"
     page_url = sys.argv[1]

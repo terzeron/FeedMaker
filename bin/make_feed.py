@@ -232,7 +232,7 @@ def append_item_to_result(feed_list: List[str], item: str, rss_file_name: str, e
             size = 0
         md5_name = URL.get_short_md5_name(url)
         if size > len(feedmakerutil.header_str) + 1:
-            cmd = 'echo "<img src=\'https://terzeron.net/img/1x1.jpg?feed=%s&item=%s\'/>" >> "%s"' % (rss_file_name, md5_name, new_file_name)
+            cmd = 'echo "<img src=\'https://terzeron.com/img/1x1.jpg?feed=%s&item=%s\'/>" >> "%s"' % (rss_file_name, md5_name, new_file_name)
             logger.debug(cmd)
             result, error = feedmakerutil.exec_cmd(cmd)
             if error:

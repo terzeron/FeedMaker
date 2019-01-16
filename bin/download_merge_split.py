@@ -213,7 +213,7 @@ def main() -> int:
     logger.debug("<!--- path_prefix=%s -->" % path_prefix)
     feedmakerutil.make_path(path_prefix)
 
-    img_url_prefix = "https://terzeron.net/xml/img/" + feed_name
+    img_url_prefix = "https://terzeron.com/xml/img/" + feed_name
     img_ext = "jpg"
     num_units = 25
 
