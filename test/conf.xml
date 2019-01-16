@@ -29,8 +29,8 @@
 	<rss>
 		<title><![CDATA[네이버캐스트 모바일]]></title>
 		<description><![CDATA[네이버캐스트 모바일 RSS Feed]]></description>
-		<feed_url><![CDATA[http://terzeron.com/navercast.m.xml]]></feed_url>
-		<link><![CDATA[http://terzeron.com/navercast.m.xml]]></link>
+		<feed_url><![CDATA[https://terzeron.com/navercast.m.xml]]></feed_url>
+		<link><![CDATA[https://terzeron.com/navercast.m.xml]]></link>
 		<generator><![CDATA[Terzeron's Feed Generator]]></generator>
 		<copyright><![CDATA[Copyright (c) NHN Corp. All Rights Reserved]]></copyright>
 		<language>en</language>
