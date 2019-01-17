@@ -161,7 +161,7 @@ def remove_html_files_without_cached_image_files(img_dir: str) -> None:
             if os.path.isfile(file_path):
                 with open(file_path) as f:
                     for line in f:
-                        m = re.search(r'<img src=[\"\']https?://terzeron\.net/xml/img/[^/]+/(?P<img>.+\.jpg)[\"\']', line)
+                        m = re.search(r'<img src=[\"\']https?://terzeron\.com/xml/img/[^/]+/(?P<img>.+\.jpg)[\"\']', line)
                         if m:
                             # 실제로 다운로드되어 있는지 확인
                             img_file = m.group("img")
@@ -190,7 +190,7 @@ def remove_unused_img_files(feed_xml_file: str, img_dir: str) -> None:
 
     with open(feed_xml_file) as f:
         for line in f:
-            m = re.search(r'img src=[\"\']https?://terzeron\.net/xml/img/[^/]+/(?P<img>[^\'\"]+\.jpg)[\"\']', line)
+            m = re.search(r'img src=[\"\']https?://terzeron\.com/xml/img/[^/]+/(?P<img>[^\'\"]+\.jpg)[\"\']', line)
             if m:
                 img_file = m.group("img")
                 img_set_in_xml_file.add(img_file)
