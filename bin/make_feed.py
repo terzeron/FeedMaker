@@ -57,9 +57,7 @@ def get_recent_list(list_dir: str, post_process_script_list: List[str]) -> List[
     new_list_file_name = get_list_file_name(list_dir, date_str)
     cmd = "collect_new_list.py"
     for post_process_script in post_process_script_list:
-        if cmd:
-            cmd += " |"
-        cmd += ' %s "%s"' % (post_process_script, new_list_file_name)
+        cmd += " | %s" % (post_process_script)
 
     logger.debug(cmd)
     result, error = feedmakerutil.exec_cmd(cmd)
