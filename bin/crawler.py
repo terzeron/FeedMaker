@@ -71,8 +71,10 @@ class Crawler():
                     response.raw.decode_content = True
                     return response
                 else:
-                    if self.encoding and self.encoding != "utf-8":
+                    if self.encoding:
                         response.encoding = self.encoding
+                    else:
+                        response.encoding = 'utf-8'
                     return response.text
             #print(response.status_code)
         return None
