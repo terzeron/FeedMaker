@@ -286,6 +286,14 @@ def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
     return not error
 
 
+def kill_chrome_process_group(proc_name: str) -> None:
+    import psutil
+    pid_list = find_process_group(proc_name)
+    for pid in pid_list:
+        p = psutil.Process(pid)
+        p.terminate()
+
+
 def main() -> int:
     archiving_period = 30
 
@@ -304,6 +312,7 @@ def main() -> int:
         log_dir = os.path.join(feed_maker_cwd, "logs")
         img_dir = os.path.join(os.getenv("FEED_MAKER_WWW_FEEDS_DIR"), "img")
         result = make_all_feeds(feed_maker_cwd, log_dir, img_dir)
+        kill_chrome_process_group("chromedriver")
     else:
         feed_name = os.path.basename(os.getcwd())
         img_dir = os.path.join(os.getenv("FEED_MAKER_WWW_FEEDS_DIR"), "img", feed_name)

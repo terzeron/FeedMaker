@@ -5,6 +5,7 @@ import os
 import sys
 import re
 import subprocess
+import psutil
 from logger import Logger
 from typing import List, Any, Dict, Tuple, Optional, Set
 import xmltodict
@@ -99,6 +100,36 @@ def warn(msg: str) -> None:
 def remove_file(file_path: str) -> None:
     if os.path.isfile(file_path):
         os.remove(file_path)
+
+
+def find_process_group(parent_proc_name: str) -> List[int]:
+    # find a parent process id by parent process name
+    parent_children_map = {}
+    ppid_list = []
+    for proc in psutil.process_iter():
+        try:
+            pinfo = proc.as_dict(attrs=["pid", "ppid", "name"])
+        except psutil.NoSuchProcess:
+            pass
+        else:
+            ppid = pinfo["ppid"]
+            if ppid in parent_children_map:
+                list = parent_children_map[ppid]
+                list.append(pinfo["pid"])
+            else:
+                list = [pinfo["pid"]]
+            parent_children_map[ppid] = list
+            if pinfo["name"] == parent_proc_name:
+                ppid_list.append(pinfo["pid"])
+
+    # find a child process id by parent process name and child process name
+    result_pid_list = []
+    for ppid in ppid_list:
+        result_pid_list.append(ppid)
+        if ppid in parent_children_map:
+            result_pid_list.extend(parent_children_map[ppid])
+
+    return result_pid_list
 
 
 class HTMLExtractor:
