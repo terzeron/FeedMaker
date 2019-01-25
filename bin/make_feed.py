@@ -21,6 +21,7 @@ logger = Logger("make_feed.py")
 SECONDS_PER_DAY = 60 * 60 * 24
 MAX_CONTENT_LENGTH = 64 * 1024
 MAX_NUM_DAYS = 7
+image_tag_fmt_str = "\n<img src='https://terzeron.com/img/1x1.jpg?feed=%s&item=%s'/>\n"
 
 
 def get_pub_date_str(file_name: str) -> str:
@@ -209,7 +210,7 @@ def append_item_to_result(feed_list: List[str], item: str, rss_file_name: str, e
     else:
         size = 0
 
-    if os.path.isfile(new_file_name) and size > len(feedmakerutil.header_str) + 1:
+    if os.path.isfile(new_file_name) and size > len(feedmakerutil.header_str) + len(image_tag_fmt_str) + 1:
         # 이미 성공적으로 만들어져 있으니까 피드 리스트에 추가
         logger.info("Success: %s: %s --> %s: %d" % (title, url, new_file_name, size))
         feed_list.append(item)
@@ -228,20 +229,20 @@ def append_item_to_result(feed_list: List[str], item: str, rss_file_name: str, e
             size = os.stat(new_file_name).st_size
         else:
             size = 0
+
         md5_name = URL.get_short_md5_name(url)
         if size > len(feedmakerutil.header_str) + 1:
-            cmd = 'echo "<img src=\'https://terzeron.com/img/1x1.jpg?feed=%s&item=%s\'/>" >> "%s"' % (rss_file_name, md5_name, new_file_name)
-            logger.debug(cmd)
-            result, error = feedmakerutil.exec_cmd(cmd)
-            if error:
-                die("can't append page view logging tag")
+            # append image_tag_str to new_file_name
+            image_tag_str = image_tag_fmt_str % (rss_file_name, md5_name)
+            with open(new_file_name, "a") as outfile:
+                outfile.write(image_tag_str)
 
             # 피드 리스트에 추가
             logger.info("Success: %s: %s --> %s: %d" % (title, url, new_file_name, size))
             feed_list.append(item)
         else:
             # 피드 리스트에서 제외
-            warn("%s: %s --> %s: %d (<= %d byte of header)" % (title, url, new_file_name, size, len(feedmakerutil.header_str) + 1))
+            warn("%s: %s --> %s: %d (<= %d byte of header)" % (title, url, new_file_name, size, len(feedmakerutil.header_str) + len(image_tag_fmt_str) + 1))
             return
 
         if extraction_conf["force_sleep_between_articles"]:
