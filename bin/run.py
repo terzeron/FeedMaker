@@ -288,7 +288,7 @@ def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
 
 def kill_chrome_process_group(proc_name: str) -> None:
     import psutil
-    pid_list = find_process_group(proc_name)
+    pid_list = feedmakerutil.find_process_group(proc_name)
     for pid in pid_list:
         p = psutil.Process(pid)
         p.terminate()
