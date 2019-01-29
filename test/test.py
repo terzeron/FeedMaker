@@ -19,8 +19,8 @@ def test_script(script, work_dir, test_dir, index):
 
 
 def main():
-    fm_cwd = os.getenv("FEED_MAKER_CWD")
-    fm_home = os.getenv("FEED_MAKER_HOME")
+    fm_cwd = os.getenv("FEED_MAKER_WORK_DIR")
+    fm_home = os.getenv("FEED_MAKER_HOME_DIR")
 
     test_subjects = {
         "naver/bingtanghuru": [fm_home + "/bin/download_image.py 'http://comic.naver.com/webtoon/detail.nhn?titleId=695321&no=39'"],
