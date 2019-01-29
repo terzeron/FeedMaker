@@ -2,4 +2,4 @@ TESTCASES= feedmakerutil.t remove_duplicates.t upload.t test.py ../../fma/test/t
 .PHONY: test
 
 test: $(TESTCASES)
-	@for testcase in $(TESTCASES); do ./$$testcase; done
+	@for testcase in $(TESTCASES); do env LC_ALL=C LANG=C ./$$testcase; done

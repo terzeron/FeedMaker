@@ -3,7 +3,6 @@
 
 import unittest
 from bs4 import BeautifulSoup
-import collections
 import feedmakerutil
 from feedmakerutil import Config, URL, HTMLExtractor
 
@@ -124,7 +123,7 @@ class UtilTest(unittest.TestCase):
         self.assertEqual(url, "http://www.naver.com/movie/hello")
 
     def test_get_short_md5_name(self):
-        self.assertEqual(URL.get_short_md5_name("https://terzeron.com"), "e0ad299")
+        self.assertEqual(URL.get_short_md5_name("https://terzeron.com"), "b8025d0")
 
 
 class ExecCmdTest(unittest.TestCase):
@@ -138,12 +137,12 @@ class ExecCmdTest(unittest.TestCase):
         invalid_cmd = "ls non_existent_file"
         (result, error) = feedmakerutil.exec_cmd(invalid_cmd)
         self.assertFalse(result)
-        self.assertTrue("ls: non_existent_file: No such file or directory" in error)
+        self.assertTrue("No such file or directory" in error)
 
         invalid_cmd = "lslslsls non_existent_file"
         (result, error) = feedmakerutil.exec_cmd(invalid_cmd)
         self.assertFalse(result)
-        self.assertTrue("/bin/sh: lslslsls: command not found" in error)
+        self.assertTrue("not found" in error)
 
         bidirectional_cmd = "cat"
         input = "hello world"
