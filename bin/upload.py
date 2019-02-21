@@ -5,12 +5,13 @@
 import os
 import sys
 import re
+import logging
+import logging.config
 import feedmakerutil
-from feedmakerutil import err, warn
-from logger import Logger
 
 
-logger = Logger("upload.py")
+logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logger = logging.getLogger()
 
 
 def main(rss_file: str) -> int:
@@ -32,7 +33,7 @@ def main(rss_file: str) -> int:
         # 과거 파일이 존재하지 않고 신규 파일만 존재하면 업로드
         do_upload = True
     else:
-        err("Upload failed! the same old RSS file")
+        logger.error("Upload failed! the same old RSS file")
         return -1
         
     if do_upload:
@@ -42,7 +43,7 @@ def main(rss_file: str) -> int:
         if not error:
             logger.info("Upload success!")
             return 0
-    warn("Upload failed! No change from the previous RSS file")
+    logger.warning("Upload failed! No change from the previous RSS file")
     return 0
 
 

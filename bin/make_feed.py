@@ -8,16 +8,17 @@ import datetime
 import getopt
 import subprocess
 import pprint
+import logging
+import logging.config
 import feedmakerutil
-from feedmakerutil import warn, die
 from feedmakerutil import Config
 from feedmakerutil import URL
 from typing import List, Dict, Any, Tuple, Union
-from logger import Logger
 import PyRSS2Gen
 
 
-logger = Logger("make_feed.py")
+logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logger = logging.getLogger()
 SECONDS_PER_DAY = 60 * 60 * 24
 MAX_CONTENT_LENGTH = 64 * 1024
 MAX_NUM_DAYS = 7
@@ -63,17 +64,26 @@ def get_recent_list(list_dir: str, post_process_script_list: List[str]) -> List[
     logger.debug(cmd)
     result, error = feedmakerutil.exec_cmd(cmd)
     if error:
-        die("can't collect new list from the page")
+        logger.error("can't collect new list from the page")
+        sys.exit(-1)
 
-    with open(new_list_file_name, 'w', encoding='utf-8') as out_file:
-        out_file.write(result)
-        
-    with open(new_list_file_name, 'r', encoding='utf-8') as in_file:
-        uniq_list: List[str] = []
-        for line in in_file:
-            line = line.rstrip()
-            if not line.startswith("# "):
-                uniq_list.append(line)
+    try:
+        with open(new_list_file_name, 'w', encoding='utf-8') as out_file:
+            out_file.write(result)
+    except IOError as e:
+        logger.error(e)
+        sys.exit(-1)
+
+    try:
+        with open(new_list_file_name, 'r', encoding='utf-8') as in_file:
+            uniq_list: List[str] = []
+            for line in in_file:
+                line = line.rstrip()
+                if not line.startswith("# "):
+                    uniq_list.append(line)
+    except IOError as e:
+        logger.error(e)
+        sys.exit(-1)
 
     return uniq_list
 
@@ -223,7 +233,8 @@ def append_item_to_result(feed_list: List[str], item: str, rss_file_name: str, e
             time.sleep(5)
             result, error = feedmakerutil.exec_cmd(cmd)
             if error:
-                die("can't extract HTML elements")
+                logger.error("can't extract HTML elements")
+                sys.exit(-1)
 
         if os.path.isfile(new_file_name):
             size = os.stat(new_file_name).st_size
@@ -242,7 +253,7 @@ def append_item_to_result(feed_list: List[str], item: str, rss_file_name: str, e
             feed_list.append(item)
         else:
             # 피드 리스트에서 제외
-            warn("%s: %s --> %s: %d (<= %d byte of header)" % (title, url, new_file_name, size, len(feedmakerutil.header_str) + len(image_tag_fmt_str) + 1))
+            logger.warning("%s: %s --> %s: %d (<= %d byte of header)" % (title, url, new_file_name, size, len(feedmakerutil.header_str) + len(image_tag_fmt_str) + 1))
             return
 
         if extraction_conf["force_sleep_between_articles"]:
@@ -404,7 +415,8 @@ def main():
 
     config = Config()
     if not config:
-        die("can't find conf.xml file nor get config element")
+        logger.error("can't find conf.xml file nor get config element")
+        sys.exit(-1)
     collection_conf = config.get_collection_configs()
     logger.info("collection_conf=%s" % pprint.pformat(collection_conf))
 
@@ -420,7 +432,7 @@ def main():
     feed_list: List[str] = []
     old_list = read_old_list_from_file(list_dir, collection_conf["is_completed"])
     if not old_list:
-        warn("can't get old list!")
+        logger.warning("can't get old list!")
 
     # 완결여부 설정값 판단 
     recent_list: List[str] = []
@@ -453,7 +465,7 @@ def main():
         if matched_count > len(old_list) / 2:
             sorted_feed_list = sorted(feed_id_sort_field_list, key=cmp_to_key(cmp_int_or_str))
         else:
-            warn("can't match the pattern /%s/" % (collection_conf["sort_field_pattern"]))
+            logger.warning("can't match the pattern /%s/" % (collection_conf["sort_field_pattern"]))
             sorted_feed_list = feed_id_sort_field_list
             
         idx_file = "start_idx.txt"
@@ -467,7 +479,8 @@ def main():
                     url, title = old_list[feed["id"]].split("\t")
                 except ValueError:
                     print("feed['id']=%r, old_list[feed['id']]=%r" % (feed["id"], old_list[feed["id"]]))
-                    die("can't read old list")
+                    logger.error("can't read old list")
+                    sys.exit(-1)
                 guid = URL.get_short_md5_name(url)
                 logger.info("%s\t%s\t%s" % (url, title, guid))
 
@@ -480,7 +493,8 @@ def main():
         # 피딩 중인 피드는 최신 피드항목을 받아옴
         recent_list = get_recent_list(list_dir, collection_conf["post_process_script_list"])
         if not recent_list:
-            die("can't get recent list!")
+            logger.error("can't get recent list!")
+            sys.exit(-1)
         
         # 과거 피드항목 리스트와 최근 피드항목 리스트를 비교함
         if collection_conf["ignore_old_list"]:

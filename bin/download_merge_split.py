@@ -7,12 +7,15 @@ import re
 import getopt
 import time
 import pprint
+import logging
+import logging.config
 import feedmakerutil
 from feedmakerutil import Cache, IO
-from logger import Logger
 from typing import List, Tuple, Optional
 
-logger = Logger("download_merge_split.py")
+
+logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logger = logging.getLogger()
 
 
 def download_image(path_prefix: str, img_url: str, img_ext: str, page_url: str) -> Optional[str]:
@@ -70,7 +73,7 @@ def download_image_and_read_metadata(path_prefix: str, img_ext: str, page_url: s
             # download
             cache_file = download_image(path_prefix, img_url, img_ext, page_url)
             if not cache_file:
-                logger.err("can't download the image from '%s'" % img_url)
+                logger.error("can't download the image from '%s'" % img_url)
                 continue
             img_file_list.append(cache_file)
             img_url_list.append(img_url)
@@ -79,7 +82,7 @@ def download_image_and_read_metadata(path_prefix: str, img_ext: str, page_url: s
             logger.debug(cmd)
             (result, error) = feedmakerutil.exec_cmd(cmd)
             if error:
-                logger.err("can't get the size of image file '%s', cmd='%s'" % (cache_file, cmd))
+                logger.error("can't get the size of image file '%s', cmd='%s'" % (cache_file, cmd))
                 sys.exit(-1)
 
             m2 = re.search(r"^(?P<width>\d+)\s+(?P<height>\d+)", result)
@@ -120,7 +123,7 @@ def merge_image_files(img_file_list: List[str], path_prefix: str, img_url: str, 
     (result, error) = feedmakerutil.exec_cmd(cmd)
     logger.debug(result)
     if error:
-        logger.err("can't merge the image files, cmd='%s'" % cmd)
+        logger.error("can't merge the image files, cmd='%s'" % cmd)
         sys.exit(-1)
     return merged_img_file
 
@@ -134,7 +137,7 @@ def crop_image_file(img_file: str) -> None:
     logger.debug(cmd)
     (result, error) = feedmakerutil.exec_cmd(cmd)
     if error:
-        # logger.err("can't crop the image file '%s', cmd='%s'" % (img_file, cmd))
+        # logger.error("can't crop the image file '%s', cmd='%s'" % (img_file, cmd))
         # sys.exit(-1)
         return
 
@@ -171,7 +174,7 @@ def split_image_file(img_file: str, num_units: int, bgcolor_option: str, orienta
     (result, error) = feedmakerutil.exec_cmd(cmd)
     logger.debug(result)
     if error:
-        logger.err("can't split the image file, cmd='%s'" % cmd)
+        logger.error("can't split the image file, cmd='%s'" % cmd)
         sys.exit(-1)
 
 

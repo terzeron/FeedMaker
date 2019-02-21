@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from bs4 import BeautifulSoup, Comment
+import os
 import re
 import sys
 import signal
 import html
+import logging
+import logging.config
+from bs4 import BeautifulSoup, Comment
 import feedmakerutil
-from feedmakerutil import die, Config, URL, IO, HTMLExtractor
-from logger import Logger
+from feedmakerutil import Config, URL, IO, HTMLExtractor
 
-logger = Logger("extract.py")
+
+logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logger = logging.getLogger()
 # recursion으로 구현된 traverse_element()의 여러 레벨에서 조회하는 변수
 footnote_num = 0
 
@@ -32,7 +36,8 @@ def extract_content(args):
     # configuration
     config = Config()
     if not config:
-        die("can't read configuration")
+        logger.error("can't read configuration")
+        sys.exit(-1)
     extraction_conf = config.get_extraction_configs()
 
     # read html contents

@@ -1,32 +1,26 @@
 #!/usr/bin/env python3
 
+
+import os
 import pprint
 import re
 import sys
 import time
 import getopt
+import logging
+import logging.config
 from collections import OrderedDict
 from typing import Dict
-
 import feedmakerutil
 from feedmakerutil import Config
-from feedmakerutil import die
-from logger import Logger
 
 
-logger = Logger("collect_new_list.py")
-do_debug = False
-
-
-def log(*args):
-    if do_debug:
-        logger.info(*args)
-    else:
-        logger.debug(*args)
+logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logger = logging.getLogger()
 
 
 def extract_urls(url, options):
-    log("# extract_urls(%s)" % url)
+    logger.debug("# extract_urls(%s)" % url)
     
     option_str = feedmakerutil.determine_crawler_options(options)
     whole_cmd = ""
@@ -36,37 +30,39 @@ def extract_urls(url, options):
         whole_cmd += " | " + cmd
     else:
         whole_cmd += cmd
-    log("# %s" % whole_cmd)
+    logger.debug("# %s" % whole_cmd)
     (result, error) = feedmakerutil.exec_cmd(cmd)
     if error:
         time.sleep(5)
         (result, error) = feedmakerutil.exec_cmd(cmd)
         if error:
-            log(whole_cmd + "\n" + str(result) + "\n")
-            die("can't get result from crawler script")
+            logger.debug(whole_cmd + "\n" + str(result) + "\n")
+            logger.error("# can't get result from crawler script")
+            sys.exit(-1)
                 
     cmd = "extract_element.py collection"
     if whole_cmd:
         whole_cmd += " | " + cmd
     else:
         whole_cmd += cmd
-    log("# %s" % whole_cmd)
+    logger.debug("# %s" % whole_cmd)
     (result, error) = feedmakerutil.exec_cmd(cmd, result)
     if error: 
-        log(whole_cmd + "\n" + str(result) + "\n")
-        logger.err(error)
-        die("can't get result from extract script")
+        logger.debug(whole_cmd + "\n" + str(result) + "\n")
+        logger.error("can't get result from extract script, %s" % (error))
+        sys.exit(-1)
 
     cmd = options["item_capture_script"]
     if whole_cmd:
         whole_cmd += " | " + cmd
     else:
         whole_cmd += cmd
-    log("# %s" % whole_cmd)
+    logger.debug("# %s" % whole_cmd)
     (result, error) = feedmakerutil.exec_cmd(cmd, result)
     if error:
-        log(whole_cmd + "\n" + str(result) + "\n")
-        die("can't get result from capture script")
+        logger.debug(whole_cmd + "\n" + str(result) + "\n")
+        logger.error("can't get result from capture script, %s" % (error))
+        sys.exit(-1)
 
     # check the result
     result_list = []
@@ -78,13 +74,14 @@ def extract_urls(url, options):
         link = items[0]
         title = " ".join(items[1:])
         if not link or not title:
-            die("can't get the link and title from '%s'," % link)
+            logger.error("can't get the link and title from '%s', %s" % (link, error))
+            sys.exit(-1)
         result_list.append((link, title))
     return result_list
 
 
 def compose_url_list(collection_conf: Dict[str, OrderedDict]):
-    log("# compose_url_list()")
+    logger.debug("# compose_url_list()")
     result_list = []
 
     for list_url in collection_conf["list_url_list"]:
@@ -96,27 +93,16 @@ def compose_url_list(collection_conf: Dict[str, OrderedDict]):
 
 
 def main():
-    global do_debug
-    
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], "d")
-    except getopt.GetoptError as err:
-        logger.error(err)
-        sys.exit(-1)
-    
-    for o, a in opts:
-        if o == "-d":
-            do_debug = True
-        
     config = Config()
     collection_conf = config.get_collection_configs()
-    log("# collection_conf=%s" % pprint.pformat(collection_conf))
+    logger.debug("# collection_conf=%s" % pprint.pformat(collection_conf))
 
     # collect items from specified url list
-    log("# collecting items from specified url list...")
+    logger.debug("# collecting items from specified url list...")
     total_list = compose_url_list(collection_conf)
     for (link, title) in total_list:
-        logger.info("%s\t%s" % (link, title))
+        print("%s\t%s" % (link, title))
+        logger.debug("%s\t%s" % (link, title))
 
     return 0
 
