@@ -6,12 +6,14 @@ import os
 import re
 import getopt
 import subprocess
+import logging
+import logging.config
 import feedmakerutil
 from feedmakerutil import IO
-from logger import Logger
 
 
-logger = Logger("aggregate_titles.py")
+logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logger = logging.getLogger()
 
 
 def print_usage():

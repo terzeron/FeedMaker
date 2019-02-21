@@ -5,13 +5,15 @@ import sys
 import os
 import re
 import time
+import logging
+import logging.config
 import feedmakerutil
 from feedmakerutil import IO, Cache
-from logger import Logger
 from typing import List, Optional
 
 
-logger = Logger("download_image.py")
+logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logger = logging.getLogger()
 
 
 def download_image(path_prefix: str, img_url: str, img_ext: str, page_url: str) -> Optional[str]:

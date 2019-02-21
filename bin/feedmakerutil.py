@@ -6,12 +6,15 @@ import sys
 import re
 import subprocess
 import psutil
-from logger import Logger
+import logging
+import logging.config
 from typing import List, Any, Dict, Tuple, Optional, Set
 import xmltodict
 from collections import OrderedDict
 
-logger = Logger("feedmakerutil.py")
+
+logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logger = logging.getLogger()
 # noinspection PyPep8
 header_str = '''<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no"/>
@@ -82,19 +85,6 @@ def remove_duplicates(a_list: List[Any]) -> List[Any]:
             seen.add(item)
             result.append(item)
     return result
-
-
-def err(msg: str) -> None:
-    logger.err(msg)
-
-
-def die(msg: str) -> None:
-    logger.err(msg)
-    sys.exit(-1)
-
-
-def warn(msg: str) -> None:
-    logger.warn(msg)
 
 
 def remove_file(file_path: str) -> None:
@@ -283,7 +273,8 @@ class Config:
         with open(config_file, "r") as f:
             parsed_data = xmltodict.parse(f.read())
             if not parsed_data or "configuration" not in parsed_data:
-                die("can't get configuration from config file")
+                logger.error("can't get configuration from config file")
+                sys.exit(-1)
             else:
                 self.config = parsed_data["configuration"]
 

@@ -8,15 +8,16 @@ from enum import Enum
 import time
 import getopt
 import requests
-from feedmakerutil import die
+import logging
+import logging.config
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import selenium
 from typing import Dict, Optional
-from logger import Logger
 
 
-logger = Logger("crawler.py")
+logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logger = logging.getLogger()
 
 
 class Method(Enum):
@@ -38,7 +39,8 @@ class HeadlessBrowser:
             content = driver.find_element_by_tag_name("body")
             response = content.get_attribute("innerHTML")
         except selenium.common.exceptions.WebDriverException as e:
-            die(e)
+            logger.error(e)
+            sys.exit(-1)
 
         driver.close()
         driver.quit()
@@ -82,7 +84,8 @@ class Crawler():
     def run(self, url) -> int:
         response = self.make_request(url)
         if not response:
-            die("can't get response from '%s'" % url)
+            logger.error("can't get response from '%s'" % url)
+            sys.exit(-1)
     
         if self.method == Method.HEAD:
             pass

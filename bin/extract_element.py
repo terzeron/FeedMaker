@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from bs4 import BeautifulSoup
+import os
 import re
 import sys
 import signal
-from feedmakerutil import Config, IO, HTMLExtractor, die
-from logger import Logger
+import logging
+import logging.config
+from bs4 import BeautifulSoup
+from feedmakerutil import Config, IO, HTMLExtractor
 
-logger = Logger("extract_element.py")
+
+logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logger = logging.getLogger()
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 
@@ -17,11 +21,13 @@ def main() -> int:
     # configuration
     config = Config()
     if not config:
-        die("can't read configuration")
+        logger.error("can't read configuration")
+        sys.exit(-1)
 
     collection_conf = config.get_collection_configs()
     if not collection_conf:
-        die("can't get collection configuration")
+        logger.error("can't get collection configuration")
+        sys.exit(-1)
 
     id_list = collection_conf["element_id_list"]
     class_list = collection_conf["element_class_list"]
@@ -49,7 +55,8 @@ def main() -> int:
     for parser in ["html.parser", "html5lib", "lxml"]:
         soup = BeautifulSoup(html, parser)
         if not soup:
-            die("can't parse HTML")
+            logger.error("can't parse HTML")
+            sys.exit(-1)
 
         for id_str in id_list:
             divs = soup.find_all(attrs={"id": id_str})
@@ -71,6 +78,10 @@ def main() -> int:
                 for div in divs:
                     print(div)
                     ret = 0
+                    
+        if ret == 0:
+            return ret
+        
     return ret
 
 

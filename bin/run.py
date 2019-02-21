@@ -6,15 +6,17 @@ import sys
 import re
 import time
 import random
+import logging
+import logging.config
 import concurrent.futures
 import getopt
-from logger import Logger
 from typing import Dict, Tuple, List, Any, Set
 import feedmakerutil
 from feedmakerutil import Config
 
 
-logger = Logger("run.py")
+logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logger = logging.getLogger()
 
 
 def send_error_msg(msg: str) -> bool:
@@ -35,7 +37,7 @@ def send_error_msg(msg: str) -> bool:
     print(cmd)
     result, error = feedmakerutil.exec_cmd(cmd)
     if error:
-        logger.err(error)
+        logger.error(error)
         return False
     logger.info(result)
     return True
@@ -234,7 +236,7 @@ def make_single_feed(feed_name: str, img_dir: str, archiving_period: int, do_rem
         remove_unused_img_files(feed_xml_file, img_dir)
 
     if error:
-        logger.err(error)
+        logger.error(error)
         return False
     print(result)
     return True
