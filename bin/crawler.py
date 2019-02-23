@@ -12,6 +12,7 @@ import logging
 import logging.config
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 import selenium
 from typing import Dict, Optional
 
@@ -31,10 +32,24 @@ class HeadlessBrowser:
         chrome_options = Options()
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("--window-size=1920x1080")
+        chrome_options.add_argument("--disable-web-security")
+        chrome_options.add_argument("--allow-running-insecure-content")
         chrome_driver = "chromedriver"
         driver = webdriver.Chrome(chrome_options=chrome_options, executable_path=chrome_driver)
 
         driver.get(url)
+        driver.execute_script('''
+        div = document.createElement("DIV");
+        div.className = "images_from_canvas";
+        var canvas_list = document.getElementsByTagName("canvas"); 
+        for (var i = 0; i < canvas_list.length; i++) {
+            img_data = canvas_list[i].toDataURL("image/png");
+            img = document.createElement("IMG");
+            img.src = img_data;
+            div.appendChild(img);
+        }
+        document.body.appendChild(div);
+        ''')
         try:
             content = driver.find_element_by_tag_name("body")
             response = content.get_attribute("innerHTML")
