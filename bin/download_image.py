@@ -10,26 +10,44 @@ import logging.config
 import feedmakerutil
 from feedmakerutil import IO, Cache
 from typing import List, Optional
+from base64 import b64decode
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
 logger = logging.getLogger()
 
 
-def download_image(path_prefix: str, img_url: str, img_ext: str, page_url: str) -> Optional[str]:
-    logger.debug("# download_image(%s, %s, %s, %s)" % (path_prefix, img_url, img_ext, page_url))
-    cache_file = Cache.get_cache_file_name(path_prefix, img_url, img_ext)
+def download_image(path_prefix: str, img_url_or_data: str, page_url: str) -> Optional[str]:
+    logger.debug("# download_image(%s, %s, %s)" % (path_prefix, img_url_or_data[:30], page_url))
+    cache_file = Cache.get_cache_file_name(path_prefix, img_url_or_data, "")
     if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
         return cache_file
-    cmd = 'crawler.py --download "%s" --referer "%s" "%s"' % (cache_file, page_url, img_url)
-    logger.debug("<!-- %s -->" % cmd)
-    (result, error) = feedmakerutil.exec_cmd(cmd)
-    logger.debug("<!-- %s -->" % result)
-    if error:
-        time.sleep(5)
+
+    m = re.search(r'^data:image/(?:png|jpeg|jpg);base64,(?P<img_data>.+)', img_url_or_data)
+    if m:
+        img_data = m.group("img_data")
+        logger.debug("image data '%s' as base64 to cache file '%s'" % (img_data[:30], cache_file))
+        if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
+            return cache_file
+        with open(cache_file, "wb") as outfile:
+            decoded_data = b64decode(img_data)
+            outfile.write(decoded_data)
+        return cache_file
+
+    if img_url_or_data.startswith("http"):
+        img_url = img_url_or_data
+        logger.debug("image url '%s' to cache file '%s'" % (img_url, cache_file))
+        cmd = 'crawler.py --download "%s" --referer "%s" "%s"' % (cache_file, page_url, img_url)
+        logger.debug("%s" % cmd)
         (result, error) = feedmakerutil.exec_cmd(cmd)
+        logger.debug("result: %s" % result)
         if error:
-            return None
+            time.sleep(5)
+            (result, error) = feedmakerutil.exec_cmd(cmd)
+            if error:
+                return None
+    else:
+        return None
     if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
         return cache_file
     return None
@@ -44,7 +62,6 @@ def main() -> int:
     feed_name = result.rstrip()
     img_url_prefix = "https://terzeron.com/xml/img/" + feed_name
     path_prefix = os.environ["FEED_MAKER_WWW_FEEDS_DIR"] + "/img/" + feed_name
-    img_ext = "jpg"
     page_url = sys.argv[1]
 
     feedmakerutil.make_path(path_prefix)
@@ -58,7 +75,7 @@ def main() -> int:
         \s*
         src=
         (["\'])
-        (?P<img_url>[^"\']+)
+        (?P<img_url_or_data>[^"\']+)
         (["\'])
         (\s*width=["\']\d+%?["\'])?
         /?>
@@ -66,7 +83,7 @@ def main() -> int:
         ''', line, re.VERBOSE)
         if m:
             pre_text = m.group("pre_text")
-            img_url = m.group("img_url")
+            img_url_or_data = m.group("img_url_or_data")
             post_text = m.group("post_text")
            
             m = re.search(r'^\s*$', pre_text)
@@ -74,13 +91,14 @@ def main() -> int:
                 print(pre_text)
 
             # download
-            cache_file = download_image(path_prefix, img_url, img_ext, page_url)
+            cache_file = download_image(path_prefix, img_url_or_data, page_url)
             if cache_file:
-                cache_url = Cache.get_cache_url(img_url_prefix, img_url, img_ext)
-                logger.debug("<!-- %s -> %s / %s -->" % (img_url, cache_file, cache_url))
+                cache_url = Cache.get_cache_url(img_url_prefix, img_url_or_data, "")
+                logger.debug("%s -> %s / %s" % (img_url_or_data[:100], cache_file, cache_url))
                 print("<img src='%s'/>" % cache_url)
             else:
-                print("<img src='%s' alt='not exist or size 0'/>" % img_url)
+                logger.debug("no cache file '%s'" % (cache_file))
+                print("<img src='%s' alt='not exist or size 0'/>" % img_url_or_data)
 
             m = re.search(r'^\s*$', post_text)
             if not m:

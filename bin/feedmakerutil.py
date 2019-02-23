@@ -478,7 +478,7 @@ class URL:
 class Cache:
     @staticmethod
     def get_cache_info_common(prefix: str, img_url: str, img_ext: str, postfix=None, index=None) -> str:
-        logger.debug("# get_cache_info_common(%s, %s, %s, %s, %d)" % (prefix, img_url, img_ext, postfix if postfix else "None", index if index else -1))
+        logger.debug("# get_cache_info_common(%s, %s, %s, %s, %d)" % (prefix, img_url[:30], img_ext, postfix if postfix else "None", index if index else -1))
         postfix_str = ""
         if postfix and postfix != "":
             postfix_str = "_" + str(postfix)
@@ -489,18 +489,18 @@ class Cache:
 
         if re.search(r'https?://', img_url) and img_ext:
             result_str = prefix + "/" + URL.get_short_md5_name(img_url) + postfix_str + index_str + "." + img_ext
-            logger.debug("result_str=" + result_str)
+            logger.debug("%s + %s + %s + '.' + %s -> %s" % (img_url[:30], postfix_str, index_str, result_str))
         else:
             result_str = prefix + "/" + URL.get_short_md5_name(img_url)
-            logger.debug("result_str=" + result_str)
+            logger.debug("%s -> %s" % (img_url[:30], result_str))
         return result_str
 
     @staticmethod
     def get_cache_url(url_prefix: str, img_url: str, img_ext: str, postfix=None, index=None) -> str:
-        logger.debug("# get_cache_url(%s, %s, %s, %s, %d)" % (url_prefix, img_url, img_ext, postfix if postfix else "None", index if index else -1))
+        logger.debug("# get_cache_url(%s, %s, %s, %s, %d)" % (url_prefix, img_url[:30], img_ext, postfix if postfix else "None", index if index else -1))
         return Cache.get_cache_info_common(url_prefix, img_url, img_ext, postfix, index)
 
     @staticmethod
     def get_cache_file_name(path_prefix: str, img_url: str, img_ext: str, postfix=None, index=None):
-        logger.debug("# get_cache_file_name(%s, %s, %s, %s, %d)" % (path_prefix, img_url, img_ext, postfix if postfix else "None", index if index else -1))
+        logger.debug("# get_cache_file_name(%s, %s, %s, %s, %d)" % (path_prefix, img_url[:30], img_ext, postfix if postfix else "None", index if index else -1))
         return Cache.get_cache_info_common(path_prefix, img_url, img_ext, postfix, index)
