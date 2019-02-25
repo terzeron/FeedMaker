@@ -489,7 +489,7 @@ class Cache:
 
         if re.search(r'https?://', img_url) and img_ext:
             result_str = prefix + "/" + URL.get_short_md5_name(img_url) + postfix_str + index_str + "." + img_ext
-            logger.debug("%s + %s + %s + '.' + %s -> %s" % (img_url[:30], postfix_str, index_str, result_str))
+            logger.debug("%s + %s + %s + '.' + %s -> %s" % (prefix, URL.get_short_md5_name(img_url), postfix_str, index_str, result_str))
         else:
             result_str = prefix + "/" + URL.get_short_md5_name(img_url)
             logger.debug("%s -> %s" % (img_url[:30], result_str))
