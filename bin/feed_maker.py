@@ -335,21 +335,21 @@ class FeedMaker:
                     logger.info("start index: %d, end index:%d, last modified time: %d, %s" % (start_idx, end_idx, mtime, self.get_rss_date_str(mtime)))
                     return start_idx, end_idx, mtime
 
-        # 처음 생성 시
+        # 처음 생성 시, 또는 파일에 정보가 없을 때
         start_idx = 0
         end_idx = self.WINDOW_SIZE
         mtime = int(datetime.datetime.now().timestamp())
-        self.write_idx_data(start_idx, mtime)
+        self.write_idx_data(start_idx, mtime, True)
         return start_idx, end_idx, mtime
     
     
-    def write_idx_data(self, start_idx: int, mtime: int) -> None:
+    def write_idx_data(self, start_idx: int, mtime: int, do_write_initially: bool = False) -> None:
         logger.debug("# write_idx_data(start_idx=%d, mtime=%d)" % (start_idx, mtime))
     
         ts = datetime.datetime.now().timestamp()
         increment_size = int(((int(ts) - mtime) * self.collection_conf["unit_size_per_day"]) / 86400)
         logger.debug("start_idx=%d, current time=%d, mtime=%d, self.WINDOW_SIZE=%d, increment_size=%d" % (start_idx, int(ts), mtime, self.WINDOW_SIZE, increment_size))
-        if increment_size > 0:
+        if do_write_initially or increment_size > 0:
             next_start_idx = start_idx + increment_size
             with open(self.start_idx_file_name, 'w', encoding='utf-8') as out_file:
                 logger.info("next start index: %d, current time: %d, %s" % (next_start_idx, ts, self.get_rss_date_str(ts)))
