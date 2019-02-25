@@ -4,14 +4,14 @@
 import sys
 import os
 import filecmp
-import feedmakerutil
+import feed_maker_util
 
 
 def test_script(script, work_dir, test_dir, index):
     os.chdir(work_dir)
     cmd = "cat %s/input.%d.txt | %s > %s/result.%d.temp" % (test_dir, index, script, test_dir, index)
     # print(cmd)
-    (result, error) = feedmakerutil.exec_cmd(cmd)
+    (result, error) = feed_maker_util.exec_cmd(cmd)
     if not error:
         os.chdir(test_dir)
         return filecmp.cmp("result.%d.temp" % index, "expected.output.%d.txt" % index)
@@ -38,7 +38,7 @@ def main():
             work_dir = fm_cwd + "/" + feed
             test_dir = fm_home + "/test/" + feed
             if not test_script(script, work_dir, test_dir, index):
-                print("Error in %s of %s" % (feed, script))
+                print("Error in %s of %s\n" % (feed, script))
                 return -1
     print("Ok")
     

@@ -10,7 +10,6 @@ import logging
 import logging.config
 from typing import List, Any, Dict, Tuple, Optional, Set
 import xmltodict
-from collections import OrderedDict
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
@@ -94,7 +93,7 @@ def remove_file(file_path: str) -> None:
 
 def find_process_group(parent_proc_name: str) -> List[int]:
     # find a parent process id by parent process name
-    parent_children_map = {}
+    parent_children_map: Dict[int, List[int]] = {}
     ppid_list = []
     for proc in psutil.process_iter():
         try:
@@ -263,9 +262,9 @@ class IO:
 
 
 class Config:
-    config: OrderedDict = {}
+    config: Dict[str, Dict[str, Any]] = {}
 
-    def __init__(self):
+    def __init__(self) -> None:
         if "FEED_MAKER_CONF_FILE" in os.environ and os.environ["FEED_MAKER_CONF_FILE"]:
             config_file = os.environ["FEED_MAKER_CONF_FILE"]
         else:
@@ -278,34 +277,29 @@ class Config:
             else:
                 self.config = parsed_data["configuration"]
 
-    @staticmethod
-    def _get_bool_config_value(config_node: OrderedDict, key: str, default: bool = False) -> bool:
+    def _get_bool_config_value(self, config_node: Dict[str, Any], key: str, default: bool = False) -> bool:
         if key in config_node:
             if "true" == config_node[key]:
                 return True
         return default
 
-    @staticmethod
-    def _get_str_config_value(config_node: OrderedDict, key: str, default: str = None) -> Optional[str]:
+    def _get_str_config_value(self, config_node: Dict[str, Any], key: str, default: str = None) -> Optional[str]:
         if key in config_node:
             return config_node[key]
         return default
 
-    @staticmethod
-    def _get_int_config_value(config_node: OrderedDict, key: str, default: int = None) -> Optional[int]:
+    def _get_int_config_value(self, config_node: Dict[str, Any], key: str, default: int = None) -> Optional[int]:
         if key in config_node:
             return int(config_node[key])
         return default
 
-    @staticmethod
-    def _get_float_config_value(config_node: OrderedDict, key: str, default: float = None) -> Optional[float]:
+    def _get_float_config_value(self, config_node: Dict[str, Any], key: str, default: float = None) -> Optional[float]:
         if key in config_node:
             return float(config_node[key])
         return default
 
-    @staticmethod
-    def _traverse_config_node(config_node: OrderedDict, key: str) -> List[str]:
-        result = []
+    def _traverse_config_node(self, config_node: Dict[str, Any], key: str) -> List[str]:
+        result: List[str] = []
         if key in config_node:
             if isinstance(config_node[key], list):
                 result.extend(config_node[key])
@@ -314,37 +308,36 @@ class Config:
             return result
 
         for k, v in config_node.items():
-            if isinstance(v, OrderedDict):
-                data = Config._traverse_config_node(v, key)
+            if isinstance(v, Dict):
+                data = self._traverse_config_node(v, key)
                 result.extend(data)
         return result
     
-    @staticmethod
-    def _get_config_value_list(config_node: OrderedDict, key: str, default: List[Any] = None) -> Optional[List[Any]]:
-        result = Config._traverse_config_node(config_node, key)
+    def _get_config_value_list(self, config_node: Dict[str, Any], key: str, default: List[Any] = None) -> Optional[List[Any]]:
+        result = self._traverse_config_node(config_node, key)
         if result:
             return result
         return default
 
     def get_collection_configs(self) -> Dict[str, Any]:
         logger.debug("# get_collection_configs()")
-        conf = {}
+        conf: Dict[str, Any] = {}
         if "collection" in self.config:
             collection_conf = self.config["collection"]
 
-            item_capture_script = Config._get_str_config_value(collection_conf, "item_capture_script", "./capture_item_link_title.py")
-            ignore_old_list = Config._get_bool_config_value(collection_conf, "ignore_old_list")
-            is_completed = Config._get_bool_config_value(collection_conf, "is_completed")
-            sort_field_pattern = Config._get_str_config_value(collection_conf, "sort_field_pattern")
-            unit_size_per_day = Config._get_float_config_value(collection_conf, "unit_size_per_day")
-            user_agent = Config._get_str_config_value(collection_conf, "user_agent")
-            encoding = Config._get_str_config_value(collection_conf, "encoding", "utf-8")
+            item_capture_script = self._get_str_config_value(collection_conf, "item_capture_script", "./capture_item_link_title.py")
+            ignore_old_list = self._get_bool_config_value(collection_conf, "ignore_old_list")
+            is_completed = self._get_bool_config_value(collection_conf, "is_completed")
+            sort_field_pattern = self._get_str_config_value(collection_conf, "sort_field_pattern")
+            unit_size_per_day = self._get_float_config_value(collection_conf, "unit_size_per_day")
+            user_agent = self._get_str_config_value(collection_conf, "user_agent")
+            encoding = self._get_str_config_value(collection_conf, "encoding", "utf-8")
 
-            list_url_list = Config._get_config_value_list(collection_conf, "list_url", [])
-            element_id_list = Config._get_config_value_list(collection_conf, "element_id", [])
-            element_class_list = Config._get_config_value_list(collection_conf, "element_class", [])
-            element_path_list = Config._get_config_value_list(collection_conf, "element_path", [])
-            post_process_script_list = Config._get_config_value_list(collection_conf, "post_process_script", [])
+            list_url_list = self._get_config_value_list(collection_conf, "list_url", [])
+            element_id_list = self._get_config_value_list(collection_conf, "element_id", [])
+            element_class_list = self._get_config_value_list(collection_conf, "element_class", [])
+            element_path_list = self._get_config_value_list(collection_conf, "element_path", [])
+            post_process_script_list = self._get_config_value_list(collection_conf, "post_process_script", [])
             conf = {
                 "item_capture_script": item_capture_script,
                 "ignore_old_list": ignore_old_list,
@@ -361,26 +354,26 @@ class Config:
             }
         return conf
 
-    def get_extraction_configs(self) -> Dict[str, OrderedDict]:
+    def get_extraction_configs(self) -> Dict[str, Any]:
         logger.debug("# get_extraciton_configs()")
-        conf = {}
+        conf: Dict[str, Any] = {}
         if "extraction" in self.config:
             extraction_conf = self.config["extraction"]
 
-            render_js = Config._get_bool_config_value(extraction_conf, "render_js")
-            bypass_element_extraction = Config._get_bool_config_value(extraction_conf, "bypass_element_extraction")
-            force_sleep_between_articles = Config._get_bool_config_value(extraction_conf,
+            render_js = self._get_bool_config_value(extraction_conf, "render_js")
+            bypass_element_extraction = self._get_bool_config_value(extraction_conf, "bypass_element_extraction")
+            force_sleep_between_articles = self._get_bool_config_value(extraction_conf,
                                                                          "force_sleep_between_articles")
-            review_point_threshold = Config._get_int_config_value(extraction_conf, "review_point_threshold")
-            user_agent = Config._get_str_config_value(extraction_conf, "user_agent")
-            encoding = Config._get_str_config_value(extraction_conf, "encoding", "utf8")
-            referer = Config._get_str_config_value(extraction_conf, "referer")
+            review_point_threshold = self._get_int_config_value(extraction_conf, "review_point_threshold")
+            user_agent = self._get_str_config_value(extraction_conf, "user_agent")
+            encoding = self._get_str_config_value(extraction_conf, "encoding", "utf8")
+            referer = self._get_str_config_value(extraction_conf, "referer")
 
-            element_id_list = Config._get_config_value_list(extraction_conf, "element_id", [])
-            element_class_list = Config._get_config_value_list(extraction_conf, "element_class", [])
-            element_path_list = Config._get_config_value_list(extraction_conf, "element_path", [])
-            post_process_script_list = Config._get_config_value_list(extraction_conf, "post_process_script", [])
-            header_list = Config._get_config_value_list(extraction_conf, "header", [])
+            element_id_list = self._get_config_value_list(extraction_conf, "element_id", [])
+            element_class_list = self._get_config_value_list(extraction_conf, "element_class", [])
+            element_path_list = self._get_config_value_list(extraction_conf, "element_path", [])
+            post_process_script_list = self._get_config_value_list(extraction_conf, "post_process_script", [])
+            header_list = self._get_config_value_list(extraction_conf, "header", [])
             conf = {
                 "render_js": render_js,
                 "bypass_element_extraction": bypass_element_extraction,
@@ -397,35 +390,35 @@ class Config:
             }
         return conf
 
-    def get_notification_configs(self) -> Optional[Dict[str, OrderedDict]]:
+    def get_notification_configs(self) -> Optional[Dict[str, Any]]:
         logger.debug("# get_notification_configs()")
-        conf = {}
+        conf: Dict[str, Any] = {}
         if "notification" in self.config:
             notification_conf = self.config["notification"]
             if "email" in notification_conf:
                 email = notification_conf["email"]
                 if email:
-                    recipient = Config._get_str_config_value(email, "recipient")
-                    subject = Config._get_str_config_value(email, "subject")
+                    recipient = self._get_str_config_value(email, "recipient")
+                    subject = self._get_str_config_value(email, "subject")
                     conf = {
                         "email_recipient": recipient,
                         "email_subject": subject,
                     }
         return conf
 
-    def get_rss_configs(self) -> Dict[str, OrderedDict]:
+    def get_rss_configs(self) -> Dict[str, Any]:
         logger.debug("# get_rss_configs()")
-        conf = {}
+        conf: Dict[str, Any] = {}
         if "rss" in self.config:
             rss_conf = self.config["rss"]
             if rss_conf:
-                rss_title = Config._get_str_config_value(rss_conf, "title")
-                rss_description = Config._get_str_config_value(rss_conf, "description")
-                rss_generator = Config._get_str_config_value(rss_conf, "generator")
-                rss_copyright = Config._get_str_config_value(rss_conf, "copyright")
-                rss_link = Config._get_str_config_value(rss_conf, "link")
-                rss_language = Config._get_str_config_value(rss_conf, "language")
-                rss_no_item_desc = Config._get_str_config_value(rss_conf, "no_item_desc")
+                rss_title = self._get_str_config_value(rss_conf, "title")
+                rss_description = self._get_str_config_value(rss_conf, "description")
+                rss_generator = self._get_str_config_value(rss_conf, "generator")
+                rss_copyright = self._get_str_config_value(rss_conf, "copyright")
+                rss_link = self._get_str_config_value(rss_conf, "link")
+                rss_language = self._get_str_config_value(rss_conf, "language")
+                rss_no_item_desc = self._get_str_config_value(rss_conf, "no_item_desc")
                 conf = {
                     "rss_title": rss_title,
                     "rss_description": rss_description,

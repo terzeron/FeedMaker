@@ -14,7 +14,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 import selenium
-from typing import Dict, Optional
+from typing import Dict, Optional, Union, Any
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
@@ -28,7 +28,7 @@ class Method(Enum):
 
 
 class HeadlessBrowser:
-    def make_request(self, url):
+    def make_request(self, url) -> Optional[str]:
         chrome_options = Options()
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("--window-size=1920x1080")
@@ -63,7 +63,7 @@ class HeadlessBrowser:
     
 
 class Crawler():
-    def __init__(self, method, headers, timeout, do_render_js=False, download_file=None, encoding=None):
+    def __init__(self, method, headers, timeout, do_render_js=False, download_file=None, encoding=None) -> None:
         self.method = method
         self.timeout = timeout
         self.do_render_js = do_render_js
@@ -71,7 +71,7 @@ class Crawler():
         self.download_file = download_file
         self.encoding = encoding
 
-    def make_request(self, url) -> Optional[str]:
+    def make_request(self, url) -> Any:
         if self.do_render_js:
             browser = HeadlessBrowser()
             return browser.make_request(url) 
@@ -120,7 +120,7 @@ class Crawler():
         return 0
 
 
-def print_usage():
+def print_usage() -> None:
     print("Usage:\t%s [ <option> ... <option> ] <url>" % sys.argv[0])
     print("options")
     print("\t--spider\t\t\tno download, just trying")
@@ -132,7 +132,7 @@ def print_usage():
     print("\t--referer <referer>")
 
     
-def main():
+def main() -> int:
     method = Method.GET
     headers = {"Accept-Encoding": "gzip, deflate", "User-Agent": "Mozillla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36", "Accept": "*/*", "Connection": "Keep-Alive"}
     timeout = 10
@@ -174,7 +174,7 @@ def main():
     url = args[0]
     
     crawler = Crawler(method, headers, timeout, do_render_js, download_file, encoding)
-    crawler.run(url)
+    return crawler.run(url)
 
     
 if __name__ == "__main__":

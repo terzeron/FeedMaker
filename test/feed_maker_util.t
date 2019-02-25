@@ -3,8 +3,8 @@
 
 import unittest
 from bs4 import BeautifulSoup
-import feedmakerutil
-from feedmakerutil import Config, URL, HTMLExtractor
+import feed_maker_util
+from feed_maker_util import Config, URL, HTMLExtractor
 
 
 class HTMLExtractorTest(unittest.TestCase):
@@ -68,7 +68,7 @@ class ConfigTest(unittest.TestCase):
         
     def test_init(self):
         self.assertNotEqual(self.config, None)
-        self.assertTrue(isinstance(self.config, feedmakerutil.Config))
+        self.assertTrue(isinstance(self.config, feed_maker_util.Config))
         
     def test_get_collection_configs(self):
         configs = self.config.get_collection_configs()
@@ -128,25 +128,25 @@ class UtilTest(unittest.TestCase):
 
 class ExecCmdTest(unittest.TestCase):
     def test_exec_cmd(self):
-        valid_cmd = "ls feedmakerutil.t"
-        (result, error) = feedmakerutil.exec_cmd(valid_cmd)
+        valid_cmd = "ls feed_maker_util.t"
+        (result, error) = feed_maker_util.exec_cmd(valid_cmd)
         self.assertTrue(result)
         self.assertEqual(error, "")
-        self.assertTrue("feedmakerutil.t" in result)
+        self.assertTrue("feed_maker_util.t" in result)
         
         invalid_cmd = "ls non_existent_file"
-        (result, error) = feedmakerutil.exec_cmd(invalid_cmd)
+        (result, error) = feed_maker_util.exec_cmd(invalid_cmd)
         self.assertFalse(result)
         self.assertTrue("No such file or directory" in error)
 
         invalid_cmd = "lslslsls non_existent_file"
-        (result, error) = feedmakerutil.exec_cmd(invalid_cmd)
+        (result, error) = feed_maker_util.exec_cmd(invalid_cmd)
         self.assertFalse(result)
         self.assertTrue("not found" in error)
 
         bidirectional_cmd = "cat"
         input = "hello world"
-        (result, error) = feedmakerutil.exec_cmd(bidirectional_cmd, input)
+        (result, error) = feed_maker_util.exec_cmd(bidirectional_cmd, input)
         self.assertTrue(result)
         self.assertEqual(error, "")
         self.assertTrue("hello world" in result)

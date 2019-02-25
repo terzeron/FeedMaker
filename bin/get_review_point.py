@@ -5,7 +5,7 @@ import re
 import signal
 import sys
 from urllib.parse import urlencode
-import feedmakerutil
+from feed_maker_util import exec_cmd
 
 
 def get_default_config(type_name):
@@ -32,7 +32,7 @@ def get_default_config(type_name):
 
 def get_page(url):
     cmd = "crawler.py \"%s\"" % url
-    (result, error) = feedmakerutil.exec_cmd(cmd)
+    result, error = exec_cmd(cmd)
     return result
 
 

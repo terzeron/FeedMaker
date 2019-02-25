@@ -8,7 +8,7 @@ import re
 import pathlib
 import sqlite3
 import json
-from feedmakerutil import IO
+from feed_maker_util import IO
 from typing import List, Dict
 
 
@@ -106,7 +106,7 @@ def update_feedmaker_status(c) -> None:
 
 def print_mismatch_feeds(c) -> None:
     query_str = "SELECT feed_alias, feed_name, http_request, htaccess, public_html, feedmaker, last_request_date FROM feed_status WHERE http_request != 1 OR htaccess != 1 OR public_html != 1 OR feedmaker != 1 ORDER BY http_request, htaccess, public_html, feedmaker"
-    result_list: List[Dict[Str, Str]] = []
+    result_list: List[Dict[str, str]] = []
     for row in c.execute(query_str):
         result = {
             "feed_alias": row[0],
