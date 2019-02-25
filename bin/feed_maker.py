@@ -332,9 +332,7 @@ class FeedMaker:
                     end_idx = start_idx + self.WINDOW_SIZE
                     mtime = int(m.group("mtime"))
                     
-                    logger.info("start index: %d" % start_idx)
-                    logger.info("end index: %d" % end_idx)
-                    logger.info("last modified time: %d, %s" % (mtime, self.get_rss_date_str(mtime)))
+                    logger.info("start index: %d, end index:%d, last modified time: %d, %s" % (start_idx, end_idx, mtime, self.get_rss_date_str(mtime)))
                     return start_idx, end_idx, mtime
 
         # 처음 생성 시
@@ -354,8 +352,7 @@ class FeedMaker:
         if increment_size > 0:
             next_start_idx = start_idx + increment_size
             with open(self.start_idx_file_name, 'w', encoding='utf-8') as out_file:
-                logger.info("next start index: %d" % next_start_idx)
-                logger.info("current time: %d, %s" % (ts, self.get_rss_date_str(ts)))
+                logger.info("next start index: %d, current time: %d, %s" % (next_start_idx, ts, self.get_rss_date_str(ts)))
                 out_file.write("%d\t%d\n" % (int(next_start_idx), int(ts)))
 
 
@@ -395,13 +392,12 @@ class FeedMaker:
             sorted_feed_list = feed_id_sort_field_list
         
         start_idx, end_idx, mtime = self.get_idx_data()
-        logger.info("%d %d %d" % (start_idx, end_idx, mtime))
         for i, feed in enumerate(sorted_feed_list):
             id = feed["id"]
             if start_idx <= i < end_idx:
-                link, title = self.old_feed_list[i]
+                link, title = self.old_feed_list[id]
                 logger.info("%s\t%s" % (link, title))
-                self.new_feed_list.append(self.old_feed_list[i])
+                self.new_feed_list.append(self.old_feed_list[id])
 
         self.write_idx_data(start_idx, mtime)
     
