@@ -9,8 +9,8 @@ import time
 import pprint
 import logging
 import logging.config
-import feedmakerutil
-from feedmakerutil import Cache, IO
+import feed_maker_util
+from feed_maker_util import Cache, IO, exec_cmd, make_path
 from typing import List, Tuple, Optional
 
 
@@ -25,11 +25,11 @@ def download_image(path_prefix: str, img_url: str, img_ext: str, page_url: str) 
         return cache_file
     cmd = 'crawler.py --download "%s" --referer "%s" "%s"' % (cache_file, page_url, img_url)
     logger.debug("<!-- cmd: %s -->" % cmd)
-    (result, error) = feedmakerutil.exec_cmd(cmd)
+    (result, error) = exec_cmd(cmd)
     logger.debug("<!-- result: %s -->" % result)
     if error:
         time.sleep(5)
-        (result, error) = feedmakerutil.exec_cmd(cmd)
+        (result, error) = exec_cmd(cmd)
         if error:
             return None
     if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
@@ -80,7 +80,7 @@ def download_image_and_read_metadata(path_prefix: str, img_ext: str, page_url: s
             logger.debug("<!-- %s -> %s -->" % (img_url, cache_file))
             cmd = "../../../CartoonSplit/size.py " + cache_file
             logger.debug(cmd)
-            (result, error) = feedmakerutil.exec_cmd(cmd)
+            (result, error) = exec_cmd(cmd)
             if error:
                 logger.error("can't get the size of image file '%s', cmd='%s'" % (cache_file, cmd))
                 sys.exit(-1)
@@ -120,7 +120,7 @@ def merge_image_files(img_file_list: List[str], path_prefix: str, img_url: str, 
     for cache_file in img_file_list:
         cmd = cmd + cache_file + " "
     logger.debug(cmd)
-    (result, error) = feedmakerutil.exec_cmd(cmd)
+    (result, error) = exec_cmd(cmd)
     logger.debug(result)
     if error:
         logger.error("can't merge the image files, cmd='%s'" % cmd)
@@ -135,7 +135,7 @@ def crop_image_file(img_file: str) -> None:
     #
     cmd = "../../../CartoonSplit/innercrop -f 4 -m crop \"%s\" \"%s.temp\" && mv -f \"%s.temp\" \"%s\"" % (img_file, img_file, img_file, img_file)
     logger.debug(cmd)
-    (result, error) = feedmakerutil.exec_cmd(cmd)
+    (result, error) = exec_cmd(cmd)
     if error:
         # logger.error("can't crop the image file '%s', cmd='%s'" % (img_file, cmd))
         # sys.exit(-1)
@@ -159,7 +159,7 @@ def remove_image_files(img_file_list: List[str]) -> bool:
     for cache_file in img_file_list:
         cmd = cmd + "'" + cache_file + "' "
     logger.debug(cmd)
-    (result, error) = feedmakerutil.exec_cmd(cmd)
+    (result, error) = exec_cmd(cmd)
     logger.debug(result)
     if error:
         return False
@@ -171,7 +171,7 @@ def split_image_file(img_file: str, num_units: int, bgcolor_option: str, orienta
     # split the image
     cmd = "../../../CartoonSplit/split.py -b 10 -t 0.03 -n %d %s %s %s" % (num_units, orientation_option, bgcolor_option, img_file)
     logger.debug(cmd)
-    (result, error) = feedmakerutil.exec_cmd(cmd)
+    (result, error) = exec_cmd(cmd)
     logger.debug(result)
     if error:
         logger.error("can't split the image file, cmd='%s'" % cmd)
@@ -209,12 +209,12 @@ def print_usage(program_name: str) -> None:
 def main() -> int:
     cmd = "basename " + os.getcwd()
     logger.debug(cmd)
-    (result, error) = feedmakerutil.exec_cmd(cmd)
+    (result, error) = exec_cmd(cmd)
     feed_name = result.rstrip()
     logger.debug("<!-- feed_name=%s -->" % feed_name)
     path_prefix = os.environ["FEED_MAKER_WWW_FEEDS_DIR"] + "/img/" + feed_name
     logger.debug("<!--- path_prefix=%s -->" % path_prefix)
-    feedmakerutil.make_path(path_prefix)
+    make_path(path_prefix)
 
     img_url_prefix = "https://terzeron.com/xml/img/" + feed_name
     img_ext = "jpg"

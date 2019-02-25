@@ -7,7 +7,7 @@ import sys
 import re
 import logging
 import logging.config
-import feedmakerutil
+from feed_maker_util import exec_cmd
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
@@ -23,7 +23,7 @@ def main(rss_file: str) -> int:
         # 과거 파일이 존재하면 비교해보고 다른 경우에만 업로드
         cmd: str = "diff '%s' '%s' | egrep -v \"(^(<|>) <(pubDate|lastBuildDate))|(^---$)|(^[0-9,]+[a-z][0-9,]+$)\" | wc -c" % (rss_file, old_rss_file)
         logger.debug(cmd)
-        (result, error) = feedmakerutil.exec_cmd(cmd)
+        result, error = exec_cmd(cmd)
         if not error:
             logger.debug(result)
             match = re.search(r"^\s*(\d+)\s*$", result)
@@ -39,7 +39,7 @@ def main(rss_file: str) -> int:
     if do_upload:
         cmd = "cp %s %s" % (rss_file, d)
         logger.debug(cmd)
-        result, error = feedmakerutil.exec_cmd(cmd)
+        result, error = exec_cmd(cmd)
         if not error:
             logger.info("Upload success!")
             return 0

@@ -9,8 +9,8 @@ import html
 import logging
 import logging.config
 from bs4 import BeautifulSoup, Comment
-import feedmakerutil
-from feedmakerutil import Config, URL, IO, HTMLExtractor
+import feed_maker_util
+from feed_maker_util import Config, URL, IO, HTMLExtractor, header_str, exec_cmd
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
@@ -19,15 +19,15 @@ logger = logging.getLogger()
 footnote_num = 0
 
 
-def print_header():
-    print(feedmakerutil.header_str)
+def print_header() -> None:
+    print(header_str)
 
 
-def print_trailer():
+def print_trailer() -> None:
     pass
 
 
-def extract_content(args):
+def extract_content(args) -> int:
     item_url = args[0]
     file = ""
     if len(args) > 1:
@@ -68,7 +68,7 @@ def extract_content(args):
         print_header()
 
     # main article sections
-    ret = True
+    ret = 0
     for parser in ["html.parser", "html5lib", "lxml"]:
         soup = BeautifulSoup(html_content, parser)
         '''
@@ -110,7 +110,7 @@ def check_element_class(element, element_name, class_name):
     return False
 
 
-def traverse_element(element, url, encoding):
+def traverse_element(element, url, encoding) -> int:
     global footnote_num
     ret = -1
 
@@ -288,7 +288,7 @@ def traverse_element(element, url, encoding):
                         leaf_id, article_num, page_num)
                     cmd = "crawler.py '%s' | extract_literature.py" % url
                     logger.debug(cmd)
-                    (result, error) = feedmakerutil.exec_cmd(cmd)
+                    (result, error) = exec_cmd(cmd)
                     if not error:
                         print(result)
                     ret = 1
@@ -334,7 +334,7 @@ def traverse_element(element, url, encoding):
     return ret
 
 
-def print_usage():
+def print_usage() -> None:
     print("_usage:\t%s\t[ <option> ] <file or url> <html file>" % sys.argv[0])
     print()
 
@@ -344,4 +344,4 @@ if __name__ == "__main__":
         print_usage()
         sys.exit(-1)
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)
-    extract_content(sys.argv[1:])
+    sys.exit(extract_content(sys.argv[1:]))

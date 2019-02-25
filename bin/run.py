@@ -11,8 +11,8 @@ import logging.config
 import concurrent.futures
 import getopt
 from typing import Dict, Tuple, List, Any, Set
-import feedmakerutil
-from feedmakerutil import Config
+from feed_maker_util import Config, exec_cmd, find_process_group
+from feed_maker import FeedMaker
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
@@ -35,7 +35,7 @@ def send_error_msg(msg: str) -> bool:
     }' https://api.line.me/v2/bot/message/push
     ''' % msg[:1999]).split("\n"))
     print(cmd)
-    result, error = feedmakerutil.exec_cmd(cmd)
+    result, error = exec_cmd(cmd)
     if error:
         logger.error(error)
         return False
@@ -59,12 +59,12 @@ def execute_job(feed_dir: str, runlog: str, errorlog: str, list_archiving_period
         collection_conf = config.get_collection_configs()
         if collection_conf["is_completed"] and not do_exist_old_list_file:
             cmd = "run.py -c"
-            result, error = feedmakerutil.exec_cmd(cmd)
+            result, error = exec_cmd(cmd)
             if error:
                 return False
         
         cmd = "run.py"
-        result, error = feedmakerutil.exec_cmd(cmd)
+        result, error = exec_cmd(cmd)
         if error:
             return False
     return True
@@ -83,8 +83,9 @@ def determine_options() -> Tuple[Dict[str, Any], List[str]]:
     do_make_all_feeds = False
     do_remove_all_files = False
     force_collection_opt = ""
+    collect_only_opt = ""
 
-    optlist, args = getopt.getopt(sys.argv[1:], "ahrc")
+    optlist, args = getopt.getopt(sys.argv[1:], "ahrcl")
     for o, a in optlist:
         if o == "-a":
             do_make_all_feeds = True
@@ -95,11 +96,14 @@ def determine_options() -> Tuple[Dict[str, Any], List[str]]:
             do_remove_all_files = True
         elif o == "-c":
             force_collection_opt = "-c"
+        elif o == "-l":
+            collect_only_opt = "-l"
 
     options = {
         "do_make_all_feeds": do_make_all_feeds,
         "do_remove_all_files": do_remove_all_files,
         "force_collection_opt": force_collection_opt,
+        "collect_only_opt": collect_only_opt,
     }
     return options, args
 
@@ -128,7 +132,7 @@ def remove_image_files_old_and_with_zero_size(img_dir: str, max_archiving_period
                     os.remove(file_path)
 
             
-def remove_all_files(feed_xml_file: str) -> None:
+def remove_all_files(rss_file_name: str) -> None:
     for file in os.listdir("html"):
         file_path = os.path.join("html", file)
         if os.path.isfile(file_path):
@@ -137,7 +141,7 @@ def remove_all_files(feed_xml_file: str) -> None:
         file_path = os.path.join("newlist", file)
         if os.path.isfile(file_path):
             os.remove(file_path)
-    for file in ["start_idx.txt", feed_xml_file, feed_xml_file + ".old", "error.log", "collector.error.log", "run.log"]:
+    for file in ["start_idx.txt", rss_file_name, rss_file_name + ".old", "error.log", "collector.error.log", "run.log"]:
         if os.path.isfile(file):
             os.remove(file)
 
@@ -183,36 +187,42 @@ def remove_temporary_files() -> None:
             os.remove(file)
 
 
-def remove_unused_img_files(feed_xml_file: str, img_dir: str) -> None:
-    if not os.path.isfile(feed_xml_file):
+def remove_unused_img_files(rss_file_name: str, img_dir: str) -> None:
+    if not os.path.isfile(rss_file_name):
         return
     
     img_set_in_img_dir = get_img_set_in_img_dir(img_dir)
     img_set_in_xml_file = set([])
 
-    with open(feed_xml_file) as f:
+    # rss 파일 내부의 이미지 파일을 모아서
+    with open(rss_file_name) as f:
         for line in f:
-            m = re.search(r'img src=[\"\']https?://terzeron\.com/xml/img/[^/]+/(?P<img>[^\'\"]+(\.jpg)?)[\"\']', line)
+            m = re.search(r'img src=[\"\']https?://terzeron\.com/xml/img/[^/]+/(?P<img>[^\"\']+)[\"\']', line)
             if m:
                 img_file = m.group("img")
                 img_set_in_xml_file.add(img_file)
 
-    for img_file in img_set_in_img_dir - img_set_in_xml_file:
-        logger.info("deleting unused image file '%s'" % img_file)
+    # 이미지 디렉토리에만 존재하는 이미지 파일을 모두 삭제
+    for img_file in sorted(img_set_in_img_dir - img_set_in_xml_file):
+        logger.info("deleting unused image file '%s' from '%s'" % (img_file, img_dir))
         img_file_path = os.path.join(img_dir, img_file)
         os.remove(img_file_path)
 
 
-def make_single_feed(feed_name: str, img_dir: str, archiving_period: int, do_remove_all_files: bool, force_collection_opt: str) -> bool:
+def make_single_feed(feed_name: str, img_dir: str, archiving_period: int, options: Dict[str, Any]) -> bool:
     logger.info(feed_name)
-    feed_xml_file = feed_name + ".xml"
+    rss_file_name = feed_name + ".xml"
 
     config = Config()
     collection_conf = config.get_collection_configs()
 
+    do_remove_all_files = options["do_remove_all_files"]
+    force_collection_opt = options["force_collection_opt"]
+    collect_only_opt = options["collect_only_opt"]
+
     if do_remove_all_files:
         # -r 옵션 사용하면 html 디렉토리의 파일들, newlist 디렉토리의 파일들, 각종 로그 파일, feed xml 파일들을 삭제
-        remove_all_files(feed_xml_file)
+        remove_all_files(rss_file_name)
     else:
         # 진행 중 피드이고
         if not collection_conf["is_completed"]:
@@ -223,23 +233,18 @@ def make_single_feed(feed_name: str, img_dir: str, archiving_period: int, do_rem
     remove_html_files_without_cached_image_files(img_dir)
 
     # make_feed.py 실행하여 feed 파일 생성
-    logger.info("making feed file '%s'" % feed_xml_file)
-    cmd = "make_feed.py %s %s" % (force_collection_opt, feed_xml_file)
-    logger.info(cmd)
-    result, error = feedmakerutil.exec_cmd(cmd)
+    logger.info("making feed file '%s'" % rss_file_name)
+    feed_maker = FeedMaker(force_collection_opt, collect_only_opt, rss_file_name)
+    result = feed_maker.make()
 
     # 불필요한 파일 삭제
     remove_temporary_files()
 
     # 진행 중 피드인 경우, 파일에 포함되지 않은 이미지 삭제
     if not collection_conf["is_completed"]:
-        remove_unused_img_files(feed_xml_file, img_dir)
+        remove_unused_img_files(rss_file_name, img_dir)
 
-    if error:
-        logger.error(error)
-        return False
-    print(result)
-    return True
+    return result
 
 
 def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
@@ -282,7 +287,7 @@ def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
         send_error_msg(", ".join(failed_feed_list))
 
     cmd = "find_problems.sh > %s/find_problems.log 2>&1" % log_dir
-    res, error = feedmakerutil.exec_cmd(cmd)
+    res, error = exec_cmd(cmd)
     if error:
         send_error_msg(error)
     return not error
@@ -290,7 +295,7 @@ def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
 
 def kill_chrome_process_group(proc_name: str) -> None:
     import psutil
-    pid_list = feedmakerutil.find_process_group(proc_name)
+    pid_list = find_process_group(proc_name)
     for pid in pid_list:
         p = psutil.Process(pid)
         p.terminate()
@@ -318,7 +323,7 @@ def main() -> int:
     else:
         feed_name = os.path.basename(os.getcwd())
         img_dir = os.path.join(os.getenv("FEED_MAKER_WWW_FEEDS_DIR"), "img", feed_name)
-        result = make_single_feed(feed_name, img_dir, archiving_period, options["do_remove_all_files"], options["force_collection_opt"])
+        result = make_single_feed(feed_name, img_dir, archiving_period, options)
         
     end_ts = time.time()
     print(time.ctime(end_ts))
@@ -329,3 +334,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+    

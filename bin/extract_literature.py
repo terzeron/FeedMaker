@@ -4,7 +4,7 @@
 
 import sys
 from bs4 import BeautifulSoup
-from feedmakerutil import IO
+from feed_maker_util import IO
 
 
 def read_file(file):
@@ -28,12 +28,13 @@ def traverse_element(element):
         prev_href = a['href']
 
 
-def main():
+def main() -> int:
     html = IO.read_stdin()
     soup = BeautifulSoup(html, 'html.parser')
     text = soup.find(attrs={"id": "navercast_div"})
     if text:
         print(text)
+    return 0
 
 
 if __name__ == "__main__":

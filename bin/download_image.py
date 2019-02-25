@@ -7,8 +7,7 @@ import re
 import time
 import logging
 import logging.config
-import feedmakerutil
-from feedmakerutil import IO, Cache
+from feed_maker_util import IO, Cache, exec_cmd, make_path
 from typing import List, Optional
 from base64 import b64decode
 
@@ -39,11 +38,11 @@ def download_image(path_prefix: str, img_url_or_data: str, page_url: str) -> Opt
         logger.debug("image url '%s' to cache file '%s'" % (img_url, cache_file))
         cmd = 'crawler.py --download "%s" --referer "%s" "%s"' % (cache_file, page_url, img_url)
         logger.debug("%s" % cmd)
-        (result, error) = feedmakerutil.exec_cmd(cmd)
+        (result, error) = exec_cmd(cmd)
         logger.debug("result: %s" % result)
         if error:
             time.sleep(5)
-            (result, error) = feedmakerutil.exec_cmd(cmd)
+            (result, error) = exec_cmd(cmd)
             if error:
                 return None
     else:
@@ -55,7 +54,7 @@ def download_image(path_prefix: str, img_url_or_data: str, page_url: str) -> Opt
 
 def main() -> int:
     cmd = "basename " + os.getcwd()
-    (result, error) = feedmakerutil.exec_cmd(cmd)
+    (result, error) = exec_cmd(cmd)
     if error:
         return -1
 
@@ -64,7 +63,7 @@ def main() -> int:
     path_prefix = os.environ["FEED_MAKER_WWW_FEEDS_DIR"] + "/img/" + feed_name
     page_url = sys.argv[1]
 
-    feedmakerutil.make_path(path_prefix)
+    make_path(path_prefix)
 
     line_list: List[str] = IO.read_stdin_as_line_list()
     for line in line_list:

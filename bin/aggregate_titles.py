@@ -8,8 +8,7 @@ import getopt
 import subprocess
 import logging
 import logging.config
-import feedmakerutil
-from feedmakerutil import IO
+from feed_maker_util import IO, exec_cmd
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
@@ -63,7 +62,7 @@ def main():
     cluster_dir = os.environ["FEED_MAKER_HOME_DIR"] + "/../HierarchicalClustering"
     cmd = "%s/hcluster -t '%f' -s stop_words.txt '%s' '%s'" % (cluster_dir, threshold, intermediate_file, temp_output_file)
     logger.debug(cmd)
-    (result, error) = feedmakerutil.exec_cmd(cmd)
+    (result, error) = exec_cmd(cmd)
     logger.debug(result)
 
     # convert & extract temporary output file

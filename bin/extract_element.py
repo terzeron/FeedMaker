@@ -8,7 +8,7 @@ import signal
 import logging
 import logging.config
 from bs4 import BeautifulSoup
-from feedmakerutil import Config, IO, HTMLExtractor
+from feed_maker_util import Config, IO, HTMLExtractor
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
