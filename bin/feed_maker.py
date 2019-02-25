@@ -46,6 +46,7 @@ class FeedMaker:
         self.recent_feed_list: List[Tuple[str, str]] = []
         self.old_feed_list: List[Tuple[str, str]] = []
         self.new_feed_list: List[Tuple[str, str]] = []
+        self.result_feed_list: List[Tuple[str, str]] = []
 
         
     def get_pub_date_str(self, file_name: str) -> str:
@@ -171,8 +172,10 @@ class FeedMaker:
         date_str = self.get_date_str()
         temp_rss_file_name = self.rss_file_name + "." + date_str
     
+        logger.info("Generating rss feed file...")
         rss_items: List[PyRSS2Gen.RSSItem] = []
-        for link, title in self.new_feed_list:
+        for link, title in self.result_feed_list:
+            logger.info("%s\t%s" % (link, title))
             html_file_name = self.get_html_file_name(link)
             pub_date_str = self.get_rss_date_str()
     
@@ -242,7 +245,7 @@ class FeedMaker:
         return True
     
     
-    def make_html_file(self, link: str, title: str) -> None:
+    def make_html_file(self, link: str, title: str) -> bool:
         html_file_name = self.get_html_file_name(link)
         if os.path.isfile(html_file_name):
             size = os.stat(html_file_name).st_size
@@ -252,6 +255,7 @@ class FeedMaker:
         if os.path.isfile(html_file_name) and size > len(header_str) + len(self.image_tag_fmt_str) + 1:
             # 이미 성공적으로 만들어져 있으니까 피드 리스트에 추가
             logger.info("Success: %s: %s --> %s: %d" % (title, link, html_file_name, size))
+            ret = True
         else:
             # 파일이 존재하지 않거나 크기가 작으니 다시 생성 시도
             cmd = self.determine_cmd(link, html_file_name)
@@ -262,7 +266,7 @@ class FeedMaker:
                 result, error = exec_cmd(cmd)
                 if error:
                     logger.error("can't extract HTML elements")
-                    sys.exit(-1)
+                    return False
     
             if os.path.isfile(html_file_name):
                 size = os.stat(html_file_name).st_size
@@ -278,13 +282,15 @@ class FeedMaker:
     
                 # 피드 리스트에 추가
                 logger.info("Success: %s: %s --> %s: %d" % (title, link, html_file_name, size))
+                ret = True
             else:
                 # 피드 리스트에서 제외
                 logger.warning("%s: %s --> %s: %d (<= %d byte of header)" % (title, link, html_file_name, size, len(header_str) + len(self.image_tag_fmt_str) + 1))
-                return
+                ret = False
     
             if self.extraction_conf["force_sleep_between_articles"]:
                 time.sleep(1)
+        return ret
     
     
     def determine_cmd(self, link: str, html_file_name: str) -> str:
@@ -313,11 +319,13 @@ class FeedMaker:
         # collect items to be generated as RSS feed
         logger.info("Appending %d new items to the feed list" % (len(self.new_feed_list)))
         for link, title in reversed(self.new_feed_list):
-            self.make_html_file(link, title)
+            if self.make_html_file(link, title):
+                self.result_feed_list.append((link, title))
 
         logger.info("Appending %d old items to the feed list" % (len(self.old_feed_list)))
         for link, title in reversed(self.old_feed_list):
-            self.make_html_file(link, title)
+            if self.make_html_file(link, title):
+                self.result_feed_list.append((link, title))
     
         
     def get_idx_data(self) -> Tuple[int, int, int]:
@@ -397,7 +405,7 @@ class FeedMaker:
             if start_idx <= i < end_idx:
                 link, title = self.old_feed_list[id]
                 logger.info("%s\t%s" % (link, title))
-                self.new_feed_list.append(self.old_feed_list[id])
+                self.result_feed_list.append(self.old_feed_list[id])
 
         self.write_idx_data(start_idx, mtime)
     
@@ -446,7 +454,7 @@ class FeedMaker:
             logger.info("self.extraction_conf=%s" % pprint.pformat(self.extraction_conf))
 
             self.diff_feeds_and_make_htmls()
-            if not self.new_feed_list or len(self.new_feed_list) == 0:
+            if not self.result_feed_list or len(self.result_feed_list) == 0:
                 logger.info("No new feeds, no update of rss file")
     
         if not self.do_collect_by_force:
