@@ -448,7 +448,6 @@ class FeedMaker:
             self.diff_feeds_and_make_htmls()
             if not self.new_feed_list or len(self.new_feed_list) == 0:
                 logger.info("No new feeds, no update of rss file")
-                return False
     
         if not self.do_collect_by_force:
             # generate RSS feed
