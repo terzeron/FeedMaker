@@ -23,10 +23,10 @@ Usage
 
 * Apply environment variables
   * `. <feedmaker dir>/bin/setup.sh`
-  * ex) `. $HOME/workspace/FeedMaker/bin/setup.sh`
+  * ex) `. $HOME/workspace/fm/bin/setup.sh`
 * Change thcurrent working directory to a feed directory
   * `cd <application dir>/<sitedir>/<feeddir>`
-  * ex) `cd $HOME/workspace/FeedMakerApplications/naver/navercast.118`
+  * ex) `cd $HOME/workspace/fma/naver/navercast.118`
 * Run the FeedMaker
   * `run.py`
 
