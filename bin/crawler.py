@@ -29,13 +29,13 @@ class Method(Enum):
 
 class HeadlessBrowser:
     def make_request(self, url) -> Optional[str]:
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--window-size=1920x1080")
-        chrome_options.add_argument("--disable-web-security")
-        chrome_options.add_argument("--allow-running-insecure-content")
+        options = Options()
+        options.add_argument("--headless")
+        options.add_argument("--window-size=1920x1080")
+        options.add_argument("--disable-web-security")
+        options.add_argument("--allow-running-insecure-content")
         chrome_driver = "chromedriver"
-        driver = webdriver.Chrome(chrome_options=chrome_options, executable_path=chrome_driver)
+        driver = webdriver.Chrome(options=options, executable_path=chrome_driver)
 
         driver.get(url)
         driver.execute_script('''
