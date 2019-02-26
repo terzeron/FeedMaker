@@ -21,21 +21,21 @@ Requirements
 Usage
 -----
 
-1. Apply environment variables
+* Apply environment variables
   * `. <feedmaker dir>/bin/setup.sh`
   * ex) `. $HOME/workspace/FeedMaker/bin/setup.sh`
-1. Change thcurrent working directory to a feed directory
+* Change thcurrent working directory to a feed directory
   * `cd <application dir>/<sitedir>/<feeddir>`
   * ex) `cd $HOME/workspace/FeedMakerApplications/naver/navercast.118`
-1. Run the FeedMaker
+* Run the FeedMaker
   * `run.py`
 
 Test
 ----
 
-1. Apply environment variables 
+* Apply environment variables 
   * `. <feedmaker dir>/bin/setup.sh`
-1. Change the current working directory to test directory
+* Change the current working directory to test directory
   * `cd test`
-1. Run the test scripts
+* Run the test scripts
   * `make test`
