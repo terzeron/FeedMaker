@@ -14,8 +14,8 @@ def test_script(script, work_dir, test_dir, index):
     (result, error) = feed_maker_util.exec_cmd(cmd)
     if not error:
         os.chdir(test_dir)
-        return filecmp.cmp("result.%d.temp" % index, "expected.output.%d.txt" % index)
-    return False
+        return (filecmp.cmp("result.%d.temp" % index, "expected.output.%d.txt" % index), cmd)
+    return (False, cmd)
 
 
 def main():
@@ -37,8 +37,9 @@ def main():
             print(feed, index, script)
             work_dir = fm_cwd + "/" + feed
             test_dir = fm_home + "/test/" + feed
-            if not test_script(script, work_dir, test_dir, index):
-                print("Error in %s of %s\n" % (feed, script))
+            result, cmd = test_script(script, work_dir, test_dir, index)
+            if not result:
+                print("Error in '%s'\n" % (cmd))
                 return -1
     print("Ok")
     

@@ -434,34 +434,73 @@ class Config:
 
 
 class URL:
+    # http://naver.com/api/items?page_no=3 => http
     @staticmethod
-    def get_url_prefix(url: str) -> str:
-        protocol = "http://"
-        protocol_len = len(protocol)
-        if url[:protocol_len] == protocol:
-            # http:// 뒷쪽부터 /의 마지막 위치를 찾아냄
-            index = url.rfind('/', protocol_len)
-            return url[:index + 1]
+    def get_url_scheme(url: str) -> str:
+        scheme_separator = "://"
+        separator_index = url.find(scheme_separator)
+        if separator_index >= 0:
+            return url[:separator_index]
         return ""
 
+    # http://naver.com/api/items?page_no=3 => naver.com
     @staticmethod
     def get_url_domain(url: str) -> str:
-        protocol = "http://"
-        protocol_len = len(protocol)
-        if url[:protocol_len] == protocol:
-            index = url.find('/', protocol_len)
-            return url[:index + 1]
+        scheme_separator = "://"
+        host_index = url.find(scheme_separator) + len(scheme_separator)
+        if host_index >= 0:
+            first_slash_index = url[host_index:].find('/', host_index)
+            if first_slash_index >= 0:
+                return url[host_index:(host_index+first_slash_index)]
         return ""
 
+    # http://naver.com/api/items?page_no=3 => /api/items?page_no=3
+    @staticmethod
+    def get_url_path(url: str) -> str:
+        scheme_separator = "://"
+        host_index = url.find(scheme_separator) + len(scheme_separator)
+        if host_index >= 0:
+            first_slash_index = url[host_index:].find('/', host_index)
+            if first_slash_index >= 0:
+                return url[(host_index+first_slash_index):]
+        return ""
+
+    # http://naver.com/api/items?page_no=3 => http://naver.com/api/
+    @staticmethod
+    def get_url_prefix(url: str) -> str:
+        scheme_separator = "://"
+        host_index = url.find(scheme_separator) + len(scheme_separator)
+        if host_index >= 0:
+            last_slash_index = url.rfind('/', host_index)
+            if last_slash_index >= 0:
+                return url[:(last_slash_index + 1)]
+        return ""
+
+    # http://naver.com/api/items?page_no=3 => http://naver.com/api/items
+    @staticmethod
+    def get_url_except_query(url: str) -> str:
+        query_index = url.find('?')
+        if query_index >= 0:
+            return url[:query_index]
+        return url
+
+    # http://naver.com/api + /data => http://naver.com/data
+    # http://naver.com/api + data => http://naver.com/api/data
+    # http://naver.com/api/view.nhn?page_no=3 + # => http://naver.com/api/view.nhn?page_no=3
     @staticmethod
     def concatenate_url(full_url: str, url2: str) -> str:
+        if url2 == "#":
+            return full_url
         if len(url2) > 0 and url2[0] == '/':
-            url1 = URL.get_url_domain(full_url)
+            url1 = URL.get_url_scheme(full_url) + "://" + URL.get_url_domain(full_url)
         else:
-            url1 = URL.get_url_prefix(full_url)
+            url1 = URL.get_url_except_query(full_url)
+
         if len(url1) > 0 and len(url2) > 0:
             if url1[-1] == '/' and url2[0] == '/':
                 return url1 + url2[1:]
+            if url1[-1] != '/' and url2[0] != '/':
+                return url1 + '/' + url2
         return url1 + url2
 
     @staticmethod
