@@ -24,3 +24,4 @@ www/work
 result.*.temp
 .mypy_cache/
 .idea/
+TAGS

@@ -325,6 +325,7 @@ class Config:
         if "collection" in self.config:
             collection_conf = self.config["collection"]
 
+            render_js = self._get_bool_config_value(collection_conf, "render_js")
             item_capture_script = self._get_str_config_value(collection_conf, "item_capture_script", "./capture_item_link_title.py")
             ignore_old_list = self._get_bool_config_value(collection_conf, "ignore_old_list")
             is_completed = self._get_bool_config_value(collection_conf, "is_completed")
@@ -339,6 +340,7 @@ class Config:
             element_path_list = self._get_config_value_list(collection_conf, "element_path", [])
             post_process_script_list = self._get_config_value_list(collection_conf, "post_process_script", [])
             conf = {
+                "render_js": render_js,
                 "item_capture_script": item_capture_script,
                 "ignore_old_list": ignore_old_list,
                 "is_completed": is_completed,
