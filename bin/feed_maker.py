@@ -48,6 +48,16 @@ class FeedMaker:
         self.new_feed_list: List[Tuple[str, str]] = []
         self.result_feed_list: List[Tuple[str, str]] = []
 
+
+    def _get_size_of_template_with_img_tag(self) -> int:
+        md5_name = URL.get_short_md5_name("any_url")
+        return len(header_str) + len(self.image_tag_fmt_str) - len("%s") - len("%s") + len(self.rss_file_name) + len(md5_name) + len("\n<div>\n</div>\n") + 1
+        
+        
+    def _get_size_of_template(self) -> int:
+        md5_name = URL.get_short_md5_name("any_url")
+        return len(header_str) + len("\n<div>\n</div>\n") + 1
+
         
     def get_pub_date_str(self, file_name: str) -> str:
         if os.path.isfile(file_name):
@@ -252,9 +262,9 @@ class FeedMaker:
         else:
             size = 0
     
-        if os.path.isfile(html_file_name) and size > len(header_str) + len(self.image_tag_fmt_str) + 1:
+        if os.path.isfile(html_file_name) and size > self._get_size_of_template_with_img_tag():
             # 이미 성공적으로 만들어져 있으니까 피드 리스트에 추가
-            logger.info("Success: %s: %s --> %s: %d" % (title, link, html_file_name, size))
+            logger.info("Success: %s: %s --> %s: %d (> %d byte of template)" % (title, link, html_file_name, size, self._get_size_of_template_with_img_tag()))
             ret = True
         else:
             # 파일이 존재하지 않거나 크기가 작으니 다시 생성 시도
@@ -274,18 +284,18 @@ class FeedMaker:
                 size = 0
     
             md5_name = URL.get_short_md5_name(link)
-            if size > len(header_str) + 1:
+            if size > self._get_size_of_template():
                 # append image_tag_str to html_file_name
                 image_tag_str = self.image_tag_fmt_str % (self.rss_file_name, md5_name)
                 with open(html_file_name, "a") as outfile:
                     outfile.write(image_tag_str)
     
                 # 피드 리스트에 추가
-                logger.info("Success: %s: %s --> %s: %d" % (title, link, html_file_name, size))
+                logger.info("Success: %s: %s --> %s: %d (> %d byte of template)" % (title, link, html_file_name, size, self._get_size_of_template()))
                 ret = True
             else:
                 # 피드 리스트에서 제외
-                logger.warning("%s: %s --> %s: %d (<= %d byte of header)" % (title, link, html_file_name, size, len(header_str) + len(self.image_tag_fmt_str) + 1))
+                logger.warning("%s: %s --> %s: %d (<= %d byte of template)" % (title, link, html_file_name, size, self._get_size_of_template()))
                 ret = False
     
             if self.extraction_conf["force_sleep_between_articles"]:
