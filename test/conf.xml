@@ -15,6 +15,7 @@
 		<element_list>
 			<element_id>ct</element_id>
 			<element_id>content</element_id>
+			<element_class>se_doc_viewer</element_class>
 			<element_class>content_view</element_class>
 		</element_list>
         <post_process_script>post_process_script_for_navercast.py</post_process_script>

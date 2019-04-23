@@ -90,7 +90,7 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(configs["review_point_threshold"], None)
         self.assertNotEqual(configs["user_agent"], None)
         self.assertEqual(configs["element_id_list"], ["ct", "content"])
-        self.assertEqual(configs["element_class_list"], ["content_view"])
+        self.assertEqual(configs["element_class_list"], ["se_doc_viewer", "content_view"])
         self.assertEqual(configs["element_path_list"], [])
         self.assertEqual(configs["post_process_script_list"], ["post_process_script_for_navercast.py"])
         self.assertEqual(configs["header_list"], [])
@@ -108,19 +108,75 @@ class ConfigTest(unittest.TestCase):
 
 
 class UtilTest(unittest.TestCase):
-    def test_get_url_prefix(self):
-        prefix = URL.get_url_prefix("http://www.naver.com/movie/hello/test.nhn?query=test")
-        self.assertEqual(prefix, "http://www.naver.com/movie/hello/")
+    def test_get_url_scheme(self):
+        scheme = URL.get_url_scheme("http://www.naver.com/movie/hello/test.nhn?query=test")
+        self.assertEqual(scheme, "http")
+        scheme = URL.get_url_scheme("https://www.naver.com/movie/hello/test.nhn?query=test")
+        self.assertEqual(scheme, "https")
 
     def test_get_url_domain(self):
         domain = URL.get_url_domain("http://www.naver.com/movie/hello/test.nhn?query=test")
-        self.assertEqual(domain, "http://www.naver.com/")
+        self.assertEqual(domain, "www.naver.com")
+        domain = URL.get_url_domain("https://www.naver.com/movie/hello/test.nhn?query=test")
+        self.assertEqual(domain, "www.naver.com")
+
+    def test_get_url_path(self):
+        path = URL.get_url_path("http://www.naver.com/movie/hello/test.nhn?query=test")
+        self.assertEqual(path, "/movie/hello/test.nhn?query=test")
+        path = URL.get_url_path("https://www.naver.com/movie/hello/test.nhn?query=test")
+        self.assertEqual(path, "/movie/hello/test.nhn?query=test")
+
+    def test_get_url_prefix(self):
+        prefix = URL.get_url_prefix("http://www.naver.com/movie")
+        self.assertEqual(prefix, "http://www.naver.com/")
+        prefix = URL.get_url_prefix("https://www.naver.com/movie")
+        self.assertEqual(prefix, "https://www.naver.com/")
+        prefix = URL.get_url_prefix("http://www.naver.com/movie/hello/test.nhn?query=test")
+        self.assertEqual(prefix, "http://www.naver.com/movie/hello/")
+        prefix = URL.get_url_prefix("https://www.naver.com/movie/hello/test.nhn?query=test")
+        self.assertEqual(prefix, "https://www.naver.com/movie/hello/")
+
+    def test_get_url_except_query(self):
+        result = URL.get_url_except_query("http://www.naver.com/movie")
+        self.assertEqual(result, "http://www.naver.com/movie")
+        result = URL.get_url_except_query("https://www.naver.com/movie")
+        self.assertEqual(result, "https://www.naver.com/movie")
+        result = URL.get_url_except_query("http://www.naver.com/movie?page_no=3")
+        self.assertEqual(result, "http://www.naver.com/movie")
+        result = URL.get_url_except_query("https://www.naver.com/movie?page_no=3")
+        self.assertEqual(result, "https://www.naver.com/movie")
+        result = URL.get_url_except_query("http://www.naver.com/movie/hello/test.nhn?query=test")
+        self.assertEqual(result, "http://www.naver.com/movie/hello/test.nhn")
+        result = URL.get_url_except_query("https://www.naver.com/movie/hello/test.nhn?query=test")
+        self.assertEqual(result, "https://www.naver.com/movie/hello/test.nhn")
 
     def test_concatenate_url(self):
-        url = URL.concatenate_url("http://www.naver.com/movie", "hello")
-        self.assertEqual(url, "http://www.naver.com/hello")
-        url = URL.concatenate_url("http://www.naver.com/movie/", "hello")
-        self.assertEqual(url, "http://www.naver.com/movie/hello")
+        url = URL.concatenate_url("http://www.naver.com/movie", "/sports")
+        self.assertEqual(url, "http://www.naver.com/sports")
+        url = URL.concatenate_url("http://www.naver.com/movie/", "/sports")
+        self.assertEqual(url, "http://www.naver.com/sports")
+        url = URL.concatenate_url("https://www.naver.com/movie", "/sports")
+        self.assertEqual(url, "https://www.naver.com/sports")
+        url = URL.concatenate_url("https://www.naver.com/movie/", "/sports")
+        self.assertEqual(url, "https://www.naver.com/sports")
+
+        url = URL.concatenate_url("http://www.naver.com/movie", "sports")
+        self.assertEqual(url, "http://www.naver.com/movie/sports")
+        url = URL.concatenate_url("http://www.naver.com/movie/", "sports")
+        self.assertEqual(url, "http://www.naver.com/movie/sports")
+        url = URL.concatenate_url("https://www.naver.com/movie", "sports")
+        self.assertEqual(url, "https://www.naver.com/movie/sports")
+        url = URL.concatenate_url("https://www.naver.com/movie/", "sports")
+        self.assertEqual(url, "https://www.naver.com/movie/sports")
+
+        url = URL.concatenate_url("http://www.naver.com/movie", "#")
+        self.assertEqual(url, "http://www.naver.com/movie")
+        url = URL.concatenate_url("http://www.naver.com/movie/", "#")
+        self.assertEqual(url, "http://www.naver.com/movie/")
+        url = URL.concatenate_url("http://www.naver.com/view.nhn?page_no=3", "#")
+        self.assertEqual(url, "http://www.naver.com/view.nhn?page_no=3")
+        url = URL.concatenate_url("http://www.naver.com/movie/view.nhn?page_no=3", "#")
+        self.assertEqual(url, "http://www.naver.com/movie/view.nhn?page_no=3")
 
     def test_get_short_md5_name(self):
         self.assertEqual(URL.get_short_md5_name("https://terzeron.com"), "b8025d0")
