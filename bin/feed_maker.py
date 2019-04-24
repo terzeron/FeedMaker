@@ -83,7 +83,11 @@ class FeedMaker:
     
 
     def get_html_file_name(self, link: str) -> str:
-        return "%s/%s.html" % (self.html_dir, URL.get_short_md5_name(link))
+        return "%s.html" % URL.get_short_md5_name(URL.get_url_path(link))
+    
+
+    def get_html_file_path(self, link: str) -> str:
+        return "%s/%s.html" % (self.html_dir, URL.get_short_md5_name(URL.get_url_path(link)))
     
     
     def cmp_int_or_str(self, a: Dict[str, str], b: Dict[str, str]) -> int:
@@ -186,12 +190,12 @@ class FeedMaker:
         rss_items: List[PyRSS2Gen.RSSItem] = []
         for link, title in self.result_feed_list:
             logger.info("%s\t%s" % (link, title))
-            html_file_name = self.get_html_file_name(link)
+            html_file_path = self.get_html_file_path(link)
             pub_date_str = self.get_rss_date_str()
     
             content = ""
-            with open(html_file_name, 'r', encoding='utf-8') as in_file:
-                logger.info("adding '%s' to the result" % html_file_name)
+            with open(html_file_path, 'r', encoding='utf-8') as in_file:
+                logger.info("adding '%s' to the result" % html_file_path)
                 for line in in_file:
                     content += line
                     # restrict big contents
@@ -256,19 +260,19 @@ class FeedMaker:
     
     
     def make_html_file(self, link: str, title: str) -> bool:
-        html_file_name = self.get_html_file_name(link)
-        if os.path.isfile(html_file_name):
-            size = os.stat(html_file_name).st_size
+        html_file_path = self.get_html_file_path(link)
+        if os.path.isfile(html_file_path):
+            size = os.stat(html_file_path).st_size
         else:
             size = 0
     
-        if os.path.isfile(html_file_name) and size > self._get_size_of_template_with_img_tag():
+        if os.path.isfile(html_file_path) and size > self._get_size_of_template_with_img_tag():
             # 이미 성공적으로 만들어져 있으니까 피드 리스트에 추가
-            logger.info("Success: %s: %s --> %s: %d (> %d byte of template)" % (title, link, html_file_name, size, self._get_size_of_template_with_img_tag()))
+            logger.info("Success: %s: %s --> %s: %d (> %d byte of template)" % (title, link, html_file_path, size, self._get_size_of_template_with_img_tag()))
             ret = True
         else:
             # 파일이 존재하지 않거나 크기가 작으니 다시 생성 시도
-            cmd = self.determine_cmd(link, html_file_name)
+            cmd = self.determine_cmd(link, html_file_path)
             logger.debug(cmd)
             result, error = exec_cmd(cmd)
             if error:
@@ -278,24 +282,24 @@ class FeedMaker:
                     logger.error("can't extract HTML elements")
                     return False
     
-            if os.path.isfile(html_file_name):
-                size = os.stat(html_file_name).st_size
+            if os.path.isfile(html_file_path):
+                size = os.stat(html_file_path).st_size
             else:
                 size = 0
     
-            md5_name = URL.get_short_md5_name(link)
+            md5_name = URL.get_short_md5_name(URL.get_url_path(link))
             if size > self._get_size_of_template():
-                # append image_tag_str to html_file_name
+                # append image_tag_str to html_file_path
                 image_tag_str = self.image_tag_fmt_str % (self.rss_file_name, md5_name)
-                with open(html_file_name, "a") as outfile:
+                with open(html_file_path, "a") as outfile:
                     outfile.write(image_tag_str)
     
                 # 피드 리스트에 추가
-                logger.info("Success: %s: %s --> %s: %d (> %d byte of template)" % (title, link, html_file_name, size, self._get_size_of_template()))
+                logger.info("Success: %s: %s --> %s: %d (> %d byte of template)" % (title, link, html_file_path, size, self._get_size_of_template()))
                 ret = True
             else:
                 # 피드 리스트에서 제외
-                logger.warning("%s: %s --> %s: %d (<= %d byte of template)" % (title, link, html_file_name, size, self._get_size_of_template()))
+                logger.warning("%s: %s --> %s: %d (<= %d byte of template)" % (title, link, html_file_path, size, self._get_size_of_template()))
                 ret = False
     
             if self.extraction_conf["force_sleep_between_articles"]:
@@ -303,7 +307,7 @@ class FeedMaker:
         return ret
     
     
-    def determine_cmd(self, link: str, html_file_name: str) -> str:
+    def determine_cmd(self, link: str, html_file_path: str) -> str:
         post_process_cmd = ""
         for script in self.extraction_conf["post_process_script_list"]:
             post_process_cmd += ' | %s "%s"' % (script, link)
@@ -314,7 +318,7 @@ class FeedMaker:
             extraction_cmd = ' | extract.py "%s"' % link
     
         option_str = determine_crawler_options(self.extraction_conf)
-        cmd = 'crawler.py %s "%s" %s %s > "%s"' % (option_str, link, extraction_cmd, post_process_cmd, html_file_name) 
+        cmd = 'crawler.py %s "%s" %s %s > "%s"' % (option_str, link, extraction_cmd, post_process_cmd, html_file_path) 
     
         return cmd
                 
