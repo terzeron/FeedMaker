@@ -34,7 +34,6 @@ def send_error_msg(msg: str) -> bool:
         ]
     }' https://api.line.me/v2/bot/message/push
     ''' % msg[:1999]).split("\n"))
-    print(cmd)
     result, error = exec_cmd(cmd)
     if error:
         logger.error(error)
@@ -277,10 +276,10 @@ def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
             try:
                 result = future.result()
                 if not result:
-                    print(feed, result)
+                    print("{}, result: {}".format(feed, result))
                     failed_feed_list.append(os.path.basename(feed))
             except Exception as e:
-                print(feed, e)
+                print("{}, exception: {}".format(feed, e))
                 failed_feed_list.append(os.path.basename(feed))
 
     if len(failed_feed_list) > 0:
