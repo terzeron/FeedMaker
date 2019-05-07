@@ -37,14 +37,16 @@ def exec_cmd(cmd: str, input_data=None) -> Tuple[Optional[str], str]:
             result, error = p.communicate(input_data.encode("utf-8"))
         else:
             result, error = p.communicate()
+        if p.returncode != 0:
+            raise subprocess.CalledProcessError(returncode=p.returncode, cmd=cmd, output=result, stderr=error)
         if error:
             if not error.startswith(
                     b"_RegisterApplication(), FAILED TO establish the default connection to the WindowServer"):
                 return None, error.decode("utf-8")
     except subprocess.CalledProcessError:
-        return None, "Error with non-zero exit status in execution of subprocess"
+        return None, "Error with non-zero exit status in command '{}'".format(cmd)
     except subprocess.SubprocessError:
-        return None, "Error in execution of subprocess"
+        return None, "Error in execution of command '{}'".format(cmd)
     return result.decode(encoding="utf-8"), ""
 
 
