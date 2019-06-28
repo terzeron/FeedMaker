@@ -423,6 +423,7 @@ class Config:
                 rss_link = self._get_str_config_value(rss_conf, "link")
                 rss_language = self._get_str_config_value(rss_conf, "language")
                 rss_no_item_desc = self._get_str_config_value(rss_conf, "no_item_desc")
+                rss_url_prefix_for_guid = self._get_str_config_value(rss_conf, "url_prefix_for_guid")
                 conf = {
                     "rss_title": rss_title,
                     "rss_description": rss_description,
@@ -430,7 +431,8 @@ class Config:
                     "rss_copyright": rss_copyright,
                     "rss_link": rss_link,
                     "rss_language": rss_language,
-                    "rss_no_item_desc": rss_no_item_desc
+                    "rss_no_item_desc": rss_no_item_desc,
+                    "rss_url_prefix_for_guid": rss_url_prefix_for_guid
                 }
         return conf
 

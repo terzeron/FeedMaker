@@ -202,11 +202,16 @@ class FeedMaker:
                     if len(content) >= self.MAX_CONTENT_LENGTH:
                         content = "<strong>본문이 너무 길어서 전문을 싣지 않았습니다. 다음의 원문 URL을 참고해주세요.</strong><br/>" + content
                         break
+
+                if self.rss_conf["rss_url_prefix_for_guid"]:
+                    guid = self.rss_conf["rss_url_prefix_for_guid"] + URL.get_url_path(link)
+                else:
+                    guid = link
                 rss_items.append(
                     PyRSS2Gen.RSSItem(
                         title=title,
                         link=link,
-                        guid=link,
+                        guid=guid,
                         pubDate=pub_date_str,
                         description=content
                     )
