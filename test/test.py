@@ -15,6 +15,7 @@ def test_script(script, work_dir, test_dir, index):
     if not error:
         os.chdir(test_dir)
         return (filecmp.cmp("result.%d.temp" % index, "expected.output.%d.txt" % index), cmd)
+    print(error)
     return (False, cmd)
 
 
