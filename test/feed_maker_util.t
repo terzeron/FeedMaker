@@ -193,12 +193,12 @@ class ExecCmdTest(unittest.TestCase):
         invalid_cmd = "ls non_existent_file"
         (result, error) = feed_maker_util.exec_cmd(invalid_cmd)
         self.assertFalse(result)
-        self.assertTrue("No such file or directory" in error)
+        self.assertTrue("Error with non-zero exit status in command" in error)
 
         invalid_cmd = "lslslsls non_existent_file"
         (result, error) = feed_maker_util.exec_cmd(invalid_cmd)
         self.assertFalse(result)
-        self.assertTrue("not found" in error)
+        self.assertTrue("Error with non-zero exit status in command" in error)
 
         bidirectional_cmd = "cat"
         input = "hello world"

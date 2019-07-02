@@ -27,7 +27,7 @@ def print_trailer() -> None:
     pass
 
 
-def extract_content(args) -> int:
+def extract_content(args) -> bool:
     item_url = args[0]
     file = ""
     if len(args) > 1:
@@ -92,7 +92,9 @@ def extract_content(args) -> int:
             if divs:
                 for div in divs:
                     ret = traverse_element(div, item_url, encoding)
-        if ret > 0:
+
+        # if any, exit this loop
+        if ret:
             break
 
     if class_list and id_list and path_list:
@@ -104,15 +106,15 @@ def extract_content(args) -> int:
     return ret
 
 
-def check_element_class(element, element_name, class_name):
+def check_element_class(element, element_name, class_name) -> bool:
     if element.name == element_name and element.has_attr("class") and class_name in element["class"]:
         return True
     return False
 
 
-def traverse_element(element, url, encoding) -> int:
+def traverse_element(element, url, encoding) -> bool:
     global footnote_num
-    ret = -1
+    ret = False
 
     if isinstance(element, Comment):
         # skip sub-elements
@@ -122,7 +124,7 @@ def traverse_element(element, url, encoding) -> int:
         p = re.compile("^\s*$")
         if not p.match(str(element)):
             sys.stdout.write("%s" % html.escape(str(element)))
-        ret = 1
+        ret = True
         return ret
     else:
         # element
@@ -147,7 +149,7 @@ def traverse_element(element, url, encoding) -> int:
             # 하위 노드를 처리하고 return하지 않으면, 텍스트를 직접 
             # 감싸고 있는 <p>의 경우, 중복된 내용이 노출될 수 있음
             print("</p>")
-            return 1
+            return True
         elif element.name == "img":
             src = ""
             if element.has_attr("data-lazy-src"):
@@ -185,7 +187,7 @@ def traverse_element(element, url, encoding) -> int:
             if element.has_attr("width"):
                 sys.stdout.write(" width='%s'" % element["width"])
             sys.stdout.write("/>\n")
-            ret = 1
+            ret = True
         elif element.name in ["input"]:
             if check_element_class(element, "input", "origin_src"):
                 if element.has_attr("value"):
@@ -193,7 +195,7 @@ def traverse_element(element, url, encoding) -> int:
                     if not re.search(r'(https?:)?//', value):
                         value = URL.concatenate_url(url, value)
                     sys.stdout.write("<img src='%s'/>\n" % value)
-                    ret = 1
+                    ret = True
         elif element.name == "canvas":
             src = ""
             if element.has_attr("data-original"):
@@ -205,7 +207,7 @@ def traverse_element(element, url, encoding) -> int:
                 if element.has_attr("width"):
                     sys.stdout.write(" width='%s'" % element["width"])
                 sys.stdout.write("/>\n")
-                ret = 1
+                ret = True
         elif element.name == "a":
             if element.has_attr("onclick"):
                 # 주석레이어 제거
@@ -226,7 +228,7 @@ def traverse_element(element, url, encoding) -> int:
                     sys.stdout.write(" target='%s'>\n" % element["target"])
                 else:
                     sys.stdout.write(">")
-                ret = 1
+                ret = True
                 open_close_tag = True
         elif element.name in ["iframe", "embed"]:
             if element.has_attr("src"):
@@ -238,7 +240,7 @@ def traverse_element(element, url, encoding) -> int:
                     print("<a href='%s'>%s</a><br/>" % (src, src))
                 else:
                     sys.stdout.write("%s\n" % str(element))
-                ret = 1
+                ret = True
         elif element.name in ["param", "object"]:
             if element.has_attr("name") and element["name"] == "Src" and element.has_attr("value") and ".swf" in \
                     element["value"]:
@@ -246,7 +248,7 @@ def traverse_element(element, url, encoding) -> int:
                 print("[Flash Player]<br/>")
                 print("<video src='%s'></video><br/>" % src)
                 print("<a href='%s'>%s</a><br/>" % (src, src))
-            ret = 1
+            ret = True
         elif element.name == "map":
             # image map
             # extract only link information from area element
@@ -259,7 +261,7 @@ def traverse_element(element, url, encoding) -> int:
                     if child.has_attr("alt"):
                         link_title = child["alt"]
                     print("<br/><br/><strong><a href='%s'>%s</a></strong><br/><br/>" % (link_href, link_title))
-                    ret = 1
+                    ret = True
                 elif element.name in ["o:p", "st1:time"]:
                     # skip unknown element 
                     return ret
@@ -273,7 +275,7 @@ def traverse_element(element, url, encoding) -> int:
             # skip sub-elements
             return ret
         elif element.name in ["xmp", "form"]:
-            ret = 1
+            ret = True
         else:
             if check_element_class(element, "div", "paginate_v1"):
                 # <div class="paginate_v1">...
@@ -291,7 +293,7 @@ def traverse_element(element, url, encoding) -> int:
                     (result, error) = exec_cmd(cmd)
                     if not error:
                         print(result)
-                    ret = 1
+                    ret = True
                 return ret
             elif check_element_class(element, "div", "view_option option_top"):
                 # "오늘의 문학"에서 폰트크기와 책갈피 이미지 영역 제거
@@ -312,7 +314,7 @@ def traverse_element(element, url, encoding) -> int:
             else:
                 sys.stdout.write("<%s>\n" % element.name)
                 open_close_tag = True
-                ret = 1
+                ret = True
 
         if hasattr(element, 'contents'):
             for e in element.contents:
@@ -324,12 +326,12 @@ def traverse_element(element, url, encoding) -> int:
             return ret
         else:
             sys.stdout.write(element)
-            ret = 1
+            ret = True
             return ret
 
         if open_close_tag:
             sys.stdout.write("</%s>\n" % element.name)
-            ret = 1
+            ret = True
 
     return ret
 
@@ -344,4 +346,6 @@ if __name__ == "__main__":
         print_usage()
         sys.exit(-1)
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)
-    sys.exit(extract_content(sys.argv[1:]))
+    if extract_content(sys.argv[1:]):
+        sys.exit(0)
+    sys.exit(-1)
