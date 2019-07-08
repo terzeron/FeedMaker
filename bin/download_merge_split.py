@@ -110,12 +110,12 @@ def split_image_list(img_file_list: List[str]) -> List[List[str]]:
     return img_file_partition_list
 
 
-def merge_image_files(img_file_list: List[str], path_prefix: str, img_url: str, img_ext: str, num: int) -> str:
+def merge_image_files(img_file_list: List[str], path_prefix: str, img_url: str, img_ext: str, unit_num: int) -> str:
     logger.debug("# merge_image_files()")
     #
     # merge mode
     #
-    merged_img_file = Cache.get_cache_file_name(path_prefix, img_url, img_ext, num)
+    merged_img_file = Cache.get_cache_file_name(path_prefix, img_url, img_ext, str(unit_num))
     cmd = "../../../CartoonSplit/merge.py " + merged_img_file + " "
     for cache_file in img_file_list:
         cmd = cmd + cache_file + " "
@@ -169,7 +169,7 @@ def remove_image_files(img_file_list: List[str]) -> bool:
 def split_image_file(img_file: str, num_units: int, bgcolor_option: str, orientation_option: str) -> None:
     logger.debug("# split_image_file(%s, %d, %s, %s)" % (img_file, num_units, bgcolor_option, orientation_option))
     # split the image
-    cmd = "../../../CartoonSplit/split.py -b 10 -t 0.03 -n %d %s %s %s" % (num_units, orientation_option, bgcolor_option, img_file)
+    cmd = "../../../CartoonSplit/split.py -b 5 -t 0.03 -n %d %s %s %s" % (num_units, orientation_option, bgcolor_option, img_file)
     logger.debug(cmd)
     (result, error) = exec_cmd(cmd)
     logger.debug(result)
@@ -178,18 +178,18 @@ def split_image_file(img_file: str, num_units: int, bgcolor_option: str, orienta
         sys.exit(-1)
 
 
-def print_image_files(num_units: int, path_prefix: str, img_url_prefix: str, img_url: str, img_ext: str, num: int, do_flip_right_to_left: bool) -> None:
-    logger.debug("# print_image_files(%d, %s, %s, %s, %s, %d, %s)" % (num_units, path_prefix, img_url_prefix, img_url, img_ext, num if num else 0, do_flip_right_to_left))
+def print_image_files(num_units: int, path_prefix: str, img_url_prefix: str, img_url: str, img_ext: str, postfix: int, do_flip_right_to_left: bool) -> None:
+    logger.debug("# print_image_files(%d, %s, %s, %s, %s, %s, %s)" % (num_units, path_prefix, img_url_prefix, img_url, img_ext, postfix if postfix else "", do_flip_right_to_left))
     # print some split images
     if not do_flip_right_to_left:
         custom_range = list(range(num_units))
     else:
         custom_range = list(reversed(range(num_units)))
     for i in custom_range:
-        split_img_file = Cache.get_cache_file_name(path_prefix, img_url, img_ext, str(num), i + 1)
+        split_img_file = Cache.get_cache_file_name(path_prefix, img_url, img_ext, postfix, i + 1)
         logger.debug("split_img_file=" + split_img_file)
         if os.path.exists(split_img_file):
-            split_img_url = Cache.get_cache_url(img_url_prefix, img_url, img_ext, str(num), i + 1)
+            split_img_url = Cache.get_cache_url(img_url_prefix, img_url, img_ext, postfix, i + 1)
             print("<img src='%s'/>" % split_img_url)
 
 
@@ -242,6 +242,9 @@ def main() -> int:
         elif o == "-h":
             print_usage(sys.argv[0])
 
+    if len(args) < 1:
+        print_usage(sys.argv[0])
+        
     page_url = args[0]
     (img_file_list, img_url_list, img_size_list) = download_image_and_read_metadata(path_prefix, img_ext, page_url)
     logger.debug(pprint.pformat(img_file_list))
@@ -252,7 +255,7 @@ def main() -> int:
         # merge-split mode
         img_file_partition_list: List[List[str]] = split_image_list(img_file_list)
 
-        num = 1
+        unit_num = 1
         for img_file_list in img_file_partition_list:
             if len(img_file_list) == 0:
                 continue
@@ -265,8 +268,8 @@ def main() -> int:
             remove_image_files(img_file_list)
             split_image_file(merged_img_file, num_units, bgcolor_option, orientation_option)
             remove_image_files([merged_img_file])
-            print_image_files(num_units, path_prefix, img_url_prefix, page_url, img_ext, num, do_flip_right_to_left)
-            num = num + 1
+            print_image_files(num_units, path_prefix, img_url_prefix, page_url, img_ext, unit_num, do_flip_right_to_left)
+            unit_num = unit_num + 1
     else:
         # only split mode
         for i in range(len(img_file_list)):
@@ -277,7 +280,7 @@ def main() -> int:
             split_image_file(img_file, num_units, bgcolor_option, orientation_option)
             if do_innercrop:
                 crop_image_files(num_units, path_prefix, img_url, img_ext)
-            print_image_files(num_units, path_prefix, img_url_prefix, img_url, img_ext, 0, do_flip_right_to_left)
+            print_image_files(num_units, path_prefix, img_url_prefix, img_url, img_ext, None, do_flip_right_to_left)
 
     return 0
 
