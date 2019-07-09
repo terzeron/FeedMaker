@@ -4,13 +4,14 @@ import sys
 import os
 import re
 import time
-import datetime
+from datetime import datetime, timedelta
+import dateutil.parser
 import getopt
 import subprocess
 import pprint
 import logging
 import logging.config
-from feed_maker_util import Config, URL, exec_cmd, make_path, determine_crawler_options, header_str, remove_duplicates
+from feed_maker_util import Config, URL, exec_cmd, make_path, determine_crawler_options, header_str, remove_duplicates, get_current_time, get_current_time_str, get_rss_date_str, get_short_date_str
 from collections import OrderedDict
 from new_list_collector import NewListCollector
 from typing import List, Dict, Any, Tuple, Union, Set, Callable
@@ -60,25 +61,6 @@ class FeedMaker:
         return len(header_str) + len("\n<div>\n</div>\n") + 1
 
         
-    def get_pub_date_str(self, file_name: str) -> str:
-        if os.path.isfile(file_name):
-            ts = os.stat(file_name).st_mtime
-        else:
-            ts = datetime.datetime.now().timestamp()
-        dt = datetime.datetime.fromtimestamp(float(ts))
-        return dt.strftime("%a, %d %b %Y %H:%M:%S %z")
-    
-
-    def get_rss_date_str(self, ts=datetime.datetime.now().timestamp()) -> str:
-        dt = datetime.datetime.fromtimestamp(float(ts))
-        return dt.strftime("%a, %d %b %Y %H:%M:%S %z")
-    
-
-    def get_date_str(self, ts=datetime.datetime.now().timestamp()) -> str:
-        dt = datetime.datetime.fromtimestamp(float(ts))
-        return dt.strftime("%Y%m%d")
-    
-
     def get_list_file_name(self, date_str: str) -> str:
         return "%s/%s.txt" % (self.list_dir, date_str)
     
@@ -134,8 +116,8 @@ class FeedMaker:
     def get_recent_feed_list(self) -> None:
         logger.debug("# get_recent_feed_list()")
     
-        date_str = self.get_date_str()
-        new_list_file_name = self.get_list_file_name(date_str)
+        short_date_str = get_short_date_str()
+        new_list_file_name = self.get_list_file_name(short_date_str)
     
         collector = NewListCollector(self.collection_conf, new_list_file_name)
         self.recent_feed_list = collector.collect()
@@ -145,15 +127,15 @@ class FeedMaker:
         logger.debug("# read_old_feed_list_from_file()")
 
         feed_list: List[Tuple[str, str]] = []
-        ts = datetime.datetime.now().timestamp()
+        dt = get_current_time()
         if not self.collection_conf["is_completed"]:
             # 아직 진행 중인 피드에 대해서는 현재 날짜에 가장 가까운
             # 과거 리스트 파일 1개를 찾아서 그 안에 기록된 리스트를 꺼냄
     
             # 과거까지 리스트가 존재하는지 확인
             for i in range(self.MAX_NUM_DAYS):
-                date_str = self.get_date_str(ts - i * SECONDS_PER_DAY)
-                list_file = self.get_list_file_name(date_str)
+                short_date_str = get_short_date_str(dt - timedelta(days=(i * SECONDS_PER_DAY)))
+                list_file = self.get_list_file_name(short_date_str)
                 # 오늘에 가장 가까운 리스트가 존재하면 탈출
                 if os.path.isfile(list_file):
                     logger.info(list_file)
@@ -183,16 +165,16 @@ class FeedMaker:
     def generate_rss_feed(self) -> bool:
         logger.debug("# generate_rss_feed()")
 
-        last_build_date_str = self.get_rss_date_str()
-        date_str = self.get_date_str()
-        temp_rss_file_name = self.rss_file_name + "." + date_str
+        last_build_date_str = get_rss_date_str()
+        short_date_str = get_short_date_str()
+        temp_rss_file_name = self.rss_file_name + "." + short_date_str
     
         logger.info("Generating rss feed file...")
         rss_items: List[PyRSS2Gen.RSSItem] = []
-        for link, title in self.result_feed_list:
+        for link, title in reversed(self.result_feed_list):
             logger.info("%s\t%s" % (link, title))
             html_file_path = self.get_html_file_path(link)
-            pub_date_str = self.get_rss_date_str()
+            pub_date_str = get_rss_date_str()
     
             content = ""
             with open(html_file_path, 'r', encoding='utf-8') as in_file:
@@ -348,40 +330,42 @@ class FeedMaker:
                 self.result_feed_list.append((link, title))
     
         
-    def get_idx_data(self) -> Tuple[int, int, int]:
+    def get_idx_data(self) -> Tuple[int, int, datetime]:
         logger.debug("# get_idx_data()")
     
         if os.path.isfile(self.start_idx_file_name):
             with open(self.start_idx_file_name, 'r', encoding='utf-8') as in_file:
                 line = in_file.readline()
-                m = re.search(r'(?P<start_idx>\d+)\t(?P<mtime>\d+)', line)
+                m = re.search(r'(?P<start_idx>\d+)\t(?P<mtime>\S+)', line)
                 if m:
                     start_idx = int(m.group("start_idx"))
                     end_idx = start_idx + self.WINDOW_SIZE
-                    mtime = int(m.group("mtime"))
+                    mtime = dateutil.parser.parse(m.group("mtime"))
                     
-                    logger.info("start index: %d, end index:%d, last modified time: %d, %s" % (start_idx, end_idx, mtime, self.get_rss_date_str(mtime)))
+                    logger.info("start index: %d, end index:%d, last modified time: %s" % (start_idx, end_idx, mtime))
                     return start_idx, end_idx, mtime
 
         # 처음 생성 시, 또는 파일에 정보가 없을 때
         start_idx = 0
         end_idx = self.WINDOW_SIZE
-        mtime = int(datetime.datetime.now().timestamp())
+        mtime = get_current_time()
         self.write_idx_data(start_idx, mtime, True)
         return start_idx, end_idx, mtime
     
     
-    def write_idx_data(self, start_idx: int, mtime: int, do_write_initially: bool = False) -> None:
-        logger.debug("# write_idx_data(start_idx=%d, mtime=%d)" % (start_idx, mtime))
-    
-        ts = datetime.datetime.now().timestamp()
-        increment_size = int(((int(ts) - mtime) * self.collection_conf["unit_size_per_day"]) / 86400)
-        logger.debug("start_idx=%d, current time=%d, mtime=%d, self.WINDOW_SIZE=%d, increment_size=%d" % (start_idx, int(ts), mtime, self.WINDOW_SIZE, increment_size))
+    def write_idx_data(self, start_idx: int, mtime: datetime, do_write_initially: bool = False) -> None:
+        logger.debug("# write_idx_data(start_idx=%d, mtime=%s)" % (start_idx, mtime))
+
+        current_time = get_current_time()
+        delta = current_time - mtime
+        increment_size = int((delta.seconds * self.collection_conf["unit_size_per_day"]) / 86400)
+        logger.debug("start_idx=%d, current time=%s, mtime=%s, self.WINDOW_SIZE=%d, increment_size=%d" % (start_idx, current_time, mtime, self.WINDOW_SIZE, increment_size))
         if do_write_initially or increment_size > 0:
             next_start_idx = start_idx + increment_size
             with open(self.start_idx_file_name, 'w', encoding='utf-8') as out_file:
-                logger.info("next start index: %d, current time: %d, %s" % (next_start_idx, ts, self.get_rss_date_str(ts)))
-                out_file.write("%d\t%d\n" % (int(next_start_idx), int(ts)))
+                current_time_str = get_current_time_str()
+                logger.info("next start index: %d, current time: %s" % (next_start_idx, current_time_str))
+                out_file.write("%d\t%s\n" % (next_start_idx, current_time_str))
 
 
     def fetch_old_feed_list_window(self) -> None:
@@ -424,7 +408,7 @@ class FeedMaker:
             id = feed["id"]
             if start_idx <= i < end_idx:
                 link, title = self.old_feed_list[id]
-                logger.info("%s\t%s" % (link, title))
+                #logger.info("%s\t%s" % (link, title))
                 self.result_feed_list.append(self.old_feed_list[id])
 
         self.write_idx_data(start_idx, mtime)
