@@ -166,10 +166,10 @@ def remove_image_files(img_file_list: List[str]) -> bool:
     return True
 
 
-def split_image_file(img_file: str, num_units: int, bgcolor_option: str, orientation_option: str) -> None:
+def split_image_file(img_file: str, bandwidth: int, diff_threshold: float, num_units: int, bgcolor_option: str, orientation_option: str) -> None:
     logger.debug("# split_image_file(%s, %d, %s, %s)" % (img_file, num_units, bgcolor_option, orientation_option))
     # split the image
-    cmd = "split.py -b 5 -t 0.03 -n %d %s %s %s" % (num_units, orientation_option, bgcolor_option, img_file)
+    cmd = "split.py -b %d -t %f -n %d %s %s %s" % (bandwidth, diff_threshold, num_units, orientation_option, bgcolor_option, img_file)
     logger.debug(cmd)
     (result, error) = exec_cmd(cmd)
     logger.debug(result)
@@ -219,6 +219,8 @@ def main() -> int:
     img_url_prefix = "https://terzeron.com/xml/img/" + feed_name
     img_ext = "jpg"
     num_units = 25
+    diff_threshold = 0.05
+    bandwidth = 10
 
     # options
     bgcolor_option = ""
@@ -226,7 +228,7 @@ def main() -> int:
     do_innercrop = False
     orientation_option = ""
     do_flip_right_to_left = False
-    optlist, args = getopt.getopt(sys.argv[1:], "c:milvh")
+    optlist, args = getopt.getopt(sys.argv[1:], "c:milvb:t:n:h")
     for o, a in optlist:
         if o == "-c":
             bgcolor_option = "-c " + a
@@ -238,7 +240,12 @@ def main() -> int:
             do_flip_right_to_left = True
         elif o == "-v":
             orientation_option = "-v"
-            num_units = 3
+        elif o == "-b":
+            bandwidth = int(a)
+        elif o == "-t":
+            diff_threshold = float(a)
+        elif o == "-n":
+            num_units = int(a)
         elif o == "-h":
             print_usage(sys.argv[0])
 
@@ -266,7 +273,7 @@ def main() -> int:
                 crop_image_file(merged_img_file)
 
             remove_image_files(img_file_list)
-            split_image_file(merged_img_file, num_units, bgcolor_option, orientation_option)
+            split_image_file(merged_img_file, bandwidth, diff_threshold, num_units, bgcolor_option, orientation_option)
             remove_image_files([merged_img_file])
             print_image_files(num_units, path_prefix, img_url_prefix, page_url, img_ext, unit_num, do_flip_right_to_left)
             unit_num = unit_num + 1
@@ -277,7 +284,7 @@ def main() -> int:
             img_url = img_url_list[i]
             logger.debug("img_file=" + img_file)
             logger.debug("img_url=" + img_url)
-            split_image_file(img_file, num_units, bgcolor_option, orientation_option)
+            split_image_file(img_file, bandwidth, diff_threshold, num_units, bgcolor_option, orientation_option)
             if do_innercrop:
                 crop_image_files(num_units, path_prefix, img_url, img_ext)
             print_image_files(num_units, path_prefix, img_url_prefix, img_url, img_ext, None, do_flip_right_to_left)
