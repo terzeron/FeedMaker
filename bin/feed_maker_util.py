@@ -8,9 +8,10 @@ import subprocess
 import psutil
 import logging
 import logging.config
+import xmltodict
+from datetime import datetime
 from typing import List, Any, Dict, Tuple, Optional, Set
 from ordered_set import OrderedSet
-import xmltodict
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
@@ -123,6 +124,27 @@ def find_process_group(parent_proc_name: str) -> List[int]:
 
     return result_pid_list
 
+
+def get_current_time() -> datetime:
+    return datetime.now().astimezone()
+
+
+def get_time_str(dt: datetime) -> str:
+    return dt.isoformat(timespec="seconds")
+
+
+def get_current_time_str() -> str:
+    return get_time_str(get_current_time())
+
+
+def get_rss_date_str() -> str:
+    dt = get_current_time()
+    return dt.strftime("%a, %d %b %Y %H:%M:%S %z")
+
+
+def get_short_date_str(dt=get_current_time()) -> str:
+    return dt.strftime("%Y%m%d")
+    
 
 class HTMLExtractor:
     @staticmethod

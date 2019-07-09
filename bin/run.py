@@ -5,6 +5,7 @@ import os
 import sys
 import re
 import time
+from datetime import datetime
 import random
 import logging
 import logging.config
@@ -304,7 +305,7 @@ def main() -> int:
     archiving_period = 30
 
     start_ts = time.time()
-    print(time.ctime(start_ts))
+    print(datetime.now().astimezone().isoformat(timespec="seconds"))
 
     options, args = determine_options()
     if args:
@@ -325,7 +326,7 @@ def main() -> int:
         result = make_single_feed(feed_name, img_dir, archiving_period, options)
         
     end_ts = time.time()
-    print(time.ctime(end_ts))
+    print(datetime.now().astimezone().isoformat(timespec="seconds"))
     logger.info("elapse=%f" % (end_ts - start_ts))
 
     return 0 if result else -1
