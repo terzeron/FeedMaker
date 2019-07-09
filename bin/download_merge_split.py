@@ -82,8 +82,8 @@ def download_image_and_read_metadata(path_prefix: str, img_ext: str, page_url: s
             logger.debug(cmd)
             (result, error) = exec_cmd(cmd)
             if error:
-                logger.error("can't get the size of image file '%s', cmd='%s'" % (cache_file, cmd))
-                sys.exit(-1)
+                logger.warning("can't get the size of image file '%s', cmd='%s'" % (cache_file, cmd))
+                continue
 
             m2 = re.search(r"^(?P<width>\d+)\s+(?P<height>\d+)", result)
             if m2:
@@ -174,8 +174,8 @@ def split_image_file(img_file: str, num_units: int, bgcolor_option: str, orienta
     (result, error) = exec_cmd(cmd)
     logger.debug(result)
     if error:
-        logger.error("can't split the image file, cmd='%s'" % cmd)
-        sys.exit(-1)
+        logger.warning("can't split the image file, cmd='%s'" % cmd)
+        
 
 
 def print_image_files(num_units: int, path_prefix: str, img_url_prefix: str, img_url: str, img_ext: str, postfix: int, do_flip_right_to_left: bool) -> None:
@@ -194,7 +194,7 @@ def print_image_files(num_units: int, path_prefix: str, img_url_prefix: str, img
 
 
 def print_usage(program_name: str) -> None:
-    print("Usage: %s\t" % program_name)
+    print("Usage: %s [-c <fuzzy>] [-m] [-i] [-l] [-v] [-d] <page_url>" % program_name)
     print("\t\t-c <color>: specify background color")
     print("\t\t\t\t(ex. 'white' or 'blackorwhite', 'dominant', 'fuzzy', '#135fd8')")
     print("\t\t-m: merge")
