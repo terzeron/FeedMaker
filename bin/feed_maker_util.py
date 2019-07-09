@@ -9,6 +9,7 @@ import psutil
 import logging
 import logging.config
 from typing import List, Any, Dict, Tuple, Optional, Set
+from ordered_set import OrderedSet
 import xmltodict
 
 
@@ -79,7 +80,7 @@ def determine_crawler_options(options: Dict[str, Any]) -> str:
 
 
 def remove_duplicates(a_list: List[Any]) -> List[Any]:
-    seen: Set[Any] = set()
+    seen: Set[Any] = OrderedSet()
     result: List[Any] = []
     for item in a_list:
         if item not in seen:

@@ -46,3 +46,8 @@ echo "--------------------"
 echo "git pull"
 git pull
 echo
+
+echo "--------------------"
+echo "pip3 install"
+pip3 install -r requirements.txt
+echo

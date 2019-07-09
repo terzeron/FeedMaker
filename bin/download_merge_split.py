@@ -78,7 +78,7 @@ def download_image_and_read_metadata(path_prefix: str, img_ext: str, page_url: s
             img_file_list.append(cache_file)
             img_url_list.append(img_url)
             logger.debug("<!-- %s -> %s -->" % (img_url, cache_file))
-            cmd = "../../../CartoonSplit/size.py " + cache_file
+            cmd = "size.py " + cache_file
             logger.debug(cmd)
             (result, error) = exec_cmd(cmd)
             if error:
@@ -116,7 +116,7 @@ def merge_image_files(img_file_list: List[str], path_prefix: str, img_url: str, 
     # merge mode
     #
     merged_img_file = Cache.get_cache_file_name(path_prefix, img_url, img_ext, str(unit_num))
-    cmd = "../../../CartoonSplit/merge.py " + merged_img_file + " "
+    cmd = "merge.py " + merged_img_file + " "
     for cache_file in img_file_list:
         cmd = cmd + cache_file + " "
     logger.debug(cmd)
@@ -133,7 +133,7 @@ def crop_image_file(img_file: str) -> None:
     #
     # crop mode (optional)
     #
-    cmd = "../../../CartoonSplit/innercrop -f 4 -m crop \"%s\" \"%s.temp\" && mv -f \"%s.temp\" \"%s\"" % (img_file, img_file, img_file, img_file)
+    cmd = "innercrop -f 4 -m crop \"%s\" \"%s.temp\" && mv -f \"%s.temp\" \"%s\"" % (img_file, img_file, img_file, img_file)
     logger.debug(cmd)
     (result, error) = exec_cmd(cmd)
     if error:
@@ -169,7 +169,7 @@ def remove_image_files(img_file_list: List[str]) -> bool:
 def split_image_file(img_file: str, num_units: int, bgcolor_option: str, orientation_option: str) -> None:
     logger.debug("# split_image_file(%s, %d, %s, %s)" % (img_file, num_units, bgcolor_option, orientation_option))
     # split the image
-    cmd = "../../../CartoonSplit/split.py -b 5 -t 0.03 -n %d %s %s %s" % (num_units, orientation_option, bgcolor_option, img_file)
+    cmd = "split.py -b 5 -t 0.03 -n %d %s %s %s" % (num_units, orientation_option, bgcolor_option, img_file)
     logger.debug(cmd)
     (result, error) = exec_cmd(cmd)
     logger.debug(result)
@@ -260,7 +260,7 @@ def main() -> int:
             if len(img_file_list) == 0:
                 continue
 
-            merged_img_file = merge_image_files(img_file_list, path_prefix, page_url, img_ext, num)
+            merged_img_file = merge_image_files(img_file_list, path_prefix, page_url, img_ext, unit_num)
 
             if do_innercrop:
                 crop_image_file(merged_img_file)

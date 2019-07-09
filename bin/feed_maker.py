@@ -10,10 +10,11 @@ import subprocess
 import pprint
 import logging
 import logging.config
-from feed_maker_util import Config, URL, exec_cmd, make_path, determine_crawler_options, header_str
+from feed_maker_util import Config, URL, exec_cmd, make_path, determine_crawler_options, header_str, remove_duplicates
 from collections import OrderedDict
 from new_list_collector import NewListCollector
 from typing import List, Dict, Any, Tuple, Union, Set, Callable
+from ordered_set import OrderedSet
 import PyRSS2Gen
 
 
@@ -176,7 +177,7 @@ class FeedMaker:
                         line = line.rstrip()
                         link, title = line.split("\t")
                         feed_list.append((link, title))
-        self.old_feed_list = list(set(feed_list))
+        self.old_feed_list = remove_duplicates(feed_list)
         
     
     def generate_rss_feed(self) -> bool:
@@ -331,18 +332,18 @@ class FeedMaker:
     def diff_feeds_and_make_htmls(self) -> None:
         logger.debug("# diff_feeds_and_make_htmls()")
 
-        recent_set = set(self.recent_feed_list)
-        old_set = set(self.old_feed_list)
+        recent_set = OrderedSet(self.recent_feed_list)
+        old_set = OrderedSet(self.old_feed_list)
         self.new_feed_list = list(recent_set - old_set)
         
         # collect items to be generated as RSS feed
         logger.info("Appending %d new items to the feed list" % (len(self.new_feed_list)))
-        for link, title in reversed(self.new_feed_list):
+        for link, title in self.new_feed_list:
             if self.make_html_file(link, title):
                 self.result_feed_list.append((link, title))
 
         logger.info("Appending %d old items to the feed list" % (len(self.old_feed_list)))
-        for link, title in reversed(self.old_feed_list):
+        for link, title in self.old_feed_list:
             if self.make_html_file(link, title):
                 self.result_feed_list.append((link, title))
     
@@ -386,7 +387,7 @@ class FeedMaker:
     def fetch_old_feed_list_window(self) -> None:
         # 오름차순 정렬
         feed_id_sort_field_list: List[Dict[str, object]] = []
-        feed_item_existence_set: Set[str] = set([])
+        feed_item_existence_set: OrderedSet[str] = OrderedSet([])
         
         matched_count = 0
         sort_field_pattern = self.collection_conf["sort_field_pattern"]
