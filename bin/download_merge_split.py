@@ -82,7 +82,7 @@ def download_image_and_read_metadata(path_prefix: str, img_ext: str, page_url: s
             logger.debug(cmd)
             (result, error) = exec_cmd(cmd)
             if error:
-                logger.warning("can't get the size of image file '%s', cmd='%s'" % (cache_file, cmd))
+                logger.debug("can't get the size of image file '%s', cmd='%s'" % (cache_file, cmd))
                 continue
 
             m2 = re.search(r"^(?P<width>\d+)\s+(?P<height>\d+)", result)
