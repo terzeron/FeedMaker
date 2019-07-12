@@ -358,7 +358,7 @@ class FeedMaker:
 
         current_time = get_current_time()
         delta = current_time - mtime
-        increment_size = int((delta.seconds * self.collection_conf["unit_size_per_day"]) / 86400)
+        increment_size = int((delta.total_seconds() * self.collection_conf["unit_size_per_day"]) / 86400)
         logger.debug("start_idx=%d, current time=%s, mtime=%s, self.WINDOW_SIZE=%d, increment_size=%d" % (start_idx, current_time, mtime, self.WINDOW_SIZE, increment_size))
         if do_write_initially or increment_size > 0:
             next_start_idx = start_idx + increment_size
