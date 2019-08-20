@@ -22,53 +22,42 @@ class NewListCollector:
         self.collection_conf = collection_conf
         self.new_list_file_name = new_list_file_name
 
-        
+
+    def compose_and_execute_cmd(self, url: str) -> (str, Any):
+        option_str = determine_crawler_options(self.collection_conf)
+        crawl_cmd = "crawler.py %s '%s'" % (option_str, url) 
+        extract_cmd = "extract_element.py collection"
+        capture_cmd = self.collection_conf["item_capture_script"]
+        post_process_cmd = ""
+        for script in self.collection_conf["post_process_script_list"]:
+            if post_process_cmd:
+                post_process_cmd += ' | %s' % script
+            else:
+                post_process_cmd = script
+        cmd_list = [crawl_cmd, extract_cmd, capture_cmd, post_process_cmd]
+
+        full_cmd = ""
+        for cmd in cmd_list:
+            if full_cmd:
+                full_cmd += " | " + cmd
+            else:
+                full_cmd += cmd
+            logger.debug("%s" % full_cmd)
+            (result, error) = exec_cmd(full_cmd)
+            if error:
+                time.sleep(5)
+                (result, error) = exec_cmd(full_cmd)
+                if error:
+                    logger.debug(full_cmd + "\n" + str(result) + "\n")
+                    logger.error("# can't get result from the command '%s'" % full_cmd)
+                    sys.exit(-1)
+        return (result, error)
+
+
     def extract_urls(self, url) -> List[Tuple[str, str]]:
         logger.debug("# extract_urls(%s)" % url)
         
-        option_str = determine_crawler_options(self.collection_conf)
-        whole_cmd = ""
-        
-        cmd = "crawler.py %s '%s'" % (option_str, url)
-        if whole_cmd:
-            whole_cmd += " | " + cmd
-        else:
-            whole_cmd += cmd
-        logger.debug("%s" % whole_cmd)
-        (result, error) = exec_cmd(cmd)
-        if error:
-            time.sleep(5)
-            (result, error) = exec_cmd(cmd)
-            if error:
-                logger.debug(whole_cmd + "\n" + str(result) + "\n")
-                logger.error("# can't get result from crawler script")
-                sys.exit(-1)
-                    
-        cmd = "extract_element.py collection"
-        if whole_cmd:
-            whole_cmd += " | " + cmd
-        else:
-            whole_cmd += cmd
-        logger.debug("%s" % whole_cmd)
-        (result, error) = exec_cmd(cmd, result)
-        if error: 
-            logger.debug(whole_cmd + "\n" + str(result) + "\n")
-            logger.error("can't get result from extract script, %s" % (error))
-            sys.exit(-1)
-    
-        cmd = self.collection_conf["item_capture_script"]
-        if whole_cmd:
-            whole_cmd += " | " + cmd
-        else:
-            whole_cmd += cmd
-        logger.debug("%s" % whole_cmd)
-        (result, error) = exec_cmd(cmd, result)
-        if error:
-            logger.debug(whole_cmd + "\n" + str(result) + "\n")
-            logger.error("can't get result from capture script, %s" % (error))
-            sys.exit(-1)
-    
-        # check the result
+        (result, error) = self.compose_and_execute_cmd(url)
         result_list = []
         for line in result.rstrip().split("\n"):
             line = line.rstrip()
