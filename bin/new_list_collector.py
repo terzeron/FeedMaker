@@ -38,7 +38,7 @@ class NewListCollector:
 
         full_cmd = ""
         for cmd in cmd_list:
-            if full_cmd:
+            if full_cmd and cmd:
                 full_cmd += " | " + cmd
             else:
                 full_cmd += cmd
