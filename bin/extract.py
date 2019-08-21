@@ -154,33 +154,41 @@ def traverse_element(element, url, encoding) -> bool:
             src = ""
             if element.has_attr("data-lazy-src"):
                 data_lazy_src = element["data-lazy-src"]
-                if not re.search(r'(https?:)?//', data_lazy_src):
-                    data_lazy_src = URL.concatenate_url(url, data_lazy_src)
-                src = data_lazy_src
+                if data_lazy_src:
+                    if not re.search(r'(https?:)?//', data_lazy_src):
+                        data_lazy_src = URL.concatenate_url(url, data_lazy_src)
+                    src = data_lazy_src
             elif element.has_attr("lazysrc"):
                 lazy_src = element["lazysrc"]
-                if not re.search(r'(https?:)?//', lazy_src):
-                    lazy_src = URL.concatenate_url(url, lazy_src)
-                src = lazy_src
+                if lazy_src:
+                    if not re.search(r'(https?:)?//', lazy_src):
+                        lazy_src = URL.concatenate_url(url, lazy_src)
+                    src = lazy_src
             elif element.has_attr("data-src"):
                 data_src = element["data-src"]
-                if not re.search(r'(https?:)?//', data_src):
-                    data_src = URL.concatenate_url(url, data_src)
-                src = data_src
+                if data_src:
+                    if not re.search(r'(https?:)?//', data_src):
+                        data_src = URL.concatenate_url(url, data_src)
+                    src = data_src
             elif element.has_attr("data-original"):
                 data_src = element["data-original"]
-                if not re.search(r'(https?:)?//', data_src):
-                    data_src = URL.concatenate_url(url, data_src)
-                src = data_src
-            elif element.has_attr("src"):
-                src = element["src"]
-                if not re.search(r'(https?:)?//', src):
-                    src = URL.concatenate_url(url, src)
-                if "ncc.phinf.naver.net" in src and (
-                        "/17.jpg" in src or "/8_17px.jpg" in src or "/7px.jpg" in src or "/20px.jpg" in src):
-                    # 외부에서 접근 불가능한 이미지 제거
-                    return ret
-            if src and src != "":
+                if data_src:
+                    if not re.search(r'(https?:)?//', data_src):
+                        data_src = URL.concatenate_url(url, data_src)
+                    src = data_src
+
+            # src 속성이 data-lazy-src보다 나중에 결정되어야 함
+            if not src:
+                if element.has_attr("src"):
+                    src = element["src"]
+                    if src:
+                        if not re.search(r'(https?:)?//', src):
+                            src = URL.concatenate_url(url, src)
+                        if "ncc.phinf.naver.net" in src and ("/17.jpg" in src or "/8_17px.jpg" in src or "/7px.jpg" in src or "/20px.jpg" in src):
+                            # 외부에서 접근 불가능한 이미지 제거
+                            return ret
+                    
+            if src:
                 if re.search(r'^//', src):
                     src = re.sub(r'^//', 'http://', src)
                 sys.stdout.write("<img src='%s'" % src)
@@ -202,7 +210,7 @@ def traverse_element(element, url, encoding) -> bool:
                 src = element["data-original"]
             elif element.has_attr("data-src"):
                 src = element["data-src"]
-            if src and src != "":
+            if src:
                 sys.stdout.write("<img src='%s'" % src)
                 if element.has_attr("width"):
                     sys.stdout.write(" width='%s'" % element["width"])
