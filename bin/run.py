@@ -166,12 +166,16 @@ def remove_html_files_without_cached_image_files(img_dir: str) -> None:
             file_path = os.path.join("html", file)
             if os.path.isfile(file_path):
                 with open(file_path) as f:
-                    for line in f:
-                        m = re.search(r'<img src=[\"\']https?://terzeron\.com/xml/img/[^/]+/(?P<img>.+\.jpg)[\"\']', line)
-                        if m:
-                            # 실제로 다운로드되어 있는지 확인
-                            img_file = m.group("img")
-                            img_html_map[img_file] = file
+                    try:
+                        for line in f:
+                            m = re.search(r'<img src=[\"\']https?://terzeron\.com/xml/img/[^/]+/(?P<img>.+\.jpg)[\"\']', line)
+                            if m:
+                                # 실제로 다운로드되어 있는지 확인
+                                img_file = m.group("img")
+                                img_html_map[img_file] = file
+                    except UnicodeDecodeError as e:
+                        logger.error("Unicode decode error in '%s'" % file_path, e)
+                        raise e
 
         for img_file in set(img_html_map.keys()) - img_set_in_img_dir:
             html_file = img_html_map[img_file]
