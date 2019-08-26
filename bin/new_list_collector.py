@@ -42,15 +42,16 @@ class NewListCollector:
                 full_cmd += " | " + cmd
             else:
                 full_cmd += cmd
-            logger.debug("%s" % full_cmd)
+
+        logger.debug("%s" % full_cmd)
+        (result, error) = exec_cmd(full_cmd)
+        if error:
+            time.sleep(5)
             (result, error) = exec_cmd(full_cmd)
             if error:
-                time.sleep(5)
-                (result, error) = exec_cmd(full_cmd)
-                if error:
-                    logger.debug(full_cmd + "\n" + str(result) + "\n")
-                    logger.error("# can't get result from the command '%s'" % full_cmd)
-                    sys.exit(-1)
+                logger.debug("%s, %s, %s" % (full_cmd, result, error))
+                logger.error("# can't get result from the command '%s'" % full_cmd)
+                sys.exit(-1)
         return (result, error)
 
 
