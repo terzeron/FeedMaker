@@ -264,7 +264,8 @@ class FeedMaker:
             logger.debug(cmd)
             result, error = exec_cmd(cmd)
             if error:
-                time.sleep(5)
+                logger.debug("wait for seconds")
+                time.sleep(10)
                 result, error = exec_cmd(cmd)
                 if error:
                     logger.error("can't extract HTML elements")
