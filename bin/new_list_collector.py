@@ -46,7 +46,7 @@ class NewListCollector:
         logger.debug("%s" % full_cmd)
         (result, error) = exec_cmd(full_cmd)
         if error:
-            logger.debug("wait for seconds")
+            logger.debug("wait for seconds and retry")
             time.sleep(10)
             (result, error) = exec_cmd(full_cmd)
             if error:

@@ -3,6 +3,8 @@
 FEED_MAKER_HOME_DIR=$HOME/workspace/fm
 FEED_MAKER_HOME_DEV_DIR=$HOME/workspace/fm.dev
 
+etags *.py
+
 echo "--------------------"
 cd $FEED_MAKER_HOME_DEV_DIR
 pwd

@@ -264,7 +264,7 @@ class FeedMaker:
             logger.debug(cmd)
             result, error = exec_cmd(cmd)
             if error:
-                logger.debug("wait for seconds")
+                logger.debug("wait for seconds and retry")
                 time.sleep(10)
                 result, error = exec_cmd(cmd)
                 if error:
@@ -445,8 +445,13 @@ class FeedMaker:
             # 피딩 중인 피드는 최신 피드항목을 받아옴
             self.get_recent_feed_list()
             if not self.recent_feed_list or len(self.recent_feed_list) == 0:
-                logger.error("Can't get recent feed list from urls")
-                return False
+                # 재시도
+                logger.debug("wait for seconds and retry")
+                time.sleep(10)
+                self.get_recent_feed_list()
+                if not self.recent_feed_list or len(self.record_feed_list) == 0:
+                    logger.error("Can't get recent feed list from urls")
+                    return False
             if self.do_collect_only:
                 return True
             
