@@ -99,7 +99,7 @@ class Crawler():
     def run(self, url) -> int:
         response = self.make_request(url)
         if not response:
-            logger.error("can't get response from '%s'" % url)
+            logger.warning("can't get response from '%s'" % url)
             sys.exit(-1)
     
         if self.method == Method.HEAD:
