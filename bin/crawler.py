@@ -63,9 +63,10 @@ class HeadlessBrowser:
     
 
 class Crawler():
-    def __init__(self, method, headers, timeout, do_render_js=False, download_file=None, encoding=None) -> None:
+    def __init__(self, method, headers, timeout, num_retries=1, do_render_js=False, download_file=None, encoding=None) -> None:
         self.method = method
         self.timeout = timeout
+        self.num_retries = num_retries
         self.do_render_js = do_render_js
         self.headers = headers
         self.download_file = download_file
@@ -97,11 +98,18 @@ class Crawler():
         return None
             
     def run(self, url) -> int:
-        response = self.make_request(url)
+        response = None
+        for i in range(self.num_retries):
+            response = self.make_request(url)
+            if response:
+                break
+            else:
+                logger.debug("wait for seconds and retry")
+                time.sleep(10)
         if not response:
             logger.warning("can't get response from '%s'" % url)
             sys.exit(-1)
-    
+           
         if self.method == Method.HEAD:
             pass
         elif self.download_file:
@@ -130,18 +138,20 @@ def print_usage() -> None:
     print("\t--encoding <encoding>\t\tspecify encoding of content")
     print("\t--ua <user agent string>")
     print("\t--referer <referer>")
+    print("\t--retry <# of retries>")
 
     
 def main() -> int:
     method = Method.GET
     headers = {"Accept-Encoding": "gzip, deflate", "User-Agent": "Mozillla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36", "Accept": "*/*", "Connection": "Keep-Alive"}
     timeout = 10
+    num_retries = 1
     do_render_js = False
     download_file: Optional[str] = None
     encoding: Optional[str] = None
     
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "h", ["spider", "render-js", "download=", "encoding=", "ua=", "referer=", "header=", "timeout="])
+        opts, args = getopt.getopt(sys.argv[1:], "h", ["spider", "render-js", "download=", "encoding=", "ua=", "referer=", "header=", "timeout=", "retry="])
     except getopt.GetoptError as err:
         print_usage()
         sys.exit(-1)
@@ -166,6 +176,8 @@ def main() -> int:
                 headers[key] = value
         elif o == "--timeout":
             timeout = int(a)
+        elif o == "--retry":
+            num_retries = int(a)
         elif o == "--download":
             download_file = a
         elif o == "--encoding":
@@ -173,7 +185,7 @@ def main() -> int:
 
     url = args[0]
     
-    crawler = Crawler(method, headers, timeout, do_render_js, download_file, encoding)
+    crawler = Crawler(method, headers, timeout, num_retries, do_render_js, download_file, encoding)
     return crawler.run(url)
 
     
