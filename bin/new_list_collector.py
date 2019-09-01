@@ -25,7 +25,7 @@ class NewListCollector:
 
     def compose_and_execute_cmd(self, url: str) -> (str, Any):
         option_str = determine_crawler_options(self.collection_conf)
-        crawl_cmd = "crawler.py %s '%s'" % (option_str, url) 
+        crawl_cmd = "crawler.py --retry 2 %s '%s'" % (option_str, url) 
         extract_cmd = "extract_element.py collection"
         capture_cmd = self.collection_conf["item_capture_script"]
         post_process_cmd = ""
