@@ -280,8 +280,15 @@ class FeedMaker:
             if size > self._get_size_of_template():
                 # append image_tag_str to html_file_path
                 image_tag_str = self.image_tag_fmt_str % (self.rss_file_name, md5_name)
-                with open(html_file_path, "a") as outfile:
-                    outfile.write(image_tag_str)
+                is_image_tag_in_file = False
+                with open(html_file_path, "r") as outfile:
+                    for line in outfile:
+                        if image_tag_str in line:
+                            is_image_tag_in_file = True
+                            break
+                if is_image_tag_in_file:
+                    with open(html_file_path, "a") as outfile:
+                        outfile.write(image_tag_str)
     
                 # 피드 리스트에 추가
                 logger.info("Success: %s: %s --> %s: %d (> %d byte of template)" % (title, link, html_file_path, size, self._get_size_of_template()))
