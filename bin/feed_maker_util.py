@@ -59,11 +59,13 @@ def determine_crawler_options(options: Dict[str, Any]) -> str:
     if "render_js" in options and options["render_js"]:
         option_str += " --render-js"
     if "user_agent" in options and options["user_agent"]:
-        option_str += " --ua '%s'" % (options["user_agent"])
+        option_str += " --ua '%s'" % options["user_agent"]
     if "referer" in options and options["referer"]:
-        option_str += " --referer '%s'" % (options["referer"])
+        option_str += " --referer '%s'" % options["referer"]
     if "encoding" in options and options["encoding"]:
-        option_str += " --encoding '%s'" % (options["encoding"])
+        option_str += " --encoding '%s'" % options["encoding"]
+    if "sleep_time" in options and options["sleep_time"]:
+        option_str += " --sleep %s" % options["sleep_time"]
     if "header_list" in options and options["header_list"]:
         for header in options["header_list"]:
             option_str += " --header '%s'" % header
@@ -149,7 +151,7 @@ def get_short_date_str(dt=get_current_time()) -> str:
 class HTMLExtractor:
     @staticmethod
     def get_first_token_from_path(path_str: str) -> Tuple[Optional[str], Optional[str], Optional[int], Optional[str], bool]:
-        # print "get_first_token_from_path(path_str='%s')" % (path_str)
+        # print "get_first_token_from_path(path_str='%s')" % path_str
         is_anywhere: bool = False
         if path_str[0:2] == "//":
             is_anywhere = True
@@ -209,7 +211,7 @@ class HTMLExtractor:
             if len(nodes) > 1:
                 # print("error, two or more id matched")
                 return None
-            # print "found! node=%s" % (nodes[0].name)
+            # print "found! node=%s" % nodes[0].name
             node_list.append(nodes[0])
             result_node_list = HTMLExtractor.get_node_with_path(nodes[0], next_path_str)
             if result_node_list:
@@ -219,7 +221,7 @@ class HTMLExtractor:
             if not name:
                 return None
 
-            # print "#children=%d" % (len(node.contents))
+            # print "#children=%d" % len(node.contents)
             i = 1
             for child in node.contents:
                 if hasattr(child, 'name'):
@@ -231,7 +233,7 @@ class HTMLExtractor:
                             # 인덱스가 지정되지 않았거나, 지정되었고 인덱스가 일치할 때
                             if next_path_str == "":
                                 # 단말 노드이면 현재 일치한 노드를 반환
-                                # print "*** append! child='%s'" % (child.name)
+                                # print "*** append! child='%s'" % child.name
                                 node_list.append(child)
                             else:
                                 # 중간 노드이면 recursion
@@ -358,6 +360,7 @@ class Config:
             unit_size_per_day = self._get_float_config_value(collection_conf, "unit_size_per_day")
             user_agent = self._get_str_config_value(collection_conf, "user_agent")
             encoding = self._get_str_config_value(collection_conf, "encoding", "utf-8")
+            sleep_time = self._get_str_config_value(collection_conf, "sleep_time")
 
             list_url_list = self._get_config_value_list(collection_conf, "list_url", [])
             element_id_list = self._get_config_value_list(collection_conf, "element_id", [])
@@ -373,6 +376,7 @@ class Config:
                 "unit_size_per_day": unit_size_per_day,
                 "user_agent": user_agent,
                 "encoding": encoding,
+                "sleep_time": sleep_time,
                 "list_url_list": list_url_list,
                 "element_id_list": element_id_list,
                 "element_class_list": element_class_list,
@@ -395,6 +399,7 @@ class Config:
             user_agent = self._get_str_config_value(extraction_conf, "user_agent")
             encoding = self._get_str_config_value(extraction_conf, "encoding", "utf8")
             referer = self._get_str_config_value(extraction_conf, "referer")
+            sleep_time = self._get_str_config_value(extraction_conf, "sleep_time")
 
             element_id_list = self._get_config_value_list(extraction_conf, "element_id", [])
             element_class_list = self._get_config_value_list(extraction_conf, "element_class", [])
@@ -409,6 +414,7 @@ class Config:
                 "user_agent": user_agent,
                 "encoding": encoding,
                 "referer": referer,
+                "sleep_time": sleep_time,
                 "element_id_list": element_id_list,
                 "element_class_list": element_class_list,
                 "element_path_list": element_path_list,

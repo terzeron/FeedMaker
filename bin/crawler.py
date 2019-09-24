@@ -28,6 +28,9 @@ class Method(Enum):
 
 
 class HeadlessBrowser:
+    def __init__(self, sleep_time=None):
+        self.sleep_time = sleep_time
+        
     def make_request(self, url) -> Optional[str]:
         options = Options()
         options.add_argument("--headless")
@@ -38,35 +41,29 @@ class HeadlessBrowser:
         driver = webdriver.Chrome(options=options, executable_path=chrome_driver)
 
         driver.get(url)
-        driver.execute_script('''
-        div = document.createElement("DIV");
-        div.className = "images_from_canvas";
-        var canvas_list = document.getElementsByTagName("canvas"); 
-        for (var i = 0; i < canvas_list.length; i++) {
-            img_data = canvas_list[i].toDataURL("image/png");
-            img = document.createElement("IMG");
-            img.src = img_data;
-            div.appendChild(img);
-        }
-        document.body.appendChild(div);
-        ''')
+        if self.sleep_time:
+            # necessary to circumvent javascript challenge of cloudflare
+            time.sleep(self.sleep_time)
+            
         try:
-            content = driver.find_element_by_tag_name("body")
-            response = content.get_attribute("innerHTML")
+            #content = driver.find_element_by_tag_name("body")
+            #response = content.get_attribute("innerHTML")
+            response = driver.page_source
         except selenium.common.exceptions.WebDriverException as e:
             logger.error(e)
             sys.exit(-1)
 
-        driver.close()
+        driver.close() 
         driver.quit()
         return response
     
 
 class Crawler():
-    def __init__(self, method, headers, timeout, num_retries=1, do_render_js=False, download_file=None, encoding=None) -> None:
+    def __init__(self, method, headers, timeout, num_retries=1, sleep_time=None, do_render_js=False, download_file=None, encoding=None) -> None:
         self.method = method
         self.timeout = timeout
         self.num_retries = num_retries
+        self.sleep_time = sleep_time
         self.do_render_js = do_render_js
         self.headers = headers
         self.download_file = download_file
@@ -74,7 +71,7 @@ class Crawler():
 
     def make_request(self, url) -> Any:
         if self.do_render_js:
-            browser = HeadlessBrowser()
+            browser = HeadlessBrowser(self.sleep_time)
             return browser.make_request(url) 
         else:
             #print(url, self.method, self.headers)
@@ -139,6 +136,7 @@ def print_usage() -> None:
     print("\t--ua <user agent string>")
     print("\t--referer <referer>")
     print("\t--retry <# of retries>")
+    print("\t--sleep <seconds>")
 
     
 def main() -> int:
@@ -146,12 +144,13 @@ def main() -> int:
     headers = {"Accept-Encoding": "gzip, deflate", "User-Agent": "Mozillla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36", "Accept": "*/*", "Connection": "Keep-Alive"}
     timeout = 10
     num_retries = 1
+    sleep_time = None
     do_render_js = False
     download_file: Optional[str] = None
     encoding: Optional[str] = None
     
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "h", ["spider", "render-js", "download=", "encoding=", "ua=", "referer=", "header=", "timeout=", "retry="])
+        opts, args = getopt.getopt(sys.argv[1:], "h", ["spider", "render-js", "download=", "encoding=", "ua=", "referer=", "header=", "timeout=", "retry=", "sleep="])
     except getopt.GetoptError as err:
         print_usage()
         sys.exit(-1)
@@ -178,6 +177,8 @@ def main() -> int:
             timeout = int(a)
         elif o == "--retry":
             num_retries = int(a)
+        elif o == "--sleep":
+            sleep_time = int(a)
         elif o == "--download":
             download_file = a
         elif o == "--encoding":
@@ -185,7 +186,7 @@ def main() -> int:
 
     url = args[0]
     
-    crawler = Crawler(method, headers, timeout, num_retries, do_render_js, download_file, encoding)
+    crawler = Crawler(method, headers, timeout, num_retries, sleep_time, do_render_js, download_file, encoding)
     return crawler.run(url)
 
     
