@@ -286,7 +286,7 @@ class FeedMaker:
                         if image_tag_str in line:
                             is_image_tag_in_file = True
                             break
-                if is_image_tag_in_file:
+                if not is_image_tag_in_file:
                     with open(html_file_path, "a") as outfile:
                         outfile.write(image_tag_str)
     
