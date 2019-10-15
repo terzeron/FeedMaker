@@ -19,7 +19,7 @@ logger = logging.getLogger()
 # noinspection PyPep8
 header_str = '''<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no"/>
-<style>img { max-width: 100%; margin-top: 0px; margin-bottom: 0px; }</style>
+<style>img { max-width: 100%; margin-top: 0px; margin-bottom: 0px; } table { border-width: thin; border-style: dashed; }</style>
 
 '''
 
