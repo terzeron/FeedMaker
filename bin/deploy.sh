@@ -3,7 +3,7 @@
 FEED_MAKER_HOME_DIR=$HOME/workspace/fm
 FEED_MAKER_HOME_DEV_DIR=$HOME/workspace/fm.dev
 
-etags *.py
+(cd $FEED_MAKER_HOME_DEV_DIR/bin; etags *.py)
 
 echo "--------------------"
 cd $FEED_MAKER_HOME_DEV_DIR
