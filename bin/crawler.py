@@ -44,11 +44,24 @@ class HeadlessBrowser:
         if self.sleep_time:
             # necessary to circumvent javascript challenge of cloudflare
             time.sleep(self.sleep_time)
+
+        driver.execute_script('''
+        div = document.createElement("DIV");
+        div.className = "images_from_canvas";
+        var canvas_list = document.getElementsByTagName("canvas"); 
+        for (var i = 0; i < canvas_list.length; i++) {
+            img_data = canvas_list[i].toDataURL("image/png");
+            img = document.createElement("IMG");
+            img.src = img_data;
+            div.appendChild(img);
+        }
+        document.body.appendChild(div);
+        ''')
             
         try:
-            #content = driver.find_element_by_tag_name("body")
-            #response = content.get_attribute("innerHTML")
-            response = driver.page_source
+            content = driver.find_element_by_tag_name("body")
+            response = content.get_attribute("innerHTML")
+            #response = driver.page_source
         except selenium.common.exceptions.WebDriverException as e:
             logger.error(e)
             sys.exit(-1)
