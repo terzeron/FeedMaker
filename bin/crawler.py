@@ -59,7 +59,7 @@ class HeadlessBrowser:
         ''')
             
         try:
-            content = driver.find_element_by_tag_name("body")
+            content = driver.find_element_by_tag_name("html")
             response = content.get_attribute("innerHTML")
             #response = driver.page_source
         except selenium.common.exceptions.WebDriverException as e:
