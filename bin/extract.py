@@ -155,25 +155,25 @@ def traverse_element(element, url, encoding) -> bool:
             if element.has_attr("data-lazy-src"):
                 data_lazy_src = element["data-lazy-src"]
                 if data_lazy_src:
-                    if not re.search(r'(https?:)?//', data_lazy_src):
+                    if not re.search(r'((https?:)?//|data:image/png;)', data_lazy_src):
                         data_lazy_src = URL.concatenate_url(url, data_lazy_src)
                     src = data_lazy_src
             elif element.has_attr("lazysrc"):
                 lazy_src = element["lazysrc"]
                 if lazy_src:
-                    if not re.search(r'(https?:)?//', lazy_src):
+                    if not re.search(r'((https?:)?//|data:image/png;)', lazy_src):
                         lazy_src = URL.concatenate_url(url, lazy_src)
                     src = lazy_src
             elif element.has_attr("data-src"):
                 data_src = element["data-src"]
                 if data_src:
-                    if not re.search(r'(https?:)?//', data_src):
+                    if not re.search(r'((https?:)?//|data:image/png;)', data_src):
                         data_src = URL.concatenate_url(url, data_src)
                     src = data_src
             elif element.has_attr("data-original"):
                 data_src = element["data-original"]
                 if data_src:
-                    if not re.search(r'(https?:)?//', data_src):
+                    if not re.search(r'((https?:)?//|data:image/png;)', data_src):
                         data_src = URL.concatenate_url(url, data_src)
                     src = data_src
 
@@ -182,7 +182,7 @@ def traverse_element(element, url, encoding) -> bool:
                 if element.has_attr("src"):
                     src = element["src"]
                     if src:
-                        if not re.search(r'(https?:)?//', src):
+                        if not re.search(r'((https?:)?//|data:image/png;)', src):
                             src = URL.concatenate_url(url, src)
                         if "ncc.phinf.naver.net" in src and ("/17.jpg" in src or "/8_17px.jpg" in src or "/7px.jpg" in src or "/20px.jpg" in src):
                             # 외부에서 접근 불가능한 이미지 제거
