@@ -28,7 +28,8 @@ class Method(Enum):
 
 
 class HeadlessBrowser:
-    def __init__(self, sleep_time=None):
+    def __init__(self, headers, sleep_time=None):
+        self.headers = headers
         self.sleep_time = sleep_time
         
     def make_request(self, url) -> Optional[str]:
@@ -39,7 +40,8 @@ class HeadlessBrowser:
         options.add_argument("--allow-running-insecure-content")
         options.add_argument("--disable-gpu")
         options.add_argument("--lang=ko_KR")
-        options.add_argument("--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36")
+        options.add_argument("--user-agent=%s" % self.headers['User-Agent'])
+        
         chrome_driver = "chromedriver"
         driver = webdriver.Chrome(options=options, executable_path=chrome_driver)
 
@@ -90,7 +92,7 @@ class Crawler():
 
     def make_request(self, url) -> Any:
         if self.do_render_js:
-            browser = HeadlessBrowser(self.sleep_time)
+            browser = HeadlessBrowser(self.headers, self.sleep_time)
             return browser.make_request(url) 
         else:
             #print(url, self.method, self.headers)
