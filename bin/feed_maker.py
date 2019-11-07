@@ -29,7 +29,7 @@ class FeedMaker:
         # ToDo: 글로벌 설정 파일로 분리
         self.MAX_CONTENT_LENGTH = 64 * 1024
         self.MAX_NUM_DAYS = 7
-        self.WINDOW_SIZE = 10
+        self.WINDOW_SIZE = 5
         self.image_tag_fmt_str = "\n<img src='https://terzeron.com/img/1x1.jpg?feed=%s&item=%s'/>\n"
 
         self.collection_conf: Dict[str, Any] = {}
