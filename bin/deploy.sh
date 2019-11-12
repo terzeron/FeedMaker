@@ -11,8 +11,8 @@ pwd
 echo
 
 echo "--------------------"
-echo "git checkout master"
-git checkout master
+echo "git switch master"
+git switch master
 echo
 
 echo "--------------------"
@@ -31,8 +31,8 @@ git push
 echo
 
 echo "--------------------"
-echo "git checkout develop"
-git checkout develop
+echo "git switch develop"
+git switch develop
 
 echo "--------------------"
 cd $FEED_MAKER_HOME_DIR
@@ -40,8 +40,8 @@ pwd
 echo
 
 echo "--------------------"
-echo "git checkout master"
-git checkout master
+echo "git switch master"
+git switch master
 echo
 
 echo "--------------------"
