@@ -29,7 +29,7 @@ echo "--- old xml files in ${public_html_dir} ---"
 find ${public_html_dir} -name "*.xml" -mtime +240 -print
 
 echo "--- too small html file ---"
-find . -maxdepth 3 -name "*.html" -size -50c -print | grep -v warfareafterschool
+find . -maxdepth 4 -name "*.html" \( -size +0c -a -size -50c \) -print
 
 #echo "--- html files containing iframe element ---"
 #find . -name "*.html" -exec grep -l "<iframe" "{}" \; | cut -d/ -f3 | uniq -c | sort -n
@@ -70,7 +70,7 @@ echo "===== check the garbage feeds ====="
 feedmaker_file=$FEED_MAKER_WORK_DIR"/logs/feedmaker.txt"
 find */ -maxdepth 2 -name "*.xml" \! \( -name conf.xml -o -name _conf.xml -o  -name "*.conf.xml" \) | grep -v /_ | xargs -I % basename % | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $feedmaker_file
 period_file_list=""
-for i in {0..14}; do
+for i in {0..30}; do
 	period_file_list="${period_file_list} $HOME/apps/logs/access.log.$(date +'%y%m%d' -d $i' days ago')"
 done
 feed_access_file=$FEED_MAKER_WORK_DIR"/logs/feed_access.txt"
