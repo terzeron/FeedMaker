@@ -38,10 +38,19 @@ find . -maxdepth 3 -name "*.html" -size -50c -print | grep -v warfareafterschool
 #find . -name run.log | xargs grep elapse= | sort -t= -k2 -n | tail -10
 
 echo 
+echo "===== check the image tag (1x1.jpg) ====="
+
+echo "--- corrupted html files without image tag ---"
+find . -name "*.html" | xargs -I % perl -e '$count = 0; $contents_count = 0; while (<ARGV>) { if (/1x1.jpg/) { $count++; } if (/<(img|div)/) { $contents_count++; } } if ($contents_count > 0 && $count < 1) { print "$ARGV $count $contents_count\n"; }' %
+
+echo "--- corrupted html files with many image tags ---"
+find . -name "*.html" | xargs -I % perl -e '$count = 0; $contents_count = 0; while (<ARGV>) { if (/1x1.jpg/) { $count++; } if (/<(img|div)/) { $contents_count++; } } if ($contents_count > 0 && $count > 1) { print "$ARGV $count $contents_count\n"; }' %
+
+echo 
 echo "===== check the incremental feeding ====="
 
 #echo "--- completed feeds ---"
-#find . -name conf.xml -exec grep -l "<is_completed>true" "{}" \; 
+#find . -name conf.xml -exec grep -l "<is_completed>true" "{}" \;
 
 echo "--- start_idx vs # of items ---"
 for f in $(find . -name conf.xml -exec grep -l "<is_completed>true" "{}" \; | xargs -I % dirname % | grep -v /_); do 
@@ -50,7 +59,7 @@ for f in $(find . -name conf.xml -exec grep -l "<is_completed>true" "{}" \; | xa
 			cd $f; idx=$(cut -f1 start_idx.txt); 
 			cnt=$(sort -u newlist/*.txt | wc -l | tr -d ' '); 
 			#if [ "$idx" -gt "$cnt" ]; then 
-				echo "$f: " $((idx + 9)) " / $cnt = " $(((idx + 9) * 100 / cnt))%; 
+				echo "$f: " $((idx + 4)) " / $cnt = " $(((idx + 4) * 100 / cnt))%; 
 			#fi
 		)
 	fi
