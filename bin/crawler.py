@@ -33,6 +33,7 @@ class HeadlessBrowser:
         self.sleep_time = sleep_time
         
     def make_request(self, url) -> Optional[str]:
+        logger.debug("HeadlessBrowser.make_request('%s')" % url)
         options = Options()
         options.add_argument("--headless")
         options.add_argument("--window-size=1920x1080")
@@ -91,6 +92,7 @@ class Crawler():
         self.encoding = encoding
 
     def make_request(self, url) -> Any:
+        logger.debug("Crawler.make_request('%s')" % url)
         if self.do_render_js:
             browser = HeadlessBrowser(self.headers, self.sleep_time)
             return browser.make_request(url) 
