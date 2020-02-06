@@ -117,12 +117,13 @@ def traverse_element(element, url, encoding) -> bool:
     ret = False
 
     if isinstance(element, Comment):
-        # skip sub-elements
+        # if comments, skip sub-elements
         return ret
     elif not hasattr(element, 'name') or not element.name:
         # text or self-close element (<br/>)
         p = re.compile("^\s*$")
         if not p.match(str(element)):
+            # non-blank text
             sys.stdout.write("%s" % html.escape(str(element)))
         ret = True
         return ret
@@ -274,7 +275,7 @@ def traverse_element(element, url, encoding) -> bool:
                     # skip unknown element 
                     return ret
         elif element.name in ["script"]:
-            # skip sub-element
+            # skip sub-elements
             return ret
         elif element.name in ["v:shapetype", "qksdmssnfl", "qksdmssnfl<span"]:
             # skip malformed element
@@ -284,6 +285,11 @@ def traverse_element(element, url, encoding) -> bool:
             return ret
         elif element.name in ["xmp", "form"]:
             ret = True
+        elif element.name in ["pre"]:
+            # preserve all white spaces as they are
+            sys.stdout.write("%s\n" % element)
+            # skip sub-elementss
+            return True
         else:
             if check_element_class(element, "div", "paginate_v1"):
                 # <div class="paginate_v1">...
