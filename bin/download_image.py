@@ -36,7 +36,7 @@ def download_image(path_prefix: str, img_url_or_data: str, page_url: str) -> Opt
     if img_url_or_data.startswith("http"):
         img_url = img_url_or_data
         logger.debug("image url '%s' to cache file '%s'" % (img_url, cache_file))
-        cmd = 'crawler.py --retry 2 --download "%s" --referer "%s" "%s"' % (cache_file, page_url, img_url)
+        cmd = 'crawler.py --retry=2 --download="%s" --referer="%s" "%s"' % (cache_file, page_url, img_url)
         logger.debug("%s" % cmd)
         (result, error) = exec_cmd(cmd)
         logger.debug("result: %s" % result)

@@ -314,7 +314,8 @@ class FeedMaker:
             extraction_cmd = ' | extract.py "%s"' % link
     
         option_str = determine_crawler_options(self.extraction_conf)
-        cmd = 'crawler.py --retry 2 %s "%s" %s %s > "%s"' % (option_str, link, extraction_cmd, post_process_cmd, html_file_path) 
+        option_str += " --retry=2"
+        cmd = 'crawler.py %s "%s" %s %s > "%s"' % (option_str, link, extraction_cmd, post_process_cmd, html_file_path) 
     
         return cmd
                 

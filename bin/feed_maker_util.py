@@ -42,8 +42,8 @@ def exec_cmd(cmd: str, input_data=None) -> Tuple[Optional[str], str]:
         if p.returncode != 0:
             raise subprocess.CalledProcessError(returncode=p.returncode, cmd=cmd, output=result, stderr=error)
         if error:
-            if not error.startswith(
-                    b"_RegisterApplication(), FAILED TO establish the default connection to the WindowServer"):
+            # handle warnings
+            if not b"InsecureRequestWarning" in error and not b"_RegisterApplication(), FAILED TO establish the default connection to the WindowServer" in error:
                 return None, error.decode("utf-8")
     except subprocess.CalledProcessError:
         return None, "Error with non-zero exit status in command '{}'".format(cmd)
@@ -56,17 +56,19 @@ def determine_crawler_options(options: Dict[str, Any]) -> str:
     logger.debug("# determine_crawler_options()")
 
     option_str: str = ""
-    if "render_js" in options and options["render_js"]:
-        option_str += " --render-js"
+    if "render_js" in options:
+        option_str += " --render-js=%s" % ("true" if options["render_js"] else "false")
+    if "verify_ssl" in options:
+        option_str += " --verify-ssl=%s" % ("true" if options["verify_ssl"] else "false")
     if "user_agent" in options and options["user_agent"]:
-        option_str += " --ua '%s'" % options["user_agent"]
+        option_str += " --user-agent='%s'" % options["user_agent"]
     if "referer" in options and options["referer"]:
-        option_str += " --referer '%s'" % options["referer"]
+        option_str += " --referer='%s'" % options["referer"]
     if "encoding" in options and options["encoding"]:
-        option_str += " --encoding '%s'" % options["encoding"]
-    if "sleep_time" in options and options["sleep_time"]:
-        option_str += " --sleep %s" % options["sleep_time"]
-    if "header_list" in options and options["header_list"]:
+        option_str += " --encoding='%s'" % options["encoding"]
+    if "sleep_time" in options and type(options["sleep_time"]) == int:
+        option_str += " --sleep-time=%d" % options["sleep_time"]
+    if "header_list" in options:
         for header in options["header_list"]:
             option_str += " --header '%s'" % header
 
@@ -353,30 +355,40 @@ class Config:
             collection_conf = self.config["collection"]
 
             render_js = self._get_bool_config_value(collection_conf, "render_js")
-            item_capture_script = self._get_str_config_value(collection_conf, "item_capture_script", "./capture_item_link_title.py")
+            verify_ssl = self._get_bool_config_value(collection_conf, "verify_ssl")
             ignore_old_list = self._get_bool_config_value(collection_conf, "ignore_old_list")
             is_completed = self._get_bool_config_value(collection_conf, "is_completed")
+
+            item_capture_script = self._get_str_config_value(collection_conf, "item_capture_script", "./capture_item_link_title.py")
             sort_field_pattern = self._get_str_config_value(collection_conf, "sort_field_pattern")
-            unit_size_per_day = self._get_float_config_value(collection_conf, "unit_size_per_day")
             user_agent = self._get_str_config_value(collection_conf, "user_agent")
             encoding = self._get_str_config_value(collection_conf, "encoding", "utf-8")
-            sleep_time = self._get_str_config_value(collection_conf, "sleep_time")
+
+            sleep_time = self._get_int_config_value(collection_conf, "sleep_time")
+
+            unit_size_per_day = self._get_float_config_value(collection_conf, "unit_size_per_day")
 
             list_url_list = self._get_config_value_list(collection_conf, "list_url", [])
             element_id_list = self._get_config_value_list(collection_conf, "element_id", [])
             element_class_list = self._get_config_value_list(collection_conf, "element_class", [])
             element_path_list = self._get_config_value_list(collection_conf, "element_path", [])
             post_process_script_list = self._get_config_value_list(collection_conf, "post_process_script", [])
+
             conf = {
                 "render_js": render_js,
-                "item_capture_script": item_capture_script,
+                "verify_ssl": verify_ssl,
                 "ignore_old_list": ignore_old_list,
                 "is_completed": is_completed,
+
+                "item_capture_script": item_capture_script,
                 "sort_field_pattern": sort_field_pattern,
-                "unit_size_per_day": unit_size_per_day,
                 "user_agent": user_agent,
                 "encoding": encoding,
+                
                 "sleep_time": sleep_time,
+
+                "unit_size_per_day": unit_size_per_day,
+
                 "list_url_list": list_url_list,
                 "element_id_list": element_id_list,
                 "element_class_list": element_class_list,
@@ -392,29 +404,36 @@ class Config:
             extraction_conf = self.config["extraction"]
 
             render_js = self._get_bool_config_value(extraction_conf, "render_js")
+            verify_ssl = self._get_bool_config_value(extraction_conf, "verify_ssl")
             bypass_element_extraction = self._get_bool_config_value(extraction_conf, "bypass_element_extraction")
-            force_sleep_between_articles = self._get_bool_config_value(extraction_conf,
-                                                                         "force_sleep_between_articles")
-            review_point_threshold = self._get_int_config_value(extraction_conf, "review_point_threshold")
+            force_sleep_between_articles = self._get_bool_config_value(extraction_conf, "force_sleep_between_articles")
+
             user_agent = self._get_str_config_value(extraction_conf, "user_agent")
             encoding = self._get_str_config_value(extraction_conf, "encoding", "utf8")
             referer = self._get_str_config_value(extraction_conf, "referer")
-            sleep_time = self._get_str_config_value(extraction_conf, "sleep_time")
+
+            review_point_threshold = self._get_int_config_value(extraction_conf, "review_point_threshold")
+            sleep_time = self._get_int_config_value(extraction_conf, "sleep_time")
 
             element_id_list = self._get_config_value_list(extraction_conf, "element_id", [])
             element_class_list = self._get_config_value_list(extraction_conf, "element_class", [])
             element_path_list = self._get_config_value_list(extraction_conf, "element_path", [])
             post_process_script_list = self._get_config_value_list(extraction_conf, "post_process_script", [])
             header_list = self._get_config_value_list(extraction_conf, "header", [])
+
             conf = {
                 "render_js": render_js,
+                "verify_ssl": verify_ssl,
                 "bypass_element_extraction": bypass_element_extraction,
                 "force_sleep_between_articles": force_sleep_between_articles,
-                "review_point_threshold": review_point_threshold,
+
                 "user_agent": user_agent,
                 "encoding": encoding,
                 "referer": referer,
+                
+                "review_point_threshold": review_point_threshold,
                 "sleep_time": sleep_time,
+
                 "element_id_list": element_id_list,
                 "element_class_list": element_class_list,
                 "element_path_list": element_path_list,

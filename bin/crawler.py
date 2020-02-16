@@ -81,30 +81,31 @@ class HeadlessBrowser:
     
 
 class Crawler():
-    def __init__(self, method, headers, timeout, num_retries=1, sleep_time=None, do_render_js=False, download_file=None, encoding=None, do_verify_ssl=True) -> None:
+    def __init__(self, method, headers, timeout, num_retries=1, sleep_time=None, render_js=False, download_file=None, encoding=None, verify_ssl=True) -> None:
         self.method = method
         self.timeout = timeout
         self.num_retries = num_retries
         self.sleep_time = sleep_time
-        self.do_render_js = do_render_js
+        self.render_js = render_js
         self.headers = headers
         self.download_file = download_file
         self.encoding = encoding
-        self.do_verify_ssl = do_verify_ssl
+        self.verify_ssl = verify_ssl
 
     def make_request(self, url) -> Any:
         logger.debug("Crawler.make_request('%s')" % url)
-        if self.do_render_js:
+        if self.render_js:
+            logger.debug("headless browser")
             browser = HeadlessBrowser(self.headers, self.sleep_time)
             return browser.make_request(url) 
         else:
-            #print(url, self.method, self.headers)
+            logger.debug("requests client")
             if self.method == Method.GET:
-                response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=self.do_verify_ssl)
+                response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
             elif self.method == Method.HEAD:
-                response = requests.head(url, headers=self.headers, timeout=self.timeout, verify=self.do_verify_ssl)
+                response = requests.head(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
             elif self.method == Method.POST:
-                response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.do_verify_ssl)
+                response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
             if response.status_code == 200:
                 if self.download_file:
                     response.raw.decode_content = True
@@ -115,7 +116,9 @@ class Crawler():
                     else:
                         response.encoding = 'utf-8'
                     return response.text
-            #print(response.status_code)
+            else:
+                logger.debug("response.status_code=%d" % response.status_code)
+
         return None
             
     def run(self, url) -> int:
@@ -139,7 +142,6 @@ class Crawler():
                     f.write(chunk)
     
         # post processing
-    
         if self.download_file:
             self.download_path = os.path.expanduser(self.download_file)
             os.utime(self.download_path, (time.time(), time.time()))
@@ -153,14 +155,15 @@ def print_usage() -> None:
     print("Usage:\t%s [ <option> ... <option> ] <url>" % sys.argv[0])
     print("options")
     print("\t--spider\t\t\tno download, just trying")
-    print("\t--render-js\t\t\tphantomjs rendering")
-    print("\t--download <file>\t\tdownload as a file, instead of stdout")
-    print("\t--header <header string>\tspecify header string")
-    print("\t--encoding <encoding>\t\tspecify encoding of content")
-    print("\t--ua <user agent string>")
-    print("\t--referer <referer>")
-    print("\t--retry <# of retries>")
-    print("\t--sleep <seconds>")
+    print("\t--render-js\t\t\ttrue or false, phantomjs rendering")
+    print("\t--verify-ssl\t\t\ttrue or false, ssl certificate verification")
+    print("\t--download=<file>\t\tdownload as a file, instead of stdout")
+    print("\t--header=<header string>\tspecify header string")
+    print("\t--encoding=<encoding>\t\tspecify encoding of content")
+    print("\t--user-agent=<user agent string>")
+    print("\t--referer=<referer>")
+    print("\t--retry=<# of retries>")
+    print("\t--sleep-time=<seconds>")
 
     
 def main() -> int:
@@ -169,13 +172,17 @@ def main() -> int:
     timeout = 10
     num_retries = 1
     sleep_time = None
-    do_render_js = False
+    render_js = False
     download_file: Optional[str] = None
     encoding: Optional[str] = None
-    do_verify_ssl: bool = True
-    
+    verify_ssl: bool = True
+
+    if len(sys.argv) == 1:
+        print_usage()
+        sys.exit(-1)
+        
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "h", ["spider", "render-js", "download=", "encoding=", "ua=", "referer=", "header=", "timeout=", "retry=", "sleep=", "verify="])
+        opts, args = getopt.getopt(sys.argv[1:], "h", ["spider", "render-js=", "verify-ssl=", "download=", "encoding=", "user-agent=", "referer=", "header=", "timeout=", "retry=", "sleep-time="])
     except getopt.GetoptError as err:
         print_usage()
         sys.exit(-1)
@@ -186,12 +193,14 @@ def main() -> int:
             sys.exit(0)
         elif o == "--spider":
             method = Method.HEAD
-        elif o == "--ua":
+        elif o == "--user-agent":
             headers["User-Agent"] = a
         elif o == "--referer":
             headers["Referer"] = a
         elif o == "--render-js":
-            do_render_js = True
+            render_js = (a == "true")
+        elif o == "--verify-ssl":
+            verify_ssl = (a == "true")
         elif o == "--header":
             m = re.search(r'^(?P<key>[^:]+)\s*:\s*(?P<value>.+)\s*$', a)
             if m:
@@ -202,18 +211,16 @@ def main() -> int:
             timeout = int(a)
         elif o == "--retry":
             num_retries = int(a)
-        elif o == "--sleep":
+        elif o == "--sleep-time":
             sleep_time = int(a)
         elif o == "--download":
             download_file = a
         elif o == "--encoding":
             encoding = a
-        elif o == "--verify":
-            do_verify_ssl = (True if a == "true" else False)
 
     url = args[0]
     
-    crawler = Crawler(method, headers, timeout, num_retries, sleep_time, do_render_js, download_file, encoding, do_verify_ssl)
+    crawler = Crawler(method, headers, timeout, num_retries, sleep_time, render_js, download_file, encoding, verify_ssl)
     return crawler.run(url)
 
     

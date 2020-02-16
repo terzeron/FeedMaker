@@ -302,7 +302,7 @@ def traverse_element(element, url, encoding) -> bool:
                     page_num = int(match[2])
                     url = "http://navercast.naver.com/ncc_request.nhn?url=http://data.navercast.naver.com/literature_module/%d/literature_%d_%d.html" % (
                         leaf_id, article_num, page_num)
-                    cmd = "crawler.py --retry 2 '%s' | extract_literature.py" % url
+                    cmd = "crawler.py --retry=2 '%s' | extract_literature.py" % url
                     logger.debug(cmd)
                     (result, error) = exec_cmd(cmd)
                     if not error:
