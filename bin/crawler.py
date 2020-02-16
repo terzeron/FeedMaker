@@ -81,7 +81,7 @@ class HeadlessBrowser:
     
 
 class Crawler():
-    def __init__(self, method, headers, timeout, num_retries=1, sleep_time=None, do_render_js=False, download_file=None, encoding=None) -> None:
+    def __init__(self, method, headers, timeout, num_retries=1, sleep_time=None, do_render_js=False, download_file=None, encoding=None, do_verify_ssl=True) -> None:
         self.method = method
         self.timeout = timeout
         self.num_retries = num_retries
@@ -90,6 +90,7 @@ class Crawler():
         self.headers = headers
         self.download_file = download_file
         self.encoding = encoding
+        self.do_verify_ssl = do_verify_ssl
 
     def make_request(self, url) -> Any:
         logger.debug("Crawler.make_request('%s')" % url)
@@ -99,11 +100,11 @@ class Crawler():
         else:
             #print(url, self.method, self.headers)
             if self.method == Method.GET:
-                response = requests.get(url, headers=self.headers, timeout=self.timeout)
+                response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=self.do_verify_ssl)
             elif self.method == Method.HEAD:
-                response = requests.head(url, headers=self.headers, timeout=self.timeout)
+                response = requests.head(url, headers=self.headers, timeout=self.timeout, verify=self.do_verify_ssl)
             elif self.method == Method.POST:
-                response = requests.post(url, headers=self.headers, timeout=self.timeout)
+                response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.do_verify_ssl)
             if response.status_code == 200:
                 if self.download_file:
                     response.raw.decode_content = True
@@ -171,9 +172,10 @@ def main() -> int:
     do_render_js = False
     download_file: Optional[str] = None
     encoding: Optional[str] = None
+    do_verify_ssl: bool = True
     
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "h", ["spider", "render-js", "download=", "encoding=", "ua=", "referer=", "header=", "timeout=", "retry=", "sleep="])
+        opts, args = getopt.getopt(sys.argv[1:], "h", ["spider", "render-js", "download=", "encoding=", "ua=", "referer=", "header=", "timeout=", "retry=", "sleep=", "verify="])
     except getopt.GetoptError as err:
         print_usage()
         sys.exit(-1)
@@ -206,10 +208,12 @@ def main() -> int:
             download_file = a
         elif o == "--encoding":
             encoding = a
+        elif o == "--verify":
+            do_verify_ssl = (True if a == "true" else False)
 
     url = args[0]
     
-    crawler = Crawler(method, headers, timeout, num_retries, sleep_time, do_render_js, download_file, encoding)
+    crawler = Crawler(method, headers, timeout, num_retries, sleep_time, do_render_js, download_file, encoding, do_verify_ssl)
     return crawler.run(url)
 
     
