@@ -27,7 +27,7 @@ def main():
         "naver/bingtanghuru": [fm_home + "/bin/download_image.py 'http://comic.naver.com/webtoon/detail.nhn?titleId=695321&no=39'"],
         "naver/windbreaker": [fm_home + "/bin/download_merge_split.py -m -c fuzzy 'http://comic.naver.com/webtoon/detail.nhn?titleId=602910&no=197'"],
         "naver/naverpost.businessinsight": [fm_home + "/bin/extract.py 'http://m.post.naver.com/viewer/postView.nhn?volumeNo=14122118&memberNo=35786474'"],
-        "kakao/go_bananas": [fm_home + "/bin/post_process_only_for_images.py"],
+        "kakao/higher_than_my_shoulders": [fm_home + "/bin/post_process_only_for_images.py"],
         # "bookdb/to_lover_of_my_lover": [fm_home + "/bin/remove_non_breaking_space.py"],
     }
     
