@@ -310,6 +310,8 @@ class Config:
         if key in config_node:
             if "true" == config_node[key]:
                 return True
+            elif "false" == config_node[key]:
+                return False
         return default
 
     def _get_str_config_value(self, config_node: Dict[str, Any], key: str, default: str = None) -> Optional[str]:
