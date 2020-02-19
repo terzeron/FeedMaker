@@ -457,7 +457,7 @@ class FeedMaker:
                 logger.debug("wait for seconds and retry")
                 time.sleep(10)
                 self.get_recent_feed_list()
-                if not self.recent_feed_list or len(self.record_feed_list) == 0:
+                if not self.recent_feed_list or len(self.recent_feed_list) == 0:
                     logger.error("Can't get recent feed list from urls")
                     return False
             if self.do_collect_only:
