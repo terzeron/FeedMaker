@@ -355,7 +355,7 @@ class Config:
             collection_conf = self.config["collection"]
 
             render_js = self._get_bool_config_value(collection_conf, "render_js")
-            verify_ssl = self._get_bool_config_value(collection_conf, "verify_ssl")
+            verify_ssl = self._get_bool_config_value(collection_conf, "verify_ssl", True)
             ignore_old_list = self._get_bool_config_value(collection_conf, "ignore_old_list")
             is_completed = self._get_bool_config_value(collection_conf, "is_completed")
 
@@ -404,7 +404,7 @@ class Config:
             extraction_conf = self.config["extraction"]
 
             render_js = self._get_bool_config_value(extraction_conf, "render_js")
-            verify_ssl = self._get_bool_config_value(extraction_conf, "verify_ssl")
+            verify_ssl = self._get_bool_config_value(extraction_conf, "verify_ssl", True)
             bypass_element_extraction = self._get_bool_config_value(extraction_conf, "bypass_element_extraction")
             force_sleep_between_articles = self._get_bool_config_value(extraction_conf, "force_sleep_between_articles")
 
