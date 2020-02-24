@@ -8,7 +8,7 @@ import feed_maker_util
 from feed_maker_util import URL, IO, exec_cmd
 
 
-def main():
+def main() -> int:
     link = sys.argv[1]
     id_str = URL.get_short_md5_name(link)
     video_file = id_str + ".avi"
@@ -36,6 +36,7 @@ def main():
                 if re.search(r"%s_\d+\.jpg" % id_str, entry.name):
                     print("<img src='%s/%s'/>\n" % (img_url_prefix, entry.name))
             # unlink(video_file)
+    return 0
 
 
 if __name__ == "__main__":

@@ -68,7 +68,7 @@ def extract_content(args) -> bool:
         print_header()
 
     # main article sections
-    ret = 0
+    ret = True
     for parser in ["html.parser", "html5lib", "lxml"]:
         soup = BeautifulSoup(html_content, parser)
         '''

@@ -14,7 +14,7 @@ import logging.config
 from feed_maker_util import Config, URL, exec_cmd, make_path, determine_crawler_options, header_str, remove_duplicates, get_current_time, get_current_time_str, get_rss_date_str, get_short_date_str
 from collections import OrderedDict
 from new_list_collector import NewListCollector
-from typing import List, Dict, Any, Tuple, Union, Set, Callable
+from typing import Optional, List, Dict, Any, Tuple, Union, Set, Callable
 from ordered_set import OrderedSet
 import PyRSS2Gen
 
@@ -468,7 +468,7 @@ class FeedMaker:
             
             # 과거 피드항목 리스트와 최근 피드항목 리스트를 비교함
             if self.collection_conf["ignore_old_list"]:
-                self.old_feed_list = []
+                del self.old_feed_list[:]
                 self.new_feed_list = self.recent_feed_list
     
             self.extraction_conf = config.get_extraction_configs()

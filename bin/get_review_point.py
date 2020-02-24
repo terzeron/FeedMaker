@@ -1,14 +1,22 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+
+import sys
+import os
 import re
 import signal
-import sys
+import logging
 from urllib.parse import urlencode
 from feed_maker_util import exec_cmd
+from typing import Optional, Dict
 
 
-def get_default_config(type_name):
+logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logger = logging.getLogger()
+
+
+def get_default_config(type_name) -> Dict[str, str]:
     if type_name == "book":
         url_prefix = "http://book.naver.com/search/search.nhn?sm=sta_hty.book&sug=&where=nexearch&"
         url_param = "query"
@@ -30,19 +38,22 @@ def get_default_config(type_name):
     return {"url_prefix": url_prefix, "url_param": url_param, "encoding": encoding, "review_point_pattern": review_point_pattern}
 
 
-def get_page(url):
+def get_page(url) -> Optional[str]:
     cmd = "crawler.py \"%s\"" % url
     result, error = exec_cmd(cmd)
     return result
 
 
-def get_first_search_result(config, type_name, keyword, year):
+def get_first_search_result(config, type_name, keyword, year) -> str:
     url_prefix = config["url_prefix"]
     url_param = config["url_param"]
     review_point_pattern = config["review_point_pattern"]
 
     url = "%s%s" % (url_prefix, urlencode({url_param: keyword}))
     html = get_page(url)
+    if not html:
+        logger.error("can't get page html from url '%s'" % url)
+        return ""
     m = re.search(review_point_pattern, html, re.MULTILINE)
     # print "review_point_pattern=", review_point_pattern
     # print "m=", m
@@ -66,11 +77,11 @@ def get_first_search_result(config, type_name, keyword, year):
     return "0.0"
 
 
-def print_usage():
+def print_usage() -> None:
     print("usage: %s\t <book|movie|game> <keyword> [ <year> ]\n\n" % sys.argv[0])
 
 
-def main():
+def main() -> int:
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)
     if len(sys.argv) < 3:
         print_usage()

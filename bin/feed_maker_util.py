@@ -32,7 +32,7 @@ def make_path(path: str) -> None:
         pass
 
 
-def exec_cmd(cmd: str, input_data=None) -> Tuple[Optional[str], str]:
+def exec_cmd(cmd: str, input_data=None) -> Tuple[Optional[str], Optional[str]]:
     try:
         p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if input_data:
@@ -152,8 +152,10 @@ def get_short_date_str(dt=get_current_time()) -> str:
 
 class HTMLExtractor:
     @staticmethod
-    def get_first_token_from_path(path_str: str) -> Tuple[Optional[str], Optional[str], Optional[int], Optional[str], bool]:
+    def get_first_token_from_path(path_str: Optional[str]) -> Tuple[Optional[str], Optional[str], Optional[int], Optional[str], bool]:
         # print "get_first_token_from_path(path_str='%s')" % path_str
+        if not path_str:
+            return None, None, None, None, False
         is_anywhere: bool = False
         if path_str[0:2] == "//":
             is_anywhere = True
@@ -193,7 +195,7 @@ class HTMLExtractor:
         return id_str, name, idx, "/".join(tokens[i:]), is_anywhere
 
     @staticmethod
-    def get_node_with_path(node, path_str: str) -> Optional[List[Any]]:
+    def get_node_with_path(node, path_str: Optional[str]) -> Optional[List[Any]]:
         if not node:
             return None
         # print "\n# get_node_with_path(node='%s', path_str='%s')" % (node.name, path_str)

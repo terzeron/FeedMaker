@@ -87,8 +87,10 @@ def download_image_and_read_metadata(path_prefix: str, img_ext: str, page_url: s
 
             m2 = re.search(r"^(?P<width>\d+)\s+(?P<height>\d+)", result)
             if m2:
-                width = int(m2.group("width"))
-                height = int(m2.group("height"))
+                width_str = str(m2.group("width"))
+                height_str = str(m2.group("height"))
+                width = int(width_str)
+                height = int(height_str)
                 img_size_list.append("%s\t%s" % (width, height))
                 logger.debug("<!-- cache_file=cache_file, img_url=img_url, width=width, height=height -->")
         else:
@@ -179,7 +181,7 @@ def split_image_file(img_file: str, bandwidth: int, diff_threshold: float, size_
     return True
 
 
-def print_image_files(num_units: int, path_prefix: str, img_url_prefix: str, img_url: str, img_ext: str, postfix: int, do_flip_right_to_left: bool) -> None:
+def print_image_files(num_units: int, path_prefix: str, img_url_prefix: str, img_url: str, img_ext: str, postfix: Optional[int], do_flip_right_to_left: bool) -> None:
     logger.debug("# print_image_files(%d, %s, %s, %s, %s, %s, %s)" % (num_units, path_prefix, img_url_prefix, img_url, img_ext, postfix if postfix else "", do_flip_right_to_left))
     # print some split images
     if not do_flip_right_to_left:
@@ -215,6 +217,9 @@ def main() -> int:
     cmd = "basename " + os.getcwd()
     logger.debug(cmd)
     (result, error) = exec_cmd(cmd)
+    if not result:
+        logger.error("can't identify current working directory")
+        return -1
     feed_name = result.rstrip()
     logger.debug("<!-- feed_name=%s -->" % feed_name)
     path_prefix = os.environ["FEED_MAKER_WWW_FEEDS_DIR"] + "/img/" + feed_name

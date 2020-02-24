@@ -321,13 +321,24 @@ def main() -> int:
 
     if options["do_make_all_feeds"]:
         feed_maker_cwd = os.getenv("FEED_MAKER_WORK_DIR")
+        if not feed_maker_cwd:
+            logger.error("can't get environment variable 'FEED_MAKER_WORK_DIR'")
+            return -1
         log_dir = os.path.join(feed_maker_cwd, "logs")
-        img_dir = os.path.join(os.getenv("FEED_MAKER_WWW_FEEDS_DIR"), "img")
+        www_feeds_dir = os.getenv("FEED_MAKER_WWW_FEEDS_DIR")
+        if not www_feeds_dir:
+            logger.error("can't get environment variable 'FEED_MAKER_WWW_FEEDS_DIR'")
+            return -1
+        img_dir = os.path.join(www_feeds_dir, "img")
         result = make_all_feeds(feed_maker_cwd, log_dir, img_dir)
         kill_chrome_process_group("chromedriver")
     else:
         feed_name = os.path.basename(os.getcwd())
-        img_dir = os.path.join(os.getenv("FEED_MAKER_WWW_FEEDS_DIR"), "img", feed_name)
+        www_feeds_dir = os.getenv("FEED_MAKER_WWW_FEEDS_DIR")
+        if not www_feeds_dir:
+            logger.error("can't get environment variable 'FEED_MAKER_WWW_FEEDS_DIR'")
+            return -1
+        img_dir = os.path.join(www_feeds_dir, "img", feed_name)
         result = make_single_feed(feed_name, img_dir, archiving_period, options)
         
     end_ts = time.time()

@@ -9,7 +9,7 @@ import time
 import getopt
 import logging
 import logging.config
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple, Any, Optional
 from feed_maker_util import Config, exec_cmd, determine_crawler_options, remove_duplicates
 
 
@@ -23,7 +23,7 @@ class NewListCollector:
         self.new_list_file_name = new_list_file_name
 
 
-    def compose_and_execute_cmd(self, url: str) -> (str, Any):
+    def compose_and_execute_cmd(self, url: str) -> Tuple[Optional[str], Any]:
         option_str = determine_crawler_options(self.collection_conf)
         option_str += " --retry=2"
         crawl_cmd = "crawler.py %s '%s'" % (option_str, url) 
@@ -62,17 +62,18 @@ class NewListCollector:
         
         (result, error) = self.compose_and_execute_cmd(url)
         result_list = []
-        for line in result.rstrip().split("\n"):
-            line = line.rstrip()
-            if re.search(r'^#', line) or re.search(r'^\s*$', line):
-                continue
-            items = line.split("\t")
-            link = items[0]
-            title = " ".join(items[1:])
-            if not link or not title:
-                logger.error("can't get the link and title from '%s', %s" % (link, error))
-                sys.exit(-1)
-            result_list.append((link, title))
+        if result:
+            for line in result.rstrip().split("\n"):
+                line = line.rstrip()
+                if re.search(r'^#', line) or re.search(r'^\s*$', line):
+                    continue
+                items = line.split("\t")
+                link = items[0]
+                title = " ".join(items[1:])
+                if not link or not title:
+                    logger.error("can't get the link and title from '%s', %s" % (link, error))
+                    sys.exit(-1)
+                result_list.append((link, title))
         return result_list
     
     
@@ -109,5 +110,5 @@ class NewListCollector:
         if new_list and len(new_list) > 0:
             self.save_new_list_to_file(new_list)
             return new_list
-        return None
+        return []
 

@@ -9,18 +9,19 @@ import subprocess
 import logging
 import logging.config
 from feed_maker_util import IO, exec_cmd
+from typing import Set, Dict
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
 logger = logging.getLogger()
 
 
-def print_usage():
+def print_usage() -> None:
     print("_usage: %s\t[ -t <threshold> ] <output file>\n" % (sys.argv[0]))
 
 
-def main():
-    threshold = 0
+def main() -> int:
+    threshold: float = 0.0
     optlist, args = getopt.getopt(sys.argv[1:], "t:")
     for o, a in optlist:
         if o == "-t":
@@ -35,8 +36,8 @@ def main():
     intermediate_file = file_prefix + ".intermediate"
     temp_output_file = file_prefix + ".temp"
     output_file = file_prefix + ".output"
-    line_num_link_map = {}
-    title_existence_set = set([])
+    line_num_link_map: Dict[int, str] = {}
+    title_existence_set: Set[str] = set([])
 
     # split link and title into two separate files
     # and make line number & link mapping table
@@ -72,8 +73,11 @@ def main():
         with open(output_file, 'w', encoding='utf-8') as out_file:
             for line in p.stdout:
                 line = line.rstrip()
-                (line_num, title) = line.split("\t")
-                out_file.write("%d\n" % (line_num_link_map[line_num]))
+                (line_num_str, title) = line.split("\t")
+                line_num = int(line_num_str)
+                out_file.write("%s\n" % (line_num_link_map[line_num]))
+
+    return 0
 
 
 if __name__ == "__main__":

@@ -28,7 +28,7 @@ class Method(Enum):
 
 
 class HeadlessBrowser:
-    def __init__(self, headers, sleep_time=None):
+    def __init__(self, headers, sleep_time=None) -> None:
         self.headers = headers
         self.sleep_time = sleep_time
         
