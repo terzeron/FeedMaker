@@ -76,15 +76,18 @@ class FeedMaker:
     def cmp_int_or_str(self, a: Dict[str, str], b: Dict[str, str]) -> int:
         m1 = re.search(r'^\d+$', a["sf"])
         m2 = re.search(r'^\d+$', b["sf"])
+        ret: int = 0
+        
         if m1 and m2:
-            return int(a["sf"]) - int(b["sf"])
+            ret = int(a["sf"]) - int(b["sf"])
         else:
             if a["sf"] < b["sf"]:
-                return -1
+                ret = -1
             elif a["sf"] > b["sf"]:
-                return 1
+                ret = 1
             else:
-                return 0
+                ret = 0
+        return ret
     
 
     def cmp_to_key(self, mycmp) -> Callable[[Dict[str, object]], Any]:
@@ -388,10 +391,10 @@ class FeedMaker:
             link, title = item
             m = re.search(sort_field_pattern, link + "\t" + title)
             if m:
-                sort_field = "%09s" % m.group(1)
+                sort_field = m.group(1)
                 try:
                     if m.group(2):
-                        sort_field += "%09s" % m.group(2)
+                        sort_field += " " + m.group(2)
                 except IndexError as e:
                     # ignore
                     pass
