@@ -81,7 +81,7 @@ class HeadlessBrowser:
     
 
 class Crawler():
-    def __init__(self, method, headers, timeout, num_retries=1, sleep_time=None, render_js=False, download_file=None, encoding=None, verify_ssl=True) -> None:
+    def __init__(self, method, headers, timeout=10, num_retries=1, sleep_time=None, render_js=False, download_file=None, encoding=None, verify_ssl=True) -> None:
         self.method = method
         self.timeout = timeout
         self.num_retries = num_retries
@@ -147,10 +147,8 @@ class Crawler():
         if self.download_file:
             self.download_path = os.path.expanduser(self.download_file)
             os.utime(self.download_path, (time.time(), time.time()))
-        else:
-            print(response)
 
-        return 0
+        return response
 
 
 def print_usage() -> None:
@@ -223,7 +221,9 @@ def main() -> int:
     url = args[0]
     
     crawler = Crawler(method, headers, timeout, num_retries, sleep_time, render_js, download_file, encoding, verify_ssl)
-    return crawler.run(url)
+    response = crawler.run(url)
+    print(response)
+    return 0
 
     
 if __name__ == "__main__":
