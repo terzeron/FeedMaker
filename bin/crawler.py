@@ -96,6 +96,7 @@ class Crawler():
         logger.debug("Crawler.make_request('%s')" % url)
         if self.render_js:
             logger.debug("headless browser")
+            self.headers['User-Agent'] = "Mozillla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36"
             browser = HeadlessBrowser(self.headers, self.sleep_time)
             return browser.make_request(url) 
         else:
