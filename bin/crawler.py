@@ -96,6 +96,7 @@ class Crawler():
         logger.debug("Crawler.make_request('%s')" % url)
         if self.render_js:
             logger.debug("headless browser")
+            self.headers['User-Agent'] = "Mozillla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36"
             browser = HeadlessBrowser(self.headers, self.sleep_time)
             return browser.make_request(url) 
         else:
@@ -155,8 +156,8 @@ def print_usage() -> None:
     print("Usage:\t%s [ <option> ... <option> ] <url>" % sys.argv[0])
     print("options")
     print("\t--spider\t\t\tno download, just trying")
-    print("\t--render-js\t\t\ttrue or false, phantomjs rendering")
-    print("\t--verify-ssl\t\t\ttrue or false, ssl certificate verification")
+    print("\t--render-js=true/false\t\tphantomjs rendering")
+    print("\t--verify-ssl=true/false\t\tssl certificate verification")
     print("\t--download=<file>\t\tdownload as a file, instead of stdout")
     print("\t--header=<header string>\tspecify header string")
     print("\t--encoding=<encoding>\t\tspecify encoding of content")
