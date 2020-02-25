@@ -291,44 +291,9 @@ def traverse_element(element, url, encoding) -> bool:
             # skip sub-elementss
             return True
         else:
-            if check_element_class(element, "div", "paginate_v1"):
-                # <div class="paginate_v1">...
-                # ajax로 받아오는 페이지들을 미리 요청
-                matches = re.findall(r"change_page\('[^']+/literature_module/(\d+)/literature_(\d+)_(\d+)\.html'",
-                                     str(element))
-                for match in matches:
-                    leaf_id = int(match[0])
-                    article_num = int(match[1])
-                    page_num = int(match[2])
-                    url = "http://navercast.naver.com/ncc_request.nhn?url=http://data.navercast.naver.com/literature_module/%d/literature_%d_%d.html" % (
-                        leaf_id, article_num, page_num)
-                    cmd = "crawler.py --retry=2 '%s' | extract_literature.py" % url
-                    logger.debug(cmd)
-                    (result, error) = exec_cmd(cmd)
-                    if not error:
-                        print(result)
-                    ret = True
-                return ret
-            elif check_element_class(element, "div", "view_option option_top"):
-                # "오늘의 문학"에서 폰트크기와 책갈피 이미지 영역 제거
-                return ret
-            elif check_element_class(element, "span", "page_prev") or check_element_class(element, "span", "page_next"):
-                # <span class="page_prev">... or <span class="page_next">...
-                # 이전/다음 페이지 화살표 링크 영역 제거
-                return ret
-            elif check_element_class(element, "dl", "designlist"):
-                # <dl class="designlist">...
-                # skip this element and sub-elements
-                return ret
-            elif check_element_class(element, "div", "na_ly_cmt"):
-                # <a onclick="openFootnoteLayer('번호'...)의 번호와 비교
-                if hasattr(element, "id"):
-                    if element["id"] != "footnoteLayer" + str(footnote_num):
-                        return ret
-            else:
-                sys.stdout.write("<%s>\n" % element.name)
-                open_close_tag = True
-                ret = True
+            sys.stdout.write("<%s>\n" % element.name)
+            open_close_tag = True
+            ret = True
 
         if hasattr(element, 'contents'):
             for e in element.contents:

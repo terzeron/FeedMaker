@@ -11,6 +11,7 @@ import logging
 import logging.config
 import feed_maker_util
 from feed_maker_util import Cache, IO, exec_cmd, make_path
+from crawler import Crawler
 from typing import List, Tuple, Optional
 
 
@@ -23,14 +24,13 @@ def download_image(path_prefix: str, img_url: str, img_ext: str, page_url: str) 
     cache_file = Cache.get_cache_file_name(path_prefix, img_url, img_ext)
     if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
         return cache_file
-    cmd = 'crawler.py --retry=2 --download="%s" --referer="%s" "%s"' % (cache_file, page_url, img_url)
-    logger.debug("<!-- cmd: %s -->" % cmd)
-    (result, error) = exec_cmd(cmd)
+    crawler = Crawler(headers={"Referer": page_url}, download_file=cache_file, num_retries=2)
+    result = crawler.run(img_url)
     logger.debug("<!-- result: %s -->" % result)
-    if error:
+    if not result:
         time.sleep(5)
-        (result, error) = exec_cmd(cmd)
-        if error:
+        result = crawler.run(img_url)
+        if not result:
             return None
     if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
         return cache_file

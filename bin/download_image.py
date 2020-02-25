@@ -7,9 +7,10 @@ import re
 import time
 import logging
 import logging.config
-from feed_maker_util import IO, Cache, exec_cmd, make_path
-from typing import List, Optional
 from base64 import b64decode
+from feed_maker_util import IO, Cache, exec_cmd, make_path
+from crawler import Crawler
+from typing import List, Optional
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
@@ -36,14 +37,13 @@ def download_image(path_prefix: str, img_url_or_data: str, page_url: str) -> Opt
     if img_url_or_data.startswith("http"):
         img_url = img_url_or_data
         logger.debug("image url '%s' to cache file '%s'" % (img_url, cache_file))
-        cmd = 'crawler.py --retry=2 --download="%s" --referer="%s" "%s"' % (cache_file, page_url, img_url)
-        logger.debug("%s" % cmd)
-        (result, error) = exec_cmd(cmd)
+        crawler = Crawler(headers={"Referer": page_url}, download_file=cache_file, num_retries=2)
+        result = crawler.run(img_url)
         logger.debug("result: %s" % result)
-        if error:
+        if not result:
             time.sleep(5)
-            (result, error) = exec_cmd(cmd)
-            if error:
+            result = crawler.run(img_url)
+            if not result:
                 return None
     else:
         return None

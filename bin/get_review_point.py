@@ -9,6 +9,7 @@ import signal
 import logging
 from urllib.parse import urlencode
 from feed_maker_util import exec_cmd
+from crawler import Crawler
 from typing import Optional, Dict
 
 
@@ -39,9 +40,8 @@ def get_default_config(type_name) -> Dict[str, str]:
 
 
 def get_page(url) -> Optional[str]:
-    cmd = "crawler.py \"%s\"" % url
-    result, error = exec_cmd(cmd)
-    return result
+    crawler = Crawler()
+    return crawler.run(url)
 
 
 def get_first_search_result(config, type_name, keyword, year) -> str:

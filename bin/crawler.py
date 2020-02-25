@@ -81,7 +81,7 @@ class HeadlessBrowser:
     
 
 class Crawler():
-    def __init__(self, method, headers, timeout=10, num_retries=1, sleep_time=None, render_js=False, download_file=None, encoding=None, verify_ssl=True) -> None:
+    def __init__(self, method=Method.GET, headers={}, timeout=10, num_retries=1, sleep_time=None, render_js=False, download_file=None, encoding=None, verify_ssl=True) -> None:
         self.method = method
         self.timeout = timeout
         self.num_retries = num_retries
@@ -134,7 +134,7 @@ class Crawler():
                 time.sleep(10)
         if not response:
             logger.warning("can't get response from '%s'" % url)
-            sys.exit(-1)
+            return None
            
         if self.method == Method.HEAD:
             pass
