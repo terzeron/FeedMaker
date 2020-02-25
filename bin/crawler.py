@@ -102,10 +102,12 @@ class Crawler():
             logger.debug("requests client")
             if self.method == Method.GET:
                 response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
-            elif self.method == Method.HEAD:
-                response = requests.head(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
             elif self.method == Method.POST:
                 response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
+            elif self.method == Method.HEAD:
+                response = requests.head(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
+                return response.status_code
+
             if response.status_code == 200:
                 if self.download_file:
                     response.raw.decode_content = True
