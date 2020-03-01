@@ -5,6 +5,7 @@ import sys
 import os
 import re
 import time
+import urllib.parse
 import logging
 import logging.config
 from base64 import b64decode
@@ -36,6 +37,13 @@ def download_image(path_prefix: str, img_url_or_data: str, page_url: str) -> Opt
 
     if img_url_or_data.startswith("http"):
         img_url = img_url_or_data
+        
+        # handle non ascii url
+        url = urllib.parse.urlsplit(page_url)
+        urls = list(url)
+        urls[2] = urllib.parse.quote(urls[2])
+        page_url = urllib.parse.urlunsplit(urls)
+        
         logger.debug("image url '%s' to cache file '%s'" % (img_url, cache_file))
         crawler = Crawler(headers={"Referer": page_url}, download_file=cache_file, num_retries=2)
         result = crawler.run(img_url)
