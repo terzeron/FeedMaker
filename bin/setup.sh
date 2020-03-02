@@ -1,5 +1,10 @@
 # You should change this environment variables according to your environment.
 
+if command -v pyenv 1>/dev/null 2>&1; then
+    eval "$(pyenv init -)"
+    eval "$(pyenv virtualenv-init -)"
+fi
+
 # engine directory
 export FEED_MAKER_HOME_DIR=$HOME/workspace/fm
 # feed working directory
