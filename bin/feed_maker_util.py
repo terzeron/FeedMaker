@@ -373,9 +373,6 @@ class Config:
             unit_size_per_day = self._get_float_config_value(collection_conf, "unit_size_per_day")
 
             list_url_list = self._get_config_value_list(collection_conf, "list_url", [])
-            element_id_list = self._get_config_value_list(collection_conf, "element_id", [])
-            element_class_list = self._get_config_value_list(collection_conf, "element_class", [])
-            element_path_list = self._get_config_value_list(collection_conf, "element_path", [])
             post_process_script_list = self._get_config_value_list(collection_conf, "post_process_script", [])
 
             conf = {
@@ -394,9 +391,6 @@ class Config:
                 "unit_size_per_day": unit_size_per_day,
 
                 "list_url_list": list_url_list,
-                "element_id_list": element_id_list,
-                "element_class_list": element_class_list,
-                "element_path_list": element_path_list,
                 "post_process_script_list": post_process_script_list,
             }
         return conf
@@ -507,7 +501,7 @@ class URL:
         if host_index >= 0:
             first_slash_index = url[host_index:].find('/', host_index)
             if first_slash_index >= 0:
-                return url[host_index:(host_index+first_slash_index)]
+                return url[host_index:(host_index + first_slash_index)]
         return ""
 
     # http://naver.com/api/items?page_no=3 => /api/items?page_no=3
@@ -518,7 +512,7 @@ class URL:
         if host_index >= 0:
             first_slash_index = url[host_index:].find('/', host_index)
             if first_slash_index >= 0:
-                return url[(host_index+first_slash_index):]
+                return url[(host_index + first_slash_index):]
         return ""
 
     # http://naver.com/api/items?page_no=3 => http://naver.com/api/
