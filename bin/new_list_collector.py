@@ -27,7 +27,6 @@ class NewListCollector:
         option_str = determine_crawler_options(self.collection_conf)
         option_str += " --retry=2"
         crawl_cmd = "crawler.py %s '%s'" % (option_str, url) 
-        extract_cmd = "extract_element.py collection"
         capture_cmd = self.collection_conf["item_capture_script"]
         post_process_cmd = ""
         for script in self.collection_conf["post_process_script_list"]:
@@ -35,7 +34,7 @@ class NewListCollector:
                 post_process_cmd += ' | %s' % script
             else:
                 post_process_cmd = script
-        cmd_list = [crawl_cmd, extract_cmd, capture_cmd, post_process_cmd]
+        cmd_list = [crawl_cmd, capture_cmd, post_process_cmd]
 
         full_cmd = ""
         for cmd in cmd_list:

@@ -19,7 +19,7 @@ logger = logging.getLogger()
 
 
 def download_image(path_prefix: str, img_url_or_data: str, page_url: str) -> Optional[str]:
-    logger.debug("# download_image(%s, %s, %s)" % (path_prefix, img_url_or_data[:30], page_url))
+    logger.debug("# download_image(%s, %s, %s)" % (path_prefix, img_url_or_data, page_url))
     cache_file = Cache.get_cache_file_name(path_prefix, img_url_or_data, "")
     if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
         return cache_file
@@ -27,7 +27,7 @@ def download_image(path_prefix: str, img_url_or_data: str, page_url: str) -> Opt
     m = re.search(r'^data:image/(?:png|jpeg|jpg);base64,(?P<img_data>.+)', img_url_or_data)
     if m:
         img_data = m.group("img_data")
-        logger.debug("image data '%s' as base64 to cache file '%s'" % (img_data[:30], cache_file))
+        logger.debug("image data '%s' as base64 to cache file '%s'" % (img_data, cache_file))
         if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
             return cache_file
         with open(cache_file, "wb") as outfile:
@@ -47,7 +47,6 @@ def download_image(path_prefix: str, img_url_or_data: str, page_url: str) -> Opt
         logger.debug("image url '%s' to cache file '%s'" % (img_url, cache_file))
         crawler = Crawler(headers={"Referer": page_url}, download_file=cache_file, num_retries=2)
         result = crawler.run(img_url)
-        logger.debug("result: %s" % result)
         if not result:
             time.sleep(5)
             result = crawler.run(img_url)
@@ -101,7 +100,7 @@ def main() -> int:
             cache_file = download_image(path_prefix, img_url_or_data, page_url)
             if cache_file:
                 cache_url = Cache.get_cache_url(img_url_prefix, img_url_or_data, "")
-                logger.debug("%s -> %s / %s" % (img_url_or_data[:100], cache_file, cache_url))
+                logger.debug("%s -> %s / %s" % (img_url_or_data, cache_file, cache_url))
                 print("<img src='%s'/>" % cache_url)
             else:
                 logger.debug("no cache file '%s'" % (cache_file))
