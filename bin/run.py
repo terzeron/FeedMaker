@@ -12,15 +12,16 @@ import logging.config
 import concurrent.futures
 import getopt
 from typing import Dict, Tuple, List, Any, Set
+import psutil
 from feed_maker_util import Config, exec_cmd, find_process_group
 from feed_maker import FeedMaker
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
-logger = logging.getLogger()
+LOGGER = logging.getLogger()
 
 
-def send_error_msg(msg: str) -> bool:
+def send_error_msg(msg: str = "") -> bool:
     cmd = " ".join(('''
     curl -s -X POST
          -H 'Content-Type:application/json'
@@ -37,13 +38,13 @@ def send_error_msg(msg: str) -> bool:
     ''' % msg[:1999]).split("\n"))
     result, error = exec_cmd(cmd)
     if error:
-        logger.error(error)
+        LOGGER.error(error)
         return False
-    logger.info(result)
+    LOGGER.info(result)
     return True
 
 
-def execute_job(feed_dir: str, runlog: str, errorlog: str, list_archiving_period: int) -> bool:
+def execute_job(feed_dir: str, list_archiving_period: int) -> bool:
     print(feed_dir)
     os.chdir(feed_dir)
     if os.path.isdir(feed_dir) and os.path.isfile(os.path.join(feed_dir, "conf.xml")):
@@ -59,16 +60,16 @@ def execute_job(feed_dir: str, runlog: str, errorlog: str, list_archiving_period
         collection_conf = config.get_collection_configs()
         if collection_conf["is_completed"] and not do_exist_old_list_file:
             cmd = "run.py -c"
-            result, error = exec_cmd(cmd)
-            if error:
+            result, _ = exec_cmd(cmd)
+            if not result:
                 return False
-        
+
         cmd = "run.py"
         result, error = exec_cmd(cmd)
         if error:
             return False
     return True
-        
+
 
 def print_usage() -> None:
     print("Usage:\t%s [-h] [-r] [-c] [ <feed path> ]")
@@ -124,14 +125,14 @@ def remove_log_files(file_list: List[str]) -> None:
 
 
 def remove_image_files_old_and_with_zero_size(img_dir: str, max_archiving_period: int) -> None:
-    for path, dirs, files in os.walk(img_dir):
+    for path, _, files in os.walk(img_dir):
         for file in files:
             file_path = os.path.join(path, file)
             if os.path.isfile(file_path):
                 if os.stat(file_path).st_size == 0 or os.stat(file_path).st_mtime + max_archiving_period * 24 * 60 * 60 < time.time():
                     os.remove(file_path)
 
-            
+
 def remove_all_files(rss_file_name: str) -> None:
     for file in os.listdir("html"):
         file_path = os.path.join("html", file)
@@ -148,17 +149,17 @@ def remove_all_files(rss_file_name: str) -> None:
 
 def remove_old_html_files(archiving_period: int) -> None:
     if os.path.exists("html"):
-        logger.info("deleting older html files than 30 days")
+        LOGGER.info("deleting older html files than 30 days")
         # deleting older html files than archiving_period
         for file in os.listdir("html"):
             file_path = os.path.join("html", file)
             if os.path.isfile(file_path) and os.path.exists(file_path) and os.stat(file_path).st_ctime + archiving_period * 24 * 60 * 60 < time.time():
                 os.remove(file_path)
-                logger.info(file_path)
+                LOGGER.info(file_path)
 
 
 def remove_html_files_without_cached_image_files(img_dir: str) -> None:
-    logger.debug("remove_html_files_without_cached_image_files(%s)" % img_dir)
+    LOGGER.debug("remove_html_files_without_cached_image_files(%s)", img_dir)
     img_set_in_img_dir = get_img_set_in_img_dir(img_dir)
 
     if os.path.isdir("html"):
@@ -175,14 +176,14 @@ def remove_html_files_without_cached_image_files(img_dir: str) -> None:
                                 img_file = m.group("img")
                                 img_html_map[img_file] = file
                     except UnicodeDecodeError as e:
-                        logger.error("Unicode decode error in '%s'" % file_path, e)
+                        LOGGER.error("Unicode decode error in '%s'", file_path)
                         raise e
 
         for img_file in set(img_html_map.keys()) - img_set_in_img_dir:
             html_file = img_html_map[img_file]
             html_file_path = os.path.join("html", html_file)
             if os.path.isfile(html_file_path):
-                logger.info("deleting html file '%s' for missing image file '%s'" % (html_file, img_file))
+                LOGGER.info("deleting html file '%s' for missing image file '%s'", html_file, img_file)
                 os.remove(html_file_path)
 
 
@@ -209,13 +210,13 @@ def remove_unused_img_files(rss_file_name: str, img_dir: str) -> None:
 
     # 이미지 디렉토리에만 존재하는 이미지 파일을 모두 삭제
     for img_file in sorted(img_set_in_img_dir - img_set_in_xml_file):
-        logger.info("deleting unused image file '%s' from '%s'" % (img_file, img_dir))
+        LOGGER.info("deleting unused image file '%s' from '%s'", img_file, img_dir)
         img_file_path = os.path.join(img_dir, img_file)
         os.remove(img_file_path)
 
 
 def make_single_feed(feed_name: str, img_dir: str, archiving_period: int, options: Dict[str, Any]) -> bool:
-    logger.info(feed_name)
+    LOGGER.info(feed_name)
     rss_file_name = feed_name + ".xml"
 
     config = Config()
@@ -238,7 +239,7 @@ def make_single_feed(feed_name: str, img_dir: str, archiving_period: int, option
     remove_html_files_without_cached_image_files(img_dir)
 
     # make_feed.py 실행하여 feed 파일 생성
-    logger.info("making feed file '%s'" % rss_file_name)
+    LOGGER.info("making feed file '%s'", rss_file_name)
     feed_maker = FeedMaker(force_collection_opt, collect_only_opt, rss_file_name)
     result = feed_maker.make()
 
@@ -259,14 +260,14 @@ def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
     max_archiving_period = 60
     list_archiving_period = 3
 
-    logger.info("deleting log files")
+    LOGGER.info("deleting log files")
     remove_log_files([runlog, errorlog, collectorerrorlog])
-    logger.info("deleting old image files and image files with zero size")
+    LOGGER.info("deleting old image files and image files with zero size")
     remove_image_files_old_and_with_zero_size(img_dir, max_archiving_period)
 
-    logger.info("executing feed generation")
+    LOGGER.info("executing feed generation")
     feed_dir_path_list: List[str] = []
-    for path, dirs, files in os.walk(feed_maker_cwd):
+    for path, dirs, _ in os.walk(feed_maker_cwd):
         if "/_" not in path:
             for d in dirs:
                 dir_path = os.path.join(path, d)
@@ -276,7 +277,7 @@ def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
     random.shuffle(feed_dir_path_list)
     failed_feed_list: List[str] = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-        future_to_feed = {executor.submit(execute_job, feed_dir_path, runlog, errorlog, list_archiving_period): feed_dir_path for feed_dir_path in feed_dir_path_list}
+        future_to_feed = {executor.submit(execute_job, feed_dir_path, list_archiving_period): feed_dir_path for feed_dir_path in feed_dir_path_list}
         for future in concurrent.futures.as_completed(future_to_feed):
             feed = future_to_feed[future]
             try:
@@ -293,13 +294,12 @@ def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
 
     cmd = "find_problems.sh > %s/find_problems.log 2>&1" % log_dir
     res, error = exec_cmd(cmd)
-    if error:
+    if not res:
         send_error_msg(error)
     return not error
 
 
 def kill_chrome_process_group(proc_name: str) -> None:
-    import psutil
     pid_list = find_process_group(proc_name)
     for pid in pid_list:
         p = psutil.Process(pid)
@@ -322,12 +322,12 @@ def main() -> int:
     if options["do_make_all_feeds"]:
         feed_maker_cwd = os.getenv("FEED_MAKER_WORK_DIR")
         if not feed_maker_cwd:
-            logger.error("can't get environment variable 'FEED_MAKER_WORK_DIR'")
+            LOGGER.error("can't get environment variable 'FEED_MAKER_WORK_DIR'")
             return -1
         log_dir = os.path.join(feed_maker_cwd, "logs")
         www_feeds_dir = os.getenv("FEED_MAKER_WWW_FEEDS_DIR")
         if not www_feeds_dir:
-            logger.error("can't get environment variable 'FEED_MAKER_WWW_FEEDS_DIR'")
+            LOGGER.error("can't get environment variable 'FEED_MAKER_WWW_FEEDS_DIR'")
             return -1
         img_dir = os.path.join(www_feeds_dir, "img")
         result = make_all_feeds(feed_maker_cwd, log_dir, img_dir)
@@ -336,19 +336,17 @@ def main() -> int:
         feed_name = os.path.basename(os.getcwd())
         www_feeds_dir = os.getenv("FEED_MAKER_WWW_FEEDS_DIR")
         if not www_feeds_dir:
-            logger.error("can't get environment variable 'FEED_MAKER_WWW_FEEDS_DIR'")
+            LOGGER.error("can't get environment variable 'FEED_MAKER_WWW_FEEDS_DIR'")
             return -1
         img_dir = os.path.join(www_feeds_dir, "img", feed_name)
         result = make_single_feed(feed_name, img_dir, archiving_period, options)
-        
+
     end_ts = time.time()
     print(datetime.now().astimezone().isoformat(timespec="seconds"))
-    logger.info("elapse=%f" % (end_ts - start_ts))
+    LOGGER.info("elapse=%f", (end_ts - start_ts))
 
     return 0 if result else -1
 
 
 if __name__ == "__main__":
     sys.exit(main())
-
-    
