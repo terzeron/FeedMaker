@@ -75,7 +75,7 @@ def determine_crawler_options(options: Dict[str, Any]) -> str:
         for header in options["header_list"]:
             option_str += " --header '%s'" % header
 
-    #LOGGER.debug("title=%s, review_point=%d, review_point_threshold=%f" % (title, review_point, review_point_threshold))
+    #LOGGER.debug("title=%s, review_point=%d, review_point_threshold=%f", title, review_point, review_point_threshold)
     #if review_point and review_point_threshold and review_point > review_point_threshold:
         # 일반적으로 평점이 사용되지 않는 경우나
         # 평점이 기준치를 초과하는 경우에만 추출

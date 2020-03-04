@@ -13,7 +13,7 @@ from feed_maker_util import IO, exec_cmd
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
-logger = logging.getLogger()
+LOGGER = logging.getLogger()
 
 
 def print_usage() -> None:
@@ -60,13 +60,13 @@ def main() -> int:
     # hierarchical clustering
     cluster_dir = os.environ["FEED_MAKER_HOME_DIR"] + "/../HierarchicalClustering"
     cmd = "%s/hcluster -t '%f' -s stop_words.txt '%s' '%s'" % (cluster_dir, threshold, intermediate_file, temp_output_file)
-    logger.debug(cmd)
+    LOGGER.debug(cmd)
     result, error = exec_cmd(cmd)
-    logger.debug(result, error)
+    LOGGER.debug(result, error)
 
     # convert & extract temporary output file
     cmd = "awk -F'\\t' '$2 >= 3 { for (i = 3; i < NF; i += 2) { print $(i) FS $(i + 1) } }' '%s'" % temp_output_file
-    logger.debug(cmd)
+    LOGGER.debug(cmd)
     with subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) as p:
         with open(output_file, 'w', encoding='utf-8') as out_file:
             for line in p.stdout:

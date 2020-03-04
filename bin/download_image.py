@@ -101,7 +101,7 @@ def main() -> int:
             if cache_file:
                 cache_url = Cache.get_cache_url(img_url_prefix, img_url_or_data, "")
                 LOGGER.debug("%s -> %s / %s", img_url_or_data, cache_file, cache_url)
-                print("<img src='%s'/>", cache_url)
+                print("<img src='%s'/>" % cache_url)
             else:
                 LOGGER.debug("no cache file '%s'", cache_file)
                 print("<img src='%s' alt='not exist or size 0'/>" % img_url_or_data)
