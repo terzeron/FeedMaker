@@ -83,7 +83,7 @@ class NewListCollector:
         for list_url in self.collection_conf["list_url_list"]:
             url_list = self.extract_urls(list_url)
             if not url_list:
-                return []
+                continue
             result_list.extend(url_list)
 
         result_list = remove_duplicates(result_list)
