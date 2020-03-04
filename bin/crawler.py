@@ -42,8 +42,8 @@ class HeadlessBrowser:
         options.add_argument("--lang=ko_KR")
         options.add_argument("--user-agent=%s" % self.headers['User-Agent'])
 
-        chrome_driver = "chromedriver"
-        driver = webdriver.Chrome(options=options, executable_path=chrome_driver)
+        chrome_driver_name = "chromedriver"
+        driver = webdriver.Chrome(options=options, executable_path=chrome_driver_name)
 
         driver.get(url)
         driver.execute_script("Object.defineProperty(navigator, 'plugins', {get: function() {return[1, 2, 3, 4, 5];},});")

@@ -10,13 +10,13 @@ from feed_maker_util import exec_cmd
 
 def send_alarm(url: str, new_url: str) -> int:
     cmd = "send_msg_to_line.sh 'no service from %s'" % url
-    result, _ = exec_cmd(cmd)
-    if not result:
+    _, error = exec_cmd(cmd)
+    if error:
         print("can't execute a command '%s'" % cmd)
         return -1
     cmd = "send_msg_to_line.sh 'would you check the new site? %s'" % new_url
-    result, _ = exec_cmd(cmd)
-    if not result:
+    _, error = exec_cmd(cmd)
+    if error:
         print("can't execute a command '%s'" % cmd)
         return -1
     return 0

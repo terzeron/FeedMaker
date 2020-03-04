@@ -43,12 +43,12 @@ class NewListCollector:
 
         LOGGER.debug("%s", full_cmd)
         result, error = exec_cmd(full_cmd)
-        if not result:
+        if error:
             LOGGER.warning("can't execute command '%s', %s", full_cmd, error)
             LOGGER.debug("wait for seconds and retry")
             time.sleep(10)
             result, error = exec_cmd(full_cmd)
-            if not result:
+            if error:
                 LOGGER.warning("can't execute command '%s', %s", full_cmd, error)
                 LOGGER.error("# can't get result from the command '%s'", full_cmd)
         return (result, error)
