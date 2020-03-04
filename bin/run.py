@@ -39,7 +39,7 @@ def send_error_msg(msg: Optional[str]) -> bool:
     }' https://api.line.me/v2/bot/message/push
     ''' % msg[:1999]).split("\n"))
     result, error = exec_cmd(cmd)
-    if not result:
+    if error:
         LOGGER.warning("can't send error message '%s', %s", msg, error)
         return False
     LOGGER.info(result)
@@ -62,14 +62,14 @@ def execute_job(feed_dir: str, list_archiving_period: int) -> bool:
         collection_conf = config.get_collection_configs()
         if collection_conf["is_completed"] and not do_exist_old_list_file:
             cmd = "run.py -c"
-            result, error = exec_cmd(cmd)
-            if not result:
+            _, error = exec_cmd(cmd)
+            if error:
                 LOGGER.warning("can't execute command '%s', %s", cmd, error)
                 return False
 
         cmd = "run.py"
         result, _ = exec_cmd(cmd)
-        if not result:
+        if error:
             LOGGER.warning("can't execute command '%s', %s", cmd, error)
             return False
     return True
@@ -299,8 +299,8 @@ def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
         send_error_msg(", ".join(failed_feed_list))
 
     cmd = "find_problems.sh > %s/find_problems.log 2>&1" % log_dir
-    res, error = exec_cmd(cmd)
-    if not res:
+    _, error = exec_cmd(cmd)
+    if error:
         send_error_msg(error)
     return not error
 

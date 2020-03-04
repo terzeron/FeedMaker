@@ -80,7 +80,7 @@ def download_image_and_read_metadata(path_prefix: str, img_ext: str, page_url: s
             cmd = "size.py " + cache_file
             LOGGER.debug(cmd)
             result, error = exec_cmd(cmd)
-            if not result:
+            if error:
                 LOGGER.warning("can't get the size of image file '%s', cmd='%s', %s", cache_file, cmd, error)
                 continue
 
@@ -172,8 +172,8 @@ def split_image_file(img_file: str, bandwidth: int, diff_threshold: float, size_
     # split the image
     cmd = "split.py -b %d -t %f -s %d -n %d %s %s %s" % (bandwidth, diff_threshold, size_threshold, num_units, orientation_option, bgcolor_option, img_file)
     LOGGER.debug(cmd)
-    result, error = exec_cmd(cmd)
-    if not result:
+    _, error = exec_cmd(cmd)
+    if error:
         LOGGER.error("can't split the image file, %s, %s", cmd, error)
         return False
     return True

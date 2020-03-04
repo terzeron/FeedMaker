@@ -262,14 +262,14 @@ class FeedMaker:
             # 파일이 존재하지 않거나 크기가 작으니 다시 생성 시도
             cmd = self.determine_cmd(link, html_file_path)
             LOGGER.debug(cmd)
-            result, error = exec_cmd(cmd)
-            if not result:
-                LOGGER.warning("can't extract HTML elements, %s", error)
+            _, error = exec_cmd(cmd)
+            if error:
+                LOGGER.warning("can't execute command '%s', %s", cmd, error)
                 LOGGER.debug("wait for seconds and retry")
                 time.sleep(10)
-                result, error = exec_cmd(cmd)
-                if not result:
-                    LOGGER.warning("can't extract HTML elements, %s", error)
+                _, error = exec_cmd(cmd)
+                if error:
+                    LOGGER.warning("can't execute command '%s', %s", cmd, error)
                     return False
 
             if os.path.isfile(html_file_path):
@@ -487,7 +487,7 @@ class FeedMaker:
             cmd = 'upload.py %s' % self.rss_file_name
             LOGGER.debug(cmd)
             result, error = exec_cmd(cmd)
-            if not result:
+            if error:
                 LOGGER.warning("can't upload file '%s', %s", self.rss_file_name, error)
                 return False
 

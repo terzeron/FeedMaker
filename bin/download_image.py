@@ -61,8 +61,9 @@ def download_image(path_prefix: str, img_url_or_data: str, page_url: str) -> Opt
 
 def main() -> int:
     cmd = "basename " + os.getcwd()
-    result, _ = exec_cmd(cmd)
-    if not result:
+    result, error = exec_cmd(cmd)
+    if error:
+        LOGGER.warning("can't execute command '%s', %s", cmd, error)
         return -1
 
     feed_name = result.rstrip()
