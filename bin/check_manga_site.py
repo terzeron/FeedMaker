@@ -61,7 +61,7 @@ def main() -> int:
         print("spidering start")
         crawler = Crawler(method=Method.HEAD)
         response = crawler.run(url)
-        if response != 200:
+        if response != "200":
             print(response)
             do_send = True
         print("spidering end")

@@ -11,7 +11,7 @@ import logging
 import logging.config
 import concurrent.futures
 import getopt
-from typing import Dict, Tuple, List, Any, Set
+from typing import Dict, Tuple, List, Any, Set, Optional
 import psutil
 from feed_maker_util import Config, exec_cmd, find_process_group
 from feed_maker import FeedMaker
@@ -21,7 +21,9 @@ logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf
 LOGGER = logging.getLogger()
 
 
-def send_error_msg(msg: str = "") -> bool:
+def send_error_msg(msg: Optional[str]) -> bool:
+    if not msg:
+        return False
     cmd = " ".join(('''
     curl -s -X POST
          -H 'Content-Type:application/json'

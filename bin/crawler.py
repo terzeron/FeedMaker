@@ -9,7 +9,7 @@ import time
 import getopt
 import logging
 import logging.config
-from typing import Optional, Any
+from typing import Optional
 import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -31,7 +31,7 @@ class HeadlessBrowser:
         self.headers = headers
         self.sleep_time = sleep_time
 
-    def make_request(self, url) -> Optional[str]:
+    def make_request(self, url) -> str:
         LOGGER.debug("HeadlessBrowser.make_request('%s')", url)
         options = Options()
         options.add_argument("--headless")
@@ -72,9 +72,9 @@ class HeadlessBrowser:
             #response = driver.page_source
         except selenium.common.exceptions.WebDriverException as e:
             LOGGER.error(e)
-            sys.exit(-1)
+            return ""
 
-        driver.close() 
+        driver.close()
         driver.quit()
         return response
 
@@ -91,7 +91,7 @@ class Crawler():
         self.encoding = encoding
         self.verify_ssl = verify_ssl
 
-    def make_request(self, url) -> Any:
+    def make_request(self, url) -> str:
         LOGGER.debug("Crawler.make_request('%s')", url)
         if self.render_js:
             LOGGER.debug("headless browser")
@@ -106,15 +106,20 @@ class Crawler():
             response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
         elif self.method == Method.HEAD:
             response = requests.head(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
-            return response.status_code
+            return str(response.status_code)
 
         if response.status_code != 200:
             LOGGER.debug("response.status_code=%d", response.status_code)
-            return None
+            return ""
 
         if self.download_file:
             response.raw.decode_content = True
-            return response
+            with open(self.download_file, 'wb') as f:
+                for chunk in response:
+                    f.write(chunk)
+            download_path = os.path.expanduser(self.download_file)
+            os.utime(download_path, (time.time(), time.time()))
+            return "200"
 
         if self.encoding:
             response.encoding = self.encoding
@@ -124,7 +129,7 @@ class Crawler():
         return response.text
 
 
-    def run(self, url) -> int:
+    def run(self, url) -> str:
         response = None
         for i in range(self.num_retries):
             response = self.make_request(url)
@@ -134,14 +139,7 @@ class Crawler():
             time.sleep(10)
         if not response:
             LOGGER.warning("can't get response from '%s'", url)
-            return None
-
-        if self.download_file:
-            with open(self.download_file, 'wb') as f:
-                for chunk in response:
-                    f.write(chunk)
-            download_path = os.path.expanduser(self.download_file)
-            os.utime(download_path, (time.time(), time.time()))
+            return ""
 
         return response
 

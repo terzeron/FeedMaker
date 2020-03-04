@@ -4,18 +4,19 @@
 import os
 import sys
 import re
+import io
 import subprocess
-import psutil
 import logging
 import logging.config
-import xmltodict
 from datetime import datetime
 from typing import List, Any, Dict, Tuple, Optional, Set
+import psutil
+import xmltodict
 from ordered_set import OrderedSet
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
-logger = logging.getLogger()
+LOGGER = logging.getLogger()
 # noinspection PyPep8
 header_str = '''<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no"/>
@@ -43,7 +44,7 @@ def exec_cmd(cmd: str, input_data=None) -> Tuple[Optional[str], Optional[str]]:
             raise subprocess.CalledProcessError(returncode=p.returncode, cmd=cmd, output=result, stderr=error)
         if error:
             # handle warnings
-            if not b"InsecureRequestWarning" in error and not b"_RegisterApplication(), FAILED TO establish the default connection to the WindowServer" in error:
+            if b"InsecureRequestWarning" not in error and b"_RegisterApplication(), FAILED TO establish the default connection to the WindowServer" not in error:
                 return None, error.decode("utf-8")
     except subprocess.CalledProcessError:
         return None, "Error with non-zero exit status in command '{}'".format(cmd)
@@ -53,7 +54,7 @@ def exec_cmd(cmd: str, input_data=None) -> Tuple[Optional[str], Optional[str]]:
 
 
 def determine_crawler_options(options: Dict[str, Any]) -> str:
-    logger.debug("# determine_crawler_options()")
+    LOGGER.debug("# determine_crawler_options()")
 
     option_str: str = ""
     if "render_js" in options:
@@ -73,7 +74,7 @@ def determine_crawler_options(options: Dict[str, Any]) -> str:
             option_str += " --header '%s'" % header
 
     '''
-    logger.debug("title=%s, review_point=%d, review_point_threshold=%f" % (title, review_point, review_point_threshold))
+    LOGGER.debug("title=%s, review_point=%d, review_point_threshold=%f" % (title, review_point, review_point_threshold))
     if review_point and review_point_threshold and review_point > review_point_threshold:
         # 일반적으로 평점이 사용되지 않는 경우나
         # 평점이 기준치를 초과하는 경우에만 추출
@@ -111,11 +112,11 @@ def find_process_group(parent_proc_name: str) -> List[int]:
         else:
             ppid = pinfo["ppid"]
             if ppid in parent_children_map:
-                list = parent_children_map[ppid]
-                list.append(pinfo["pid"])
+                pid_list = parent_children_map[ppid]
+                pid_list.append(pinfo["pid"])
             else:
-                list = [pinfo["pid"]]
-            parent_children_map[ppid] = list
+                pid_list = [pinfo["pid"]]
+            parent_children_map[ppid] = pid_list
             if pinfo["name"] == parent_proc_name:
                 ppid_list.append(pinfo["pid"])
 
@@ -148,7 +149,7 @@ def get_rss_date_str() -> str:
 
 def get_short_date_str(dt=get_current_time()) -> str:
     return dt.strftime("%Y%m%d")
-    
+
 
 class HTMLExtractor:
     @staticmethod
@@ -166,23 +167,21 @@ class HTMLExtractor:
             valid_token = token
             # print "tokens[%d]='%s'" % (i, token)
             i += 1
-            if token in ("", "html", "body"):
-                continue
-            else:
+            if token not in ("", "html", "body"):
                 # 첫번째 유효한 토큰만 꺼내옴
                 break
 
         # 해당 토큰에 대해 정규식 매칭 시도
-        pattern = re.compile(r"""
-        (
-          (?P<name>\w+)
-          (?:\[
-            (?P<idx>\d+)
-          \])?
-        |
-          \*\[@id=\"(?P<id>\w+)\"\]
-        )
-        """, re.VERBOSE)
+        pattern = re.compile(r'''
+            (
+              (?P<name>\w+)
+              (?:\[
+                (?P<idx>\d+)
+              \])?
+            |
+              \*\[@id=\"(?P<id>\w+)\"\]
+            )
+        ''', re.VERBOSE)
         m = pattern.match(valid_token)
         if m:
             name = m.group("name")
@@ -267,7 +266,6 @@ class IO:
 
     @staticmethod
     def read_stdin_as_line_list() -> List[str]:
-        import io
         input_stream = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8", errors="ignore")
         line_list = []
         for line in input_stream:
@@ -303,12 +301,13 @@ class Config:
         with open(config_file, "r") as f:
             parsed_data = xmltodict.parse(f.read())
             if not parsed_data or "configuration" not in parsed_data:
-                logger.error("can't get configuration from config file")
+                LOGGER.error("can't get configuration from config file")
                 sys.exit(-1)
             else:
                 self.config = parsed_data["configuration"]
 
-    def _get_bool_config_value(self, config_node: Dict[str, Any], key: str, default: bool = False) -> bool:
+    @staticmethod
+    def _get_bool_config_value(config_node: Dict[str, Any], key: str, default: bool = False) -> bool:
         if key in config_node:
             if "true" == config_node[key]:
                 return True
@@ -316,22 +315,26 @@ class Config:
                 return False
         return default
 
-    def _get_str_config_value(self, config_node: Dict[str, Any], key: str, default: str = None) -> Optional[str]:
+    @staticmethod
+    def _get_str_config_value(config_node: Dict[str, Any], key: str, default: str = None) -> Optional[str]:
         if key in config_node:
             return config_node[key]
         return default
 
-    def _get_int_config_value(self, config_node: Dict[str, Any], key: str, default: int = None) -> Optional[int]:
+    @staticmethod
+    def _get_int_config_value(config_node: Dict[str, Any], key: str, default: int = None) -> Optional[int]:
         if key in config_node:
             return int(config_node[key])
         return default
 
-    def _get_float_config_value(self, config_node: Dict[str, Any], key: str, default: float = None) -> Optional[float]:
+    @staticmethod
+    def _get_float_config_value(config_node: Dict[str, Any], key: str, default: float = None) -> Optional[float]:
         if key in config_node:
             return float(config_node[key])
         return default
 
-    def _traverse_config_node(self, config_node: Dict[str, Any], key: str) -> List[str]:
+    @staticmethod
+    def _traverse_config_node(config_node: Dict[str, Any], key: str) -> List[str]:
         result: List[str] = []
         if key in config_node:
             if isinstance(config_node[key], list):
@@ -342,38 +345,39 @@ class Config:
 
         for k, v in config_node.items():
             if isinstance(v, Dict):
-                data = self._traverse_config_node(v, key)
+                data = Config._traverse_config_node(v, key)
                 result.extend(data)
         return result
-    
-    def _get_config_value_list(self, config_node: Dict[str, Any], key: str, default: List[Any] = None) -> Optional[List[Any]]:
-        result = self._traverse_config_node(config_node, key)
+
+    @staticmethod
+    def _get_config_value_list(config_node: Dict[str, Any], key: str, default: List[Any] = None) -> Optional[List[Any]]:
+        result = Config._traverse_config_node(config_node, key)
         if result:
             return result
         return default
 
     def get_collection_configs(self) -> Dict[str, Any]:
-        logger.debug("# get_collection_configs()")
+        LOGGER.debug("# get_collection_configs()")
         conf: Dict[str, Any] = {}
         if "collection" in self.config:
             collection_conf = self.config["collection"]
 
-            render_js = self._get_bool_config_value(collection_conf, "render_js")
-            verify_ssl = self._get_bool_config_value(collection_conf, "verify_ssl", True)
-            ignore_old_list = self._get_bool_config_value(collection_conf, "ignore_old_list")
-            is_completed = self._get_bool_config_value(collection_conf, "is_completed")
+            render_js = Config._get_bool_config_value(collection_conf, "render_js")
+            verify_ssl = Config._get_bool_config_value(collection_conf, "verify_ssl", True)
+            ignore_old_list = Config._get_bool_config_value(collection_conf, "ignore_old_list")
+            is_completed = Config._get_bool_config_value(collection_conf, "is_completed")
 
-            item_capture_script = self._get_str_config_value(collection_conf, "item_capture_script", "./capture_item_link_title.py")
-            sort_field_pattern = self._get_str_config_value(collection_conf, "sort_field_pattern")
-            user_agent = self._get_str_config_value(collection_conf, "user_agent")
-            encoding = self._get_str_config_value(collection_conf, "encoding", "utf-8")
+            item_capture_script = Config._get_str_config_value(collection_conf, "item_capture_script", "./capture_item_link_title.py")
+            sort_field_pattern = Config._get_str_config_value(collection_conf, "sort_field_pattern")
+            user_agent = Config._get_str_config_value(collection_conf, "user_agent")
+            encoding = Config._get_str_config_value(collection_conf, "encoding", "utf-8")
 
-            sleep_time = self._get_int_config_value(collection_conf, "sleep_time")
+            sleep_time = Config._get_int_config_value(collection_conf, "sleep_time")
 
-            unit_size_per_day = self._get_float_config_value(collection_conf, "unit_size_per_day")
+            unit_size_per_day = Config._get_float_config_value(collection_conf, "unit_size_per_day")
 
-            list_url_list = self._get_config_value_list(collection_conf, "list_url", [])
-            post_process_script_list = self._get_config_value_list(collection_conf, "post_process_script", [])
+            list_url_list = Config._get_config_value_list(collection_conf, "list_url", [])
+            post_process_script_list = Config._get_config_value_list(collection_conf, "post_process_script", [])
 
             conf = {
                 "render_js": render_js,
@@ -396,28 +400,28 @@ class Config:
         return conf
 
     def get_extraction_configs(self) -> Dict[str, Any]:
-        logger.debug("# get_extraciton_configs()")
+        LOGGER.debug("# get_extraciton_configs()")
         conf: Dict[str, Any] = {}
         if "extraction" in self.config:
             extraction_conf = self.config["extraction"]
 
-            render_js = self._get_bool_config_value(extraction_conf, "render_js")
-            verify_ssl = self._get_bool_config_value(extraction_conf, "verify_ssl", True)
-            bypass_element_extraction = self._get_bool_config_value(extraction_conf, "bypass_element_extraction")
-            force_sleep_between_articles = self._get_bool_config_value(extraction_conf, "force_sleep_between_articles")
+            render_js = Config._get_bool_config_value(extraction_conf, "render_js")
+            verify_ssl = Config._get_bool_config_value(extraction_conf, "verify_ssl", True)
+            bypass_element_extraction = Config._get_bool_config_value(extraction_conf, "bypass_element_extraction")
+            force_sleep_between_articles = Config._get_bool_config_value(extraction_conf, "force_sleep_between_articles")
 
-            user_agent = self._get_str_config_value(extraction_conf, "user_agent")
-            encoding = self._get_str_config_value(extraction_conf, "encoding", "utf8")
-            referer = self._get_str_config_value(extraction_conf, "referer")
+            user_agent = Config._get_str_config_value(extraction_conf, "user_agent")
+            encoding = Config._get_str_config_value(extraction_conf, "encoding", "utf8")
+            referer = Config._get_str_config_value(extraction_conf, "referer")
 
-            review_point_threshold = self._get_int_config_value(extraction_conf, "review_point_threshold")
-            sleep_time = self._get_int_config_value(extraction_conf, "sleep_time")
+            review_point_threshold = Config._get_int_config_value(extraction_conf, "review_point_threshold")
+            sleep_time = Config._get_int_config_value(extraction_conf, "sleep_time")
 
-            element_id_list = self._get_config_value_list(extraction_conf, "element_id", [])
-            element_class_list = self._get_config_value_list(extraction_conf, "element_class", [])
-            element_path_list = self._get_config_value_list(extraction_conf, "element_path", [])
-            post_process_script_list = self._get_config_value_list(extraction_conf, "post_process_script", [])
-            header_list = self._get_config_value_list(extraction_conf, "header", [])
+            element_id_list = Config._get_config_value_list(extraction_conf, "element_id", [])
+            element_class_list = Config._get_config_value_list(extraction_conf, "element_class", [])
+            element_path_list = Config._get_config_value_list(extraction_conf, "element_path", [])
+            post_process_script_list = Config._get_config_value_list(extraction_conf, "post_process_script", [])
+            header_list = Config._get_config_value_list(extraction_conf, "header", [])
 
             conf = {
                 "render_js": render_js,
@@ -441,15 +445,15 @@ class Config:
         return conf
 
     def get_notification_configs(self) -> Optional[Dict[str, Any]]:
-        logger.debug("# get_notification_configs()")
+        LOGGER.debug("# get_notification_configs()")
         conf: Dict[str, Any] = {}
         if "notification" in self.config:
             notification_conf = self.config["notification"]
             if "email" in notification_conf:
                 email = notification_conf["email"]
                 if email:
-                    recipient = self._get_str_config_value(email, "recipient")
-                    subject = self._get_str_config_value(email, "subject")
+                    recipient = Config._get_str_config_value(email, "recipient")
+                    subject = Config._get_str_config_value(email, "subject")
                     conf = {
                         "email_recipient": recipient,
                         "email_subject": subject,
@@ -457,19 +461,19 @@ class Config:
         return conf
 
     def get_rss_configs(self) -> Dict[str, Any]:
-        logger.debug("# get_rss_configs()")
+        LOGGER.debug("# get_rss_configs()")
         conf: Dict[str, Any] = {}
         if "rss" in self.config:
             rss_conf = self.config["rss"]
             if rss_conf:
-                rss_title = self._get_str_config_value(rss_conf, "title")
-                rss_description = self._get_str_config_value(rss_conf, "description")
-                rss_generator = self._get_str_config_value(rss_conf, "generator")
-                rss_copyright = self._get_str_config_value(rss_conf, "copyright")
-                rss_link = self._get_str_config_value(rss_conf, "link")
-                rss_language = self._get_str_config_value(rss_conf, "language")
-                rss_no_item_desc = self._get_str_config_value(rss_conf, "no_item_desc")
-                rss_url_prefix_for_guid = self._get_str_config_value(rss_conf, "url_prefix_for_guid")
+                rss_title = Config._get_str_config_value(rss_conf, "title")
+                rss_description = Config._get_str_config_value(rss_conf, "description")
+                rss_generator = Config._get_str_config_value(rss_conf, "generator")
+                rss_copyright = Config._get_str_config_value(rss_conf, "copyright")
+                rss_link = Config._get_str_config_value(rss_conf, "link")
+                rss_language = Config._get_str_config_value(rss_conf, "language")
+                rss_no_item_desc = Config._get_str_config_value(rss_conf, "no_item_desc")
+                rss_url_prefix_for_guid = Config._get_str_config_value(rss_conf, "url_prefix_for_guid")
                 conf = {
                     "rss_title": rss_title,
                     "rss_description": rss_description,
@@ -562,7 +566,7 @@ class URL:
 class Cache:
     @staticmethod
     def get_cache_info_common(prefix: str, img_url: str, img_ext: str, postfix=None, index=None) -> str:
-        logger.debug("# get_cache_info_common(%s, %s, %s, %s, %d)" % (prefix, img_url, img_ext, postfix if postfix else "None", index if index else -1))
+        LOGGER.debug("# get_cache_info_common(%s, %s, %s, %s, %d)", prefix, img_url, img_ext, postfix if postfix else "None", index if index else -1)
         postfix_str = ""
         if postfix and postfix != "":
             postfix_str = "_" + str(postfix)
@@ -579,10 +583,10 @@ class Cache:
 
     @staticmethod
     def get_cache_url(url_prefix: str, img_url: str, img_ext: str, postfix=None, index=None) -> str:
-        logger.debug("# get_cache_url(%s, %s, %s, %s, %d)" % (url_prefix, img_url, img_ext, postfix if postfix else "None", index if index else -1))
+        LOGGER.debug("# get_cache_url(%s, %s, %s, %s, %d)", url_prefix, img_url, img_ext, postfix if postfix else "None", index if index else -1)
         return Cache.get_cache_info_common(url_prefix, img_url, img_ext, postfix, index)
 
     @staticmethod
     def get_cache_file_name(path_prefix: str, img_url: str, img_ext: str, postfix=None, index=None) -> str:
-        logger.debug("# get_cache_file_name(%s, %s, %s, %s, %d)" % (path_prefix, img_url, img_ext, postfix if postfix else "None", index if index else -1))
+        LOGGER.debug("# get_cache_file_name(%s, %s, %s, %s, %d)", path_prefix, img_url, img_ext, postfix if postfix else "None", index if index else -1)
         return Cache.get_cache_info_common(path_prefix, img_url, img_ext, postfix, index)
