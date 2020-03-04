@@ -68,7 +68,7 @@ def execute_job(feed_dir: str, list_archiving_period: int) -> bool:
                 return False
 
         cmd = "run.py"
-        result, _ = exec_cmd(cmd)
+        _, error = exec_cmd(cmd)
         if error:
             LOGGER.warning("can't execute command '%s', %s", cmd, error)
             return False
