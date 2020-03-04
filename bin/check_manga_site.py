@@ -80,7 +80,7 @@ def main() -> int:
         print("too small response")
         do_send = True
     print("getting end")
-        
+
     if do_send:
         print("alarming start")
         new_url = re.sub(r'(?P<pre>https?://[\w\.]+\D)(?P<num>\d+)(?P<post>\D.*)', lambda m: m.group("pre") + str(int(m.group("num")) + 1) + m.group("post"), url)

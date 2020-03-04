@@ -4,7 +4,6 @@
 import sys
 import os
 import re
-import feed_maker_util
 from feed_maker_util import URL, IO, exec_cmd
 
 
@@ -24,13 +23,13 @@ def main() -> int:
                 if not os.path.isfile(video_file):
                     cmd = "rtmpdump -q -r '%s' > %s" % (movie_url, video_file)
                     print("<!-- %s -->" % cmd)
-                    (result, error) = exec_cmd(cmd)
-                    print("<!-- %s -->" % result)
+                    result, error = exec_cmd(cmd)
+                    print("<!-- %s, %s -->" % (result, error))
 
                 cmd = "extract_images_from_video.sh '%s' '%s/%s_' > /dev/null 2>&1" % (video_file, img_dir, id_str)
                 print("<!-- %s -->" % cmd)
-                (result, error) = exec_cmd(cmd)
-                print("<!-- %s -->" % result)
+                result, error = exec_cmd(cmd)
+                print("<!-- %s, %s -->" % (result, error))
 
             for entry in os.scandir(img_dir):
                 if re.search(r"%s_\d+\.jpg" % id_str, entry.name):

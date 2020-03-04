@@ -3,9 +3,8 @@
 
 import sys
 import re
-import requests
-from requests import status_codes
 from typing import Dict
+from requests import status_codes
 
 
 def main() -> int:
@@ -33,6 +32,6 @@ def main() -> int:
         print('%-25s \033[1;%dm%d\033[0m %s' % (name, color, status, message))
     return 0
 
-                
+
 if __name__ == "__main__":
     sys.exit(main())

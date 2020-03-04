@@ -8,13 +8,12 @@ import re
 import signal
 import logging
 from urllib.parse import urlencode
-from feed_maker_util import exec_cmd
-from crawler import Crawler
 from typing import Optional, Dict
+from crawler import Crawler
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
-logger = logging.getLogger()
+LOGGER = logging.getLogger()
 
 
 def get_default_config(type_name) -> Dict[str, str]:
@@ -52,8 +51,10 @@ def get_first_search_result(config, type_name, keyword, year) -> str:
     url = "%s%s" % (url_prefix, urlencode({url_param: keyword}))
     html = get_page(url)
     if not html:
-        logger.error("can't get page html from url '%s'" % url)
+        LOGGER.error("can't get page html from url '%s'", url)
         return ""
+
+    ret = "0.0"
     m = re.search(review_point_pattern, html, re.MULTILINE)
     # print "review_point_pattern=", review_point_pattern
     # print "m=", m
@@ -61,20 +62,20 @@ def get_first_search_result(config, type_name, keyword, year) -> str:
         # print "m='%s', '%s' '%s'" % (m.group(0), m.group(1), m.group(2))
         if type_name == "movie":
             if m.group(1) == " b_star":
-                return "0.1"
+                ret = "0.1"
             elif m.group(3) != year:
-                return "0.2"
+                ret = "0.2"
             else:
-                return m.group(2)
+                ret = m.group(2)
         elif type_name == "book":
             if m.group(1) == " b_star":
-                return "0.1"
+                ret = "0.1"
             else:
-                return m.group(2)
+                ret = m.group(2)
         elif type_name == "game":
-            return m.group(1)
+            ret = m.group(1)
 
-    return "0.0"
+    return ret
 
 
 def print_usage() -> None:
@@ -88,7 +89,7 @@ def main() -> int:
         return -1
     type_name = sys.argv[1]
     keyword = sys.argv[2]
-    if type_name != "book" and type_name != "movie" and type_name != "game":
+    if type_name not in ("book", "movie", "game"):
         print_usage()
         return -1
     year = ""

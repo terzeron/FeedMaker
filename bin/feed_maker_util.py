@@ -5,7 +5,9 @@ import os
 import sys
 import re
 import io
+import codecs
 import subprocess
+import hashlib
 import logging
 import logging.config
 from datetime import datetime
@@ -33,7 +35,7 @@ def make_path(path: str) -> None:
         pass
 
 
-def exec_cmd(cmd: str, input_data=None) -> Tuple[Optional[str], Optional[str]]:
+def exec_cmd(cmd: str, input_data=None) -> Tuple[str, Optional[str]]:
     try:
         p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if input_data:
@@ -45,11 +47,11 @@ def exec_cmd(cmd: str, input_data=None) -> Tuple[Optional[str], Optional[str]]:
         if error:
             # handle warnings
             if b"InsecureRequestWarning" not in error and b"_RegisterApplication(), FAILED TO establish the default connection to the WindowServer" not in error:
-                return None, error.decode("utf-8")
+                return "", error.decode("utf-8")
     except subprocess.CalledProcessError:
-        return None, "Error with non-zero exit status in command '{}'".format(cmd)
+        return "", "Error with non-zero exit status in command '{}'".format(cmd)
     except subprocess.SubprocessError:
-        return None, "Error in execution of command '{}'".format(cmd)
+        return "", "Error in execution of command '{}'".format(cmd)
     return result.decode(encoding="utf-8"), ""
 
 
@@ -67,20 +69,18 @@ def determine_crawler_options(options: Dict[str, Any]) -> str:
         option_str += " --referer='%s'" % options["referer"]
     if "encoding" in options and options["encoding"]:
         option_str += " --encoding='%s'" % options["encoding"]
-    if "sleep_time" in options and type(options["sleep_time"]) == int:
+    if "sleep_time" in options and isinstance(options["sleep_time"], int):
         option_str += " --sleep-time=%d" % options["sleep_time"]
     if "header_list" in options:
         for header in options["header_list"]:
             option_str += " --header '%s'" % header
 
-    '''
-    LOGGER.debug("title=%s, review_point=%d, review_point_threshold=%f" % (title, review_point, review_point_threshold))
-    if review_point and review_point_threshold and review_point > review_point_threshold:
+    #LOGGER.debug("title=%s, review_point=%d, review_point_threshold=%f" % (title, review_point, review_point_threshold))
+    #if review_point and review_point_threshold and review_point > review_point_threshold:
         # 일반적으로 평점이 사용되지 않는 경우나
         # 평점이 기준치를 초과하는 경우에만 추출
-        warn("ignore an article due to the low score")
-        return 0
-    '''
+        #warn("ignore an article due to the low score")
+        #return 0
 
     return option_str
 
@@ -282,8 +282,6 @@ class IO:
 
     @staticmethod
     def read_file_as_line_list(file) -> List[str]:
-        import codecs
-
         with codecs.open(file, 'rb', encoding="utf-8", errors="ignore") as f:
             line_list = f.readlines()
             f.close()
@@ -308,12 +306,13 @@ class Config:
 
     @staticmethod
     def _get_bool_config_value(config_node: Dict[str, Any], key: str, default: bool = False) -> bool:
+        ret = default
         if key in config_node:
-            if "true" == config_node[key]:
-                return True
-            elif "false" == config_node[key]:
-                return False
-        return default
+            if config_node[key] == "true":
+                ret = True
+            elif config_node[key] == "false":
+                ret = False
+        return ret
 
     @staticmethod
     def _get_str_config_value(config_node: Dict[str, Any], key: str, default: str = None) -> Optional[str]:
@@ -343,7 +342,7 @@ class Config:
                 result.append(config_node[key])
             return result
 
-        for k, v in config_node.items():
+        for _, v in config_node.items():
             if isinstance(v, Dict):
                 data = Config._traverse_config_node(v, key)
                 result.extend(data)
@@ -389,7 +388,7 @@ class Config:
                 "sort_field_pattern": sort_field_pattern,
                 "user_agent": user_agent,
                 "encoding": encoding,
-                
+
                 "sleep_time": sleep_time,
 
                 "unit_size_per_day": unit_size_per_day,
@@ -432,7 +431,7 @@ class Config:
                 "user_agent": user_agent,
                 "encoding": encoding,
                 "referer": referer,
-                
+
                 "review_point_threshold": review_point_threshold,
                 "sleep_time": sleep_time,
 
@@ -559,7 +558,6 @@ class URL:
 
     @staticmethod
     def get_short_md5_name(content: str) -> str:
-        import hashlib
         return hashlib.md5(content.encode()).hexdigest()[:7]
 
 

@@ -89,7 +89,7 @@ def determine_options() -> Tuple[Dict[str, Any], List[str]]:
     collect_only_opt = ""
 
     optlist, args = getopt.getopt(sys.argv[1:], "ahrcl")
-    for o, a in optlist:
+    for o, _ in optlist:
         if o == "-a":
             do_make_all_feeds = True
         elif o == "-h":
@@ -198,7 +198,7 @@ def remove_temporary_files() -> None:
 def remove_unused_img_files(rss_file_name: str, img_dir: str) -> None:
     if not os.path.isfile(rss_file_name):
         return
-    
+
     img_set_in_img_dir = get_img_set_in_img_dir(img_dir)
     img_set_in_xml_file = set([])
 
