@@ -1,20 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
-import sys
 import re
 import unittest
 from unittest.mock import patch
 from io import StringIO
-from feed_maker_util import exec_cmd, remove_file
 from crawler import Method, Crawler, print_usage
 
 
 class CrawlerTest(unittest.TestCase):
     def setUp(self):
         pass
-    
+
     def test_printUsage(self):
         with patch('sys.stdout', new=StringIO()) as stdout:
             print_usage()
@@ -48,11 +45,11 @@ class CrawlerTest(unittest.TestCase):
         self.assertTrue(m)
         m = re.search(r'<meta property="og:url" content="http://m.naver.com/">', result)
         self.assertTrue(m)
-        
+
         crawler = Crawler(method=Method.HEAD)
         self.assertTrue(crawler)
         result = crawler.run("https://m.naver.com")
-        self.assertEqual(200, result)
+        self.assertEqual("200", result)
 
     def test_instantiateWithOptions(self):
         # default parameter
@@ -125,7 +122,7 @@ class CrawlerTest(unittest.TestCase):
         m = re.search(r'<div id="app-6" class="demo"><p>안녕하세요 Vue!</p> <input></div>', result)
         self.assertFalse(m)
         crawler = Crawler(render_js=True)
-        result = crawler.run(url) 
+        result = crawler.run(url)
         m = re.search(r'<div id="app-6" class="demo"><p>안녕하세요 Vue!</p> <input></div>', result)
         self.assertTrue(m)
 

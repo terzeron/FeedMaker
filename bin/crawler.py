@@ -7,18 +7,17 @@ import re
 from enum import Enum
 import time
 import getopt
-import requests
 import logging
 import logging.config
+from typing import Optional
+import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 import selenium
-from typing import Dict, Optional, Union, Any
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
-logger = logging.getLogger()
+LOGGER = logging.getLogger()
 
 
 class Method(Enum):
@@ -31,9 +30,9 @@ class HeadlessBrowser:
     def __init__(self, headers, sleep_time=None) -> None:
         self.headers = headers
         self.sleep_time = sleep_time
-        
-    def make_request(self, url) -> Optional[str]:
-        logger.debug("HeadlessBrowser.make_request('%s')" % url)
+
+    def make_request(self, url) -> str:
+        LOGGER.debug("HeadlessBrowser.make_request('%s')", url)
         options = Options()
         options.add_argument("--headless")
         options.add_argument("--window-size=1920x1080")
@@ -42,7 +41,7 @@ class HeadlessBrowser:
         options.add_argument("--disable-gpu")
         options.add_argument("--lang=ko_KR")
         options.add_argument("--user-agent=%s" % self.headers['User-Agent'])
-        
+
         chrome_driver = "chromedriver"
         driver = webdriver.Chrome(options=options, executable_path=chrome_driver)
 
@@ -66,19 +65,19 @@ class HeadlessBrowser:
         }
         document.body.appendChild(div);
         ''')
-            
+
         try:
             content = driver.find_element_by_tag_name("html")
             response = content.get_attribute("innerHTML")
             #response = driver.page_source
         except selenium.common.exceptions.WebDriverException as e:
-            logger.error(e)
-            sys.exit(-1)
+            LOGGER.error(e)
+            return ""
 
-        driver.close() 
+        driver.close()
         driver.quit()
         return response
-    
+
 
 class Crawler():
     def __init__(self, method=Method.GET, headers={}, timeout=10, num_retries=1, sleep_time=None, render_js=False, download_file=None, encoding=None, verify_ssl=True) -> None:
@@ -92,62 +91,55 @@ class Crawler():
         self.encoding = encoding
         self.verify_ssl = verify_ssl
 
-    def make_request(self, url) -> Any:
-        logger.debug("Crawler.make_request('%s')" % url)
+    def make_request(self, url) -> str:
+        LOGGER.debug("Crawler.make_request('%s')", url)
         if self.render_js:
-            logger.debug("headless browser")
+            LOGGER.debug("headless browser")
             self.headers['User-Agent'] = "Mozillla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36"
             browser = HeadlessBrowser(self.headers, self.sleep_time)
-            return browser.make_request(url) 
+            return browser.make_request(url)
+
+        LOGGER.debug("requests client")
+        if self.method == Method.GET:
+            response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
+        elif self.method == Method.POST:
+            response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
+        elif self.method == Method.HEAD:
+            response = requests.head(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
+            return str(response.status_code)
+
+        if response.status_code != 200:
+            LOGGER.debug("response.status_code=%d", response.status_code)
+            return ""
+
+        if self.download_file:
+            response.raw.decode_content = True
+            with open(self.download_file, 'wb') as f:
+                for chunk in response:
+                    f.write(chunk)
+            download_path = os.path.expanduser(self.download_file)
+            os.utime(download_path, (time.time(), time.time()))
+            return "200"
+
+        if self.encoding:
+            response.encoding = self.encoding
         else:
-            logger.debug("requests client")
-            if self.method == Method.GET:
-                response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
-            elif self.method == Method.POST:
-                response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
-            elif self.method == Method.HEAD:
-                response = requests.head(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
-                return response.status_code
+            response.encoding = 'utf-8'
 
-            if response.status_code == 200:
-                if self.download_file:
-                    response.raw.decode_content = True
-                    return response
-                else:
-                    if self.encoding:
-                        response.encoding = self.encoding
-                    else:
-                        response.encoding = 'utf-8'
-                    return response.text
-            else:
-                logger.debug("response.status_code=%d" % response.status_code)
+        return response.text
 
-        return None
-            
-    def run(self, url) -> int:
+
+    def run(self, url) -> str:
         response = None
         for i in range(self.num_retries):
             response = self.make_request(url)
             if response:
                 break
-            else:
-                logger.debug("wait for seconds and retry")
-                time.sleep(10)
+            LOGGER.debug("wait for seconds and retry (#%d)", i)
+            time.sleep(10)
         if not response:
-            logger.warning("can't get response from '%s'" % url)
-            return None
-           
-        if self.method == Method.HEAD:
-            pass
-        elif self.download_file:
-            with open(self.download_file, 'wb') as f:
-                for chunk in response:
-                    f.write(chunk)
-    
-        # post processing
-        if self.download_file:
-            self.download_path = os.path.expanduser(self.download_file)
-            os.utime(self.download_path, (time.time(), time.time()))
+            LOGGER.warning("can't get response from '%s'", url)
+            return ""
 
         return response
 
@@ -166,7 +158,7 @@ def print_usage() -> None:
     print("\t--retry=<# of retries>")
     print("\t--sleep-time=<seconds>")
 
-    
+
 def main() -> int:
     method = Method.GET
     headers = {"Accept-Encoding": "gzip, deflate", "User-Agent": "Mozillla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36", "Accept": "*/*", "Connection": "Keep-Alive"}
@@ -181,10 +173,10 @@ def main() -> int:
     if len(sys.argv) == 1:
         print_usage()
         sys.exit(-1)
-        
+
     try:
         opts, args = getopt.getopt(sys.argv[1:], "h", ["spider", "render-js=", "verify-ssl=", "download=", "encoding=", "user-agent=", "referer=", "header=", "timeout=", "retry=", "sleep-time="])
-    except getopt.GetoptError as err:
+    except getopt.GetoptError:
         print_usage()
         sys.exit(-1)
 
@@ -220,13 +212,12 @@ def main() -> int:
             encoding = a
 
     url = args[0]
-    
+
     crawler = Crawler(method, headers, timeout, num_retries, sleep_time, render_js, download_file, encoding, verify_ssl)
     response = crawler.run(url)
     print(response)
     return 0
 
-    
+
 if __name__ == "__main__":
     sys.exit(main())
-

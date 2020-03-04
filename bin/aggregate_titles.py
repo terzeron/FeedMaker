@@ -8,12 +8,12 @@ import getopt
 import subprocess
 import logging
 import logging.config
-from feed_maker_util import IO, exec_cmd
 from typing import Set, Dict
+from feed_maker_util import IO, exec_cmd
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
-logger = logging.getLogger()
+LOGGER = logging.getLogger()
 
 
 def print_usage() -> None:
@@ -47,14 +47,12 @@ def main() -> int:
             if re.search(r"^#", line):
                 continue
             line = line.rstrip()
-            (link, title) = line.split("\t")        
+            (link, title) = line.split("\t")
             line_num_link_map[line_num] = link + "\t" + title
-        
+
             clean_title = title.lower()
             clean_title = re.sub(r'[\s!-/:-@\[-`]*', '', clean_title)
-            if clean_title in title_existence_set:
-                continue
-            else:
+            if clean_title not in title_existence_set:
                 title_existence_set.add(clean_title)
             out_file.write("%s\n" % title)
             line_num += 1
@@ -62,13 +60,13 @@ def main() -> int:
     # hierarchical clustering
     cluster_dir = os.environ["FEED_MAKER_HOME_DIR"] + "/../HierarchicalClustering"
     cmd = "%s/hcluster -t '%f' -s stop_words.txt '%s' '%s'" % (cluster_dir, threshold, intermediate_file, temp_output_file)
-    logger.debug(cmd)
-    (result, error) = exec_cmd(cmd)
-    logger.debug(result)
+    LOGGER.debug(cmd)
+    result, error = exec_cmd(cmd)
+    LOGGER.debug(result, error)
 
     # convert & extract temporary output file
     cmd = "awk -F'\\t' '$2 >= 3 { for (i = 3; i < NF; i += 2) { print $(i) FS $(i + 1) } }' '%s'" % temp_output_file
-    logger.debug(cmd)
+    LOGGER.debug(cmd)
     with subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) as p:
         with open(output_file, 'w', encoding='utf-8') as out_file:
             for line in p.stdout:

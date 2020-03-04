@@ -5,29 +5,30 @@ import os
 import re
 import json
 from crawler import Crawler, Method
-from feed_maker_util import IO, exec_cmd
+from feed_maker_util import exec_cmd
 
 
 def send_alarm(url: str, new_url: str) -> int:
     cmd = "send_msg_to_line.sh 'no service from %s'" % url
-    result, error = exec_cmd(cmd)
-    if error:
+    result, _ = exec_cmd(cmd)
+    if not result:
         print("can't execute a command '%s'" % cmd)
         return -1
     cmd = "send_msg_to_line.sh 'would you check the new site? %s'" % new_url
-    result, error = exec_cmd(cmd)
-    if error:
+    result, _ = exec_cmd(cmd)
+    if not result:
         print("can't execute a command '%s'" % cmd)
         return -1
     return 0
-    
+
+
 def main() -> int:
     do_send: bool = False
     site_config_file = "site_config.json"
     if not os.path.isfile(site_config_file):
         print("can't find site config file")
         return -1
-    
+
     with open(site_config_file, "r") as f:
         site_config = json.load(f)
         url: str = ""
@@ -60,7 +61,7 @@ def main() -> int:
         print("spidering start")
         crawler = Crawler(method=Method.HEAD)
         response = crawler.run(url)
-        if response != 200:
+        if response != "200":
             print(response)
             do_send = True
         print("spidering end")
@@ -68,7 +69,7 @@ def main() -> int:
     print("getting start")
     crawler = Crawler(method=Method.GET, num_retries=num_retries, sleep_time=sleep_time, render_js=render_js, encoding=encoding)
     response = crawler.run(url)
-    
+
     if not response:
         print("no response")
         do_send = True
@@ -79,7 +80,7 @@ def main() -> int:
         print("too small response")
         do_send = True
     print("getting end")
-        
+
     if do_send:
         print("alarming start")
         new_url = re.sub(r'(?P<pre>https?://[\w\.]+\D)(?P<num>\d+)(?P<post>\D.*)', lambda m: m.group("pre") + str(int(m.group("num")) + 1) + m.group("post"), url)
@@ -89,6 +90,7 @@ def main() -> int:
 
     print("Ok")
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())
