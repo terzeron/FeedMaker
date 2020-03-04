@@ -42,35 +42,37 @@ class NewListCollector:
                 full_cmd += cmd
 
         LOGGER.debug("%s", full_cmd)
-        (result, error) = exec_cmd(full_cmd)
-        if error:
+        result, error = exec_cmd(full_cmd)
+        if not result:
+            LOGGER.warning("can't execute command '%s', %s", full_cmd, error)
             LOGGER.debug("wait for seconds and retry")
             time.sleep(10)
-            (result, error) = exec_cmd(full_cmd)
-            if error:
-                LOGGER.debug("%s, %s, %s", full_cmd, result, error)
+            result, error = exec_cmd(full_cmd)
+            if not result:
+                LOGGER.warning("can't execute command '%s', %s", full_cmd, error)
                 LOGGER.error("# can't get result from the command '%s'", full_cmd)
-                sys.exit(-1)
         return (result, error)
 
 
     def extract_urls(self, url) -> List[Tuple[str, str]]:
         LOGGER.debug("# extract_urls(%s)", url)
 
-        (result, error) = self.compose_and_execute_cmd(url)
+        result, error = self.compose_and_execute_cmd(url)
+        if not result:
+            return []
+
         result_list = []
-        if result:
-            for line in result.rstrip().split("\n"):
-                line = line.rstrip()
-                if re.search(r'^#', line) or re.search(r'^\s*$', line):
-                    continue
-                items = line.split("\t")
-                link = items[0]
-                title = " ".join(items[1:])
-                if not link or not title:
-                    LOGGER.error("can't get the link and title from '%s', %s", link, error)
-                    sys.exit(-1)
-                result_list.append((link, title))
+        for line in result.rstrip().split("\n"):
+            line = line.rstrip()
+            if re.search(r'^#', line) or re.search(r'^\s*$', line):
+                continue
+            items = line.split("\t")
+            link = items[0]
+            title = " ".join(items[1:])
+            if not link or not title:
+                LOGGER.error("can't get the link and title from '%s', %s", link, error)
+                return []
+            result_list.append((link, title))
         return result_list
 
 
@@ -80,6 +82,8 @@ class NewListCollector:
 
         for list_url in self.collection_conf["list_url_list"]:
             url_list = self.extract_urls(list_url)
+            if not url_list:
+                return []
             result_list.extend(url_list)
 
         result_list = remove_duplicates(result_list)

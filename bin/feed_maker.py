@@ -218,28 +218,32 @@ class FeedMaker:
         else:
             is_different = True
 
-        error = None
         if is_different:
             # 이전 파일을 old 파일로 이름 바꾸기
             if os.path.isfile(self.rss_file_name):
                 cmd = 'mv -f "%s" "%s.old"' % (self.rss_file_name, self.rss_file_name)
                 LOGGER.debug(cmd)
-                result, error = exec_cmd(cmd)
+                _, error = exec_cmd(cmd)
                 if error:
+                    LOGGER.warning("can't rename file '%s' to '%s.old', %s", self.rss_file_name, self.rss_file_name, error)
                     return False
             # 이번에 만들어진 파일을 정식 파일 이름으로 바꾸기
             if os.path.isfile(temp_rss_file_name):
                 cmd = 'mv -f "%s" "%s"' % (temp_rss_file_name, self.rss_file_name)
                 LOGGER.debug(cmd)
-                result, error = exec_cmd(cmd)
+                _, error = exec_cmd(cmd)
+                if error:
+                    LOGGER.warning("can't rename file '%s' to '%s', %s", temp_rss_file_name, self.rss_file_name, error)
+                    return False
         else:
             # 이번에 만들어진 파일을 지우기
             cmd = 'rm -f "%s"' % temp_rss_file_name
             LOGGER.debug(cmd)
-            result, error = exec_cmd(cmd)
+            _, error = exec_cmd(cmd)
+            if error:
+                LOGGER.warning("can't remove file '%s', %s", temp_rss_file_name, error)
+                return False
 
-        if error:
-            return False
         return True
 
 
@@ -260,11 +264,12 @@ class FeedMaker:
             LOGGER.debug(cmd)
             result, error = exec_cmd(cmd)
             if not result:
+                LOGGER.warning("can't extract HTML elements, %s", error)
                 LOGGER.debug("wait for seconds and retry")
                 time.sleep(10)
                 result, error = exec_cmd(cmd)
-                if error:
-                    LOGGER.error("can't extract HTML elements")
+                if not result:
+                    LOGGER.warning("can't extract HTML elements, %s", error)
                     return False
 
             if os.path.isfile(html_file_path):
@@ -482,8 +487,8 @@ class FeedMaker:
             cmd = 'upload.py %s' % self.rss_file_name
             LOGGER.debug(cmd)
             result, error = exec_cmd(cmd)
-            LOGGER.debug(result)
-            if error:
+            if not result:
+                LOGGER.warning("can't upload file '%s', %s", self.rss_file_name, error)
                 return False
 
             m = re.search(r'Upload success', result)

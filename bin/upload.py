@@ -40,9 +40,11 @@ def main(rss_file: str) -> int:
         cmd = "cp %s %s" % (rss_file, d)
         LOGGER.debug(cmd)
         result, error = exec_cmd(cmd)
-        if not error:
-            LOGGER.info("Upload success!")
-            return 0
+        if error:
+            LOGGER.error("can't copy file '%s' to '%s', %s", rss_file, d, error)
+            return -1
+        LOGGER.info("Upload success!")
+        return 0
     LOGGER.warning("Upload failed! No change from the previous RSS file")
     return 0
 

@@ -22,13 +22,16 @@ feedmaker_path = os.environ["FEED_MAKER_WORK_DIR"]
 
 def create_feed_status_table(c) -> int:
     query_str = "DROP TABLE IF EXISTS %s" % status_table
-    c.execute(query_str)
+    result = c.execute(query_str)
+    if not result:
+        print("can't execute query '%s'" % query_str)
+        return False
     query_str = "CREATE TABLE %s (feed_alias VARCHAR(256) PRIMARY KEY, feed_name VARCHAR(256) NOT NULL DEFAULT '', http_request INT NOT NULL DEFAULT 0, htaccess INT NOT NULL DEFAULT 0, public_html INT NOT NULL DEFAULT 0, feedmaker INT NOT NULL DEFAULT 0, last_request_date date)" % status_table
     result = c.execute(query_str)
     if not result:
         print("can't execute query '%s'" % query_str)
-        return -1
-    return 0
+        return False
+    return True
 
 
 def update_htaccess_status(c) -> int:
@@ -44,7 +47,7 @@ def update_htaccess_status(c) -> int:
             result = c.execute(query_str)
             if not result:
                 print("cant' execute query '%s'" % query_str)
-                return -1
+                return False
             row = c.fetchone()
             if row:
                 query_str = "UPDATE %s SET feed_name = '%s', htaccess = %d WHERE feed_alias = '%s'" % (status_table, feed_name, 1, feed_alias)
@@ -53,8 +56,8 @@ def update_htaccess_status(c) -> int:
             result = c.execute(query_str)
             if not result:
                 print("can't execute query '%s'" % query_str)
-                return -1
-    return 0
+                return False
+    return True
 
 
 def update_http_request_status(c) -> int:
@@ -71,14 +74,14 @@ def update_http_request_status(c) -> int:
             result = c.execute(query_str)
             if not result:
                 print("can't execute query '%s'" % query_str)
-                return -1
+                return False
             row = c.fetchone()
             if row:
                 query_str = "UPDATE %s SET http_request = '%s', last_request_date = '%s' WHERE feed_name = '%s'" % (status_table, 1, date, feed_name)
             else:
                 query_str = "INSERT OR IGNORE INTO %s (feed_name, http_request, last_request_date) VALUES ('%s', %d, '%s')" % (status_table, feed_name, 1, date)
             c.execute(query_str)
-    return 0
+    return True
 
 
 def update_public_html_status(c) -> int:
@@ -94,7 +97,7 @@ def update_public_html_status(c) -> int:
         result = c.execute(query_str)
         if not result:
             print("can't execute query '%s'" % query_str)
-            return -1
+            return False
         row = c.fetchone()
         if row:
             query_str = "UPDATE %s SET public_html = %d WHERE feed_name = '%s'" % (status_table, 1, feed_name)
@@ -103,8 +106,8 @@ def update_public_html_status(c) -> int:
         result = c.execute(query_str)
         if not result:
             print("can't execute query '%s'" % query_str)
-            return -1
-    return 0
+            return False
+    return True
 
 
 def update_feedmaker_status(c) -> int:
@@ -120,7 +123,7 @@ def update_feedmaker_status(c) -> int:
         result = c.execute(query_str)
         if not result:
             print("can't execute query '%s'" % query_str)
-            return -1
+            return False
         row = c.fetchone()
         if row:
             query_str = "UPDATE %s SET feedmaker = %d WHERE feed_name = '%s'" % (status_table, 1, feed_name)
@@ -129,8 +132,8 @@ def update_feedmaker_status(c) -> int:
         result = c.execute(query_str)
         if not result:
             print("can't execute query '%s'" % query_str)
-            return -1
-    return 0
+            return False
+    return True
 
 
 def print_mismatch_feeds(c) -> None:

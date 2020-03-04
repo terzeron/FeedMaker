@@ -39,8 +39,8 @@ def send_error_msg(msg: Optional[str]) -> bool:
     }' https://api.line.me/v2/bot/message/push
     ''' % msg[:1999]).split("\n"))
     result, error = exec_cmd(cmd)
-    if error:
-        LOGGER.error(error)
+    if not result:
+        LOGGER.warning("can't send error message '%s', %s", msg, error)
         return False
     LOGGER.info(result)
     return True
@@ -62,13 +62,15 @@ def execute_job(feed_dir: str, list_archiving_period: int) -> bool:
         collection_conf = config.get_collection_configs()
         if collection_conf["is_completed"] and not do_exist_old_list_file:
             cmd = "run.py -c"
-            result, _ = exec_cmd(cmd)
+            result, error = exec_cmd(cmd)
             if not result:
+                LOGGER.warning("can't execute command '%s', %s", cmd, error)
                 return False
 
         cmd = "run.py"
-        result, error = exec_cmd(cmd)
-        if error:
+        result, _ = exec_cmd(cmd)
+        if not result:
+            LOGGER.warning("can't execute command '%s', %s", cmd, error)
             return False
     return True
 
@@ -285,9 +287,11 @@ def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
             try:
                 result = future.result()
                 if not result:
+                    LOGGER.warning("can't execute a job for feed '%s', %s", feed, result)
                     print("{}, result: {}".format(feed, result))
                     failed_feed_list.append(os.path.basename(feed))
             except Exception as e:
+                LOGGER.warning("can't execute a job for feed '%s', %s", feed, e)
                 print("{}, exception: {}".format(feed, e))
                 failed_feed_list.append(os.path.basename(feed))
 

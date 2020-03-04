@@ -80,8 +80,8 @@ def download_image_and_read_metadata(path_prefix: str, img_ext: str, page_url: s
             cmd = "size.py " + cache_file
             LOGGER.debug(cmd)
             result, error = exec_cmd(cmd)
-            if error:
-                LOGGER.debug("can't get the size of image file '%s', cmd='%s'", cache_file, cmd)
+            if not result:
+                LOGGER.warning("can't get the size of image file '%s', cmd='%s', %s", cache_file, cmd, error)
                 continue
 
             m2 = re.search(r"^(?P<width>\d+)\s+(?P<height>\d+)", result)
@@ -121,10 +121,10 @@ def merge_image_files(img_file_list: List[str], path_prefix: str, img_url: str, 
     for cache_file in img_file_list:
         cmd = cmd + cache_file + " "
     LOGGER.debug(cmd)
-    (result, error) = exec_cmd(cmd)
+    result, error = exec_cmd(cmd)
     LOGGER.debug(result)
-    if error:
-        LOGGER.error("can't merge the image files, cmd='%s'", cmd)
+    if not result:
+        LOGGER.error("can't merge the image files, cmd='%s', %s", cmd, error)
         sys.exit(-1)
     return merged_img_file
 
@@ -136,8 +136,8 @@ def crop_image_file(img_file: str) -> None:
     #
     cmd = "innercrop -f 4 -m crop \"%s\" \"%s.temp\" && mv -f \"%s.temp\" \"%s\"" % (img_file, img_file, img_file, img_file)
     LOGGER.debug(cmd)
-    result, error = exec_cmd(cmd)
-    if not result:
+    _, error = exec_cmd(cmd)
+    if error:
         LOGGER.error("can't crop the image file '%s', cmd='%s', %s", img_file, cmd, error)
         # sys.exit(-1)
         return
@@ -160,9 +160,9 @@ def remove_image_files(img_file_list: List[str]) -> bool:
     for cache_file in img_file_list:
         cmd = cmd + "'" + cache_file + "' "
     LOGGER.debug(cmd)
-    (result, error) = exec_cmd(cmd)
-    LOGGER.debug(result)
+    _, error = exec_cmd(cmd)
     if error:
+        LOGGER.error("can't remove files '%s', %s, %s", img_file_list, cmd, error)
         return False
     return True
 
@@ -172,10 +172,9 @@ def split_image_file(img_file: str, bandwidth: int, diff_threshold: float, size_
     # split the image
     cmd = "split.py -b %d -t %f -s %d -n %d %s %s %s" % (bandwidth, diff_threshold, size_threshold, num_units, orientation_option, bgcolor_option, img_file)
     LOGGER.debug(cmd)
-    (result, error) = exec_cmd(cmd)
-    LOGGER.debug(result)
-    if error:
-        LOGGER.debug("can't split the image file, cmd='%s'", cmd)
+    result, error = exec_cmd(cmd)
+    if not result:
+        LOGGER.error("can't split the image file, %s, %s", cmd, error)
         return False
     return True
 
