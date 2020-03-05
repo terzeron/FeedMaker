@@ -288,11 +288,9 @@ def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
                 result = future.result()
                 if not result:
                     LOGGER.warning("can't execute a job for feed '%s', %s", feed, result)
-                    print("{}, result: {}".format(feed, result))
                     failed_feed_list.append(os.path.basename(feed))
             except Exception as e:
                 LOGGER.warning("can't execute a job for feed '%s', %s", feed, e)
-                print("{}, exception: {}".format(feed, e))
                 failed_feed_list.append(os.path.basename(feed))
 
     if len(failed_feed_list) > 0:
