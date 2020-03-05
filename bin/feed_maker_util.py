@@ -95,8 +95,6 @@ def determine_crawler_options(options: Dict[str, Any]) -> str:
         option_str += " --referer='%s'" % options["referer"]
     if "encoding" in options and options["encoding"]:
         option_str += " --encoding='%s'" % options["encoding"]
-    if "sleep_time" in options and isinstance(options["sleep_time"], int):
-        option_str += " --sleep-time=%d" % options["sleep_time"]
     if "header_list" in options:
         for header in options["header_list"]:
             option_str += " --header '%s'" % header
@@ -405,8 +403,6 @@ class Config:
             user_agent = Config._get_str_config_value(collection_conf, "user_agent")
             encoding = Config._get_str_config_value(collection_conf, "encoding", "utf-8")
 
-            sleep_time = Config._get_int_config_value(collection_conf, "sleep_time")
-
             unit_size_per_day = Config._get_float_config_value(collection_conf, "unit_size_per_day")
 
             list_url_list = Config._get_config_value_list(collection_conf, "list_url", [])
@@ -422,8 +418,6 @@ class Config:
                 "sort_field_pattern": sort_field_pattern,
                 "user_agent": user_agent,
                 "encoding": encoding,
-
-                "sleep_time": sleep_time,
 
                 "unit_size_per_day": unit_size_per_day,
 
@@ -448,7 +442,6 @@ class Config:
             referer = Config._get_str_config_value(extraction_conf, "referer")
 
             review_point_threshold = Config._get_int_config_value(extraction_conf, "review_point_threshold")
-            sleep_time = Config._get_int_config_value(extraction_conf, "sleep_time")
 
             element_id_list = Config._get_config_value_list(extraction_conf, "element_id", [])
             element_class_list = Config._get_config_value_list(extraction_conf, "element_class", [])
@@ -467,7 +460,6 @@ class Config:
                 "referer": referer,
 
                 "review_point_threshold": review_point_threshold,
-                "sleep_time": sleep_time,
 
                 "element_id_list": element_id_list,
                 "element_class_list": element_class_list,

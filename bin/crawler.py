@@ -14,6 +14,9 @@ from typing import Optional
 import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions
+from selenium.webdriver.common.by import By
 import selenium
 
 
@@ -29,9 +32,8 @@ class Method(Enum):
 
 
 class HeadlessBrowser:
-    def __init__(self, headers, sleep_time=None) -> None:
+    def __init__(self, headers) -> None:
         self.headers = headers
-        self.sleep_time = sleep_time
 
     def make_request(self, url) -> str:
         LOGGER.debug("HeadlessBrowser.make_request('%s')", url)
@@ -48,6 +50,7 @@ class HeadlessBrowser:
         driver = webdriver.Chrome(options=options, executable_path=chrome_driver_name)
 
         driver.get(url)
+
         if os.path.isfile(COOKIE_FILE):
             with open(COOKIE_FILE, "r") as f:
                 cookies = json.load(f)
@@ -55,6 +58,11 @@ class HeadlessBrowser:
                     if "expiry" in cookie:
                         del cookie["expiry"]
                     driver.add_cookie(cookie)
+
+        try:
+            WebDriverWait(driver, 10).until(expected_conditions.invisibility_of_element((By.ID, "cf-content")))
+        except selenium.common.exceptions.TimeoutException as e:
+            pass
 
         driver.execute_script("Object.defineProperty(navigator, 'plugins', {get: function() {return[1, 2, 3, 4, 5];},});")
         driver.execute_script("Object.defineProperty(navigator, 'languages', {get: function() {return ['ko-KR', 'ko']}})")
@@ -91,11 +99,10 @@ class HeadlessBrowser:
 
 
 class Crawler():
-    def __init__(self, method=Method.GET, headers={}, timeout=10, num_retries=1, sleep_time=None, render_js=False, download_file=None, encoding=None, verify_ssl=True) -> None:
+    def __init__(self, method=Method.GET, headers={}, timeout=10, num_retries=1, render_js=False, download_file=None, encoding=None, verify_ssl=True) -> None:
         self.method = method
         self.timeout = timeout
         self.num_retries = num_retries
-        self.sleep_time = sleep_time
         self.render_js = render_js
         self.headers = headers
         self.download_file = download_file
@@ -107,7 +114,7 @@ class Crawler():
         if self.render_js:
             LOGGER.debug("headless browser")
             self.headers['User-Agent'] = "Mozillla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36"
-            browser = HeadlessBrowser(self.headers, self.sleep_time)
+            browser = HeadlessBrowser(self.headers)
             return browser.make_request(url)
 
         LOGGER.debug("requests client")
@@ -167,7 +174,6 @@ def print_usage() -> None:
     print("\t--user-agent=<user agent string>")
     print("\t--referer=<referer>")
     print("\t--retry=<# of retries>")
-    print("\t--sleep-time=<seconds>")
 
 
 def main() -> int:
@@ -175,7 +181,6 @@ def main() -> int:
     headers = {"Accept-Encoding": "gzip, deflate", "User-Agent": "Mozillla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36", "Accept": "*/*", "Connection": "Keep-Alive"}
     timeout = 10
     num_retries = 1
-    sleep_time = None
     render_js = False
     download_file: Optional[str] = None
     encoding: Optional[str] = None
@@ -186,7 +191,7 @@ def main() -> int:
         sys.exit(-1)
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "h", ["spider", "render-js=", "verify-ssl=", "download=", "encoding=", "user-agent=", "referer=", "header=", "timeout=", "retry=", "sleep-time="])
+        opts, args = getopt.getopt(sys.argv[1:], "h", ["spider", "render-js=", "verify-ssl=", "download=", "encoding=", "user-agent=", "referer=", "header=", "timeout=", "retry="])
     except getopt.GetoptError:
         print_usage()
         sys.exit(-1)
@@ -215,8 +220,6 @@ def main() -> int:
             timeout = int(a)
         elif o == "--retry":
             num_retries = int(a)
-        elif o == "--sleep-time":
-            sleep_time = int(a)
         elif o == "--download":
             download_file = a
         elif o == "--encoding":
@@ -224,7 +227,7 @@ def main() -> int:
 
     url = args[0]
 
-    crawler = Crawler(method, headers, timeout, num_retries, sleep_time, render_js, download_file, encoding, verify_ssl)
+    crawler = Crawler(method, headers, timeout, num_retries, render_js, download_file, encoding, verify_ssl)
     response = crawler.run(url)
     print(response)
     return 0

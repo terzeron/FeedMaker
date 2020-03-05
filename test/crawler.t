@@ -35,8 +35,6 @@ class CrawlerTest(unittest.TestCase):
             self.assertTrue(m)
             m = re.search(r'--retry=', result)
             self.assertTrue(m)
-            m = re.search(r'--sleep-time=', result)
-            self.assertTrue(m)
 
     def test_basicInstantiation(self):
         crawler = Crawler()
@@ -61,7 +59,6 @@ class CrawlerTest(unittest.TestCase):
         self.assertEqual({}, crawler.headers)
         self.assertEqual(10, crawler.timeout)
         self.assertEqual(1, crawler.num_retries)
-        self.assertEqual(None, crawler.sleep_time)
         self.assertEqual(False, crawler.render_js)
         self.assertEqual(None, crawler.download_file)
         self.assertEqual(None, crawler.encoding)
@@ -91,10 +88,6 @@ class CrawlerTest(unittest.TestCase):
 
         crawler = Crawler(num_retries=3)
         self.assertEqual(3, crawler.num_retries)
-        del crawler
-
-        crawler = Crawler(sleep_time=6)
-        self.assertEqual(6, crawler.sleep_time)
         del crawler
 
         crawler = Crawler(render_js=True)

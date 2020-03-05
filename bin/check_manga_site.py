@@ -34,7 +34,6 @@ def main() -> int:
         url: str = ""
         keyword: str = ""
         num_retries: int = 1
-        sleep_time: int = 0
         render_js: bool = False
         encoding: str = "utf-8"
         if site_config:
@@ -50,8 +49,6 @@ def main() -> int:
                 return -1
             if "num_retries" in site_config:
                 num_retries = site_config["num_retries"]
-            if "sleep_time" in site_config:
-                sleep_time = site_config["sleep_time"]
             if "render_js" in site_config:
                 render_js = site_config["render_js"]
             if "encoding" in site_config:
@@ -67,7 +64,7 @@ def main() -> int:
         print("spidering end")
 
     print("getting start")
-    crawler = Crawler(method=Method.GET, num_retries=num_retries, sleep_time=sleep_time, render_js=render_js, encoding=encoding)
+    crawler = Crawler(method=Method.GET, num_retries=num_retries, render_js=render_js, encoding=encoding)
     response = crawler.run(url)
 
     if not response:
