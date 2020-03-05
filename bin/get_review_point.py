@@ -7,6 +7,7 @@ import os
 import re
 import signal
 import logging
+import logging.config
 from urllib.parse import urlencode
 from typing import Optional, Dict
 from crawler import Crawler

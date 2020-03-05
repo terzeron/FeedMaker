@@ -266,7 +266,7 @@ class FeedMaker:
             if error:
                 LOGGER.warning("can't execute command '%s', %s", cmd, error)
                 LOGGER.debug("wait for seconds and retry")
-                time.sleep(10)
+                time.sleep(5)
                 _, error = exec_cmd(cmd)
                 if error:
                     LOGGER.warning("can't execute command '%s', %s", cmd, error)
@@ -456,7 +456,7 @@ class FeedMaker:
             if not self.recent_feed_list or len(self.recent_feed_list) == 0:
                 # 재시도
                 LOGGER.debug("wait for seconds and retry")
-                time.sleep(10)
+                time.sleep(5)
                 self.get_recent_feed_list()
                 if not self.recent_feed_list or len(self.recent_feed_list) == 0:
                     LOGGER.error("Can't get recent feed list from urls")

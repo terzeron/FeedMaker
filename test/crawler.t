@@ -5,6 +5,7 @@ import re
 import unittest
 from unittest.mock import patch
 from io import StringIO
+from feed_maker_util import kill_process_group
 from crawler import Method, Crawler, print_usage
 
 
@@ -45,11 +46,13 @@ class CrawlerTest(unittest.TestCase):
         self.assertTrue(m)
         m = re.search(r'<meta property="og:url" content="http://m.naver.com/">', result)
         self.assertTrue(m)
+        del crawler
 
         crawler = Crawler(method=Method.HEAD)
         self.assertTrue(crawler)
         result = crawler.run("https://m.naver.com")
         self.assertEqual("200", result)
+        del crawler
 
     def test_instantiateWithOptions(self):
         # default parameter
@@ -63,43 +66,58 @@ class CrawlerTest(unittest.TestCase):
         self.assertEqual(None, crawler.download_file)
         self.assertEqual(None, crawler.encoding)
         self.assertEqual(True, crawler.verify_ssl)
+        del crawler
 
         crawler = Crawler(method=Method.GET)
         self.assertEqual(Method.GET, crawler.method)
+        del crawler
         crawler = Crawler(method=Method.HEAD)
         self.assertEqual(Method.HEAD, crawler.method)
+        del crawler
         crawler = Crawler(method=Method.POST)
         self.assertEqual(Method.POST, crawler.method)
+        del crawler
 
         crawler = Crawler(headers={})
         self.assertEqual({}, crawler.headers)
+        del crawler
         crawler = Crawler(headers={"Referer": "https://m.naver.com"})
         self.assertEqual({"Referer": "https://m.naver.com"}, crawler.headers)
+        del crawler
 
         crawler = Crawler(timeout=5)
         self.assertEqual(5, crawler.timeout)
+        del crawler
 
         crawler = Crawler(num_retries=3)
         self.assertEqual(3, crawler.num_retries)
+        del crawler
 
         crawler = Crawler(sleep_time=6)
         self.assertEqual(6, crawler.sleep_time)
+        del crawler
 
         crawler = Crawler(render_js=True)
         self.assertEqual(True, crawler.render_js)
+        del crawler
         crawler = Crawler(render_js=False)
         self.assertEqual(False, crawler.render_js)
+        del crawler
 
         crawler = Crawler(download_file="test.html")
         self.assertEqual("test.html", crawler.download_file)
+        del crawler
 
         crawler = Crawler(encoding="cp949")
         self.assertEqual("cp949", crawler.encoding)
+        del crawler
 
         crawler = Crawler(verify_ssl=False)
         self.assertEqual(False, crawler.verify_ssl)
+        del crawler
         crawler = Crawler(verify_ssl=True)
         self.assertEqual(True, crawler.verify_ssl)
+        del crawler
 
     def test_runHttp(self):
         url = "http://info.cern.ch/"
@@ -107,6 +125,7 @@ class CrawlerTest(unittest.TestCase):
         result = crawler.run(url)
         m = re.search(r'<title>http://info.cern.ch</title>', result)
         self.assertTrue(m)
+        del crawler
 
     def test_runHttps(self):
         url = "https://theuselessweb.site/unicodesnowmanforyou/"
@@ -114,6 +133,7 @@ class CrawlerTest(unittest.TestCase):
         result = crawler.run(url)
         m = re.search(r'&#9731;', result)
         self.assertTrue(m)
+        del crawler
 
     def test_runHeadlessBrowser(self):
         url = "https://kr.vuejs.org/v2/guide/index.html"
@@ -121,13 +141,17 @@ class CrawlerTest(unittest.TestCase):
         result = crawler.run(url)
         m = re.search(r'<div id="app-6" class="demo"><p>안녕하세요 Vue!</p> <input></div>', result)
         self.assertFalse(m)
+        del crawler
+        
         crawler = Crawler(render_js=True)
         result = crawler.run(url)
         m = re.search(r'<div id="app-6" class="demo"><p>안녕하세요 Vue!</p> <input></div>', result)
         self.assertTrue(m)
+        del crawler
 
     def tearDown(self):
-        pass
+        kill_process_group("chromedriver")
+        kill_process_group("chrome")
 
 
 if __name__ == "__main__":

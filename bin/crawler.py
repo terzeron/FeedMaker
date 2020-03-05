@@ -7,6 +7,7 @@ import re
 from enum import Enum
 import time
 import getopt
+import json
 import logging
 import logging.config
 from typing import Optional
@@ -18,6 +19,7 @@ import selenium
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
 LOGGER = logging.getLogger()
+COOKIE_FILE = "cookies.json"
 
 
 class Method(Enum):
@@ -46,17 +48,26 @@ class HeadlessBrowser:
         driver = webdriver.Chrome(options=options, executable_path=chrome_driver_name)
 
         driver.get(url)
+        if os.path.isfile(COOKIE_FILE):
+            with open(COOKIE_FILE, "r") as f:
+                cookies = json.load(f)
+                for cookie in cookies:
+                    if "expiry" in cookie:
+                        del cookie["expiry"]
+                    driver.add_cookie(cookie)
+
         driver.execute_script("Object.defineProperty(navigator, 'plugins', {get: function() {return[1, 2, 3, 4, 5];},});")
         driver.execute_script("Object.defineProperty(navigator, 'languages', {get: function() {return ['ko-KR', 'ko']}})")
         #driver.execute_script("const getParameter = WebGLRenderingContext.getParameter;WebGLRenderingContext.prototype.getParameter = function(parameter) {if (parameter === 37445) {return 'NVIDIA Corporation'} if (parameter === 37446) {return 'NVIDIA GeForce GTX 980 Ti OpenGL Engine';}return getParameter(parameter);};")
-        if self.sleep_time:
-            # necessary to circumvent javascript challenge of cloudflare
-            time.sleep(self.sleep_time)
+
+        cookies = driver.get_cookies()
+        with open(COOKIE_FILE, "w") as f:
+            json.dump(cookies, f)
 
         driver.execute_script('''
         div = document.createElement("DIV");
         div.className = "images_from_canvas";
-        var canvas_list = document.getElementsByTagName("canvas"); 
+        var canvas_list = document.getElementsByTagName("canvas");
         for (var i = 0; i < canvas_list.length; i++) {
             img_data = canvas_list[i].toDataURL("image/png");
             img = document.createElement("IMG");
@@ -136,7 +147,7 @@ class Crawler():
             if response:
                 break
             LOGGER.debug("wait for seconds and retry (#%d)", i)
-            time.sleep(10)
+            time.sleep(5)
         if not response:
             LOGGER.warning("can't get response from '%s'", url)
             return ""

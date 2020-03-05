@@ -25,3 +25,4 @@ result.*.temp
 .mypy_cache/
 .idea/
 TAGS
+cookies.json
