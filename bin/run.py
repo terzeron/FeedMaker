@@ -50,7 +50,6 @@ def send_error_msg(msg: Optional[str]) -> bool:
 def execute_job(feed_dir: str, list_archiving_period: int) -> bool:
     LOGGER.debug("execute_job(feed_dir='%s', list_archiving_period=%d)", feed_dir, list_archiving_period)
     print(feed_dir)
-    return True
     os.chdir(feed_dir)
     if os.path.isdir(feed_dir) and os.path.isfile(os.path.join(feed_dir, "conf.xml")):
         do_exist_old_list_file = False
