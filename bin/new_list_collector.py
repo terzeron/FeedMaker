@@ -46,7 +46,7 @@ class NewListCollector:
         if error:
             LOGGER.warning("can't execute command '%s', %s", full_cmd, error)
             LOGGER.debug("wait for seconds and retry")
-            time.sleep(10)
+            time.sleep(5)
             result, error = exec_cmd(full_cmd)
             if error:
                 LOGGER.warning("can't execute command '%s', %s", full_cmd, error)

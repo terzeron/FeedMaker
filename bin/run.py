@@ -11,40 +11,13 @@ import logging
 import logging.config
 import concurrent.futures
 import getopt
-from typing import Dict, Tuple, List, Any, Set, Optional
-import psutil
-from feed_maker_util import Config, exec_cmd, find_process_group
+from typing import Dict, Tuple, List, Any, Set
+from feed_maker_util import Config, exec_cmd, send_error_msg, kill_process_group
 from feed_maker import FeedMaker
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
 LOGGER = logging.getLogger()
-
-
-def send_error_msg(msg: Optional[str]) -> bool:
-    if not msg:
-        return False
-    LOGGER.debug("send_error_msg('%s')", msg)
-    cmd = " ".join(('''
-    curl -s -X POST
-         -H 'Content-Type:application/json'
-         -H 'Authorization: Bearer gdrao6YPr50SCzwqb7By40yqwOotDdo9a/+nGYmFkL3xMUA1P3OPJO7aKlNTnN12tz0BzJ5C/TX+gTZiIUFeXIa8X1reFHNXPcJ/hlZysxTkBOkSzbEI/TUbBVDjves+lDqDwVicBisE3/MelN5QrAdB04t89/1O/w1cDnyilFU='
-    -d '{
-        "to": "U52aa71b262aa645ba5f3e4786949ef23",
-        "messages":[
-            {
-                "type": "text",
-                "text": "%s"
-            }
-        ]
-    }' https://api.line.me/v2/bot/message/push
-    ''' % msg[:1999]).split("\n"))
-    result, error = exec_cmd(cmd)
-    if error:
-        LOGGER.warning("can't send error message '%s', %s", msg, error)
-        return False
-    LOGGER.info(result)
-    return True
 
 
 def execute_job(feed_dir: str, list_archiving_period: int) -> bool:
@@ -314,14 +287,6 @@ def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
     return not error
 
 
-def kill_chrome_process_group(proc_name: str) -> None:
-    LOGGER.debug("kill_chrome_process_group(proc_name='%s')", proc_name)
-    pid_list = find_process_group(proc_name)
-    for pid in pid_list:
-        p = psutil.Process(pid)
-        p.terminate()
-
-
 def main() -> int:
     archiving_period = 30
 
@@ -347,7 +312,7 @@ def main() -> int:
             return -1
         img_dir = os.path.join(www_feeds_dir, "img")
         result = make_all_feeds(feed_maker_cwd, log_dir, img_dir)
-        kill_chrome_process_group("chromedriver")
+        kill_process_group("chromedriver")
     else:
         feed_name = os.path.basename(os.getcwd())
         www_feeds_dir = os.getenv("FEED_MAKER_WWW_FEEDS_DIR")

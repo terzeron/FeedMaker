@@ -55,6 +55,32 @@ def exec_cmd(cmd: str, input_data=None) -> Tuple[str, Optional[str]]:
     return result.decode(encoding="utf-8"), ""
 
 
+def send_error_msg(msg: Optional[str]) -> bool:
+    if not msg:
+        return False
+    LOGGER.debug("send_error_msg('%s')", msg)
+    cmd = " ".join(('''
+    curl -s -X POST
+         -H 'Content-Type:application/json'
+         -H 'Authorization: Bearer gdrao6YPr50SCzwqb7By40yqwOotDdo9a/+nGYmFkL3xMUA1P3OPJO7aKlNTnN12tz0BzJ5C/TX+gTZiIUFeXIa8X1reFHNXPcJ/hlZysxTkBOkSzbEI/TUbBVDjves+lDqDwVicBisE3/MelN5QrAdB04t89/1O/w1cDnyilFU='
+    -d '{
+        "to": "U52aa71b262aa645ba5f3e4786949ef23",
+        "messages":[
+            {
+                "type": "text",
+                "text": "%s"
+            }
+        ]
+    }' https://api.line.me/v2/bot/message/push
+    ''' % msg[:1999]).split("\n"))
+    result, error = exec_cmd(cmd)
+    if error:
+        LOGGER.warning("can't send error message '%s', %s", msg, error)
+        return False
+    LOGGER.info(result)
+    return True
+
+
 def determine_crawler_options(options: Dict[str, Any]) -> str:
     LOGGER.debug("# determine_crawler_options()")
 
@@ -128,6 +154,14 @@ def find_process_group(parent_proc_name: str) -> List[int]:
             result_pid_list.extend(parent_children_map[ppid])
 
     return result_pid_list
+
+
+def kill_process_group(proc_name: str) -> None:
+    LOGGER.debug("kill_process_group(proc_name='%s')", proc_name)
+    pid_list = find_process_group(proc_name)
+    for pid in pid_list:
+        p = psutil.Process(pid)
+        p.terminate()
 
 
 def get_current_time() -> datetime:
