@@ -24,6 +24,7 @@ LOGGER = logging.getLogger()
 def send_error_msg(msg: Optional[str]) -> bool:
     if not msg:
         return False
+    LOGGER.debug("send_error_msg('%s')", msg)
     cmd = " ".join(('''
     curl -s -X POST
          -H 'Content-Type:application/json'
@@ -47,7 +48,9 @@ def send_error_msg(msg: Optional[str]) -> bool:
 
 
 def execute_job(feed_dir: str, list_archiving_period: int) -> bool:
+    LOGGER.debug("execute_job(feed_dir='%s', list_archiving_period=%d)", feed_dir, list_archiving_period)
     print(feed_dir)
+    return True
     os.chdir(feed_dir)
     if os.path.isdir(feed_dir) and os.path.isfile(os.path.join(feed_dir, "conf.xml")):
         do_exist_old_list_file = False
@@ -114,6 +117,7 @@ def determine_options() -> Tuple[Dict[str, Any], List[str]]:
 
 
 def get_img_set_in_img_dir(img_dir: str) -> Set[str]:
+    LOGGER.debug("get_img_set_in_img_dir(img_dir='%s')", img_dir)
     img_set_in_img_dir = set([])
     if os.path.isdir(img_dir):
         for file in os.listdir(img_dir):
@@ -123,12 +127,14 @@ def get_img_set_in_img_dir(img_dir: str) -> Set[str]:
 
 
 def remove_log_files(file_list: List[str]) -> None:
+    LOGGER.debug("remove_log_files(file_list=%r)", file_list)
     for file in file_list:
         if os.path.isfile(file):
             os.remove(file)
 
 
 def remove_image_files_old_and_with_zero_size(img_dir: str, max_archiving_period: int) -> None:
+    LOGGER.debug("remove_image_files_old_and_with_zero_size(img_dir='%s', max_archiving_period=%d)", img_dir, max_archiving_period)
     for path, _, files in os.walk(img_dir):
         for file in files:
             file_path = os.path.join(path, file)
@@ -138,6 +144,7 @@ def remove_image_files_old_and_with_zero_size(img_dir: str, max_archiving_period
 
 
 def remove_all_files(rss_file_name: str) -> None:
+    LOGGER.debug("remove_all_files(rss_file_name='%s')", rss_file_name)
     for file in os.listdir("html"):
         file_path = os.path.join("html", file)
         if os.path.isfile(file_path):
@@ -152,6 +159,7 @@ def remove_all_files(rss_file_name: str) -> None:
 
 
 def remove_old_html_files(archiving_period: int) -> None:
+    LOGGER.debug("remove_old_html_files(archiving_period=%d)", archiving_period)
     if os.path.exists("html"):
         LOGGER.info("deleting older html files than 30 days")
         # deleting older html files than archiving_period
@@ -163,7 +171,7 @@ def remove_old_html_files(archiving_period: int) -> None:
 
 
 def remove_html_files_without_cached_image_files(img_dir: str) -> None:
-    LOGGER.debug("remove_html_files_without_cached_image_files(%s)", img_dir)
+    LOGGER.debug("remove_html_files_without_cached_image_files(img_dir='%s')", img_dir)
     img_set_in_img_dir = get_img_set_in_img_dir(img_dir)
 
     if os.path.isdir("html"):
@@ -192,12 +200,14 @@ def remove_html_files_without_cached_image_files(img_dir: str) -> None:
 
 
 def remove_temporary_files() -> None:
-    for file in ["cookie.txt", "nohup.out"]:
+    LOGGER.debug("remove_temporary_files()")
+    for file in ["nohup.out", "temp.html", "x.html"]:
         if os.path.isfile(file):
             os.remove(file)
 
 
 def remove_unused_img_files(rss_file_name: str, img_dir: str) -> None:
+    LOGGER.debug("remove_unused_img_files(rss_file_name='%s', img_dir='%s')", rss_file_name, img_dir)
     if not os.path.isfile(rss_file_name):
         return
 
@@ -221,6 +231,7 @@ def remove_unused_img_files(rss_file_name: str, img_dir: str) -> None:
 
 def make_single_feed(feed_name: str, img_dir: str, archiving_period: int, options: Dict[str, Any]) -> bool:
     LOGGER.info(feed_name)
+    LOGGER.debug("make_single_feed(feed_name='%s', img_dir='%s', archiving_period=%d, options=%r)", feed_name, img_dir, archiving_period, options)
     rss_file_name = feed_name + ".xml"
 
     config = Config()
@@ -258,6 +269,7 @@ def make_single_feed(feed_name: str, img_dir: str, archiving_period: int, option
 
 
 def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
+    LOGGER.info("make_all_feeds(feed_maker_cwd='%s', log_dir='%s', img_dir='%s')", feed_maker_cwd, log_dir, img_dir)
     runlog = "run.log"
     errorlog = "error.log"
     collectorerrorlog = "collector.error.log"
@@ -304,6 +316,7 @@ def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
 
 
 def kill_chrome_process_group(proc_name: str) -> None:
+    LOGGER.debug("kill_chrome_process_group(proc_name='%s')", proc_name)
     pid_list = find_process_group(proc_name)
     for pid in pid_list:
         p = psutil.Process(pid)
