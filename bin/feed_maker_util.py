@@ -55,24 +55,17 @@ def exec_cmd(cmd: str, input_data=None) -> Tuple[str, Optional[str]]:
     return result.decode(encoding="utf-8"), ""
 
 
-def send_error_msg(msg: Optional[str]) -> bool:
+def send_error_msg(msg: Optional[str], access_token: str, receiver_id: str) -> bool:
     if not msg:
         return False
     LOGGER.debug("send_error_msg('%s')", msg)
     cmd = " ".join(('''
-    curl -s -X POST
-         -H 'Content-Type:application/json'
-         -H 'Authorization: Bearer gdrao6YPr50SCzwqb7By40yqwOotDdo9a/+nGYmFkL3xMUA1P3OPJO7aKlNTnN12tz0BzJ5C/TX+gTZiIUFeXIa8X1reFHNXPcJ/hlZysxTkBOkSzbEI/TUbBVDjves+lDqDwVicBisE3/MelN5QrAdB04t89/1O/w1cDnyilFU='
-    -d '{
-        "to": "U52aa71b262aa645ba5f3e4786949ef23",
-        "messages":[
-            {
-                "type": "text",
-                "text": "%s"
-            }
-        ]
-    }' https://api.line.me/v2/bot/message/push
-    ''' % msg[:1999]).split("\n"))
+        curl -s -X POST
+             -H 'Content-Type:application/json'
+             -H 'Authorization: Bearer %s'
+             -d '{ "to": "%s", "messages": [ { "type": "text", "text": "%s" } ] }' 
+             https://api.line.me/v2/bot/message/push
+        ''' % (msg[:1999], access_token, receiver_id)).split("\n"))
     result, error = exec_cmd(cmd)
     if error:
         LOGGER.warning("can't send error message '%s', %s", msg, error)

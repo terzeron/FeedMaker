@@ -5,6 +5,7 @@ import os
 import sys
 import re
 import time
+import json
 from datetime import datetime
 import random
 import logging
@@ -277,13 +278,21 @@ def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
                 LOGGER.warning("can't execute a job for feed '%s', %s", feed, e)
                 failed_feed_list.append(os.path.basename(feed))
 
+    # read global config
+    access_token: str = ""
+    receiver_id: str = ""            
+    with open("global_config.json", "r") as f:
+        global_config: Dict[str, Any] = json.load(f)
+        access_token = global_config["access_token"]
+        receiver_id = global_config["receiver_id"]
+                
     if len(failed_feed_list) > 0:
-        send_error_msg(", ".join(failed_feed_list))
+        send_error_msg(", ".join(failed_feed_list), access_token, receiver_id)
 
     cmd = "find_problems.sh > %s/find_problems.log 2>&1" % log_dir
     _, error = exec_cmd(cmd)
     if error:
-        send_error_msg(error)
+        send_error_msg(error, access_token, receiver_id)
     return not error
 
 

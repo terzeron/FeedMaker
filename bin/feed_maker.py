@@ -168,13 +168,12 @@ class FeedMaker:
         LOGGER.info("Generating rss feed file...")
         rss_items: List[PyRSS2Gen.RSSItem] = []
         for link, title in reversed(self.result_feed_list):
-            LOGGER.info("%s\t%s", link, title)
             html_file_path = FeedMaker.get_html_file_path(self.html_dir, link)
+            LOGGER.info("%s\t%s\t%s", link, title, html_file_path)
             pub_date_str = get_rss_date_str()
 
             content = ""
             with open(html_file_path, 'r', encoding='utf-8') as in_file:
-                LOGGER.info("adding '%s' to the result", html_file_path)
                 for line in in_file:
                     content += line
                     # restrict big contents
@@ -256,7 +255,7 @@ class FeedMaker:
 
         if os.path.isfile(html_file_path) and size > FeedMaker._get_size_of_template_with_img_tag(self.rss_file_name):
             # 이미 성공적으로 만들어져 있으니까 피드 리스트에 추가
-            LOGGER.info("Success: %s: %s --> %s: %d (> %d byte of template)", title, link, html_file_path, size, FeedMaker._get_size_of_template_with_img_tag(self.rss_file_name))
+            #LOGGER.info("%s\t%s\t%s (%d bytes > %d bytes of template)", link, title, html_file_path, size, FeedMaker._get_size_of_template_with_img_tag(self.rss_file_name))
             ret = True
         else:
             # 파일이 존재하지 않거나 크기가 작으니 다시 생성 시도
@@ -292,11 +291,11 @@ class FeedMaker:
                         outfile.write(image_tag_str)
 
                 # 피드 리스트에 추가
-                LOGGER.info("Success: %s: %s --> %s: %d (> %d byte of template)", title, link, html_file_path, size, self._get_size_of_template())
+                LOGGER.info("New: %s\t%s\t%s (%d bytes > %d bytes of template)", link, title, html_file_path, size, self._get_size_of_template())
                 ret = True
             else:
                 # 피드 리스트에서 제외
-                LOGGER.warning("%s: %s --> %s: %d (<= %d byte of template)", title, link, html_file_path, size, self._get_size_of_template())
+                LOGGER.warning("Excluded: %s\t%s\t%s (%d bytes <= %d bytes of template)", link, title, html_file_path, size, self._get_size_of_template())
                 ret = False
 
             if self.extraction_conf["force_sleep_between_articles"]:
