@@ -65,8 +65,9 @@ def send_error_msg(msg: Optional[str], access_token: str, receiver_id: str) -> b
              -H 'Authorization: Bearer %s'
              -d '{ "to": "%s", "messages": [ { "type": "text", "text": "%s" } ] }' 
              https://api.line.me/v2/bot/message/push
-        ''' % (msg[:1999], access_token, receiver_id)).split("\n"))
+        ''' % (access_token, receiver_id, msg[:1999])).split("\n"))
     result, error = exec_cmd(cmd)
+    print(cmd)
     if error:
         LOGGER.warning("can't send error message '%s', %s", msg, error)
         return False
