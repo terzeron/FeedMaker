@@ -281,7 +281,7 @@ def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
     # read global config
     access_token: str = ""
     receiver_id: str = ""            
-    with open(os.path.join(os.environ["FEED_MAKER_HOME_DIR"], "bin", "global_config.json", "r") as f:
+    with open(os.path.join(os.environ["FEED_MAKER_HOME_DIR"], "bin", "global_config.json", "r")) as f:
         global_config: Dict[str, Any] = json.load(f)
         access_token = global_config["access_token"]
         receiver_id = global_config["receiver_id"]
