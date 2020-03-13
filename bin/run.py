@@ -242,7 +242,7 @@ def make_single_feed(feed_name: str, img_dir: str, archiving_period: int, option
 
 
 def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
-    LOGGER.info("make_all_feeds(feed_maker_cwd='%s', log_dir='%s', img_dir='%s')", feed_maker_cwd, log_dir, img_dir)
+    LOGGER.debug("make_all_feeds(feed_maker_cwd='%s', log_dir='%s', img_dir='%s')", feed_maker_cwd, log_dir, img_dir)
     runlog = "run.log"
     errorlog = "error.log"
     collectorerrorlog = "collector.error.log"
