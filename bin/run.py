@@ -106,13 +106,13 @@ def remove_log_files(file_list: List[str]) -> None:
             os.remove(file)
 
 
-def remove_image_files_old_and_with_zero_size(img_dir: str, max_archiving_period: int) -> None:
-    LOGGER.debug("remove_image_files_old_and_with_zero_size(img_dir='%s', max_archiving_period=%d)", img_dir, max_archiving_period)
+def remove_image_files_with_zero_size(img_dir: str) -> None:
+    LOGGER.debug("remove_image_files_with_zero_size(img_dir='%s')", img_dir)
     for path, _, files in os.walk(img_dir):
         for file in files:
             file_path = os.path.join(path, file)
             if os.path.isfile(file_path):
-                if os.stat(file_path).st_size == 0 or os.stat(file_path).st_mtime + max_archiving_period * 24 * 60 * 60 < time.time():
+                if os.stat(file_path).st_size == 0:
                     os.remove(file_path)
 
 
@@ -134,7 +134,7 @@ def remove_all_files(rss_file_name: str) -> None:
 def remove_old_html_files(archiving_period: int) -> None:
     LOGGER.debug("remove_old_html_files(archiving_period=%d)", archiving_period)
     if os.path.exists("html"):
-        LOGGER.info("deleting older html files than 30 days")
+        LOGGER.info("deleting older html files than %d days", archiving_period)
         # deleting older html files than archiving_period
         for file in os.listdir("html"):
             file_path = os.path.join("html", file)
@@ -234,10 +234,6 @@ def make_single_feed(feed_name: str, img_dir: str, archiving_period: int, option
     # 불필요한 파일 삭제
     remove_temporary_files()
 
-    # 진행 중 피드인 경우, 파일에 포함되지 않은 이미지 삭제
-    if not collection_conf["is_completed"]:
-        remove_unused_img_files(rss_file_name, img_dir)
-
     return result
 
 
@@ -246,13 +242,12 @@ def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
     runlog = "run.log"
     errorlog = "error.log"
     collectorerrorlog = "collector.error.log"
-    max_archiving_period = 60
     list_archiving_period = 3
 
     LOGGER.info("deleting log files")
     remove_log_files([runlog, errorlog, collectorerrorlog])
-    LOGGER.info("deleting old image files and image files with zero size")
-    remove_image_files_old_and_with_zero_size(img_dir, max_archiving_period)
+    LOGGER.info("deleting image files with zero size")
+    remove_image_files_with_zero_size(img_dir)
 
     LOGGER.info("executing feed generation")
     feed_dir_path_list: List[str] = []
