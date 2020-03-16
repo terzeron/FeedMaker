@@ -61,7 +61,7 @@ class HeadlessBrowser:
 
         try:
             WebDriverWait(driver, 10).until(expected_conditions.invisibility_of_element((By.ID, "cf-content")))
-        except selenium.common.exceptions.TimeoutException as e:
+        except selenium.common.exceptions.TimeoutException:
             pass
 
         driver.execute_script("Object.defineProperty(navigator, 'plugins', {get: function() {return[1, 2, 3, 4, 5];},});")
