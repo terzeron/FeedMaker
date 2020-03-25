@@ -156,7 +156,7 @@ class Crawler():
             LOGGER.debug("wait for seconds and retry (#%d)", i)
             time.sleep(5)
         if not response:
-            LOGGER.warning("can't get response from '%s'", url)
+            LOGGER.debug("can't get response from '%s'", url)
             return ""
 
         return response

@@ -16,6 +16,7 @@ from crawler import Crawler
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
 LOGGER = logging.getLogger()
+IMAGE_NOT_FOUND_IMAGE_URL = "https://terzeron.com/image-not-found.png"
 
 
 def download_image(path_prefix: str, img_url_or_data: str, page_url: str) -> Optional[str]:
@@ -105,7 +106,7 @@ def main() -> int:
                 print("<img src='%s'/>" % cache_url)
             else:
                 LOGGER.debug("no cache file '%s'", cache_file)
-                print("<img src='%s' alt='not exist or size 0'/>" % img_url_or_data)
+                print("<img src='%s' alt='not exist or size 0'/>" % IMAGE_NOT_FOUND_IMAGE_URL)
 
             m = re.search(r'^\s*$', post_text)
             if not m:

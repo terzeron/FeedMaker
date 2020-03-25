@@ -16,6 +16,7 @@ from feed_maker_util import Cache, IO, exec_cmd, make_path
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
 LOGGER = logging.getLogger()
+IMAGE_NOT_FOUND_IMAGE_URL = "https://terzeron.com/image-not-found.png"
 
 
 def download_image(path_prefix: str, img_url: str, img_ext: str, page_url: str) -> Optional[str]:
@@ -73,6 +74,7 @@ def download_image_and_read_metadata(path_prefix: str, img_ext: str, page_url: s
             cache_file = download_image(path_prefix, img_url, img_ext, page_url)
             if not cache_file:
                 LOGGER.error("can't download the image from '%s'", img_url)
+                print("<img src='%s' alt='not exist or size 0'/>" % IMAGE_NOT_FOUND_IMAGE_URL)
                 continue
             img_file_list.append(cache_file)
             img_url_list.append(img_url)
