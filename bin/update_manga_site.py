@@ -5,6 +5,12 @@ import sys
 import os
 import re
 import json
+import logging
+from feed_maker_util import exec_cmd
+
+
+logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+LOGGER = logging.getLogger()
 
 
 def print_usage() -> None:
@@ -36,6 +42,11 @@ def main() -> int:
         site_config["url"] = new_url
         json.dump(site_config, f, ensure_ascii=False)
 
+    cmd: str = "git add %s; git commit -m 'modify site url'" % site_config_file
+    result, error = exec_cmd(cmd)
+    if error:
+        LOGGER.error("can't git add '%s' & commit, %s", site_config_file, error)
+            
     # update config files of all feeds which belongs to the site
     for entry in os.listdir("."):
         if not os.path.isdir(os.path.join(".", entry)) or entry.startswith("."):
@@ -53,6 +64,11 @@ def main() -> int:
         ofile.close()
         os.rename(temp_conf_file, conf_file)
 
+        cmd: str = "git add %s; git commit -m 'modify site url'" % conf_file
+        result, error = exec_cmd(cmd)
+        if error:
+            LOGGER.error("can't git add '%s' & commit, %s", conf_file, error)
+            
         if os.path.isdir(os.path.join(".", entry, "newlist")):
             for e in os.listdir(os.path.join(".", entry, "newlist")):
                 os.remove(os.path.join(".", entry, "newlist", e))
