@@ -179,17 +179,14 @@ def traverse_element(element, url, encoding) -> bool:
                 if src:
                     if not re.search(r'((https?:)?//|data:image/png;)', src):
                         src = URL.concatenate_url(url, src)
-                    if "ncc.phinf.naver.net" in src and ("/17.jpg" in src or "/8_17px.jpg" in src or "/7px.jpg" in src or "/20px.jpg" in src):
-                        # 외부에서 접근 불가능한 이미지 제거
-                        return ret
 
         if src:
             if re.search(r'^//', src):
                 src = re.sub(r'^//', 'http://', src)
             sys.stdout.write("<img src='%s'" % src)
-        if element.has_attr("width"):
-            sys.stdout.write(" width='%s'" % element["width"])
-        sys.stdout.write("/>\n")
+            if element.has_attr("width"):
+                sys.stdout.write(" width='%s'" % element["width"])
+            sys.stdout.write("/>\n")
         ret = True
     elif element.name in ["input"]:
         if check_element_class(element, "input", "origin_src"):
