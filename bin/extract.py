@@ -153,6 +153,12 @@ def traverse_element(element, url, encoding) -> bool:
                 if not re.search(r'((https?:)?//|data:image/png;)', data_lazy_src):
                     data_lazy_src = URL.concatenate_url(url, data_lazy_src)
                 src = data_lazy_src
+        elif element.has_attr("lazy-src"):
+            lazy_src = element["lazy-src"]
+            if lazy_src:
+                if not re.search(r'((https?:)?//|data:image/png;)', lazy_src):
+                    lazy_src = URL.concatenate_url(url, lazy_src)
+                src = lazy_src
         elif element.has_attr("lazysrc"):
             lazy_src = element["lazysrc"]
             if lazy_src:
