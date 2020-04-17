@@ -217,11 +217,6 @@ def make_single_feed(feed_name: str, img_dir: str, archiving_period: int, option
     if do_remove_all_files:
         # -r 옵션 사용하면 html 디렉토리의 파일들, newlist 디렉토리의 파일들, 각종 로그 파일, feed xml 파일들을 삭제
         remove_all_files(rss_file_name)
-    else:
-        # 진행 중 피드이고
-        if not collection_conf["is_completed"]:
-            # archiving_period일 이상 오래된 html 파일을 삭제
-            remove_old_html_files(archiving_period)
 
     # 다운로드되어 있어야 하는 이미지가 없는 html 파일 삭제
     remove_html_files_without_cached_image_files(img_dir)
@@ -240,12 +235,10 @@ def make_single_feed(feed_name: str, img_dir: str, archiving_period: int, option
 def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
     LOGGER.debug("make_all_feeds(feed_maker_cwd='%s', log_dir='%s', img_dir='%s')", feed_maker_cwd, log_dir, img_dir)
     runlog = "run.log"
-    errorlog = "error.log"
-    collectorerrorlog = "collector.error.log"
     list_archiving_period = 3
 
     LOGGER.info("deleting log files")
-    remove_log_files([runlog, errorlog, collectorerrorlog])
+    remove_log_files([runlog])
     LOGGER.info("deleting image files with zero size")
     remove_image_files_with_zero_size(img_dir)
 
