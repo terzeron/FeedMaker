@@ -73,7 +73,7 @@ def download_image_and_read_metadata(path_prefix: str, img_ext: str, page_url: s
             # download
             cache_file = download_image(path_prefix, img_url, img_ext, page_url)
             if not cache_file:
-                LOGGER.error("can't download the image from '%s'", img_url)
+                LOGGER.error("<!-- can't download the image from '%s' -->", img_url)
                 print("<img src='%s' alt='not exist or size 0'/>" % IMAGE_NOT_FOUND_IMAGE_URL)
                 continue
             img_file_list.append(cache_file)
@@ -83,7 +83,7 @@ def download_image_and_read_metadata(path_prefix: str, img_ext: str, page_url: s
             LOGGER.debug(cmd)
             result, error = exec_cmd(cmd)
             if error:
-                LOGGER.warning("can't get the size of image file '%s', cmd='%s', %s", cache_file, cmd, error)
+                LOGGER.warning("<!-- can't get the size of image file '%s', cmd='%s', %s -->", cache_file, cmd, error)
                 continue
 
             m2 = re.search(r"^(?P<width>\d+)\s+(?P<height>\d+)", result)
@@ -126,7 +126,7 @@ def merge_image_files(img_file_list: List[str], path_prefix: str, img_url: str, 
     result, error = exec_cmd(cmd)
     LOGGER.debug(result)
     if not result:
-        LOGGER.error("can't merge the image files, cmd='%s', %s", cmd, error)
+        LOGGER.error("<!-- can't merge the image files, cmd='%s', %s -->", cmd, error)
         sys.exit(-1)
     return merged_img_file
 
@@ -140,7 +140,7 @@ def crop_image_file(img_file: str) -> None:
     LOGGER.debug(cmd)
     _, error = exec_cmd(cmd)
     if error:
-        LOGGER.error("can't crop the image file '%s', cmd='%s', %s", img_file, cmd, error)
+        LOGGER.error("<!-- can't crop the image file '%s', cmd='%s', %s -->", img_file, cmd, error)
         # sys.exit(-1)
         return
 
@@ -164,7 +164,7 @@ def remove_image_files(img_file_list: List[str]) -> bool:
     LOGGER.debug(cmd)
     _, error = exec_cmd(cmd)
     if error:
-        LOGGER.error("can't remove files '%s', %s, %s", img_file_list, cmd, error)
+        LOGGER.error("<!-- can't remove files '%s', %s, %s -->", img_file_list, cmd, error)
         return False
     return True
 
@@ -176,7 +176,7 @@ def split_image_file(img_file: str, bandwidth: int, diff_threshold: float, size_
     LOGGER.debug(cmd)
     _, error = exec_cmd(cmd)
     if error:
-        LOGGER.error("can't split the image file, %s, %s", cmd, error)
+        LOGGER.error("<!-- can't split the image file, %s, %s -->", cmd, error)
         return False
     return True
 
@@ -218,7 +218,7 @@ def main() -> int:
     LOGGER.debug(cmd)
     result, error = exec_cmd(cmd)
     if not result:
-        LOGGER.error("can't identify current working directory, %s", error)
+        LOGGER.error("<!-- can't identify current working directory, %s -->", error)
         return -1
     feed_name = result.rstrip()
     LOGGER.debug("<!-- feed_name=%s -->", feed_name)
