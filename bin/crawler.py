@@ -121,7 +121,7 @@ class Crawler():
         if self.method == Method.GET:
             response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
         elif self.method == Method.POST:
-            response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, data)
+            response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, data=data)
         elif self.method == Method.HEAD:
             response = requests.head(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
             return str(response.status_code)
