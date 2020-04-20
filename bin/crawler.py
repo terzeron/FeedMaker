@@ -109,7 +109,7 @@ class Crawler():
         self.encoding = encoding
         self.verify_ssl = verify_ssl
 
-    def make_request(self, url) -> str:
+    def make_request(self, url, data=None) -> str:
         LOGGER.debug("Crawler.make_request('%s')", url)
         if self.render_js:
             LOGGER.debug("headless browser")
@@ -121,7 +121,7 @@ class Crawler():
         if self.method == Method.GET:
             response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
         elif self.method == Method.POST:
-            response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
+            response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, data)
         elif self.method == Method.HEAD:
             response = requests.head(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
             return str(response.status_code)
@@ -147,10 +147,10 @@ class Crawler():
         return response.text
 
 
-    def run(self, url) -> str:
+    def run(self, url, data=None) -> str:
         response = None
         for i in range(self.num_retries):
-            response = self.make_request(url)
+            response = self.make_request(url, data)
             if response:
                 break
             LOGGER.debug("wait for seconds and retry (#%d)", i)
