@@ -196,6 +196,15 @@ def print_image_files(num_units: int, path_prefix: str, img_url_prefix: str, img
             print("<img src='%s'/>" % split_img_url)
 
 
+def print_cached_image_file(path_prefix: str, img_url_prefix: str, img_url: str, img_ext: str) -> None:
+    LOGGER.debug("# print_cached_image_file(%s, %s, %s, %s)", path_prefix, img_url_prefix, img_url, img_ext)
+    img_file = Cache.get_cache_file_name(path_prefix, img_url, img_ext)
+    LOGGER.debug("img_file=%s", img_file)
+    if os.path.exists(img_file):
+        img_url = Cache.get_cache_url(img_url_prefix, img_url, img_ext)
+        print("<img src='%s'/>" % img_url)
+
+
 def print_usage(program_name: str) -> None:
     print("Usage: %s [-c <fuzzy>] [-m] [-i] [-l] [-v] [-d] <page_url>" % program_name)
     print("\t\t-c <color>: specify background color")
@@ -300,7 +309,7 @@ def main() -> int:
                     crop_image_files(num_units, path_prefix, img_url, img_ext)
                 print_image_files(num_units, path_prefix, img_url_prefix, img_url, img_ext, None, do_flip_right_to_left)
             else:
-                print("<img src='%s'/>" % img_url)
+                print_cached_image_file(path_prefix, img_url_prefix, img_url, img_ext)
 
     return 0
 
