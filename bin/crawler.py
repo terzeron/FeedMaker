@@ -49,6 +49,17 @@ class HeadlessBrowser:
         chrome_driver_name = "chromedriver"
         driver = webdriver.Chrome(options=options, executable_path=chrome_driver_name)
 
+        if "Referer" in self.headers:
+            driver.get(self.headers["Referer"])
+            try:
+                WebDriverWait(driver, 10).until(expected_conditions.invisibility_of_element((By.ID, "cf-content")))
+            except selenium.common.exceptions.TimeoutException:
+                pass
+
+            cookies = driver.get_cookies()
+            with open(COOKIE_FILE, "w") as f:
+                json.dump(cookies, f)
+
         driver.get(url)
 
         if os.path.isfile(COOKIE_FILE):
