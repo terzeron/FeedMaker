@@ -100,6 +100,7 @@ class HeadlessBrowser:
 
 class Crawler():
     def __init__(self, method=Method.GET, headers={}, timeout=10, num_retries=1, render_js=False, download_file=None, encoding=None, verify_ssl=True) -> None:
+        LOGGER.debug("Crawler(method=%r, headers=%r, timeout=%d, num_retries=%d, render_js=%r, download_file=%r, encoding=%r, verify_ssl=%r)", method, headers, timeout, num_retries, render_js, download_file, encoding, verify_ssl)
         self.method = method
         self.timeout = timeout
         self.num_retries = num_retries

@@ -9,8 +9,8 @@ import urllib.parse
 import logging
 import logging.config
 from base64 import b64decode
-from typing import List, Optional
-from feed_maker_util import IO, Cache, exec_cmd, make_path
+from typing import List, Optional, Dict, Any
+from feed_maker_util import Config, IO, Cache, exec_cmd, make_path
 from crawler import Crawler
 
 
@@ -19,8 +19,8 @@ LOGGER = logging.getLogger()
 IMAGE_NOT_FOUND_IMAGE_URL = "https://terzeron.com/image-not-found.png"
 
 
-def download_image(path_prefix: str, img_url_or_data: str, page_url: str) -> Optional[str]:
-    LOGGER.debug("# download_image(%s, %s, %s)", path_prefix, img_url_or_data, page_url)
+def download_image(config: Dict[str, Any], path_prefix: str, img_url_or_data: str, page_url: str) -> Optional[str]:
+    LOGGER.debug("# download_image(%r, %s, %s, %s)", config, path_prefix, img_url_or_data, page_url)
     cache_file = Cache.get_cache_file_name(path_prefix, img_url_or_data, "")
     if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
         return cache_file
@@ -46,7 +46,12 @@ def download_image(path_prefix: str, img_url_or_data: str, page_url: str) -> Opt
         page_url = urllib.parse.urlunsplit(urls)
 
         LOGGER.debug("image url '%s' to cache file '%s'", img_url, cache_file)
-        crawler = Crawler(headers={"Referer": page_url}, download_file=cache_file, num_retries=2)
+        headers: Dict[str, Any] = {}
+        if "user_agent" in config:
+            headers["User-Agent"] = config["user_agent"]
+        headers["Referer"] = page_url
+        render_js = config["render_js"]
+        crawler = Crawler(headers=headers, download_file=cache_file, num_retries=2, render_js=render_js)
         result = crawler.run(img_url)
         if not result:
             time.sleep(5)
@@ -74,6 +79,12 @@ def main() -> int:
 
     make_path(path_prefix)
 
+    config = Config()
+    if not config:
+        LOGGER.error("can't read configuration")
+        return -1
+    extraction_conf = config.get_extraction_configs()
+
     line_list: List[str] = IO.read_stdin_as_line_list()
     for line in line_list:
         line = line.rstrip()
@@ -99,7 +110,7 @@ def main() -> int:
                 print(pre_text)
 
             # download
-            cache_file = download_image(path_prefix, img_url_or_data, page_url)
+            cache_file = download_image(extraction_conf, path_prefix, img_url_or_data, page_url)
             if cache_file:
                 cache_url = Cache.get_cache_url(img_url_prefix, img_url_or_data, "")
                 LOGGER.debug("%s -> %s / %s", img_url_or_data, cache_file, cache_url)
