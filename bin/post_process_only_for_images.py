@@ -7,7 +7,7 @@ import sys
 
 def main() -> int:
     for line in sys.stdin:
-        if re.search(r'<meta|style', line):
+        if re.search(r'<(meta|style)', line):
             print(line, end='')
         match = re.search(r'(?P<img_tag><img src=[\'"]?[^\'"]+[\'"]?[^>]*>)', line)
         if match:
