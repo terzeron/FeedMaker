@@ -50,8 +50,7 @@ def download_image(config: Dict[str, Any], path_prefix: str, img_url_or_data: st
         if "user_agent" in config:
             headers["User-Agent"] = config["user_agent"]
         headers["Referer"] = page_url
-        render_js = config["render_js"]
-        crawler = Crawler(headers=headers, download_file=cache_file, num_retries=2, render_js=render_js)
+        crawler = Crawler(headers=headers, download_file=cache_file, num_retries=2)
         result = crawler.run(img_url)
         if not result:
             time.sleep(5)
