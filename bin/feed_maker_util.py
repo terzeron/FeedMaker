@@ -395,6 +395,7 @@ class Config:
             sort_field_pattern = Config._get_str_config_value(collection_conf, "sort_field_pattern")
             user_agent = Config._get_str_config_value(collection_conf, "user_agent")
             encoding = Config._get_str_config_value(collection_conf, "encoding", "utf-8")
+            referer = Config._get_str_config_value(collection_conf, "referer")
 
             unit_size_per_day = Config._get_float_config_value(collection_conf, "unit_size_per_day")
 
@@ -411,6 +412,7 @@ class Config:
                 "sort_field_pattern": sort_field_pattern,
                 "user_agent": user_agent,
                 "encoding": encoding,
+                "referer": referer,
 
                 "unit_size_per_day": unit_size_per_day,
 

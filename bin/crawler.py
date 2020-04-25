@@ -49,6 +49,17 @@ class HeadlessBrowser:
         chrome_driver_name = "chromedriver"
         driver = webdriver.Chrome(options=options, executable_path=chrome_driver_name)
 
+        if "Referer" in self.headers:
+            driver.get(self.headers["Referer"])
+            try:
+                WebDriverWait(driver, 10).until(expected_conditions.invisibility_of_element((By.ID, "cf-content")))
+            except selenium.common.exceptions.TimeoutException:
+                pass
+
+            cookies = driver.get_cookies()
+            with open(COOKIE_FILE, "w") as f:
+                json.dump(cookies, f)
+
         driver.get(url)
 
         if os.path.isfile(COOKIE_FILE):
@@ -110,7 +121,7 @@ class Crawler():
         self.encoding = encoding
         self.verify_ssl = verify_ssl
 
-    def make_request(self, url) -> str:
+    def make_request(self, url, data=None) -> str:
         LOGGER.debug("Crawler.make_request('%s')", url)
         if self.render_js:
             LOGGER.debug("headless browser")
@@ -122,7 +133,7 @@ class Crawler():
         if self.method == Method.GET:
             response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
         elif self.method == Method.POST:
-            response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
+            response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, data=data)
         elif self.method == Method.HEAD:
             response = requests.head(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
             return str(response.status_code)
@@ -148,10 +159,10 @@ class Crawler():
         return response.text
 
 
-    def run(self, url) -> str:
+    def run(self, url, data=None) -> str:
         response = None
         for i in range(self.num_retries):
-            response = self.make_request(url)
+            response = self.make_request(url, data)
             if response:
                 break
             LOGGER.debug("wait for seconds and retry (#%d)", i)
