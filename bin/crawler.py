@@ -35,8 +35,8 @@ class HeadlessBrowser:
     def __init__(self, headers) -> None:
         self.headers = headers
 
-    def make_request(self, url) -> str:
-        LOGGER.debug("HeadlessBrowser.make_request('%s')", url)
+    def make_request(self, url, download_file=None) -> str:
+        LOGGER.debug("make_request(url=%r, download_file=%r)", url, download_file)
         options = Options()
         options.add_argument("--headless")
         options.add_argument("--window-size=1920x1080")
@@ -109,27 +109,17 @@ class HeadlessBrowser:
         return response
 
 
-class Crawler():
-    def __init__(self, method=Method.GET, headers={}, timeout=10, num_retries=1, render_js=False, download_file=None, encoding=None, verify_ssl=True) -> None:
-        LOGGER.debug("Crawler(method=%r, headers=%r, timeout=%d, num_retries=%d, render_js=%r, download_file=%r, encoding=%r, verify_ssl=%r)", method, headers, timeout, num_retries, render_js, download_file, encoding, verify_ssl)
+class RequestsClient():
+    def __init__(self, render_js=False, method=Method.GET, headers={}, timeout=10, encoding=None, verify_ssl=True) -> None:
+        LOGGER.debug("RequestsClient(render_js=%r, method=%r, headers=%r, timeout=%d, encoding=%r, verify_ssl=%r)", render_js, method, headers, timeout, encoding, verify_ssl)
         self.method = method
         self.timeout = timeout
-        self.num_retries = num_retries
-        self.render_js = render_js
         self.headers = headers
-        self.download_file = download_file
         self.encoding = encoding
         self.verify_ssl = verify_ssl
 
-    def make_request(self, url, data=None) -> str:
-        LOGGER.debug("Crawler.make_request('%s')", url)
-        if self.render_js:
-            LOGGER.debug("headless browser")
-            self.headers['User-Agent'] = "Mozillla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36"
-            browser = HeadlessBrowser(self.headers)
-            return browser.make_request(url)
-
-        LOGGER.debug("requests client")
+    def make_request(self, url, data=None, download_file=None) -> str:
+        LOGGER.debug("make_request('%s')", url)
         if self.method == Method.GET:
             response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
         elif self.method == Method.POST:
@@ -142,12 +132,12 @@ class Crawler():
             LOGGER.debug("response.status_code=%d", response.status_code)
             return ""
 
-        if self.download_file:
+        if download_file:
             response.raw.decode_content = True
-            with open(self.download_file, 'wb') as f:
+            with open(download_file, 'wb') as f:
                 for chunk in response:
                     f.write(chunk)
-            download_path = os.path.expanduser(self.download_file)
+            download_path = os.path.expanduser(download_file)
             os.utime(download_path, (time.time(), time.time()))
             return "200"
 
@@ -159,19 +149,33 @@ class Crawler():
         return response.text
 
 
-    def run(self, url, data=None) -> str:
+class Crawler():
+    def __init__(self, render_js=False, method=Method.GET, headers={}, timeout=10, num_retries=1, encoding=None, verify_ssl=True) -> None:
+        LOGGER.debug("Crawler(render_js=%r, method=%r, headers=%r, timeout=%d, num_retries=%d, encoding=%r, verify_ssl=%r)", render_js, method, headers, timeout, num_retries, encoding, verify_ssl)
+        self.render_js = render_js
+        self.num_retries = num_retries
+        if render_js:
+            # headless browser
+            headers['User-Agent'] = "Mozillla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36"
+            self.headless_browser = HeadlessBrowser(headers=headers)
+        else:
+            self.requests_client = RequestsClient(method=method, headers=headers, timeout=timeout, encoding=encoding, verify_ssl=verify_ssl)
+
+    def run(self, url, data=None, download_file=None) -> str:
         response = None
         for i in range(self.num_retries):
-            response = self.make_request(url, data)
+            if self.render_js:
+                response = self.headless_browser.make_request(url, download_file=download_file)
+            else:
+                response = self.requests_client.make_request(url, download_file=download_file, data=data)
+
             if response:
-                break
+                return response
             LOGGER.debug("wait for seconds and retry (#%d)", i)
             time.sleep(5)
-        if not response:
-            LOGGER.debug("can't get response from '%s'", url)
-            return ""
 
-        return response
+        LOGGER.debug("can't get response from '%s'", url)
+        return ""
 
 
 def print_usage() -> None:
@@ -239,8 +243,8 @@ def main() -> int:
 
     url = args[0]
 
-    crawler = Crawler(method, headers, timeout, num_retries, render_js, download_file, encoding, verify_ssl)
-    response = crawler.run(url)
+    crawler = Crawler(render_js=render_js, method=method, headers=headers, timeout=timeout, num_retries=num_retries, encoding=encoding, verify_ssl=verify_ssl)
+    response = crawler.run(url, download_file=download_file)
     print(response)
     return 0
 

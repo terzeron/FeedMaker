@@ -55,35 +55,15 @@ class CrawlerTest(unittest.TestCase):
     def test_instantiateWithOptions(self):
         # default parameter
         crawler = Crawler()
-        self.assertEqual(Method.GET, crawler.method)
-        self.assertEqual({}, crawler.headers)
-        self.assertEqual(10, crawler.timeout)
+        client = crawler.requests_client
         self.assertEqual(1, crawler.num_retries)
         self.assertEqual(False, crawler.render_js)
-        self.assertEqual(None, crawler.download_file)
-        self.assertEqual(None, crawler.encoding)
-        self.assertEqual(True, crawler.verify_ssl)
-        del crawler
-
-        crawler = Crawler(method=Method.GET)
-        self.assertEqual(Method.GET, crawler.method)
-        del crawler
-        crawler = Crawler(method=Method.HEAD)
-        self.assertEqual(Method.HEAD, crawler.method)
-        del crawler
-        crawler = Crawler(method=Method.POST)
-        self.assertEqual(Method.POST, crawler.method)
-        del crawler
-
-        crawler = Crawler(headers={})
-        self.assertEqual({}, crawler.headers)
-        del crawler
-        crawler = Crawler(headers={"Referer": "https://m.naver.com"})
-        self.assertEqual({"Referer": "https://m.naver.com"}, crawler.headers)
-        del crawler
-
-        crawler = Crawler(timeout=5)
-        self.assertEqual(5, crawler.timeout)
+        self.assertEqual(Method.GET, client.method)
+        self.assertEqual(10, client.timeout)
+        self.assertEqual({}, client.headers)
+        self.assertEqual(None, client.encoding)
+        self.assertEqual(True, client.verify_ssl)
+        del client
         del crawler
 
         crawler = Crawler(num_retries=3)
@@ -97,19 +77,54 @@ class CrawlerTest(unittest.TestCase):
         self.assertEqual(False, crawler.render_js)
         del crawler
 
-        crawler = Crawler(download_file="test.html")
-        self.assertEqual("test.html", crawler.download_file)
+        crawler = Crawler(method=Method.GET)
+        client = crawler.requests_client
+        self.assertEqual(Method.GET, client.method)
+        del client
+        del crawler
+        crawler = Crawler(method=Method.HEAD)
+        client = crawler.requests_client
+        self.assertEqual(Method.HEAD, client.method)
+        del client
+        del crawler
+        crawler = Crawler(method=Method.POST)
+        client = crawler.requests_client
+        self.assertEqual(Method.POST, client.method)
+        del client
+        del crawler
+
+        crawler = Crawler(headers={})
+        client = crawler.requests_client
+        self.assertEqual({}, client.headers)
+        del client
+        del crawler
+        crawler = Crawler(headers={"Referer": "https://m.naver.com"})
+        client = crawler.requests_client
+        self.assertEqual({"Referer": "https://m.naver.com"}, client.headers)
+        del client
+        del crawler
+
+        crawler = Crawler(timeout=5)
+        client = crawler.requests_client
+        self.assertEqual(5, client.timeout)
+        del client
         del crawler
 
         crawler = Crawler(encoding="cp949")
-        self.assertEqual("cp949", crawler.encoding)
+        client = crawler.requests_client
+        self.assertEqual("cp949", client.encoding)
+        del client
         del crawler
 
         crawler = Crawler(verify_ssl=False)
-        self.assertEqual(False, crawler.verify_ssl)
+        client = crawler.requests_client
+        self.assertEqual(False, client.verify_ssl)
+        del client
         del crawler
         crawler = Crawler(verify_ssl=True)
-        self.assertEqual(True, crawler.verify_ssl)
+        client = crawler.requests_client
+        self.assertEqual(True, client.verify_ssl)
+        del client
         del crawler
 
     def test_runHttp(self):

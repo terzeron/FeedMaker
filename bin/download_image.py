@@ -19,8 +19,8 @@ LOGGER = logging.getLogger()
 IMAGE_NOT_FOUND_IMAGE_URL = "https://terzeron.com/image-not-found.png"
 
 
-def download_image(config: Dict[str, Any], path_prefix: str, img_url_or_data: str, page_url: str) -> Optional[str]:
-    LOGGER.debug("# download_image(%r, %s, %s, %s)", config, path_prefix, img_url_or_data, page_url)
+def download_image(crawler: Crawler, path_prefix: str, img_url_or_data: str, page_url: str) -> Optional[str]:
+    LOGGER.debug("# download_image(crawler=%r, path_prefix=%s, image_url_or_data=%s, page_url=%s)", crawler, path_prefix, img_url_or_data, page_url)
     cache_file = Cache.get_cache_file_name(path_prefix, img_url_or_data, "")
     if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
         return cache_file
@@ -46,12 +46,7 @@ def download_image(config: Dict[str, Any], path_prefix: str, img_url_or_data: st
         page_url = urllib.parse.urlunsplit(urls)
 
         LOGGER.debug("image url '%s' to cache file '%s'", img_url, cache_file)
-        headers: Dict[str, Any] = {}
-        if "user_agent" in config:
-            headers["User-Agent"] = config["user_agent"]
-        headers["Referer"] = page_url
-        crawler = Crawler(headers=headers, download_file=cache_file, num_retries=2)
-        result = crawler.run(img_url)
+        result = crawler.run(img_url, download_file=cache_file)
         if not result:
             time.sleep(5)
             result = crawler.run(img_url)
@@ -84,6 +79,12 @@ def main() -> int:
         return -1
     extraction_conf = config.get_extraction_configs()
 
+    headers: Dict[str, Any] = {}
+    if "user_agent" in extraction_conf:
+        headers["User-Agent"] = extraction_conf["user_agent"]
+    headers["Referer"] = page_url
+    crawler = Crawler(headers=headers, num_retries=2)
+
     line_list: List[str] = IO.read_stdin_as_line_list()
     for line in line_list:
         line = line.rstrip()
@@ -109,7 +110,7 @@ def main() -> int:
                 print(pre_text)
 
             # download
-            cache_file = download_image(extraction_conf, path_prefix, img_url_or_data, page_url)
+            cache_file = download_image(crawler, path_prefix, img_url_or_data, page_url)
             if cache_file:
                 cache_url = Cache.get_cache_url(img_url_prefix, img_url_or_data, "")
                 LOGGER.debug("%s -> %s / %s", img_url_or_data, cache_file, cache_url)

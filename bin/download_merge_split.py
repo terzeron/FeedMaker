@@ -9,9 +9,9 @@ import time
 import pprint
 import logging
 import logging.config
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict, Any
 from crawler import Crawler
-from feed_maker_util import Cache, IO, exec_cmd, make_path
+from feed_maker_util import Config, Cache, IO, exec_cmd, make_path
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
@@ -19,17 +19,16 @@ LOGGER = logging.getLogger()
 IMAGE_NOT_FOUND_IMAGE_URL = "https://terzeron.com/image-not-found.png"
 
 
-def download_image(path_prefix: str, img_url: str, img_ext: str, page_url: str) -> Optional[str]:
-    LOGGER.debug("# download_image(%s, %s, %s, %s)", path_prefix, img_url, img_ext, page_url)
+def download_image(crawler: Crawler, path_prefix: str, img_url: str, img_ext: str, page_url: str) -> Optional[str]:
+    LOGGER.debug("# download_image(crawler=%r, path_prefix=%r, img_url=%r, img_ext=%r, page_url=%r)", crawler, path_prefix, img_url, img_ext, page_url)
     cache_file = Cache.get_cache_file_name(path_prefix, img_url, img_ext)
     if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
         return cache_file
-    crawler = Crawler(headers={"Referer": page_url}, download_file=cache_file, num_retries=2)
-    result = crawler.run(img_url)
+    result = crawler.run(url=img_url, download_file=cache_file)
     LOGGER.debug("<!-- result: %s -->", result)
     if not result:
         time.sleep(5)
-        result = crawler.run(img_url)
+        result = crawler.run(url=img_url, download_file=cache_file)
         if not result:
             return None
     if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
@@ -55,8 +54,8 @@ def get_total_height(img_size_list: List[str]) -> int:
     return total_height
 
 
-def download_image_and_read_metadata(path_prefix: str, img_ext: str, page_url: str) -> Tuple[List[str], List[str], List[str]]:
-    LOGGER.debug("# download_image_and_read_metadata(%s, %s, %s)", path_prefix, img_ext, page_url)
+def download_image_and_read_metadata(crawler: Crawler, path_prefix: str, img_ext: str, page_url: str) -> Tuple[List[str], List[str], List[str]]:
+    LOGGER.debug("# download_image_and_read_metadata(crawler=%r, path_prefix=%r, img_ext=%r, page_url=%r)", crawler, path_prefix, img_ext, page_url)
     #
     # read input and collect image files into the list
     # (file name, url and dimension)
@@ -64,6 +63,9 @@ def download_image_and_read_metadata(path_prefix: str, img_ext: str, page_url: s
     img_file_list: List[str] = []
     img_url_list: List[str] = []
     img_size_list: List[str] = []
+
+    crawler = Crawler(headers={"Referer": page_url}, num_retries=2)
+
     line_list: List[str] = IO.read_stdin_as_line_list()
     for line in line_list:
         m1 = re.search(r"<img src=(?:[\"'])(?P<img_url>[^\"']+)(?:[\"'])( width='\d+%?')?/?>", line)
@@ -71,7 +73,7 @@ def download_image_and_read_metadata(path_prefix: str, img_ext: str, page_url: s
             img_url = m1.group("img_url")
             LOGGER.debug(img_url)
             # download
-            cache_file = download_image(path_prefix, img_url, img_ext, page_url)
+            cache_file = download_image(crawler, path_prefix, img_url, img_ext, page_url)
             if not cache_file:
                 LOGGER.error("<!-- can't download the image from '%s' -->", img_url)
                 print("<img src='%s' alt='not exist or size 0'/>" % IMAGE_NOT_FOUND_IMAGE_URL)
@@ -233,7 +235,6 @@ def main() -> int:
     LOGGER.debug("<!-- feed_name=%s -->", feed_name)
     path_prefix = os.environ["FEED_MAKER_WWW_FEEDS_DIR"] + "/img/" + feed_name
     LOGGER.debug("<!--- path_prefix=%s -->", path_prefix)
-    make_path(path_prefix)
 
     img_url_prefix = "https://terzeron.com/xml/img/" + feed_name
     img_ext = "jpg"
@@ -275,7 +276,22 @@ def main() -> int:
         print_usage(sys.argv[0])
 
     page_url = args[0]
-    img_file_list, img_url_list, _ = download_image_and_read_metadata(path_prefix, img_ext, page_url)
+
+    make_path(path_prefix)
+
+    config = Config()
+    if not config:
+        LOGGER.error("can't read configuration")
+        return -1
+    extraction_conf = config.get_extraction_configs()
+
+    headers: Dict[str, Any] = {}
+    if "user_agent" in extraction_conf:
+        headers["User-Agent"] = extraction_conf["user_agent"]
+    headers["Referer"] = page_url
+    crawler = Crawler(headers=headers, num_retries=2)
+
+    img_file_list, img_url_list, _ = download_image_and_read_metadata(crawler, path_prefix, img_ext, page_url)
     LOGGER.debug(pprint.pformat(img_file_list))
     if len(img_file_list) == 0:
         return 0
