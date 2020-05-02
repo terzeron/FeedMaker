@@ -146,7 +146,7 @@ class RequestsClient():
 
         if response.cookies:
             cookie_data: List[Dict[str, Any]] = []
-            for k, v in responsㅜe.cookies.iteritems():
+            for k, v in response.cookies.iteritems():
                 cookie_data.append({"name": k, "value": v})
             LOGGER.debug("Set-Cookie: %s", cookie_data)
             with open(COOKIE_FILE, "w") as f:
