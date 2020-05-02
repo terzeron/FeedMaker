@@ -10,7 +10,7 @@ import getopt
 import json
 import logging
 import logging.config
-from typing import Optional
+from typing import Optional, Dict, List, Any
 import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -120,6 +120,18 @@ class RequestsClient():
 
     def make_request(self, url, data=None, download_file=None) -> str:
         LOGGER.debug("make_request('%s')", url)
+
+        if os.path.isfile(COOKIE_FILE):
+            cookie_str: str = ""
+            with open(COOKIE_FILE, "r") as f:
+                cookies = json.load(f)
+                for cookie in cookies:
+                    if "expiry" in cookie:
+                        del cookie["expiry"]
+                    cookie_str = cookie_str + cookie["name"] + "=" + cookie["value"] + "; "
+            self.headers["Cookie"] = cookie_str
+            LOGGER.debug("Cookie: %s", self.headers["Cookie"])
+            
         if self.method == Method.GET:
             response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
         elif self.method == Method.POST:
@@ -131,6 +143,14 @@ class RequestsClient():
         if response.status_code != 200:
             LOGGER.debug("response.status_code=%d", response.status_code)
             return ""
+
+        if response.cookies:
+            cookie_data: List[Dict[str, Any]] = []
+            for k, v in responsㅜe.cookies.iteritems():
+                cookie_data.append({"name": k, "value": v})
+            LOGGER.debug("Set-Cookie: %s", cookie_data)
+            with open(COOKIE_FILE, "w") as f:
+                json.dump(cookie_data, f)
 
         if download_file:
             response.raw.decode_content = True

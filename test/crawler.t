@@ -1,17 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os
 import re
 import unittest
 from unittest.mock import patch
 from io import StringIO
-from feed_maker_util import kill_process_group
-from crawler import Method, Crawler, print_usage
+#from feed_maker_util import kill_process_group
+from crawler import Method, Crawler, print_usage, COOKIE_FILE
 
 
 class CrawlerTest(unittest.TestCase):
     def setUp(self):
-        pass
+        if os.path.isfile(COOKIE_FILE):
+            os.remove(COOKIE_FILE)
 
     def test_printUsage(self):
         with patch('sys.stdout', new=StringIO()) as stdout:
@@ -60,7 +62,7 @@ class CrawlerTest(unittest.TestCase):
         self.assertEqual(False, crawler.render_js)
         self.assertEqual(Method.GET, client.method)
         self.assertEqual(10, client.timeout)
-        self.assertEqual({}, client.headers)
+        #self.assertEqual({}, client.headers)
         self.assertEqual(None, client.encoding)
         self.assertEqual(True, client.verify_ssl)
         del client
@@ -98,6 +100,7 @@ class CrawlerTest(unittest.TestCase):
         self.assertEqual({}, client.headers)
         del client
         del crawler
+
         crawler = Crawler(headers={"Referer": "https://m.naver.com"})
         client = crawler.requests_client
         self.assertEqual({"Referer": "https://m.naver.com"}, client.headers)
@@ -158,8 +161,8 @@ class CrawlerTest(unittest.TestCase):
         del crawler
 
     def tearDown(self):
-        kill_process_group("chromedriver")
-        kill_process_group("chrome")
+        if os.path.isfile(COOKIE_FILE):
+            os.remove(COOKIE_FILE)
 
 
 if __name__ == "__main__":
