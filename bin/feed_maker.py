@@ -26,7 +26,7 @@ class FeedMaker:
     MAX_CONTENT_LENGTH = 64 * 1024
     MAX_NUM_DAYS = 7
     WINDOW_SIZE = 5
-    IMAGE_TAG_FMT_STR = "\n<img src='https://terzeron.com/img/1x1.jpg?feed=%s&item=%s'/>\n"
+    IMAGE_TAG_FMT_STR = "<img src='https://terzeron.com/img/1x1.jpg?feed=%s&item=%s'/>"
 
     def __init__(self, do_collect_by_force: bool, do_collect_only: bool, rss_file_name: str) -> None:
         self.collection_conf: Dict[str, Any] = {}
@@ -48,9 +48,13 @@ class FeedMaker:
         self.result_feed_list: List[Tuple[str, str]] = []
 
     @staticmethod
-    def _get_size_of_template_with_img_tag(rss_file_name: str) -> int:
-        md5_name = URL.get_short_md5_name("any_url")
-        return len(header_str) + len(FeedMaker.IMAGE_TAG_FMT_STR % (rss_file_name, md5_name)) + 1
+    def get_image_tag_str(rss_file_name: str, url: str = "any_url") -> str:
+        md5_name = URL.get_short_md5_name(URL.get_url_path(url))
+        return FeedMaker.IMAGE_TAG_FMT_STR % (rss_file_name, md5_name)
+
+    @staticmethod
+    def _get_size_of_template_with_image_tag(rss_file_name: str) -> int:
+        return len(header_str) + len("\n") + len(FeedMaker.get_image_tag_str(rss_file_name)) + len("\n")
 
     @staticmethod
     def _get_size_of_template() -> int:
@@ -181,19 +185,19 @@ class FeedMaker:
                         content = "<strong>본문이 너무 길어서 전문을 싣지 않았습니다. 다음의 원문 URL을 참고해주세요.</strong><br/>" + content
                         break
 
-                if self.rss_conf["rss_url_prefix_for_guid"]:
-                    guid = self.rss_conf["rss_url_prefix_for_guid"] + URL.get_url_path(link)
-                else:
-                    guid = link
-                rss_items.append(
-                    PyRSS2Gen.RSSItem(
-                        title=title,
-                        link=link,
-                        guid=guid,
-                        pubDate=pub_date_str,
-                        description=content
-                    )
+            if self.rss_conf["rss_url_prefix_for_guid"]:
+                guid = self.rss_conf["rss_url_prefix_for_guid"] + URL.get_url_path(link)
+            else:
+                guid = link
+            rss_items.append(
+                PyRSS2Gen.RSSItem(
+                    title=title,
+                    link=link,
+                    guid=guid,
+                    pubDate=pub_date_str,
+                    description=content
                 )
+            )
 
         rss = PyRSS2Gen.RSS2(
             title=self.rss_conf["rss_title"],
@@ -253,10 +257,21 @@ class FeedMaker:
         else:
             size = 0
 
-        if os.path.isfile(html_file_path) and size > FeedMaker._get_size_of_template_with_img_tag(self.rss_file_name):
+        image_tag_str = FeedMaker.get_image_tag_str(self.rss_file_name, link)
+
+        if os.path.isfile(html_file_path) and size > FeedMaker._get_size_of_template_with_image_tag(self.rss_file_name):
             # 이미 성공적으로 만들어져 있으니까 피드 리스트에 추가
-            #LOGGER.info("%s\t%s\t%s (%d bytes > %d bytes of template)", link, title, html_file_path, size, FeedMaker._get_size_of_template_with_img_tag(self.rss_file_name))
-            ret = True
+            #LOGGER.info("%s\t%s\t%s (%d bytes > %d bytes of template)", link, title, html_file_path, size, FeedMaker._get_size_of_template_with_image_tag(self.rss_file_name))
+            # 다만 이미지 태그를 포함하지 않으면 에러 반환
+            is_image_tag_in_file = False
+            with open(html_file_path, "r") as infile:
+                for line in infile:
+                    if image_tag_str in line:
+                        is_image_tag_in_file = True
+                        break
+            ret = is_image_tag_in_file
+            if not ret:
+                LOGGER.error("no image tag in html file '%s'", html_file_path)
         else:
             # 파일이 존재하지 않거나 크기가 작으니 다시 생성 시도
             cmd = self.determine_cmd(link, html_file_path)
@@ -276,19 +291,17 @@ class FeedMaker:
             else:
                 size = 0
 
-            md5_name = URL.get_short_md5_name(URL.get_url_path(link))
             if size > self._get_size_of_template():
                 # append image_tag_str to html_file_path
-                image_tag_str = self.IMAGE_TAG_FMT_STR % (self.rss_file_name, md5_name)
                 is_image_tag_in_file = False
-                with open(html_file_path, "r") as outfile:
-                    for line in outfile:
+                with open(html_file_path, "r") as infile:
+                    for line in infile:
                         if image_tag_str in line:
                             is_image_tag_in_file = True
                             break
                 if not is_image_tag_in_file:
                     with open(html_file_path, "a") as outfile:
-                        outfile.write(image_tag_str)
+                        outfile.write("\n" + image_tag_str + "\n")
 
                 # 피드 리스트에 추가
                 LOGGER.info("New: %s\t%s\t%s (%d bytes > %d bytes of template)", link, title, html_file_path, size, self._get_size_of_template())
