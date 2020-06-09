@@ -53,16 +53,27 @@ class FeedMaker:
         return FeedMaker.IMAGE_TAG_FMT_STR % (rss_file_name, md5_name)
 
     @staticmethod
-    def _get_size_of_template_with_image_tag(rss_file_name: str) -> int:
+    def get_size_of_template_with_image_tag(rss_file_name: str) -> int:
         return len(header_str) + len("\n") + len(FeedMaker.get_image_tag_str(rss_file_name)) + len("\n")
 
     @staticmethod
-    def _get_size_of_template() -> int:
-        return len(header_str) + 1
+    def is_image_tag_in_html_file(html_file_path: str, image_tag_str: str):
+        is_image_tag_in_file: bool = False
+        with open(html_file_path, "r") as infile:
+            for line in infile:
+                if image_tag_str in line:
+                    is_image_tag_in_file = True
+                    break
+        return is_image_tag_in_file
 
     @staticmethod
-    def get_html_file_name(link: str) -> str:
-        return "%s.html" % URL.get_short_md5_name(URL.get_url_path(link))
+    def append_image_tag_to_html_file(html_file_path: str, image_tag_str: str):
+        with open(html_file_path, "a") as outfile:
+            outfile.write("\n" + image_tag_str + "\n")
+
+    @staticmethod
+    def get_size_of_template() -> int:
+        return len(header_str) + 1
 
     @staticmethod
     def get_html_file_path(html_dir, link: str) -> str:
@@ -259,19 +270,16 @@ class FeedMaker:
 
         image_tag_str = FeedMaker.get_image_tag_str(self.rss_file_name, link)
 
-        if os.path.isfile(html_file_path) and size > FeedMaker._get_size_of_template_with_image_tag(self.rss_file_name):
-            # 이미 성공적으로 만들어져 있으니까 피드 리스트에 추가
-            #LOGGER.info("%s\t%s\t%s (%d bytes > %d bytes of template)", link, title, html_file_path, size, FeedMaker._get_size_of_template_with_image_tag(self.rss_file_name))
-            # 다만 이미지 태그를 포함하지 않으면 에러 반환
-            is_image_tag_in_file = False
-            with open(html_file_path, "r") as infile:
-                for line in infile:
-                    if image_tag_str in line:
-                        is_image_tag_in_file = True
-                        break
-            ret = is_image_tag_in_file
-            if not ret:
+        if os.path.isfile(html_file_path) and size > FeedMaker.get_size_of_template_with_image_tag(self.rss_file_name):
+            # 이미 성공적으로 만들어져 있으니까, 이미지 태그만 검사해보고 피드 리스트에 추가
+            #LOGGER.info("%s\t%s\t%s (%d bytes > %d bytes of template)", link, title, html_file_path, size, FeedMaker.get_size_of_template_with_image_tag(self.rss_file_name))
+            if FeedMaker.is_image_tag_in_html_file(html_file_path, image_tag_str):
+                ret = True
+            else:
                 LOGGER.error("no image tag in html file '%s'", html_file_path)
+                LOGGER.warning("removing incomplete html file '%s'", html_file_path)
+                os.remove(html_file_path)
+                ret = False
         else:
             # 파일이 존재하지 않거나 크기가 작으니 다시 생성 시도
             cmd = self.determine_cmd(link, html_file_path)
@@ -284,6 +292,8 @@ class FeedMaker:
                 _, error = exec_cmd(cmd)
                 if error:
                     LOGGER.warning("can't execute command '%s', %s", cmd, error)
+                    LOGGER.warning("removing incomplete html file '%s'", html_file_path)
+                    os.remove(html_file_path)
                     return False
 
             if os.path.isfile(html_file_path):
@@ -291,24 +301,16 @@ class FeedMaker:
             else:
                 size = 0
 
-            if size > self._get_size_of_template():
-                # append image_tag_str to html_file_path
-                is_image_tag_in_file = False
-                with open(html_file_path, "r") as infile:
-                    for line in infile:
-                        if image_tag_str in line:
-                            is_image_tag_in_file = True
-                            break
-                if not is_image_tag_in_file:
-                    with open(html_file_path, "a") as outfile:
-                        outfile.write("\n" + image_tag_str + "\n")
+            if size > self.get_size_of_template():
+                if not FeedMaker.is_image_tag_in_html_file(html_file_path, image_tag_str):
+                    FeedMaker.append_image_tag_to_html_file(html_file_path, image_tag_str)
 
                 # 피드 리스트에 추가
-                LOGGER.info("New: %s\t%s\t%s (%d bytes > %d bytes of template)", link, title, html_file_path, size, self._get_size_of_template())
+                LOGGER.info("New: %s\t%s\t%s (%d bytes > %d bytes of template)", link, title, html_file_path, size, self.get_size_of_template())
                 ret = True
             else:
                 # 피드 리스트에서 제외
-                LOGGER.warning("Excluded: %s\t%s\t%s (%d bytes <= %d bytes of template)", link, title, html_file_path, size, self._get_size_of_template())
+                LOGGER.warning("Excluded: %s\t%s\t%s (%d bytes <= %d bytes of template)", link, title, html_file_path, size, self.get_size_of_template())
                 ret = False
 
             if self.extraction_conf["force_sleep_between_articles"]:
