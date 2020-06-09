@@ -153,10 +153,18 @@ class CrawlerTest(unittest.TestCase):
         m = re.search(r'<div id="app-6" class="demo"><p>안녕하세요 Vue!</p> <input></div>', result)
         self.assertFalse(m)
         del crawler
-        
+
         crawler = Crawler(render_js=True)
         result = crawler.run(url)
         m = re.search(r'<div id="app-6" class="demo"><p>안녕하세요 Vue!</p> <input></div>', result)
+        self.assertTrue(m)
+        del crawler
+
+    def test_imagesInCanvas(self):
+        url = "https://terzeron.com/images_in_canvas_test.html"
+        crawler = Crawler(render_js=True, copy_images_from_canvas=True)
+        result = crawler.run(url)
+        m = re.search(r'<div class="images_from_canvas"><img src="data:image/png;base64,iVBORw0KGgoAAAAN.*1WQAAAABJRU5ErkJggg=="></div>', result)
         self.assertTrue(m)
         del crawler
 
