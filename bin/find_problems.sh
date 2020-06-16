@@ -16,7 +16,7 @@ echo "--- the number of <list_url> element ---"
 find . -name conf.xml -print0 | xargs -0 grep -c "<list_url>" | grep -v "/_" | perl -ne 'if (/^(\d+)$/ and $1 > 1) { $count = $1; } if (/^(\..+\.xml)$/) { if ($count > 1) { s/\/conf\.xml//; print $count . "\t" . $_; $count = 0; } }' | sort -n
 
 echo "--- the number of occurrence of each element ---"
-find . -name conf.xml | grep -v "/_" | perl -ne 'while (/\<(\w+)\>/g) { if ($1 !~ /encoding|collection|extraction|copyright|configuration|element_list|description|language|link|list_url_list|rss|title|list_url|element_class|element_id|element_path|feed_url|generator/) { print $1 . "\n"; } }' | sort | uniq -c | sort -n | perl -ne 'if (/^\s*(\d+)\s+/) { print; }'
+find . -name conf.xml | xargs| grep -v "/_" | perl -ne 'while (/\<(\w+)\>/g) { if ($1 !~ /encoding|collection|extraction|copyright|configuration|element_list|description|language|link|list_url_list|rss|title|list_url|element_class|element_id|element_path|feed_url|generator/) { print $1 . "\n"; } }' | sort | uniq -c | sort -n | perl -ne 'if (/^\s*(\d+)\s+/) { print; }'
 
 echo "--- should use spaces instead of tab ---"
 find . -name conf.xml -exec grep -l "	" "{}" \;
@@ -41,10 +41,13 @@ echo
 echo "===== check the image tag (1x1.jpg) ====="
 
 echo "--- corrupted html files without image tag ---"
-find . -name "*.html" | xargs -I % perl -e '$count = 0; $contents_count = 0; while (<ARGV>) { if (/1x1.jpg/) { $count++; } if (/<(img|div)/) { $contents_count++; } } if ($contents_count > 0 && $count < 1) { print "$ARGV $count $contents_count\n"; }' %
+find . -name "*.html" -print0 | xargs -0 -I % perl -e '$count = 0; $contents_count = 0; while (<ARGV>) { if (/1x1.jpg/) { $count++; } if (/<(img|div)/) { $contents_count++; } } if ($contents_count > 0 && $count < 1) { print "$ARGV $count $contents_count\n"; }' %
 
 echo "--- corrupted html files with many image tags ---"
-find . -name "*.html" | xargs -I % perl -e '$count = 0; $contents_count = 0; while (<ARGV>) { if (/1x1.jpg/) { $count++; } if (/<(img|div)/) { $contents_count++; } } if ($contents_count > 0 && $count > 1) { print "$ARGV $count $contents_count\n"; }' %
+find . -name "*.html" -print0 | xargs -0 -I % perl -e '$count = 0; $contents_count = 0; while (<ARGV>) { if (/1x1.jpg/) { $count++; } if (/<(img|div)/) { $contents_count++; } } if ($contents_count > 0 && $count > 1) { print "$ARGV $count $contents_count\n"; }' %
+
+echo "--- html files with image not found ---"
+find . -name "*.html" -print0 | xargs -0 -I % grep -l image-not-found.png % | cut -d'/' -f2-5 | sort | uniq -c | sort -rn
 
 echo 
 echo "===== check the incremental feeding ====="
@@ -53,7 +56,7 @@ echo "===== check the incremental feeding ====="
 #find . -name conf.xml -exec grep -l "<is_completed>true" "{}" \;
 
 echo "--- start_idx vs # of items ---"
-for f in $(find . -name conf.xml -exec grep -l "<is_completed>true" "{}" \; | xargs -I % dirname % | grep -v /_); do 
+for f in $(find . -name conf.xml -exec grep -l "<is_completed>true" "{}" \; -print0 | xargs -0 -I % dirname % | grep -v /_); do 
 	if [ -d "$f" ]; then
 		(
 			cd $f; idx=$(cut -f1 start_idx.txt); 
