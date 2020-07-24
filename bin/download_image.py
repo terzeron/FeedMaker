@@ -123,7 +123,9 @@ def main() -> int:
             if not m:
                 print(post_text)
         else:
-            print(line)
+            m = re.search(r'^</?br>$', line)
+            if not m:
+                print(line)
 
     return 0
 
