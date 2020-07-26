@@ -468,7 +468,7 @@ class Config:
             }
         return conf
 
-    def get_notification_configs(self) -> Optional[Dict[str, Any]]:
+    def get_notification_configs(self) -> Dict[str, Any]:
         LOGGER.debug("# get_notification_configs()")
         conf: Dict[str, Any] = {}
         if "notification" in self.config:

@@ -32,6 +32,7 @@ class FeedMaker:
         self.collection_conf: Dict[str, Any] = {}
         self.extraction_conf: Dict[str, Any] = {}
         self.rss_conf: Dict[str, Any] = {}
+        self.notification_conf: Dict[str, Any] = {}
         self.do_collect_by_force = do_collect_by_force
         self.do_collect_only = do_collect_only
         self.rss_file_name = rss_file_name
@@ -449,6 +450,12 @@ class FeedMaker:
             sys.exit(-1)
         self.collection_conf = config.get_collection_configs()
         LOGGER.info("self.collection_conf=%s", pprint.pformat(self.collection_conf))
+        self.extraction_conf = config.get_extraction_configs()
+        LOGGER.info("self.extraction_conf=%s", pprint.pformat(self.extraction_conf))
+        self.rss_conf = config.get_rss_configs()
+        LOGGER.info("self.rss_conf=%s", pprint.pformat(self.rss_conf))
+        self.notification_conf = config.get_notification_configs()
+        LOGGER.info("self.notification_conf=%s", pprint.pformat(self.notification_conf))
 
         # -c 또는 -l 옵션이 지정된 경우, 설정의 is_completed 값 무시
         if self.do_collect_by_force or self.do_collect_only:
@@ -483,17 +490,12 @@ class FeedMaker:
                 del self.old_feed_list[:]
                 self.new_feed_list = self.recent_feed_list
 
-            self.extraction_conf = config.get_extraction_configs()
-            LOGGER.info("self.extraction_conf=%s", pprint.pformat(self.extraction_conf))
-
             self.diff_feeds_and_make_htmls()
             if not self.result_feed_list or len(self.result_feed_list) == 0:
                 LOGGER.info("No new feeds, no update of rss file")
 
         if not self.do_collect_by_force:
             # generate RSS feed
-            self.rss_conf = config.get_rss_configs()
-            LOGGER.info("self.rss_conf=%s", pprint.pformat(self.rss_conf))
             if not self.generate_rss_feed():
                 return False
 
@@ -510,9 +512,8 @@ class FeedMaker:
                 LOGGER.info("Uploaded file '%s'", self.rss_file_name)
                 if not self.do_collect_by_force:
                     # email notification
-                    notification_conf = config.get_notification_configs()
-                    if notification_conf:
-                        cmd = "| mail -s '%s' '%s'" % (notification_conf["email_subject"], notification_conf["email_recipient"])
+                    if self.notification_conf:
+                        cmd = "| mail -s '%s' '%s'" % (self.notification_conf["email_subject"], self.notification_conf["email_recipient"])
                         with subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE) as p:
                             for link, title in self.recent_feed_list:
                                 p.communicate("%s\t%s\n" % (link, title))
