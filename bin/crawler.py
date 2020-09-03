@@ -183,6 +183,12 @@ class Crawler():
         else:
             self.requests_client = RequestsClient(method=method, headers=headers, timeout=timeout, encoding=encoding, verify_ssl=verify_ssl)
 
+    def __del__(self) -> None:
+        if self.render_js:
+            del self.headless_browser
+        else:
+            del self.requests_client
+
     def run(self, url, data=None, download_file=None) -> str:
         response = None
         for i in range(self.num_retries):
