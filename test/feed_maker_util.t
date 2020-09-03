@@ -174,6 +174,8 @@ class UtilTest(unittest.TestCase):
         self.assertEqual(url, "http://www.naver.com/view.nhn?page_no=3")
         url = URL.concatenate_url("http://www.naver.com/movie/view.nhn?page_no=3", "#")
         self.assertEqual(url, "http://www.naver.com/movie/view.nhn?page_no=3")
+        url = URL.concatenate_url("http://www.naver.com/movie/view.nhn?page_no=3", "./list.nhn?page_no=4")
+        self.assertEqual(url, "http://www.naver.com/movie/list.nhn?page_no=4")
 
     def test_get_short_md5_name(self):
         self.assertEqual(URL.get_short_md5_name("https://terzeron.com"), "b8025d0")
@@ -198,8 +200,8 @@ class ExecCmdTest(unittest.TestCase):
         self.assertTrue("Error with non-zero exit status in command" in error)
 
         bidirectional_cmd = "cat"
-        input = "hello world"
-        (result, error) = feed_maker_util.exec_cmd(bidirectional_cmd, input)
+        input_str = "hello world"
+        (result, error) = feed_maker_util.exec_cmd(bidirectional_cmd, input_str)
         self.assertTrue(result)
         self.assertEqual(error, "")
         self.assertTrue("hello world" in result)

@@ -571,6 +571,9 @@ class URL:
             return full_url
         if len(url2) > 0 and url2[0] == '/':
             url1 = URL.get_url_scheme(full_url) + "://" + URL.get_url_domain(full_url)
+        elif len(url2) > 0 and url2[0:2] == "./":
+            url1 = URL.get_url_prefix(full_url)
+            url2 = url2[2:]
         else:
             url1 = URL.get_url_except_query(full_url)
 
