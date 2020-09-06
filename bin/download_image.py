@@ -82,7 +82,7 @@ def main() -> int:
     headers: Dict[str, Any] = {}
     if "user_agent" in extraction_conf:
         headers["User-Agent"] = extraction_conf["user_agent"]
-    headers["Referer"] = page_url
+    headers["Referer"] = urllib.parse.quote(page_url)
     crawler = Crawler(headers=headers, num_retries=2)
 
     line_list: List[str] = IO.read_stdin_as_line_list()
