@@ -118,7 +118,15 @@ def traverse_element(element, url, encoding) -> bool:
         p = re.compile(r"^\s*$")
         if not p.match(str(element)):
             # non-blank text
-            sys.stdout.write("%s" % html.escape(str(element)))
+            try:
+                sys.stdout.write("%s" % html.escape(str(element)))
+            except UnicodeEncodeError:
+                # try to print word-by-word
+                for word in str(element).split(' '):
+                    try:
+                        sys.stdout.write(" %s" % html.escape(word))
+                    except UnicodeEncodeError:
+                        sys.stdout.write(" ****")
         ret = True
         return ret
 
