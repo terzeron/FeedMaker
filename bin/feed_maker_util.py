@@ -10,6 +10,7 @@ import subprocess
 import hashlib
 import logging
 import logging.config
+from urllib.parse import urlparse, urlunparse, quote
 from datetime import datetime
 from typing import List, Any, Dict, Tuple, Optional, Set
 import psutil
@@ -587,6 +588,15 @@ class URL:
     @staticmethod
     def get_short_md5_name(content: str) -> str:
         return hashlib.md5(content.encode()).hexdigest()[:7]
+
+
+    @staticmethod
+    def encode(url: str) -> str:
+        parsed = urlparse(url)
+        quoted_path = quote(parsed.path)
+        quoted_query = quote(parsed.query, safe='=')
+        parsed = parsed._replace(path=quoted_path, query=quoted_query)
+        return urlunparse(parsed)
 
 
 class Cache:

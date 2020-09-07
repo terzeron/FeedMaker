@@ -180,6 +180,9 @@ class UtilTest(unittest.TestCase):
     def test_get_short_md5_name(self):
         self.assertEqual(URL.get_short_md5_name("https://terzeron.com"), "b8025d0")
 
+    def test_encode(self):
+        self.assertEqual(URL.encode('http://5rs-wc22.com/식극의-소마/post/134225?a=테스트b'), 'http://5rs-wc22.com/%EC%8B%9D%EA%B7%B9%EC%9D%98-%EC%86%8C%EB%A7%88/post/134225?a=%ED%85%8C%EC%8A%A4%ED%8A%B8b')
+
 
 class ExecCmdTest(unittest.TestCase):
     def test_exec_cmd(self):
