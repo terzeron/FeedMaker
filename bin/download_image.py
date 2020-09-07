@@ -5,12 +5,11 @@ import sys
 import os
 import re
 import time
-import urllib.parse
 import logging
 import logging.config
 from base64 import b64decode
 from typing import List, Optional, Dict, Any
-from feed_maker_util import Config, IO, Cache, exec_cmd, make_path
+from feed_maker_util import Config, IO, Cache, exec_cmd, make_path, URL
 from crawler import Crawler
 
 
@@ -38,12 +37,7 @@ def download_image(crawler: Crawler, path_prefix: str, img_url_or_data: str, pag
 
     if img_url_or_data.startswith("http"):
         img_url = img_url_or_data
-
-        # handle non ascii url
-        url = urllib.parse.urlsplit(page_url)
-        urls = list(url)
-        urls[2] = urllib.parse.quote(urls[2])
-        page_url = urllib.parse.urlunsplit(urls)
+        page_url = URL.encode(page_url)
 
         LOGGER.debug("image url '%s' to cache file '%s'", img_url, cache_file)
         result = crawler.run(img_url, download_file=cache_file)
@@ -82,7 +76,7 @@ def main() -> int:
     headers: Dict[str, Any] = {}
     if "user_agent" in extraction_conf:
         headers["User-Agent"] = extraction_conf["user_agent"]
-    headers["Referer"] = urllib.parse.quote(page_url)
+    headers["Referer"] = URL.encode(page_url)
     crawler = Crawler(headers=headers, num_retries=2)
 
     line_list: List[str] = IO.read_stdin_as_line_list()
