@@ -176,7 +176,7 @@ class Crawler():
         LOGGER.debug("Crawler(render_js=%r, method=%r, headers=%r, timeout=%d, num_retries=%d, encoding=%r, verify_ssl=%r, copy_images_from_canvas=%r)", render_js, method, headers, timeout, num_retries, encoding, verify_ssl, copy_images_from_canvas)
         self.render_js = render_js
         self.num_retries = num_retries
-        if not headers['User-Agent']:
+        if 'User-Agent' not in headers:
             headers['User-Agent'] = "Mozillla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36"
         if render_js:
             # headless browser
