@@ -1,8 +1,8 @@
 #!/bin/bash
 
 if [ "$FEED_MAKER_WORK_DIR" == "" -o "$FEED_MAKER_WWW_FEEDS_DIR" == "" ]; then
-	echo "You should declare FEED_MAKER_WORK_DIR and FEED_MAKER_WWW_FEEDS_DIR."
-	exit -1
+    echo "You should declare FEED_MAKER_WORK_DIR and FEED_MAKER_WWW_FEEDS_DIR."
+    exit -1
 fi
 work_dir=$FEED_MAKER_WORK_DIR
 public_html_dir=$FEED_MAKER_WWW_FEEDS_DIR
@@ -57,16 +57,18 @@ echo "===== check the incremental feeding ====="
 
 echo "--- start_idx vs # of items ---"
 for f in $(find . -name conf.xml -exec grep -l "<is_completed>true" "{}" \; -print0 | xargs -0 -I % dirname % | grep -v /_); do 
-	if [ -d "$f" ]; then
-		(
-			cd $f; idx=$(cut -f1 start_idx.txt); 
-			cnt=$(sort -u newlist/*.txt | wc -l | tr -d ' '); 
-			#if [ "$idx" -gt "$cnt" ]; then 
-				echo "$f: " $((idx + 4)) " / $cnt = " $(((idx + 4) * 100 / cnt))%; 
-			#fi
-		)
-	fi
-done
+    if [ -d "$f" ]; then
+        (
+            cd $f;
+            idx=$(cut -f1 start_idx.txt);
+            cnt=$(sort -u newlist/*.txt | wc -l | tr -d ' ');
+            unit_size=$(xmllint --xpath '//unit_size_per_day/text()' conf.xml);
+            remainder=$((cnt - (idx + 4)));
+            days=$(echo "$remainder / $unit_size" | bc);
+            echo "$f: "$((idx + 4))" / $cnt = "$(((idx + 4) * 100 / cnt))"%, $unit_size articles/day, "$(date +"%Y-%m-%d" -d "$days days"); 
+        )
+    fi
+done | sort -k6 -rn
 
 echo
 echo "===== check the garbage feeds ====="
@@ -74,7 +76,7 @@ feedmaker_file=$FEED_MAKER_WORK_DIR"/logs/feedmaker.txt"
 find */ -maxdepth 2 -name "*.xml" \! \( -name conf.xml -o -name _conf.xml -o  -name "*.conf.xml" \) | grep -v /_ | xargs -I % basename % | perl -pe 's/\.xml//; s/\\\././g' | sort -u > $feedmaker_file
 period_file_list=""
 for i in {0..30}; do
-	period_file_list="${period_file_list} $HOME/apps/logs/access.log.$(date +'%y%m%d' -d $i' days ago')"
+    period_file_list="${period_file_list} $HOME/apps/logs/access.log.$(date +'%y%m%d' -d $i' days ago')"
 done
 feed_access_file=$FEED_MAKER_WORK_DIR"/logs/feed_access.txt"
 echo "--- $feed_access_file ---"
@@ -82,13 +84,13 @@ perl -e '
 my %name_date_map = ();
 my %month_map = ("Jan"=>"01", "Feb"=>"02", "Mar"=>"03", "Apr"=>"04", "May"=>"05", "Jun"=>"06", "Jul"=>"07", "Aug"=>"08", "Sep"=>"09", "Oct"=>"10", "Nov"=>"11", "Dec"=>"12"); 
 while (my $line = <>) {
-	if ($line =~ m!\[(\d+)/(\w+)/(\d+):\d+:\d+:\d+ \+\d+\] "GET /img/1x1\.jpg\?feed=([\w\.\_]+)\.xml\S* HTTP\S+" (\d+) (?:\d+|-) "[^"]*" "[^"]*"!) {
-		$name_date_map{$4} = "$3$month_map{$2}$1\t$5";
-	}
+    if ($line =~ m!\[(\d+)/(\w+)/(\d+):\d+:\d+:\d+ \+\d+\] "GET /img/1x1\.jpg\?feed=([\w\.\_]+)\.xml\S* HTTP\S+" (\d+) (?:\d+|-) "[^"]*" "[^"]*"!) {
+        $name_date_map{$4} = "$3$month_map{$2}$1\t$5";
+    }
 } 
 foreach my $name (sort { $name_date_map{$b} <=> $name_date_map{$a} } keys %name_date_map) {
-	my ($date, $status) = split /\t/, $name_date_map{$name};
-	print "$date\t$name\t$status\n";
+    my ($date, $status) = split /\t/, $name_date_map{$name};
+    print "$date\t$name\t$status\n";
 }' $period_file_list > $feed_access_file
 
 echo "--- false path (${public_html_dir}) of recent days ---"
