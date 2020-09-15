@@ -155,7 +155,7 @@ def remove_html_files_without_cached_image_files(img_dir: str) -> None:
                 with open(file_path) as f:
                     try:
                         for line in f:
-                            m = re.search(r'<img src=[\"\']https?://terzeron\.com/xml/img/[^/]+/(?P<img>.+)[\"\']', line)
+                            m = re.search(r'<img src=[\"\']https?://terzeron\.com/xml/img/[^/]+/(?P<img>\S+)[\"\']', line)
                             if m:
                                 # 실제로 다운로드되어 있는지 확인
                                 img_file = m.group("img")
