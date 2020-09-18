@@ -4,21 +4,19 @@
 import re
 import sys
 import getopt
-from typing import List
-
 
 
 def print_usage() -> None:
     print("Usage:\t%s [ <option> ]" % sys.argv[0])
     print("options")
-    print("\t-u\t\t\tleave only unique images")
+    print("\t-u\t\tleave only unique images")
 
 
 def main() -> int:
     leave_only_unique_images: bool = False
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "u")
+        opts, _ = getopt.getopt(sys.argv[1:], "u")
     except getopt.GetoptError:
         print_usage()
         sys.exit(-1)
