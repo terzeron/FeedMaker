@@ -85,6 +85,8 @@ def determine_crawler_options(options: Dict[str, Any]) -> str:
         option_str += " --verify-ssl=%s" % ("true" if options["verify_ssl"] else "false")
     if "copy_images_from_canvas" in options:
         option_str += " --copy-images-from-canvas=%s" % ("true" if options["copy_images_from_canvas"] else "false")
+    if "simulate_scrolling" in options:
+        option_str += " --simulate-scrolling=%s" % ("true" if options["simulate_scrolling"] else "false")
     if "user_agent" in options and options["user_agent"]:
         option_str += " --user-agent='%s'" % options["user_agent"]
     if "referer" in options and options["referer"]:
@@ -435,6 +437,7 @@ class Config:
             bypass_element_extraction = Config._get_bool_config_value(extraction_conf, "bypass_element_extraction")
             force_sleep_between_articles = Config._get_bool_config_value(extraction_conf, "force_sleep_between_articles")
             copy_images_from_canvas = Config._get_bool_config_value(extraction_conf, "copy_images_from_canvas")
+            simulate_scrolling = Config._get_bool_config_value(extraction_conf, "simulate_scrolling")
 
             user_agent = Config._get_str_config_value(extraction_conf, "user_agent")
             encoding = Config._get_str_config_value(extraction_conf, "encoding", "utf8")
@@ -454,6 +457,7 @@ class Config:
                 "bypass_element_extraction": bypass_element_extraction,
                 "force_sleep_between_articles": force_sleep_between_articles,
                 "copy_images_from_canvas": copy_images_from_canvas,
+                "simulate_scrolling": simulate_scrolling,
 
                 "user_agent": user_agent,
                 "encoding": encoding,

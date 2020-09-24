@@ -32,9 +32,10 @@ class Method(Enum):
 
 
 class HeadlessBrowser:
-    def __init__(self, headers, copy_images_from_canvas) -> None:
+    def __init__(self, headers, copy_images_from_canvas, simulate_scrolling) -> None:
         self.headers = headers
         self.copy_images_from_canvas = copy_images_from_canvas
+        self.simulate_scrolling = simulate_scrolling
 
     def make_request(self, url, download_file=None) -> str:
         LOGGER.debug("make_request(url=%r, download_file=%r)", url, download_file)
@@ -98,6 +99,19 @@ class HeadlessBrowser:
                 document.body.appendChild(div);
             ''')
 
+        if self.simulate_scrolling:
+            driver.execute_script('''
+                function sleep(ms) {
+                   return new Promise(resolve => setTimeout(resolve, ms));
+                }
+                var bottom = document.body.scrollHeight;
+                for (var i = 0; i < bottom; i += 1024) {
+                    window.scrollTo(0, i);
+                    await sleep(50);
+                    bottom = document.body.scrollHeight;
+                }
+            ''')
+
         try:
             content = driver.find_element_by_tag_name("html")
             response = content.get_attribute("innerHTML")
@@ -133,7 +147,7 @@ class RequestsClient():
                     cookie_str = cookie_str + cookie["name"] + "=" + cookie["value"] + "; "
             self.headers["Cookie"] = cookie_str
             LOGGER.debug("Cookie: %s", self.headers["Cookie"])
-            
+
         if self.method == Method.GET:
             response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
         elif self.method == Method.POST:
@@ -172,15 +186,15 @@ class RequestsClient():
 
 
 class Crawler():
-    def __init__(self, render_js=False, method=Method.GET, headers={}, timeout=10, num_retries=1, encoding=None, verify_ssl=True, copy_images_from_canvas=True) -> None:
-        LOGGER.debug("Crawler(render_js=%r, method=%r, headers=%r, timeout=%d, num_retries=%d, encoding=%r, verify_ssl=%r, copy_images_from_canvas=%r)", render_js, method, headers, timeout, num_retries, encoding, verify_ssl, copy_images_from_canvas)
+    def __init__(self, render_js=False, method=Method.GET, headers={}, timeout=10, num_retries=1, encoding=None, verify_ssl=True, copy_images_from_canvas=True, simulate_scrolling=True) -> None:
+        LOGGER.debug("Crawler(render_js=%r, method=%r, headers=%r, timeout=%d, num_retries=%d, encoding=%r, verify_ssl=%r, copy_images_from_canvas=%r, simulate_scrolling=%r)", render_js, method, headers, timeout, num_retries, encoding, verify_ssl, copy_images_from_canvas, simulate_scrolling)
         self.render_js = render_js
         self.num_retries = num_retries
         if 'User-Agent' not in headers:
             headers['User-Agent'] = "Mozillla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36"
         if render_js:
             # headless browser
-            self.headless_browser = HeadlessBrowser(headers=headers, copy_images_from_canvas=copy_images_from_canvas)
+            self.headless_browser = HeadlessBrowser(headers=headers, copy_images_from_canvas=copy_images_from_canvas, simulate_scrolling=simulate_scrolling)
         else:
             self.requests_client = RequestsClient(method=method, headers=headers, timeout=timeout, encoding=encoding, verify_ssl=verify_ssl)
 
@@ -214,6 +228,7 @@ def print_usage() -> None:
     print("\t--render-js=true/false\t\tphantomjs rendering")
     print("\t--verify-ssl=true/false\t\tssl certificate verification")
     print("\t--copy-images-from-canvas=true/false\t\timage in canvas element (in headless browser)")
+    print("\t--simulate-scrolling=true/false\t\tsimulate scrolling (in headless browser)")
     print("\t--download=<file>\t\tdownload as a file, instead of stdout")
     print("\t--header=<header string>\tspecify header string")
     print("\t--encoding=<encoding>\t\tspecify encoding of content")
@@ -232,13 +247,14 @@ def main() -> int:
     encoding: Optional[str] = None
     verify_ssl: bool = True
     copy_images_from_canvas: bool = False
+    simulate_scrolling: bool = False
 
     if len(sys.argv) == 1:
         print_usage()
         sys.exit(-1)
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "h", ["spider", "render-js=", "verify-ssl=", "copy-images-from-canvas=", "download=", "encoding=", "user-agent=", "referer=", "header=", "timeout=", "retry="])
+        opts, args = getopt.getopt(sys.argv[1:], "h", ["spider", "render-js=", "verify-ssl=", "copy-images-from-canvas=", "simulate-scrolling=", "download=", "encoding=", "user-agent=", "referer=", "header=", "timeout=", "retry="])
     except getopt.GetoptError:
         print_usage()
         sys.exit(-1)
@@ -259,6 +275,8 @@ def main() -> int:
             verify_ssl = (a == "true")
         elif o == "--copy-images-from-canvas":
             copy_images_from_canvas = (a == "true")
+        elif o == "--simulate-scrolling":
+            simulate_scrolling = (a == "true")
         elif o == "--header":
             m = re.search(r'^(?P<key>[^:]+)\s*:\s*(?P<value>.+)\s*$', a)
             if m:
@@ -276,7 +294,7 @@ def main() -> int:
 
     url = args[0]
 
-    crawler = Crawler(render_js=render_js, method=method, headers=headers, timeout=timeout, num_retries=num_retries, encoding=encoding, verify_ssl=verify_ssl, copy_images_from_canvas=copy_images_from_canvas)
+    crawler = Crawler(render_js=render_js, method=method, headers=headers, timeout=timeout, num_retries=num_retries, encoding=encoding, verify_ssl=verify_ssl, copy_images_from_canvas=copy_images_from_canvas, simulate_scrolling=simulate_scrolling)
     response = crawler.run(url, download_file=download_file)
     print(response)
     return 0
