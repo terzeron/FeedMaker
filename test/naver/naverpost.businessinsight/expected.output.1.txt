@@ -19,11 +19,11 @@
 </div>
 <div>
 <a href='http://m.post.naver.com/my/series/detail.nhn?seriesNo=350574&memberNo=35786474&prevVolumeNo=14122118'><div>
-<i>
+<i style='display:none'>
 스타에디터3</i>
 <i>
 시리즈</i>
-<i>
+<i style='display:none'>
 콜라보</i>
 이슈앤트렌드</div>
 </a>
@@ -57,7 +57,7 @@
 InterBiz 인터비즈</span>
 </a>
 </p>
-<p>
+<p style='display:none'>
 <span>
 <i>
 공식</i>
@@ -77,13 +77,12 @@ InterBiz 인터비즈</span>
 </i>
 <span>
 15,319 읽음 </span>
-<span>
+<span style='display:none'>
 비밀글</span>
 </p>
 </div>
 <div>
-<a href='http://m.post.naver.com/viewer/postView.nhn?volumeNo=14122118&memberNo=35786474' target='_blank'>
-<span>
+<a href='http://m.post.naver.com/viewer/postView.nhn?volumeNo=14122118&memberNo=35786474' style='display:none' target='_blank'><span>
 통계</span>
 </a>
 </div>
@@ -105,8 +104,7 @@ InterBiz 인터비즈</span>
 <div>
 <div>
 <p>
-<a href='https://blog.naver.com/businessinsight' target='_blank'>
-[인터비즈]</a>
+<a href='https://blog.naver.com/businessinsight' target='_blank'>[인터비즈]</a>
  신용카드를 비롯해 스마트폰 등의 모바일 기기로도 간편하게 결제할 수 있는 기술이 상용화되면서 현금으로 물건을 구매하는 빈도가 점점 줄어들고 있습니다. 거래의 기본 절차였던 &#x27;지폐를 내밀고 거스름돈을 돌려받는 행위&#x27;조차도 카드 한 장으로 간편하게 대체되었죠. 세계는 점차 현금 없는 사회로 나아가고 있습니다. 지폐와 동전 없이도 모든 물건을 살 수 있는 세상, 가능할까요?<br>
 </br>
 </p>

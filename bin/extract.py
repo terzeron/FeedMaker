@@ -145,8 +145,14 @@ def traverse_element(element, url, encoding) -> bool:
     # flash?
 
     open_close_tag = False
+    attribute_str = ""
+    if element.has_attr("style"):
+        # 스타일 속성을 이용하여 요소를 보이지 않게 처리하는 경우에는 이 속성을 유지해야 함
+        m = re.search(r'(?P<style>display\s*:\s*none|visibility\s*:\s*hidden)', element["style"])
+        if m:
+            attribute_str = " style='%s'" % m.group("style")
     if element.name == "p":
-        print("<p>")
+        print("<p%s>" % attribute_str)
         for e in element.contents:
             traverse_element(e, url, encoding)
         # 하위 노드를 처리하고 return하지 않으면, 텍스트를 직접
@@ -197,10 +203,9 @@ def traverse_element(element, url, encoding) -> bool:
         if src:
             if re.search(r'^//', src):
                 src = re.sub(r'^//', 'http://', src)
-            sys.stdout.write("<img src='%s'" % src)
             if element.has_attr("width"):
-                sys.stdout.write(" width='%s'" % element["width"])
-            sys.stdout.write("/>\n")
+                attribute_str += " width='%s'" % element["width"]
+            print("<img src='%s'%s/>" % (src, attribute_str))
         ret = True
     elif element.name in ["input"]:
         if check_element_class(element, "input", "origin_src"):
@@ -208,7 +213,7 @@ def traverse_element(element, url, encoding) -> bool:
                 value = element["value"]
                 if not re.search(r'(https?:)?//', value):
                     value = URL.concatenate_url(url, value)
-                sys.stdout.write("<img src='%s'/>\n" % value)
+                print("<img src='%s'%s/>" % (value, attribute_str))
                 ret = True
     elif element.name == "canvas":
         src = ""
@@ -217,10 +222,9 @@ def traverse_element(element, url, encoding) -> bool:
         elif element.has_attr("data-src"):
             src = element["data-src"]
         if src:
-            sys.stdout.write("<img src='%s'" % src)
             if element.has_attr("width"):
-                sys.stdout.write(" width='%s'" % element["width"])
-            sys.stdout.write("/>\n")
+                attribute_str += " width='%s'" % element["width"]
+            print("<img src='%s'%s/>" % (src, attribute_str))
             ret = True
     elif element.name == "a":
         if element.has_attr("onclick"):
@@ -237,11 +241,9 @@ def traverse_element(element, url, encoding) -> bool:
             if not re.search(r'(https?:)?//', href):
                 href = URL.concatenate_url(url, href)
             # A tag는 href와 target attribute를 출력해줘야 함
-            sys.stdout.write("<a href='%s'" % href)
             if element.has_attr("target"):
-                sys.stdout.write(" target='%s'>\n" % element["target"])
-            else:
-                sys.stdout.write(">")
+                attribute_str += " target='%s'" % element["target"]
+            print("<a href='%s'%s>" % (href, attribute_str), end='')
             ret = True
             open_close_tag = True
     elif element.name in ["iframe", "embed"]:
@@ -249,17 +251,15 @@ def traverse_element(element, url, encoding) -> bool:
             src = element["src"]
             if "video_player.nhn" in src or ".swf" in src or "getCommonPlayer.nhn" in src:
                 # flash 파일은 [IFRAME with Flash]라고 표시
-                print("[Flash Player]<br/>")
                 print("<%s src='%s'></%s><br/>" % (element.name, src, element.name))
                 print("<a href='%s'>%s</a><br/>" % (src, src))
             else:
-                sys.stdout.write("%s\n" % str(element))
+                print(str(element))
             ret = True
     elif element.name in ["param", "object"]:
         if element.has_attr("name") and element["name"] == "Src" and element.has_attr("value") and ".swf" in \
                 element["value"]:
             src = element["value"]
-            print("[Flash Player]<br/>")
             print("<video src='%s'></video><br/>" % src)
             print("<a href='%s'>%s</a><br/>" % (src, src))
         ret = True
@@ -292,11 +292,11 @@ def traverse_element(element, url, encoding) -> bool:
         ret = True
     elif element.name in ["pre"]:
         # preserve all white spaces as they are
-        sys.stdout.write("%s\n" % element)
+        print(str(element))
         # skip sub-elementss
         return True
     else:
-        sys.stdout.write("<%s>\n" % element.name)
+        print("<%s%s>" % (element.name, attribute_str))
         open_close_tag = True
         ret = True
 
@@ -312,7 +312,7 @@ def traverse_element(element, url, encoding) -> bool:
         return ret
 
     if open_close_tag:
-        sys.stdout.write("</%s>\n" % element.name)
+        print("</%s>" % element.name)
         ret = True
 
     return ret
