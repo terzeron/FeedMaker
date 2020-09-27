@@ -23,6 +23,7 @@ import selenium
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
 LOGGER = logging.getLogger()
 COOKIE_FILE = "cookies.json"
+DEFAULT_USER_AGENT = "Mozillla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36"
 
 
 class Method(Enum):
@@ -193,7 +194,7 @@ class Crawler():
         self.render_js = render_js
         self.num_retries = num_retries
         if 'User-Agent' not in headers:
-            headers['User-Agent'] = "Mozillla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36"
+            headers['User-Agent'] = DEFAULT_USER_AGENT
         if render_js:
             # headless browser
             self.headless_browser = HeadlessBrowser(headers=headers, copy_images_from_canvas=copy_images_from_canvas, simulate_scrolling=simulate_scrolling, disable_headless=disable_headless)

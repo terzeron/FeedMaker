@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 from io import StringIO
 #from feed_maker_util import kill_process_group
-from crawler import Method, Crawler, print_usage, COOKIE_FILE
+from crawler import Method, Crawler, print_usage, COOKIE_FILE, DEFAULT_USER_AGENT
 
 
 class CrawlerTest(unittest.TestCase):
@@ -97,13 +97,13 @@ class CrawlerTest(unittest.TestCase):
 
         crawler = Crawler(headers={})
         client = crawler.requests_client
-        self.assertEqual({}, client.headers)
+        self.assertEqual({'User-Agent': DEFAULT_USER_AGENT}, client.headers)
         del client
         del crawler
 
         crawler = Crawler(headers={"Referer": "https://m.naver.com"})
         client = crawler.requests_client
-        self.assertEqual({"Referer": "https://m.naver.com"}, client.headers)
+        self.assertEqual({"Referer": "https://m.naver.com", 'User-Agent': DEFAULT_USER_AGENT}, client.headers)
         del client
         del crawler
 
