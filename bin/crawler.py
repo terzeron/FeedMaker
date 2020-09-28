@@ -110,7 +110,7 @@ class HeadlessBrowser:
                 var bottom = document.body.scrollHeight;
                 for (var i = 0; i < bottom; i += 1024) {
                     window.scrollTo(0, i);
-                    await sleep(50);
+                    await sleep(100);
                     bottom = document.body.scrollHeight;
                 }
             ''')
