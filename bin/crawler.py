@@ -113,6 +113,10 @@ class HeadlessBrowser:
                     await sleep(100);
                     bottom = document.body.scrollHeight;
                 }
+                for (var i = bottom; i >= 0; i -= 729) {
+                    window.scrollTo(0, i);
+                    await sleep(100);
+                }
             ''')
 
         try:
