@@ -147,10 +147,11 @@ def traverse_element(element, url, encoding) -> bool:
     open_close_tag = False
     attribute_str = ""
     if element.has_attr("style"):
-        # 스타일 속성을 이용하여 요소를 보이지 않게 처리하는 경우에는 이 속성을 유지해야 함
+        # 스타일 속성을 이용하여 요소를 보이지 않게 처리한 경우에는 하위 요소를 삭제함
         m = re.search(r'(?P<style>display\s*:\s*none|visibility\s*:\s*hidden)', element["style"])
         if m:
-            attribute_str = " style='%s'" % m.group("style")
+            # skip sub-elements
+            return ret
     if element.name == "p":
         print("<p%s>" % attribute_str)
         for e in element.contents:

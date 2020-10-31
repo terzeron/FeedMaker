@@ -19,12 +19,8 @@
 </div>
 <div>
 <a href='http://m.post.naver.com/my/series/detail.nhn?seriesNo=350574&memberNo=35786474&prevVolumeNo=14122118'><div>
-<i style='display:none'>
-스타에디터3</i>
 <i>
 시리즈</i>
-<i style='display:none'>
-콜라보</i>
 이슈앤트렌드</div>
 </a>
 <div>
@@ -57,12 +53,6 @@
 InterBiz 인터비즈</span>
 </a>
 </p>
-<p style='display:none'>
-<span>
-<i>
-공식</i>
-</span>
-</p>
 <p>
 <i>
 </i>
@@ -77,14 +67,9 @@ InterBiz 인터비즈</span>
 </i>
 <span>
 15,319 읽음 </span>
-<span style='display:none'>
-비밀글</span>
 </p>
 </div>
 <div>
-<a href='http://m.post.naver.com/viewer/postView.nhn?volumeNo=14122118&memberNo=35786474' style='display:none' target='_blank'><span>
-통계</span>
-</a>
 </div>
 </div>
 <div>
