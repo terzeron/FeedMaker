@@ -57,7 +57,7 @@ class HeadlessBrowser:
         if "Referer" in self.headers:
             driver.get(self.headers["Referer"])
             try:
-                WebDriverWait(driver, 10).until(expected_conditions.invisibility_of_element((By.ID, "cf-content")))
+                WebDriverWait(driver, 60).until(expected_conditions.invisibility_of_element((By.ID, "cf-content")))
             except selenium.common.exceptions.TimeoutException:
                 pass
 
@@ -76,7 +76,7 @@ class HeadlessBrowser:
                     driver.add_cookie(cookie)
 
         try:
-            WebDriverWait(driver, 10).until(expected_conditions.invisibility_of_element((By.ID, "cf-content")))
+            WebDriverWait(driver, 60).until(expected_conditions.invisibility_of_element((By.ID, "cf-content")))
         except selenium.common.exceptions.TimeoutException:
             pass
 
