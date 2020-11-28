@@ -126,7 +126,7 @@ class HeadlessBrowser:
             #response = driver.page_source
         except selenium.common.exceptions.WebDriverException as e:
             LOGGER.error(e)
-            return ""
+            response = ""
 
         driver.close()
         driver.quit()
