@@ -53,7 +53,7 @@ class HeadlessBrowser:
 
         chrome_driver_name = "chromedriver"
         driver = webdriver.Chrome(options=options, executable_path=chrome_driver_name)
-        driver.set_script_timeout(60)
+        driver.set_script_timeout(120)
 
         if "Referer" in self.headers:
             driver.get(self.headers["Referer"])
