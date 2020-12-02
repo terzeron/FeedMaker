@@ -8,7 +8,7 @@ import time
 import logging
 import logging.config
 from base64 import b64decode
-from typing import List, Optional, Dict, Any
+from typing import List, Dict, Any
 from feed_maker_util import Config, IO, Cache, exec_cmd, make_path, URL
 from crawler import Crawler
 
@@ -18,36 +18,38 @@ LOGGER = logging.getLogger()
 IMAGE_NOT_FOUND_IMAGE_URL = "https://terzeron.com/image-not-found.png"
 
 
-def download_image(crawler: Crawler, path_prefix: str, img_url: str) -> Optional[str]:
-    LOGGER.debug("# download_image(crawler=%r, path_prefix=%s, image_url_or_data=%s, page_url=%s)", crawler, path_prefix, img_url)
-    cache_file = Cache.get_cache_file_name(path_prefix, img_url, "")
-    if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
-        return cache_file
+def download_image(crawler: Crawler, path_prefix: str, img_url: str) -> str:
+    LOGGER.debug("# download_image(crawler=%r, path_prefix=%s, img_url=%r)", crawler, path_prefix, img_url if not img_url.startswith("data:image") else img_url[:30])
+    cache_file = Cache.get_cache_file_name(path_prefix, img_url)
+    for ext in ["", ".png", ".jpeg", ".jpg"]:
+        if os.path.isfile(cache_file + ext) and os.stat(cache_file + ext).st_size > 0:
+            return cache_file + ext
 
-    m = re.search(r'^data:image/(?:png|jpeg|jpg);base64,(?P<img_data>.+)', img_url)
+    m = re.search(r'^data:image/(?P<img_ext>png|jpeg|jpg);base64,(?P<img_data>.+)', img_url)
     if m:
         img_data = m.group("img_data")
-        LOGGER.debug("image data '%s' as base64 to cache file '%s'", img_data, cache_file)
-        if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
-            return cache_file
-        with open(cache_file, "wb") as outfile:
+        img_ext = "." + m.group("img_ext")
+        LOGGER.debug("image data '%s' as base64 to cache file '%s%s'", img_data[:30], cache_file, img_ext)
+        if os.path.isfile(cache_file + img_ext) and os.stat(cache_file + img_ext).st_size > 0:
+            return cache_file + img_ext
+        with open(cache_file + img_ext, "wb") as outfile:
             decoded_data = b64decode(img_data)
             outfile.write(decoded_data)
-        return cache_file
+        return cache_file + img_ext
 
     if img_url.startswith("http"):
         LOGGER.debug("image url '%s' to cache file '%s'", img_url, cache_file)
         result = crawler.run(img_url, download_file=cache_file)
         if not result:
             time.sleep(5)
-            result = crawler.run(img_url, download_file=cache_file)
+            result = crawler.run(url=img_url, download_file=cache_file)
             if not result:
-                return None
+                return ""
     else:
-        return None
+        return ""
     if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
         return cache_file
-    return None
+    return ""
 
 
 def main() -> int:

@@ -605,8 +605,8 @@ class URL:
 
 class Cache:
     @staticmethod
-    def get_cache_info_common(prefix: str, img_url: str, img_ext: str, postfix=None, index=None) -> str:
-        LOGGER.debug("# get_cache_info_common(%s, %s, %s, %s, %d)", prefix, img_url, img_ext, postfix if postfix else "None", index if index else -1)
+    def get_cache_info_common(prefix: str, img_url: str, postfix=None, index=None) -> str:
+        LOGGER.debug("# get_cache_info_common(%s, %s, %r, %r)", prefix, img_url if not img_url.startswith("data:image") else img_url[:30], postfix, index)
         postfix_str = ""
         if postfix and postfix != "":
             postfix_str = "_" + str(postfix)
@@ -615,18 +615,18 @@ class Cache:
         if index and index != "":
             index_str = "." + str(index)
 
-        if re.search(r'https?://', img_url) and img_ext:
-            result_str = prefix + "/" + URL.get_short_md5_name(img_url) + postfix_str + index_str + "." + img_ext
+        if img_url.startswith("http") or img_url.startswith("data:image"):
+            result_str = prefix + "/" + URL.get_short_md5_name(img_url) + postfix_str + index_str
         else:
             result_str = prefix + "/" + URL.get_short_md5_name(img_url)
         return result_str
 
     @staticmethod
-    def get_cache_url(url_prefix: str, img_url: str, img_ext: str, postfix=None, index=None) -> str:
-        LOGGER.debug("# get_cache_url(%s, %s, %s, %s, %d)", url_prefix, img_url, img_ext, postfix if postfix else "None", index if index else -1)
-        return Cache.get_cache_info_common(url_prefix, img_url, img_ext, postfix, index)
+    def get_cache_url(url_prefix: str, img_url: str, postfix=None, index=None) -> str:
+        LOGGER.debug("# get_cache_url(%s, %s, %r, %r)", url_prefix, img_url if not img_url.startswith("data:image") else img_url[:30], postfix, index)
+        return Cache.get_cache_info_common(url_prefix, img_url, postfix, index)
 
     @staticmethod
-    def get_cache_file_name(path_prefix: str, img_url: str, img_ext: str, postfix=None, index=None) -> str:
-        LOGGER.debug("# get_cache_file_name(%s, %s, %s, %s, %d)", path_prefix, img_url, img_ext, postfix if postfix else "None", index if index else -1)
-        return Cache.get_cache_info_common(path_prefix, img_url, img_ext, postfix, index)
+    def get_cache_file_name(path_prefix: str, img_url: str, postfix=None, index=None) -> str:
+        LOGGER.debug("# get_cache_file_name(%s, %s, %r, %r)", path_prefix, img_url if not img_url.startswith("data:image") else img_url[:30], postfix, index)
+        return Cache.get_cache_info_common(path_prefix, img_url, postfix, index)
