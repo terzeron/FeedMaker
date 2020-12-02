@@ -9,6 +9,7 @@ import time
 import pprint
 import logging
 import logging.config
+from base64 import b64decode
 from typing import List, Tuple, Optional, Dict, Any
 from crawler import Crawler
 from feed_maker_util import Config, Cache, IO, exec_cmd, make_path
@@ -24,13 +25,28 @@ def download_image(crawler: Crawler, path_prefix: str, img_url: str, img_ext: st
     cache_file = Cache.get_cache_file_name(path_prefix, img_url, img_ext)
     if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
         return cache_file
-    result = crawler.run(url=img_url, download_file=cache_file)
-    LOGGER.debug("<!-- result: %s -->", result)
-    if not result:
-        time.sleep(5)
-        result = crawler.run(url=img_url, download_file=cache_file)
+
+    m = re.search(r'^data:image/(?:png|jpeg|jpg);base64,(?P<img_data>.+)', img_url)
+    if m:
+        img_data = m.group("img_data")
+        LOGGER.debug("image data '%s' as base64 to cache file '%s'", img_data, cache_file)
+        if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
+            return cache_file
+        with open(cache_file, "wb") as outfile:
+            decoded_data = b64decode(img_data)
+            outfile.write(decoded_data)
+        return cache_file
+
+    if img_url.startswith("http"):
+        LOGGER.debug("image url '%s' to cache file '%s'", img_url, cache_file)
+        result = crawler.run(img_url, download_file=cache_file)
         if not result:
-            return None
+            time.sleep(5)
+            result = crawler.run(url=img_url, download_file=cache_file)
+            if not result:
+                return None
+    else:
+        return None
     if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
         return cache_file
     return None

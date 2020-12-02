@@ -18,13 +18,13 @@ LOGGER = logging.getLogger()
 IMAGE_NOT_FOUND_IMAGE_URL = "https://terzeron.com/image-not-found.png"
 
 
-def download_image(crawler: Crawler, path_prefix: str, img_url_or_data: str, page_url: str) -> Optional[str]:
-    LOGGER.debug("# download_image(crawler=%r, path_prefix=%s, image_url_or_data=%s, page_url=%s)", crawler, path_prefix, img_url_or_data, page_url)
-    cache_file = Cache.get_cache_file_name(path_prefix, img_url_or_data, "")
+def download_image(crawler: Crawler, path_prefix: str, img_url: str) -> Optional[str]:
+    LOGGER.debug("# download_image(crawler=%r, path_prefix=%s, image_url_or_data=%s, page_url=%s)", crawler, path_prefix, img_url)
+    cache_file = Cache.get_cache_file_name(path_prefix, img_url, "")
     if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
         return cache_file
 
-    m = re.search(r'^data:image/(?:png|jpeg|jpg);base64,(?P<img_data>.+)', img_url_or_data)
+    m = re.search(r'^data:image/(?:png|jpeg|jpg);base64,(?P<img_data>.+)', img_url)
     if m:
         img_data = m.group("img_data")
         LOGGER.debug("image data '%s' as base64 to cache file '%s'", img_data, cache_file)
@@ -35,15 +35,12 @@ def download_image(crawler: Crawler, path_prefix: str, img_url_or_data: str, pag
             outfile.write(decoded_data)
         return cache_file
 
-    if img_url_or_data.startswith("http"):
-        img_url = img_url_or_data
-        page_url = URL.encode(page_url)
-
+    if img_url.startswith("http"):
         LOGGER.debug("image url '%s' to cache file '%s'", img_url, cache_file)
         result = crawler.run(img_url, download_file=cache_file)
         if not result:
             time.sleep(5)
-            result = crawler.run(img_url)
+            result = crawler.run(img_url, download_file=cache_file)
             if not result:
                 return None
     else:
@@ -88,7 +85,7 @@ def main() -> int:
         \s*
         src=
         (["\'])
-        (?P<img_url_or_data>[^"\']+)
+        (?P<img_url>[^"\']+)
         (["\'])
         (\s*width=["\']\d+%?["\'])?
         /?>
@@ -96,7 +93,7 @@ def main() -> int:
         ''', line, re.VERBOSE)
         if m:
             pre_text = m.group("pre_text")
-            img_url_or_data = m.group("img_url_or_data")
+            img_url = m.group("img_url")
             post_text = m.group("post_text")
 
             m = re.search(r'^\s*$', pre_text)
@@ -104,10 +101,10 @@ def main() -> int:
                 print(pre_text)
 
             # download
-            cache_file = download_image(crawler, path_prefix, img_url_or_data, page_url)
+            cache_file = download_image(crawler, path_prefix, img_url)
             if cache_file:
-                cache_url = Cache.get_cache_url(img_url_prefix, img_url_or_data, "")
-                LOGGER.debug("%s -> %s / %s", img_url_or_data, cache_file, cache_url)
+                cache_url = Cache.get_cache_url(img_url_prefix, img_url, "")
+                LOGGER.debug("%s -> %s / %s", img_url, cache_file, cache_url)
                 print("<img src='%s'/>" % cache_url)
             else:
                 LOGGER.debug("no cache file '%s'", cache_file)
