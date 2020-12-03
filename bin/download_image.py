@@ -105,9 +105,10 @@ def main() -> int:
             # download
             cache_file = download_image(crawler, path_prefix, img_url)
             if cache_file:
+                _, ext = os.path.splitext(cache_file)
                 cache_url = Cache.get_cache_url(img_url_prefix, img_url, "")
-                LOGGER.debug("%s -> %s / %s", img_url, cache_file, cache_url)
-                print("<img src='%s'/>" % cache_url)
+                LOGGER.debug("%s -> %s / %s%s", img_url if not img_url.startswith("data:image") else img_url[:30], cache_file, cache_url, ext)
+                print("<img src='%s%s'/>" % (cache_url, ext))
             else:
                 LOGGER.debug("no cache file '%s'", cache_file)
                 print("<img src='%s' alt='not exist or size 0'/>" % IMAGE_NOT_FOUND_IMAGE_URL)

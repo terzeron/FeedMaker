@@ -5,10 +5,8 @@ import os
 import sys
 import re
 import getopt
-import time
 import logging
 import logging.config
-from base64 import b64decode
 from typing import List, Tuple, Optional, Dict, Any
 from crawler import Crawler
 from feed_maker_util import Config, Cache, IO, exec_cmd, make_path
