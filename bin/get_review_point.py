@@ -9,7 +9,7 @@ import signal
 import logging
 import logging.config
 from urllib.parse import urlencode
-from typing import Optional, Dict
+from typing import Tuple, Dict, Any
 from crawler import Crawler
 
 
@@ -39,7 +39,7 @@ def get_default_config(type_name) -> Dict[str, str]:
     return {"url_prefix": url_prefix, "url_param": url_param, "encoding": encoding, "review_point_pattern": review_point_pattern}
 
 
-def get_page(url) -> Optional[str]:
+def get_page(url) -> Tuple[str, Any]:
     crawler = Crawler()
     return crawler.run(url)
 
@@ -50,7 +50,7 @@ def get_first_search_result(config, type_name, keyword, year) -> str:
     review_point_pattern = config["review_point_pattern"]
 
     url = "%s%s" % (url_prefix, urlencode({url_param: keyword}))
-    html = get_page(url)
+    html, _ = get_page(url)
     if not html:
         LOGGER.error("can't get page html from url '%s'", url)
         return ""

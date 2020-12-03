@@ -39,10 +39,10 @@ def download_image(crawler: Crawler, path_prefix: str, img_url: str) -> str:
 
     if img_url.startswith("http"):
         LOGGER.debug("image url '%s' to cache file '%s'", img_url, cache_file)
-        result = crawler.run(img_url, download_file=cache_file)
+        result, _ = crawler.run(img_url, download_file=cache_file)
         if not result:
             time.sleep(5)
-            result = crawler.run(url=img_url, download_file=cache_file)
+            result, _ = crawler.run(url=img_url, download_file=cache_file)
             if not result:
                 return ""
     else:
