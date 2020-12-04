@@ -214,13 +214,15 @@ class Crawler():
 
     def run(self, url, data=None, download_file=None) -> Tuple[str, Any]:
         response = None
+        headers = None
         for i in range(self.num_retries):
             if self.render_js:
                 response = self.headless_browser.make_request(url, download_file=download_file)
             else:
                 response, headers = self.requests_client.make_request(url, download_file=download_file, data=data)
-                if response:
-                    return response, headers if headers else None
+
+            if response:
+                return response, headers if headers else None
             LOGGER.debug("wait for seconds and retry (#%d)", i)
             time.sleep(5)
 
