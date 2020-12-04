@@ -440,6 +440,7 @@ class FeedMaker:
 
 
     def make(self) -> bool:
+        LOGGER.debug("# make()")
         LOGGER.info("=========================================================")
         LOGGER.info(" %s ", os.getcwd())
         LOGGER.info("=========================================================")

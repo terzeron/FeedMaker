@@ -96,6 +96,8 @@ def determine_crawler_options(options: Dict[str, Any]) -> str:
     if "header_list" in options:
         for header in options["header_list"]:
             option_str += " --header '%s'" % header
+    if "timeout" in options:
+        option_str += " --timeout=%s" % (options["timeout"] if options["timeout"] else "10")
 
     #LOGGER.debug("title=%s, review_point=%d, review_point_threshold=%f", title, review_point, review_point_threshold)
     #if review_point and review_point_threshold and review_point > review_point_threshold:
@@ -402,6 +404,7 @@ class Config:
             encoding = Config._get_str_config_value(collection_conf, "encoding", "utf-8")
             referer = Config._get_str_config_value(collection_conf, "referer")
 
+            timeout = Config._get_int_config_value(collection_conf, "timeout")
             unit_size_per_day = Config._get_float_config_value(collection_conf, "unit_size_per_day")
 
             list_url_list = Config._get_config_value_list(collection_conf, "list_url", [])
@@ -419,6 +422,7 @@ class Config:
                 "encoding": encoding,
                 "referer": referer,
 
+                "timeout": timeout,
                 "unit_size_per_day": unit_size_per_day,
 
                 "list_url_list": list_url_list,
@@ -427,7 +431,7 @@ class Config:
         return conf
 
     def get_extraction_configs(self) -> Dict[str, Any]:
-        LOGGER.debug("# get_extraciton_configs()")
+        LOGGER.debug("# get_extraction_configs()")
         conf: Dict[str, Any] = {}
         if "extraction" in self.config:
             extraction_conf = self.config["extraction"]
@@ -443,6 +447,7 @@ class Config:
             encoding = Config._get_str_config_value(extraction_conf, "encoding", "utf8")
             referer = Config._get_str_config_value(extraction_conf, "referer")
 
+            timeout = Config._get_int_config_value(extraction_conf, "timeout")
             review_point_threshold = Config._get_int_config_value(extraction_conf, "review_point_threshold")
 
             element_id_list = Config._get_config_value_list(extraction_conf, "element_id", [])
@@ -463,6 +468,7 @@ class Config:
                 "encoding": encoding,
                 "referer": referer,
 
+                "timeout": timeout,
                 "review_point_threshold": review_point_threshold,
 
                 "element_id_list": element_id_list,

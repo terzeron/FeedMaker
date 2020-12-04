@@ -34,13 +34,14 @@ class Method(Enum):
 
 class HeadlessBrowser:
     def __init__(self, headers, copy_images_from_canvas, simulate_scrolling, disable_headless) -> None:
+        LOGGER.debug("# HeadlessBrowser(headers=%r, copy_images_from_canvas=%r, simulate_scrolling=%r, disable_headless=%r)", headers, copy_images_from_canvas, simulate_scrolling, disable_headless)
         self.headers = headers
         self.copy_images_from_canvas = copy_images_from_canvas
         self.simulate_scrolling = simulate_scrolling
         self.disable_headless = disable_headless
 
     def make_request(self, url, download_file=None) -> str:
-        LOGGER.debug("make_request(url=%r, download_file=%r)", url, download_file)
+        LOGGER.debug("# make_request(url=%r, download_file=%r)", url, download_file)
         options = Options()
         if not self.disable_headless:
             options.add_argument("--headless")
@@ -135,7 +136,7 @@ class HeadlessBrowser:
 
 class RequestsClient():
     def __init__(self, render_js=False, method=Method.GET, headers={}, timeout=10, encoding=None, verify_ssl=True) -> None:
-        LOGGER.debug("RequestsClient(render_js=%r, method=%r, headers=%r, timeout=%d, encoding=%r, verify_ssl=%r)", render_js, method, headers, timeout, encoding, verify_ssl)
+        LOGGER.debug("# RequestsClient(render_js=%r, method=%r, headers=%r, timeout=%d, encoding=%r, verify_ssl=%r)", render_js, method, headers, timeout, encoding, verify_ssl)
         self.method = method
         self.timeout = timeout
         self.headers = headers
@@ -143,7 +144,7 @@ class RequestsClient():
         self.verify_ssl = verify_ssl
 
     def make_request(self, url, data=None, download_file=None) -> Tuple[str, Any]:
-        LOGGER.debug("make_request('%s')", url)
+        LOGGER.debug("# make_request('%s')", url)
 
         if os.path.isfile(COOKIE_FILE):
             cookie_str: str = ""
@@ -195,7 +196,7 @@ class RequestsClient():
 
 class Crawler():
     def __init__(self, render_js=False, method=Method.GET, headers={}, timeout=10, num_retries=1, encoding=None, verify_ssl=True, copy_images_from_canvas=False, simulate_scrolling=False, disable_headless=False) -> None:
-        LOGGER.debug("Crawler(render_js=%r, method=%r, headers=%r, timeout=%d, num_retries=%d, encoding=%r, verify_ssl=%r, copy_images_from_canvas=%r, simulate_scrolling=%r, disable_headless=%r)", render_js, method, headers, timeout, num_retries, encoding, verify_ssl, copy_images_from_canvas, simulate_scrolling, disable_headless)
+        LOGGER.debug("# Crawler(render_js=%r, method=%r, headers=%r, timeout=%d, num_retries=%d, encoding=%r, verify_ssl=%r, copy_images_from_canvas=%r, simulate_scrolling=%r, disable_headless=%r)", render_js, method, headers, timeout, num_retries, encoding, verify_ssl, copy_images_from_canvas, simulate_scrolling, disable_headless)
         self.render_js = render_js
         self.num_retries = num_retries
         if 'User-Agent' not in headers:
@@ -213,6 +214,7 @@ class Crawler():
             del self.requests_client
 
     def run(self, url, data=None, download_file=None) -> Tuple[str, Any]:
+        LOGGER.debug("# run(url=%s, data=%r, download_file=%r)", url, data, download_file)
         response = None
         headers = None
         for i in range(self.num_retries):
@@ -248,6 +250,7 @@ def print_usage() -> None:
 
 
 def main() -> int:
+    LOGGER.debug("# main()")
     method = Method.GET
     headers = {"Accept-Encoding": "gzip, deflate", "User-Agent": "Mozillla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36", "Accept": "*/*", "Connection": "Keep-Alive"}
     timeout = 10

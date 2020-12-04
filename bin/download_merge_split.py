@@ -178,6 +178,7 @@ def print_usage(program_name: str) -> None:
 
 
 def main() -> int:
+    LOGGER.debug("# main()")
     cmd = "basename " + os.getcwd()
     LOGGER.debug(cmd)
     result, error = exec_cmd(cmd)

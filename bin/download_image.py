@@ -53,6 +53,7 @@ def download_image(crawler: Crawler, path_prefix: str, img_url: str) -> str:
 
 
 def main() -> int:
+    LOGGER.debug("# main()")
     cmd = "basename " + os.getcwd()
     result, error = exec_cmd(cmd)
     if error:

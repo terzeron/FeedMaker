@@ -27,6 +27,7 @@ def print_trailer() -> None:
 
 
 def extract_content(args) -> bool:
+    LOGGER.debug("# extract_content(args=%r)", args)
     item_url = args[0]
     file = ""
     if len(args) > 1:
