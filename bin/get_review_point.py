@@ -41,7 +41,8 @@ def get_default_config(type_name) -> Dict[str, str]:
 
 def get_page(url) -> Tuple[str, Any]:
     crawler = Crawler()
-    return crawler.run(url)
+    response, _ = crawler.run(url)
+    return response
 
 
 def get_first_search_result(config, type_name, keyword, year) -> str:
