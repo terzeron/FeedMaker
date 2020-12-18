@@ -57,7 +57,7 @@ def split_image_list(img_file_list: List[str]) -> List[List[str]]:
     img_file_partition_list: List[List[str]] = []
     partition_size = int((len(img_file_list) + 3) / 4)
     LOGGER.debug("<!-- length=%d, partition_size=%d -->", len(img_file_list), partition_size)
-    for i in range(int(len(img_file_list) / partition_size)):
+    for i in range(int((len(img_file_list) + partition_size - 1) / partition_size)):
         img_file_partition_list.append(img_file_list[i * partition_size: (i + 1) * partition_size])
     #LOGGER.debug(pprint.pformat(img_file_partition_list))
     return img_file_partition_list
@@ -151,12 +151,12 @@ def print_image_files(num_units: int, path_prefix: str, img_url_prefix: str, img
             print("<img src='%s%s'/>" % (split_img_url, ext))
 
 
-def print_cached_image_file(path_prefix: str, img_url_prefix: str, img_url: str) -> None:
-    LOGGER.debug("# print_cached_image_file(path_prefix=%s, img_url_prefix=%s, img_url=%s)", path_prefix, img_url_prefix, img_url if not img_url.startswith("data:image") else img_url[:30])
-    img_file = Cache.get_cache_file_name(path_prefix, img_url)
+def print_cached_image_file(path_prefix: str, img_url_prefix: str, img_url: str, unit_num: Optional[int] = None) -> None:
+    LOGGER.debug("# print_cached_image_file(path_prefix=%s, img_url_prefix=%s, img_url=%s, unit_num=%r)", path_prefix, img_url_prefix, img_url if not img_url.startswith("data:image") else img_url[:30], unit_num if unit_num else None)
+    img_file = Cache.get_cache_file_name(path_prefix, img_url, postfix=str(unit_num))
     LOGGER.debug("img_file=%s", img_file)
     if os.path.exists(img_file):
-        img_url = Cache.get_cache_url(img_url_prefix, img_url)
+        img_url = Cache.get_cache_url(img_url_prefix, img_url, postfix=str(unit_num))
         print("<img src='%s'/>" % img_url)
 
 
@@ -202,7 +202,8 @@ def main() -> int:
     do_innercrop = False
     orientation_option = ""
     do_flip_right_to_left = False
-    optlist, args = getopt.getopt(sys.argv[1:], "c:milvb:t:n:s:h")
+    do_only_merge = False
+    optlist, args = getopt.getopt(sys.argv[1:], "c:milvb:t:n:s:h", ["only-merge="])
     for o, a in optlist:
         if o == "-c":
             bgcolor_option = "-c " + a
@@ -224,6 +225,8 @@ def main() -> int:
             num_units = int(a)
         elif o == "-h":
             print_usage(sys.argv[0])
+        elif o == "--only-merge":
+            do_only_merge = (a == "true")
 
     if len(args) < 1:
         print_usage(sys.argv[0])
@@ -264,10 +267,14 @@ def main() -> int:
             if do_innercrop:
                 crop_image_file(merged_img_file)
 
-            #remove_image_files(img_file_partition)
-            split_image_file(merged_img_file, bandwidth, diff_threshold, size_threshold, num_units, bgcolor_option, orientation_option)
-            #remove_image_files([merged_img_file])
-            print_image_files(num_units, path_prefix, img_url_prefix, page_url, None, str(unit_num), do_flip_right_to_left)
+            if do_only_merge:
+                print_cached_image_file(path_prefix, img_url_prefix, page_url, unit_num)
+            else:
+                #remove_image_files(img_file_partition)
+                split_image_file(merged_img_file, bandwidth, diff_threshold, size_threshold, num_units, bgcolor_option, orientation_option)
+                #remove_image_files([merged_img_file])
+                print_image_files(num_units, path_prefix, img_url_prefix, page_url, None, str(unit_num), do_flip_right_to_left)
+
             unit_num = unit_num + 1
     else:
         # only split mode
