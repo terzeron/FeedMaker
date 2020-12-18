@@ -41,7 +41,7 @@ class CrawlerTest(unittest.TestCase):
     def test_basicInstantiation(self):
         crawler = Crawler()
         self.assertTrue(crawler)
-        result = crawler.run("https://m.naver.com")
+        result, _ = crawler.run("https://m.naver.com")
         m = re.search(r'<!DOCTYPE html>', result)
         self.assertTrue(m)
         m = re.search(r'<meta property="og:url" content="http://m.naver.com/">', result)
@@ -50,7 +50,7 @@ class CrawlerTest(unittest.TestCase):
 
         crawler = Crawler(method=Method.HEAD)
         self.assertTrue(crawler)
-        result = crawler.run("https://m.naver.com")
+        result, _ = crawler.run("https://m.naver.com")
         self.assertEqual("200", result)
         del crawler
 
@@ -133,7 +133,7 @@ class CrawlerTest(unittest.TestCase):
     def test_runHttp(self):
         url = "http://info.cern.ch/"
         crawler = Crawler()
-        result = crawler.run(url)
+        result, _ = crawler.run(url)
         m = re.search(r'<title>http://info.cern.ch</title>', result)
         self.assertTrue(m)
         del crawler
@@ -141,7 +141,7 @@ class CrawlerTest(unittest.TestCase):
     def test_runHttps(self):
         url = "https://theuselessweb.site/unicodesnowmanforyou/"
         crawler = Crawler()
-        result = crawler.run(url)
+        result, _ = crawler.run(url)
         m = re.search(r'&#9731;', result)
         self.assertTrue(m)
         del crawler
@@ -149,13 +149,13 @@ class CrawlerTest(unittest.TestCase):
     def test_runHeadlessBrowser(self):
         url = "https://kr.vuejs.org/v2/guide/index.html"
         crawler = Crawler(render_js=False)
-        result = crawler.run(url)
+        result, _ = crawler.run(url)
         m = re.search(r'<div id="app-6" class="demo"><p>안녕하세요 Vue!</p> <input></div>', result)
         self.assertFalse(m)
         del crawler
 
         crawler = Crawler(render_js=True)
-        result = crawler.run(url)
+        result, _ = crawler.run(url)
         m = re.search(r'<div id="app-6" class="demo"><p>안녕하세요 Vue!</p> <input></div>', result)
         self.assertTrue(m)
         del crawler
@@ -163,7 +163,7 @@ class CrawlerTest(unittest.TestCase):
     def test_imagesInCanvas(self):
         url = "https://terzeron.com/images_in_canvas_test.html"
         crawler = Crawler(render_js=True, copy_images_from_canvas=True)
-        result = crawler.run(url)
+        result, _ = crawler.run(url)
         m = re.search(r'<div class="images_from_canvas"><img src="data:image/png;base64,iVBORw0KGgoAAAAN.*1WQAAAABJRU5ErkJggg=="></div>', result)
         self.assertTrue(m)
         del crawler
