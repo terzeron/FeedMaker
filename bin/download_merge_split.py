@@ -18,7 +18,7 @@ LOGGER = logging.getLogger()
 IMAGE_NOT_FOUND_IMAGE_URL = "https://terzeron.com/image-not-found.png"
 
 
-def download_image_and_read_metadata(crawler: Crawler, path_prefix: str, page_url: str) -> Tuple[List[str], List[str]]:
+def download_image_and_read_metadata(crawler: Crawler, path_prefix: str, page_url: str) -> Tuple[List[str], List[str], List[str]]:
     LOGGER.debug("# download_image_and_read_metadata(crawler=%r, path_prefix=%r, page_url=%r)", crawler, path_prefix, page_url)
     #
     # read input and collect image files into the list
@@ -29,9 +29,10 @@ def download_image_and_read_metadata(crawler: Crawler, path_prefix: str, page_ur
 
     crawler = Crawler(headers={"Referer": page_url}, num_retries=2)
 
+    normal_html_lines = []
     line_list: List[str] = IO.read_stdin_as_line_list()
     for line in line_list:
-        # <img> element pattern
+        line = line.rstrip()
         m = re.search(r"<img src=(?:[\"'])(?P<img_url>[^\"']+)(?:[\"'])( width='\d+%?')?/?>", line)
         if m:
             img_url = m.group("img_url")
@@ -45,8 +46,12 @@ def download_image_and_read_metadata(crawler: Crawler, path_prefix: str, page_ur
             img_file_list.append(cache_file)
             img_url_list.append(img_url)
             LOGGER.debug("<!-- %s -> %s -->", img_url if not img_url.startswith("data:image") else img_url[:30], cache_file)
+        else:
+            m = re.search(r'^</?br>$', line)
+            if not m:
+                normal_html_lines.append(line.rstrip())
 
-    return img_file_list, img_url_list
+    return img_file_list, img_url_list, normal_html_lines
 
 
 def split_image_list(img_file_list: List[str]) -> List[List[str]]:
@@ -247,7 +252,9 @@ def main() -> int:
     headers["Referer"] = page_url
     crawler = Crawler(headers=headers, num_retries=2)
 
-    img_file_list, img_url_list = download_image_and_read_metadata(crawler, path_prefix, page_url)
+    img_file_list, img_url_list, normal_html_lines = download_image_and_read_metadata(crawler, path_prefix, page_url)
+    for line in normal_html_lines:
+        print(line)
     LOGGER.debug("img_file_list=%r", img_file_list)
     if len(img_file_list) == 0:
         return 0
