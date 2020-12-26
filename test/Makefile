@@ -1,4 +1,4 @@
-TESTCASES= extract.t feed_maker_util.t crawler.t remove_duplicates.t upload.t test.py ../../fma/test/test.py
+TESTCASES= extract.t feed_maker_util.t crawler1.t crawler2.t remove_duplicates.t upload.t test.py ../../fma/test/test.py
 .PHONY: test
 
 test: $(TESTCASES)

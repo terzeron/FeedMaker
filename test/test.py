@@ -4,18 +4,29 @@
 import sys
 import os
 import filecmp
+import logging
+import logging.config
 import feed_maker_util
+
+
+logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+LOGGER = logging.getLogger()
 
 
 def test_script(script, work_dir, test_dir, index):
     os.chdir(work_dir)
     cmd = "cat %s/input.%d.txt | %s > %s/result.%d.temp" % (test_dir, index, script, test_dir, index)
-    # print(cmd)
+    LOGGER.debug(cmd)
     (result, error) = feed_maker_util.exec_cmd(cmd)
     if not error:
         os.chdir(test_dir)
-        return (filecmp.cmp("result.%d.temp" % index, "expected.output.%d.txt" % index), cmd)
-    print(error)
+        cmp_result = filecmp.cmp("result.%d.temp" % index, "expected.output.%d.txt" % index)
+        if not cmp_result:
+            LOGGER.error("Error in diff '%s/expected.output.%d.txt' '%s/result.%d.temp'" % (test_dir, index, test_dir, index))
+            return (False, cmd)
+        else:
+            return (True, cmd)
+    LOGGER.error(error)
     return (False, cmd)
 
 
@@ -30,20 +41,20 @@ def main():
         #"kakao/higher_than_my_shoulders": [fm_home + "/bin/post_process_only_for_images.py"],
         # "bookdb/to_lover_of_my_lover": [fm_home + "/bin/remove_non_breaking_space.py"],
     }
-    
+
     for (feed, scripts) in test_subjects.items():
         index = 0
         for script in scripts:
             index += 1
-            print(feed)
+            LOGGER.info("%s", feed)
             work_dir = fm_cwd + "/" + feed
             test_dir = fm_home + "/test/" + feed
             result, cmd = test_script(script, work_dir, test_dir, index)
             if not result:
-                print("Error in '%s'\n" % (cmd))
+                LOGGER.error("Error in '%s'\n", cmd)
                 return -1
-    print("Ok")
-    
-                
+    LOGGER.info("Ok")
+
+
 if __name__ == "__main__":
     sys.exit(main())
