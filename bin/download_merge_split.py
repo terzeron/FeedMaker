@@ -157,11 +157,11 @@ def print_image_files(num_units: int, path_prefix: str, img_url_prefix: str, img
 
 
 def print_cached_image_file(path_prefix: str, img_url_prefix: str, img_url: str, unit_num: Optional[int] = None) -> None:
-    LOGGER.debug("# print_cached_image_file(path_prefix=%s, img_url_prefix=%s, img_url=%s, unit_num=%r)", path_prefix, img_url_prefix, img_url if not img_url.startswith("data:image") else img_url[:30], unit_num if unit_num else None)
-    img_file = Cache.get_cache_file_name(path_prefix, img_url, postfix=str(unit_num))
+    LOGGER.debug("# print_cached_image_file(path_prefix=%s, img_url_prefix=%s, img_url=%s, unit_num=%r)", path_prefix, img_url_prefix, img_url if not img_url.startswith("data:image") else img_url[:30], unit_num)
+    img_file = Cache.get_cache_file_name(path_prefix, img_url, postfix=unit_num)
     LOGGER.debug("img_file=%s", img_file)
     if os.path.exists(img_file):
-        img_url = Cache.get_cache_url(img_url_prefix, img_url, postfix=str(unit_num))
+        img_url = Cache.get_cache_url(img_url_prefix, img_url, postfix=unit_num)
         print("<img src='%s'/>" % img_url)
 
 
@@ -278,9 +278,9 @@ def main() -> int:
                 print_cached_image_file(path_prefix, img_url_prefix, page_url, unit_num)
             else:
                 #remove_image_files(img_file_partition)
-                split_image_file(merged_img_file, bandwidth, diff_threshold, size_threshold, num_units, bgcolor_option, orientation_option)
-                #remove_image_files([merged_img_file])
-                print_image_files(num_units, path_prefix, img_url_prefix, page_url, None, str(unit_num), do_flip_right_to_left)
+                if split_image_file(merged_img_file, bandwidth, diff_threshold, size_threshold, num_units, bgcolor_option, orientation_option):
+                    #remove_image_files([merged_img_file])
+                    print_image_files(num_units, path_prefix, img_url_prefix, page_url, None, str(unit_num), do_flip_right_to_left)
 
             unit_num = unit_num + 1
     else:
