@@ -90,6 +90,24 @@ class HeadlessBrowser:
         with open(COOKIE_FILE, "w") as f:
             json.dump(cookies, f)
 
+        driver.execute_script('''
+            var metas = document.getElementsByTagName("meta");
+            var has_og_url_property = false;
+            for (var i = 0; i < metas.length; i++) {
+                var meta = metas[i];
+                if (meta.getAttribute("property") == "og:url") {
+                    has_og_url_property = true;
+                }
+            }
+            if (!has_og_url_property) {
+                console.log("no og url prop");
+                var new_meta = document.createElement("meta");
+                new_meta.setAttribute("property", "og:url");
+                new_meta.setAttribute("content", window.location.href);
+                document.head.appendChild(new_meta);
+            }
+        ''')
+
         if self.copy_images_from_canvas:
             driver.execute_script('''
                 div = document.createElement("DIV");
