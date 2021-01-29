@@ -158,11 +158,11 @@ class UtilTest(unittest.TestCase):
         self.assertEqual(url, "https://www.naver.com/sports")
 
         url = URL.concatenate_url("http://www.naver.com/movie", "sports")
-        self.assertEqual(url, "http://www.naver.com/movie/sports")
+        self.assertEqual(url, "http://www.naver.com/sports")
         url = URL.concatenate_url("http://www.naver.com/movie/", "sports")
         self.assertEqual(url, "http://www.naver.com/movie/sports")
         url = URL.concatenate_url("https://www.naver.com/movie", "sports")
-        self.assertEqual(url, "https://www.naver.com/movie/sports")
+        self.assertEqual(url, "https://www.naver.com/sports")
         url = URL.concatenate_url("https://www.naver.com/movie/", "sports")
         self.assertEqual(url, "https://www.naver.com/movie/sports")
 
@@ -174,6 +174,7 @@ class UtilTest(unittest.TestCase):
         self.assertEqual(url, "http://www.naver.com/view.nhn?page_no=3")
         url = URL.concatenate_url("http://www.naver.com/movie/view.nhn?page_no=3", "#")
         self.assertEqual(url, "http://www.naver.com/movie/view.nhn?page_no=3")
+
         url = URL.concatenate_url("http://www.naver.com/movie/view.nhn?page_no=3", "./list.nhn?page_no=4")
         self.assertEqual(url, "http://www.naver.com/movie/list.nhn?page_no=4")
 

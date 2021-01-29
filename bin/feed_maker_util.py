@@ -10,7 +10,7 @@ import subprocess
 import hashlib
 import logging
 import logging.config
-from urllib.parse import urlparse, urlunparse, quote
+from urllib.parse import urlparse, urlunparse, quote, urljoin
 from datetime import datetime
 from typing import List, Any, Dict, Tuple, Optional, Set
 import psutil
@@ -578,22 +578,7 @@ class URL:
     # http://naver.com/api/view.nhn?page_no=3 + # => http://naver.com/api/view.nhn?page_no=3
     @staticmethod
     def concatenate_url(full_url: str, url2: str) -> str:
-        if url2 == "#":
-            return full_url
-        if len(url2) > 0 and url2[0] == '/':
-            url1 = URL.get_url_scheme(full_url) + "://" + URL.get_url_domain(full_url)
-        elif len(url2) > 0 and url2[0:2] == "./":
-            url1 = URL.get_url_prefix(full_url)
-            url2 = url2[2:]
-        else:
-            url1 = URL.get_url_except_query(full_url)
-
-        if len(url1) > 0 and len(url2) > 0:
-            if url1[-1] == '/' and url2[0] == '/':
-                return url1 + url2[1:]
-            if url1[-1] != '/' and url2[0] != '/':
-                return url1 + '/' + url2
-        return url1 + url2
+        return urljoin(full_url, url2)
 
     @staticmethod
     def get_short_md5_name(content: str) -> str:
