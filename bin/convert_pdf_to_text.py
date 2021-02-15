@@ -2,12 +2,36 @@
 
 
 import sys
+import os
 import re
+import logging
+import logging.config
 import pdftotext
+from crawler import Crawler
+
+
+logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+LOGGER = logging.getLogger()
 
 
 def main() -> int:
-    pdf_file = sys.argv[1]
+    sys.stdin.read()
+    sys.stdin.close()
+    
+    if len(sys.argv) > 1:
+        if os.path.isfile(sys.argv[1]):
+            pdf_file = sys.argv[1]
+        elif sys.argv[1].startswith("http"):
+            pdf_file = os.environ["FEED_MAKER_WWW_FEEDS_DIR"] + "/pdf/" + str(os.getpid())
+            crawler = Crawler()
+            _, error = crawler.run(url=sys.argv[1], download_file=pdf_file)
+            if error:
+                LOGGER.error(error)
+        else:
+            return -1
+    else:
+        return -1
+
     with open(pdf_file, "rb") as f:
         pdf = pdftotext.PDF(f)
         for page in pdf:
@@ -16,6 +40,8 @@ def main() -> int:
             page = re.sub(r'^\s*\S+\s* - ', '\n - ', page)
             page = re.sub(r'(?<=\S)\s*(?P<bullet>[▶•])', '\n\g<bullet>', page)
             print(page)
+
+    f.close()
 
     return 0
 
