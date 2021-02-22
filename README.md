@@ -14,8 +14,10 @@ Requirements
   * You should download chromedriver appropriate for chrome browser installed on your system. And this binary must be located in PATH environment variable.
   * Also you should install chrome browser.
 * pdf libraries
-  * pdftotext
-    * `sudo apt install build-essential libpoppler-cpp-dev pkg-config`
+  * pdf2image
+    * `sudo apt install poppler-utils`
+    * If you have some trouble in installting poppler-utils, then
+        * `sudo apt install build-essential libpoppler-cpp-dev pkg-config`
 * FeedMaker & FeedMakerApplications
   * https://github.com/terzeron/FeedMaker/archive/master.zip
   * https://github.com/terzeron/FeedMakerApplications/archive/master.zip

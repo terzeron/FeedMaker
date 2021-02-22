@@ -43,7 +43,6 @@ def main() -> int:
             page = re.sub(r'(?<=\S)\s*(?P<bullet>[▶•])', '\n\g<bullet>', page)
             print(page)
 
-    f.close()
     os.unlink(pdf_file)
 
     return 0
