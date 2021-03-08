@@ -6,7 +6,7 @@ import os
 import logging
 import logging.config
 from pdf2image import convert_from_path
-from feed_maker_util import Cache, exec_cmd, make_path
+from feed_maker_util import Cache, exec_cmd, make_path, header_str
 from crawler import Crawler
 
 
@@ -50,6 +50,7 @@ def main() -> int:
 
     images = convert_from_path(pdf_file)
     num = 0
+    print(header_str)
     for image in images:
         cache_file = Cache.get_cache_file_name(path_prefix, sys.argv[1])
         cache_url = Cache.get_cache_url(img_url_prefix, sys.argv[1], "")
