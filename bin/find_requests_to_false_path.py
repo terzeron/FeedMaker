@@ -28,8 +28,9 @@ def main() -> int:
             color = 32
         elif status == 410:
             color = 39
-        message = status_codes._codes[status][0]
-        print('%-25s \033[1;%dm%d\033[0m %s' % (name, color, status, message))
+        if status != 200:
+            message = status_codes._codes[status][0]
+            print('%-25s \033[1;%dm%d\033[0m %s' % (name, color, status, message))
     return 0
 
 
