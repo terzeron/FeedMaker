@@ -20,7 +20,7 @@ mypy-extensions==0.4.3
 mysqlclient==1.4.6
 ordered-set==3.1.1
 pdftotext==2.1.5
-Pillow==7.2.0
+Pillow==8.1.1
 ply==3.11
 psutil==5.6.6
 pycodestyle==2.5.0
