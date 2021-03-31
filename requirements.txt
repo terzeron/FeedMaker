@@ -1,4 +1,4 @@
-astroid==2.3.1
+astroid==2.5.2
 attrs==19.3.0
 beautifulsoup4==4.8.1
 bs4==0.0.1
@@ -15,7 +15,7 @@ lazy-object-proxy==1.4.2
 libcst==0.3.4
 lxml==4.6.3
 mccabe==0.6.1
-mypy==0.790
+mypy==0.812
 mypy-extensions==0.4.3
 mysqlclient==1.4.6
 ordered-set==3.1.1
@@ -26,7 +26,7 @@ ply==3.11
 psutil==5.6.6
 pycodestyle==2.5.0
 pyflakes==2.1.1
-pylint==2.4.2
+pylint==2.7.4
 pymongo==3.10.1
 pyre-check==0.0.46
 pyre-extensions==0.0.17
@@ -38,6 +38,7 @@ requests==2.22.0
 selenium==3.141.0
 six==1.12.0
 soupsieve==1.9.4
+toml==0.10.2
 typed-ast==1.4.1
 typing-extensions==3.7.4
 typing-inspect==0.5.0
