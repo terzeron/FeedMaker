@@ -10,7 +10,7 @@ import getopt
 import json
 import logging
 import logging.config
-from typing import Dict, List, Any, Tuple
+from typing import Dict, List, Any, Tuple, Optional
 import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -274,8 +274,8 @@ def main() -> int:
     timeout = 10
     num_retries = 1
     render_js = False
-    download_file: str = None
-    encoding: str = None
+    download_file: Optional[str] = None
+    encoding: Optional[str] = None
     verify_ssl: bool = True
     copy_images_from_canvas: bool = False
     simulate_scrolling: bool = False
