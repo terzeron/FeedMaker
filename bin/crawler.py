@@ -75,6 +75,7 @@ class HeadlessBrowser:
                 for cookie in cookies:
                     if "expiry" in cookie:
                         del cookie["expiry"]
+                    LOGGER.debug(cookie)
                     driver.add_cookie(cookie)
 
         try:
