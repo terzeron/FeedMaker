@@ -128,12 +128,16 @@ class HeadlessBrowser:
                 function sleep(ms) {
                    return new Promise(resolve => setTimeout(resolve, ms));
                 }
+
+                await sleep(1000);
+
                 var bottom = document.body.scrollHeight;
                 for (var i = 0; i < bottom; i += 349) {
                     window.scrollTo(0, i);
                     await sleep(200);
                     bottom = document.body.scrollHeight;
                 }
+
                 for (var i = bottom; i >= 0; i -= 683) {
                     window.scrollTo(0, i);
                     await sleep(400);
