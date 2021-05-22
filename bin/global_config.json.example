@@ -1,0 +1,1 @@
+{ "line_access_token": "TOKEN", "receiver_line_id": "LINE_MESSENGER_ID", "sender_email_address": "somebody at domain.com", "receiver_email_address": "recipient at domain.com" }
