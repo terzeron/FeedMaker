@@ -8,6 +8,7 @@ import io
 import codecs
 import subprocess
 import hashlib
+import json
 import logging
 import logging.config
 from urllib.parse import urlparse, urlunparse, quote, urljoin
@@ -15,6 +16,7 @@ from datetime import datetime
 from typing import List, Any, Dict, Tuple, Optional, Set
 import psutil
 import xmltodict
+import mail1
 from ordered_set import OrderedSet
 
 
@@ -56,17 +58,33 @@ def exec_cmd(cmd: str, input_data=None) -> Tuple[str, Optional[str]]:
     return result.decode(encoding="utf-8"), ""
 
 
-def send_error_msg(msg: Optional[str], access_token: str, receiver_id: str) -> bool:
+def send_error_msg(msg: Optional[str], subject="") -> None:
+    # read global config
+    line_access_token: str = ""
+    receiver_line_id: str = ""
+    receiver_email_address: str = ""
+    sender_email_address: str = ""
+    with open(os.path.join(os.environ["FEED_MAKER_HOME_DIR"], "bin", "global_config.json"), "r") as f:
+        global_config: Dict[str, Any] = json.load(f)
+        line_access_token = global_config["line_access_token"]
+        receiver_line_id = global_config["receiver_line_id"]
+        receiver_email_address = global_config["receiver_email_address"]
+        sender_email_address = global_config["sender_email_address"]
+
+    #send_error_msg_to_line(msg, receiver_line_id, access_token=line_access_token)
+    send_error_msg_to_mail(msg, receiver_email_address, sender=sender_email_address, subject=subject)
+    
+def send_error_msg_to_line(msg: Optional[str], receiver: str, access_token: str) -> bool:
     if not msg:
         return False
-    LOGGER.debug("send_error_msg('%s')", msg)
+    LOGGER.debug("send_error_msg_to_line('%s')", msg)
     cmd = " ".join(('''
         curl -s -X POST
              -H 'Content-Type:application/json'
              -H 'Authorization: Bearer %s'
              -d '{ "to": "%s", "messages": [ { "type": "text", "text": "%s" } ] }' 
              https://api.line.me/v2/bot/message/push
-        ''' % (access_token, receiver_id, msg[:1999])).split("\n"))
+        ''' % (access_token, receiver, msg[:1999])).split("\n"))
     result, error = exec_cmd(cmd)
     if error:
         LOGGER.warning("can't send error message '%s', %s", msg, error)
@@ -74,6 +92,16 @@ def send_error_msg(msg: Optional[str], access_token: str, receiver_id: str) -> b
     LOGGER.info(result)
     return True
 
+def send_error_msg_to_mail(msg: Optional[str], receiver: str, sender: str, subject: str) -> bool:
+    if not msg:
+        return False
+    LOGGER.debug("send_error_msg_to_gmail('%s', '%s')", subject, msg)
+    try:
+        mail1.send(subject=subject, text=msg, recipients=receiver, sender=sender, smtp_host='localhost')
+    except Exception as e:
+        LOGGER.warning("can't send error message '%s', %s", msg, e)
+        return False
+    return True
 
 def determine_crawler_options(options: Dict[str, Any]) -> str:
     LOGGER.debug("# determine_crawler_options()")
