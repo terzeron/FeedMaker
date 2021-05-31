@@ -33,12 +33,72 @@ class Method(Enum):
 
 
 class HeadlessBrowser:
+    GETTING_METADATA_SCRIPT = '''
+        var metas = document.getElementsByTagName("meta");
+        var has_og_url_property = false;
+        for (var i = 0; i < metas.length; i++) {
+            var meta = metas[i];
+            if (meta.getAttribute("property") == "og:url") {
+                has_og_url_property = true;
+            }
+        }
+        if (!has_og_url_property) {
+            console.log("no og url prop");
+            var new_meta = document.createElement("meta");
+            new_meta.setAttribute("property", "og:url");
+            new_meta.setAttribute("content", window.location.href);
+            document.head.appendChild(new_meta);
+        }'''
+    CONVERTING_CANVAS_TO_IMAGES_SCRIPT = '''
+        div = document.createElement("DIV");
+        div.className = "images_from_canvas";
+        var canvas_list = document.getElementsByTagName("canvas");
+        for (var i = 0; i < canvas_list.length; i++) {
+            img_data = canvas_list[i].toDataURL("image/png");
+            img = document.createElement("IMG");
+            img.src = img_data;
+            div.appendChild(img);
+        }
+        document.body.appendChild(div);'''
+    SIMULATING_SCROLLING_SCRIPT = '''
+        function sleep(ms) {
+           return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        await sleep(1000);
+        var bottom = document.body.scrollHeight;
+        for (var i = 0; i < bottom; i += 349) {
+            window.scrollTo(0, i);
+            await sleep(200);
+            bottom = document.body.scrollHeight;
+        }
+        for (var i = bottom; i >= 0; i -= 683) {
+            window.scrollTo(0, i);
+            await sleep(400);
+        }'''
+    SETTING_PLUGINS_SCRIPT = "Object.defineProperty(navigator, 'plugins', {get: function() {return[1, 2, 3, 4, 5];},});"
+    SETTING_LANGUAGES_SCRIPT = "Object.defineProperty(navigator, 'languages', {get: function() {return ['ko-KR', 'ko']}})"
+    SETTING_WEBGL_SCRIPT = "const getParameter = WebGLRenderingContext.getParameter;WebGLRenderingContext.prototype.getParameter = function(parameter) { if (parameter === 37445) { return 'NVIDIA Corporation' } if (parameter === 37446) { return 'NVIDIA GeForce GTX 980 Ti OpenGL Engine';}return getParameter(parameter); };"
+
     def __init__(self, headers, copy_images_from_canvas, simulate_scrolling, disable_headless) -> None:
         LOGGER.debug("# HeadlessBrowser(headers=%r, copy_images_from_canvas=%r, simulate_scrolling=%r, disable_headless=%r)", headers, copy_images_from_canvas, simulate_scrolling, disable_headless)
         self.headers = headers
         self.copy_images_from_canvas = copy_images_from_canvas
         self.simulate_scrolling = simulate_scrolling
         self.disable_headless = disable_headless
+
+    def write_cookies_to_file(self, driver, cookie_file):
+        cookies = driver.get_cookies()
+        with open(cookie_file, "w") as f:
+            json.dump(cookies, f)
+
+    def read_cookies_from_file(self, driver, cookie_file):
+        if os.path.isfile(cookie_file):
+            with open(cookie_file, "r") as f:
+                cookies = json.load(f)
+                for cookie in cookies:
+                    if "expiry" in cookie:
+                        del cookie["expiry"]
+                    driver.add_cookie(cookie)
 
     def make_request(self, url, download_file=None) -> str:
         LOGGER.debug("# make_request(url=%r, download_file=%r)", url, download_file)
@@ -63,90 +123,40 @@ class HeadlessBrowser:
             except selenium.common.exceptions.TimeoutException:
                 pass
 
-            cookies = driver.get_cookies()
-            with open(COOKIE_FILE, "w") as f:
-                json.dump(cookies, f)
+            self.write_cookies_to_file(driver, COOKIE_FILE)
 
         driver.get(url)
 
-        if os.path.isfile(COOKIE_FILE):
-            with open(COOKIE_FILE, "r") as f:
-                cookies = json.load(f)
-                for cookie in cookies:
-                    if "expiry" in cookie:
-                        del cookie["expiry"]
-                    driver.add_cookie(cookie)
+        try:
+            self.read_cookies_from_file(driver, COOKIE_FILE)
+        except selenium.common.exceptions.InvalidCookieDomainException:
+            os.remove(COOKIE_FILE)
+            self.read_cookies_from_file(driver, COOKIE_FILE)
 
+        # bypass cloudflare test
         try:
             WebDriverWait(driver, 60).until(expected_conditions.invisibility_of_element((By.ID, "cf-content")))
         except selenium.common.exceptions.TimeoutException:
             pass
 
-        driver.execute_script("Object.defineProperty(navigator, 'plugins', {get: function() {return[1, 2, 3, 4, 5];},});")
-        driver.execute_script("Object.defineProperty(navigator, 'languages', {get: function() {return ['ko-KR', 'ko']}})")
-        #driver.execute_script("const getParameter = WebGLRenderingContext.getParameter;WebGLRenderingContext.prototype.getParameter = function(parameter) {if (parameter === 37445) {return 'NVIDIA Corporation'} if (parameter === 37446) {return 'NVIDIA GeForce GTX 980 Ti OpenGL Engine';}return getParameter(parameter);};")
+        # pretend to be a real browser
+        driver.execute_script(HeadlessBrowser.SETTING_PLUGINS_SCRIPT)
+        driver.execute_script(HeadlessBrowser.SETTING_LANGUAGES_SCRIPT)
+        #driver.execute_script(HeadlessBrowser.SETTING_WEBGL_SCRIPT)
+        
+        self.write_cookies_to_file(driver, COOKIE_FILE)
 
-        cookies = driver.get_cookies()
-        with open(COOKIE_FILE, "w") as f:
-            json.dump(cookies, f)
-
-        driver.execute_script('''
-            var metas = document.getElementsByTagName("meta");
-            var has_og_url_property = false;
-            for (var i = 0; i < metas.length; i++) {
-                var meta = metas[i];
-                if (meta.getAttribute("property") == "og:url") {
-                    has_og_url_property = true;
-                }
-            }
-            if (!has_og_url_property) {
-                console.log("no og url prop");
-                var new_meta = document.createElement("meta");
-                new_meta.setAttribute("property", "og:url");
-                new_meta.setAttribute("content", window.location.href);
-                document.head.appendChild(new_meta);
-            }
-        ''')
+        driver.execute_script(HeadlessBrowser.GETTING_METADATA_SCRIPT)
 
         if self.copy_images_from_canvas:
-            driver.execute_script('''
-                div = document.createElement("DIV");
-                div.className = "images_from_canvas";
-                var canvas_list = document.getElementsByTagName("canvas");
-                for (var i = 0; i < canvas_list.length; i++) {
-                    img_data = canvas_list[i].toDataURL("image/png");
-                    img = document.createElement("IMG");
-                    img.src = img_data;
-                    div.appendChild(img);
-                }
-                document.body.appendChild(div);
-            ''')
+            driver.execute_script(HeadlessBrowser.CONVERTING_CANVAS_TO_IMAGES_SCRIPT)
 
         if self.simulate_scrolling:
-            driver.execute_script('''
-                function sleep(ms) {
-                   return new Promise(resolve => setTimeout(resolve, ms));
-                }
-
-                await sleep(1000);
-
-                var bottom = document.body.scrollHeight;
-                for (var i = 0; i < bottom; i += 349) {
-                    window.scrollTo(0, i);
-                    await sleep(200);
-                    bottom = document.body.scrollHeight;
-                }
-
-                for (var i = bottom; i >= 0; i -= 683) {
-                    window.scrollTo(0, i);
-                    await sleep(400);
-                }
-            ''')
+            driver.execute_script(HeadlessBrowser.SIMULATING_SCROLLING_SCRIPT)
 
         try:
             content = driver.find_element_by_tag_name("html")
             response = content.get_attribute("innerHTML")
-            #response = driver.page_source
         except selenium.common.exceptions.WebDriverException as e:
             LOGGER.error(e)
             response = ""
