@@ -42,7 +42,7 @@ class CrawlerTest(unittest.TestCase):
         crawler = Crawler()
         self.assertTrue(crawler)
         result, _ = crawler.run("https://m.naver.com")
-        m = re.search(r'<!DOCTYPE html>', result)
+        m = re.search(r'<!DOCTYPE html>', result, re.IGNORECASE)
         self.assertTrue(m)
         m = re.search(r'<meta property="og:url" content="http://m.naver.com/">', result)
         self.assertTrue(m)
