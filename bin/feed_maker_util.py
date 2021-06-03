@@ -577,7 +577,7 @@ class URL:
         scheme_separator = "://"
         host_index = url.find(scheme_separator) + len(scheme_separator)
         if host_index >= 0:
-            first_slash_index = url[host_index:].find('/', host_index)
+            first_slash_index = url[host_index:].find('/')
             if first_slash_index >= 0:
                 return url[(host_index + first_slash_index):]
         return ""
