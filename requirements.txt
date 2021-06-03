@@ -1,11 +1,11 @@
-astroid==2.5.2
+astroid==2.5.6
 attrs==19.3.0
 beautifulsoup4==4.8.1
 bs4==0.0.1
 certifi==2019.9.11
 chardet==3.0.4
 entrypoints==0.3
-flake8==3.7.8
+flake8==3.9.2
 flake8-mypy==17.8.0
 html-parser==0.2
 html5lib==1.0.1
@@ -16,7 +16,7 @@ libcst==0.3.4
 lxml==4.6.3
 mail1==4.1.0
 mccabe==0.6.1
-mypy==0.790
+mypy==0.812
 mypy-extensions==0.4.3
 mysqlclient==1.4.6
 ordered-set==3.1.1
@@ -25,9 +25,9 @@ pdftotext==2.1.5
 Pillow==8.1.1
 ply==3.11
 psutil==5.6.6
-pycodestyle==2.5.0
-pyflakes==2.1.1
-pylint==2.7.4
+pycodestyle==2.7.0
+pyflakes==2.3.1
+pylint==2.8.3
 pymongo==3.10.1
 pyre-check==0.0.46
 pyre-extensions==0.0.17
