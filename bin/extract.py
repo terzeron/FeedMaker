@@ -116,18 +116,17 @@ def traverse_element(element, url, encoding) -> bool:
         return ret
     if not hasattr(element, 'name') or not element.name:
         # text or self-close element (<br/>)
-        p = re.compile(r"^\s*$")
-        if not p.match(str(element)):
-            # non-blank text
+        if not re.compile(r'^(\s*|html)$').match(str(element)):
+            # neither blank text nor <!DOCTYPE html>
             try:
-                sys.stdout.write("%s" % html.escape(str(element)))
+                print("%s" % html.escape(str(element)), end='')
             except UnicodeEncodeError:
                 # try to print word-by-word
                 for word in str(element).split(' '):
                     try:
-                        sys.stdout.write(" %s" % html.escape(word))
+                        print(" %s" % html.escape(word), end='')
                     except UnicodeEncodeError:
-                        sys.stdout.write(" ****")
+                        print(" ****", end='')
         ret = True
         return ret
 
@@ -153,6 +152,7 @@ def traverse_element(element, url, encoding) -> bool:
         if m:
             # skip sub-elements
             return ret
+
     if element.name == "p":
         print("<p%s>" % attribute_str)
         for e in element.contents:
@@ -281,13 +281,10 @@ def traverse_element(element, url, encoding) -> bool:
             elif element.name in ["o:p", "st1:time"]:
                 # skip unknown element
                 return ret
-    elif element.name in ["script"]:
-        # skip sub-elements
-        return ret
     elif element.name in ["v:shapetype", "qksdmssnfl", "qksdmssnfl<span"]:
         # skip malformed element
         return ret
-    elif element.name in ["style", "st1:personname", "script"]:
+    elif element.name in ["script", "style", "st1:personname"]:
         # skip sub-elements
         return ret
     elif element.name in ["xmp", "form"]:
@@ -309,7 +306,7 @@ def traverse_element(element, url, encoding) -> bool:
     elif isinstance(element, Comment):
         return ret
     else:
-        sys.stdout.write(element)
+        print(element, end='')
         ret = True
         return ret
 
