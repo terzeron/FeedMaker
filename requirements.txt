@@ -22,7 +22,7 @@ mysqlclient==1.4.6
 ordered-set==3.1.1
 pdf2image==1.14.0
 pdftotext==2.1.5
-Pillow==8.1.1
+Pillow==8.2.0
 ply==3.11
 psutil==5.6.6
 pycodestyle==2.7.0
