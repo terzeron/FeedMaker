@@ -125,7 +125,7 @@ def determine_crawler_options(options: Dict[str, Any]) -> str:
         for header in options["header_list"]:
             option_str += " --header '%s'" % header
     if "timeout" in options:
-        option_str += " --timeout=%s" % (options["timeout"] if options["timeout"] else "10")
+        option_str += " --timeout=%s" % (options["timeout"] if options["timeout"] else "60")
 
     #LOGGER.debug("title=%s, review_point=%d, review_point_threshold=%f", title, review_point, review_point_threshold)
     #if review_point and review_point_threshold and review_point > review_point_threshold:

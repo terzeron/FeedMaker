@@ -167,7 +167,7 @@ class HeadlessBrowser:
 
 
 class RequestsClient():
-    def __init__(self, render_js=False, method=Method.GET, headers={}, timeout=10, encoding=None, verify_ssl=True) -> None:
+    def __init__(self, render_js=False, method=Method.GET, headers={}, timeout=60, encoding=None, verify_ssl=True) -> None:
         LOGGER.debug("# RequestsClient(render_js=%r, method=%r, headers=%r, timeout=%d, encoding=%r, verify_ssl=%r)", render_js, method, headers, timeout, encoding, verify_ssl)
         self.method = method
         self.timeout = timeout
@@ -227,7 +227,7 @@ class RequestsClient():
 
 
 class Crawler():
-    def __init__(self, render_js=False, method=Method.GET, headers={}, timeout=10, num_retries=1, encoding=None, verify_ssl=True, copy_images_from_canvas=False, simulate_scrolling=False, disable_headless=False) -> None:
+    def __init__(self, render_js=False, method=Method.GET, headers={}, timeout=60, num_retries=1, encoding=None, verify_ssl=True, copy_images_from_canvas=False, simulate_scrolling=False, disable_headless=False) -> None:
         LOGGER.debug("# Crawler(render_js=%r, method=%r, headers=%r, timeout=%d, num_retries=%d, encoding=%r, verify_ssl=%r, copy_images_from_canvas=%r, simulate_scrolling=%r, disable_headless=%r)", render_js, method, headers, timeout, num_retries, encoding, verify_ssl, copy_images_from_canvas, simulate_scrolling, disable_headless)
         self.render_js = render_js
         self.num_retries = num_retries
@@ -285,7 +285,7 @@ def main() -> int:
     LOGGER.debug("# main()")
     method = Method.GET
     headers = {"Accept-Encoding": "gzip, deflate", "User-Agent": "Mozillla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36", "Accept": "*/*", "Connection": "Keep-Alive"}
-    timeout = 10
+    timeout = 60
     num_retries = 1
     render_js = False
     download_file: Optional[str] = None
