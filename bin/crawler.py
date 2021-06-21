@@ -205,11 +205,11 @@ class RequestsClient():
             response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, data=data)
         elif self.method == Method.HEAD:
             response = requests.head(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
-            return str(response.status_code), response.headers
+            return str(response.status_code), response.headers, response.status_code
 
         if response.status_code != 200:
             LOGGER.debug("response.status_code=%d", response.status_code)
-            return "", None
+            return "", None, response.status_code
 
         if response.cookies:
             self.write_cookies_to_file(response.cookies, COOKIE_FILE_FOR_REQUESTS_CLIENT)
@@ -221,14 +221,14 @@ class RequestsClient():
                     f.write(chunk)
             download_path = os.path.expanduser(download_file)
             os.utime(download_path, (time.time(), time.time()))
-            return "200", None
+            return "200", None, response.status_code
 
         if self.encoding:
             response.encoding = self.encoding
         else:
             response.encoding = 'utf-8'
 
-        return response.text, response.headers
+        return response.text, response.headers, response.status_code
 
 
 class Crawler():
@@ -258,10 +258,18 @@ class Crawler():
             if self.render_js:
                 response = self.headless_browser.make_request(url, download_file=download_file)
             else:
-                response, headers = self.requests_client.make_request(url, download_file=download_file, data=data)
+                response, headers, status_code = self.requests_client.make_request(url, download_file=download_file, data=data)
 
             if response:
                 return response, headers if headers else None
+            if status_code in [401, 403, 404, 405, 410]:
+                # no retry in case of
+                #   401 Unauthorized
+                #   403 Forbidden
+                #   404 Not Found
+                #   405 Method Not Allowed
+                #   410 Gone
+                break
             LOGGER.debug("wait for seconds and retry (#%d)", i)
             time.sleep(5)
 
