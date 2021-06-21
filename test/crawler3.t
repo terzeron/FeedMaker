@@ -13,27 +13,17 @@ class CrawlerTest(unittest.TestCase):
             if os.path.isfile(cookie_file):
                 os.remove(cookie_file)
 
-    def test_runHttp(self):
-        url = "http://info.cern.ch/"
-        crawler = Crawler()
+    def test_runHeadlessBrowser(self):
+        url = "https://kr.vuejs.org/v2/guide/index.html"
+        crawler = Crawler(render_js=False)
         result, _ = crawler.run(url)
-        m = re.search(r'<title>http://info.cern.ch</title>', result)
-        self.assertTrue(m)
+        m = re.search(r'<div id="app-6" class="demo"><p>안녕하세요 Vue!</p> <input></div>', result)
+        self.assertFalse(m)
         del crawler
 
-    def test_runHttps(self):
-        url = "https://theuselessweb.site/unicodesnowmanforyou/"
-        crawler = Crawler()
+        crawler = Crawler(render_js=True)
         result, _ = crawler.run(url)
-        m = re.search(r'&#9731;', result)
-        self.assertTrue(m)
-        del crawler
-
-    def test_imagesInCanvas(self):
-        url = "https://terzeron.com/images_in_canvas_test.html"
-        crawler = Crawler(render_js=True, copy_images_from_canvas=True)
-        result, _ = crawler.run(url)
-        m = re.search(r'<div class="images_from_canvas"><img src="data:image/png;base64,iVBORw0KGgoAAAAN.*1WQAAAABJRU5ErkJggg=="></div>', result)
+        m = re.search(r'<div id="app-6" class="demo"><p>안녕하세요 Vue!</p> <input></div>', result)
         self.assertTrue(m)
         del crawler
 
