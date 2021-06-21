@@ -6,14 +6,14 @@ import re
 import unittest
 from unittest.mock import patch
 from io import StringIO
-#from feed_maker_util import kill_process_group
-from crawler import Method, Crawler, print_usage, COOKIE_FILE, DEFAULT_USER_AGENT
+from crawler import Method, Crawler, print_usage, COOKIE_FILE_FOR_REQUESTS_CLIENT, COOKIE_FILE_FOR_HEADLESS_BROWSER, DEFAULT_USER_AGENT
 
 
 class CrawlerTest(unittest.TestCase):
     def setUp(self):
-        if os.path.isfile(COOKIE_FILE):
-            os.remove(COOKIE_FILE)
+        for cookie_file in [COOKIE_FILE_FOR_REQUESTS_CLIENT, COOKIE_FILE_FOR_HEADLESS_BROWSER]:
+            if os.path.isfile(cookie_file):
+                os.remove(cookie_file)
 
     def test_printUsage(self):
         with patch('sys.stdout', new=StringIO()) as stdout:
@@ -61,7 +61,7 @@ class CrawlerTest(unittest.TestCase):
         self.assertEqual(1, crawler.num_retries)
         self.assertEqual(False, crawler.render_js)
         self.assertEqual(Method.GET, client.method)
-        self.assertEqual(10, client.timeout)
+        self.assertEqual(60, client.timeout)
         #self.assertEqual({}, client.headers)
         self.assertEqual(None, client.encoding)
         self.assertEqual(True, client.verify_ssl)
@@ -131,8 +131,9 @@ class CrawlerTest(unittest.TestCase):
         del crawler
 
     def tearDown(self):
-        if os.path.isfile(COOKIE_FILE):
-            os.remove(COOKIE_FILE)
+        for cookie_file in [COOKIE_FILE_FOR_REQUESTS_CLIENT, COOKIE_FILE_FOR_HEADLESS_BROWSER]:
+            if os.path.isfile(cookie_file):
+                os.remove(cookie_file)
 
 
 if __name__ == "__main__":
