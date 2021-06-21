@@ -228,6 +228,9 @@ class RequestsClient():
         else:
             response.encoding = 'utf-8'
 
+        if not re.search(r'<meta\s+property="og:url"\s+content="[^"]+"\s*/?>', response.text):
+            result = re.sub(r'</head>', '<meta property="og:url" content="%s"/>\n</head>' % response.request.url, response.text)
+            return result, response.headers, response.status_code
         return response.text, response.headers, response.status_code
 
 
