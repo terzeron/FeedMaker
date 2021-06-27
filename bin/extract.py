@@ -163,36 +163,14 @@ def traverse_element(element, url, encoding) -> bool:
         return True
     elif element.name == "img":
         src = ""
-        if element.has_attr("data-lazy-src"):
-            data_lazy_src = element["data-lazy-src"]
-            if data_lazy_src:
-                if not re.search(r'((https?:)?//|data:image/png;)', data_lazy_src):
-                    data_lazy_src = URL.concatenate_url(url, data_lazy_src)
-                src = data_lazy_src
-        elif element.has_attr("lazy-src"):
-            lazy_src = element["lazy-src"]
-            if lazy_src:
-                if not re.search(r'((https?:)?//|data:image/png;)', lazy_src):
-                    lazy_src = URL.concatenate_url(url, lazy_src)
-                src = lazy_src
-        elif element.has_attr("lazysrc"):
-            lazy_src = element["lazysrc"]
-            if lazy_src:
-                if not re.search(r'((https?:)?//|data:image/png;)', lazy_src):
-                    lazy_src = URL.concatenate_url(url, lazy_src)
-                src = lazy_src
-        elif element.has_attr("data-src"):
-            data_src = element["data-src"]
-            if data_src:
-                if not re.search(r'((https?:)?//|data:image/png;)', data_src):
-                    data_src = URL.concatenate_url(url, data_src)
-                src = data_src
-        elif element.has_attr("data-original"):
-            data_src = element["data-original"]
-            if data_src:
-                if not re.search(r'((https?:)?//|data:image/png;)', data_src):
-                    data_src = URL.concatenate_url(url, data_src)
-                src = data_src
+        extra_attributes = ["data-lazy-src", "lazy-src", "lazysrc", "data-src", "data-original", "o_src"]
+        for extra_attribute in extra_attributes:
+            if element.has_attr(extra_attribute):
+                extra_src = element[extra_attribute]
+                if extra_src:
+                    if not re.search(r'((https?:)?//|data:image/png;)', extra_src):
+                        extra_src = URL.concatenate_url(url, extra_src)
+                    src = extra_src
 
         # src 속성이 data-lazy-src보다 나중에 결정되어야 함
         if not src:
