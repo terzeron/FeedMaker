@@ -124,10 +124,10 @@ def remove_image_files(img_file_list: List[str]) -> bool:
     return True
 
 
-def split_image_file(img_file: str, bandwidth: int, diff_threshold: float, size_threshold: float, num_units: int, bgcolor_option: str, orientation_option: str) -> bool:
-    LOGGER.debug("# split_image_file(img_file=%s, bandwidth=%d, diff_threshold=%f, size_threshold=%f, num_units=%d, bgcolor_option=%s, orientation_option=%s)", img_file, num_units, diff_threshold, size_threshold, num_units, bgcolor_option, orientation_option)
+def split_image_file(img_file: str, bandwidth: int, diff_threshold: float, size_threshold: float, acceptable_diff_of_color_value: int, num_units: int, bgcolor_option:str, orientation_option: str, wider_scan_option: str) -> bool:
+    LOGGER.debug("# split_image_file(img_file=%s, bandwidth=%d, diff_threshold=%f, size_threshold=%f, acceptable_diff_of_color_value=%d, num_units=%d, bgcolor_option=%s, orientation_option=%s, wider_scan_option=%s)", img_file, num_units, diff_threshold, size_threshold, acceptable_diff_of_color_value, num_units, bgcolor_option, orientation_option, wider_scan_option)
     # split the image
-    cmd = "split.py -b %d -t %f -s %d -n %d %s %s %s" % (bandwidth, diff_threshold, size_threshold, num_units, orientation_option, bgcolor_option, img_file)
+    cmd = "split.py -b %d -t %f -s %d -a %d -n %d %s %s %s %s" % (bandwidth, diff_threshold, size_threshold, acceptable_diff_of_color_value, num_units, bgcolor_option, orientation_option, wider_scan_option, img_file)
     LOGGER.debug(cmd)
     _, error = exec_cmd(cmd)
     if error:
@@ -199,16 +199,18 @@ def main() -> int:
     num_units = 25
     diff_threshold = 0.05
     size_threshold = 0
+    acceptable_diff_of_color_value = 1
     bandwidth = 10
 
     # options
-    bgcolor_option = ""
+    bgcolor_option: Optional[str] = None
     do_merge = False
     do_innercrop = False
-    orientation_option = ""
+    orientation_option: Optional[str] = None
+    wider_scan_option: Optional[str] = None
     do_flip_right_to_left = False
     do_only_merge = False
-    optlist, args = getopt.getopt(sys.argv[1:], "c:milvb:t:n:s:h", ["only-merge="])
+    optlist, args = getopt.getopt(sys.argv[1:], "c:milvwb:t:n:s:a:h", ["only-merge="])
     for o, a in optlist:
         if o == "-c":
             bgcolor_option = "-c " + a
@@ -220,12 +222,16 @@ def main() -> int:
             do_flip_right_to_left = True
         elif o == "-v":
             orientation_option = "-v"
+        elif o == "-w":
+            wider_scan_option = "-w"
         elif o == "-b":
             bandwidth = int(a)
         elif o == "-t":
             diff_threshold = float(a)
         elif o == "-s":
             size_threshold = int(a)
+        elif o == "-a":
+            acceptable_diff_of_color_value = int(a)
         elif o == "-n":
             num_units = int(a)
         elif o == "-h":
@@ -278,7 +284,7 @@ def main() -> int:
                 print_cached_image_file(path_prefix, img_url_prefix, page_url, unit_num)
             else:
                 #remove_image_files(img_file_partition)
-                if split_image_file(merged_img_file, bandwidth, diff_threshold, size_threshold, num_units, bgcolor_option, orientation_option):
+                if split_image_file(merged_img_file, bandwidth, diff_threshold, size_threshold, acceptable_diff_of_color_value, num_units, bgcolor_option, orientation_option, wider_scan_option):
                     #remove_image_files([merged_img_file])
                     print_image_files(num_units, path_prefix, img_url_prefix, page_url, None, str(unit_num), do_flip_right_to_left)
 
@@ -288,7 +294,7 @@ def main() -> int:
         for img_file, img_url in zip(img_file_list, img_url_list):
             LOGGER.debug("img_file=%s", img_file)
             LOGGER.debug("img_url=%s", img_url if not img_url.startswith("data:image") else img_url[:30])
-            if split_image_file(img_file, bandwidth, diff_threshold, size_threshold, num_units, bgcolor_option, orientation_option):
+            if split_image_file(img_file, bandwidth, diff_threshold, size_threshold, acceptable_diff_of_color_value, num_units, bgcolor_option, orientation_option, wider_scan_option):
                 if do_innercrop:
                     crop_image_files(num_units, path_prefix, img_url)
                 print_image_files(num_units, path_prefix, img_url_prefix, img_url, img_file, None, do_flip_right_to_left)
