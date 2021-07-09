@@ -11,6 +11,7 @@ import json
 import logging
 import logging.config
 from typing import Dict, List, Any, Tuple, Optional
+from requests.structures import CaseInsensitiveDict
 import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -194,7 +195,7 @@ class RequestsClient():
             self.headers["Cookie"] = cookie_str
             LOGGER.debug("Cookie: %s", self.headers["Cookie"])
 
-    def make_request(self, url, data=None, download_file=None) -> Tuple[str, Any]:
+    def make_request(self, url, data=None, download_file=None) -> Tuple[str, Optional[CaseInsensitiveDict[str]], int]:
         LOGGER.debug("# make_request('%s')", url)
 
         self.read_cookies_from_file(COOKIE_FILE_FOR_REQUESTS_CLIENT)
@@ -235,6 +236,10 @@ class RequestsClient():
 
 
 class Crawler():
+    class ReadTimeoutException(Exception):
+        def __init__(self):
+            super().__init__("Read timed out")
+
     def __init__(self, render_js=False, method=Method.GET, headers={}, timeout=60, num_retries=1, encoding=None, verify_ssl=True, copy_images_from_canvas=False, simulate_scrolling=False, disable_headless=False) -> None:
         LOGGER.debug("# Crawler(render_js=%r, method=%r, headers=%r, timeout=%d, num_retries=%d, encoding=%r, verify_ssl=%r, copy_images_from_canvas=%r, simulate_scrolling=%r, disable_headless=%r)", render_js, method, headers, timeout, num_retries, encoding, verify_ssl, copy_images_from_canvas, simulate_scrolling, disable_headless)
         self.render_js = render_js
@@ -261,7 +266,10 @@ class Crawler():
             if self.render_js:
                 response = self.headless_browser.make_request(url, download_file=download_file)
             else:
-                response, headers, status_code = self.requests_client.make_request(url, download_file=download_file, data=data)
+                try:
+                    response, headers, status_code = self.requests_client.make_request(url, download_file=download_file, data=data)
+                except requests.exceptions.ReadTimeout as e:
+                    raise Crawler.ReadTimeoutException from e
 
             if response:
                 return response, headers if headers else None
