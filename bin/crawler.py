@@ -86,27 +86,23 @@ class HeadlessBrowser:
         self.copy_images_from_canvas: bool = copy_images_from_canvas
         self.simulate_scrolling: bool = simulate_scrolling
         self.disable_headless: bool = disable_headless
-        self.driver: webdriver = None
 
     def __del__(self) -> None:
         self.headers = {}
-        self.driver.close()
-        self.driver.quit()
-        self.driver = None
 
-    def write_cookies_to_file(self) -> None:
-        cookies = self.driver.get_cookies()
+    def write_cookies_to_file(self, driver) -> None:
+        cookies = driver.get_cookies()
         with open(HeadlessBrowser.COOKIE_FILE, "w") as f:
             json.dump(cookies, f)
 
-    def read_cookies_from_file(self) -> None:
+    def read_cookies_from_file(self, driver) -> None:
         if os.path.isfile(HeadlessBrowser.COOKIE_FILE):
             with open(HeadlessBrowser.COOKIE_FILE, "r") as f:
                 cookies = json.load(f)
                 for cookie in cookies:
                     if "expiry" in cookie:
                         del cookie["expiry"]
-                    self.driver.add_cookie(cookie)
+                    driver.add_cookie(cookie)
 
     def make_request(self, url, download_file=None) -> str:
         LOGGER.debug("# make_request(url=%r, download_file=%r)", url, download_file)
@@ -122,52 +118,53 @@ class HeadlessBrowser:
 
         chrome_driver_name = "chromedriver"
         driver = webdriver.Chrome(options=options, executable_path=chrome_driver_name)
-        self.driver = driver
-        self.driver.set_script_timeout(240)
+        driver.set_script_timeout(240)
 
         if "Referer" in self.headers:
-            self.driver.get(self.headers["Referer"])
+            driver.get(self.headers["Referer"])
             try:
-                WebDriverWait(self.driver, 60).until(expected_conditions.invisibility_of_element((By.ID, "cf-content")))
+                WebDriverWait(driver, 60).until(expected_conditions.invisibility_of_element((By.ID, "cf-content")))
             except selenium.common.exceptions.TimeoutException:
                 pass
-            self.write_cookies_to_file()
+            self.write_cookies_to_file(driver)
 
-        self.driver.get(url)
+        driver.get(url)
         try:
-            self.read_cookies_from_file()
+            self.read_cookies_from_file(driver)
         except selenium.common.exceptions.InvalidCookieDomainException:
             os.remove(HeadlessBrowser.COOKIE_FILE)
-            self.read_cookies_from_file()
+            self.read_cookies_from_file(driver)
 
         # bypass cloudflare test
         try:
-            WebDriverWait(self.driver, 60).until(expected_conditions.invisibility_of_element((By.ID, "cf-content")))
+            WebDriverWait(driver, 60).until(expected_conditions.invisibility_of_element((By.ID, "cf-content")))
         except selenium.common.exceptions.TimeoutException:
             pass
 
         # pretend to be a real browser
-        self.driver.execute_script(HeadlessBrowser.SETTING_PLUGINS_SCRIPT)
-        self.driver.execute_script(HeadlessBrowser.SETTING_LANGUAGES_SCRIPT)
-        #self.driver.execute_script(HeadlessBrowser.SETTING_WEBGL_SCRIPT)
+        driver.execute_script(HeadlessBrowser.SETTING_PLUGINS_SCRIPT)
+        driver.execute_script(HeadlessBrowser.SETTING_LANGUAGES_SCRIPT)
+        #driver.execute_script(HeadlessBrowser.SETTING_WEBGL_SCRIPT)
 
-        self.write_cookies_to_file()
+        self.write_cookies_to_file(driver)
 
-        self.driver.execute_script(HeadlessBrowser.GETTING_METADATA_SCRIPT)
+        driver.execute_script(HeadlessBrowser.GETTING_METADATA_SCRIPT)
 
         if self.copy_images_from_canvas:
-            self.driver.execute_script(HeadlessBrowser.CONVERTING_CANVAS_TO_IMAGES_SCRIPT)
+            driver.execute_script(HeadlessBrowser.CONVERTING_CANVAS_TO_IMAGES_SCRIPT)
 
         if self.simulate_scrolling:
-            self.driver.execute_script(HeadlessBrowser.SIMULATING_SCROLLING_SCRIPT)
+            driver.execute_script(HeadlessBrowser.SIMULATING_SCROLLING_SCRIPT)
 
         try:
-            content = self.driver.find_element_by_tag_name("html")
+            content = driver.find_element_by_tag_name("html")
             response = content.get_attribute("innerHTML")
         except selenium.common.exceptions.WebDriverException as e:
             LOGGER.error(e)
             response = ""
 
+        driver.close()
+        driver.quit()
         return response
 
 

@@ -78,7 +78,7 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(configs["sort_field_pattern"], None)
         self.assertEqual(configs["unit_size_per_day"], None)
         self.assertEqual(configs["list_url_list"], ["http://m.navercast.naver.com/homeMain.nhn?page=1", "http://m.navercast.naver.com/homeMain.nhn?page=2"])
-        self.assertEqual(configs["post_process_script_list"], [])
+        self.assertEqual(configs["post_process_script_list"], ['shuf'])
     
     def test_get_extraction_configs(self):
         configs = self.config.get_extraction_configs()
