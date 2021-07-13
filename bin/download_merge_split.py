@@ -203,11 +203,11 @@ def main() -> int:
     bandwidth = 10
 
     # options
-    bgcolor_option: Optional[str] = None
+    bgcolor_option: str = ""
     do_merge = False
     do_innercrop = False
-    orientation_option: Optional[str] = None
-    wider_scan_option: Optional[str] = None
+    orientation_option: str = ""
+    wider_scan_option: str = ""
     do_flip_right_to_left = False
     do_only_merge = False
     optlist, args = getopt.getopt(sys.argv[1:], "c:milvwb:t:n:s:a:h", ["only-merge="])
