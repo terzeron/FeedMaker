@@ -23,8 +23,6 @@ import selenium
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
 LOGGER = logging.getLogger()
-COOKIE_FILE_FOR_HEADLESS_BROWSER = "cookies.headlessbrowser.json"
-COOKIE_FILE_FOR_REQUESTS_CLIENT = "cookies.requestsclient.json"
 DEFAULT_USER_AGENT = "Mozillla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36"
 
 
@@ -35,6 +33,7 @@ class Method(Enum):
 
 
 class HeadlessBrowser:
+    COOKIE_FILE = "cookies.headlessbrowser.json"
     GETTING_METADATA_SCRIPT = '''
         var metas = document.getElementsByTagName("meta");
         var has_og_url_property = false;
@@ -83,19 +82,22 @@ class HeadlessBrowser:
 
     def __init__(self, headers, copy_images_from_canvas, simulate_scrolling, disable_headless) -> None:
         LOGGER.debug("# HeadlessBrowser(headers=%r, copy_images_from_canvas=%r, simulate_scrolling=%r, disable_headless=%r)", headers, copy_images_from_canvas, simulate_scrolling, disable_headless)
-        self.headers = headers
-        self.copy_images_from_canvas = copy_images_from_canvas
-        self.simulate_scrolling = simulate_scrolling
-        self.disable_headless = disable_headless
+        self.headers: Dict[str, str] = headers
+        self.copy_images_from_canvas: bool = copy_images_from_canvas
+        self.simulate_scrolling: bool = simulate_scrolling
+        self.disable_headless: bool = disable_headless
 
-    def write_cookies_to_file(self, driver, cookie_file):
+    def __del__(self) -> None:
+        self.headers = {}
+
+    def write_cookies_to_file(self, driver) -> None:
         cookies = driver.get_cookies()
-        with open(cookie_file, "w") as f:
+        with open(HeadlessBrowser.COOKIE_FILE, "w") as f:
             json.dump(cookies, f)
 
-    def read_cookies_from_file(self, driver, cookie_file):
-        if os.path.isfile(cookie_file):
-            with open(cookie_file, "r") as f:
+    def read_cookies_from_file(self, driver) -> None:
+        if os.path.isfile(HeadlessBrowser.COOKIE_FILE):
+            with open(HeadlessBrowser.COOKIE_FILE, "r") as f:
                 cookies = json.load(f)
                 for cookie in cookies:
                     if "expiry" in cookie:
@@ -124,14 +126,14 @@ class HeadlessBrowser:
                 WebDriverWait(driver, 60).until(expected_conditions.invisibility_of_element((By.ID, "cf-content")))
             except selenium.common.exceptions.TimeoutException:
                 pass
-            self.write_cookies_to_file(driver, COOKIE_FILE_FOR_HEADLESS_BROWSER)
+            self.write_cookies_to_file(driver)
 
         driver.get(url)
         try:
-            self.read_cookies_from_file(driver, COOKIE_FILE_FOR_HEADLESS_BROWSER)
+            self.read_cookies_from_file(driver)
         except selenium.common.exceptions.InvalidCookieDomainException:
-            os.remove(COOKIE_FILE_FOR_HEADLESS_BROWSER)
-            self.read_cookies_from_file(driver, COOKIE_FILE_FOR_HEADLESS_BROWSER)
+            os.remove(HeadlessBrowser.COOKIE_FILE)
+            self.read_cookies_from_file(driver)
 
         # bypass cloudflare test
         try:
@@ -143,8 +145,8 @@ class HeadlessBrowser:
         driver.execute_script(HeadlessBrowser.SETTING_PLUGINS_SCRIPT)
         driver.execute_script(HeadlessBrowser.SETTING_LANGUAGES_SCRIPT)
         #driver.execute_script(HeadlessBrowser.SETTING_WEBGL_SCRIPT)
-        
-        self.write_cookies_to_file(driver, COOKIE_FILE_FOR_HEADLESS_BROWSER)
+
+        self.write_cookies_to_file(driver)
 
         driver.execute_script(HeadlessBrowser.GETTING_METADATA_SCRIPT)
 
@@ -167,26 +169,31 @@ class HeadlessBrowser:
 
 
 class RequestsClient():
+    COOKIE_FILE = "cookies.requestsclient.json"
+
     def __init__(self, render_js=False, method=Method.GET, headers={}, timeout=60, encoding=None, verify_ssl=True) -> None:
         LOGGER.debug("# RequestsClient(render_js=%r, method=%r, headers=%r, timeout=%d, encoding=%r, verify_ssl=%r)", render_js, method, headers, timeout, encoding, verify_ssl)
-        self.method = method
-        self.timeout = timeout
-        self.headers = headers
-        self.encoding = encoding
-        self.verify_ssl = verify_ssl
+        self.method: Method = method
+        self.timeout: int = timeout
+        self.headers: Dict[str, str] = headers
+        self.encoding: str = encoding
+        self.verify_ssl: bool = verify_ssl
 
-    def write_cookies_to_file(self, cookies, cookie_file):
+    def __del__(self):
+        self.headers = {}
+
+    def write_cookies_to_file(self, cookies) -> None:
         cookie_data: List[Dict[str, Any]] = []
         for k, v in cookies.iteritems():
             cookie_data.append({"name": k, "value": v})
         LOGGER.debug("Set-Cookie: %s", cookie_data)
-        with open(cookie_file, "w") as f:
+        with open(RequestsClient.COOKIE_FILE, "w") as f:
             json.dump(cookie_data, f)
 
-    def read_cookies_from_file(self, cookie_file):
-        if os.path.isfile(cookie_file):
+    def read_cookies_from_file(self) -> None:
+        if os.path.isfile(RequestsClient.COOKIE_FILE):
             cookie_str: str = ""
-            with open(cookie_file, "r") as f:
+            with open(RequestsClient.COOKIE_FILE, "r") as f:
                 cookies = json.load(f)
                 for cookie in cookies:
                     if "expiry" in cookie:
@@ -198,7 +205,7 @@ class RequestsClient():
     def make_request(self, url, data=None, download_file=None) -> Tuple[str, Optional[CaseInsensitiveDict[str]], int]:
         LOGGER.debug("# make_request('%s')", url)
 
-        self.read_cookies_from_file(COOKIE_FILE_FOR_REQUESTS_CLIENT)
+        self.read_cookies_from_file()
 
         if self.method == Method.GET:
             response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
@@ -213,8 +220,8 @@ class RequestsClient():
             return "", None, response.status_code
 
         if response.cookies:
-            self.write_cookies_to_file(response.cookies, COOKIE_FILE_FOR_REQUESTS_CLIENT)
-                
+            self.write_cookies_to_file(response.cookies)
+
         if download_file:
             response.raw.decode_content = True
             with open(download_file, 'wb') as f:

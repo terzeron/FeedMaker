@@ -10,6 +10,9 @@
 		    <element_class>cst_m</element_class>
 		    <element_class>cst_m2</element_class>
 	    </element_list>
+        <post_process_script_list>
+            <post_process_script>shuf</post_process_script>
+        </post_process_script_list>
 	</collection>
 	<extraction>
 		<element_list>

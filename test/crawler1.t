@@ -6,12 +6,12 @@ import re
 import unittest
 from unittest.mock import patch
 from io import StringIO
-from crawler import Method, Crawler, print_usage, COOKIE_FILE_FOR_REQUESTS_CLIENT, COOKIE_FILE_FOR_HEADLESS_BROWSER, DEFAULT_USER_AGENT
+from crawler import Method, Crawler, HeadlessBrowser, RequestsClient, print_usage, DEFAULT_USER_AGENT
 
 
 class CrawlerTest(unittest.TestCase):
     def setUp(self):
-        for cookie_file in [COOKIE_FILE_FOR_REQUESTS_CLIENT, COOKIE_FILE_FOR_HEADLESS_BROWSER]:
+        for cookie_file in [HeadlessBrowser.COOKIE_FILE, RequestsClient.COOKIE_FILE]:
             if os.path.isfile(cookie_file):
                 os.remove(cookie_file)
 
@@ -131,7 +131,7 @@ class CrawlerTest(unittest.TestCase):
         del crawler
 
     def tearDown(self):
-        for cookie_file in [COOKIE_FILE_FOR_REQUESTS_CLIENT, COOKIE_FILE_FOR_HEADLESS_BROWSER]:
+        for cookie_file in [HeadlessBrowser.COOKIE_FILE, RequestsClient.COOKIE_FILE]:
             if os.path.isfile(cookie_file):
                 os.remove(cookie_file)
 

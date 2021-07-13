@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 
 import os
@@ -21,45 +22,58 @@ class NewListCollector:
         self.new_list_file_name = new_list_file_name
 
 
-    def compose_and_execute_cmd(self, url: str) -> Tuple[Optional[str], Any]:
-        option_str = determine_crawler_options(self.collection_conf)
-        option_str += " --retry=2"
-        crawl_cmd = "crawler.py %s '%s'" % (option_str, url)
-        capture_cmd = self.collection_conf["item_capture_script"]
+    def compose_cmd(self, url_list: List[str]) -> str:
+        full_cmd: str = ""
+        if len(url_list) == 1:
+            url = url_list[0]
+            option_str = determine_crawler_options(self.collection_conf)
+            option_str += " --retry=2"
+            crawl_cmd = "crawler.py %s '%s'" % (option_str, url)
+            capture_cmd = self.collection_conf["item_capture_script"]
+            full_cmd = crawl_cmd + " | " + capture_cmd
+        elif len(url_list) > 1:
+            for url in url_list:
+                option_str = determine_crawler_options(self.collection_conf)
+                option_str += " --retry=2"
+                crawl_cmd = "crawler.py %s '%s'" % (option_str, url)
+                capture_cmd = self.collection_conf["item_capture_script"]
+                if full_cmd and crawl_cmd:
+                    full_cmd += "; " + crawl_cmd
+                else:
+                    full_cmd += "( " + crawl_cmd
+                if capture_cmd:
+                    full_cmd += " | " + capture_cmd
+            full_cmd += " )"
+
         post_process_cmd = ""
         for script in self.collection_conf["post_process_script_list"]:
             if post_process_cmd:
                 post_process_cmd += ' | %s' % script
             else:
                 post_process_cmd = script
-        cmd_list = [crawl_cmd, capture_cmd, post_process_cmd]
 
-        full_cmd = ""
-        for cmd in cmd_list:
-            if full_cmd and cmd:
-                full_cmd += " | " + cmd
-            else:
-                full_cmd += cmd
+        if post_process_cmd:
+            full_cmd += " | " + post_process_cmd
 
-        LOGGER.debug("%s", full_cmd)
-        result, error = exec_cmd(full_cmd)
+        return full_cmd
+
+
+    def execute_cmd(self, cmd: str) -> Tuple[Optional[str], Any]:
+        LOGGER.debug("%s", cmd)
+        result, error = exec_cmd(cmd)
         if error:
-            LOGGER.warning("can't execute command '%s', %s", full_cmd, error)
+            LOGGER.warning("can't execute command '%s', %s", cmd, error)
             LOGGER.debug("wait for seconds and retry")
             time.sleep(5)
-            result, error = exec_cmd(full_cmd)
+            result, error = exec_cmd(cmd)
             if error:
-                LOGGER.warning("can't execute command '%s', %s", full_cmd, error)
-                LOGGER.error("# can't get result from the command '%s'", full_cmd)
+                LOGGER.warning("can't execute command '%s', %s", cmd, error)
+                LOGGER.error("# can't get result from the command '%s'", cmd)
         return (result, error)
 
 
-    def extract_urls(self, url) -> List[Tuple[str, str]]:
-        LOGGER.debug("# extract_urls(%s)", url)
-
-        result, error = self.compose_and_execute_cmd(url)
-        if not result:
-            return []
+    def split_result_into_items(self, result) -> List[Tuple[str, str]]:
+        LOGGER.debug("# extract_urls()")
 
         result_list = []
         for line in result.rstrip().split("\n"):
@@ -70,7 +84,7 @@ class NewListCollector:
             link = items[0]
             title = " ".join(items[1:])
             if not link or not title:
-                LOGGER.error("can't get the link and title from '%s', %s", link, error)
+                LOGGER.error("can't split a line into link and title, line='%s'", line)
                 return []
             result_list.append((link, title))
         return result_list
@@ -78,13 +92,17 @@ class NewListCollector:
 
     def compose_url_list(self) -> List[Tuple[str, str]]:
         LOGGER.debug("# compose_url_list()")
-        result_list: List[Tuple[str, str]] = []
 
-        for list_url in self.collection_conf["list_url_list"]:
-            url_list = self.extract_urls(list_url)
-            if not url_list:
-                continue
-            result_list.extend(url_list)
+        result_list: List[Tuple[str, str]] = []
+        url_list = self.collection_conf["list_url_list"]
+        cmd = self.compose_cmd(url_list)
+        LOGGER.debug("cmd='%s'", cmd)
+        result, error = self.execute_cmd(cmd)
+        if not result or error:
+            return []
+
+        url_list = self.split_result_into_items(result)
+        result_list.extend(url_list)
 
         result_list = remove_duplicates(result_list)
         return result_list

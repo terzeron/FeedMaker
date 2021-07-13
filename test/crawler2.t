@@ -4,12 +4,12 @@
 import os
 import re
 import unittest
-from crawler import Crawler, COOKIE_FILE_FOR_REQUESTS_CLIENT, COOKIE_FILE_FOR_HEADLESS_BROWSER
+from crawler import Crawler, HeadlessBrowser, RequestsClient
 
 
 class CrawlerTest(unittest.TestCase):
     def setUp(self):
-        for cookie_file in [COOKIE_FILE_FOR_REQUESTS_CLIENT, COOKIE_FILE_FOR_HEADLESS_BROWSER]:
+        for cookie_file in [HeadlessBrowser.COOKIE_FILE, RequestsClient.COOKIE_FILE]:
             if os.path.isfile(cookie_file):
                 os.remove(cookie_file)
 
@@ -38,7 +38,7 @@ class CrawlerTest(unittest.TestCase):
         del crawler
 
     def tearDown(self):
-        for cookie_file in [COOKIE_FILE_FOR_REQUESTS_CLIENT, COOKIE_FILE_FOR_HEADLESS_BROWSER]:
+        for cookie_file in [HeadlessBrowser.COOKIE_FILE, RequestsClient.COOKIE_FILE]:
             if os.path.isfile(cookie_file):
                 os.remove(cookie_file)
 
