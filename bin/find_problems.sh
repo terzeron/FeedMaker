@@ -16,7 +16,7 @@ echo "--- the number of <list_url> element ---"
 find . -name conf.xml -print0 | xargs -0 grep -c "<list_url>" | grep -v "/_" | perl -ne 'if (/^(\d+)$/ and $1 > 1) { $count = $1; } if (/^(\..+\.xml)$/) { if ($count > 1) { s/\/conf\.xml//; print $count . "\t" . $_; $count = 0; } }' | sort -n
 
 echo "--- the number of occurrence of each element ---"
-find . -name conf.xml | xargs| grep -v "/_" | perl -ne 'while (/\<(\w+)\>/g) { if ($1 !~ /encoding|collection|extraction|copyright|configuration|element_list|description|language|link|list_url_list|rss|title|list_url|element_class|element_id|element_path|feed_url|generator/) { print $1 . "\n"; } }' | sort | uniq -c | sort -n | perl -ne 'if (/^\s*(\d+)\s+/) { print; }'
+find . -name conf.xml | xargs| grep -v "/_" | perl -ne 'while (/\<(\w+)\>/g) { if ($1 !~ /encoding|collection|extraction|copyright|configuration|element_list|description|language|link|list_url_list|rss|title|list_url|element_class|element_id|element_path|generator/) { print $1 . "\n"; } }' | sort | uniq -c | sort -n | perl -ne 'if (/^\s*(\d+)\s+/) { print; }'
 
 echo "--- should use spaces instead of tab ---"
 find . -name conf.xml -exec grep -l "	" "{}" \;
