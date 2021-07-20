@@ -127,13 +127,6 @@ def determine_crawler_options(options: Dict[str, Any]) -> str:
     if "timeout" in options:
         option_str += " --timeout=%s" % (options["timeout"] if options["timeout"] else "60")
 
-    #LOGGER.debug("title=%s, review_point=%d, review_point_threshold=%f", title, review_point, review_point_threshold)
-    #if review_point and review_point_threshold and review_point > review_point_threshold:
-        # 일반적으로 평점이 사용되지 않는 경우나
-        # 평점이 기준치를 초과하는 경우에만 추출
-        #warn("ignore an article due to the low score")
-        #return 0
-
     return option_str
 
 
@@ -476,7 +469,6 @@ class Config:
             referer = Config._get_str_config_value(extraction_conf, "referer")
 
             timeout = Config._get_int_config_value(extraction_conf, "timeout")
-            review_point_threshold = Config._get_int_config_value(extraction_conf, "review_point_threshold")
 
             element_id_list = Config._get_config_value_list(extraction_conf, "element_id", [])
             element_class_list = Config._get_config_value_list(extraction_conf, "element_class", [])
@@ -497,7 +489,6 @@ class Config:
                 "referer": referer,
 
                 "timeout": timeout,
-                "review_point_threshold": review_point_threshold,
 
                 "element_id_list": element_id_list,
                 "element_class_list": element_class_list,

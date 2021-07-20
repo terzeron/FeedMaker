@@ -84,7 +84,6 @@ class ConfigTest(unittest.TestCase):
         configs = self.config.get_extraction_configs()
         self.assertTrue(isinstance(configs, dict))
         self.assertFalse(configs["render_js"])
-        self.assertEqual(configs["review_point_threshold"], None)
         self.assertNotEqual(configs["user_agent"], None)
         self.assertEqual(configs["element_id_list"], ["ct", "content"])
         self.assertEqual(configs["element_class_list"], ["se_doc_viewer", "content_view"])
