@@ -73,11 +73,11 @@ def main() -> int:
         return -1
     extraction_conf = config.get_extraction_configs()
 
+    timeout = extraction_conf.get("timeout", None)
     headers: Dict[str, Any] = {}
-    if "user_agent" in extraction_conf:
-        headers["User-Agent"] = extraction_conf["user_agent"]
+    headers["User-Agent"] = extraction_conf.get("user_agent", None)
     headers["Referer"] = URL.encode(page_url)
-    crawler = Crawler(headers=headers, num_retries=2)
+    crawler = Crawler(headers=headers, num_retries=2, timeout=timeout)
 
     line_list: List[str] = IO.read_stdin_as_line_list()
     for line in line_list:
@@ -91,12 +91,15 @@ def main() -> int:
         (?P<img_url>[^"\']+)
         (["\'])
         (\s*width=["\']\d+%?["\'])?
+        [^>]*
         /?>
         (?P<post_text>.*)
         ''', line, re.VERBOSE)
         if m:
             pre_text = m.group("pre_text")
             img_url = m.group("img_url")
+            if not img_url.startswith("http"):
+                img_url = URL.concatenate_url(page_url, img_url)
             post_text = m.group("post_text")
 
             m = re.search(r'^\s*$', pre_text)
