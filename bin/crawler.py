@@ -80,12 +80,13 @@ class HeadlessBrowser:
     SETTING_LANGUAGES_SCRIPT = "Object.defineProperty(navigator, 'languages', {get: function() {return ['ko-KR', 'ko']}})"
     SETTING_WEBGL_SCRIPT = "const getParameter = WebGLRenderingContext.getParameter;WebGLRenderingContext.prototype.getParameter = function(parameter) { if (parameter === 37445) { return 'NVIDIA Corporation' } if (parameter === 37446) { return 'NVIDIA GeForce GTX 980 Ti OpenGL Engine';}return getParameter(parameter); };"
 
-    def __init__(self, headers, copy_images_from_canvas, simulate_scrolling, disable_headless) -> None:
-        LOGGER.debug("# HeadlessBrowser(headers=%r, copy_images_from_canvas=%r, simulate_scrolling=%r, disable_headless=%r)", headers, copy_images_from_canvas, simulate_scrolling, disable_headless)
+    def __init__(self, headers, copy_images_from_canvas, simulate_scrolling, disable_headless, timeout=60) -> None:
+        LOGGER.debug("# HeadlessBrowser(headers=%r, copy_images_from_canvas=%r, simulate_scrolling=%r, disable_headless=%r, timeout=%r)", headers, copy_images_from_canvas, simulate_scrolling, disable_headless, timeout)
         self.headers: Dict[str, str] = headers
         self.copy_images_from_canvas: bool = copy_images_from_canvas
         self.simulate_scrolling: bool = simulate_scrolling
         self.disable_headless: bool = disable_headless
+        self.timeout: int = timeout
 
     def __del__(self) -> None:
         self.headers = {}
@@ -95,14 +96,18 @@ class HeadlessBrowser:
         with open(HeadlessBrowser.COOKIE_FILE, "w") as f:
             json.dump(cookies, f)
 
-    def read_cookies_from_file(self, driver) -> None:
-        if os.path.isfile(HeadlessBrowser.COOKIE_FILE):
-            with open(HeadlessBrowser.COOKIE_FILE, "r") as f:
-                cookies = json.load(f)
-                for cookie in cookies:
-                    if "expiry" in cookie:
-                        del cookie["expiry"]
-                    driver.add_cookie(cookie)
+    def read_cookies_from_file(self, driver) -> None: 
+        try:
+            if os.path.isfile(HeadlessBrowser.COOKIE_FILE):
+                with open(HeadlessBrowser.COOKIE_FILE, "r") as f:
+                    cookies = json.load(f)
+                    for cookie in cookies:
+                        if "expiry" in cookie:
+                            del cookie["expiry"]
+                        driver.add_cookie(cookie)
+        except selenium.common.exceptions.InvalidCookieDomainException:
+            os.remove(HeadlessBrowser.COOKIE_FILE)
+            self.read_cookies_from_file(driver)
 
     def make_request(self, url, download_file=None) -> str:
         LOGGER.debug("# make_request(url=%r, download_file=%r)", url, download_file)
@@ -118,44 +123,50 @@ class HeadlessBrowser:
 
         chrome_driver_name = "chromedriver"
         driver = webdriver.Chrome(options=options, executable_path=chrome_driver_name)
-        driver.set_script_timeout(240)
+        driver.set_page_load_timeout(self.timeout)
 
         if "Referer" in self.headers:
+            LOGGER.debug("visitin referer page '%s'", self.headers["Referer"])
             driver.get(self.headers["Referer"])
+            # bypass cloudflare test
             try:
-                WebDriverWait(driver, 60).until(expected_conditions.invisibility_of_element((By.ID, "cf-content")))
+                WebDriverWait(driver, self.timeout).until(expected_conditions.invisibility_of_element((By.ID, "cf-content")))
             except selenium.common.exceptions.TimeoutException:
                 pass
             self.write_cookies_to_file(driver)
 
+        LOGGER.debug("getting the page '%s'", url)
         driver.get(url)
-        try:
-            self.read_cookies_from_file(driver)
-        except selenium.common.exceptions.InvalidCookieDomainException:
-            os.remove(HeadlessBrowser.COOKIE_FILE)
-            self.read_cookies_from_file(driver)
-
         # bypass cloudflare test
         try:
-            WebDriverWait(driver, 60).until(expected_conditions.invisibility_of_element((By.ID, "cf-content")))
+            WebDriverWait(driver, self.timeout).until(expected_conditions.invisibility_of_element((By.ID, "cf-content")))
         except selenium.common.exceptions.TimeoutException:
             pass
 
+        driver.set_script_timeout(self.timeout)
         # pretend to be a real browser
+        LOGGER.debug("executing some scripts")
         driver.execute_script(HeadlessBrowser.SETTING_PLUGINS_SCRIPT)
         driver.execute_script(HeadlessBrowser.SETTING_LANGUAGES_SCRIPT)
         #driver.execute_script(HeadlessBrowser.SETTING_WEBGL_SCRIPT)
 
         self.write_cookies_to_file(driver)
 
+        LOGGER.debug("executing a script for datadata")
         driver.execute_script(HeadlessBrowser.GETTING_METADATA_SCRIPT)
 
         if self.copy_images_from_canvas:
+            LOGGER.debug("converting canvas to images")
             driver.execute_script(HeadlessBrowser.CONVERTING_CANVAS_TO_IMAGES_SCRIPT)
 
         if self.simulate_scrolling:
-            driver.execute_script(HeadlessBrowser.SIMULATING_SCROLLING_SCRIPT)
+            LOGGER.debug("simulating scrolling")
+            try:
+                driver.execute_script(HeadlessBrowser.SIMULATING_SCROLLING_SCRIPT)
+            except selenium.common.exceptions.TimeoutException:
+                pass
 
+        LOGGER.debug("getting inner html")
         try:
             content = driver.find_element_by_tag_name("html")
             response = content.get_attribute("innerHTML")
@@ -163,6 +174,7 @@ class HeadlessBrowser:
             LOGGER.error(e)
             response = ""
 
+        LOGGER.debug("exiting driver")
         driver.close()
         driver.quit()
         return response
@@ -172,7 +184,7 @@ class RequestsClient():
     COOKIE_FILE = "cookies.requestsclient.json"
 
     def __init__(self, render_js=False, method=Method.GET, headers={}, timeout=60, encoding=None, verify_ssl=True) -> None:
-        LOGGER.debug("# RequestsClient(render_js=%r, method=%r, headers=%r, timeout=%d, encoding=%r, verify_ssl=%r)", render_js, method, headers, timeout, encoding, verify_ssl)
+        LOGGER.debug("# RequestsClient(render_js=%r, method=%r, headers=%r, timeout=%r, encoding=%r, verify_ssl=%r)", render_js, method, headers, timeout, encoding, verify_ssl)
         self.method: Method = method
         self.timeout: int = timeout
         self.headers: Dict[str, str] = headers
@@ -248,14 +260,14 @@ class Crawler():
             super().__init__("Read timed out")
 
     def __init__(self, render_js=False, method=Method.GET, headers={}, timeout=60, num_retries=1, encoding=None, verify_ssl=True, copy_images_from_canvas=False, simulate_scrolling=False, disable_headless=False) -> None:
-        LOGGER.debug("# Crawler(render_js=%r, method=%r, headers=%r, timeout=%d, num_retries=%d, encoding=%r, verify_ssl=%r, copy_images_from_canvas=%r, simulate_scrolling=%r, disable_headless=%r)", render_js, method, headers, timeout, num_retries, encoding, verify_ssl, copy_images_from_canvas, simulate_scrolling, disable_headless)
+        LOGGER.debug("# Crawler(render_js=%r, method=%r, headers=%r, timeout=%r, num_retries=%r, encoding=%r, verify_ssl=%r, copy_images_from_canvas=%r, simulate_scrolling=%r, disable_headless=%r)", render_js, method, headers, timeout, num_retries, encoding, verify_ssl, copy_images_from_canvas, simulate_scrolling, disable_headless)
         self.render_js = render_js
         self.num_retries = num_retries
         if 'User-Agent' not in headers:
             headers['User-Agent'] = DEFAULT_USER_AGENT
         if render_js:
             # headless browser
-            self.headless_browser = HeadlessBrowser(headers=headers, copy_images_from_canvas=copy_images_from_canvas, simulate_scrolling=simulate_scrolling, disable_headless=disable_headless)
+            self.headless_browser = HeadlessBrowser(headers=headers, copy_images_from_canvas=copy_images_from_canvas, simulate_scrolling=simulate_scrolling, disable_headless=disable_headless, timeout=timeout)
         else:
             self.requests_client = RequestsClient(method=method, headers=headers, timeout=timeout, encoding=encoding, verify_ssl=verify_ssl)
 
@@ -266,7 +278,7 @@ class Crawler():
             del self.requests_client
 
     def run(self, url, data=None, download_file=None) -> Tuple[str, Any]:
-        LOGGER.debug("# run(url=%s, data=%r, download_file=%r)", url, data, download_file)
+        LOGGER.debug("# run(url=%r, data=%r, download_file=%r)", url, data, download_file)
         response = None
         headers = None
         for i in range(self.num_retries):
