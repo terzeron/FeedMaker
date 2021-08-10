@@ -23,7 +23,7 @@ LOGGER = logging.getLogger()
 
 def execute_job(feed_dir: str, list_archiving_period: int) -> bool:
     LOGGER.debug("execute_job(feed_dir='%s', list_archiving_period=%d)", feed_dir, list_archiving_period)
-    print(feed_dir)
+    LOGGER.info("  * %s", feed_dir)
     os.chdir(feed_dir)
     if os.path.isdir(feed_dir) and os.path.isfile(os.path.join(feed_dir, "conf.json")):
         do_exist_old_list_file = False
@@ -134,13 +134,13 @@ def remove_all_files(rss_file_name: str) -> None:
 def remove_old_html_files(archiving_period: int) -> None:
     LOGGER.debug("remove_old_html_files(archiving_period=%d)", archiving_period)
     if os.path.exists("html"):
-        LOGGER.info("deleting older html files than %d days", archiving_period)
+        LOGGER.info("# deleting older html files than %d days", archiving_period)
         # deleting older html files than archiving_period
         for file in os.listdir("html"):
             file_path = os.path.join("html", file)
             if os.path.isfile(file_path) and os.path.exists(file_path) and os.stat(file_path).st_ctime + archiving_period * 24 * 60 * 60 < time.time():
                 os.remove(file_path)
-                LOGGER.info(file_path)
+                LOGGER.info("  * %s", file_path)
 
 
 def remove_html_files_without_cached_image_files(img_dir: str) -> None:
@@ -168,7 +168,7 @@ def remove_html_files_without_cached_image_files(img_dir: str) -> None:
             html_file = img_html_map[img_file]
             html_file_path = os.path.join("html", html_file)
             if os.path.isfile(html_file_path):
-                LOGGER.info("deleting html file '%s' for missing image file '%s'", html_file, img_file)
+                LOGGER.info("# deleting html file '%s' for missing image file '%s'", html_file, img_file)
                 os.remove(html_file_path)
 
 
@@ -197,13 +197,13 @@ def remove_unused_img_files(rss_file_name: str, img_dir: str) -> None:
 
     # 이미지 디렉토리에만 존재하는 이미지 파일을 모두 삭제
     for img_file in sorted(img_set_in_img_dir - img_set_in_xml_file):
-        LOGGER.info("deleting unused image file '%s' from '%s'", img_file, img_dir)
+        LOGGER.info("# deleting unused image file '%s' from '%s'", img_file, img_dir)
         img_file_path = os.path.join(img_dir, img_file)
         os.remove(img_file_path)
 
 
 def make_single_feed(feed_name: str, img_dir: str, archiving_period: int, options: Dict[str, Any]) -> bool:
-    LOGGER.info(feed_name)
+    LOGGER.info("  * %s", feed_name)
     LOGGER.debug("make_single_feed(feed_name='%s', img_dir='%s', archiving_period=%d, options=%r)", feed_name, img_dir, archiving_period, options)
     rss_file_name = feed_name + ".xml"
 
@@ -222,7 +222,7 @@ def make_single_feed(feed_name: str, img_dir: str, archiving_period: int, option
     remove_html_files_without_cached_image_files(img_dir)
 
     # make_feed.py 실행하여 feed 파일 생성
-    LOGGER.info("making feed file '%s'", rss_file_name)
+    LOGGER.info("# making feed file '%s'", rss_file_name)
     feed_maker = FeedMaker(force_collection_opt, collect_only_opt, rss_file_name)
     result = feed_maker.make()
 
@@ -237,12 +237,12 @@ def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
     runlog = "run.log"
     list_archiving_period = 3
 
-    LOGGER.info("deleting log files")
+    LOGGER.info("# deleting log files")
     remove_log_files([runlog])
-    LOGGER.info("deleting image files with zero size")
+    LOGGER.info("# deleting image files with zero size")
     remove_image_files_with_zero_size(img_dir)
 
-    LOGGER.info("executing feed generation")
+    LOGGER.info("# generating feeds")
     feed_dir_path_list: List[str] = []
     for path, dirs, _ in os.walk(feed_maker_cwd):
         if "/_" not in path:
@@ -280,7 +280,7 @@ def main() -> int:
     archiving_period = 30
 
     start_ts = time.time()
-    print(datetime.now().astimezone().isoformat(timespec="seconds"))
+    LOGGER.info("* Start time: %s", datetime.now().astimezone().isoformat(timespec="seconds"))
 
     options, args = determine_options()
     if args:
@@ -312,8 +312,8 @@ def main() -> int:
         result = make_single_feed(feed_name, img_dir, archiving_period, options)
 
     end_ts = time.time()
-    print(datetime.now().astimezone().isoformat(timespec="seconds"))
-    LOGGER.info("elapse=%f", (end_ts - start_ts))
+    LOGGER.info("* End time: %s", datetime.now().astimezone().isoformat(timespec="seconds"))
+    LOGGER.info("* Elapsed time: %f", (end_ts - start_ts))
 
     return 0 if result else -1
 
