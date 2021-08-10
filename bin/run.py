@@ -25,7 +25,7 @@ def execute_job(feed_dir: str, list_archiving_period: int) -> bool:
     LOGGER.debug("execute_job(feed_dir='%s', list_archiving_period=%d)", feed_dir, list_archiving_period)
     print(feed_dir)
     os.chdir(feed_dir)
-    if os.path.isdir(feed_dir) and os.path.isfile(os.path.join(feed_dir, "conf.xml")):
+    if os.path.isdir(feed_dir) and os.path.isfile(os.path.join(feed_dir, "conf.json")):
         do_exist_old_list_file = False
         if os.path.isdir("newlist"):
             for list_file in os.listdir("newlist"):
@@ -248,7 +248,7 @@ def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
         if "/_" not in path:
             for d in dirs:
                 dir_path = os.path.join(path, d)
-                if not d.startswith("_") and os.path.isdir(dir_path) and os.path.isfile(os.path.join(dir_path, "conf.xml")):
+                if not d.startswith("_") and os.path.isdir(dir_path) and os.path.isfile(os.path.join(dir_path, "conf.json")):
                     feed_dir_path_list.append(dir_path)
 
     random.shuffle(feed_dir_path_list)

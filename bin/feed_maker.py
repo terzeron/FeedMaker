@@ -447,7 +447,7 @@ class FeedMaker:
 
         config = Config()
         if not config:
-            LOGGER.error("can't find conf.xml file nor get config element")
+            LOGGER.error("can't find configuration file nor get config element")
             sys.exit(-1)
         self.collection_conf = config.get_collection_configs()
         LOGGER.info("self.collection_conf=%s", pprint.pformat(self.collection_conf))

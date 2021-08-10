@@ -73,7 +73,7 @@ def send_error_msg(msg: Optional[str], subject="") -> None:
 
     #send_error_msg_to_line(msg, receiver_line_id, access_token=line_access_token)
     send_error_msg_to_mail(msg, receiver_email_address, sender=sender_email_address, subject=subject)
-    
+
 def send_error_msg_to_line(msg: Optional[str], receiver: str, access_token: str) -> bool:
     if not msg:
         return False
@@ -345,45 +345,59 @@ class Config:
     config: Dict[str, Dict[str, Any]] = {}
 
     def __init__(self) -> None:
+        error_msg: Optional[str] = None
         if "FEED_MAKER_CONF_FILE" in os.environ and os.environ["FEED_MAKER_CONF_FILE"]:
             config_file = os.environ["FEED_MAKER_CONF_FILE"]
         else:
-            config_file = "conf.xml"
-        with open(config_file, "r") as f:
-            parsed_data = xmltodict.parse(f.read())
-            if not parsed_data or "configuration" not in parsed_data:
-                LOGGER.error("can't get configuration from config file")
-                sys.exit(-1)
-            else:
-                self.config = parsed_data["configuration"]
+            config_file = "conf.json"
+        if os.path.isfile(config_file):
+            with open(config_file, 'r') as fp:
+                data = json.load(fp)
+                if "configuration" in data:
+                    self.config = data["configuration"]
+                else:
+                    error_msg = "invalid configuration file format"
+        else:
+            error_msg = "no such file"
+
+        if error_msg:
+            LOGGER.error("can't get configuration from config file, %s", error_msg)
+            sys.exit(-1)
+
 
     @staticmethod
     def _get_bool_config_value(config_node: Dict[str, Any], key: str, default: bool = False) -> bool:
-        ret = default
+        value: bool = default
         if key in config_node:
-            if config_node[key] == "true":
-                ret = True
-            elif config_node[key] == "false":
-                ret = False
-        return ret
+            value = config_node[key]
+        return value
 
     @staticmethod
     def _get_str_config_value(config_node: Dict[str, Any], key: str, default: str = None) -> Optional[str]:
+        value: Optional[str] = default
         if key in config_node:
-            return config_node[key]
-        return default
+            value = config_node[key]
+        return value
 
     @staticmethod
     def _get_int_config_value(config_node: Dict[str, Any], key: str, default: int = None) -> Optional[int]:
+        value: Optional[int] = default
         if key in config_node:
-            return int(config_node[key])
-        return default
+            try:
+                value = int(config_node[key])
+            except TypeError:
+                value = None
+        return value
 
     @staticmethod
     def _get_float_config_value(config_node: Dict[str, Any], key: str, default: float = None) -> Optional[float]:
+        value: Optional[float] = default
         if key in config_node:
-            return float(config_node[key])
-        return default
+            try:
+                value = float(config_node[key])
+            except TypeError:
+                value = None
+        return value
 
     @staticmethod
     def _traverse_config_node(config_node: Dict[str, Any], key: str) -> List[str]:
@@ -428,8 +442,8 @@ class Config:
             timeout = Config._get_int_config_value(collection_conf, "timeout")
             unit_size_per_day = Config._get_float_config_value(collection_conf, "unit_size_per_day")
 
-            list_url_list = Config._get_config_value_list(collection_conf, "list_url", [])
-            post_process_script_list = Config._get_config_value_list(collection_conf, "post_process_script", [])
+            list_url_list = Config._get_config_value_list(collection_conf, "list_url_list", [])
+            post_process_script_list = Config._get_config_value_list(collection_conf, "post_process_script_list", [])
 
             conf = {
                 "render_js": render_js,
@@ -465,15 +479,15 @@ class Config:
             simulate_scrolling = Config._get_bool_config_value(extraction_conf, "simulate_scrolling")
 
             user_agent = Config._get_str_config_value(extraction_conf, "user_agent")
-            encoding = Config._get_str_config_value(extraction_conf, "encoding", "utf8")
+            encoding = Config._get_str_config_value(extraction_conf, "encoding", "utf-8")
             referer = Config._get_str_config_value(extraction_conf, "referer")
 
             timeout = Config._get_int_config_value(extraction_conf, "timeout")
 
-            element_id_list = Config._get_config_value_list(extraction_conf, "element_id", [])
-            element_class_list = Config._get_config_value_list(extraction_conf, "element_class", [])
-            element_path_list = Config._get_config_value_list(extraction_conf, "element_path", [])
-            post_process_script_list = Config._get_config_value_list(extraction_conf, "post_process_script", [])
+            element_id_list = Config._get_config_value_list(extraction_conf, "element_id_list", [])
+            element_class_list = Config._get_config_value_list(extraction_conf, "element_class_list", [])
+            element_path_list = Config._get_config_value_list(extraction_conf, "element_path_list", [])
+            post_process_script_list = Config._get_config_value_list(extraction_conf, "post_process_script_list", [])
             header_list = Config._get_config_value_list(extraction_conf, "header", [])
 
             conf = {

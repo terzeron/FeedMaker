@@ -1,0 +1,58 @@
+{
+  "configuration": {
+    "collection": {
+      "render_js": false,
+      "verify_ssl": true,
+      "ignore_old_list": false,
+      "is_completed": false,
+      "item_capture_script": "./capture_item_link_title.py",
+      "sort_field_pattern": null,
+      "user_agent": null,
+      "encoding": "utf-8",
+      "referer": null,
+      "timeout": null,
+      "unit_size_per_day": null,
+      "list_url_list": [
+        "http://m.navercast.naver.com/homeMain.nhn?page=1",
+        "http://m.navercast.naver.com/homeMain.nhn?page=2"
+      ],
+      "post_process_script_list": [
+        "shuf"
+      ]
+    },
+    "extraction": {
+      "render_js": false,
+      "verify_ssl": true,
+      "bypass_element_extraction": false,
+      "force_sleep_between_articles": false,
+      "copy_images_from_canvas": false,
+      "simulate_scrolling": false,
+      "user_agent": "Mozilla",
+      "encoding": "utf8",
+      "referer": null,
+      "timeout": null,
+      "element_id_list": [
+        "ct",
+        "content"
+      ],
+      "element_class_list": [
+        "se_doc_viewer",
+        "content_view"
+      ],
+      "element_path_list": [],
+      "post_process_script_list": [
+        "post_process_script_for_navercast.py"
+      ],
+      "header_list": []
+    },
+    "rss": {
+      "title": "네이버캐스트 모바일",
+      "description": "네이버캐스트 모바일 RSS Feed",
+      "generator": "Terzeron's Feed Generator",
+      "copyright": "Copyright (c) NHN Corp. All Rights Reserved",
+      "link": "https://terzeron.com/navercast.m.xml",
+      "language": "en",
+      "url_prefix_for_guid": null
+    }
+  }
+}

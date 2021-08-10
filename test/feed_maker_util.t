@@ -91,12 +91,6 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(configs["post_process_script_list"], ["post_process_script_for_navercast.py"])
         self.assertEqual(configs["header_list"], [])
 
-    def test_get_notification_configs(self):
-        configs = self.config.get_notification_configs()
-        self.assertTrue(isinstance(configs, dict))
-        self.assertEqual(configs["email_recipient"], "terzeron@gmail.com")
-        self.assertEqual(configs["email_subject"], "Success in navercast")
-
     def test_get_rss_configs(self):
         configs = self.config.get_rss_configs()
         self.assertTrue(isinstance(configs, dict))

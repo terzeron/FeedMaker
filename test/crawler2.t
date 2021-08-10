@@ -33,7 +33,7 @@ class CrawlerTest(unittest.TestCase):
         url = "https://terzeron.com/images_in_canvas_test.html"
         crawler = Crawler(render_js=True, copy_images_from_canvas=True)
         result, _ = crawler.run(url)
-        m = re.search(r'<div class="images_from_canvas"><img src="data:image/png;base64,iVBORw0KGgoAAAAN.*1WQAAAABJRU5ErkJggg=="></div>', result)
+        m = re.search(r'<div class="images_from_canvas"><img src="data:image/png;base64,iVBORw0KGgoAAAAN.*VkAAAAASUVORK5CYII="></div>', result)
         self.assertTrue(m)
         del crawler
 
