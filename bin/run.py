@@ -269,7 +269,7 @@ def make_all_feeds(feed_maker_cwd: str, log_dir: str, img_dir: str) -> bool:
     if len(failed_feed_list) > 0:
         send_error_msg(", ".join(failed_feed_list), subject="Errors of FeedMaker")
 
-    cmd = "find_problems.sh > %s/find_problems.log 2>&1" % log_dir
+    cmd = "find_problems.py > %s/find_problems.log 2>&1" % log_dir
     _, error = exec_cmd(cmd)
     if error:
         send_error_msg(error, subject="Errors in finding problems")
