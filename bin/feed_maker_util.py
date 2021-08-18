@@ -659,7 +659,7 @@ class Cache:
 
 class Htaccess:
     @staticmethod
-    def set_alias(group_name: str, feed_name: str, selected_feed_name: str) -> bool:
+    def set_alias(group_name: str, feed_name: str) -> bool:
         htaccess_file_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]).parent / ".htaccess"
         lock_file_path = Path(str(htaccess_file_path) + ".lock")
         temp_file_path = Path(str(htaccess_file_path) + "." + datetime.now().strftime("%Y%m%d%H%i%s"))
