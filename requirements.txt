@@ -6,6 +6,7 @@ bs4==0.0.1
 certifi==2019.9.11
 chardet==3.0.4
 entrypoints==0.3
+filelock==3.0.12
 flake8==3.9.2
 flake8-mypy==17.8.0
 html-parser==0.2
