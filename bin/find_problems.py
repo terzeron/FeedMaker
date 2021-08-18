@@ -333,9 +333,10 @@ class ProblemChecker:
                 if config["collection"]["is_completed"]:
                     index = 0
                     file_path = ProblemChecker.work_dir / self.feed_name_group_map[feed_name] / feed_name / "start_idx.txt"
-                    with open(file_path, 'r') as infile:
-                        line = infile.readline()
-                        index = int(line.split('\t')[0])
+                    if file_path.is_file():
+                        with open(file_path, 'r') as infile:
+                            line = infile.readline()
+                            index = int(line.split('\t')[0])
 
                     url_list: List[str] = []
                     dir_name = ProblemChecker.work_dir / self.feed_name_group_map[feed_name] / feed_name / "newlist"
@@ -347,7 +348,7 @@ class ProblemChecker:
                                     url_list.append(url)
                     count = len(list(set(url_list)))
 
-                    unit_size = config["collection"]["unit_size_per_day"] 
+                    unit_size = config["collection"].get("unit_size_per_day", 1)
                     progress_ratio = (index + 4) * 100 / count
                     remainder = count - (index + 4)
                     num_days = int(math.ceil(remainder / unit_size))
