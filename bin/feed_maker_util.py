@@ -11,6 +11,9 @@ import hashlib
 import json
 import logging
 import logging.config
+import shutil
+from pathlib import Path
+from filelock import FileLock
 from urllib.parse import urlparse, urlunparse, quote, urljoin
 from datetime import datetime
 from typing import List, Any, Dict, Tuple, Optional, Set
@@ -652,3 +655,41 @@ class Cache:
     def get_cache_file_name(path_prefix: str, img_url: str, postfix=None, index=None) -> str:
         LOGGER.debug("# get_cache_file_name(%s, %s, %r, %r)", path_prefix, img_url if not img_url.startswith("data:image") else img_url[:30], postfix, index)
         return Cache.get_cache_info_common(path_prefix, img_url, postfix, index)
+
+
+class Htaccess:
+    @staticmethod
+    def set_alias(group_name: str, feed_name: str, selected_feed_name: str) -> bool:
+        htaccess_file_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]).parent / ".htaccess"
+        temp_file_path = Path(str(htaccess_file_path) + "." + datetime.now().strftime("%Y%m%d%H%i%s"))
+        line_list = []
+        outfile_line_list = []
+        is_found = False
+        rewrite_rule_fmt = "RewriteRule\t^%s\\.xml$\txml/%s\\.xml\n"
+
+        with FileLock(htaccess_file_path):
+            with open(htaccess_file_path, 'r') as infile:
+                for line in infile:
+                    line_list.append(line)
+
+            for line in infile:
+                # ^RewriteRule\t^feed_name\.xml$\txml/feed_name\.xml$ pattern
+                if re.search(r'RewriteRule\t^' + selected_feed_name + '\\\.xml', line):
+                    outfile_line_list.append(rewrite_rule_fmt % (feed_name, feed_name))
+                    is_found = True
+                outfile_line_list.append(line)
+
+            if not is_found:
+                for line in infile:
+                    # (group_name) pattern
+                    if re.search(r'^#[^(]+\(' + group_name + '\)', line):
+                        outfile_line_list.append(rewrite_rule_fmt % (feed_name, feed_name))
+                        is_found = True
+                    outfile_line_list.append(line)
+
+            with open(temp_file_path, 'w') as outfile:
+                for line in outfile_line_list:
+                    outfile.write(line)
+
+        shutil.copy(temp_file_path, htaccess_file_path)
+        return is_found
