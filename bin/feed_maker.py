@@ -10,8 +10,8 @@ import logging
 import logging.config
 from typing import List, Dict, Any, Tuple, Callable
 from datetime import datetime, timedelta
-from ordered_set import OrderedSet
 import dateutil.parser
+from ordered_set import OrderedSet
 import PyRSS2Gen
 from feed_maker_util import Config, URL, exec_cmd, make_path, determine_crawler_options, header_str, remove_duplicates, get_current_time, get_current_time_str, get_rss_date_str, get_short_date_str
 from new_list_collector import NewListCollector
@@ -102,7 +102,7 @@ class FeedMaker:
         return ret
 
     @staticmethod
-    def cmp_to_key(mycmp) -> Callable[[Dict[str, object]], Any]:
+    def cmp_to_key(mycmp) -> Callable[[Dict[str, Any]], Any]:
         # noinspection PyUnusedLocal,PyUnusedLocal
         class K:
             def __init__(self, obj, *args):
@@ -363,9 +363,10 @@ class FeedMaker:
                 line = in_file.readline()
                 m = re.search(r'(?P<start_idx>\d+)\t(?P<mtime>\S+)', line)
                 if m:
-                    start_idx = int(m.group("start_idx"))
+                    start_idx = int(m.group("start_idx")) 
+                    mtime_str = m.group("mtime")
                     end_idx = start_idx + self.WINDOW_SIZE
-                    mtime = dateutil.parser.parse(m.group("mtime"))
+                    mtime = dateutil.parser.parse(mtime_str)
 
                     LOGGER.info("start index: %d, end index:%d, last modified time: %s", start_idx, end_idx, mtime)
                     return start_idx, end_idx, mtime
@@ -395,11 +396,15 @@ class FeedMaker:
 
     def fetch_old_feed_list_window(self) -> None:
         # 오름차순 정렬
-        feed_id_sort_field_list: List[Dict[str, object]] = []
+        feed_id_sort_field_list: List[Dict[str, Any]] = []
         feed_item_existence_set: OrderedSet[str] = OrderedSet([])
 
         matched_count = 0
-        sort_field_pattern = self.collection_conf["sort_field_pattern"]
+        sort_field_pattern = self.collection_conf.get("sort_field_pattern", "")
+        if not sort_field_pattern:
+            LOGGER.error("can't get sort_field_pattern from collection_conf")
+            return
+
         for i, item in enumerate(self.old_feed_list):
             link, title = item
             m = re.search(sort_field_pattern, link + "\t" + title)
@@ -423,7 +428,7 @@ class FeedMaker:
 
         # 전체 리스트 중 절반 이상의 정렬필드를 검출하지 못하면 경고
         if matched_count > len(self.old_feed_list) / 2:
-            sorted_feed_list = sorted(feed_id_sort_field_list, key=self.cmp_to_key(self.cmp_int_or_str))
+            sorted_feed_list: List[Dict[str, Any]] = sorted(feed_id_sort_field_list, key=self.cmp_to_key(self.cmp_int_or_str))
         else:
             LOGGER.warning("can't match the pattern /%s/", self.collection_conf["sort_field_pattern"])
             sorted_feed_list = feed_id_sort_field_list
@@ -517,7 +522,7 @@ class FeedMaker:
                         cmd = "| mail -s '%s' '%s'" % (self.notification_conf["email_subject"], self.notification_conf["email_recipient"])
                         with subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE) as p:
                             for link, title in self.recent_feed_list:
-                                p.communicate("%s\t%s\n" % (link, title))
+                                p.communicate(bytes("%s\t%s\n" % (link, title), encoding="utf-8"))
                         LOGGER.info("Sent a notification in mail")
             else:
                 LOGGER.info("No need to upload same file '%s'", self.rss_file_name)
