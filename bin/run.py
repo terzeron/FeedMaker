@@ -290,7 +290,6 @@ def determine_options() -> Tuple[Dict[str, Any], List[str]]:
 
 def main() -> int:
     LOGGER.debug("# main()")
-    feed_dir_path = Path.cwd()
 
     options, args = determine_options()
     if args:
@@ -299,7 +298,8 @@ def main() -> int:
             return -1
         os.chdir(args[0])
 
-    runner = FeedMakerRunner(html_archiving_period=30, list_archiving_period=3)
+    feed_dir_path = Path.cwd()
+    runner = FeedMakerRunner(html_archiving_period=30, list_archiving_period=7)
     if options["do_make_all_feeds"]:
         result = runner.make_all_feeds()
         kill_process_group("chromedriver")
