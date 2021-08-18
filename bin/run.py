@@ -212,7 +212,7 @@ class FeedMakerRunner:
         LOGGER.info("# generating feeds")
         feed_dir_path_list: List[Path] = []
         for group_dir_path in self.work_dir_path.iterdir():
-            if not group_dir_path.name.startswith("_"):
+            if not group_dir_path.name.startswith("_") and group_dir_path.is_dir():
                 for feed_dir_path in group_dir_path.iterdir():
                     conf_file_path = feed_dir_path / "conf.json"
                     if not feed_dir_path.name.startswith("_") and feed_dir_path.is_dir() and conf_file_path.is_file():
@@ -221,7 +221,7 @@ class FeedMakerRunner:
         random.shuffle(feed_dir_path_list)
         failed_feed_list: List[str] = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future_to_feed = {executor.submit(self.execute_job, feed_dir_path, self.list_archiving_period): feed_dir_path for feed_dir_path in feed_dir_path_list}
+            future_to_feed = {executor.submit(self.execute_job, feed_dir_path): feed_dir_path for feed_dir_path in feed_dir_path_list}
             for future in concurrent.futures.as_completed(future_to_feed):
                 feed_dir_path = future_to_feed[future]
                 feed_name = feed_dir_path.name
