@@ -71,8 +71,9 @@ class FeedMakerRunner:
     def get_img_set_in_img_dir(feed_img_dir_path: Path) -> Set[str]:
         LOGGER.debug("# get_img_set_in_img_dir()")
         img_set_in_img_dir = set([])
-        for img_file_path in feed_img_dir_path.iterdir():
-            img_set_in_img_dir.add(img_file_path.name)
+        if feed_img_dir_path.is_dir():
+            for img_file_path in feed_img_dir_path.iterdir():
+                img_set_in_img_dir.add(img_file_path.name)
         return img_set_in_img_dir
 
 
@@ -80,11 +81,12 @@ class FeedMakerRunner:
     def remove_image_files_with_zero_size(feed_img_dir_path: Path) -> None:
         LOGGER.debug("# remove_image_files_with_zero_size()")
         LOGGER.info("# deleting image files with zero size")
-        for img_file_path in feed_img_dir_path.iterdir():
-            if img_file_path.is_file():
-                if img_file_path.stat().st_size == 0:
-                    LOGGER.info("* %s", img_file_path)
-                    img_file_path.unlink()
+        if feed_img_dir_path.is_dir():
+            for img_file_path in feed_img_dir_path.iterdir():
+                if img_file_path.is_file():
+                    if img_file_path.stat().st_size == 0:
+                        LOGGER.info("* %s", img_file_path)
+                        img_file_path.unlink()
 
 
     @staticmethod
@@ -163,14 +165,15 @@ class FeedMakerRunner:
         LOGGER.debug("# make_single_feed(feed_dir_path='%s', options=%r)", feed_dir_path, options)
 
         start_time = datetime.now()
+        os.chdir(feed_dir_path)
         feed_name = feed_dir_path.name
         LOGGER.info("* %s", (feed_dir_path.parent.name + "/" + feed_name))
         rss_file_path = feed_dir_path / (feed_name + ".xml")
         feed_img_dir_path = self.img_dir_path / feed_name
 
-        do_remove_all_files = options["do_remove_all_files"]
-        force_collection_opt = options["force_collection_opt"]
-        collect_only_opt = options["collect_only_opt"]
+        do_remove_all_files = options.get("do_remove_all_files", False)
+        force_collection_opt = options.get("force_collection_opt", "")
+        collect_only_opt = options.get("collect_only_opt", "")
 
         if do_remove_all_files:
             # -r 옵션 사용하면 html 디렉토리의 파일들, newlist 디렉토리의 파일들, 각종 로그 파일, feed xml 파일들을 삭제
@@ -296,9 +299,9 @@ def main() -> int:
         if len(args) > 1:
             print_usage()
             return -1
-        os.chdir(args[0])
-
-    feed_dir_path = Path.cwd()
+        feed_dir_path = sys.argv[0]
+    else:
+        feed_dir_path = Path.cwd()
     runner = FeedMakerRunner(html_archiving_period=30, list_archiving_period=7)
     if options["do_make_all_feeds"]:
         result = runner.make_all_feeds()
