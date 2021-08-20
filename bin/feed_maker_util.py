@@ -659,21 +659,35 @@ class Cache:
 
 class Htaccess:
     @staticmethod
-    def set_alias(group_name: str, feed_name: str) -> bool:
+    def set_alias(group_name: str, feed_name: str, new_alias: str="") -> bool:
         htaccess_file_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]).parent / ".htaccess"
         lock_file_path = Path(str(htaccess_file_path) + ".lock")
         temp_file_path = Path(str(htaccess_file_path) + "." + datetime.now().strftime("%Y%m%d%H%i%s"))
-        is_found = False
+        is_found: bool = False
         rewrite_rule_fmt = "RewriteRule\t^%s\\.xml$\txml/%s\\.xml\n"
 
-        with FileLock(lock_file_path):
-            with open(htaccess_file_path, 'r') as infile:
-                with open(temp_file_path, 'w') as outfile:
-                    for line in infile:
-                        # korean_group_name (group_name) pattern
-                        if re.search(r'^#[^(]+\(' + group_name + '\)', line):
-                            outfile.write(rewrite_rule_fmt % (feed_name, feed_name))
-                            is_found = True
-                        outfile.write(line)
+        line_list: List[str] = []
+        with FileLock(str(lock_file_path)):
+            with open(htaccess_file_path, 'r') as infile: 
+                for line in infile:
+                    # find feed name and replace
+                    if new_alias and re.search(r'RewriteRule\t\^[^.]+\\\.xml\$\txml/' + feed_name + '\\\.xml', line):
+                        line_list.append(rewrite_rule_fmt % (new_alias, feed_name))
+                        print("feed is found")
+                        is_found = True
+                        continue
+                    
+                    line_list.append(line)
+                    
+                    # find group name and append after group name
+                    if not new_alias and re.search(r'^#[^(]+\(' + group_name + '\)', line):
+                        line_list.append(rewrite_rule_fmt % (feed_name, feed_name))
+                        print("group is found")
+                        is_found = True
+
+            with open(temp_file_path, 'w') as outfile:
+                for line in line_list:
+                    outfile.write(line)
+
             shutil.copy(temp_file_path, htaccess_file_path)
         return is_found
