@@ -5,7 +5,7 @@
   "author": "Youngil Cho <terzeron@gmail.com>",
   "private": true,
   "scripts": {
-    "dev": "webpack-dev-server --host 0.0.0.0 --disableHostCheck true --inline --progress --config build/webpack.dev.conf.js",
+    "dev": "webpack-dev-server --inline --progress --config build/webpack.dev.conf.js",
     "start": "npm run dev",
     "unit": "jest --config test/unit/jest.conf.js --coverage",
     "e2e": "node test/e2e/runner.js",
@@ -14,11 +14,17 @@
     "build": "node build/build.js"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^1.2.36",
+    "@fortawesome/free-solid-svg-icons": "^5.15.4",
+    "@fortawesome/vue-fontawesome": "^2.0.2",
     "axios": "^0.21.1",
-    "bootstrap": "^5.1.0",
+    "bootstrap": "^4.6.0",
     "bootstrap-vue": "^2.21.2",
+    "json-beautify": "^1.1.1",
     "vue": "^2.5.2",
-    "vue-router": "^3.0.1"
+    "vue-json-edit": "^1.4.3",
+    "vue-router": "^3.0.1",
+    "vue-simple-markdown": "^1.1.5"
   },
   "devDependencies": {
     "autoprefixer": "^7.1.2",
@@ -56,7 +62,7 @@
     "jest": "^22.0.4",
     "jest-serializer-vue": "^0.3.0",
     "nightwatch": "^0.9.12",
-    "node-notifier": "^8.0.1",
+    "node-notifier": "^5.1.2",
     "optimize-css-assets-webpack-plugin": "^3.2.0",
     "ora": "^1.2.0",
     "portfinder": "^1.0.13",
@@ -74,8 +80,8 @@
     "vue-style-loader": "^3.0.1",
     "vue-template-compiler": "^2.5.2",
     "webpack": "^3.6.0",
-    "webpack-bundle-analyzer": "^3.3.2",
-    "webpack-dev-server": "^3.1.11",
+    "webpack-bundle-analyzer": "^2.9.0",
+    "webpack-dev-server": "^2.9.1",
     "webpack-merge": "^4.1.0"
   },
   "engines": {

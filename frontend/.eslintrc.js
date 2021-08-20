@@ -28,6 +28,8 @@ module.exports = {
     'no-trailing-spaces': 'off',
     'comma-dangle': 'off',
     'space-before-function-paren': 'off',
+    'spaced-comment': 'off',
+    'camelcase': 'off',
     // allow debugger during development
     'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'off'
   }
