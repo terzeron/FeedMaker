@@ -11,7 +11,8 @@ from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 from feed_manager import FeedManager
 
-app = Flask(__name__, static_folder="./dist/static", template_folder="./dist")
+app = Flask(__name__, static_folder="./dist", template_folder="./dist")
+app.config['JSON_AS_ASCII'] = False
 app.config.from_object(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 logging.basicConfig(filename='run.log', level=logging.DEBUG)
@@ -27,9 +28,9 @@ def catch_all(path):
     return render_template("index.html")
 
 
-@app.route("/fm/exec_result", methods=["GET"])
+@app.route("/exec_result", methods=["GET"])
 def get_exec_result():
-    print("/fm/exec_result, %r -> get_exec_result()" % request.method)
+    print("/exec_result, %r -> get_exec_result()" % request.method)
     response_object = {"status": "success"}
     result, error = feed_manager.get_exec_result()
     if result:
@@ -40,9 +41,9 @@ def get_exec_result():
     return jsonify(response_object)
 
 
-@app.route("/fm/problems", methods=["GET"])
+@app.route("/problems", methods=["GET"])
 def get_problems():
-    print("/fm/problems, %r -> get_problems()" % request.method)
+    print("/problems, %r -> get_problems()" % request.method)
     response_object = {"status": "success"}
     result, error = feed_manager.get_problems()
     if result:
@@ -53,9 +54,9 @@ def get_problems():
     return jsonify(response_object)
 
 
-@app.route("/fm/groups", methods=["GET"])
+@app.route("/groups", methods=["GET"])
 def get_groups():
-    print("/fm/groups, %r -> get_groups()" % request.method)
+    print("/groups, %r -> get_groups()" % request.method)
     response_object = {"status": "failure"}
     result, error = feed_manager.get_groups()
     if result:
@@ -67,9 +68,9 @@ def get_groups():
     return jsonify(response_object)
 
 
-@app.route("/fm/groups/<group_name>", methods=["DELETE"])
+@app.route("/groups/<group_name>", methods=["DELETE"])
 def remove_group(group_name):
-    print("/fm/groups/<group_name>, %r -> remove_group(%s)" % (request.method, group_name))
+    print("/groups/<group_name>, %r -> remove_group(%s)" % (request.method, group_name))
     response_object = {"status": "failure"}
     result, error = feed_manager.remove_group(group_name)
     if result or not error:
@@ -81,9 +82,9 @@ def remove_group(group_name):
     return jsonify(response_object)
 
 
-@app.route("/fm/groups/<group_name>/feeds", methods=["GET"])
+@app.route("/groups/<group_name>/feeds", methods=["GET"])
 def get_feeds_by_group(group_name):
-    print("/fm/groups/<group_name>/feeds, %r -> get_feeds_by_group(%s)" % (request.method, group_name))
+    print("/groups/<group_name>/feeds, %r -> get_feeds_by_group(%s)" % (request.method, group_name))
     response_object = {"status": "failure"}
     result, error = feed_manager.get_feeds_by_group(group_name)
     if result or not error:
@@ -96,9 +97,9 @@ def get_feeds_by_group(group_name):
     return jsonify(response_object)
 
 
-@app.route("/fm/groups/<group_name>/feeds/<feed_name>", methods=["DELETE", "POST", "GET"])
+@app.route("/groups/<group_name>/feeds/<feed_name>", methods=["DELETE", "POST", "GET"])
 def get_feed_info(group_name, feed_name):
-    print("/fm/groups/<group_name>/feeds/<feed_name>, %r -> get_feed_info(%s, %s)" % (request.method, group_name, feed_name))
+    print("/groups/<group_name>/feeds/<feed_name>, %r -> get_feed_info(%s, %s)" % (request.method, group_name, feed_name))
     response_object = {"status": "failure"}
     if request.method == "GET":
         result, error = feed_manager.get_feed_info_by_name(feed_name)
@@ -125,9 +126,9 @@ def get_feed_info(group_name, feed_name):
     return jsonify(response_object)
 
 
-@app.route("/fm/groups/<group_name>/feeds/<feed_name>/run", methods=["POST"])
+@app.route("/groups/<group_name>/feeds/<feed_name>/run", methods=["POST"])
 def run(group_name, feed_name):
-    print("/fm/groups/<group_name>/feeds/<feed_name>/run, %r -> run(%s, %s)" % (request.method, group_name, feed_name))
+    print("/groups/<group_name>/feeds/<feed_name>/run, %r -> run(%s, %s)" % (request.method, group_name, feed_name))
     response_object = {"status": "failure"}
     result, error = feed_manager.run(group_name, feed_name)
     if result:
@@ -137,9 +138,9 @@ def run(group_name, feed_name):
     return jsonify(response_object)
 
 
-@app.route("/fm/groups/<group_name>/toggle", methods=["PUT"])
+@app.route("/groups/<group_name>/toggle", methods=["PUT"])
 def toggle_group(group_name):
-    print("/fm/groups/<group_name>/toggle, %r -> toggle_group(%s)" % (request.method, group_name))
+    print("/groups/<group_name>/toggle, %r -> toggle_group(%s)" % (request.method, group_name))
     response_object = {"status": "failure"}
     result, error = feed_manager.toggle_group(group_name)
     if result:
@@ -150,9 +151,9 @@ def toggle_group(group_name):
     return jsonify(response_object)
 
 
-@app.route("/fm/groups/<group_name>/feeds/<feed_name>/toggle", methods=["PUT"])
+@app.route("/groups/<group_name>/feeds/<feed_name>/toggle", methods=["PUT"])
 def toggle_feed(group_name, feed_name):
-    print("/fm/groups/<group_name>/feeds/<feed_name>/toggle, %r -> toggle_feed(%s, %s)" % (request.method, group_name, feed_name))
+    print("/groups/<group_name>/feeds/<feed_name>/toggle, %r -> toggle_feed(%s, %s)" % (request.method, group_name, feed_name))
     response_object = {"status": "failure"}
     result, error = feed_manager.toggle_feed(group_name, feed_name)
     if result:
@@ -163,9 +164,9 @@ def toggle_feed(group_name, feed_name):
     return jsonify(response_object)
 
 
-@app.route("/fm/groups/<group_name>/feeds/<feed_name>/disable", methods=["PUT"])
+@app.route("/groups/<group_name>/feeds/<feed_name>/disable", methods=["PUT"])
 def disable(group_name, feed_name):
-    print("/fm/groups/<group_name>/feeds/<feed_name>/disable, %r -> disable(%s, %s)" % (request.method, group_name, feed_name))
+    print("/groups/<group_name>/feeds/<feed_name>/disable, %r -> disable(%s, %s)" % (request.method, group_name, feed_name))
     response_object = {"status": "failure"}
     result, error = feed_manager.enable(group_name, feed_name, False)
     if result:
@@ -176,9 +177,9 @@ def disable(group_name, feed_name):
     return jsonify(response_object)
 
 
-@app.route("/fm/groups/<group_name>/feeds/<feed_name>/list", methods=["DELETE"])
+@app.route("/groups/<group_name>/feeds/<feed_name>/list", methods=["DELETE"])
 def remove_list(group_name, feed_name):
-    print("/fm/groups/<group_name>/feeds/<feed_name>/list, %r -> remove_list(%s, %s)" % (request.method, group_name, feed_name))
+    print("/groups/<group_name>/feeds/<feed_name>/list, %r -> remove_list(%s, %s)" % (request.method, group_name, feed_name))
     response_object = {"status": "failure"}
     result, error = feed_manager.remove_list(group_name, feed_name)
     if result:
@@ -188,9 +189,9 @@ def remove_list(group_name, feed_name):
     return jsonify(response_object)
 
 
-@app.route("/fm/groups/<group_name>/feeds/<feed_name>/html", methods=["DELETE"])
+@app.route("/groups/<group_name>/feeds/<feed_name>/html", methods=["DELETE"])
 def remove_html(group_name, feed_name):
-    print("/fm/groups/<group_name>/feeds/<feed_name>/html, %r -> remove_html(%s, %s)" % (request.method, group_name, feed_name))
+    print("/groups/<group_name>/feeds/<feed_name>/html, %r -> remove_html(%s, %s)" % (request.method, group_name, feed_name))
     response_object = {"status": "failure"}
     result, error = feed_manager.remove_html(group_name, feed_name)
     if result:
@@ -200,9 +201,9 @@ def remove_html(group_name, feed_name):
     return jsonify(response_object)
 
 
-@app.route("/fm/groups/<group_name>/feeds/<feed_name>/alias", methods=["GET"])
+@app.route("/groups/<group_name>/feeds/<feed_name>/alias", methods=["GET"])
 def get_alias(group_name, feed_name):
-    print("/fm/groups/<group_name>/feeds/<feed_name>/alias, %r -> get_alias(%s, %s)" % (request.method, group_name, feed_name))
+    print("/groups/<group_name>/feeds/<feed_name>/alias, %r -> get_alias(%s, %s)" % (request.method, group_name, feed_name))
     response_object = {"status": "failure"}
     result, error = feed_manager.get_alias(group_name, feed_name)
     if result:
@@ -213,9 +214,9 @@ def get_alias(group_name, feed_name):
     return jsonify(response_object)
 
 
-@app.route("/fm/groups/<group_name>/feeds/<feed_name>/rename/<new_alias>", methods=["PUT"])
+@app.route("/groups/<group_name>/feeds/<feed_name>/rename/<new_alias>", methods=["PUT"])
 def rename_alias(group_name, feed_name, new_alias):
-    print("/fm/groups/<group_name>/feeds/<feed_name>/rename/<new_alias>, %r -> rename_alias(%s, %s, %s)" % (request.method, group_name, feed_name, new_alias))
+    print("/groups/<group_name>/feeds/<feed_name>/rename/<new_alias>, %r -> rename_alias(%s, %s, %s)" % (request.method, group_name, feed_name, new_alias))
     response_object = {"status": "failure"}
     result, error = feed_manager.rename_alias(group_name, feed_name, new_alias)
     if result:
