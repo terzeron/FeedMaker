@@ -1,13 +1,13 @@
 <template>
-    <div>
-        <b-alert variant="success" show>{{ message }}</b-alert>
-        <br>
-    </div>
+  <div>
+    <b-alert variant="success" show>{{ message }}</b-alert>
+    <br>
+  </div>
 </template>
 
 <script>
- export default {
-    name: 'Alert',
-     props: ['message'],
- };
+export default {
+  name: 'Alert',
+  props: ['message'],
+};
 </script>

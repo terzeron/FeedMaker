@@ -7,7 +7,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-vue/dist/bootstrap-vue.css'
 
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { faCaretDown, faCaretRight, faTrash, faPen, faList, faPlus, faMinus, faArrowDown } from '@fortawesome/free-solid-svg-icons'
+import { faCheckCircle } from '@fortawesome/free-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 import JsonEditor from 'vue-json-edit';
@@ -19,7 +19,7 @@ Vue.use(IconsPlugin);
 Vue.use(JsonEditor);
 Vue.use(VueSimpleMarkdown);
 
-library.add(faCaretDown, faCaretRight, faTrash, faPen, faList, faPlus, faMinus, faArrowDown);
+library.add(faCheckCircle);
 Vue.component('font-awesome-icon', FontAwesomeIcon);
 
 Vue.config.productionTip = false;
