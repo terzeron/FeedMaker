@@ -13,7 +13,7 @@ import logging
 import logging.config
 import shutil
 from pathlib import Path
-from filelock import FileLock
+from filelock import FileLock, Timeout
 from urllib.parse import urlparse, urlunparse, quote, urljoin
 from datetime import datetime
 from typing import List, Any, Dict, Tuple, Optional, Set
@@ -85,7 +85,7 @@ def send_error_msg_to_line(msg: Optional[str], receiver: str, access_token: str)
         curl -s -X POST
              -H 'Content-Type:application/json'
              -H 'Authorization: Bearer %s'
-             -d '{ "to": "%s", "messages": [ { "type": "text", "text": "%s" } ] }' 
+             -d '{ "to": "%s", "messages": [ { "type": "text", "text": "%s" } ] }'
              https://api.line.me/v2/bot/message/push
         ''' % (access_token, receiver, msg[:1999])).split("\n"))
     result, error = exec_cmd(cmd)
@@ -658,36 +658,65 @@ class Cache:
 
 
 class Htaccess:
+    htaccess_file_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]).parent / ".htaccess"
+    lock_file_path = Path(str(htaccess_file_path) + ".lock")
+    rewrite_rule_pattern = r'RewriteRule\t\^(?P<alias>[^.]+)\\\.xml\$\txml/%s\\\.xml'
+    group_tag_pattern = r'^#[^(]+\(%s\)'
+
     @staticmethod
-    def set_alias(group_name: str, feed_name: str, new_alias: str="") -> bool:
-        htaccess_file_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]).parent / ".htaccess"
-        lock_file_path = Path(str(htaccess_file_path) + ".lock")
-        temp_file_path = Path(str(htaccess_file_path) + "." + datetime.now().strftime("%Y%m%d%H%i%s"))
+    def get_alias(group_name: str, feed_name: str) -> Tuple[str, str]:
+        try:
+            with FileLock(str(Htaccess.lock_file_path), timeout=5):
+                with open(Htaccess.htaccess_file_path, 'r') as infile:
+                    state = 0
+                    for line in infile:
+                        if state == 0:
+                            m = re.search(Htaccess.group_tag_pattern % group_name, line)
+                            if m:
+                                state = 1
+                                continue
+                        elif state == 1:
+                            m = re.search(Htaccess.rewrite_rule_pattern % feed_name, line)
+                            if m:
+                                alias = m.group("alias")
+                                return alias, ""
+        except Timeout as e:
+            return "", "timeout in getting alias for feed '%s', %s" % (feed_name, str(e))
+        return "", "error in getting alias for feed '%s' from group '%s'" % (feed_name, group_name)
+
+    @staticmethod
+    def set_alias(group_name: str, feed_name: str, new_alias: str="") -> Tuple[bool, str]:
         is_found: bool = False
+        temp_file_path = Path(str(Htaccess.htaccess_file_path) + "." + datetime.now().strftime("%Y%m%d%H%i%s"))
         rewrite_rule_fmt = "RewriteRule\t^%s\\.xml$\txml/%s\\.xml\n"
 
         line_list: List[str] = []
-        with FileLock(str(lock_file_path)):
-            with open(htaccess_file_path, 'r') as infile: 
-                for line in infile:
-                    # find feed name and replace
-                    if new_alias and re.search(r'RewriteRule\t\^[^.]+\\\.xml\$\txml/' + feed_name + '\\\.xml', line):
-                        line_list.append(rewrite_rule_fmt % (new_alias, feed_name))
-                        print("feed is found")
-                        is_found = True
-                        continue
-                    
-                    line_list.append(line)
-                    
-                    # find group name and append after group name
-                    if not new_alias and re.search(r'^#[^(]+\(' + group_name + '\)', line):
-                        line_list.append(rewrite_rule_fmt % (feed_name, feed_name))
-                        print("group is found")
-                        is_found = True
+        try:
+            with FileLock(str(Htaccess.lock_file_path), timeout=5):
+                with open(Htaccess.htaccess_file_path, 'r') as infile:
+                    for line in infile:
+                        # find feed name and replace
+                        if new_alias and re.search(Htaccess.rewrite_rule_pattern % feed_name, line):
+                            line_list.append(rewrite_rule_fmt % (new_alias, feed_name))
+                            print("feed is found")
+                            is_found = True
+                            continue
 
-            with open(temp_file_path, 'w') as outfile:
-                for line in line_list:
-                    outfile.write(line)
+                        line_list.append(line)
 
-            shutil.copy(temp_file_path, htaccess_file_path)
-        return is_found
+                        # find group name and append after group name
+                        if not new_alias and re.search(Htaccess.group_tag_pattern % group_name, line):
+                            line_list.append(rewrite_rule_fmt % (feed_name, feed_name))
+                            print("group is found")
+                            is_found = True
+
+                with open(temp_file_path, 'w') as outfile:
+                    for line in line_list:
+                        outfile.write(line)
+
+                shutil.copy(temp_file_path, Htaccess.htaccess_file_path)
+        except Timeout as e:
+            return False, "timeout in renaming alias for feed '%s', %s" % (feed_name, str(e))
+        if is_found:
+            return True, ""
+        return False, "can't find such group '%s' or feed '%s'" % (group_name, feed_name)
