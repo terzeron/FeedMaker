@@ -628,7 +628,7 @@ class Htaccess:
     def get_alias(group_name: str, feed_name: str) -> Tuple[str, str]:
         try:
             with FileLock(str(Htaccess.lock_file_path), timeout=5):
-                with open(Htaccess.htaccess_file_path, 'r') as infile:
+                with open(Htaccess.htaccess_file_path, 'r', encoding='utf-8') as infile:
                     state = 0
                     for line in infile:
                         if state == 0:
@@ -654,7 +654,7 @@ class Htaccess:
         line_list: List[str] = []
         try:
             with FileLock(str(Htaccess.lock_file_path), timeout=5):
-                with open(Htaccess.htaccess_file_path, 'r') as infile:
+                with open(Htaccess.htaccess_file_path, 'r', encoding='utf-8') as infile:
                     for line in infile:
                         # find feed name and replace
                         if new_alias and re.search(Htaccess.rewrite_rule_pattern % feed_name, line):
