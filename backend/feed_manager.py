@@ -54,7 +54,7 @@ class FeedManager:
         self.logger.debug("# read_config_file(feed_dir_path=%r)", feed_dir_path)
         conf_file_path = feed_dir_path / self.CONF_FILE
         if conf_file_path.is_file():
-            with open(conf_file_path, 'r') as infile:
+            with open(conf_file_path, 'rb') as infile:
                 json_data = json.load(infile)
                 if "configuration" not in json_data:
                     self.logger.error("can't find normal configuration '%s'", feed_dir_path.relative_to(self.work_dir))
@@ -74,7 +74,7 @@ class FeedManager:
         group_dir_path = self.work_dir / group_name
         feed_title_list: List[Dict[str, str]] = []
         for path in group_dir_path.iterdir():
-            if path.is_dir():
+            if path.is_dir() and not path.name.startswith("."):
                 feed_name = path.name
                 configuration = self.read_config_file(path)
                 self.feed_name_config_map[feed_name] = configuration
@@ -176,7 +176,7 @@ class FeedManager:
         feed_dir_path = self.work_dir / group_name / feed_name
         os.chdir(feed_dir_path)
         conf_file_path = feed_dir_path / self.CONF_FILE
-        with open(conf_file_path, 'r') as infile:
+        with open(conf_file_path, 'rb') as infile:
             json_data = json.load(infile)
             if "configuration" in json_data:
                 runner = FeedMakerRunner(
