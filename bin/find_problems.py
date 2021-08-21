@@ -363,6 +363,8 @@ class ProblemChecker:
         for i in range(30, -1, -1):
             date_str = (today - timedelta(days=i)).strftime("%y%m%d")
             file_path = ProblemChecker.httpd_access_log_dir / ("access.log." + date_str)
+            if not file_path.is_file():
+                continue
             with open(file_path, 'r') as infile:
                 for line in infile:
                     # view
