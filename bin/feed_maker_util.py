@@ -13,11 +13,10 @@ import logging
 import logging.config
 import shutil
 from pathlib import Path
-from filelock import FileLock, Timeout
 from urllib.parse import urlparse, urlunparse, quote, urljoin
 from datetime import datetime
 from typing import List, Any, Dict, Tuple, Optional, Set
-import psutil
+from filelock import FileLock, Timeout
 import xmltodict
 import mail1
 from ordered_set import OrderedSet
@@ -146,44 +145,6 @@ def remove_duplicates(a_list: List[Any]) -> List[Any]:
 def remove_file(file_path: str) -> None:
     if os.path.isfile(file_path):
         os.remove(file_path)
-
-
-def find_process_group(parent_proc_name: str) -> List[int]:
-    # find a parent process id by parent process name
-    parent_children_map: Dict[int, List[int]] = {}
-    ppid_list = []
-    for proc in psutil.process_iter():
-        try:
-            pinfo = proc.as_dict(attrs=["pid", "ppid", "name"])
-        except psutil.NoSuchProcess:
-            pass
-        else:
-            ppid = pinfo["ppid"]
-            if ppid in parent_children_map:
-                pid_list = parent_children_map[ppid]
-                pid_list.append(pinfo["pid"])
-            else:
-                pid_list = [pinfo["pid"]]
-            parent_children_map[ppid] = pid_list
-            if pinfo["name"] == parent_proc_name:
-                ppid_list.append(pinfo["pid"])
-
-    # find a child process id by parent process name and child process name
-    result_pid_list = []
-    for ppid in ppid_list:
-        result_pid_list.append(ppid)
-        if ppid in parent_children_map:
-            result_pid_list.extend(parent_children_map[ppid])
-
-    return result_pid_list
-
-
-def kill_process_group(proc_name: str) -> None:
-    LOGGER.debug("kill_process_group(proc_name='%s')", proc_name)
-    pid_list = find_process_group(proc_name)
-    for pid in pid_list:
-        p = psutil.Process(pid)
-        p.terminate()
 
 
 def get_current_time() -> datetime:

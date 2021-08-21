@@ -12,7 +12,7 @@ import concurrent.futures
 import getopt
 from pathlib import Path
 from typing import Dict, Tuple, List, Any, Set
-from feed_maker_util import Config, exec_cmd, send_error_msg, kill_process_group
+from feed_maker_util import Config, exec_cmd, send_error_msg
 from feed_maker import FeedMaker
 
 
@@ -305,7 +305,6 @@ def main() -> int:
     runner = FeedMakerRunner(html_archiving_period=30, list_archiving_period=7)
     if options["do_make_all_feeds"]:
         result = runner.make_all_feeds()
-        kill_process_group("chromedriver")
     else:
         result = runner.make_single_feed(feed_dir_path, options)
 
