@@ -58,8 +58,11 @@ class FeedManager:
         self.logger.debug("# read_config_file(feed_dir_path=%r)", feed_dir_path)
         conf_file_path = feed_dir_path / self.CONF_FILE
         if conf_file_path.is_file():
-            with open(conf_file_path, 'rb') as infile:
-                json_data = json.load(infile)
+            with open(conf_file_path, 'r', encoding='utf-8') as infile:
+                line_list: List[str] = []
+                for line in infile:
+                    line_list.append(line)
+                json_data = json.loads(''.join(line_list))
                 if "configuration" not in json_data:
                     self.logger.error("can't find normal configuration '%s'", feed_dir_path.relative_to(self.work_dir))
                     return {}
@@ -163,8 +166,8 @@ class FeedManager:
 
         config_file_path = self.work_dir / group_name / feed_name / self.CONF_FILE
         config_file_path.parent.mkdir(exist_ok=True)
-        with open(config_file_path, 'w') as outfile:
-            json.dump(post_data, outfile, indent=2, ensure_ascii=False)
+        with open(config_file_path, 'w', encoding='utf-8') as outfile:
+            outfile.write(json.dumps(post_data, indent=2, ensure_ascii=False))
 
         title = configuration["rss"]["title"].split("::")[0]
         feed_title_list = self.group_name_feed_title_list_map[group_name]
@@ -172,7 +175,7 @@ class FeedManager:
         self.group_name_feed_title_list_map[group_name] = feed_title_list
         self.feed_name_config_map[feed_name] = post_data
 
-        print(self.git_add(config_file_path))
+        self.git_add(config_file_path)
 
         return True, ""
 
@@ -265,6 +268,9 @@ class FeedManager:
 
         # git rm & commit
         self.git_rm(group_dir_path)
+
+        # remove remainder files and directories
+        self.remove_dir_and_files(group_dir_path)
 
         # re-scan feeds by group
         self.load_all_feeds()
