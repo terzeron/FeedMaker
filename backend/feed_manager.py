@@ -13,13 +13,20 @@ from feed_maker_util import Htaccess, exec_cmd
 
 
 class FeedManager:
-    # group_name -> feed_title_list(name, title)
-    group_name_feed_title_list_map: Dict[str, List[Dict[str, str]]] = {}
-    # feed_name -> configuration
-    feed_name_config_map: Dict[str, Any] = {}
     work_dir = Path(os.environ["FEED_MAKER_WORK_DIR"])
     www_feeds_dir = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"])
     CONF_FILE = "conf.json"
+
+    def __init__(self, logger: logging.Logger) -> None:
+        self.logger = logger
+        # group_name -> feed_title_list(name, title)
+        self.group_name_feed_title_list_map: Dict[str, List[Dict[str, str]]] = {}
+        # feed_name -> configuration
+        self.feed_name_config_map: Dict[str, Any] = {}
+
+    def __del__(self) -> None:
+        del self.group_name_feed_title_list_map
+        del self.feed_name_config_map
 
     def git_add(self, feed_dir_path: Path) -> Tuple[str, Optional[str]]:
         os.chdir(self.work_dir)
@@ -43,12 +50,9 @@ class FeedManager:
         new_feed_dir_name = new_feed_dir_path.name
         feed_dir_path_relative = feed_dir_path.relative_to(self.work_dir)
         new_feed_dir_path_relative = new_feed_dir_path.relative_to(self.work_dir)
-        cmd = "git mv %s %s && git commit -m 'rename %s to %s'" % (feed_dir_path_relative, new_feed_dir_path_relative, feed_dir_name, new_feed_dir_name)
+        cmd = "git mv %s %s && git commit -m 'rename %s to %s' || mv %s %s" % (feed_dir_path_relative, new_feed_dir_path_relative, feed_dir_name, new_feed_dir_name, feed_dir_path_relative, new_feed_dir_path_relative)
         print(cmd)
         return exec_cmd(cmd)
-
-    def __init__(self, logger: logging.Logger) -> None:
-        self.logger = logger
 
     def read_config_file(self, feed_dir_path: Path) -> Dict[str, Any]:
         self.logger.debug("# read_config_file(feed_dir_path=%r)", feed_dir_path)
@@ -74,7 +78,7 @@ class FeedManager:
         group_dir_path = self.work_dir / group_name
         feed_title_list: List[Dict[str, str]] = []
         for path in group_dir_path.iterdir():
-            if path.is_dir() and not path.name.startswith("."):
+            if path.is_dir():
                 feed_name = path.name
                 configuration = self.read_config_file(path)
                 self.feed_name_config_map[feed_name] = configuration
@@ -83,12 +87,12 @@ class FeedManager:
         self.group_name_feed_title_list_map[group_name] = feed_title_list
 
     def load_all_feeds(self) -> None:
-        self.feed_name_config_map = {}
-        self.group_name_feed_title_list_map = {}
+        self.feed_name_config_map.clear()
+        self.group_name_feed_title_list_map.clear()
         for group_dir_path in self.work_dir.iterdir():
             if group_dir_path.is_dir():
                 group_name = group_dir_path.name
-                if group_name == "test" or group_name == ".git":
+                if group_name in ["test", "logs"] or group_name.startswith("."):
                     continue
                 self.scan_feeds_by_group(group_name)
 
@@ -211,7 +215,7 @@ class FeedManager:
                 return False, str(e)
         return False, "can't remove directory '%s'" % path
 
-    def remove_img_pdf_rss_files(self, feed_name: str) -> Tuple[bool, str]:
+    def remove_img_pdf_rss_files(self, feed_name: str) -> None:
         img_dir_path = self.www_feeds_dir / "img" / feed_name
         pdf_dir_path = self.www_feeds_dir / "pdf" / feed_name
         rss_file_path = self.www_feeds_dir / "xml" / (feed_name + ".xml")
@@ -222,7 +226,6 @@ class FeedManager:
         if rss_file_path.is_file():
             print(rss_file_path)
             rss_file_path.unlink()
-
 
     def remove_list(self, group_name: str, feed_name: str) -> Tuple[bool, str]:
         feed_dir_path = self.work_dir / group_name / feed_name
@@ -282,8 +285,8 @@ class FeedManager:
         self.git_mv(feed_dir_path, new_feed_dir_path)
 
         # re-scan feeds by group
-        self.group_name_feed_title_list_map[group_name] = {}
-        self.feed_name_config_map[feed_name] = {}
+        self.group_name_feed_title_list_map[group_name].clear()
+        self.feed_name_config_map[feed_name].clear()
         self.scan_feeds_by_group(group_name)
 
         print("self.group_name_feed_title_list_map[%s]=%r" % (group_name, self.group_name_feed_title_list_map[group_name]))
