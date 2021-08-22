@@ -252,6 +252,9 @@ class FeedManager:
         # git rm & commit
         self.git_rm(feed_dir_path)
 
+        # remove remainder files and directories
+        self.remove_dir_and_files(feed_dir_path)
+
         # re-scan feeds by group
         self.load_all_feeds()
         return True, ""
