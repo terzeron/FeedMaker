@@ -33,7 +33,7 @@
  .navbar-text { font-weight: bold; }
  a.navbar-link { text-decoration: none !important; }
  a.navbar-link > a { text-decoration: none !important; }
- a:ᆼ-webki-any-link { text-decoration: none !important; }
+ a:-webkit-any-link { text-decoration: none !important; }
 </style>
 
 <script>

@@ -86,7 +86,7 @@
               {{ newFeedName }}
             </b-form-input>
             <b-input-group-append>
-              <my-button ref="saveButton" label="저장" :click="save"/>
+              <my-button ref="saveButton" label="저장" @click="save"/>
             </b-input-group-append>
           </b-input-group>
         </b-col>
@@ -95,22 +95,22 @@
           <my-button
             ref="runButton"
             label="실행"
-            :click="run"
+            @click="run"
             v-if="showRunButton"/>
           <my-button
             ref="registerButton"
             label="Feeder 등록"
-            :click="registerToFeeder"
+            @click="registerToFeeder"
             v-if="showRegisterButton"/>
           <my-button
             ref="removeListButton"
             label="리스트 삭제"
-            :click="removeList"
+            @click="removeList"
             v-if="showRemoveListButton"/>
           <my-button
             ref="removeHtmlButton"
             label="HTML 삭제"
-            :click="removeHtml"
+            @click="removeHtml"
             v-if="showRemoveHtmlButton"/>
           <my-button
             ref="toggleFeedButton"
@@ -120,7 +120,7 @@
           <my-button
             ref="removeFeedButton"
             label="피드 삭제"
-            :click="removeFeed"
+            @click="removeFeed"
             v-if="showRemoveFeedButton"/>
           <my-button
             ref="toggleGroupButton"
@@ -132,7 +132,7 @@
             ref="removeGroupButton"
             label="그룹 삭제"
             variant="outline-primary"
-            :click="removeGroup"
+            @click="removeGroup"
             v-if="showRemoveGroupButton"/>
         </b-col>
 
@@ -145,7 +145,7 @@
               <my-button
                 ref="renameButton"
                 label="변경"
-                :click="renameAlias"/>
+                @click="renameAlias"/>
             </b-input-group-append>
           </b-input-group>
         </b-col>
@@ -273,7 +273,7 @@ export default {
     getApiUrlPath() {
       let pathPrefix = 'https://api.terzeron.com/fm';
       if (process.env.NODE_ENV === 'development') {
-        pathPrefix = 'http://localhost:5000/fm';
+        pathPrefix = 'http://localhost:5000/';
       }
       return pathPrefix;
     },
@@ -313,6 +313,12 @@ export default {
       this.$refs[ref].doShowSpinner = false;
       this.$refs[ref].doShowCheck = false;
     },
+    resetAllButtons() {
+      /*for (let key in this.$refs) {
+        this.$refs[key].doShowSpinner = false;
+        this.$refs[key].doShowCheck = false;
+      }*/
+    },
     showAllRelatedToFeed() {
       this.showEditor = true;
       this.showNewFeedNameInput = true;
@@ -337,8 +343,10 @@ export default {
       this.clearAlert();
     },
     showAllRelatedToGroup() {
-      this.showToggleGroupButton = true;
-      this.showRemoveGroupButton = true;
+      if (this.selectedGroupName) {
+        this.showToggleGroupButton = true;
+        this.showRemoveGroupButton = true;
+      }
     },
     hideAllRelatedToGroup() {
       this.showToggleGroupButton = false;
@@ -350,6 +358,7 @@ export default {
       this.showGroupList = true;
       this.showFeedList = false;
       this.showFeedListButton = false;
+      this.resetAllButtons();
 
       this.getGroups();
     },
@@ -383,6 +392,7 @@ export default {
       console.log(`feedListButtonClicked()`);
       this.showGroupList = false;
       this.showFeedList = true;
+      this.resetAllButtons();
 
       this.getFeedListByGroup(this.selectedGroupName);
     },
@@ -397,6 +407,7 @@ export default {
       this.showGroupList = false;
       this.showFeedList = true;
       this.showFeedListButton = true;
+      this.resetAllButtons();
 
       this.getFeedListByGroup(groupName);
     },
@@ -432,6 +443,7 @@ export default {
       // show and hide
       this.showFeedList = false;
       this.showFeedListButton = true;
+      this.resetAllButtons();
 
       this.getFeedInfo(feedName);
     },
@@ -467,7 +479,6 @@ export default {
         .then((value) => {
           this.startButton('saveButton');
           if (value) {
-            this.showSaveSpinner = true;
             const postData = {configuration: this.jsonData};
             const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.newFeedName}`;
             axios
@@ -479,7 +490,6 @@ export default {
                   this.selectedFeedName = this.newFeedName;
                   console.log(`selectedFeedName is set to ${this.selectedFeedName}`);
                 }
-                this.showSaveSpinner = false;
                 this.endButton('saveButton');
               })
               .catch((error) => {
@@ -494,7 +504,7 @@ export default {
     },
     run: function () {
       console.log(`run()`);
-      this.showRunSpinner = true;
+      this.startButton('runButton');
       const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.newFeedName}/run`;
       axios
         .post(path)
@@ -502,10 +512,11 @@ export default {
           if (res.data.status === 'failure') {
             this.alert(res.data.message);
           }
-          this.showRunSpinner = false;
+          this.endButton('runButton');
         })
         .catch((error) => {
           console.error(error);
+          this.resetButton('runButton');
         });
     },
     registerToFeeder: function () {
@@ -528,6 +539,11 @@ export default {
         .msgBoxConfirm('정말로 실행하시겠습니까?')
         .then((value) => {
           if (value) {
+            if (target === 'feed') {
+              this.startButton('toggleFeedButton');
+            } else {
+              this.startButton('toggleGroupButton');
+            }
             console.log(path);
             axios
               .put(path)
@@ -551,9 +567,19 @@ export default {
                     this.hideAllRelatedToGroup();
                   }
                 }
+                if (target === 'feed') {
+                  this.endButton('toggleFeedButton');
+                } else {
+                  this.endButton('toggleGroupButton');
+                }
               })
               .catch((error) => {
                 console.error(error);
+                if (target === 'feed') {
+                  this.resetButton('toggleFeedButton');
+                } else {
+                  this.resetButton('toggleGroupButton');
+                }
               });
           }
         })
@@ -567,6 +593,7 @@ export default {
         .msgBoxConfirm('정말로 실행하시겠습니까?')
         .then((value) => {
           if (value) {
+            this.startButton('removeListButton');
             const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/list`;
             axios
               .delete(path)
@@ -574,9 +601,11 @@ export default {
                 if (res.data.status === 'failure') {
                   this.alert(res.data.message);
                 }
+                this.endButton('removeListButton');
               })
               .catch((error) => {
                 console.error(error);
+                this.resetButton('removeListButton');
               });
           }
         })
@@ -590,6 +619,7 @@ export default {
         .msgBoxConfirm('정말로 실행하시겠습니까?')
         .then((value) => {
           if (value) {
+            this.startButton('removeHtmlButton');
             const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/html`;
             axios
               .delete(path)
@@ -597,9 +627,11 @@ export default {
                 if (res.data.status === 'failure') {
                   this.alert(res.data.message);
                 }
+                this.endButton('removeHtmlButton');
               })
               .catch((error) => {
                 console.error(error);
+                this.resetButton('removeHtmlButton');
               });
           }
         })
@@ -617,6 +649,7 @@ export default {
         .msgBoxConfirm('정말로 실행하시겠습니까?')
         .then((value) => {
           if (value) {
+            this.startButton('removeFeedButton');
             const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}`;
             axios
               .delete(path)
@@ -627,9 +660,11 @@ export default {
                   this.getFeedListByGroup(this.selectedGroupName);
                 }
                 this.showEditor = false;
+                this.endButton('removeFeedButton');
               })
               .catch((error) => {
                 console.error(error);
+                this.resetButton('removeFeedButton');
               });
           }
         })
@@ -647,6 +682,7 @@ export default {
         .msgBoxConfirm('정말로 실행하시겠습니까?')
         .then((value) => {
           if (value) {
+            this.startButton('removeGroupButton');
             const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}`;
             axios
               .delete(path)
@@ -657,9 +693,11 @@ export default {
                   this.getGroups();
                 }
                 this.showEditor = false;
+                this.endButton('removeGroupButton');
               })
               .catch((error) => {
                 console.error(error);
+                this.resetButton('removeGroupButton');
               });
           }
         })
@@ -691,6 +729,7 @@ export default {
     renameAlias: function () {
       console.log(`renameAlias(${this.alias})`);
       let alias = this.getCleanFeedName(this.alias);
+      this.startButton('renameButton');
       const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/rename/${alias}`;
       console.log(`renameAlias() ${path}`)
       axios
@@ -699,9 +738,11 @@ export default {
           if (res.data.status === 'failure') {
             this.alert(res.data.message);
           }
+          this.endButton('renameButton');
         })
         .catch((error) => {
           console.error(error);
+          this.resetButton('renameButton');
         });
     }
   },
