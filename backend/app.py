@@ -111,7 +111,6 @@ def get_feed_info(group_name, feed_name):
             response_object["message"] = error
     elif request.method == "POST":
         post_data = request.get_json()
-        json.dump(post_data, sys.stdout, indent=2, ensure_ascii=False)
         result, error = feed_manager.save_config_file(group_name, feed_name, post_data)
         if result:
             response_object["status"] = "success"
