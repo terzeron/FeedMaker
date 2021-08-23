@@ -77,12 +77,12 @@ If you have .htaccess RewriteEngine issue, add this configuration
 ## API(backend) Flask settings
 * index.wsgi
   * /home/user/public_html/fmw/backend/index.wsgi
-  * `sys.path.insert(0, '/home/terzeron/public_html/fmw/backend')`
+  * `sys.path.insert(0, '/home/user/public_html/fmw/backend')`
 * app.py
   * `@app.route("/groups", methods=["GET"])`
   * Apache mounts this Flask app on /fm path. So all routes in app.py should be relative path such as '/groups'.
 * URLs and paths in all codes
   * frontend: `axios.get('https://userdomain.com/fm/groups')`
   * apache: `WSGIScriptAlias /fm /home/user/public_html/fmw/backend/index.wsgi`
-  * index.wsgi: `sys.path.insert(0, '/home/terzeron/public_html/fmw/backend')`
+  * index.wsgi: `sys.path.insert(0, '/home/user/public_html/fmw/backend')`
   * app.py: `@app.route("/groups", methods=["GET"])`
