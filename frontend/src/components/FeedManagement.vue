@@ -4,14 +4,14 @@
     <b-row>
       <b-col cols="12" class="m-0">
         <my-button
-          ref="groupListButton" label="그룹 목록"
-          variant="outline-primary"
-          @click="groupListButtonClicked"/>
+            ref="groupListButton" label="그룹 목록"
+            variant="primary"
+            @click="groupListButtonClicked"/>
         <my-button
-          ref="feedListButton"
-          :label="selectedGroupName + ' 그룹의 피드 목록'"
-          @click="feedListButtonClicked"
-          v-if="showFeedListButton"/>
+            ref="feedListButton"
+            :label="selectedGroupName + ' 그룹의 피드 목록'"
+            @click="feedListButtonClicked"
+            v-if="showFeedListButton"/>
       </b-col>
     </b-row>
 
@@ -19,13 +19,13 @@
     <b-row>
       <b-col id="group_list" cols="12" class="m-0" v-if="showGroupList">
         <my-button
-          ref="groupNameButton"
-          :label="group"
-          variant="outline-primary"
-          @click="groupNameButtonClicked(group, index)"
-          :class="{'active': activeGroupIndex === index}"
-          v-for="(group, index) in groups"
-          :key="group"/>
+            ref="groupNameButton"
+            :label="group"
+            variant="primary"
+            @click="groupNameButtonClicked(group, index)"
+            :class="{'active': activeGroupIndex === index}"
+            v-for="(group, index) in groups"
+            :key="group"/>
         <div class="p-2" v-if="!groups.length">
           그룹 목록 없음
         </div>
@@ -34,14 +34,14 @@
 
     <!-- 피드 목록 -->
     <b-row>
-      <b-col id="feed_list" ols="12" class="m-0" v-if="showFeedList">
+      <b-col id="feed_list" ols="12" class="m-0" :class="{'bg-warning': !groupStatus}" v-if="showFeedList">
         <my-button
-          ref="feedNameButton"
-          :label="feed.title"
-          @click="feedNameButtonClicked(feed.name, index)"
-          :class="{'active': activeFeedIndex === index}"
-          v-for="(feed, index) in feeds"
-          :key="feed.name"/>
+            ref="feedNameButton"
+            :label="feed.title"
+            @click="feedNameButtonClicked(feed.name, index)"
+            :class="{'active': activeFeedIndex === index}"
+            v-for="(feed, index) in feeds"
+            :key="feed.name"/>
         <div class="p-2" v-if="!feeds.length">
           피드 목록 없음
         </div>
@@ -51,16 +51,16 @@
     <!-- 설정 편집기 및 액션 영역 -->
     <b-row>
       <!-- 설정 편집기 영역 -->
-      <b-col id="configuration" cols="12" lg="8" class="m-0">
+      <b-col id="configuration" cols="12" lg="8" class="m-0" :class="{'bg-warning': !feedStatus}">
         <JsonEditor
-          class="m-0 p-0"
-          :options="{
+            class="m-0 p-0"
+            :options="{
               confirmText: 'confirm',
               cancelText: 'cancel',
             }"
-          :objData="jsonData"
-          v-model="jsonData"
-          v-if="showEditor">
+            :objData="jsonData"
+            v-model="jsonData"
+            v-if="showEditor">
         </JsonEditor>
         <div class="p-2" v-if="!showEditor">
           설정 파일 없음
@@ -68,20 +68,20 @@
       </b-col>
 
       <!-- 액션 영역 -->
-      <b-col id="actions" cols="12" lg="4" class="m-0">
+      <b-col id="actions" cols="12" lg="4" class="m-0" :class="{'bg-warning': !feedStatus}">
         <b-alert
-          v-model="showAlert"
-          class="mb-0"
-          variant="danger"
-          dismissible>
+            class="mb-0"
+            variant="danger"
+            dismissible
+            v-if="showAlert">
           {{ alertMessage }}
         </b-alert>
 
         <b-col cols="12" class="m-0">
           <b-input-group
-            prepend="피드"
-            class="m-0"
-            v-if="showNewFeedNameInput">
+              prepend="피드"
+              class="m-0"
+              v-if="showNewFeedNameInput">
             <b-form-input class="m-0" v-model="newFeedName">
               {{ newFeedName }}
             </b-form-input>
@@ -93,47 +93,47 @@
 
         <b-col cols="12" class="m-0">
           <my-button
-            ref="runButton"
-            label="실행"
-            @click="run"
-            v-if="showRunButton"/>
+              ref="runButton"
+              label="실행"
+              @click="run"
+              v-if="showRunButton"/>
           <my-button
-            ref="registerButton"
-            label="Feeder 등록"
-            @click="registerToFeeder"
-            v-if="showRegisterButton"/>
+              ref="registerButton"
+              label="Feeder 등록"
+              @click="registerToFeeder"
+              v-if="showRegisterButton"/>
           <my-button
-            ref="removeListButton"
-            label="리스트 삭제"
-            @click="removeList"
-            v-if="showRemoveListButton"/>
+              ref="removeListButton"
+              label="리스트 삭제"
+              @click="removeList"
+              v-if="showRemoveListButton"/>
           <my-button
-            ref="removeHtmlButton"
-            label="HTML 삭제"
-            @click="removeHtml"
-            v-if="showRemoveHtmlButton"/>
+              ref="removeHtmlButton"
+              label="HTML 삭제"
+              @click="removeHtml"
+              v-if="showRemoveHtmlButton"/>
           <my-button
-            ref="toggleFeedButton"
-            :label="feedStatusLabel"
-            @click="toggleStatus('feed')"
-            v-if="showToggleFeedButton"/>
+              ref="toggleFeedButton"
+              :label="feedStatusLabel"
+              @click="toggleStatus('feed')"
+              v-if="showToggleFeedButton"/>
           <my-button
-            ref="removeFeedButton"
-            label="피드 삭제"
-            @click="removeFeed"
-            v-if="showRemoveFeedButton"/>
+              ref="removeFeedButton"
+              label="피드 삭제"
+              @click="removeFeed"
+              v-if="showRemoveFeedButton"/>
           <my-button
-            ref="toggleGroupButton"
-            :label="groupStatusLabel"
-            variant="outline-primary"
-            @click="toggleStatus('group')"
-            v-if="showToggleGroupButton"/>
+              ref="toggleGroupButton"
+              :label="groupStatusLabel"
+              variant="primary"
+              @click="toggleStatus('group')"
+              v-if="showToggleGroupButton"/>
           <my-button
-            ref="removeGroupButton"
-            label="그룹 삭제"
-            variant="outline-primary"
-            @click="removeGroup"
-            v-if="showRemoveGroupButton"/>
+              ref="removeGroupButton"
+              label="그룹 삭제"
+              variant="primary"
+              @click="removeGroup"
+              v-if="showRemoveGroupButton"/>
         </b-col>
 
         <b-col cols="12" class="m-0">
@@ -143,9 +143,9 @@
             </b-form-input>
             <b-input-group-append>
               <my-button
-                ref="renameButton"
-                label="변경"
-                @click="renameAlias"/>
+                  ref="renameButton"
+                  label="변경"
+                  @click="renameAlias"/>
             </b-input-group-append>
           </b-input-group>
         </b-col>
@@ -189,6 +189,7 @@ input.key-input {
   text-overflow: fade;
   border: 1px gray dotted !important;
 }
+
 </style>
 
 <script>
@@ -273,7 +274,7 @@ export default {
     getApiUrlPath() {
       let pathPrefix = 'https://api.terzeron.com/fm';
       if (process.env.NODE_ENV === 'development') {
-        pathPrefix = 'http://localhost:5000/';
+        pathPrefix = 'http://localhost:5000';
       }
       return pathPrefix;
     },
@@ -312,12 +313,6 @@ export default {
     resetButton(ref) {
       this.$refs[ref].doShowSpinner = false;
       this.$refs[ref].doShowCheck = false;
-    },
-    resetAllButtons() {
-      /*for (let key in this.$refs) {
-        this.$refs[key].doShowSpinner = false;
-        this.$refs[key].doShowCheck = false;
-      }*/
     },
     showAllRelatedToFeed() {
       this.showEditor = true;
@@ -358,7 +353,7 @@ export default {
       this.showGroupList = true;
       this.showFeedList = false;
       this.showFeedListButton = false;
-      this.resetAllButtons();
+      this.hideAllRelatedToGroup();
 
       this.getGroups();
     },
@@ -366,33 +361,32 @@ export default {
       console.log(`getGroups()`);
       const path = this.getApiUrlPath() + '/groups';
       axios
-        .get(path)
-        .then((res) => {
-          if (res.data.status === 'failure') {
-            this.alert(res.data.message);
-          } else {
-            this.groups = res.data.groups;
-            this.feeds = [];
-            this.activeFeedIndex = undefined;
-            this.activeGroupIndex = undefined;
-            this.selectedFeedName = '';
-            this.selectedGroupName = '';
-            this.showRemoveFeedButton = false;
-            this.showRemoveGroupButton = false;
+          .get(path)
+          .then((res) => {
+            if (res.data.status === 'failure') {
+              this.alert(res.data.message);
+            } else {
+              this.groups = res.data.groups;
+              this.feeds = [];
+              this.activeFeedIndex = undefined;
+              this.activeGroupIndex = undefined;
+              this.selectedFeedName = '';
+              this.selectedGroupName = '';
+              this.showRemoveFeedButton = false;
+              this.showRemoveGroupButton = false;
 
-            this.hideAllRelatedToFeed();
-            this.showAllRelatedToGroup();
-          }
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+              this.hideAllRelatedToFeed();
+              this.showAllRelatedToGroup();
+            }
+          })
+          .catch((error) => {
+            console.error(error);
+          });
     },
     feedListButtonClicked() {
       console.log(`feedListButtonClicked()`);
       this.showGroupList = false;
       this.showFeedList = true;
-      this.resetAllButtons();
 
       this.getFeedListByGroup(this.selectedGroupName);
     },
@@ -407,7 +401,6 @@ export default {
       this.showGroupList = false;
       this.showFeedList = true;
       this.showFeedListButton = true;
-      this.resetAllButtons();
 
       this.getFeedListByGroup(groupName);
     },
@@ -415,23 +408,23 @@ export default {
       console.log(`getFeedListByGroup(${groupName})`);
       const path = this.getApiUrlPath() + `/groups/${groupName}/feeds`;
       axios
-        .get(path)
-        .then((res) => {
-          if (res.data.status === 'failure') {
-            this.alert(res.data.message);
-          } else {
-            this.feeds = res.data.feeds;
-            console.log(`feeds.length=${this.feeds.length}`);
-            this.activeFeedIndex = undefined;
-            this.selectedFeedName = '';
+          .get(path)
+          .then((res) => {
+            if (res.data.status === 'failure') {
+              this.alert(res.data.message);
+            } else {
+              this.feeds = res.data.feeds;
+              console.log(`feeds.length=${this.feeds.length}`);
+              this.activeFeedIndex = undefined;
+              this.selectedFeedName = '';
 
-            this.hideAllRelatedToFeed();
-            this.showAllRelatedToGroup();
-          }
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+              this.hideAllRelatedToFeed();
+              this.showAllRelatedToGroup();
+            }
+          })
+          .catch((error) => {
+            console.error(error);
+          });
     },
     feedNameButtonClicked(feedName, index) {
       console.log(`feedNameButtonClicked(${feedName}, ${index})`);
@@ -443,7 +436,6 @@ export default {
       // show and hide
       this.showFeedList = false;
       this.showFeedListButton = true;
-      this.resetAllButtons();
 
       this.getFeedInfo(feedName);
     },
@@ -451,79 +443,77 @@ export default {
       console.log(`getFeedInfo(${feedName})`);
       const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}`;
       axios
-        .get(path)
-        .then((res) => {
-          if (res.data.status === 'failure') {
-            this.alert(res.data.message);
-          } else {
-            this.jsonData = res.data.configuration;
-            console.log(`jsonData is set to ${this.jsonData}`);
-            console.log(`Object.keys(this.jsonData)=${Object.keys(this.jsonData)}`);
-            if (Object.keys(this.jsonData).length >= 3) {
-              this.showAllRelatedToFeed();
+          .get(path)
+          .then((res) => {
+            if (res.data.status === 'failure') {
+              this.alert(res.data.message);
             } else {
-              this.hideAllRelatedToFeed();
+              this.jsonData = res.data.configuration;
+              console.log(`jsonData is set to ${this.jsonData}`);
+              console.log(`Object.keys(this.jsonData)=${Object.keys(this.jsonData)}`);
+              if (Object.keys(this.jsonData).length >= 3) {
+                this.showAllRelatedToFeed();
+              } else {
+                this.hideAllRelatedToFeed();
+              }
+              this.hideAllRelatedToGroup();
+              this.getAlias();
             }
-            this.hideAllRelatedToGroup();
-            this.getAlias();
-          }
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+          })
+          .catch((error) => {
+            console.error(error);
+          });
     },
     save: function () {
       console.log(`save()`);
       this.$bvModal
-        .msgBoxConfirm('정말로 실행하시겠습니까?')
-        .then((value) => {
-          this.startButton('saveButton');
-          if (value) {
-            const postData = {configuration: this.jsonData};
-            const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.newFeedName}`;
-            axios
-              .post(path, postData)
-              .then((res) => {
-                if (res.data.status === 'failure') {
-                  this.alert(res.data.message);
-                } else {
-                  this.selectedFeedName = this.newFeedName;
-                  console.log(`selectedFeedName is set to ${this.selectedFeedName}`);
-                }
-                this.endButton('saveButton');
-              })
-              .catch((error) => {
-                console.error(error);
-                this.resetButton('saveButton');
-              });
-          }
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+          .msgBoxConfirm('정말로 실행하시겠습니까?')
+          .then((value) => {
+            this.startButton('saveButton');
+            if (value) {
+              const postData = {configuration: this.jsonData};
+              const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.newFeedName}`;
+              axios
+                  .post(path, postData)
+                  .then((res) => {
+                    if (res.data.status === 'failure') {
+                      this.alert(res.data.message);
+                    } else {
+                      this.selectedFeedName = this.newFeedName;
+                      console.log(`selectedFeedName is set to ${this.selectedFeedName}`);
+                    }
+                    this.endButton('saveButton');
+                  })
+                  .catch((error) => {
+                    console.error(error);
+                    this.resetButton('saveButton');
+                  });
+            }
+          })
+          .catch((error) => {
+            console.error(error);
+          });
     },
     run: function () {
       console.log(`run()`);
       this.startButton('runButton');
       const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.newFeedName}/run`;
       axios
-        .post(path)
-        .then((res) => {
-          if (res.data.status === 'failure') {
-            this.alert(res.data.message);
-          }
-          this.endButton('runButton');
-        })
-        .catch((error) => {
-          console.error(error);
-          this.resetButton('runButton');
-        });
+          .post(path)
+          .then((res) => {
+            if (res.data.status === 'failure') {
+              this.alert(res.data.message);
+            }
+            this.endButton('runButton');
+          })
+          .catch((error) => {
+            console.error(error);
+            this.resetButton('runButton');
+          });
     },
     registerToFeeder: function () {
       console.log(`registerToFeeder()`);
-      const feeder_link =
-        'https://www.inoreader.com/feed/' +
-        encodeURIComponent(`https://terzeron.com/${this.newFeedName}.xml`);
+      const feeder_link = 'https://www.inoreader.com/feed/' + encodeURIComponent(`https://terzeron.com/${this.newFeedName}.xml`);
       window.open(feeder_link);
     },
     toggleStatus: function (target) {
@@ -536,108 +526,108 @@ export default {
       }
 
       this.$bvModal
-        .msgBoxConfirm('정말로 실행하시겠습니까?')
-        .then((value) => {
-          if (value) {
-            if (target === 'feed') {
-              this.startButton('toggleFeedButton');
-            } else {
-              this.startButton('toggleGroupButton');
+          .msgBoxConfirm('정말로 실행하시겠습니까?')
+          .then((value) => {
+            if (value) {
+              if (target === 'feed') {
+                this.startButton('toggleFeedButton');
+              } else {
+                this.startButton('toggleGroupButton');
+              }
+              console.log(path);
+              axios
+                  .put(path)
+                  .then((res) => {
+                    if (res.data.status === 'failure') {
+                      this.alert(res.data.message);
+                    } else {
+                      if (target === 'feed') {
+                        this.newFeedName = res.data['new_name'];
+                        console.log(`newFeedName is set to ${this.newFeedName}`);
+                        this.getFeedListByGroup(this.selectedGroupName);
+                        this.showFeedList = true;
+                        this.hideAllRelatedToFeed();
+                      } else {
+                        this.selectedGroupName = res.data['new_name'];
+                        console.log(`selectedFeedName is set to ${this.selectedFeedName}`);
+                        this.getGroups();
+                        this.showGroupList = true;
+                        this.showFeedList = false
+                        this.hideAllRelatedToFeed();
+                        this.hideAllRelatedToGroup();
+                      }
+                    }
+                    if (target === 'feed') {
+                      this.endButton('toggleFeedButton');
+                    } else {
+                      this.endButton('toggleGroupButton');
+                    }
+                  })
+                  .catch((error) => {
+                    console.error(error);
+                    if (target === 'feed') {
+                      this.resetButton('toggleFeedButton');
+                    } else {
+                      this.resetButton('toggleGroupButton');
+                    }
+                  });
             }
-            console.log(path);
-            axios
-              .put(path)
-              .then((res) => {
-                if (res.data.status === 'failure') {
-                  this.alert(res.data.message);
-                } else {
-                  if (target === 'feed') {
-                    this.newFeedName = res.data.new_name;
-                    console.log(`newFeedName is set to ${this.newFeedName}`);
-                    this.getFeedListByGroup(this.selectedGroupName);
-                    this.showFeedList = true;
-                    this.hideAllRelatedToFeed();
-                  } else {
-                    this.selectedGroupName = res.data.new_name;
-                    console.log(`selectedFeedName is set to ${this.selectedFeedName}`);
-                    this.getGroups();
-                    this.showGroupList = true;
-                    this.showFeedList = false
-                    this.hideAllRelatedToFeed();
-                    this.hideAllRelatedToGroup();
-                  }
-                }
-                if (target === 'feed') {
-                  this.endButton('toggleFeedButton');
-                } else {
-                  this.endButton('toggleGroupButton');
-                }
-              })
-              .catch((error) => {
-                console.error(error);
-                if (target === 'feed') {
-                  this.resetButton('toggleFeedButton');
-                } else {
-                  this.resetButton('toggleGroupButton');
-                }
-              });
-          }
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+          })
+          .catch((error) => {
+            console.error(error);
+          });
     },
     removeList: function () {
       console.log(`removeList()`);
       this.$bvModal
-        .msgBoxConfirm('정말로 실행하시겠습니까?')
-        .then((value) => {
-          if (value) {
-            this.startButton('removeListButton');
-            const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/list`;
-            axios
-              .delete(path)
-              .then((res) => {
-                if (res.data.status === 'failure') {
-                  this.alert(res.data.message);
-                }
-                this.endButton('removeListButton');
-              })
-              .catch((error) => {
-                console.error(error);
-                this.resetButton('removeListButton');
-              });
-          }
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+          .msgBoxConfirm('정말로 실행하시겠습니까?')
+          .then((value) => {
+            if (value) {
+              this.startButton('removeListButton');
+              const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/list`;
+              axios
+                  .delete(path)
+                  .then((res) => {
+                    if (res.data.status === 'failure') {
+                      this.alert(res.data.message);
+                    }
+                    this.endButton('removeListButton');
+                  })
+                  .catch((error) => {
+                    console.error(error);
+                    this.resetButton('removeListButton');
+                  });
+            }
+          })
+          .catch((error) => {
+            console.error(error);
+          });
     },
     removeHtml: function () {
       console.log(`removeHtml()`);
       this.$bvModal
-        .msgBoxConfirm('정말로 실행하시겠습니까?')
-        .then((value) => {
-          if (value) {
-            this.startButton('removeHtmlButton');
-            const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/html`;
-            axios
-              .delete(path)
-              .then((res) => {
-                if (res.data.status === 'failure') {
-                  this.alert(res.data.message);
-                }
-                this.endButton('removeHtmlButton');
-              })
-              .catch((error) => {
-                console.error(error);
-                this.resetButton('removeHtmlButton');
-              });
-          }
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+          .msgBoxConfirm('정말로 실행하시겠습니까?')
+          .then((value) => {
+            if (value) {
+              this.startButton('removeHtmlButton');
+              const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/html`;
+              axios
+                  .delete(path)
+                  .then((res) => {
+                    if (res.data.status === 'failure') {
+                      this.alert(res.data.message);
+                    }
+                    this.endButton('removeHtmlButton');
+                  })
+                  .catch((error) => {
+                    console.error(error);
+                    this.resetButton('removeHtmlButton');
+                  });
+            }
+          })
+          .catch((error) => {
+            console.error(error);
+          });
     },
     removeFeed: function () {
       console.log(`removeFeed()`);
@@ -646,31 +636,31 @@ export default {
         return;
       }
       this.$bvModal
-        .msgBoxConfirm('정말로 실행하시겠습니까?')
-        .then((value) => {
-          if (value) {
-            this.startButton('removeFeedButton');
-            const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}`;
-            axios
-              .delete(path)
-              .then((res) => {
-                if (res.data.status === 'failure') {
-                  this.alert(res.data.message);
-                } else {
-                  this.getFeedListByGroup(this.selectedGroupName);
-                }
-                this.showEditor = false;
-                this.endButton('removeFeedButton');
-              })
-              .catch((error) => {
-                console.error(error);
-                this.resetButton('removeFeedButton');
-              });
-          }
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+          .msgBoxConfirm('정말로 실행하시겠습니까?')
+          .then((value) => {
+            if (value) {
+              this.startButton('removeFeedButton');
+              const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}`;
+              axios
+                  .delete(path)
+                  .then((res) => {
+                    if (res.data.status === 'failure') {
+                      this.alert(res.data.message);
+                    } else {
+                      this.getFeedListByGroup(this.selectedGroupName);
+                    }
+                    this.showEditor = false;
+                    this.endButton('removeFeedButton');
+                  })
+                  .catch((error) => {
+                    console.error(error);
+                    this.resetButton('removeFeedButton');
+                  });
+            }
+          })
+          .catch((error) => {
+            console.error(error);
+          });
     },
     removeGroup: function () {
       console.log(`removeGroup()`);
@@ -679,31 +669,31 @@ export default {
         return;
       }
       this.$bvModal
-        .msgBoxConfirm('정말로 실행하시겠습니까?')
-        .then((value) => {
-          if (value) {
-            this.startButton('removeGroupButton');
-            const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}`;
-            axios
-              .delete(path)
-              .then((res) => {
-                if (res.data.status === 'failure') {
-                  this.alert(res.data.message);
-                } else {
-                  this.getGroups();
-                }
-                this.showEditor = false;
-                this.endButton('removeGroupButton');
-              })
-              .catch((error) => {
-                console.error(error);
-                this.resetButton('removeGroupButton');
-              });
-          }
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+          .msgBoxConfirm('정말로 실행하시겠습니까?')
+          .then((value) => {
+            if (value) {
+              this.startButton('removeGroupButton');
+              const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}`;
+              axios
+                  .delete(path)
+                  .then((res) => {
+                    if (res.data.status === 'failure') {
+                      this.alert(res.data.message);
+                    } else {
+                      this.getGroups();
+                    }
+                    this.showEditor = false;
+                    this.endButton('removeGroupButton');
+                  })
+                  .catch((error) => {
+                    console.error(error);
+                    this.resetButton('removeGroupButton');
+                  });
+            }
+          })
+          .catch((error) => {
+            console.error(error);
+          });
     },
     getAlias: function () {
       console.log(`getAlias()`);
@@ -711,20 +701,20 @@ export default {
       const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${feedName}/alias`;
       console.log(`getAlias() ${path}`)
       axios
-        .get(path)
-        .then((res) => {
-          if (res.data.status === 'failure') {
-            this.alert(res.data.message);
-            this.alias = '';
-          } else {
-            this.alias = res.data.alias;
-            this.showAliasInput = true;
-          }
-          console.log(`alias is set to ${this.alias}`);
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+          .get(path)
+          .then((res) => {
+            if (res.data.status === 'failure') {
+              this.alert(res.data.message);
+              this.alias = '';
+            } else {
+              this.alias = res.data.alias;
+              this.showAliasInput = true;
+            }
+            console.log(`alias is set to ${this.alias}`);
+          })
+          .catch((error) => {
+            console.error(error);
+          });
     },
     renameAlias: function () {
       console.log(`renameAlias(${this.alias})`);
@@ -733,17 +723,17 @@ export default {
       const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/rename/${alias}`;
       console.log(`renameAlias() ${path}`)
       axios
-        .put(path)
-        .then((res) => {
-          if (res.data.status === 'failure') {
-            this.alert(res.data.message);
-          }
-          this.endButton('renameButton');
-        })
-        .catch((error) => {
-          console.error(error);
-          this.resetButton('renameButton');
-        });
+          .put(path)
+          .then((res) => {
+            if (res.data.status === 'failure') {
+              this.alert(res.data.message);
+            }
+            this.endButton('renameButton');
+          })
+          .catch((error) => {
+            console.error(error);
+            this.resetButton('renameButton');
+          });
     }
   },
   created() {

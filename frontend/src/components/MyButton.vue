@@ -24,7 +24,7 @@ export default {
     },
     variant: {
       type: String,
-      default: 'outline-secondary'
+      default: 'secondary'
     },
     showSpinner: {
       type: Boolean,

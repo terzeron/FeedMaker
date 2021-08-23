@@ -11,7 +11,7 @@ from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 from feed_manager import FeedManager
 
-app = Flask(__name__, static_folder="./dist", template_folder="./dist")
+app = Flask(__name__, static_folder="../frontend/dist", template_folder="./dist")
 app.config['JSON_AS_ASCII'] = False
 app.config.from_object(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -158,19 +158,6 @@ def toggle_feed(group_name, feed_name):
     if result:
         response_object["status"] = "success"
         response_object["new_name"] = result
-    else:
-        response_object["message"] = error
-    return jsonify(response_object)
-
-
-@app.route("/groups/<group_name>/feeds/<feed_name>/disable", methods=["PUT"])
-def disable(group_name, feed_name):
-    print("/groups/<group_name>/feeds/<feed_name>/disable, %r -> disable(%s, %s)" % (request.method, group_name, feed_name))
-    response_object = {"status": "failure"}
-    result, error = feed_manager.enable(group_name, feed_name, False)
-    if result:
-        response_object["status"] = "success"
-        response_object["new_feed_name"] = result
     else:
         response_object["message"] = error
     return jsonify(response_object)

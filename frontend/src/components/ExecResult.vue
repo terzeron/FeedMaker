@@ -35,7 +35,7 @@
          getApiUrlPath() {
              var path_prefix = 'https://api.terzeron.com/fm';
              if (process.env.NODE_ENV === 'development') {
-                 path_prefix = 'http://localhost:5000/fm';
+                 path_prefix = 'http://localhost:5000';
              }
              return path_prefix;
          },

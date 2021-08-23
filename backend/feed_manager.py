@@ -102,7 +102,7 @@ class FeedManager:
     def get_exec_result(self) -> Tuple[str, str]:
         exec_result_file_path = self.work_dir / "logs" / "all.log"
         if exec_result_file_path.is_file():
-            with open(exec_result_file_path, 'r') as infile:
+            with open(exec_result_file_path, 'r', encoding='utf-8') as infile:
                 return infile.read(), ""
         else:
             return "", "can't find such file '%s'" % exec_result_file_path.relative_to(self.work_dir)
@@ -110,7 +110,7 @@ class FeedManager:
     def get_problems(self) -> Tuple[str, str]:
         problems_file_path = self.work_dir / "logs" / "find_problems.log"
         if problems_file_path.is_file():
-            with open(problems_file_path, 'r') as infile:
+            with open(problems_file_path, 'r', encoding='utf-8') as infile:
                 return infile.read(), ""
         else:
             return "", "can't find such file '%s'" % problems_file_path.relative_to(self.work_dir)
@@ -119,11 +119,11 @@ class FeedManager:
     def compare_names(x, y):
         if x[0] == "_" and y[0] != "_":
             return 1
-        elif x[0] != "_" and y[0] == "_":
+        if x[0] != "_" and y[0] == "_":
             return -1
-        elif x < y:
+        if x < y:
             return -1
-        elif x > y:
+        if x > y:
             return 1
         return 0
 
@@ -139,11 +139,11 @@ class FeedManager:
     def compare_title(x, y):
         if x["title"][0] == "_" and y["title"][0] != "_":
             return 1
-        elif x["title"][0] != "_" and y["title"][0] == "_":
+        if x["title"][0] != "_" and y["title"][0] == "_":
             return -1
         if x["title"] < y["title"]:
             return -1
-        elif x["title"] > y["title"]:
+        if x["title"] > y["title"]:
             return 1
         return 0
 
@@ -158,11 +158,11 @@ class FeedManager:
 
     def save_config_file(self, group_name: str, feed_name: str, post_data: Dict[str, Any]) -> Tuple[bool, str]:
         if "configuration" not in post_data:
-            return False, "invalid conifiguration format (no 'configuration')"
+            return False, "invalid configuration format (no 'configuration')"
 
         configuration = post_data["configuration"]
         if not ("collection" in configuration and "extraction" in configuration and "rss" in configuration):
-            return False, "invalid conifiguration format (no 'collection' or 'extraction' or 'rss')"
+            return False, "invalid configuration format (no 'collection' or 'extraction' or 'rss')"
 
         config_file_path = self.work_dir / group_name / feed_name / self.CONF_FILE
         config_file_path.parent.mkdir(exist_ok=True)
@@ -214,7 +214,7 @@ class FeedManager:
                     list_file.unlink()
                 path.rmdir()
                 return True, ""
-            except Exception as e:
+            except FileNotFoundError as e:
                 return False, str(e)
         return False, "can't remove directory '%s'" % path
 
