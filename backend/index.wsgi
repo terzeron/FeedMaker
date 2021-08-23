@@ -5,7 +5,7 @@ import sys
 import os
 
 logging.basicConfig(stream=sys.stderr)
-sys.path.insert(0, '/home/terzeron/public_html/fmw/')
+sys.path.insert(0, '/home/terzeron/public_html/fmw/backend')
 sys.path.insert(1, '/home/terzeron/.pyenv/versions/fm/lib/python3.9/site-packages')
 sys.path.insert(1, '/home/terzeron/workspace/fm/bin')
 
@@ -15,7 +15,7 @@ os.environ["FEED_MAKER_WWW_FEEDS_DIR"] = "/home/terzeron/public_html/xml"
 os.environ["LC_ALL"] = "ko_KR.utf8"
 os.environ["LANG"] = "ko_KR.utf8"
 
-os.chdir("/home/terzeron/public_html/fmw")
+os.chdir("/home/terzeron/public_html/fmw/backend")
 
 from app import app as application
 
