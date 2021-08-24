@@ -62,14 +62,15 @@ def exec_cmd(cmd: str, input_data=None) -> Tuple[str, Optional[str]]:
 
 def send_error_msg(msg: Optional[str], subject="") -> None:
     # read global config
-    line_access_token: str = ""
-    receiver_line_id: str = ""
+    #line_access_token: str = ""
+    #receiver_line_id: str = ""
     receiver_email_address: str = ""
     sender_email_address: str = ""
-    with open(os.path.join(os.environ["FEED_MAKER_HOME_DIR"], "bin", "global_config.json"), "r") as f:
+    global_config_file_path = Path(os.environ["FEED_MAKER_HOME_DIR"], "bin", "global_config.json")
+    with open(global_config_file_path, "r", encoding='utf-8') as f:
         global_config: Dict[str, Any] = json.load(f)
-        line_access_token = global_config["line_access_token"]
-        receiver_line_id = global_config["receiver_line_id"]
+        #line_access_token = global_config["line_access_token"]
+        #receiver_line_id = global_config["receiver_line_id"]
         receiver_email_address = global_config["receiver_email_address"]
         sender_email_address = global_config["sender_email_address"]
 
@@ -315,7 +316,7 @@ class Config:
         else:
             config_file = "conf.json"
         if os.path.isfile(config_file):
-            with open(config_file, 'r') as fp:
+            with open(config_file, 'r', encoding='utf-8') as fp:
                 data = json.load(fp)
                 if "configuration" in data:
                     self.config = data["configuration"]
