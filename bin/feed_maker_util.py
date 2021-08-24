@@ -67,7 +67,7 @@ def send_error_msg(msg: Optional[str], subject="") -> None:
     receiver_email_address: str = ""
     sender_email_address: str = ""
     global_config_file_path = Path(os.environ["FEED_MAKER_HOME_DIR"], "bin", "global_config.json")
-    with open(global_config_file_path, "r", encoding='utf-8') as infile:
+    with open(global_config_file_path, "r") as infile:
         global_config: Dict[str, Any] = json.load(infile)
         #line_access_token = global_config["line_access_token"]
         #receiver_line_id = global_config["receiver_line_id"]
@@ -316,11 +316,8 @@ class Config:
         else:
             config_file = "conf.json"
         if os.path.isfile(config_file):
-            with open(config_file, 'r', encoding='utf-8') as infile:
-                line_list: List[str] = []
-                for line in infile:
-                    line_list.append(line)
-                data = json.loads(''.join(line_list))
+            with open(config_file, 'r') as infile:
+                data = json.load(infile)
                 if "configuration" in data:
                     self.config = data["configuration"]
                 else:
@@ -632,7 +629,7 @@ class Htaccess:
     def get_alias(group_name: str, feed_name: str) -> Tuple[str, str]:
         try:
             with FileLock(str(Htaccess.lock_file_path), timeout=5):
-                with open(Htaccess.htaccess_file_path, 'r', encoding='utf-8') as infile:
+                with open(Htaccess.htaccess_file_path, 'r') as infile:
                     state = 0
                     for line in infile:
                         if state == 0:
@@ -658,7 +655,7 @@ class Htaccess:
         line_list: List[str] = []
         try:
             with FileLock(str(Htaccess.lock_file_path), timeout=5):
-                with open(Htaccess.htaccess_file_path, 'r', encoding='utf-8') as infile:
+                with open(Htaccess.htaccess_file_path, 'r') as infile:
                     for line in infile:
                         # find feed name and replace
                         if new_alias and re.search(Htaccess.rewrite_rule_pattern % feed_name, line):
