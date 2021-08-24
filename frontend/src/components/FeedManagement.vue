@@ -71,7 +71,8 @@
       <!-- 액션 영역 -->
       <b-col id="actions" cols="12" lg="4" class="m-0">
         <b-col cols="12" class="m-0" :class="{'bg-secondary': !feedStatus}" v-if="showNewFeedNameInput">
-          <my-button :label="selectedGroupName + '/' + selectedFeedName" variant="transparent"/>
+          <my-button :label="title" variant="transparent"/>
+          <my-button :label="selectedGroupName + '/' + selectedFeedName" variant="transparent" class="float-right"/>
         </b-col>
 
         <b-alert
@@ -252,6 +253,9 @@ export default {
     groupStatusLabel() {
       return '그룹 ' + (this.groupStatus ? '비활성화' : '활성화');
     },
+    title() {
+      return this.jsonData.rss.title;
+    }
   },
   components: {
     MyButton
