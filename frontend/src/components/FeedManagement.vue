@@ -21,12 +21,14 @@
       <b-col id="group_list" cols="12" class="m-0" v-if="showGroupList">
         <my-button
             ref="groupNameButton"
-            :label="group"
+            :label="group.name + ' (' + group.num_feeds + ')'"
             variant="success"
-            @click="groupNameButtonClicked(group, index)"
-            :class="{'active': activeGroupIndex === index, 'bg-secondary': !determineStatus(group)}"
+            @click="groupNameButtonClicked(group.name, index)"
+            :class="{'active': activeGroupIndex === index, 'bg-secondary': !determineStatus(group.name)}"
             v-for="(group, index) in groups"
-            :key="group"/>
+            :key="group.name">
+
+        </my-button>
         <div class="p-2" v-if="!groups.length">
           그룹 목록 없음
         </div>

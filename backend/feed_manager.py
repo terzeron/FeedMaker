@@ -118,21 +118,21 @@ class FeedManager:
 
     @staticmethod
     def compare_names(x, y):
-        if x[0] == "_" and y[0] != "_":
+        if x['name'][0] == "_" and y['name'][0] != "_":
             return 1
-        if x[0] != "_" and y[0] == "_":
+        if x['name'][0] != "_" and y['name'][0] == "_":
             return -1
-        if x < y:
+        if x['name'] < y['name']:
             return -1
-        if x > y:
+        if x['name'] > y['name']:
             return 1
         return 0
 
-    def get_groups(self) -> Tuple[List[str], str]:
-        group_list: List[str] = []
+    def get_groups(self) -> Tuple[List[Dict[str, Any]], str]:
+        group_list: List[Dict[str, Any]] = []
         if self.group_name_feed_title_list_map != {}:
-            for group_name in self.group_name_feed_title_list_map:
-                group_list.append(group_name)
+            for group_name, feed_title_list in self.group_name_feed_title_list_map.items():
+                group_list.append({"name": group_name, "num_feeds": len(feed_title_list)})
             return sorted(group_list, key=cmp_to_key(FeedManager.compare_names)), ""
         return [], "no group list"
 
