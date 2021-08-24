@@ -48,7 +48,7 @@ def exec_cmd(cmd: str, input_data=None) -> Tuple[str, Optional[str]]:
             else:
                 result, error = p.communicate()
             if p.returncode != 0:
-                raise subprocess.CalledProcessError(returncode=p.returncode, cmd=cmd, output=result, stderr=error)
+                raise subprocess.CalledProcessError(returncode=p.returncode, cmd=cmd, output=str(result) + ", " + error.decode("utf-8"), stderr=error)
             if error:
                 # handle warnings
                 if b"InsecureRequestWarning" not in error and b"_RegisterApplication(), FAILED TO establish the default connection to the WindowServer" not in error:
