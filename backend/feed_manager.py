@@ -1,11 +1,12 @@
 #!/usr/bin/env python
-# -*- encoding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 
 import os
 from pathlib import Path
 import json
 import logging
+from shutil import rmtree
 from typing import List, Dict, Any, Tuple, Optional
 from functools import cmp_to_key
 from run import FeedMakerRunner
@@ -58,7 +59,7 @@ class FeedManager:
         self.logger.debug("# read_config_file(feed_dir_path=%r)", feed_dir_path)
         conf_file_path = feed_dir_path / self.CONF_FILE
         if conf_file_path.is_file():
-            with open(conf_file_path, 'r', encoding='utf-8') as infile:
+            with open(conf_file_path, 'r') as infile:
                 line_list: List[str] = []
                 for line in infile:
                     line_list.append(line)
@@ -102,7 +103,7 @@ class FeedManager:
     def get_exec_result(self) -> Tuple[str, str]:
         exec_result_file_path = self.work_dir / "logs" / "all.log"
         if exec_result_file_path.is_file():
-            with open(exec_result_file_path, 'r', encoding='utf-8') as infile:
+            with open(exec_result_file_path, 'r') as infile:
                 return infile.read(), ""
         else:
             return "", "can't find such file '%s'" % exec_result_file_path.relative_to(self.work_dir)
@@ -110,7 +111,7 @@ class FeedManager:
     def get_problems(self) -> Tuple[str, str]:
         problems_file_path = self.work_dir / "logs" / "find_problems.log"
         if problems_file_path.is_file():
-            with open(problems_file_path, 'r', encoding='utf-8') as infile:
+            with open(problems_file_path, 'r') as infile:
                 return infile.read(), ""
         else:
             return "", "can't find such file '%s'" % problems_file_path.relative_to(self.work_dir)
@@ -137,6 +138,10 @@ class FeedManager:
 
     @staticmethod
     def compare_title(x, y):
+        if x["name"][0] == "_" and y["name"][0] != "_":
+            return 1
+        if x["name"][0] != "_" and y["name"][0] == "_":
+            return -1
         if x["title"][0] == "_" and y["title"][0] != "_":
             return 1
         if x["title"][0] != "_" and y["title"][0] == "_":
@@ -166,14 +171,14 @@ class FeedManager:
 
         config_file_path = self.work_dir / group_name / feed_name / self.CONF_FILE
         config_file_path.parent.mkdir(exist_ok=True)
-        with open(config_file_path, 'w', encoding='utf-8') as outfile:
+        with open(config_file_path, 'w') as outfile:
             outfile.write(json.dumps(post_data, indent=2, ensure_ascii=False))
 
         title = configuration["rss"]["title"].split("::")[0]
         feed_title_list = self.group_name_feed_title_list_map[group_name]
         feed_title_list.append({"name": feed_name, "title": title})
         self.group_name_feed_title_list_map[group_name] = feed_title_list
-        self.feed_name_config_map[feed_name] = post_data
+        self.feed_name_config_map[feed_name] = configuration
 
         self.git_add(config_file_path)
 
@@ -205,40 +210,36 @@ class FeedManager:
                 return False, "invalid format of configuration file"
         return True, ""
 
-    @staticmethod
-    def remove_dir_and_files(path: Path) -> Tuple[bool, str]:
-        if path.is_dir():
-            print(path)
-            try:
-                for list_file in path.iterdir():
-                    list_file.unlink()
-                path.rmdir()
-                return True, ""
-            except FileNotFoundError as e:
-                return False, str(e)
-        return False, "can't remove directory '%s'" % path
-
     def remove_img_pdf_rss_files(self, feed_name: str) -> None:
         img_dir_path = self.www_feeds_dir / "img" / feed_name
         pdf_dir_path = self.www_feeds_dir / "pdf" / feed_name
         rss_file_path = self.www_feeds_dir / "xml" / (feed_name + ".xml")
 
         # remove files
-        self.remove_dir_and_files(img_dir_path)
-        self.remove_dir_and_files(pdf_dir_path)
-        if rss_file_path.is_file():
-            print(rss_file_path)
-            rss_file_path.unlink()
+        try:
+            rmtree(img_dir_path)
+            rmtree(pdf_dir_path)
+            if rss_file_path.is_file():
+                print(rss_file_path)
+                rss_file_path.unlink()
+        except FileNotFoundError:
+            pass
 
-    def remove_list(self, group_name: str, feed_name: str) -> Tuple[bool, str]:
+    def remove_list(self, group_name: str, feed_name: str) -> None:
         feed_dir_path = self.work_dir / group_name / feed_name
         list_dir_path = feed_dir_path / "newlist"
-        return self.remove_dir_and_files(list_dir_path)
+        try:
+            rmtree(list_dir_path)
+        except FileNotFoundError:
+            pass
 
-    def remove_html(self, group_name: str, feed_name: str) -> Tuple[bool, str]:
+    def remove_html(self, group_name: str, feed_name: str) -> None:
         feed_dir_path = self.work_dir / group_name / feed_name
         html_dir_path = feed_dir_path / "html"
-        return self.remove_dir_and_files(html_dir_path)
+        try:
+            rmtree(html_dir_path)
+        except FileNotFoundError:
+            pass
 
     def remove_feed(self, group_name: str, feed_name: str) -> Tuple[bool, str]:
         feed_dir_path = self.work_dir / group_name / feed_name
@@ -253,7 +254,10 @@ class FeedManager:
         self.git_rm(feed_dir_path)
 
         # remove remainder files and directories
-        self.remove_dir_and_files(feed_dir_path)
+        try:
+            rmtree(feed_dir_path)
+        except FileNotFoundError:
+            pass
 
         # re-scan feeds by group
         self.load_all_feeds()
@@ -273,7 +277,10 @@ class FeedManager:
         self.git_rm(group_dir_path)
 
         # remove remainder files and directories
-        self.remove_dir_and_files(group_dir_path)
+        try:
+            rmtree(group_dir_path)
+        except FileNotFoundError:
+            pass
 
         # re-scan feeds by group
         self.load_all_feeds()

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*- encoding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 
 import sys
@@ -99,24 +99,28 @@ def get_feeds_by_group(group_name):
 
 @app.route("/groups/<group_name>/feeds/<feed_name>", methods=["DELETE", "POST", "GET"])
 def get_feed_info(group_name, feed_name):
-    print("/groups/<group_name>/feeds/<feed_name>, %r -> get_feed_info(%s, %s)" % (request.method, group_name, feed_name))
     response_object = {"status": "failure"}
     if request.method == "GET":
+        print("/groups/<group_name>/feeds/<feed_name>, %r -> get_feed_info(%s, %s)" % (request.method, group_name, feed_name))
         result, error = feed_manager.get_feed_info_by_name(feed_name)
         if result or not error:
             # success in case of feed without configuration
             response_object["configuration"] = result
+            print(response_object["configuration"])
             response_object["status"] = "success"
         else:
             response_object["message"] = error
     elif request.method == "POST":
+        print("/groups/<group_name>/feeds/<feed_name>, %r -> save_config_file(%s, %s)" % (request.method, group_name, feed_name))
         post_data = request.get_json()
+        print(post_data)
         result, error = feed_manager.save_config_file(group_name, feed_name, post_data)
         if result:
             response_object["status"] = "success"
         else:
             response_object["message"] = error
     elif request.method == "DELETE":
+        print("/groups/<group_name>/feeds/<feed_name>, %r -> remove_feed(%s, %s)" % (request.method, group_name, feed_name))
         result, error = feed_manager.remove_feed(group_name, feed_name)
         if result:
             response_object["status"] = "success"
