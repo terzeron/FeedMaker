@@ -4,8 +4,9 @@
     <b-row>
       <b-col cols="12" class="m-0">
         <my-button
-            ref="groupListButton" label="그룹 목록"
-            variant="primary"
+            ref="groupListButton"
+            label="그룹 목록"
+            variant="success"
             @click="groupListButtonClicked"/>
         <my-button
             ref="feedListButton"
@@ -21,9 +22,9 @@
         <my-button
             ref="groupNameButton"
             :label="group"
-            variant="primary"
+            variant="success"
             @click="groupNameButtonClicked(group, index)"
-            :class="{'active': activeGroupIndex === index}"
+            :class="{'active': activeGroupIndex === index, 'bg-secondary': !determineStatus(group)}"
             v-for="(group, index) in groups"
             :key="group"/>
         <div class="p-2" v-if="!groups.length">
@@ -34,12 +35,12 @@
 
     <!-- 피드 목록 -->
     <b-row>
-      <b-col id="feed_list" ols="12" class="m-0" :class="{'bg-warning': !groupStatus}" v-if="showFeedList">
+      <b-col id="feed_list" ols="12" class="m-0" v-if="showFeedList">
         <my-button
             ref="feedNameButton"
             :label="feed.title"
             @click="feedNameButtonClicked(feed.name, index)"
-            :class="{'active': activeFeedIndex === index}"
+            :class="{'active': activeFeedIndex === index, 'bg-secondary': !determineStatus(feed.name)}"
             v-for="(feed, index) in feeds"
             :key="feed.name"/>
         <div class="p-2" v-if="!feeds.length">
@@ -51,7 +52,7 @@
     <!-- 설정 편집기 및 액션 영역 -->
     <b-row>
       <!-- 설정 편집기 영역 -->
-      <b-col id="configuration" cols="12" lg="8" class="m-0" :class="{'bg-warning': !feedStatus}">
+      <b-col id="configuration" cols="12" lg="8" class="m-0">
         <JsonEditor
             class="m-0 p-0"
             :options="{
@@ -68,7 +69,11 @@
       </b-col>
 
       <!-- 액션 영역 -->
-      <b-col id="actions" cols="12" lg="4" class="m-0" :class="{'bg-warning': !feedStatus}">
+      <b-col id="actions" cols="12" lg="4" class="m-0">
+        <b-col cols="12" class="m-0" :class="{'bg-secondary': !feedStatus}" v-if="showNewFeedNameInput">
+          <my-button :label="selectedGroupName + '/' + selectedFeedName" variant="transparent"/>
+        </b-col>
+
         <b-alert
             class="mb-0"
             variant="danger"
@@ -125,13 +130,13 @@
           <my-button
               ref="toggleGroupButton"
               :label="groupStatusLabel"
-              variant="primary"
+              variant="success"
               @click="toggleStatus('group')"
               v-if="showToggleGroupButton"/>
           <my-button
               ref="removeGroupButton"
               label="그룹 삭제"
-              variant="primary"
+              variant="success"
               @click="removeGroup"
               v-if="showRemoveGroupButton"/>
         </b-col>
