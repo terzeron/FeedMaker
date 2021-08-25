@@ -11,8 +11,17 @@
 </template>
 
 <script>
+import {library} from '@fortawesome/fontawesome-svg-core'
+import {faCheckCircle} from '@fortawesome/free-regular-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+
+library.add(faCheckCircle);
+
 export default {
   name: 'MyButton',
+  components: {
+    FontAwesomeIcon
+  },
   props: {
     label: {
       type: String,

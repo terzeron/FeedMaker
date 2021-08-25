@@ -218,10 +218,6 @@ div.jsoneditor-value {
 import vueJsonEditor from 'vue-json-editor'
 import axios from 'axios';
 import MyButton from './MyButton';
-import {library} from '@fortawesome/fontawesome-svg-core'
-import {faCheckCircle} from '@fortawesome/free-regular-svg-icons'
-
-library.add(faCheckCircle);
 
 export default {
   name: 'FeedManagement',
