@@ -393,6 +393,7 @@ export default {
       this.showFeedList = false;
       this.showFeedListButton = false;
       this.hideAllRelatedToGroup();
+      this.hideAllRelatedToSiteConfig();
 
       this.getGroups();
     },
@@ -426,6 +427,7 @@ export default {
       console.log(`feedListButtonClicked()`);
       this.showGroupList = false;
       this.showFeedList = true;
+      this.hideAllRelatedToSiteConfig();
 
       this.getFeedListByGroup(this.selectedGroupName);
     },
@@ -440,6 +442,7 @@ export default {
       this.showGroupList = false;
       this.showFeedList = true;
       this.showFeedListButton = true;
+      this.hideAllRelatedToSiteConfig();
 
       this.getFeedListByGroup(groupName);
     },
