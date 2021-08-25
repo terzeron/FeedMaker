@@ -15,7 +15,7 @@
     "bootstrap-vue": "^2.21.2",
     "core-js": "^3.6.5",
     "vue": "^2.6.11",
-    "vue-json-edit": "^1.4.3",
+    "vue-json-editor": "^1.4.3",
     "vue-router": "^3.5.2",
     "vue-simple-markdown": "^1.1.5"
   },

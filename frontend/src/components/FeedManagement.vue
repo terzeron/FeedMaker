@@ -55,16 +55,13 @@
     <b-row>
       <!-- 설정 편집기 영역 -->
       <b-col id="configuration" cols="12" lg="8" class="m-0">
-        <JsonEditor
-            class="m-0 p-0"
-            :options="{
-              confirmText: 'confirm',
-              cancelText: 'cancel',
-            }"
-            :objData="jsonData"
+        <vue-json-editor
+            :expandedOnStart="true"
+            :mode="'form'"
+            @json-change="onJsonChange"
             v-model="jsonData"
             v-if="showEditor">
-        </JsonEditor>
+        </vue-json-editor>
         <div class="p-2" v-if="!showEditor">
           설정 파일 없음
         </div>
@@ -206,12 +203,25 @@ input.key-input {
   border: 1px gray dotted !important;
 }
 
+div.jsoneditor-field {
+  padding: 5px;
+}
+
+div.jsoneditor-value {
+  padding: 5px;
+  border: 1px lightgray dotted;
+}
+
 </style>
 
 <script>
-
+import vueJsonEditor from 'vue-json-editor'
 import axios from 'axios';
 import MyButton from './MyButton';
+import {library} from '@fortawesome/fontawesome-svg-core'
+import {faCheckCircle} from '@fortawesome/free-regular-svg-icons'
+
+library.add(faCheckCircle);
 
 export default {
   name: 'FeedManagement',
@@ -269,10 +279,19 @@ export default {
     }
   },
   components: {
+    vueJsonEditor,
     MyButton
   },
   watch: {
-    jsonData: function (val) {
+    newFeedName: function (val) {
+      console.log(`newFeedName is changed to ${val}`);
+    },
+    alias: function (val) {
+      console.log(`alias is changed to ${val}`);
+    }
+  },
+  methods: {
+    onJsonChange: function (val) {
       console.log(`jsonData is changed to ${val}`);
       console.log(`Object.keys(jsonData)=${Object.keys(this.jsonData)}`);
       if ('rss' in this.jsonData && 'link' in this.jsonData.rss) {
@@ -283,14 +302,6 @@ export default {
         }
       }
     },
-    newFeedName: function (val) {
-      console.log(`newFeedName is changed to ${val}`);
-    },
-    alias: function (val) {
-      console.log(`alias is changed to ${val}`);
-    }
-  },
-  methods: {
     getApiUrlPath() {
       let pathPrefix = 'https://api.terzeron.com/fm';
       if (process.env.NODE_ENV === 'development') {
