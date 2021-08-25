@@ -203,6 +203,8 @@ class FeedManager:
 
         self.git_add(config_file_path)
 
+        # re-scan feeds by group
+        self.load_all_feeds()
         return True, ""
 
     def run(self, group_name: str, feed_name: str) -> Tuple[bool, str]:
