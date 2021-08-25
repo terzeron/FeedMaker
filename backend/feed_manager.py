@@ -84,6 +84,8 @@ class FeedManager:
         for path in group_dir_path.iterdir():
             if path.is_dir():
                 feed_name = path.name
+                if feed_name.startswith("."):
+                    continue
                 configuration = self.read_config_file(path)
                 self.feed_name_config_map[feed_name] = configuration
                 title = self.get_title_from_configuration(configuration, feed_name)
