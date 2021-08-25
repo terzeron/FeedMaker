@@ -281,6 +281,7 @@ export default {
   watch: {
     newFeedName: function (val) {
       console.log(`newFeedName is changed to ${val}`);
+      this.jsonData.rss.link = 'https://terzeron.com/' + val + '.xml';
     },
     alias: function (val) {
       console.log(`alias is changed to ${val}`);
@@ -290,13 +291,6 @@ export default {
     onJsonChange: function (val) {
       console.log(`jsonData is changed to ${val}`);
       console.log(`Object.keys(jsonData)=${Object.keys(this.jsonData)}`);
-      if ('rss' in this.jsonData && 'link' in this.jsonData.rss) {
-        const re = /https:\/\/terzeron.com\/_?(.+)\.xml/;
-        const matched = this.jsonData.rss.link.match(re);
-        if (matched) {
-          this.newFeedName = matched[1];
-        }
-      }
     },
     getApiUrlPath() {
       let pathPrefix = 'https://api.terzeron.com/fm';
@@ -304,6 +298,15 @@ export default {
         pathPrefix = 'http://localhost:5000';
       }
       return pathPrefix;
+    },
+    determineNewFeedNameFromJsonRssLink() {
+      if ('rss' in this.jsonData && 'link' in this.jsonData.rss) {
+        const re = /https:\/\/terzeron.com\/_?(.+)\.xml/;
+        const matched = this.jsonData.rss.link.match(re);
+        if (matched) {
+          this.newFeedName = matched[1];
+        }
+      }
     },
     setActiveGroup(index) {
       this.activeGroupIndex = index;
@@ -494,6 +497,7 @@ export default {
               console.log(`jsonData is set to ...`);
               console.log(this.jsonData);
               console.log(`Object.keys(this.jsonData)=${Object.keys(this.jsonData)}`);
+              this.determineNewFeedNameFromJsonRssLink();
               if (Object.keys(this.jsonData).length >= 3) {
                 this.showAllRelatedToFeed();
               } else {
