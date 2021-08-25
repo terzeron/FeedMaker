@@ -130,6 +130,14 @@
               label="피드 삭제"
               @click="removeFeed"
               v-if="showRemoveFeedButton"/>
+        </b-col>
+
+        <b-col cols="12" class="m-0">
+          <my-button
+              ref="saveSiteConfigButton"
+              label="그룹 설정 저장"
+              @click="saveSiteConfig"
+              v-if="showSiteConfig"/>
           <my-button
               ref="toggleGroupButton"
               :label="groupStatusLabel"
@@ -229,6 +237,7 @@ export default {
       showRemoveHtmlButton: false,
       showNewFeedNameInput: false,
       showAliasInput: false,
+      showSiteConfig: false,
 
       activeGroupIndex: undefined,
       activeFeedIndex: undefined,
@@ -266,7 +275,7 @@ export default {
     jsonData: function (val) {
       console.log(`jsonData is changed to ${val}`);
       console.log(`Object.keys(jsonData)=${Object.keys(this.jsonData)}`);
-      if ('rss' in this.jsonData) {
+      if ('rss' in this.jsonData && 'link' in this.jsonData.rss) {
         const re = /https:\/\/terzeron.com\/_?(.+)\.xml/;
         const matched = this.jsonData.rss.link.match(re);
         if (matched) {
@@ -358,6 +367,14 @@ export default {
       this.showToggleGroupButton = false;
       this.showRemoveGroupButton = false;
     },
+    showAllRelatedToSiteConfig() {
+      this.showEditor = true;
+      this.showSiteConfig = true;
+    },
+    hideAllRelatedToSiteConfig() {
+      this.showEditor = false;
+      this.showSiteConfig = false;
+    },
 
     groupListButtonClicked() {
       console.log(`groupListButtonClicked()`);
@@ -448,7 +465,11 @@ export default {
       this.showFeedList = false;
       this.showFeedListButton = true;
 
-      this.getFeedInfo(feedName);
+      if (feedName === 'site_config.json') {
+        this.getSiteConfig();
+      } else {
+        this.getFeedInfo(feedName);
+      }
     },
     getFeedInfo(feedName) {
       console.log(`getFeedInfo(${feedName})`);
@@ -460,7 +481,8 @@ export default {
               this.alert(res.data.message);
             } else {
               this.jsonData = res.data.configuration;
-              console.log(`jsonData is set to ${this.jsonData}`);
+              console.log(`jsonData is set to ...`);
+              console.log(this.jsonData);
               console.log(`Object.keys(this.jsonData)=${Object.keys(this.jsonData)}`);
               if (Object.keys(this.jsonData).length >= 3) {
                 this.showAllRelatedToFeed();
@@ -469,6 +491,57 @@ export default {
               }
               this.hideAllRelatedToGroup();
               this.getAlias();
+            }
+          })
+          .catch((error) => {
+            console.error(error);
+          });
+    },
+    getSiteConfig() {
+      console.log(`getSiteConfig()`);
+      const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/site_config`;
+      axios
+          .get(path)
+          .then((res) => {
+            if (res.data.status === 'failure') {
+              this.alert(res.data.message);
+            } else {
+              this.jsonData = res.data.configuration;
+              console.log(`jsonData is set to ...`);
+              console.log(this.jsonData);
+              console.log(`Object.keys(this.jsonData)=${Object.keys(this.jsonData)}`);
+              this.hideAllRelatedToFeed();
+              this.hideAllRelatedToGroup();
+              if (Object.keys(this.jsonData).length >= 2) {
+                this.showAllRelatedToSiteConfig();
+              }
+            }
+          })
+          .catch((error) => {
+            console.error(error);
+          });
+    },
+    saveSiteConfig() {
+      console.log(`saveSiteConfig()`);
+      this.$bvModal
+          .msgBoxConfirm('정말로 실행하시겠습니까?')
+          .then((value) => {
+            this.startButton('saveSiteConfigButton');
+            if (value) {
+              const postData = this.jsonData;
+              const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/site_config`;
+              axios
+                  .put(path, postData)
+                  .then((res) => {
+                    if (res.data.status === 'failure') {
+                      this.alert(res.data.message);
+                    }
+                    this.endButton('saveSiteConfigButton');
+                  })
+                  .catch((error) => {
+                    console.error(error);
+                    this.resetButton('saveSiteConfigButton');
+                  });
             }
           })
           .catch((error) => {

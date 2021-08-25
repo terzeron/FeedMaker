@@ -90,6 +90,8 @@ class FeedManager:
                 self.feed_name_config_map[feed_name] = configuration
                 title = self.get_title_from_configuration(configuration, feed_name)
                 feed_title_list.append({"name": feed_name, "title": title})
+            elif path.name == "site_config.json":
+                feed_title_list.append({"name": path.name, "title": path.name})
         self.group_name_feed_title_list_map[group_name] = feed_title_list
 
     def load_all_feeds(self) -> None:
@@ -153,6 +155,23 @@ class FeedManager:
         if x["title"] > y["title"]:
             return 1
         return 0
+
+    def get_site_config(self, group_name: str) -> Tuple[Dict[str, str], str]:
+        path = self.work_dir / group_name / "site_config.json"
+        if path.is_file():
+            with open(path, 'r') as infile:
+                json_data = json.load(infile)
+                return json_data, ""
+        return {}, "no feed list in group '%s'" % group_name
+
+    def save_site_config(self, group_name: str, post_data: Dict[str, Any]) -> Tuple[bool, str]:
+        path = self.work_dir / group_name / "site_config.json"
+        try:
+            with open(path, 'w') as outfile:
+                outfile.write(json.dumps(post_data, indent=2, ensure_ascii=False))
+        except IOError as e:
+            return False, str(e)
+        return True, ""
 
     def get_feeds_by_group(self, group_name: str) -> Tuple[List[Dict[str, str]], str]:
         if group_name in self.group_name_feed_title_list_map:

@@ -97,6 +97,31 @@ def get_feeds_by_group(group_name):
     return jsonify(response_object)
 
 
+@app.route("/groups/<group_name>/site_config", methods=["GET", "PUT"])
+def site_config(group_name):
+    print("/groups/<group_name>/site_config, %r -> get_site_config(%s)" % (request.method, group_name))
+    response_object = {"status": "failure"}
+    if request.method == "GET":
+        result, error = feed_manager.get_site_config(group_name)
+        if result:
+            response_object["configuration"] = result
+            print(response_object["configuration"])
+            response_object["status"] = "success"
+            print(result)
+        else:
+            response_object["message"] = error
+    elif request.method == "PUT":
+        print("/groups/<group_name>/site_config, %r -> save_site_config(%s)" % (request.method, group_name))
+        post_data = request.get_json()
+        print(post_data)
+        result, error = feed_manager.save_site_config(group_name, post_data)
+        if result:
+            response_object["status"] = "success"
+        else:
+            response_object["message"] = error
+    return jsonify(response_object)
+
+
 @app.route("/groups/<group_name>/feeds/<feed_name>", methods=["DELETE", "POST", "GET"])
 def get_feed_info(group_name, feed_name):
     response_object = {"status": "failure"}
