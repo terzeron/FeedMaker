@@ -2,16 +2,13 @@
 # -*- coding: utf-8 -*-
 
 
-import sys
-import json
-from typing import Dict, Any
 import logging.config
 import requests
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 from feed_manager import FeedManager
 
-app = Flask(__name__, static_folder="../frontend/dist", template_folder="./dist")
+app = Flask(__name__, static_folder="../frontend/dist", template_folder="../frontend/dist")
 app.config['JSON_AS_ASCII'] = False
 app.config.from_object(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -196,11 +193,8 @@ def toggle_feed(group_name, feed_name):
 def remove_list(group_name, feed_name):
     print("/groups/<group_name>/feeds/<feed_name>/list, %r -> remove_list(%s, %s)" % (request.method, group_name, feed_name))
     response_object = {"status": "failure"}
-    result, error = feed_manager.remove_list(group_name, feed_name)
-    if result:
-        response_object["status"] = "success"
-    else:
-        response_object["message"] = error
+    feed_manager.remove_list(group_name, feed_name)
+    response_object["status"] = "success"
     return jsonify(response_object)
 
 
@@ -208,24 +202,29 @@ def remove_list(group_name, feed_name):
 def remove_html(group_name, feed_name):
     print("/groups/<group_name>/feeds/<feed_name>/html, %r -> remove_html(%s, %s)" % (request.method, group_name, feed_name))
     response_object = {"status": "failure"}
-    result, error = feed_manager.remove_html(group_name, feed_name)
-    if result:
-        response_object["status"] = "success"
-    else:
-        response_object["message"] = error
+    feed_manager.remove_html(group_name, feed_name)
+    response_object["status"] = "success"
     return jsonify(response_object)
 
 
-@app.route("/groups/<group_name>/feeds/<feed_name>/alias", methods=["GET"])
+@app.route("/groups/<group_name>/feeds/<feed_name>/alias", methods=["GET", "DELETE"])
 def get_alias(group_name, feed_name):
     print("/groups/<group_name>/feeds/<feed_name>/alias, %r -> get_alias(%s, %s)" % (request.method, group_name, feed_name))
     response_object = {"status": "failure"}
-    result, error = feed_manager.get_alias(group_name, feed_name)
-    if result:
-        response_object["status"] = "success"
-        response_object["alias"] = result
-    else:
-        response_object["message"] = error
+    if request.method == "GET":
+        result, error = feed_manager.get_alias(group_name, feed_name)
+        if result:
+            response_object["status"] = "success"
+            response_object["alias"] = result
+        else:
+            response_object["message"] = error
+    elif request.method == "DELETE":
+        result, error = feed_manager.remove_alias(group_name, feed_name)
+        if result:
+            response_object["status"] = "success"
+            response_object["alias"] = result
+        else:
+            response_object["message"] = error
     return jsonify(response_object)
 
 

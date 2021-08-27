@@ -21,7 +21,7 @@
       <b-col id="group_list" cols="12" class="m-0" v-if="showGroupList">
         <my-button
             ref="groupNameButton"
-            :label="group.name + ' (' + group.num_feeds + ')'"
+            :label="group.name + ' (' + group['num_feeds'] + ')'"
             variant="success"
             @click="groupNameButtonClicked(group.name, index)"
             :class="{'active': activeGroupIndex === index, 'bg-secondary': !determineStatus(group.name)}"
@@ -156,11 +156,16 @@
             </b-form-input>
             <b-input-group-append>
               <my-button
-                  ref="renameButton"
+                  ref="renameAliasButton"
                   label="변경"
                   @click="renameAlias"/>
             </b-input-group-append>
-          </b-input-group>
+            <b-input-group-append>
+              <my-button
+                  ref="removeAliasButton"
+                  label="삭제"
+                  @click="removeAlias"/>
+            </b-input-group-append>          </b-input-group>
         </b-col>
       </b-col>
     </b-row>
@@ -814,10 +819,29 @@ export default {
             console.error(error);
           });
     },
+    removeAlias: function () {
+      console.log(`removeAlias()`);
+      let feedName = this.getCleanFeedName(this.selectedFeedName);
+      this.startButton('removeAliasButton');
+      const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${feedName}/alias`;
+
+      axios
+          .delete(path)
+          .then((res) => {
+            if (res.data.status === 'failure') {
+              this.alert(res.data.message);
+            }
+            this.endButton('removeAliasButton');
+          })
+          .catch((error) => {
+            console.error(error);
+            this.resetButton('removeAliasButton');
+          });
+    },
     renameAlias: function () {
       console.log(`renameAlias(${this.alias})`);
       let alias = this.getCleanFeedName(this.alias);
-      this.startButton('renameButton');
+      this.startButton('renameAliasButton');
       const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/rename/${alias}`;
       console.log(`renameAlias() ${path}`)
       axios
@@ -826,13 +850,13 @@ export default {
             if (res.data.status === 'failure') {
               this.alert(res.data.message);
             }
-            this.endButton('renameButton');
+            this.endButton('renameAliasButton');
           })
           .catch((error) => {
             console.error(error);
-            this.resetButton('renameButton');
+            this.resetButton('renameAliasButton');
           });
-    }
+    },
   },
   created() {
     return this.getGroups();
