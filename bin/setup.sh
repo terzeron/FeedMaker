@@ -9,7 +9,7 @@ if command -v pyenv 1>/dev/null 2>&1; then
 fi
 
 # engine directory
-export FEED_MAKER_HOME_DIR=$(dirname $(readlink -f $0))
+export FEED_MAKER_HOME_DIR=$(dirname $(dirname $(readlink -f $0)))
 # feed working directory
 export FEED_MAKER_WORK_DIR=$(dirname $FEED_MAKER_HOME_DIR)/fma
 export FEED_MAKER_LOG_DIR=$FEED_MAKER_WORK_DIR/logs
