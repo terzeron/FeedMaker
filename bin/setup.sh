@@ -10,10 +10,8 @@ fi
 
 # engine directory
 export FEED_MAKER_HOME_DIR=$(dirname $(dirname $0))
-echo $FEED_MAKER_HOME_DIR
 # feed working directory
 export FEED_MAKER_WORK_DIR=$(dirname $FEED_MAKER_HOME_DIR)/fma
-echo $FEED_MAKER_WORK_DIR
 export FEED_MAKER_LOG_DIR=$FEED_MAKER_WORK_DIR/logs
 # admin console web page directory
 export FEED_MAKER_WWW_ADMIN_DIR=$HOME/public_html/fm
