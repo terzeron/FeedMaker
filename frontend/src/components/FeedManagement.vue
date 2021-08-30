@@ -45,7 +45,7 @@
             @click="searchResultFeedNameButtonClicked(feed.group_name, feed.name, index)"
             :class="{'active': activeFeedIndex === index, 'bg-secondary': !determineStatus(feed.name)}"
             v-for="(feed, index) in feeds"
-            :key="feed.name"/>
+            :key="feed.group_name + '/' + feed.name"/>
       </b-col>
     </b-row>
 
@@ -533,6 +533,7 @@ export default {
       if (index) {
         this.setActiveFeed(index);
       }
+      this.selectedGroupName = groupName;
       this.selectedFeedName = feedName;
 
       // show and hide
