@@ -64,7 +64,7 @@ export default {
   components: {},
   methods: {
     getApiUrlPath() {
-      var path_prefix = 'https://api.terzeron.com/fm';
+      let path_prefix = 'https://api.terzeron.com/fm';
       if (process.env.NODE_ENV === 'development') {
         path_prefix = 'http://localhost:5000';
       }
@@ -74,7 +74,7 @@ export default {
       const path = this.getApiUrlPath() + '/exec_result';
       axios.get(path)
           .then((res) => {
-            this.source = res.data.exec_result;
+            this.source = res.data['exec_result'];
           })
           .catch((error) => {
             console.error(error);
