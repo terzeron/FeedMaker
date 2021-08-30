@@ -121,6 +121,32 @@ class FeedManager:
         else:
             return "", "can't find such file '%s'" % problems_file_path.relative_to(self.work_dir)
 
+    def search(self, keywords: str) -> Tuple[List[Dict[str, Any]], str]:
+        result_list: List[Tuple[str, str, str]] = []
+        keyword_list = keywords.split(' ')
+        print(len(keyword_list))
+        for feed_name, config in self.feed_name_config_map.items():
+            match_count_in_name = 0
+            match_count_in_title = 0
+            match_count_in_description = 0
+            for keyword in keyword_list:
+                if keyword in feed_name:
+                    match_count_in_name += 1
+                if "rss" in config and "title" in config["rss"] and keyword in config["rss"]["title"]:
+                    match_count_in_title += 1
+                if "rss" in config and "description" in config["rss"] and keyword in config["rss"]["description"]:
+                    match_count_in_description += 1
+            if match_count_in_name == len(keyword_list) or match_count_in_title == len(keyword_list) or match_count_in_description == len(keyword_list):
+                for group_name, feed_title_list in self.group_name_feed_title_list_map.items():
+                    for info in feed_title_list:
+                        if info["name"] == feed_name:
+                            feed_info: Dict[str, Any] = {}
+                            feed_info['group_name'] = group_name
+                            feed_info['name'] = feed_name
+                            feed_info['title'] = self.get_title_from_configuration(config, feed_name)
+                            result_list.append(feed_info)
+        return result_list, ""
+
     @staticmethod
     def compare_names(x, y):
         if x['name'][0] == "_" and y['name'][0] != "_":

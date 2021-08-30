@@ -13,6 +13,39 @@
             :label="selectedGroupName + ' 그룹의 피드 목록'"
             @click="feedListButtonClicked"
             v-if="showFeedListButton"/>
+
+        <b-input-group
+            prepend="키워드"
+            class="float-right p-1"
+            style="width: 300px">
+          <b-form-input
+              class="m-0"
+              v-model="searchKeyword"
+              @keyup.enter="search">
+            {{ searchKeyword }}
+          </b-form-input>
+          <b-input-group-append>
+            <my-button
+                ref="searchButton"
+                label="검색"
+                @click="search"
+                variant="dark"/>
+          </b-input-group-append>
+        </b-input-group>
+      </b-col>
+    </b-row>
+
+    <!-- 검색 결과 -->
+    <b-row>
+      <b-col id="search_result" cols="12" class="m-0" v-if="showSearchResult">
+        <my-button
+            ref="searchResultFeedButton"
+            :label="feed.group_name + '/' + feed.title"
+            variant="success"
+            @click="searchResultFeedNameButtonClicked(feed.group_name, feed.name, index)"
+            :class="{'active': activeFeedIndex === index, 'bg-secondary': !determineStatus(feed.name)}"
+            v-for="(feed, index) in feeds"
+            :key="feed.name"/>
       </b-col>
     </b-row>
 
@@ -26,9 +59,7 @@
             @click="groupNameButtonClicked(group.name, index)"
             :class="{'active': activeGroupIndex === index, 'bg-secondary': !determineStatus(group.name)}"
             v-for="(group, index) in groups"
-            :key="group.name">
-
-        </my-button>
+            :key="group.name"/>
         <div class="p-2" v-if="!groups.length">
           그룹 목록 없음
         </div>
@@ -41,7 +72,7 @@
         <my-button
             ref="feedNameButton"
             :label="feed.title"
-            @click="feedNameButtonClicked(feed.name, index)"
+            @click="feedNameButtonClicked(selectedGroupName, feed.name, index)"
             :class="{'active': activeFeedIndex === index, 'bg-secondary': !determineStatus(feed.name)}"
             v-for="(feed, index) in feeds"
             :key="feed.name"/>
@@ -165,7 +196,8 @@
                   ref="removeAliasButton"
                   label="삭제"
                   @click="removeAlias"/>
-            </b-input-group-append>          </b-input-group>
+            </b-input-group-append>
+          </b-input-group>
         </b-col>
       </b-col>
     </b-row>
@@ -234,6 +266,7 @@ export default {
       showGroupList: true,
       showFeedList: false,
       showFeedListButton: false,
+      showSearchResult: false,
 
       showEditor: false,
 
@@ -260,6 +293,7 @@ export default {
       selectedFeedName: '',
       newFeedName: '',
       alias: '',
+      searchKeyword: ''
     };
   },
   computed: {
@@ -288,9 +322,6 @@ export default {
       console.log(`newFeedName is changed to ${val}`);
       this.jsonData.rss.link = 'https://terzeron.com/' + val + '.xml';
     },
-    alias: function (val) {
-      console.log(`alias is changed to ${val}`);
-    }
   },
   methods: {
     onJsonChange: function (val) {
@@ -391,11 +422,35 @@ export default {
       this.showSiteConfig = false;
     },
 
+    search() {
+      console.log(`search()`);
+      this.showSearchResult = true;
+      this.showGroupList = false;
+      this.showFeedListButton = false;
+      this.hideAllRelatedToGroup();
+      this.hideAllRelatedToFeed();
+
+      const url = this.getApiUrlPath() + `/search/${this.searchKeyword}`;
+      axios
+          .get(url)
+          .then((res) => {
+                if (res.data.status === 'failure') {
+                  this.alert(res.data.message);
+                } else {
+                  this.feeds = res.data.feeds;
+                }
+              }
+          )
+          .catch((error) => {
+            console.error(error);
+          })
+    },
     groupListButtonClicked() {
       console.log(`groupListButtonClicked()`);
       this.showGroupList = true;
       this.showFeedList = false;
       this.showFeedListButton = false;
+      this.showSearchResult = false;
       this.hideAllRelatedToGroup();
       this.hideAllRelatedToSiteConfig();
 
@@ -472,8 +527,21 @@ export default {
             console.error(error);
           });
     },
-    feedNameButtonClicked(feedName, index) {
-      console.log(`feedNameButtonClicked(${feedName}, ${index})`);
+    searchResultFeedNameButtonClicked(groupName, feedName, index) {
+      console.log(`searchResultFeedNameButtonClicked(${groupName}, ${feedName}, ${index})`);
+      if (index) {
+        this.setActiveFeed(index);
+      }
+      this.selectedFeedName = feedName;
+
+      // show and hide
+      this.showFeedList = false;
+      this.showFeedListButton = false;
+
+      this.getFeedInfo(groupName, feedName);
+    },
+    feedNameButtonClicked(groupName, feedName, index) {
+      console.log(`feedNameButtonClicked(${groupName}, ${feedName}, ${index})`);
       if (index) {
         this.setActiveFeed(index);
       }
@@ -486,12 +554,12 @@ export default {
       if (feedName === 'site_config.json') {
         this.getSiteConfig();
       } else {
-        this.getFeedInfo(feedName);
+        this.getFeedInfo(groupName, feedName);
       }
     },
-    getFeedInfo(feedName) {
-      console.log(`getFeedInfo(${feedName})`);
-      const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}`;
+    getFeedInfo(groupName, feedName) {
+      console.log(`getFeedInfo(${groupName}, ${feedName})`);
+      const path = this.getApiUrlPath() + `/groups/${groupName}/feeds/${feedName}`;
       axios
           .get(path)
           .then((res) => {

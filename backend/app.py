@@ -51,6 +51,20 @@ def get_problems():
     return jsonify(response_object)
 
 
+@app.route("/search/<keyword>", methods=["GET"])
+def search(keyword):
+    print("/search, %r -> search(%s)" % (request.method, keyword))
+    response_object = {"status": "failure"}
+    result, error = feed_manager.search(keyword)
+    if result or not error:
+        response_object["feeds"] = result
+        response_object["status"] = "success"
+        print(result)
+    else:
+        response_object["message"] = error
+    return jsonify(response_object)
+
+
 @app.route("/groups", methods=["GET"])
 def get_groups():
     print("/groups, %r -> get_groups()" % request.method)
