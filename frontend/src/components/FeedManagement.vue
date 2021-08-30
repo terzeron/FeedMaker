@@ -426,6 +426,7 @@ export default {
       console.log(`search()`);
       this.showSearchResult = true;
       this.showGroupList = false;
+      this.showFeedList = false;
       this.showFeedListButton = false;
       this.hideAllRelatedToGroup();
       this.hideAllRelatedToFeed();
