@@ -11,6 +11,7 @@ from typing import List, Dict, Any, Tuple, Optional
 from functools import cmp_to_key
 from run import FeedMakerRunner
 from feed_maker_util import Htaccess, exec_cmd
+from problem_checker import ProblemChecker
 
 
 class FeedManager:
@@ -25,10 +26,13 @@ class FeedManager:
         self.group_name_feed_title_list_map: Dict[str, List[Dict[str, str]]] = {}
         # feed_name -> configuration
         self.feed_name_config_map: Dict[str, Any] = {}
+        self.checker = ProblemChecker()
+        self.checker.load()
 
     def __del__(self) -> None:
         del self.group_name_feed_title_list_map
         del self.feed_name_config_map
+        del self.checker
 
     def git_add(self, feed_dir_path: Path) -> Tuple[str, Optional[str]]:
         os.chdir(self.work_dir)
@@ -113,18 +117,32 @@ class FeedManager:
         else:
             return "", "can't find such file '%s'" % exec_result_file_path.relative_to(self.work_dir)
 
-    def get_problems(self) -> Tuple[str, str]:
-        problems_file_path = self.work_dir / "logs" / "find_problems.log"
-        if problems_file_path.is_file():
-            with open(problems_file_path, 'r') as infile:
-                return infile.read(), ""
-        else:
-            return "", "can't find such file '%s'" % problems_file_path.relative_to(self.work_dir)
+    def get_problems_progress_info(self) -> Tuple[List[Dict[str, Any]], str]:
+        return self.checker.feed_name_progress_info_list, ""
+
+    def get_problems_public_feed_info(self) -> Tuple[List[Dict[str, Any]], str]:
+        return self.checker.public_feed_info_list, ""
+
+    def get_problems_html_info(self) -> Tuple[Dict[str, Any], str]:
+        return {
+            "html_file_size_list": self.checker.html_file_size_list,
+            "html_file_with_many_image_tag_list": self.checker.html_file_with_many_image_tag_list,
+            "html_file_without_image_tag_list": self.checker.html_file_without_image_tag_list,
+            "html_file_image_not_found_list": self.checker.html_file_image_not_found_list
+        }, ""
+
+    def get_problems_element_info(self) -> Tuple[Dict[str, Any], str]:
+        return {
+            "feed_name_list_url_count_list": self.checker.feed_name_list_url_count_list,
+            "element_name_count_list": self.checker.element_name_count_list
+        }, ""
+
+    def get_problems_status_info(self) -> Tuple[Dict[str, Any], str]:
+        return self.checker.feed_alias_status_info_list, ""
 
     def search(self, keywords: str) -> Tuple[List[Dict[str, Any]], str]:
-        result_list: List[Tuple[str, str, str]] = []
+        result_list: List[Dict[str, Any]] = []
         keyword_list = keywords.split(' ')
-        print(len(keyword_list))
         for feed_name, config in self.feed_name_config_map.items():
             match_count_in_name = 0
             match_count_in_title = 0
@@ -140,11 +158,8 @@ class FeedManager:
                 for group_name, feed_title_list in self.group_name_feed_title_list_map.items():
                     for info in feed_title_list:
                         if info["name"] == feed_name:
-                            feed_info: Dict[str, Any] = {}
-                            feed_info['group_name'] = group_name
-                            feed_info['name'] = feed_name
-                            feed_info['title'] = self.get_title_from_configuration(config, feed_name)
-                            result_list.append(feed_info)
+                            title = self.get_title_from_configuration(config, feed_name)
+                            result_list.append({'group_name': group_name, 'name': feed_name, 'title': title})
         return result_list, ""
 
     @staticmethod

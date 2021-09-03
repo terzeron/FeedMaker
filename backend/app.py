@@ -38,13 +38,25 @@ def get_exec_result():
     return jsonify(response_object)
 
 
-@app.route("/problems", methods=["GET"])
-def get_problems():
-    print("/problems, %r -> get_problems()" % request.method)
+@app.route("/problems/<data_type>", methods=["GET"])
+def get_problems(data_type):
+    print("/problems/%s, %r -> get_problems_%s()" % (data_type, request.method, data_type))
     response_object = {"status": "success"}
-    result, error = feed_manager.get_problems()
+    result = None
+    error = ""
+    if data_type == "progress_info":
+        result, error = feed_manager.get_problems_progress_info()
+    elif data_type == "public_feed_info":
+        result, error = feed_manager.get_problems_public_feed_info()
+    elif data_type == "html_info":
+        result, error = feed_manager.get_problems_html_info()
+    elif data_type == "element_info":
+        result, error = feed_manager.get_problems_element_info()
+    elif data_type == "status_info":
+        result, error = feed_manager.get_problems_status_info()
+    #print(result)
     if result:
-        response_object["problems"] = result
+        response_object["result"] = result
         response_object["status"] = "success"
     else:
         response_object["message"] = error
