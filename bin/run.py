@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Dict, Tuple, List, Any, Set
 from feed_maker_util import Config, exec_cmd, send_error_msg
 from feed_maker import FeedMaker
+from problem_checker import ProblemChecker
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
@@ -243,13 +244,10 @@ class FeedMakerRunner:
         if len(failed_feed_list) > 0:
             send_error_msg(", ".join(failed_feed_list), subject="Errors of FeedMaker")
 
-        LOGGER.info("# executing find_problems.py")
-        problem_log = self.work_dir_path / "logs" / "find_problems.log"
-        cmd = "find_problems.py > %s 2>&1" % problem_log
-        _, error = exec_cmd(cmd)
-        if error:
-            send_error_msg(error, subject="Errors in finding problems")
-        return not error
+        LOGGER.info("# checking problems and making report")
+        checker = ProblemChecker()
+        checker.load()
+        return True
 
 
 def print_usage() -> None:
