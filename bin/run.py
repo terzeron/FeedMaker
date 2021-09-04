@@ -243,10 +243,6 @@ class FeedMakerRunner:
 
         if len(failed_feed_list) > 0:
             send_error_msg(", ".join(failed_feed_list), subject="Errors of FeedMaker")
-
-        LOGGER.info("# checking problems and making report")
-        checker = ProblemChecker()
-        checker.load()
         return True
 
 
@@ -297,7 +293,7 @@ def main() -> int:
         if len(args) > 1:
             print_usage()
             return -1
-        feed_dir_path = sys.argv[0]
+        feed_dir_path = Path(sys.argv[0])
     else:
         feed_dir_path = Path.cwd()
     runner = FeedMakerRunner(html_archiving_period=30, list_archiving_period=7)
@@ -305,6 +301,10 @@ def main() -> int:
         result = runner.make_all_feeds()
     else:
         result = runner.make_single_feed(feed_dir_path, options)
+
+    LOGGER.info("# checking problems and making report")
+    checker = ProblemChecker()
+    checker.load()
 
     return 0 if result else -1
 
