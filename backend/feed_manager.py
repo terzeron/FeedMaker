@@ -273,6 +273,7 @@ class FeedManager:
                     return False, "error in setting alias to .htaccess"
             else:
                 return False, "invalid format of configuration file"
+            self.checker.load()
         return True, ""
 
     def remove_img_pdf_rss_files(self, feed_name: str) -> None:
