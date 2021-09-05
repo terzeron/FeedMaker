@@ -88,7 +88,7 @@
       <b-col id="configuration" cols="12" lg="8" class="m-0">
         <vue-json-editor
             :expandedOnStart="true"
-            :mode="'form'"
+            :mode="'tree'"
             v-model="jsonData"
             v-if="showEditor">
         </vue-json-editor>
