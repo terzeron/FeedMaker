@@ -89,7 +89,6 @@
         <vue-json-editor
             :expandedOnStart="true"
             :mode="'form'"
-            @json-change="onJsonChange"
             v-model="jsonData"
             v-if="showEditor">
         </vue-json-editor>
@@ -322,12 +321,12 @@ export default {
       console.log(`newFeedName is changed to ${val}`);
       this.jsonData.rss.link = 'https://terzeron.com/' + val + '.xml';
     },
+    jsonData: function(val) {
+      console.log(`jsonData is changed to ${val}`);
+      this.determineNewFeedNameFromJsonRssLink();
+    }
   },
   methods: {
-    onJsonChange: function (val) {
-      console.log(`jsonData is changed to ${val}`);
-      console.log(`Object.keys(jsonData)=${Object.keys(this.jsonData)}`);
-    },
     getApiUrlPath() {
       let pathPrefix = 'https://api.terzeron.com/fm';
       if (process.env.NODE_ENV === 'development') {
