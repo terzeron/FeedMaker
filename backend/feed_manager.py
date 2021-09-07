@@ -21,6 +21,7 @@ class FeedManager:
     SITE_CONF_FILE = "site_config.json"
 
     def __init__(self, logger: logging.Logger) -> None:
+        print("FeedManager.__init__()")
         self.logger = logger
         # group_name -> feed_title_list(name, title)
         self.group_name_feed_title_list_map: Dict[str, List[Dict[str, str]]] = {}
@@ -34,37 +35,34 @@ class FeedManager:
         del self.feed_name_config_map
         del self.checker
 
-    def git_add(self, feed_dir_path: Path) -> Tuple[str, Optional[str]]:
+    def _git_add(self, feed_dir_path: Path) -> Tuple[str, Optional[str]]:
         os.chdir(self.work_dir)
         feed_name = feed_dir_path.name
         conf_file_relative = feed_dir_path.relative_to(self.work_dir)
         cmd = "git add %s && git commit -m 'add %s'" % (conf_file_relative, feed_name)
-        print(cmd)
         return exec_cmd(cmd)
 
-    def git_rm(self, feed_dir_path: Path) -> Tuple[str, Optional[str]]:
+    def _git_rm(self, feed_dir_path: Path) -> Tuple[str, Optional[str]]:
         os.chdir(self.work_dir)
         feed_name = feed_dir_path.name
         conf_file_relative = feed_dir_path.relative_to(self.work_dir)
         cmd = "git rm -r %s && git commit -m 'remove %s'" % (conf_file_relative, feed_name)
-        print(cmd)
         return exec_cmd(cmd)
 
-    def git_mv(self, feed_dir_path: Path, new_feed_dir_path: Path) -> Tuple[str, Optional[str]]:
+    def _git_mv(self, feed_dir_path: Path, new_feed_dir_path: Path) -> Tuple[str, Optional[str]]:
         os.chdir(self.work_dir)
         feed_dir_name = feed_dir_path.name
         new_feed_dir_name = new_feed_dir_path.name
         feed_dir_path_relative = feed_dir_path.relative_to(self.work_dir)
         new_feed_dir_path_relative = new_feed_dir_path.relative_to(self.work_dir)
         cmd = "git mv %s %s && git commit -m 'rename %s to %s' || mv %s %s" % (feed_dir_path_relative, new_feed_dir_path_relative, feed_dir_name, new_feed_dir_name, feed_dir_path_relative, new_feed_dir_path_relative)
-        print(cmd)
         return exec_cmd(cmd)
 
-    def read_config_file(self, feed_dir_path: Path) -> Dict[str, Any]:
-        self.logger.debug("# read_config_file(feed_dir_path=%r)", feed_dir_path)
+    def _read_config_file(self, feed_dir_path: Path) -> Dict[str, Any]:
+        self.logger.debug("# _read_config_file(feed_dir_path=%r)", feed_dir_path)
         conf_file_path = feed_dir_path / self.CONF_FILE
         if conf_file_path.is_file():
-            with open(conf_file_path, 'r') as infile:
+            with open(conf_file_path, 'r', encoding='utf-8') as infile:
                 line_list: List[str] = []
                 for line in infile:
                     line_list.append(line)
@@ -76,14 +74,14 @@ class FeedManager:
         return {}
 
     @staticmethod
-    def get_title_from_configuration(configuration: Dict[str, Any], feed_name: str) -> str:
+    def _get_title_from_configuration(configuration: Dict[str, Any], feed_name: str) -> str:
         if configuration and "rss" in configuration and "title" in configuration["rss"]:
             title = configuration["rss"]["title"].split("::")[0]
         else:
             title = feed_name
         return title
 
-    def scan_feeds_by_group(self, group_name: str) -> None:
+    def _scan_feeds_by_group(self, group_name: str) -> None:
         group_dir_path = self.work_dir / group_name
         feed_title_list: List[Dict[str, str]] = []
         for path in group_dir_path.iterdir():
@@ -91,9 +89,9 @@ class FeedManager:
                 feed_name = path.name
                 if feed_name.startswith("."):
                     continue
-                configuration = self.read_config_file(path)
+                configuration = self._read_config_file(path)
                 self.feed_name_config_map[feed_name] = configuration
-                title = self.get_title_from_configuration(configuration, feed_name)
+                title = self._get_title_from_configuration(configuration, feed_name)
                 feed_title_list.append({"name": feed_name, "title": title})
             elif path.name == self.SITE_CONF_FILE:
                 feed_title_list.append({"name": path.name, "title": path.name})
@@ -107,15 +105,18 @@ class FeedManager:
                 group_name = group_dir_path.name
                 if group_name in ["test", "logs"] or group_name.startswith("."):
                     continue
-                self.scan_feeds_by_group(group_name)
+                self._scan_feeds_by_group(group_name)
 
     def get_exec_result(self) -> Tuple[str, str]:
         exec_result_file_path = self.work_dir / "logs" / "all.log"
         if exec_result_file_path.is_file():
-            with open(exec_result_file_path, 'r') as infile:
+            with open(exec_result_file_path, 'r', encoding='utf-8') as infile:
                 return infile.read(), ""
         else:
             return "", "can't find such file '%s'" % exec_result_file_path.relative_to(self.work_dir)
+
+    def get_problems_status_info(self) -> Tuple[Dict[str, Any], str]:
+        return self.checker.feed_alias_status_info_list, ""
 
     def get_problems_progress_info(self) -> Tuple[List[Dict[str, Any]], str]:
         return self.checker.feed_name_progress_info_list, ""
@@ -125,20 +126,25 @@ class FeedManager:
 
     def get_problems_html_info(self) -> Tuple[Dict[str, Any], str]:
         return {
-            "html_file_size_list": self.checker.html_file_size_list,
-            "html_file_with_many_image_tag_list": self.checker.html_file_with_many_image_tag_list,
-            "html_file_without_image_tag_list": self.checker.html_file_without_image_tag_list,
-            "html_file_image_not_found_list": self.checker.html_file_image_not_found_list
-        }, ""
+                   "html_file_size_list": self.checker.html_file_size_list,
+                   "html_file_with_many_image_tag_list": self.checker.html_file_with_many_image_tag_list,
+                   "html_file_without_image_tag_list": self.checker.html_file_without_image_tag_list,
+                   "html_file_image_not_found_list": self.checker.html_file_image_not_found_list
+               }, ""
 
     def get_problems_element_info(self) -> Tuple[Dict[str, Any], str]:
         return {
-            "feed_name_list_url_count_list": self.checker.feed_name_list_url_count_list,
-            "element_name_count_list": self.checker.element_name_count_list
-        }, ""
+                   "feed_name_list_url_count_list": self.checker.feed_name_list_url_count_list,
+                   "element_name_count_list": self.checker.element_name_count_list
+               }, ""
 
-    def get_problems_status_info(self) -> Tuple[Dict[str, Any], str]:
-        return self.checker.feed_alias_status_info_list, ""
+    @staticmethod
+    def _determine_keyword_in_config_item(keyword, config, *args):
+        config_item = config
+        for arg in args:
+            if arg in config_item:
+                config_item = config_item[arg]
+        return keyword in config_item
 
     def search(self, keywords: str) -> Tuple[List[Dict[str, Any]], str]:
         result_list: List[Dict[str, Any]] = []
@@ -150,20 +156,20 @@ class FeedManager:
             for keyword in keyword_list:
                 if keyword in feed_name:
                     match_count_in_name += 1
-                if "rss" in config and "title" in config["rss"] and keyword in config["rss"]["title"]:
+                if self._determine_keyword_in_config_item(keyword, config, "rss", "title"):
                     match_count_in_title += 1
-                if "rss" in config and "description" in config["rss"] and keyword in config["rss"]["description"]:
+                if self._determine_keyword_in_config_item(keyword, config, "rss", "description"):
                     match_count_in_description += 1
+
             if match_count_in_name == len(keyword_list) or match_count_in_title == len(keyword_list) or match_count_in_description == len(keyword_list):
-                for group_name, feed_title_list in self.group_name_feed_title_list_map.items():
-                    for info in feed_title_list:
-                        if info["name"] == feed_name:
-                            title = self.get_title_from_configuration(config, feed_name)
-                            result_list.append({'group_name': group_name, 'name': feed_name, 'title': title})
+                group_name = self.checker.feed_name_group_map.get(feed_name, "")
+                title = self.checker.feed_name_title_map.get(feed_name, "")
+                result_list.append({'group_name': group_name, 'feed_name': feed_name, 'feed_title': title})
+
         return result_list, ""
 
     @staticmethod
-    def compare_names(x, y):
+    def _compare_names(x, y):
         if x['name'][0] == "_" and y['name'][0] != "_":
             return 1
         if x['name'][0] != "_" and y['name'][0] == "_":
@@ -179,11 +185,11 @@ class FeedManager:
         if self.group_name_feed_title_list_map != {}:
             for group_name, feed_title_list in self.group_name_feed_title_list_map.items():
                 group_list.append({"name": group_name, "num_feeds": len(feed_title_list)})
-            return sorted(group_list, key=cmp_to_key(FeedManager.compare_names)), ""
+            return sorted(group_list, key=cmp_to_key(FeedManager._compare_names)), ""
         return [], "no group list"
 
     @staticmethod
-    def compare_title(x, y):
+    def _compare_title(x, y):
         if x["name"][0] == "_" and y["name"][0] != "_":
             return 1
         if x["name"][0] != "_" and y["name"][0] == "_":
@@ -201,7 +207,7 @@ class FeedManager:
     def get_site_config(self, group_name: str) -> Tuple[Dict[str, str], str]:
         path = self.work_dir / group_name / self.SITE_CONF_FILE
         if path.is_file():
-            with open(path, 'r') as infile:
+            with open(path, 'r', encoding='utf-8') as infile:
                 json_data = json.load(infile)
                 return json_data, ""
         return {}, "no feed list in group '%s'" % group_name
@@ -209,7 +215,7 @@ class FeedManager:
     def save_site_config(self, group_name: str, post_data: Dict[str, Any]) -> Tuple[bool, str]:
         path = self.work_dir / group_name / self.SITE_CONF_FILE
         try:
-            with open(path, 'w') as outfile:
+            with open(path, 'w', encoding='utf-8') as outfile:
                 outfile.write(json.dumps(post_data, indent=2, ensure_ascii=False))
         except IOError as e:
             return False, str(e)
@@ -218,7 +224,7 @@ class FeedManager:
     def get_feeds_by_group(self, group_name: str) -> Tuple[List[Dict[str, str]], str]:
         if group_name in self.group_name_feed_title_list_map:
             feed_title_list = self.group_name_feed_title_list_map[group_name]
-            return sorted(feed_title_list, key=cmp_to_key(FeedManager.compare_title)), ""
+            return sorted(feed_title_list, key=cmp_to_key(FeedManager._compare_title)), ""
         return [], "no feed list in group '%s'" % group_name
 
     def get_feed_info_by_name(self, feed_name: str) -> Tuple[Dict[str, Any], str]:
@@ -234,7 +240,7 @@ class FeedManager:
 
         config_file_path = self.work_dir / group_name / feed_name / self.CONF_FILE
         config_file_path.parent.mkdir(exist_ok=True)
-        with open(config_file_path, 'w') as outfile:
+        with open(config_file_path, 'w', encoding='utf-8') as outfile:
             outfile.write(json.dumps(post_data, indent=2, ensure_ascii=False))
 
         title = configuration["rss"]["title"].split("::")[0]
@@ -243,10 +249,11 @@ class FeedManager:
         self.group_name_feed_title_list_map[group_name] = feed_title_list
         self.feed_name_config_map[feed_name] = configuration
 
-        self.git_add(config_file_path)
+        self._git_add(config_file_path)
 
         # re-scan feeds by group
         self.load_all_feeds()
+        self.checker.load()
         return True, ""
 
     def run(self, group_name: str, feed_name: str) -> Tuple[bool, str]:
@@ -273,21 +280,21 @@ class FeedManager:
                     return False, "error in setting alias to .htaccess"
             else:
                 return False, "invalid format of configuration file"
-            self.checker.load()
+        self.checker.load()
         return True, ""
 
-    def remove_img_pdf_rss_files(self, feed_name: str) -> None:
+    def _remove_public_img_pdf_feed_files(self, feed_name: str) -> None:
         img_dir_path = self.www_feeds_dir / "img" / feed_name
         pdf_dir_path = self.www_feeds_dir / "pdf" / feed_name
-        rss_file_path = self.www_feeds_dir / "xml" / (feed_name + ".xml")
+        feed_file_path = self.www_feeds_dir / "xml" / (feed_name + ".xml")
 
         # remove files
         try:
             rmtree(img_dir_path)
             rmtree(pdf_dir_path)
-            if rss_file_path.is_file():
-                print(rss_file_path)
-                rss_file_path.unlink()
+            if feed_file_path.is_file():
+                feed_file_path.unlink()
+            self.checker.load_all_public_feed_files(do_merge=True)
         except FileNotFoundError:
             pass
 
@@ -304,6 +311,23 @@ class FeedManager:
         html_dir_path = feed_dir_path / "html"
         try:
             rmtree(html_dir_path)
+            self.checker.load_all_html_files(do_merge=True)
+        except FileNotFoundError:
+            pass
+
+    def remove_html_file(self, group_name: str, feed_name: str, html_file_name: str) -> None:
+        html_dir_path = self.work_dir / group_name / feed_name / "html" / html_file_name
+        try:
+            html_dir_path.unlink()
+            self.checker.load_all_html_files(do_merge=True)
+        except FileNotFoundError:
+            pass
+
+    def remove_public_feed(self, feed_name: str) -> None:
+        feed_path = self.www_feeds_dir / (feed_name + ".xml")
+        try:
+            feed_path.unlink()
+            self.checker.load_all_public_feed_files(do_merge=True)
         except FileNotFoundError:
             pass
 
@@ -314,10 +338,10 @@ class FeedManager:
             return False, "can't remove feed '%s'" % feed_dir_path.relative_to(self.work_dir)
 
         # remove files
-        self.remove_img_pdf_rss_files(feed_name)
+        self._remove_public_img_pdf_feed_files(feed_name)
 
         # git rm & commit
-        self.git_rm(feed_dir_path)
+        self._git_rm(feed_dir_path)
 
         # remove remainder files and directories
         try:
@@ -327,6 +351,7 @@ class FeedManager:
 
         # re-scan feeds by group
         self.load_all_feeds()
+        self.checker.load()
         return True, ""
 
     def remove_group(self, group_name: str) -> Tuple[bool, str]:
@@ -337,10 +362,10 @@ class FeedManager:
         # remove files
         for feed_dir_path in group_dir_path.iterdir():
             feed_name = feed_dir_path.name
-            self.remove_img_pdf_rss_files(feed_name)
+            self._remove_public_img_pdf_feed_files(feed_name)
 
         # git rm & commit
-        self.git_rm(group_dir_path)
+        self._git_rm(group_dir_path)
 
         # remove remainder files and directories
         try:
@@ -350,6 +375,7 @@ class FeedManager:
 
         # re-scan feeds by group
         self.load_all_feeds()
+        self.checker.load()
         return True, ""
 
     def toggle_feed(self, group_name: str, feed_name: str) -> Tuple[str, str]:
@@ -364,15 +390,14 @@ class FeedManager:
         if not feed_dir_path.is_dir():
             return "", "can't find such a directory '%s'" % feed_dir_path.relative_to(self.work_dir)
         # git mv & commit
-        self.git_mv(feed_dir_path, new_feed_dir_path)
+        self._git_mv(feed_dir_path, new_feed_dir_path)
 
         # re-scan feeds by group
         self.group_name_feed_title_list_map[group_name].clear()
         self.feed_name_config_map[feed_name].clear()
-        self.scan_feeds_by_group(group_name)
+        self._scan_feeds_by_group(group_name)
 
-        print("self.group_name_feed_title_list_map[%s]=%r" % (group_name, self.group_name_feed_title_list_map[group_name]))
-        print("self.feed_name_config_map[%s]=%r" % (new_feed_name, self.feed_name_config_map[new_feed_name]))
+        self.checker.load()
         return new_feed_name, ""
 
     def toggle_group(self, group_name: str) -> Tuple[str, str]:
@@ -387,10 +412,11 @@ class FeedManager:
         if not group_dir_path.is_dir():
             return "", "can't find such a directory '%s'" % group_dir_path.relative_to(self.work_dir)
         # git mv & commit
-        self.git_mv(group_dir_path, new_group_dir_path)
+        self._git_mv(group_dir_path, new_group_dir_path)
 
         # re-scan feeds by group
         self.load_all_feeds()
+        self.checker.load()
         return new_group_name, ""
 
     @staticmethod
@@ -400,16 +426,16 @@ class FeedManager:
             return "", error
         return result, ""
 
-    @staticmethod
-    def remove_alias(group_name: str, feed_name: str):
+    def remove_alias(self, group_name: str, feed_name: str):
         result, error = Htaccess.remove_alias(group_name, feed_name)
         if not result:
             return False, error
+        self.checker.load_htaccess_file(do_merge=True)
         return True, ""
 
-    @staticmethod
-    def rename_alias(group_name: str, feed_name: str, new_alias: str):
+    def rename_alias(self, group_name: str, feed_name: str, new_alias: str):
         result, error = Htaccess.set_alias(group_name, feed_name, new_alias)
         if not result:
             return False, error
+        self.checker.load_htaccess_file(do_merge=True)
         return True, ""

@@ -15,23 +15,26 @@ export default new Router({
             name: 'Home',
             component: ExecResult
         },
-        
         {
             path: '/result',
             name: 'ExecResult',
             component: ExecResult
         },
-        
         {
             path: '/problems',
             name: 'Problems',
             component: Problems
         },
-        
         {
             path: '/management',
             name: 'FeedManagement',
-            component: FeedManagement
+            component: FeedManagement,
+            children: [
+                {
+                    path: ':group/:feed',
+                    component: FeedManagement
+                }
+            ]
         }
     ]
 })

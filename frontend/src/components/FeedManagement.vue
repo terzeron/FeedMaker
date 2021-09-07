@@ -19,8 +19,8 @@
             class="float-right p-1"
             style="width: 300px">
           <b-form-input
-              class="m-0"
               v-model="searchKeyword"
+              class="m-0"
               @keyup.enter="search">
             {{ searchKeyword }}
           </b-form-input>
@@ -40,12 +40,12 @@
       <b-col id="search_result" cols="12" class="m-0" v-if="showSearchResult">
         <my-button
             ref="searchResultFeedButton"
-            :label="feed.group_name + '/' + feed.title"
+            :label="feed['group_name'] + '/' + feed['feed_title']"
             variant="success"
-            @click="searchResultFeedNameButtonClicked(feed.group_name, feed.name, index)"
-            :class="{'active': activeFeedIndex === index, 'bg-secondary': !determineStatus(feed.name)}"
+            @click="searchResultFeedNameButtonClicked(feed['group_name'], feed['feed_name'], index)"
+            :class="{'active': activeFeedIndex === index, 'bg-secondary': !determineStatus(feed['feed_name'])}"
             v-for="(feed, index) in feeds"
-            :key="feed.group_name + '/' + feed.name"/>
+            :key="feed['group_name'] + '/' + feed['feed_name']"/>
       </b-col>
     </b-row>
 
@@ -216,27 +216,12 @@
   padding: 2px !important;
 }
 
-div.row {
-  padding: 2px !important;
-}
-
 div.col-12 {
   padding: 2px !important;
 }
 
 div.row > div > button, div.row > div > div > button, div.input-group {
   margin: 2px 3px 3px 2px !important;
-}
-
-input.val-input {
-  text-overflow: fade;
-  border: 1px gray dotted !important;
-  width: 400px !important;
-}
-
-input.key-input {
-  text-overflow: fade;
-  border: 1px gray dotted !important;
 }
 
 div.jsoneditor-field {
@@ -318,11 +303,9 @@ export default {
   },
   watch: {
     newFeedName: function (val) {
-      console.log(`newFeedName is changed to ${val}`);
       this.jsonData.rss.link = 'https://terzeron.com/' + val + '.xml';
     },
-    jsonData: function(val) {
-      console.log(`jsonData is changed to ${val}`);
+    jsonData: function() {
       this.determineNewFeedNameFromJsonRssLink();
     }
   },
@@ -458,9 +441,9 @@ export default {
     },
     getGroups() {
       console.log(`getGroups()`);
-      const path = this.getApiUrlPath() + '/groups';
+      const url = this.getApiUrlPath() + '/groups';
       axios
-          .get(path)
+          .get(url)
           .then((res) => {
             if (res.data.status === 'failure') {
               this.alert(res.data.message);
@@ -507,15 +490,14 @@ export default {
     },
     getFeedListByGroup(groupName) {
       console.log(`getFeedListByGroup(${groupName})`);
-      const path = this.getApiUrlPath() + `/groups/${groupName}/feeds`;
+      const url = this.getApiUrlPath() + `/groups/${groupName}/feeds`;
       axios
-          .get(path)
+          .get(url)
           .then((res) => {
             if (res.data.status === 'failure') {
               this.alert(res.data.message);
             } else {
               this.feeds = res.data.feeds;
-              console.log(`feeds.length=${this.feeds.length}`);
               this.activeFeedIndex = undefined;
               this.selectedFeedName = '';
 
@@ -560,17 +542,14 @@ export default {
     },
     getFeedInfo(groupName, feedName) {
       console.log(`getFeedInfo(${groupName}, ${feedName})`);
-      const path = this.getApiUrlPath() + `/groups/${groupName}/feeds/${feedName}`;
+      const url = this.getApiUrlPath() + `/groups/${groupName}/feeds/${feedName}`;
       axios
-          .get(path)
+          .get(url)
           .then((res) => {
             if (res.data.status === 'failure') {
               this.alert(res.data.message);
             } else {
               this.jsonData = res.data.configuration;
-              console.log(`jsonData is set to ...`);
-              console.log(this.jsonData);
-              console.log(`Object.keys(this.jsonData)=${Object.keys(this.jsonData)}`);
               this.determineNewFeedNameFromJsonRssLink();
               if (Object.keys(this.jsonData).length >= 3) {
                 this.showAllRelatedToFeed();
@@ -587,17 +566,14 @@ export default {
     },
     getSiteConfig() {
       console.log(`getSiteConfig()`);
-      const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/site_config`;
+      const url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/site_config`;
       axios
-          .get(path)
+          .get(url)
           .then((res) => {
             if (res.data.status === 'failure') {
               this.alert(res.data.message);
             } else {
               this.jsonData = res.data.configuration;
-              console.log(`jsonData is set to ...`);
-              console.log(this.jsonData);
-              console.log(`Object.keys(this.jsonData)=${Object.keys(this.jsonData)}`);
               this.hideAllRelatedToFeed();
               this.hideAllRelatedToGroup();
               if (Object.keys(this.jsonData).length >= 2) {
@@ -617,9 +593,9 @@ export default {
             this.startButton('saveSiteConfigButton');
             if (value) {
               const postData = this.jsonData;
-              const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/site_config`;
+              const url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/site_config`;
               axios
-                  .put(path, postData)
+                  .put(url, postData)
                   .then((res) => {
                     if (res.data.status === 'failure') {
                       this.alert(res.data.message);
@@ -644,9 +620,9 @@ export default {
             this.startButton('saveButton');
             if (value) {
               const postData = {configuration: this.jsonData};
-              const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.newFeedName}`;
+              const url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.newFeedName}`;
               axios
-                  .post(path, postData)
+                  .post(url, postData)
                   .then((res) => {
                     if (res.data.status === 'failure') {
                       this.alert(res.data.message);
@@ -669,9 +645,9 @@ export default {
     run: function () {
       console.log(`run()`);
       this.startButton('runButton');
-      const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.newFeedName}/run`;
+      const url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.newFeedName}/run`;
       axios
-          .post(path)
+          .post(url)
           .then((res) => {
             if (res.data.status === 'failure') {
               this.alert(res.data.message);
@@ -690,11 +666,11 @@ export default {
     },
     toggleStatus: function (target) {
       console.log(`toggleStatus(${target})`);
-      let path = '';
+      let url = '';
       if (target === 'feed') {
-        path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/toggle`;
+        url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/toggle`;
       } else {
-        path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/toggle`;
+        url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/toggle`;
       }
 
       this.$bvModal
@@ -706,22 +682,19 @@ export default {
               } else {
                 this.startButton('toggleGroupButton');
               }
-              console.log(path);
               axios
-                  .put(path)
+                  .put(url)
                   .then((res) => {
                     if (res.data.status === 'failure') {
                       this.alert(res.data.message);
                     } else {
                       if (target === 'feed') {
                         this.newFeedName = res.data['new_name'];
-                        console.log(`newFeedName is set to ${this.newFeedName}`);
                         this.getFeedListByGroup(this.selectedGroupName);
                         this.showFeedList = true;
                         this.hideAllRelatedToFeed();
                       } else {
                         this.selectedGroupName = res.data['new_name'];
-                        console.log(`selectedFeedName is set to ${this.selectedFeedName}`);
                         this.getGroups();
                         this.showGroupList = true;
                         this.showFeedList = false
@@ -756,9 +729,9 @@ export default {
           .then((value) => {
             if (value) {
               this.startButton('removeListButton');
-              const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/list`;
+              const url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/list`;
               axios
-                  .delete(path)
+                  .delete(url)
                   .then((res) => {
                     if (res.data.status === 'failure') {
                       this.alert(res.data.message);
@@ -782,9 +755,10 @@ export default {
           .then((value) => {
             if (value) {
               this.startButton('removeHtmlButton');
-              const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/html`;
+              const url = this.getApiUrlPath() +
+                  `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/htmls`;
               axios
-                  .delete(path)
+                  .delete(url)
                   .then((res) => {
                     if (res.data.status === 'failure') {
                       this.alert(res.data.message);
@@ -812,9 +786,9 @@ export default {
           .then((value) => {
             if (value) {
               this.startButton('removeFeedButton');
-              const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}`;
+              const url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}`;
               axios
-                  .delete(path)
+                  .delete(url)
                   .then((res) => {
                     if (res.data.status === 'failure') {
                       this.alert(res.data.message);
@@ -845,9 +819,9 @@ export default {
           .then((value) => {
             if (value) {
               this.startButton('removeGroupButton');
-              const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}`;
+              const url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}`;
               axios
-                  .delete(path)
+                  .delete(url)
                   .then((res) => {
                     if (res.data.status === 'failure') {
                       this.alert(res.data.message);
@@ -870,10 +844,9 @@ export default {
     getAlias: function () {
       console.log(`getAlias()`);
       let feedName = this.getCleanFeedName(this.selectedFeedName);
-      const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${feedName}/alias`;
-      console.log(`getAlias() ${path}`)
+      const url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${feedName}/alias`;
       axios
-          .get(path)
+          .get(url)
           .then((res) => {
             if (res.data.status === 'failure') {
               this.alert(res.data.message);
@@ -882,7 +855,6 @@ export default {
               this.alias = res.data.alias;
               this.showAliasInput = true;
             }
-            console.log(`alias is set to ${this.alias}`);
           })
           .catch((error) => {
             console.error(error);
@@ -892,10 +864,10 @@ export default {
       console.log(`removeAlias()`);
       let feedName = this.getCleanFeedName(this.selectedFeedName);
       this.startButton('removeAliasButton');
-      const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${feedName}/alias`;
+      const url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${feedName}/alias`;
 
       axios
-          .delete(path)
+          .delete(url)
           .then((res) => {
             if (res.data.status === 'failure') {
               this.alert(res.data.message);
@@ -911,10 +883,9 @@ export default {
       console.log(`renameAlias(${this.alias})`);
       let alias = this.getCleanFeedName(this.alias);
       this.startButton('renameAliasButton');
-      const path = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/rename/${alias}`;
-      console.log(`renameAlias() ${path}`)
+      const url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/rename/${alias}`;
       axios
-          .put(path)
+          .put(url)
           .then((res) => {
             if (res.data.status === 'failure') {
               this.alert(res.data.message);
@@ -928,7 +899,13 @@ export default {
     },
   },
   created() {
-    return this.getGroups();
+    if (this.$route.params['group'] && this.$route.params['feed']) {
+      this.selectedGroupName = this.$route.params['group'];
+      this.selectedFeedName = this.$route.params['feed'];
+      return this.feedNameButtonClicked(this.selectedGroupName, this.selectedFeedName);
+    } else {
+      return this.getGroups();
+    }
   },
 };
 </script>

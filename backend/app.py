@@ -224,11 +224,20 @@ def remove_list(group_name, feed_name):
     return jsonify(response_object)
 
 
-@app.route("/groups/<group_name>/feeds/<feed_name>/html", methods=["DELETE"])
+@app.route("/groups/<group_name>/feeds/<feed_name>/htmls", methods=["DELETE"])
 def remove_html(group_name, feed_name):
-    print("/groups/<group_name>/feeds/<feed_name>/html, %r -> remove_html(%s, %s)" % (request.method, group_name, feed_name))
+    print("/groups/<group_name>/feeds/<feed_name>/htmls, %r -> remove_html(%s, %s)" % (request.method, group_name, feed_name))
     response_object = {"status": "failure"}
     feed_manager.remove_html(group_name, feed_name)
+    response_object["status"] = "success"
+    return jsonify(response_object)
+
+
+@app.route("/groups/<group_name>/feeds/<feed_name>/htmls/<html_file_name>", methods=["DELETE"])
+def remove_html_file(group_name, feed_name, html_file_name):
+    print("/groups/<group_name>/feeds/<feed_name>/htmls/<html_file_name>, %r -> remove_html_file(%s, %s, %s)" % (request.method, group_name, feed_name, html_file_name))
+    response_object = {"status": "failure"}
+    feed_manager.remove_html_file(group_name, feed_name, html_file_name)
     response_object["status"] = "success"
     return jsonify(response_object)
 
@@ -263,6 +272,15 @@ def rename_alias(group_name, feed_name, new_alias):
         response_object["status"] = "success"
     else:
         response_object["message"] = error
+    return jsonify(response_object)
+
+
+@app.route("/public_feeds/<feed_name>", methods=["DELETE"])
+def remove_public_feed(feed_name):
+    print("/public_feeds/<feed_name>, %r -> remove_public_feed(%s)" % (request.method, feed_name))
+    response_object = {"status": "failure"}
+    feed_manager.remove_public_feed(feed_name)
+    response_object["status"] = "success"
     return jsonify(response_object)
 
 
