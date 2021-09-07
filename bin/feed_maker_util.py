@@ -691,7 +691,10 @@ class Htaccess:
         try:
             with FileLock(str(Htaccess.lock_file_path), timeout=5):
                 with open(Htaccess.htaccess_file_path, 'r') as infile:
-                    state = 0
+                    if group_name == "___":
+                        state = 1
+                    else:
+                        state = 0
                     for line in infile:
                         if state == 0:
                             m = re.search(Htaccess.group_tag_pattern % group_name, line)
@@ -700,6 +703,7 @@ class Htaccess:
                         elif state == 1:
                             m = re.search(Htaccess.rewrite_rule_pattern % feed_name, line)
                             if m:
+                                is_found = True
                                 continue
                         line_list.append(line)
 
