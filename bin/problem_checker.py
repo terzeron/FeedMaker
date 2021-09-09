@@ -160,7 +160,7 @@ class ProblemChecker:
                     try:
                         s = path.stat()
                         upload_date = datetime.fromtimestamp(s.st_mtime)
-                        self.public_feed_info_list.append({"feed_name": feed_name, "feed_title": self.feed_name_title_map.get(feed_name, ""), "file_path": str(path.relative_to(self.public_feed_dir)), "upload_date": upload_date, "size": s.st_size})
+                        self.public_feed_info_list.append({"feed_name": feed_name, "feed_title": self.feed_name_title_map.get(feed_name, ""), "file_path": str(path.relative_to(self.public_feed_dir)), "upload_date": self.convert_datetime_to_str(upload_date), "size": s.st_size})
                     except Exception as e:
                         LOGGER.error("can't get stat from public_feed '%s', %s", path, str(e))
 
@@ -186,7 +186,7 @@ class ProblemChecker:
                 s = path.stat()
                 html_file_count += 1
                 if 124 < s.st_size < 434:
-                    self.html_file_size_list.append({"file_name": self.get_html_file_name(path), "file_path": str(path.relative_to(self.work_dir)), "size": s.st_size})
+                    self.html_file_size_list.append({"file_name": self.get_html_file_name(path), "file_path": str(path.relative_to(self.work_dir)), "size": s.st_size, "update_date": self.convert_datetime_to_str(datetime.fromtimestamp(s.st_mtime))})
 
                 # html file with normal size should have image tag
                 # would find html files with zero count of image tag
@@ -247,7 +247,7 @@ class ProblemChecker:
                     remainder = count - (index + 4)
                     num_days = int(math.ceil(remainder / unit_size))
 
-                    self.feed_name_progress_info_list.append({"feed_name": feed_name, "feed_title": self.feed_name_title_map[feed_name], "group_name": self.feed_name_group_map[feed_name], "index": index, "count": count, "ratio": int(progress_ratio), "unit_size": unit_size, "due_date": (datetime.now() + timedelta(days=num_days)).strftime("%Y-%m-%d")})
+                    self.feed_name_progress_info_list.append({"feed_name": feed_name, "feed_title": self.feed_name_title_map[feed_name], "group_name": self.feed_name_group_map[feed_name], "index": index, "count": count, "ratio": int(progress_ratio), "unit_size": unit_size, "due_date": self.convert_datetime_to_str(datetime.now() + timedelta(days=num_days))})
 
         print("The loading of all progress info is done. %d items" % len(self.feed_name_progress_info_list))
         if do_merge:
@@ -314,7 +314,7 @@ class ProblemChecker:
         if isinstance(date, str):
             return date
         if isinstance(date, datetime):
-            return date.astimezone().strftime("%m-%d")
+            return date.astimezone().strftime("%y-%m-%d")
         return ""
 
     def get_status_info_with_default(self, alias: str) -> Dict[str, Any]:
