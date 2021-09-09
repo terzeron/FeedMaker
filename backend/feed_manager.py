@@ -21,7 +21,6 @@ class FeedManager:
     SITE_CONF_FILE = "site_config.json"
 
     def __init__(self, logger: logging.Logger) -> None:
-        print("FeedManager.__init__()")
         self.logger = logger
         # group_name -> feed_title_list(name, title)
         self.group_name_feed_title_list_map: Dict[str, List[Dict[str, str]]] = {}

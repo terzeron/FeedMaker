@@ -11,10 +11,10 @@
               striped
               hover
               small
-              :fields="status_info_fields"
-              :items="status_info_list"
-              :sort-by.sync="status_info_sort_by"
-              :sort-desc.sync="status_info_sort_desc">
+              :fields="statusInfoFields"
+              :items="statusInfoList"
+              :sort-by.sync="statusInfoSortBy"
+              :sort-desc.sync="statusInfoSortDesc">
             <template #cell(feed_title)="data">
               <span v-html="data.value"></span>
             </template>
@@ -39,10 +39,10 @@
               striped
               hover
               small
-              :fields="progress_info_fields"
-              :items="progress_info_list"
-              :sort-by.sync="progress_info_sort_by"
-              :sort-desc.sync="progress_info_sort_desc">
+              :fields="progressInfoFields"
+              :items="progressInfoList"
+              :sort-by.sync="progressInfoSortBy"
+              :sort-desc.sync="progressInfoSortDesc">
             <template #cell(feed_title)="data">
               <span v-html="data.value"></span>
             </template>
@@ -60,10 +60,19 @@
               striped
               hover
               small
-              :fields="public_feed_info_fields"
-              :items="public_feed_info_list"
-              :sort-by.sync="public_feed_info_sort_by"
-              :sort-desc.sync="public_feed_info_sort_desc">
+              :fields="publicFeedInfoFields"
+              :items="publicFeedInfoList"
+              :sort-by.sync="publicFeedInfoSortBy"
+              :sort-desc.sync="publicFeedInfoSortDesc">
+            <template #cell(feed_title)="data">
+              <span v-html="data.value"></span>
+            </template>
+            <template #cell(size)="data">
+              <span v-html="data.value"></span>
+            </template>
+            <template #cell(upload_date)="data">
+              <span v-html="data.value"></span>
+            </template>
             <template #cell(action)="data">
               <font-awesome-icon :icon="['far', 'trash-alt']" @click="publicFeedInfoDeleteClicked(data)"/>
             </template>
@@ -81,10 +90,10 @@
               striped
               hover
               small
-              :fields="html_file_size_fields"
-              :items="html_file_size_list"
-              :sort-by.sync="html_file_size_sort_by"
-              :sort-desc.sync="html_file_size_sort_desc">
+              :fields="htmlFileSizeFields"
+              :items="htmlFileSizeList"
+              :sort-by.sync="htmlFileSizeSortBy"
+              :sort-desc.sync="htmlFileSizeSortDesc">
             <template #cell(action)="data">
               <font-awesome-icon :icon="['far', 'trash-alt']" @click="htmlFileSizeDeleteClicked(data)"/>
             </template>
@@ -102,10 +111,10 @@
               striped
               hover
               small
-              :fields="html_file_without_image_tag_fields"
-              :items="html_file_without_image_tag_list"
-              :sort-by.sync="html_file_without_image_tag_sort_by"
-              :sort-desc.sync="html_file_without_image_tag_sort_desc">
+              :fields="htmlFileWithoutImageTagFields"
+              :items="htmlFileWithoutImageTagList"
+              :sort-by.sync="htmlFileWithoutImageTagSortBy"
+              :sort-desc.sync="htmlFileWithoutImageTagSortDesc">
             <template #cell(action)="data">
               <font-awesome-icon :icon="['far', 'trash-alt']" @click="imageWithoutImageTagDeleteClicked(data)"/>
             </template>
@@ -123,10 +132,10 @@
               striped
               hover
               small
-              :fields="html_file_with_many_image_tag_fields"
-              :items="html_file_with_many_image_tag_list"
-              :sort-by.sync="html_file_with_many_image_tag_sort_by"
-              :sort-desc.sync="html_file_with_many_image_tag_sort_desc">
+              :fields="htmlFileWithManyImageTagFields"
+              :items="htmlFileWithManyImageTagList"
+              :sort-by.sync="htmlFileWithManyImageTagSortBy"
+              :sort-desc.sync="htmlFileWithManyImageTagSortDesc">
             <template #cell(action)="data">
               <font-awesome-icon :icon="['far', 'trash-alt']" @click="imageWithManyImageTagDeleteClicked(data)"/>
             </template>
@@ -144,10 +153,10 @@
               striped
               hover
               small
-              :fields="html_file_with_image_not_found_fields"
-              :items="html_file_with_image_not_found_list"
-              :sort-by.sync="html_file_with_image_not_found_sort_by"
-              :sort-desc.sync="html_file_with_image_not_found_sort_desc">
+              :fields="htmlFileWithImageNotFoundFields"
+              :items="htmlFileWithImageNotFoundList"
+              :sort-by.sync="htmlFileWithImageNotFoundSortBy"
+              :sort-desc.sync="htmlFileWithImageNotFoundSortDesc">
             <template #cell(action)="data">
               <font-awesome-icon :icon="['far', 'trash-alt']" @click="imageNotFoundDeleteClicked(data)"/>
             </template>
@@ -166,10 +175,10 @@
               striped
               hover
               small
-              :fields="list_url_info_fields"
-              :items="list_url_info_list"
-              :sort-by.sync="list_url_info_sort_by"
-              :sort-desc.sync="list_url_info_sort_desc">
+              :fields="listUrlInfoFields"
+              :items="listUrlInfoList"
+              :sort-by.sync="listUrlInfoSortBy"
+              :sort-desc.sync="listUrlInfoSortDesc">
             <template #cell(feed_title)="data">
               <span v-html="data.value"></span>
             </template>
@@ -187,10 +196,10 @@
               striped
               hover
               small
-              :fields="element_info_fields"
-              :items="element_info_list"
-              :sort-by.sync="element_info_sort_by"
-              :sort-desc.sync="element_info_sort_desc">
+              :fields="elementInfoFields"
+              :items="elementInfoList"
+              :sort-by.sync="elementInfoSortBy"
+              :sort-desc.sync="elementInfoSortDesc">
           </b-table>
         </b-card-body>
       </b-col>
@@ -227,7 +236,7 @@ export default {
     return {
       problems: {},
 
-      status_info_fields: [
+      statusInfoFields: [
         {key: 'feed_title', sortable: true},
         {key: 'feed_alias', sortable: true},
         {key: 'feed_name', sortable: true},
@@ -241,11 +250,11 @@ export default {
         {key: 'update_date', sortable: true},
         {key: 'action', sortable: false},
       ],
-      status_info_sort_by: 'feed_alias',
-      status_info_sort_desc: false,
-      status_info_list: [],
+      statusInfoSortBy: 'feed_alias',
+      statusInfoSortDesc: false,
+      statusInfoList: [],
 
-      progress_info_fields: [
+      progressInfoFields: [
         {key: 'feed_title', sortable: true},
         {key: 'index', sortable: true},
         {key: 'count', sortable: true},
@@ -253,79 +262,80 @@ export default {
         {key: 'ratio', sortable: true},
         {key: 'due_date', sortable: true},
       ],
-      progress_info_sort_by: 'ratio',
-      progress_info_sort_desc: true,
-      progress_info_list: [],
+      progressInfoSortBy: 'ratio',
+      progressInfoSortDesc: true,
+      progressInfoList: [],
 
-      public_feed_info_fields: [
+      publicFeedInfoFields: [
         {key: 'feed_title', sortable: true},
+        {key: 'size', sortable: true},
+        {key: 'upload_date', sortable: true},
+        {key: 'action', sortable: false},
+      ],
+      publicFeedInfoSortBy: 'size',
+      publicFeedInfoSortDesc: false,
+      publicFeedInfoList: [],
+
+      htmlFileWithImageNotFoundFields: [
+        {key: 'file_name', sortable: true},
+        {key: 'count', sortable: true},
+        {key: 'action', sortable: false},
+      ],
+      htmlFileWithImageNotFoundSortBy: 'count',
+      htmlFileWithImageNotFoundSortDesc: true,
+      htmlFileWithImageNotFoundList: [],
+
+      htmlFileWithoutImageTagFields: [
+        {key: 'file_name', sortable: true},
+        {key: 'count', sortable: true},
+        {key: 'action', sortable: false},
+      ],
+      htmlFileWithoutImageTagSortBy: 'count',
+      htmlFileWithoutImageTagSortDesc: true,
+      htmlFileWithoutImageTagList: [],
+
+      htmlFileWithManyImageTagFields: [
+        {key: 'file_name', sortable: true},
+        {key: 'count', sortable: true},
+        {key: 'action', sortable: false},
+      ],
+      htmlFileWithManyImageTagSortBy: 'count',
+      htmlFileWithManyImageTagSortDesc: true,
+      htmlFileWithManyImageTagList: [],
+
+      htmlFileSizeFields: [
+        {key: 'file_name', sortable: true},
         {key: 'size', sortable: true},
         {key: 'action', sortable: false},
       ],
-      public_feed_info_sort_by: 'size',
-      public_feed_info_sort_desc: false,
-      public_feed_info_list: [],
+      htmlFileSizeSortBy: 'size',
+      htmlFileSizeSortDesc: false,
+      htmlFileSizeList: [],
 
-      html_file_with_image_not_found_fields: [
-        {key: 'file_name', sortable: true},
-        {key: 'count', sortable: true},
-        {key: 'action', sortable: false},
-      ],
-      html_file_with_image_not_found_sort_by: 'count',
-      html_file_with_image_not_found_sort_desc: true,
-      html_file_with_image_not_found_list: [],
-
-      html_file_without_image_tag_fields: [
-        {key: 'file_name', sortable: true},
-        {key: 'count', sortable: true},
-        {key: 'action', sortable: false},
-      ],
-      html_file_without_image_tag_sort_by: 'count',
-      html_file_without_image_tag_sort_desc: true,
-      html_file_without_image_tag_list: [],
-
-      html_file_with_many_image_tag_fields: [
-        {key: 'file_name', sortable: true},
-        {key: 'count', sortable: true},
-        {key: 'action', sortable: false},
-      ],
-      html_file_with_many_image_tag_sort_by: 'count',
-      html_file_with_many_image_tag_sort_desc: true,
-      html_file_with_many_image_tag_list: [],
-
-      html_file_size_fields: [
-        {key: 'file_name', sortable: true},
-        {key: 'size', sortable: true},
-        {key: 'action', sortable: false},
-      ],
-      html_file_size_sort_by: 'size',
-      html_file_size_sort_desc: false,
-      html_file_size_list: [],
-
-      list_url_info_fields: [
+      listUrlInfoFields: [
         {key: 'feed_title', sortable: true},
         {key: 'count', sortable: true},
       ],
-      list_url_info_sort_by: 'count',
-      list_url_info_sort_desc: true,
-      list_url_info_list: [],
+      listUrlInfoSortBy: 'count',
+      listUrlInfoSortDesc: true,
+      listUrlInfoList: [],
 
-      element_info_fields: [
+      elementInfoFields: [
         {key: 'element_name', sortable: true},
         {key: 'count', sortable: true},
       ],
-      element_info_sort_by: 'count',
-      element_info_sort_desc: true,
-      element_info_list: [],
+      elementInfoSortBy: 'count',
+      elementInfoSortDesc: true,
+      elementInfoList: [],
     }
   },
   methods: {
     getApiUrlPath() {
-      let path_prefix = 'https://api.terzeron.com/fm';
+      let pathPrefix = 'https://api.terzeron.com/fm';
       if (process.env.NODE_ENV === 'development') {
-        path_prefix = 'http://localhost:5000';
+        pathPrefix = 'http://localhost:5000';
       }
-      return path_prefix;
+      return pathPrefix;
     },
     removeAlias(groupName, feedName) {
       if (groupName === '') {
@@ -372,7 +382,7 @@ export default {
 
               this.removeAlias(groupName, feedName);
               this.removePublicFeed(feedName);
-              this.status_info_list = _.without(this.status_info_list, data.item);
+              this.statusInfoList = _.without(this.statusInfoList, data.item);
             }
           })
           .catch((error) => {
@@ -388,15 +398,15 @@ export default {
             if (value) {
               const feedName = data.item['feed_name']
               this.removePublicFeed(feedName);
-              this.public_feed_info_list = _.without(this.public_feed_info_list, data.item);
+              this.publicFeedInfoList = _.without(this.publicFeedInfoList, data.item);
             }
           })
           .catch((error) => {
             console.error(error);
           });
     },
-    removeHtmlFile(file_path) {
-      const parts = file_path.split('/');
+    removeHtmlFile(filePath) {
+      const parts = filePath.split('/');
       const groupName = parts[0];
       const feedName = parts[1];
       const htmlFileName = parts[3];
@@ -425,7 +435,7 @@ export default {
           .then((value) => {
             if (value) {
               this.removeHtmlFile(data.item['file_path']);
-              this.html_file_without_image_tag_list = _.without(this.html_file_without_image_tag_list, data.item);
+              this.htmlFileWithoutImageTagList = _.without(this.htmlFileWithoutImageTagList, data.item);
             }
           })
           .catch((error) => {
@@ -440,7 +450,7 @@ export default {
           .then((value) => {
             if (value) {
               this.removeHtmlFile(data.item['file_path']);
-              this.html_file_with_many_image_tag_list = _.without(this.html_file_with_many_image_tag_list, data.item);
+              this.htmlFileWithManyImageTagList = _.without(this.htmlFileWithManyImageTagList, data.item);
             }
           })
           .catch((error) => {
@@ -455,7 +465,7 @@ export default {
           .then((value) => {
             if (value) {
               this.removeHtmlFile(data.item['file_path']);
-              this.html_file_with_image_not_found_list = _.without(this.html_file_with_image_not_found_list, data.item);
+              this.htmlFileWithImageNotFoundList = _.without(this.htmlFileWithImageNotFoundList, data.item);
             }
           })
           .catch((error) => {
@@ -470,26 +480,26 @@ export default {
           .then((value) => {
             if (value) {
               this.removeHtmlFile(data.item['file_path']);
-              this.html_file_size_list = _.without(this.html_file_size_list, data.item);
+              this.htmlFileSizeList = _.without(this.htmlFileSizeList, data.item);
             }
           })
           .catch((error) => {
             console.error(error);
           });
     },
-    getManagementLink(feed_title, group_name, feed_name) {
-      return feed_title ? `<a href="/management/${group_name}/${feed_name}">${feed_title}</a>` : '';
+    getManagementLink(feedTitle, groupName, feedName) {
+      return feedTitle ? `<a href="/management/${groupName}/${feedName}">${feedTitle}</a>` : '';
     },
     getProblems() {
       // 상태 정보
-      const path_status_info = this.getApiUrlPath() + '/problems/status_info';
-      axios.get(path_status_info)
-          .then((res_status_info) => {
-                if (res_status_info.data.status === 'failure') {
-                  console.log(res_status_info.data.message);
+      const pathStatusInfo = this.getApiUrlPath() + '/problems/status_info';
+      axios.get(pathStatusInfo)
+          .then((resStatusInfo) => {
+                if (resStatusInfo.data.status === 'failure') {
+                  console.log(resStatusInfo.data.message);
                 } else {
                   // transformation
-                  this.status_info_list = _.map(res_status_info.data['result'], (o) => {
+                  this.statusInfoList = _.map(resStatusInfo.data['result'], (o) => {
                     o['feed_title'] = this.getManagementLink(o['feed_title'], o['group_name'], o['feed_name']);
                     o['http_request'] = o['http_request'] ? 'O' : 'X';
                     o['htaccess'] = o['htaccess'] ? 'O' : 'X';
@@ -501,13 +511,13 @@ export default {
                 }
 
                 // 점진적 피딩 진행률 정보
-                const path_progress_info = this.getApiUrlPath() + '/problems/progress_info';
-                axios.get(path_progress_info)
-                    .then((res_progress_info) => {
-                      if (res_progress_info.data.status === 'failure') {
-                        console.log(res_progress_info.data.message);
+                const pathProgressInfo = this.getApiUrlPath() + '/problems/progress_info';
+                axios.get(pathProgressInfo)
+                    .then((resProgressInfo) => {
+                      if (resProgressInfo.data.status === 'failure') {
+                        console.log(resProgressInfo.data.message);
                       } else {
-                        this.progress_info_list = _.map(res_progress_info.data['result'], (o) => {
+                        this.progressInfoList = _.map(resProgressInfo.data['result'], (o) => {
                           o['feed_title'] = this.getManagementLink(o['feed_title'], o['group_name'], o['feed_name']);
                           return o;
                         });
@@ -518,17 +528,29 @@ export default {
                     });
 
                 // 결과(public feed) 정보
-                const path_public_feed_info = this.getApiUrlPath() + '/problems/public_feed_info';
-                axios.get(path_public_feed_info)
-                    .then((res_public_feed_info) => {
-                      if (res_public_feed_info.data.status === 'failure') {
-                        console.log(res_public_feed_info.data.message);
+                const pathPublicFeedInfo = this.getApiUrlPath() + '/problems/public_feed_info';
+                axios.get(pathPublicFeedInfo)
+                    .then((resPublicFeedInfo) => {
+                      if (resPublicFeedInfo.data.status === 'failure') {
+                        console.log(resPublicFeedInfo.data.message);
                       } else {
                         // transformation & filtering
-                        this.public_feed_info_list = _.filter(res_public_feed_info.data['result'], (o) => {
-                          return parseInt(o['size'], 10) < 4 * 1024;
+                        let day2MonthAgo = new Date();
+                        day2MonthAgo.setTime(day2MonthAgo.getTime() - 2 * 30 * 24 * 60 * 60 * 1000); // 2 months ago
+                        day2MonthAgo = day2MonthAgo.toISOString().substring(2, 10);
+                        this.publicFeedInfoList = _.filter(resPublicFeedInfo.data['result'], (o) => {
+                          return (o['upload_date'] < day2MonthAgo) || o['size'] < 4 * 1024 ;
                         }).map((o) => {
+                          o['feed_title'] = this.getManagementLink(o['feed_title'], o['group_name'], o['feed_name']);
                           o['action'] = "삭제";
+                          if (o['upload_date'] < day2MonthAgo) {
+                            o['upload_date'] = `<span class="text-warning">${o['upload_date']}</span>`;
+                          }
+                          if (o['size'] < 1 * 1024) {
+                            o['size'] = `<span class="text-danger">${o['size']}</span>`;
+                          } else if (o['size'] < 4 * 1024) {
+                            o['size'] = `<span class="text-warning">${o['size']}</span>`;
+                          }
                           return o;
                         });
                       }
@@ -538,41 +560,46 @@ export default {
                     })
 
                 // HTML 정보
-                const path_html_info = this.getApiUrlPath() + '/problems/html_info';
-                axios.get(path_html_info)
-                    .then((res_html_info) => {
-                      if (res_html_info.data.status === 'failure') {
-                        console.log(res_html_info.data.message);
+                const pathHtmlInfo = this.getApiUrlPath() + '/problems/html_info';
+                axios.get(pathHtmlInfo)
+                    .then((resHtmlInfo) => {
+                      if (resHtmlInfo.data.status === 'failure') {
+                        console.log(resHtmlInfo.data.message);
                       } else {
-                        this.html_file_size_list = _.map(res_html_info.data['result']['html_file_size_list'], (o) => {
-                          o['action'] = '삭제';
-                          return o;
-                        });
-                        this.html_file_with_many_image_tag_list = _.map(res_html_info.data['result']['html_file_with_many_image_tag_list'], (o) => {
-                          o['action'] = '삭제';
-                          return o;
-                        });
-                        this.html_file_without_image_tag_list = _.map(res_html_info.data['result']['html_file_without_image_tag_list'], (o) => {
-                          o['action'] = '삭제';
-                          return o;
-                        });
-                        this.html_file_with_image_not_found_list = _.map(res_html_info.data['result']['html_file_image_not_found_list'], (o) => {
-                          o['action'] = '삭제';
-                          return o;
-                        });
+                        this.htmlFileSizeList =
+                            _.map(resHtmlInfo.data['result']['html_file_size_list'], (o) => {
+                              o['action'] = '삭제';
+                              return o;
+                            });
+                        this.htmlFileWithManyImageTagList =
+                            _.map(resHtmlInfo.data['result']['html_file_with_many_image_tag_list'], (o) => {
+                              o['action'] = '삭제';
+                              return o;
+                            });
+                        this.htmlFileWithoutImageTagList =
+                            _.map(resHtmlInfo.data['result']['html_file_without_image_tag_list'], (o) => {
+                              o['action'] = '삭제';
+                              return o;
+                            });
+                        this.htmlFileWithImageNotFoundList =
+                            _.map(resHtmlInfo.data['result']['html_file_image_not_found_list'], (o) => {
+                              o['action'] = '삭제';
+                              return o;
+                            });
 
                         // element 정보
-                        const path_element_info = this.getApiUrlPath() + '/problems/element_info';
-                        axios.get(path_element_info)
-                            .then((res_element_info) => {
-                              if (res_element_info.data.status === 'failure') {
-                                console.log(res_element_info.data.message);
+                        const pathElementInfo = this.getApiUrlPath() + '/problems/element_info';
+                        axios.get(pathElementInfo)
+                            .then((resElementInfo) => {
+                              if (resElementInfo.data.status === 'failure') {
+                                console.log(resElementInfo.data.message);
                               } else {
-                                this.list_url_info_list = _.map(res_element_info.data['result']['feed_name_list_url_count_list'], (o) => {
-                                  o['feed_title'] = this.getManagementLink(o['feed_title'], o['group_name'], o['feed_name']);
-                                  return o;
-                                });
-                                this.element_info_list = res_element_info.data['result']['element_name_count_list'];
+                                this.listUrlInfoList =
+                                    _.map(resElementInfo.data['result']['feed_name_list_url_count_list'], (o) => {
+                                      o['feed_title'] = this.getManagementLink(o['feed_title'], o['group_name'], o['feed_name']);
+                                      return o;
+                                    });
+                                this.elementInfoList = resElementInfo.data['result']['element_name_count_list'];
                               }
                             })
                             .catch((error) => {
