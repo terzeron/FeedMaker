@@ -242,12 +242,6 @@ class FeedManager:
         with open(config_file_path, 'w', encoding='utf-8') as outfile:
             outfile.write(json.dumps(post_data, indent=2, ensure_ascii=False))
 
-        title = configuration["rss"]["title"].split("::")[0]
-        feed_title_list = self.group_name_feed_title_list_map[group_name]
-        feed_title_list.append({"name": feed_name, "title": title})
-        self.group_name_feed_title_list_map[group_name] = feed_title_list
-        self.feed_name_config_map[feed_name] = configuration
-
         self._git_add(config_file_path)
 
         # re-scan feeds by group
@@ -394,8 +388,6 @@ class FeedManager:
         self._git_mv(feed_dir_path, new_feed_dir_path)
 
         # re-scan feeds by group
-        self.group_name_feed_title_list_map[group_name].clear()
-        self.feed_name_config_map[feed_name].clear()
         self._scan_feeds_by_group(group_name)
 
         self.checker.load()
