@@ -89,7 +89,7 @@ class ProblemChecker:
                     aliases[feed_alias] = True
                     self.feed_name_aliases_map[feed_name] = aliases
 
-        print("The loading of htaccess file is done. %d items" % len(self.feed_alias_name_map))
+        print("* The loading of htaccess file is done. %d items" % len(self.feed_alias_name_map))
         if do_merge:
             self.merge_all_feeds_status()
 
@@ -147,7 +147,7 @@ class ProblemChecker:
         for element_name, count in element_name_count_map.items():
             self.element_name_count_list.append({"element_name": element_name, "count": count})
 
-        print("The loading of all config files and rss files is done. %d items" % len(self.feed_name_rss_info_map))
+        print("* The loading of all config files and rss files is done. %d items" % len(self.feed_name_rss_info_map))
         if do_merge:
             self.merge_all_feeds_status()
 
@@ -164,7 +164,7 @@ class ProblemChecker:
                     except Exception as e:
                         LOGGER.error("can't get stat from public_feed '%s', %s", path, str(e))
 
-        print("The loading of public feed file is done. %d items" % len(self.public_feed_info_list))
+        print("* The loading of public feed file is done. %d items" % len(self.public_feed_info_list))
         if do_merge:
             self.merge_all_feeds_status()
 
@@ -212,7 +212,7 @@ class ProblemChecker:
         for path, count in html_file_image_not_found_count_map.items():
             self.html_file_image_not_found_list.append({"file_name": self.get_html_file_name(path), "file_path": str(path.relative_to(self.work_dir)), "count": count})
 
-        print("The loading of all html files is done. %d items" % html_file_count)
+        print("* The loading of all html files is done. %d items" % html_file_count)
         if do_merge:
             self.merge_all_feeds_status()
 
@@ -249,7 +249,7 @@ class ProblemChecker:
 
                     self.feed_name_progress_info_list.append({"feed_name": feed_name, "feed_title": self.feed_name_title_map[feed_name], "group_name": self.feed_name_group_map[feed_name], "index": index, "count": count, "ratio": int(progress_ratio), "unit_size": unit_size, "due_date": self.convert_datetime_to_str(datetime.now() + timedelta(days=num_days))})
 
-        print("The loading of all progress info is done. %d items" % len(self.feed_name_progress_info_list))
+        print("* The loading of all progress info is done. %d items" % len(self.feed_name_progress_info_list))
         if do_merge:
             self.merge_all_feeds_status()
 
@@ -303,7 +303,7 @@ class ProblemChecker:
                             access_info["is_in_xml_dir"] = feed.startswith("xml/")
                             self.feed_alias_access_info_map[feed_alias] = access_info
 
-        print("The loading of http access log is done. %d items" % len(self.feed_alias_access_info_map))
+        print("* The loading of http access log is done. %d items" % len(self.feed_alias_access_info_map))
         if do_merge:
             self.merge_all_feeds_status()
 
@@ -416,7 +416,7 @@ class ProblemChecker:
 
             self.feed_alias_status_info_list.append(status_info)
 
-        LOGGER.info("The merging of all information is done.")
+        LOGGER.info("* The merging of all information is done.")
 
     def load(self) -> None:
         self.load_htaccess_file()

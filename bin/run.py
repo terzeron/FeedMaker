@@ -206,11 +206,11 @@ class FeedMakerRunner:
 
         start_time = datetime.now()
 
-        LOGGER.info("# deleting log file")
+        LOGGER.info("# Deleting log file")
         runlog_path = self.work_dir_path / "run.log"
         runlog_path.unlink()
 
-        LOGGER.info("# generating feeds")
+        LOGGER.info("# Generating feeds")
         feed_dir_path_list: List[Path] = []
         for group_dir_path in self.work_dir_path.iterdir():
             if not group_dir_path.name.startswith("_") and group_dir_path.is_dir():
@@ -303,7 +303,7 @@ def main() -> int:
     else:
         result = runner.make_single_feed(feed_dir_path, options)
 
-    LOGGER.info("# checking problems and making report")
+    LOGGER.info("# Checking problems and making report")
     checker = ProblemChecker()
     checker.load()
 
