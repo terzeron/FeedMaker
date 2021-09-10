@@ -255,7 +255,7 @@ class FeedManager:
         self.checker.load()
         return True, ""
 
-    def run(self, group_name: str, feed_name: str) -> Tuple[bool, str]:
+    def run(self, group_name: str, feed_name: str, alias: str) -> Tuple[bool, str]:
         feed_dir_path = self.work_dir / group_name / feed_name
         os.chdir(feed_dir_path)
         conf_file_path = feed_dir_path / self.CONF_FILE
@@ -274,9 +274,11 @@ class FeedManager:
                 if not result:
                     return False, "error in making a feed with recent articles"
 
-                result = Htaccess.set_alias(group_name, feed_name)
+                result, _ = Htaccess.get_alias(group_name, feed_name)
                 if not result:
-                    return False, "error in setting alias to .htaccess"
+                    result, _ = Htaccess.set_alias(group_name, feed_name, alias)
+                    if not result:
+                        return False, "error in setting alias to .htaccess"
             else:
                 return False, "invalid format of configuration file"
         self.checker.load()

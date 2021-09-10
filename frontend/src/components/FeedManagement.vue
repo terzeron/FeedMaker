@@ -653,8 +653,9 @@ export default {
       console.log(`run()`);
       this.startButton('runButton');
       const url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.newFeedName}/run`;
+      const postData = {alias: this.alias};
       axios
-          .post(url)
+          .post(url, postData)
           .then((res) => {
             if (res.data.status === 'failure') {
               this.alert(res.data.message);

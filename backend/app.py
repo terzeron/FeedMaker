@@ -161,7 +161,6 @@ def get_feed_info(group_name, feed_name):
     elif request.method == "POST":
         print("/groups/<group_name>/feeds/<feed_name>, %r -> save_config_file(%s, %s)" % (request.method, group_name, feed_name))
         post_data = request.get_json()
-        print(post_data)
         result, error = feed_manager.save_config_file(group_name, feed_name, post_data)
         if result:
             response_object["status"] = "success"
@@ -181,7 +180,8 @@ def get_feed_info(group_name, feed_name):
 def run(group_name, feed_name):
     print("/groups/<group_name>/feeds/<feed_name>/run, %r -> run(%s, %s)" % (request.method, group_name, feed_name))
     response_object = {"status": "failure"}
-    result, error = feed_manager.run(group_name, feed_name)
+    post_data = request.get_json()
+    result, error = feed_manager.run(group_name, feed_name, post_data["alias"])
     if result:
         response_object["status"] = "success"
     else:
