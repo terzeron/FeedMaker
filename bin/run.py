@@ -303,10 +303,13 @@ def main() -> int:
     else:
         config = Config()
         collection_conf = config.get_collection_configs()
-        if collection_conf["is_completed"] and "collect_only_opt" not in options:
-            temp_options = options
-            temp_options["force_collection_opt"] = "-c"
-            result = runner.make_single_feed(feed_dir_path, temp_options)
+        if collection_conf["is_completed"]:
+            if "collect_only_opt" not in options or not options["collect_only_opt"]:
+                temp_options = options
+                temp_options["force_collection_opt"] = "-c"
+                LOGGER.info("run with force_collection_opt '-c'")
+                result = runner.make_single_feed(feed_dir_path, temp_options)
+        LOGGER.info("run")
         result = runner.make_single_feed(feed_dir_path, options)
 
     LOGGER.info("# Checking problems and making report")
