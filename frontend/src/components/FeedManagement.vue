@@ -304,9 +304,11 @@ export default {
   watch: {
     newFeedName: function (val) {
       this.jsonData.rss.link = 'https://terzeron.com/' + val + '.xml';
+      this.alias = val;
     },
     jsonData: function() {
       this.determineNewFeedNameFromJsonRssLink();
+      this.determineDescriptionFromTitle();
     }
   },
   methods: {
@@ -324,6 +326,11 @@ export default {
         if (matched) {
           this.newFeedName = matched[1];
         }
+      }
+    },
+    determineDescriptionFromTitle() {
+      if ('rss' in this.jsonData && 'title' in this.jsonData.rss && 'description' in this.jsonData.rss) {
+        this.jsonData.rss.description = this.jsonData.rss.title;
       }
     },
     setActiveGroup(index) {
