@@ -301,6 +301,12 @@ def main() -> int:
         result = runner.make_all_feeds()
         kill_process_group("chromedriver")
     else:
+        config = Config()
+        collection_conf = config.get_collection_configs()
+        if collection_conf["is_completed"] and "collect_only_opt" not in options:
+            temp_options = options
+            temp_options["force_collection_opt"] = "-c"
+            result = runner.make_single_feed(feed_dir_path, temp_options)
         result = runner.make_single_feed(feed_dir_path, options)
 
     LOGGER.info("# Checking problems and making report")
