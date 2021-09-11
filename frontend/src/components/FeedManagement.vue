@@ -15,12 +15,12 @@
             v-if="showFeedListButton"/>
 
         <b-input-group
-            prepend="키워드"
             class="float-right p-1"
             style="width: 300px">
           <b-form-input
               v-model="searchKeyword"
               class="m-0"
+              placeholder="키워드"
               @keyup.enter="search">
             {{ searchKeyword }}
           </b-form-input>
@@ -29,6 +29,8 @@
                 ref="searchButton"
                 label="검색"
                 @click="search"
+                :initial-icon="['fas', 'search']"
+                :show-initial-icon="true"
                 variant="dark"/>
           </b-input-group-append>
         </b-input-group>
@@ -121,7 +123,12 @@
               {{ newFeedName }}
             </b-form-input>
             <b-input-group-append>
-              <my-button ref="saveButton" label="저장" @click="save"/>
+              <my-button
+                  ref="saveButton"
+                  label="저장"
+                  @click="save"
+                  :initial-icon="['far', 'save']"
+                  :show-initial-icon="true"/>
             </b-input-group-append>
           </b-input-group>
         </b-col>
@@ -131,31 +138,43 @@
               ref="runButton"
               label="실행"
               @click="run"
+              :initial-icon="['fas', 'play']"
+              :show-initial-icon="true"
               v-if="showRunButton"/>
           <my-button
               ref="registerButton"
-              label="Feeder 등록"
+              label="등록"
               @click="registerToFeeder"
+              :initial-icon="['fas', 'rss']"
+              :show-initial-icon="true"
               v-if="showRegisterButton"/>
           <my-button
               ref="removeListButton"
               label="리스트 삭제"
               @click="removeList"
+              :initial-icon="['fas', 'eraser']"
+              :show-initial-icon="true"
               v-if="showRemoveListButton"/>
           <my-button
               ref="removeHtmlButton"
               label="HTML 삭제"
               @click="removeHtml"
+              :initial-icon="['fas', 'eraser']"
+              :show-initial-icon="true"
               v-if="showRemoveHtmlButton"/>
           <my-button
               ref="toggleFeedButton"
               :label="feedStatusLabel"
               @click="toggleStatus('feed')"
+              :initial-icon="['fas', feedStatusIcon]"
+              :show-initial-icon="true"
               v-if="showToggleFeedButton"/>
           <my-button
               ref="removeFeedButton"
               label="피드 삭제"
               @click="removeFeed"
+              :initial-icon="['far', 'trash-alt']"
+              :show-initial-icon="true"
               v-if="showRemoveFeedButton"/>
         </b-col>
 
@@ -164,18 +183,24 @@
               ref="saveSiteConfigButton"
               label="그룹 설정 저장"
               @click="saveSiteConfig"
+              :initial-icon="['far', 'save']"
+              :show-initial-icon="true"
               v-if="showSiteConfig"/>
           <my-button
               ref="toggleGroupButton"
               :label="groupStatusLabel"
               variant="success"
               @click="toggleStatus('group')"
+              :initial-icon="['fas', groupStatusIcon]"
+              :show-initial-icon="true"
               v-if="showToggleGroupButton"/>
           <my-button
               ref="removeGroupButton"
               label="그룹 삭제"
               variant="success"
               @click="removeGroup"
+              :initial-icon="['far', 'trash-alt']"
+              :show-initial-icon="true"
               v-if="showRemoveGroupButton"/>
         </b-col>
 
@@ -188,13 +213,17 @@
               <my-button
                   ref="renameAliasButton"
                   label="변경"
-                  @click="renameAlias"/>
+                  @click="renameAlias"
+                  :initial-icon="['fas', 'pen']"
+                  :show-initial-icon="true"/>
             </b-input-group-append>
             <b-input-group-append>
               <my-button
                   ref="removeAliasButton"
                   label="삭제"
-                  @click="removeAlias"/>
+                  @click="removeAlias"
+                  :initial-icon="['fas', 'eraser']"
+                  :show-initial-icon="true"/>
             </b-input-group-append>
           </b-input-group>
         </b-col>
@@ -239,9 +268,18 @@ div.jsoneditor-value {
 import vueJsonEditor from 'vue-json-editor'
 import axios from 'axios';
 import MyButton from './MyButton';
+import {library} from '@fortawesome/fontawesome-svg-core';
+import {faTrashAlt, faSave} from '@fortawesome/free-regular-svg-icons';
+import {faSearch, faRss, faPlay, faToggleOn, faToggleOff, faEraser, faPen} from '@fortawesome/free-solid-svg-icons';
+
+library.add(faTrashAlt, faSave, faSearch, faRss, faPlay, faToggleOn, faToggleOff, faEraser, faPen);
 
 export default {
   name: 'FeedManagement',
+  components: {
+    vueJsonEditor,
+    MyButton
+  },
   props: ['feed', 'group'],
   data() {
     return {
@@ -290,23 +328,25 @@ export default {
     feedStatusLabel() {
       return '피드 ' + (this.feedStatus ? '비활성화' : '활성화');
     },
+    feedStatusIcon() {
+      return 'toggle-' + (this.feedStatus ? 'off' : 'on');
+    },
     groupStatusLabel() {
       return '그룹 ' + (this.groupStatus ? '비활성화' : '활성화');
+    },
+    groupStatusIcon() {
+      return 'toggle-' + (this.feedStatus ? 'off' : 'on');
     },
     title() {
       return this.jsonData.rss.title;
     }
-  },
-  components: {
-    vueJsonEditor,
-    MyButton
   },
   watch: {
     newFeedName: function (val) {
       this.jsonData.rss.link = 'https://terzeron.com/' + val + '.xml';
       this.alias = val;
     },
-    jsonData: function() {
+    jsonData: function () {
       this.determineNewFeedNameFromJsonRssLink();
       this.determineDescriptionFromTitle();
     }
@@ -358,16 +398,16 @@ export default {
     },
 
     startButton(ref) {
+      this.$refs[ref].doShowInitialIcon = false;
       this.$refs[ref].doShowSpinner = true;
-      this.$refs[ref].doShowCheck = false;
     },
     endButton(ref) {
+      this.$refs[ref].doShowInitialIcon = true;
       this.$refs[ref].doShowSpinner = false;
-      this.$refs[ref].doShowCheck = true;
     },
     resetButton(ref) {
+      this.$refs[ref].doShowInitialIcon = true;
       this.$refs[ref].doShowSpinner = false;
-      this.$refs[ref].doShowCheck = false;
     },
     showAllRelatedToFeed() {
       this.showEditor = true;

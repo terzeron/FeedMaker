@@ -1,21 +1,17 @@
 <template>
   <b-button
-    :variant="variant"
-    @click="$emit('click')">
+      :variant="variant"
+      @click="$emit('click')">
     {{ label }}
-    <b-spinner small v-if="doShowSpinner"></b-spinner>
     <font-awesome-icon
-      :icon="['far', 'check-circle']"
-      v-if="doShowCheck"/>
+        :icon="initialIcon"
+        v-if="doShowInitialIcon"/>
+    <b-spinner small v-if="doShowSpinner"></b-spinner>
   </b-button>
 </template>
 
 <script>
-import {library} from '@fortawesome/fontawesome-svg-core'
-import {faCheckCircle} from '@fortawesome/free-regular-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-
-library.add(faCheckCircle);
+import {FontAwesomeIcon} from '@fortawesome/vue-fontawesome'
 
 export default {
   name: 'MyButton',
@@ -35,6 +31,16 @@ export default {
       type: String,
       default: 'info'
     },
+    initialIcon: {
+      type: Array,
+      default: function () {
+        return [];
+      }
+    },
+    showInitialIcon: {
+      type: Boolean,
+      default: false,
+    },
     showSpinner: {
       type: Boolean,
       default: false,
@@ -46,8 +52,8 @@ export default {
   },
   data: function () {
     return {
+      doShowInitialIcon: this.showInitialIcon,
       doShowSpinner: this.showSpinner,
-      doShowCheck: this.showCheck,
     }
   }
 };

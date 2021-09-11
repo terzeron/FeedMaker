@@ -220,12 +220,11 @@
 import axios from 'axios';
 import _ from 'lodash';
 
-import {library} from '@fortawesome/fontawesome-svg-core'
-import {faTrashAlt} from '@fortawesome/free-regular-svg-icons'
-import {faTrash} from '@fortawesome/free-solid-svg-icons'
-import {FontAwesomeIcon} from '@fortawesome/vue-fontawesome'
+import {library} from '@fortawesome/fontawesome-svg-core';
+import {faTrashAlt} from '@fortawesome/free-regular-svg-icons';
+import {FontAwesomeIcon} from '@fortawesome/vue-fontawesome';
 
-library.add(faTrash, faTrashAlt);
+library.add(faTrashAlt);
 
 export default {
   name: 'Problems',
