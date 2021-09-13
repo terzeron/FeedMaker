@@ -16,7 +16,7 @@ from problem_checker import ProblemChecker
 
 class FeedManager:
     work_dir = Path(os.environ["FEED_MAKER_WORK_DIR"])
-    www_feeds_dir = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"])
+    public_feed_dir = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"])
     CONF_FILE = "conf.json"
     SITE_CONF_FILE = "site_config.json"
 
@@ -279,9 +279,9 @@ class FeedManager:
         return True, ""
 
     def _remove_public_img_pdf_feed_files(self, feed_name: str) -> None:
-        img_dir_path = self.www_feeds_dir / "img" / feed_name
-        pdf_dir_path = self.www_feeds_dir / "pdf" / feed_name
-        feed_file_path = self.www_feeds_dir / "xml" / (feed_name + ".xml")
+        img_dir_path = self.public_feed_dir / "img" / feed_name
+        pdf_dir_path = self.public_feed_dir / "pdf" / feed_name
+        feed_file_path = self.public_feed_dir / "xml" / (feed_name + ".xml")
 
         # remove files
         try:
@@ -289,7 +289,6 @@ class FeedManager:
             rmtree(pdf_dir_path)
             if feed_file_path.is_file():
                 feed_file_path.unlink()
-            self.checker.load_all_public_feed_files(do_merge=True)
         except FileNotFoundError:
             pass
 
@@ -319,7 +318,7 @@ class FeedManager:
             pass
 
     def remove_public_feed(self, feed_name: str) -> None:
-        feed_path = self.www_feeds_dir / (feed_name + ".xml")
+        feed_path = self.public_feed_dir / (feed_name + ".xml")
         try:
             feed_path.unlink()
             self.checker.load_all_public_feed_files(do_merge=True)
@@ -343,6 +342,11 @@ class FeedManager:
             rmtree(feed_dir_path)
         except FileNotFoundError:
             pass
+
+        # remove alias
+        result, _ = Htaccess.remove_alias(group_name, feed_name)
+        if not result:
+            return False, "error in removing alias from .htaccess"
 
         # re-scan feeds by group
         self.load_all_feeds()
