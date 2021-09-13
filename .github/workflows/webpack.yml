@@ -28,9 +28,12 @@ jobs:
         npm install
         npm run build
 
-    - name: Archive production artifacts
-      uses: actions/upload-artifact@v2
+    - name: copy file to server
+      uses: appleboy/scp-action@deploy
       with:
-        name: dist
-        path: |
-          frontend/dist
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        password: ${{ secrets.SSH_PASSWORD }}
+        port: ${{ secrets.SSH_PORT }}
+        source: 'dist'
+        target: '/home/terzeron/temp'
