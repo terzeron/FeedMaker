@@ -12,6 +12,7 @@ import logging.config
 from typing import List, Dict, Any, Union, Optional
 from feed_maker import FeedMaker
 
+
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
 LOGGER = logging.getLogger()
 
@@ -76,6 +77,7 @@ class ProblemChecker:
         del self.element_name_count_list
 
     def load_htaccess_file(self, do_merge=False) -> None:
+        LOGGER.debug("# load_htaccess_file(do_merge=%r)" % do_merge)
         self.feed_alias_name_map.clear()
         self.feed_name_aliases_map.clear()
         with open(self.htaccess_file, 'r') as infile:
@@ -152,6 +154,7 @@ class ProblemChecker:
             self.merge_all_feeds_status()
 
     def load_all_public_feed_files(self, do_merge=False) -> None:
+        LOGGER.debug("# load_all_public_feed_files(do_merge=%r)" % do_merge)
         self.public_feed_info_list.clear()
         for path in self.public_feed_dir.iterdir():
             if path.suffix == ".xml":
@@ -323,6 +326,7 @@ class ProblemChecker:
         return {"http_request": False, "htaccess": False, "public_html": False, "feedmaker": False, "access_date": None, "view_date": None, "upload_date": None, "update_date": None}
 
     def merge_all_feeds_status(self) -> None:
+        LOGGER.debug("# merge_all_feeds_status()")
         self.feed_alias_status_info_map.clear()
         self.feed_alias_status_info_list.clear()
 
@@ -419,6 +423,7 @@ class ProblemChecker:
         LOGGER.info("* The merging of all information is done.")
 
     def load(self) -> None:
+        LOGGER.debug("# load()")
         self.load_htaccess_file()
         self.load_all_config_rss_files()
         self.load_all_public_feed_files()
