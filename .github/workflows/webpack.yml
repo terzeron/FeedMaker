@@ -33,4 +33,4 @@ jobs:
       with:
         name: dist
         path: |
-          dist
+          frontend/dist
