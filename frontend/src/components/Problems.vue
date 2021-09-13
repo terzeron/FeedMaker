@@ -70,6 +70,9 @@
             <template #cell(size)="data">
               <span v-html="data.value"></span>
             </template>
+            <template #cell(num_items)="data">
+              <span v-html="data.value"></span>
+            </template>
             <template #cell(upload_date)="data">
               <span v-html="data.value"></span>
             </template>
@@ -268,6 +271,7 @@ export default {
       publicFeedInfoFields: [
         {key: 'feed_title', sortable: true},
         {key: 'size', sortable: true},
+        {key: 'num_items', sortable: true},
         {key: 'upload_date', sortable: true},
         {key: 'action', sortable: false},
       ],
@@ -538,7 +542,9 @@ export default {
                         day2MonthAgo.setTime(day2MonthAgo.getTime() - 2 * 30 * 24 * 60 * 60 * 1000); // 2 months ago
                         day2MonthAgo = day2MonthAgo.toISOString().substring(2, 10);
                         this.publicFeedInfoList = _.filter(resPublicFeedInfo.data['result'], (o) => {
-                          return (o['upload_date'] < day2MonthAgo) || o['size'] < 4 * 1024 ;
+                          return o['upload_date'] < day2MonthAgo ||
+                              o['size'] < 4 * 1024 ||
+                              o['num_items'] < 5 || o['num_items'] > 20;
                         }).map((o) => {
                           o['feed_title'] = this.getManagementLink(o['feed_title'], o['group_name'], o['feed_name']);
                           o['action'] = "삭제";
@@ -549,6 +555,11 @@ export default {
                             o['size'] = `<span class="text-danger">${o['size']}</span>`;
                           } else if (o['size'] < 4 * 1024) {
                             o['size'] = `<span class="text-warning">${o['size']}</span>`;
+                          }
+                          if (o['num_items'] < 5) {
+                            o['num_items'] = `<span class="text-warning">${o['num_items']}</span>`;
+                          } else if (o['num_items'] > 20) {
+                            o['num_items'] = `<span class="text-danger">${o['num_items']}</span>`;
                           }
                           return o;
                         });
