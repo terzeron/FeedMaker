@@ -39,9 +39,10 @@ jobs:
     - name: Publish
       uses: nogsantos/scp-deploy@master
       with:
-        src: ./dist/*
+        src: ./dist
         host: ${{ secrets.SSH_HOST }}
         remote: ${{ secrets.SSH_PATH }}
         port: ${{ secrets.SSH_PORT }}
-        user: ${{ secrets.SSH_USER }}
-        key: ${{ secrets.SSH_PASSWORD }}
+        user: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_KEY }}
+        options: -o StrictHostKeyChecking=no
