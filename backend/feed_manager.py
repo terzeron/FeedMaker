@@ -284,30 +284,25 @@ class FeedManager:
         feed_file_path = self.public_feed_dir / "xml" / (feed_name + ".xml")
 
         # remove files
-        try:
+        if img_dir_path.is_dir():
             rmtree(img_dir_path)
+        if pdf_dir_path.is_dir():
             rmtree(pdf_dir_path)
-            if feed_file_path.is_file():
-                feed_file_path.unlink()
-        except FileNotFoundError:
-            pass
+        if feed_file_path.is_file():
+            feed_file_path.unlink()
 
     def remove_list(self, group_name: str, feed_name: str) -> None:
         feed_dir_path = self.work_dir / group_name / feed_name
         list_dir_path = feed_dir_path / "newlist"
-        try:
+        if list_dir_path.is_dir():
             rmtree(list_dir_path)
-        except FileNotFoundError:
-            pass
 
     def remove_html(self, group_name: str, feed_name: str) -> None:
         feed_dir_path = self.work_dir / group_name / feed_name
         html_dir_path = feed_dir_path / "html"
-        try:
+        if html_dir_path.is_dir():
             rmtree(html_dir_path)
             self.checker.load_all_html_files(do_merge=True)
-        except FileNotFoundError:
-            pass
 
     def remove_html_file(self, group_name: str, feed_name: str, html_file_name: str) -> None:
         html_dir_path = self.work_dir / group_name / feed_name / "html" / html_file_name
@@ -338,10 +333,8 @@ class FeedManager:
         self._git_rm(feed_dir_path)
 
         # remove remainder files and directories
-        try:
+        if feed_dir_path.is_dir():
             rmtree(feed_dir_path)
-        except FileNotFoundError:
-            pass
 
         # remove alias
         result, _ = Htaccess.remove_alias(group_name, feed_name)
@@ -367,10 +360,8 @@ class FeedManager:
         self._git_rm(group_dir_path)
 
         # remove remainder files and directories
-        try:
+        if group_dir_path.is_dir():
             rmtree(group_dir_path)
-        except FileNotFoundError:
-            pass
 
         # re-scan feeds by group
         self.load_all_feeds()
