@@ -178,7 +178,7 @@ def get_feed_info(group_name, feed_name):
 
 @app.route("/groups/<group_name>/feeds/<feed_name>/run", methods=["POST"])
 def run(group_name, feed_name):
-    print("/groups/<group_name>/feeds/<feed_name>/run, %r -> run(%s, %s)" % (request.method, group_name, feed_name))
+    print("/groups/<group_name>/feeds/<feed_name>/run, %r, %r -> run(%s, %s)" % (request.method, request.get_json(), group_name, feed_name))
     response_object = {"status": "failure"}
     post_data = request.get_json()
     result, error = feed_manager.run(group_name, feed_name, post_data["alias"])

@@ -114,7 +114,7 @@ class FeedManager:
         else:
             return "", "can't find such file '%s'" % exec_result_file_path.relative_to(self.work_dir)
 
-    def get_problems_status_info(self) -> Tuple[Dict[str, Any], str]:
+    def get_problems_status_info(self) -> Tuple[List[Dict[str, Any]], str]:
         return self.checker.feed_alias_status_info_list, ""
 
     def get_problems_progress_info(self) -> Tuple[List[Dict[str, Any]], str]:
@@ -250,6 +250,7 @@ class FeedManager:
         return True, ""
 
     def run(self, group_name: str, feed_name: str, alias: str) -> Tuple[bool, str]:
+        self.logger.debug("# run(%s, %s, %s)", group_name, feed_name, alias)
         feed_dir_path = self.work_dir / group_name / feed_name
         os.chdir(feed_dir_path)
         conf_file_path = feed_dir_path / self.CONF_FILE
