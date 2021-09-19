@@ -168,7 +168,7 @@ class ProblemChecker:
                         num_items = file_content.count("<item>")
                     s = path.stat()
                     upload_date = datetime.fromtimestamp(s.st_mtime)
-                    self.public_feed_info_list.append({"feed_name": feed_name, "feed_title": self.feed_name_title_map.get(feed_name, ""), "file_path": str(path.relative_to(self.public_feed_dir)), "upload_date": self.convert_datetime_to_str(upload_date), "size": s.st_size, "num_items": num_items})
+                    self.public_feed_info_list.append({"feed_name": feed_name, "feed_title": self.feed_name_title_map.get(feed_name, ""), "group_name": self.feed_name_group_map.get(feed_name, ""), "file_path": str(path.relative_to(self.public_feed_dir)), "upload_date": self.convert_datetime_to_str(upload_date), "size": s.st_size, "num_items": num_items})
                 except Exception as e:
                     LOGGER.error("can't get stat from public_feed '%s', %s", path, str(e))
 
