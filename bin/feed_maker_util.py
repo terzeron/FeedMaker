@@ -661,14 +661,15 @@ class Cache:
 class Htaccess:
     htaccess_file_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]).parent / ".htaccess"
     lock_file_path = Path(str(htaccess_file_path) + ".lock")
-    rewrite_rule_pattern = r'RewriteRule\t\^%s\\\.xml\$\txml/%s\\\.xml'
+    rewrite_rule_pattern = r'RewriteRule\t\^(?P<alias>[^.]+)\\\.xml\$\txml/%s\\\.xml'
     rewrite_rule_fmt = "RewriteRule\t^%s\\.xml$\txml/%s\\.xml\n"
+    rewrite_rule_gone_fmt = "RewriteRule\t^(xml/)?%s\\.xml$\t- [G]"
     group_tag_pattern = r'^#[^(]+\(%s\)'
 
     @staticmethod
     def get_alias(group_name: str, feed_name: str) -> Tuple[str, str]:
         LOGGER.debug("# get_alias(%s, %s)", group_name, feed_name)
-        LOGGER.debug("rewrite_rule_pattern=%s", Htaccess.rewrite_rule_pattern % (feed_name, feed_name))
+        LOGGER.debug("rewrite_rule_pattern=%s", Htaccess.rewrite_rule_pattern % feed_name)
         try:
             with FileLock(str(Htaccess.lock_file_path), timeout=5):
                 with open(Htaccess.htaccess_file_path, 'r') as infile:
@@ -680,7 +681,7 @@ class Htaccess:
                                 state = 1
                                 continue
                         elif state == 1:
-                            m = re.search(Htaccess.rewrite_rule_pattern % (feed_name, feed_name), line)
+                            m = re.search(Htaccess.rewrite_rule_pattern % feed_name, line)
                             if m:
                                 alias = m.group("alias")
                                 return alias, ""
@@ -689,22 +690,33 @@ class Htaccess:
         return "", "error in getting alias for feed '%s' from group '%s'" % (feed_name, group_name)
 
     @staticmethod
-    def set_alias(group_name: str, feed_name: str, new_alias: str="") -> Tuple[bool, str]:
-        LOGGER.debug("# set_alias(%s, %s, %s)" % (group_name, feed_name, new_alias))
+    def set_alias(group_name: str, feed_name: str, alias: str = "") -> Tuple[bool, str]:
+        LOGGER.debug("# set_alias(%s, %s, %s)" % (group_name, feed_name, alias))
         LOGGER.debug("group_tag_pattern=%s", Htaccess.group_tag_pattern % group_name)
         is_found: bool = False
         temp_file_path = Path(str(Htaccess.htaccess_file_path) + "." + datetime.now().strftime("%Y%m%d%H%i%s"))
+
+        _, error = Htaccess.get_alias(group_name, feed_name)
+        if not error:
+            is_found = True
 
         line_list: List[str] = []
         try:
             with FileLock(str(Htaccess.lock_file_path), timeout=5):
                 with open(Htaccess.htaccess_file_path, 'r') as infile:
                     for line in infile:
+                        # find feed name and replace
+                        if is_found and re.search(Htaccess.rewrite_rule_pattern % feed_name, line):
+                            line_list.append(Htaccess.rewrite_rule_fmt % (alias, feed_name))
+                            continue
+
                         line_list.append(line)
 
                         # find group name and append after group name
-                        if re.search(Htaccess.group_tag_pattern % group_name, line):
-                            line_list.append(Htaccess.rewrite_rule_fmt % (feed_name, feed_name))
+                        if not is_found and re.search(Htaccess.group_tag_pattern % group_name, line):
+                            if not alias:
+                                alias = feed_name
+                            line_list.append(Htaccess.rewrite_rule_fmt % (alias, feed_name))
                             is_found = True
 
                 with open(temp_file_path, 'w') as outfile:
@@ -724,6 +736,7 @@ class Htaccess:
         temp_file_path = Path(str(Htaccess.htaccess_file_path) + "." + datetime.now().strftime("%Y%m%d%H%i%s"))
 
         line_list: List[str] = []
+        alias = ""
         try:
             with FileLock(str(Htaccess.lock_file_path), timeout=5):
                 with open(Htaccess.htaccess_file_path, 'r') as infile:
@@ -737,11 +750,14 @@ class Htaccess:
                             if m:
                                 state = 1
                         elif state == 1:
-                            m = re.search(Htaccess.rewrite_rule_pattern % (feed_name, feed_name), line)
+                            m = re.search(Htaccess.rewrite_rule_pattern % feed_name, line)
                             if m:
+                                alias = m.group("alias")
                                 is_found = True
                                 continue
                         line_list.append(line)
+                    if alias:
+                        line_list.append(Htaccess.rewrite_rule_gone_fmt % alias)
 
                 with open(temp_file_path, 'w') as outfile:
                     for line in line_list:
