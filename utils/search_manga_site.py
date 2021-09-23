@@ -203,7 +203,7 @@ def main():
         "marumaru": ["/bbs/search.php?stx=" + keyword, {"class": "media"}],
         "funbe": ["/bbs/search.php?stx=" + keyword, {"class": "section-item-title"}],
         "tkor": ["/bbs/search.php?stx=" + keyword, {"class": "section-item-title"}],
-        "flix": ["/bbs/search.php?stx=" + keyword, {"class": "post-list"}, Method.POST, {"Content-Type": "application/x-www-form-urlencoded"}, {"keyword": original_keyword}],
+        #"flix": ["/bbs/search.php?stx=" + keyword, {"class": "post-list"}, Method.POST, {"Content-Type": "application/x-www-form-urlencoded"}, {"keyword": original_keyword}],
         "buzztoon": ["/bbs/search.php?stx=" + keyword, {"class": "list_info_title"}],
         #"sektoon": ["/?post_type=post&s=" + keyword, {"class": "entry-title"}],
         "agit":["", {"keyword": original_keyword}],
