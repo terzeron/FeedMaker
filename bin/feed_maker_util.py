@@ -48,16 +48,14 @@ def exec_cmd(cmd: str, input_data=None) -> Tuple[str, Optional[str]]:
                 result, error = p.communicate(input_data.encode("utf-8"))
             else:
                 result, error = p.communicate()
-            if p.returncode != 0:
-                raise subprocess.CalledProcessError(returncode=p.returncode, cmd=cmd, output=str(result) + ", " + error.decode("utf-8"), stderr=error)
             if error:
                 # handle warnings
                 if b"InsecureRequestWarning" not in error and b"_RegisterApplication(), FAILED TO establish the default connection to the WindowServer" not in error:
                     return "", error.decode("utf-8")
-    except subprocess.CalledProcessError:
-        return "", "Error with non-zero exit status in command '{}'".format(cmd)
-    except subprocess.SubprocessError:
-        return "", "Error in execution of command '{}'".format(cmd)
+    except subprocess.CalledProcessError as e:
+        return "", "Error with non-zero exit status, {}".format(e)
+    except subprocess.SubprocessError as e:
+        return "", "Error in execution of command, {}".format(e)
     return result.decode(encoding="utf-8"), ""
 
 
