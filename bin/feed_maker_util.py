@@ -661,7 +661,7 @@ class Htaccess:
     lock_file_path = Path(str(htaccess_file_path) + ".lock")
     rewrite_rule_pattern = r'RewriteRule\t\^(?P<alias>[^.]+)\\\.xml\$\txml/%s\\\.xml'
     rewrite_rule_fmt = "RewriteRule\t^%s\\.xml$\txml/%s\\.xml\n"
-    rewrite_rule_gone_fmt = "RewriteRule\t^(xml/)?%s\\.xml$\t- [G]"
+    rewrite_rule_gone_fmt = "RewriteRule\t^(xml/)?%s\\.xml$\t- [G]\n"
     group_tag_pattern = r'^#[^(]+\(%s\)'
 
     @staticmethod
