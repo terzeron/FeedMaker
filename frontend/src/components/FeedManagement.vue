@@ -265,12 +265,12 @@ div.jsoneditor-value {
 </style>
 
 <script>
-import vueJsonEditor from 'vue-json-editor'
+import vueJsonEditor from 'vue-json-editor';
 import axios from 'axios';
-import MyButton from './MyButton';
 import {library} from '@fortawesome/fontawesome-svg-core';
 import {faTrashAlt, faSave} from '@fortawesome/free-regular-svg-icons';
 import {faSearch, faRss, faPlay, faToggleOn, faToggleOff, faEraser, faPen} from '@fortawesome/free-solid-svg-icons';
+import MyButton from './MyButton';
 
 library.add(faTrashAlt, faSave, faSearch, faRss, faPlay, faToggleOn, faToggleOff, faEraser, faPen);
 
@@ -281,7 +281,7 @@ export default {
     MyButton
   },
   props: ['feed', 'group'],
-  data() {
+  data: function () {
     return {
       alertMessage: '',
 
@@ -319,26 +319,26 @@ export default {
     };
   },
   computed: {
-    feedStatus() {
+    feedStatus: function () {
       return this.selectedFeedName[0] !== '_';
     },
-    groupStatus() {
+    groupStatus: function () {
       return this.selectedGroupName[0] !== '_';
     },
-    feedStatusLabel() {
+    feedStatusLabel: function () {
       return '피드 ' + (this.feedStatus ? '비활성화' : '활성화');
     },
-    feedStatusIcon() {
+    feedStatusIcon: function () {
       return 'toggle-' + (this.feedStatus ? 'off' : 'on');
     },
-    groupStatusLabel() {
+    groupStatusLabel: function () {
       return '그룹 ' + (this.groupStatus ? '비활성화' : '활성화');
     },
-    groupStatusIcon() {
+    groupStatusIcon: function () {
       return 'toggle-' + (this.feedStatus ? 'off' : 'on');
     },
-    title() {
-      return this.jsonData.rss.title;
+    title: function () {
+      return this.jsonData.rss['title'];
     }
   },
   watch: {
@@ -352,14 +352,14 @@ export default {
     }
   },
   methods: {
-    getApiUrlPath() {
+    getApiUrlPath: function () {
       let pathPrefix = 'https://api.terzeron.com/fm';
       if (process.env.NODE_ENV === 'development') {
         pathPrefix = 'http://localhost:5000';
       }
       return pathPrefix;
     },
-    determineNewFeedNameFromJsonRssLink() {
+    determineNewFeedNameFromJsonRssLink: function () {
       if ('rss' in this.jsonData && 'link' in this.jsonData.rss) {
         const re = /https:\/\/terzeron.com\/_?(.+)\.xml/;
         const matched = this.jsonData.rss.link.match(re);
@@ -368,48 +368,48 @@ export default {
         }
       }
     },
-    determineDescriptionFromTitle() {
+    determineDescriptionFromTitle: function () {
       if ('rss' in this.jsonData && 'title' in this.jsonData.rss && 'description' in this.jsonData.rss) {
-        this.jsonData.rss.description = this.jsonData.rss.title;
+        this.jsonData.rss['description'] = this.jsonData.rss['title'];
       }
     },
-    setActiveGroup(index) {
+    setActiveGroup: function (index) {
       this.activeGroupIndex = index;
     },
-    setActiveFeed(index) {
+    setActiveFeed: function (index) {
       this.activeFeedIndex = index;
     },
-    alert(message) {
+    alert: function (message) {
       this.alertMessage = message;
       this.showAlert = true;
     },
-    clearAlert() {
+    clearAlert: function () {
       this.alertMessage = '';
       this.showAlert = false;
     },
-    getCleanFeedName(feedName) {
+    getCleanFeedName: function (feedName) {
       if (feedName[0] === '_') {
         return feedName.substring(1);
       }
       return feedName;
     },
-    determineStatus(name) {
+    determineStatus: function (name) {
       return name[0] !== '_';
     },
 
-    startButton(ref) {
+    startButton: function (ref) {
       this.$refs[ref].doShowInitialIcon = false;
       this.$refs[ref].doShowSpinner = true;
     },
-    endButton(ref) {
+    endButton: function (ref) {
       this.$refs[ref].doShowInitialIcon = true;
       this.$refs[ref].doShowSpinner = false;
     },
-    resetButton(ref) {
+    resetButton: function (ref) {
       this.$refs[ref].doShowInitialIcon = true;
       this.$refs[ref].doShowSpinner = false;
     },
-    showAllRelatedToFeed() {
+    showAllRelatedToFeed: function () {
       this.showEditor = true;
       this.showNewFeedNameInput = true;
       this.showRunButton = true;
@@ -420,7 +420,7 @@ export default {
       this.showRemoveFeedButton = true;
       this.showAliasInput = true;
     },
-    hideAllRelatedToFeed() {
+    hideAllRelatedToFeed: function () {
       this.showEditor = false;
       this.showNewFeedNameInput = false;
       this.showRunButton = false;
@@ -432,26 +432,26 @@ export default {
       this.showAliasInput = false;
       this.clearAlert();
     },
-    showAllRelatedToGroup() {
+    showAllRelatedToGroup: function () {
       if (this.selectedGroupName) {
         this.showToggleGroupButton = true;
         this.showRemoveGroupButton = true;
       }
     },
-    hideAllRelatedToGroup() {
+    hideAllRelatedToGroup: function () {
       this.showToggleGroupButton = false;
       this.showRemoveGroupButton = false;
     },
-    showAllRelatedToSiteConfig() {
+    showAllRelatedToSiteConfig: function () {
       this.showEditor = true;
       this.showSiteConfig = true;
     },
-    hideAllRelatedToSiteConfig() {
+    hideAllRelatedToSiteConfig: function () {
       this.showEditor = false;
       this.showSiteConfig = false;
     },
 
-    search() {
+    search: function () {
       console.log(`search()`);
       this.showSearchResult = true;
       this.showGroupList = false;
@@ -475,7 +475,7 @@ export default {
             console.error(error);
           })
     },
-    groupListButtonClicked() {
+    groupListButtonClicked: function () {
       console.log(`groupListButtonClicked()`);
       this.showGroupList = true;
       this.showFeedList = false;
@@ -486,7 +486,7 @@ export default {
 
       this.getGroups();
     },
-    getGroups() {
+    getGroups: function () {
       console.log(`getGroups()`);
       const url = this.getApiUrlPath() + '/groups';
       axios
@@ -512,7 +512,7 @@ export default {
             console.error(error);
           });
     },
-    feedListButtonClicked() {
+    feedListButtonClicked: function () {
       console.log(`feedListButtonClicked()`);
       this.showGroupList = false;
       this.showFeedList = true;
@@ -520,7 +520,7 @@ export default {
 
       this.getFeedListByGroup(this.selectedGroupName);
     },
-    groupNameButtonClicked(groupName, index) {
+    groupNameButtonClicked: function (groupName, index) {
       console.log(`groupNameButtonClicked(${groupName}, ${index})`);
       if (index) {
         this.setActiveGroup(index);
@@ -535,7 +535,7 @@ export default {
 
       this.getFeedListByGroup(groupName);
     },
-    getFeedListByGroup(groupName) {
+    getFeedListByGroup: function (groupName) {
       console.log(`getFeedListByGroup(${groupName})`);
       const url = this.getApiUrlPath() + `/groups/${groupName}/feeds`;
       axios
@@ -556,7 +556,7 @@ export default {
             console.error(error);
           });
     },
-    searchResultFeedNameButtonClicked(groupName, feedName, index) {
+    searchResultFeedNameButtonClicked: function (groupName, feedName, index) {
       console.log(`searchResultFeedNameButtonClicked(${groupName}, ${feedName}, ${index})`);
       if (index) {
         this.setActiveFeed(index);
@@ -570,7 +570,7 @@ export default {
 
       this.getFeedInfo(groupName, feedName);
     },
-    feedNameButtonClicked(groupName, feedName, index) {
+    feedNameButtonClicked: function (groupName, feedName, index) {
       console.log(`feedNameButtonClicked(${groupName}, ${feedName}, ${index})`);
       if (index) {
         this.setActiveFeed(index);
@@ -587,7 +587,7 @@ export default {
         this.getFeedInfo(groupName, feedName);
       }
     },
-    getFeedInfo(groupName, feedName) {
+    getFeedInfo: function (groupName, feedName) {
       console.log(`getFeedInfo(${groupName}, ${feedName})`);
       const url = this.getApiUrlPath() + `/groups/${groupName}/feeds/${feedName}`;
       axios
@@ -611,7 +611,7 @@ export default {
             console.error(error);
           });
     },
-    getSiteConfig() {
+    getSiteConfig: function () {
       console.log(`getSiteConfig()`);
       const url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/site_config`;
       axios
@@ -632,7 +632,7 @@ export default {
             console.error(error);
           });
     },
-    saveSiteConfig() {
+    saveSiteConfig: function () {
       console.log(`saveSiteConfig()`);
       this.$bvModal
           .msgBoxConfirm('정말로 실행하시겠습니까?')
@@ -946,7 +946,7 @@ export default {
           });
     },
   },
-  created() {
+  mounted: function () {
     if (this.$route.params['group'] && this.$route.params['feed']) {
       this.selectedGroupName = this.$route.params['group'];
       this.selectedFeedName = this.$route.params['feed'];

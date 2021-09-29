@@ -22,8 +22,7 @@
               <font-awesome-icon
                   :icon="['far', 'trash-alt']"
                   @click="statusInfoDeleteClicked(data)"
-                  v-if="data.item['feed_title'] === '' &&
-                  (data.item['htaccess'] === 'O' || data.item['public_html'] === 'O')"/>
+                  v-if="showStatusInfoDeleteButton(data)"/>
             </template>
           </b-table>
         </b-card-body>
@@ -234,7 +233,7 @@ export default {
   components: {
     FontAwesomeIcon
   },
-  data() {
+  data: function () {
     return {
       problems: {},
 
@@ -333,6 +332,9 @@ export default {
     }
   },
   methods: {
+    showStatusInfoDeleteButton: function (data) {
+      return data.item['feed_title'] === '' && (data.item['htaccess'] === 'O' || data.item['public_html'] === 'O');
+    },
     getApiUrlPath() {
       let pathPrefix = 'https://api.terzeron.com/fm';
       if (process.env.NODE_ENV === 'development') {
@@ -627,7 +629,7 @@ export default {
           })
     }
   },
-  created() {
+  mounted: function () {
     return this.getProblems();
   }
   ,

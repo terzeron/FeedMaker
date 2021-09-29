@@ -1,10 +1,10 @@
-import Vue from 'vue'
-import App from './App'
+import Vue from 'vue';
+import App from './App';
 import router from './router';
 
 import { BootstrapVue } from 'bootstrap-vue';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import 'bootstrap-vue/dist/bootstrap-vue.css'
+import 'bootstrap-vue/dist/bootstrap-vue.css';
 import VueSimpleMarkdown from 'vue-simple-markdown';
 import 'vue-simple-markdown/dist/vue-simple-markdown.css';
 
