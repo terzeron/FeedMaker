@@ -149,16 +149,20 @@ def search_site(site_name: str, url_postfix: str, attrs: Dict[str, str], method=
     with open("site_config.json", 'r', encoding='utf-8') as infile:
         config = json.load(infile)
         if site_name == "agit":
-            version = ""
+            version0 = ""
+            version1 = ""
             content = get_data_from_site(config, "")
-            m = re.search(r'src=\'/data/azi_webtoon_\d.js(?P<version>\?v=[^\']+)\'', content)
+            m = re.search(r'src=\'/data/azi_webtoon_0.js(?P<version0>\?v=[^\']+)\'', content)
             if m:
-                version = m.group("version")
+                version0 = m.group("version0")
+            m = re.search(r'src=\'/data/azi_webtoon_0.js(?P<version1>\?v=[^\']+)\'', content)
+            if m:
+                version1 = m.group("version1")
             result_list = []
             for i in range(config["num_retries"]):
-                content0 = get_data_from_site(config, "/data/azi_webtoon_0.js" + version, method=method, headers=headers, data=data)
+                content0 = get_data_from_site(config, "/data/azi_webtoon_0.js" + version0, method=method, headers=headers, data=data)
                 result0 = extract_sub_content_from_agit(config["url"], content0, attrs["keyword"])
-                content1 = get_data_from_site(config, "/data/azi_webtoon_1.js" + version, method=method, headers=headers, data=data)
+                content1 = get_data_from_site(config, "/data/azi_webtoon_1.js" + version1, method=method, headers=headers, data=data)
                 result1 = extract_sub_content_from_agit(config["url"], content1, attrs["keyword"])
                 if result0:
                     result_list.extend(result0)
