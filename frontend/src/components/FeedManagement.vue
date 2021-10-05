@@ -679,7 +679,6 @@ export default {
             console.error(error);
             this.resetButton('saveButton');
           });
-        }
     },
     run: function () {
       console.log(`run()`);
@@ -946,6 +945,6 @@ export default {
     } else {
       return this.getGroups();
     }
-  },
+  }
 };
 </script>
