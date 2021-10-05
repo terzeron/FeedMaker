@@ -661,33 +661,25 @@ export default {
     },
     save: function () {
       console.log(`save()`);
-      this.$bvModal
-          .msgBoxConfirm('정말로 실행하시겠습니까?')
-          .then((value) => {
-            this.startButton('saveButton');
-            if (value) {
-              const postData = {configuration: this.jsonData};
-              const url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.newFeedName}`;
-              axios
-                  .post(url, postData)
-                  .then((res) => {
-                    if (res.data.status === 'failure') {
-                      this.alert(res.data.message);
-                    } else {
-                      this.selectedFeedName = this.newFeedName;
-                      console.log(`selectedFeedName is set to ${this.selectedFeedName}`);
-                    }
-                    this.endButton('saveButton');
-                  })
-                  .catch((error) => {
-                    console.error(error);
-                    this.resetButton('saveButton');
-                  });
+      this.startButton('saveButton');
+      const postData = {configuration: this.jsonData};
+      const url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.newFeedName}`;
+      axios
+          .post(url, postData)
+          .then((res) => {
+            if (res.data.status === 'failure') {
+              this.alert(res.data.message);
+            } else {
+              this.selectedFeedName = this.newFeedName;
+              console.log(`selectedFeedName is set to ${this.selectedFeedName}`);
             }
+            this.endButton('saveButton');
           })
           .catch((error) => {
             console.error(error);
+            this.resetButton('saveButton');
           });
+        }
     },
     run: function () {
       console.log(`run()`);
