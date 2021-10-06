@@ -182,6 +182,7 @@
               @click="removeFeed"
               :initial-icon="['far', 'trash-alt']"
               :show-initial-icon="true"
+              variant="danger"
               v-if="showRemoveFeedButton"/>
         </b-col>
 
