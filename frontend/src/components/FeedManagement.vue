@@ -142,6 +142,13 @@
               :show-initial-icon="true"
               v-if="showRunButton"/>
           <my-button
+              ref="viewRssButton"
+              label="RSS 보기"
+              @click="viewRss"
+              :initial-icon="['fas', 'eye']"
+              :show-initial-icon="true"
+              v-if="showViewRssButton"/>
+          <my-button
               ref="registerButton"
               label="Inoreader등록"
               @click="registerToInoreader"
@@ -277,10 +284,11 @@ import vueJsonEditor from 'vue-json-editor';
 import axios from 'axios';
 import {library} from '@fortawesome/fontawesome-svg-core';
 import {faTrashAlt, faSave} from '@fortawesome/free-regular-svg-icons';
-import {faSearch, faRss, faPlay, faToggleOn, faToggleOff, faEraser, faPen} from '@fortawesome/free-solid-svg-icons';
+import {faSearch, faRss, faPlay, faToggleOn, faToggleOff, faEraser, faPen, faEye} from
+      '@fortawesome/free-solid-svg-icons';
 import MyButton from './MyButton';
 
-library.add(faTrashAlt, faSave, faSearch, faRss, faPlay, faToggleOn, faToggleOff, faEraser, faPen);
+library.add(faTrashAlt, faSave, faSearch, faRss, faPlay, faToggleOn, faToggleOff, faEraser, faPen, faEye);
 
 export default {
   name: 'FeedManagement',
@@ -302,6 +310,7 @@ export default {
 
       showAlert: false,
       showRunButton: false,
+      showViewRssButton: false,
       showRegisterButton: false,
       showRemoveListButton: false,
       showRemoveFeedButton: false,
@@ -347,6 +356,9 @@ export default {
     },
     title: function () {
       return this.jsonData.rss['title'];
+    },
+    rssUrl: function () {
+      return `https://terzeron.com/${this.newFeedName}.xml`;
     }
   },
   watch: {
@@ -421,6 +433,7 @@ export default {
       this.showEditor = true;
       this.showNewFeedNameInput = true;
       this.showRunButton = true;
+      this.showViewRssButton = true;
       this.showRegisterButton = true;
       this.showRemoveListButton = true;
       this.showRemoveHtmlButton = true;
@@ -432,6 +445,7 @@ export default {
       this.showEditor = false;
       this.showNewFeedNameInput = false;
       this.showRunButton = false;
+      this.showViewRssButton = false;
       this.showRegisterButton = false;
       this.showRemoveListButton = false;
       this.showRemoveHtmlButton = false;
@@ -706,14 +720,18 @@ export default {
             this.resetButton('runButton');
           });
     },
+    viewRss() {
+      console.log(`viewRss()`);
+      window.open(this.rssUrl);
+    },
     registerToInoreader: function () {
       console.log(`registerToInoreader()`);
-      const feeder_link = 'https://www.inoreader.com/feed/' + encodeURIComponent(`https://terzeron.com/${this.newFeedName}.xml`);
+      const feeder_link = 'https://www.inoreader.com/feed/' + encodeURIComponent(this.rssUrl);
       window.open(feeder_link);
     },
     registerToFeedly: function () {
       console.log(`registerToFeedly()`);
-      const feeder_link = 'https://feedly.com/i/discover/sources/search/feed/' + encodeURIComponent(`https://terzeron.com/${this.newFeedName}.xml`);
+      const feeder_link = 'https://feedly.com/i/discover/sources/search/feed/' + encodeURIComponent(this.rssUrl);
       window.open(feeder_link);
     },
     toggleStatus: function (target) {
