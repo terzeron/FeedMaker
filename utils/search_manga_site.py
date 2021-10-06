@@ -155,7 +155,7 @@ def search_site(site_name: str, url_postfix: str, attrs: Dict[str, str], method=
             m = re.search(r'src=\'/data/azi_webtoon_0.js(?P<version0>\?v=[^\']+)\'', content)
             if m:
                 version0 = m.group("version0")
-            m = re.search(r'src=\'/data/azi_webtoon_0.js(?P<version1>\?v=[^\']+)\'', content)
+            m = re.search(r'src=\'/data/azi_webtoon_1.js(?P<version1>\?v=[^\']+)\'', content)
             if m:
                 version1 = m.group("version1")
             result_list = []
