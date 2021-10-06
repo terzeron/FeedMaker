@@ -154,14 +154,14 @@
               @click="registerToInoreader"
               :initial-icon="['fas', 'rss']"
               :show-initial-icon="true"
-              v-if="showRegisterButton"/>
+              v-if="showRegisterToInoreaderButton"/>
           <my-button
               ref="registerButton"
               label="Feedly등록"
               @click="registerToFeedly"
               :initial-icon="['fas', 'rss']"
               :show-initial-icon="true"
-              v-if="showRegisterButton"/>
+              v-if="showRegisterToFeedlyButton"/>
           <my-button
               ref="removeListButton"
               label="리스트 삭제"
@@ -311,7 +311,8 @@ export default {
       showAlert: false,
       showRunButton: false,
       showViewRssButton: false,
-      showRegisterButton: false,
+      showRegisterToInoreaderButton: false,
+      showRegisterToFeedlyButton: false,
       showRemoveListButton: false,
       showRemoveFeedButton: false,
       showRemoveGroupButton: false,
@@ -434,7 +435,8 @@ export default {
       this.showNewFeedNameInput = true;
       this.showRunButton = true;
       this.showViewRssButton = true;
-      this.showRegisterButton = true;
+      this.showRegisterToInoreaderButton = true;
+      this.showRegisterToFeedlyButton = true;
       this.showRemoveListButton = true;
       this.showRemoveHtmlButton = true;
       this.showToggleFeedButton = true;
@@ -446,7 +448,8 @@ export default {
       this.showNewFeedNameInput = false;
       this.showRunButton = false;
       this.showViewRssButton = false;
-      this.showRegisterButton = false;
+      this.showRegisterToInoreaderButton = false;
+      this.showRegisterToFeedlyButton = false;
       this.showRemoveListButton = false;
       this.showRemoveHtmlButton = false;
       this.showToggleFeedButton = false;
@@ -726,13 +729,13 @@ export default {
     },
     registerToInoreader: function () {
       console.log(`registerToInoreader()`);
-      const feeder_link = 'https://www.inoreader.com/feed/' + encodeURIComponent(this.rssUrl);
-      window.open(feeder_link);
+      const feederLink = 'https://www.inoreader.com/feed/' + encodeURIComponent(this.rssUrl);
+      window.open(feederLink);
     },
     registerToFeedly: function () {
       console.log(`registerToFeedly()`);
-      const feeder_link = 'https://feedly.com/i/discover/sources/search/feed/' + encodeURIComponent(this.rssUrl);
-      window.open(feeder_link);
+      const feederLink = 'https://feedly.com/i/discover/sources/search/feed/' + encodeURIComponent(this.rssUrl);
+      window.open(feederLink);
     },
     toggleStatus: function (target) {
       console.log(`toggleStatus(${target})`);
