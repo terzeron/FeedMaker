@@ -143,8 +143,15 @@
               v-if="showRunButton"/>
           <my-button
               ref="registerButton"
-              label="등록"
-              @click="registerToFeeder"
+              label="Inoreader등록"
+              @click="registerToInoreader"
+              :initial-icon="['fas', 'rss']"
+              :show-initial-icon="true"
+              v-if="showRegisterButton"/>
+          <my-button
+              ref="registerButton"
+              label="Feedly등록"
+              @click="registerToFeedly"
               :initial-icon="['fas', 'rss']"
               :show-initial-icon="true"
               v-if="showRegisterButton"/>
@@ -698,9 +705,14 @@ export default {
             this.resetButton('runButton');
           });
     },
-    registerToFeeder: function () {
-      console.log(`registerToFeeder()`);
+    registerToInoreader: function () {
+      console.log(`registerToInoreader()`);
       const feeder_link = 'https://www.inoreader.com/feed/' + encodeURIComponent(`https://terzeron.com/${this.newFeedName}.xml`);
+      window.open(feeder_link);
+    },
+    registerToFeedly: function () {
+      console.log(`registerToFeedly()`);
+      const feeder_link = 'https://feedly.com/i/discover/sources/search/feed/' + encodeURIComponent(`https://terzeron.com/${this.newFeedName}.xml`);
       window.open(feeder_link);
     },
     toggleStatus: function (target) {
