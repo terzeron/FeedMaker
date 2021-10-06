@@ -198,7 +198,7 @@ class RequestsClient():
         cookie_data: List[Dict[str, Any]] = []
         for k, v in cookies.iteritems():
             cookie_data.append({"name": k, "value": v})
-        LOGGER.debug("Set-Cookie: %s", cookie_data)
+        #LOGGER.debug("Set-Cookie: %s", cookie_data)
         with open(RequestsClient.COOKIE_FILE, "w") as f:
             json.dump(cookie_data, f)
 
@@ -212,7 +212,7 @@ class RequestsClient():
                         del cookie["expiry"]
                     cookie_str = cookie_str + cookie["name"] + "=" + cookie["value"] + "; "
             self.headers["Cookie"] = cookie_str
-            LOGGER.debug("Cookie: %s", self.headers["Cookie"])
+            #LOGGER.debug("Cookie: %s", self.headers["Cookie"])
 
     def make_request(self, url, data=None, download_file=None) -> Tuple[str, Optional[CaseInsensitiveDict[str]], int]:
         LOGGER.debug("# make_request('%s')", url)
