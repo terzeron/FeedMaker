@@ -188,7 +188,6 @@ class FeedMaker:
         else:
             size = 0
 
-        LOGGER.debug(f"rss_file_path={self.rss_file_path}, rss_file_name={self.rss_file_path.name}")
         image_tag_str = FeedMaker._get_image_tag_str(self.rss_file_path.name, item_url)
 
         if os.path.isfile(html_file_path) and size > FeedMaker.get_size_of_template_with_image_tag(self.rss_file_path.name):
@@ -397,7 +396,7 @@ class FeedMaker:
         rss_items: List[PyRSS2Gen.RSSItem] = []
         for link, title in reversed(merged_feed_list):
             html_file_path = FeedMaker._get_html_file_path(self.html_dir, link)
-            LOGGER.info(f"{link}\t{title}\t{html_file_path}")
+            LOGGER.info(f"{link}\t{title}\t{html_file_path.relative_to(self.work_dir_path)}")
             pub_date_str = Datetime.get_rss_date_str()
 
             content = ""
@@ -460,7 +459,7 @@ class FeedMaker:
     def make(self) -> bool:
         LOGGER.debug("# make()")
         LOGGER.info("=========================================================")
-        LOGGER.info(f"{self.feed_dir_path} ")
+        LOGGER.info(f"{self.feed_dir_path.relative_to(self.work_dir_path)} ")
         LOGGER.info("=========================================================")
 
         config = Config(feed_dir_path=self.feed_dir_path)

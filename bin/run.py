@@ -143,7 +143,7 @@ class FeedMakerRunner:
         self._remove_image_files_with_zero_size(feed_img_dir_path)
 
         # make_feed.py 실행하여 feed 파일 생성
-        LOGGER.info(f"* making feed file '{rss_file_path}'")
+        LOGGER.info(f"* making feed file '{rss_file_path.relative_to(self.work_dir_path)}'")
         feed_maker = FeedMaker(feed_dir_path, force_collection_opt, collect_only_opt, rss_file_path)
         result = feed_maker.make()
 
