@@ -16,14 +16,14 @@ class CrawlerTest(unittest.TestCase):
     def test_runHeadlessBrowser(self):
         url = "https://kr.vuejs.org/v2/guide/index.html"
         crawler = Crawler(render_js=False)
-        result, _ = crawler.run(url)
-        m = re.search(r'<div id="app-6" class="demo"><p>안녕하세요 Vue!</p> <input></div>', result)
+        actual, _, _ = crawler.run(url)
+        m = re.search(r'<div id="app-6" class="demo"><p>안녕하세요 Vue!</p> <input></div>', actual)
         self.assertFalse(m)
         del crawler
 
         crawler = Crawler(render_js=True)
-        result, _ = crawler.run(url)
-        m = re.search(r'<div id="app-6" class="demo"><p>안녕하세요 Vue!</p> <input></div>', result)
+        actual, _, _ = crawler.run(url)
+        m = re.search(r'<div id="app-6" class="demo"><p>안녕하세요 Vue!</p> <input></div>', actual)
         self.assertTrue(m)
         del crawler
 

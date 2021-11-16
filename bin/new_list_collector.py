@@ -5,74 +5,29 @@
 import os
 import re
 import sys
-import time
-import logging
 import logging.config
-from typing import Dict, List, Tuple, Any, Optional
-from feed_maker_util import exec_cmd, determine_crawler_options, remove_duplicates
-
+from pathlib import Path
+from typing import Dict, List, Tuple, Any
+from distutils.spawn import find_executable
+from feed_maker_util import Process, Data
+from crawler import Crawler, Method
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
 LOGGER = logging.getLogger()
 
 
 class NewListCollector:
-    def __init__(self, collection_conf: Dict[str, Any], new_list_file_name: str) -> None:
-        self.collection_conf = collection_conf
-        self.new_list_file_name = new_list_file_name
+    def __init__(self, feed_dir_path: Path, collection_conf: Dict[str, Any], new_list_file_path: Path) -> None:
+        LOGGER.debug(f"# NewListCollector(feed_dir_path={feed_dir_path}, collection_conf={collection_conf}, new_list_file_path={new_list_file_path}")
+        self.feed_dir_path: Path = feed_dir_path
+        self.collection_conf: Dict[str, Any] = collection_conf
+        self.new_list_file_path: Path = new_list_file_path
 
+    def __del__(self):
+        del self.collection_conf
 
-    def compose_cmd(self, url_list: List[str]) -> str:
-        full_cmd: str = ""
-        if len(url_list) == 1:
-            url = url_list[0]
-            option_str = determine_crawler_options(self.collection_conf)
-            option_str += " --retry=2"
-            crawl_cmd = "crawler.py %s '%s'" % (option_str, url)
-            capture_cmd = self.collection_conf["item_capture_script"]
-            full_cmd = crawl_cmd + " | " + capture_cmd
-        elif len(url_list) > 1:
-            for url in url_list:
-                option_str = determine_crawler_options(self.collection_conf)
-                option_str += " --retry=2"
-                crawl_cmd = "crawler.py %s '%s'" % (option_str, url)
-                capture_cmd = self.collection_conf["item_capture_script"]
-                if full_cmd and crawl_cmd:
-                    full_cmd += "; " + crawl_cmd
-                else:
-                    full_cmd += "( " + crawl_cmd
-                if capture_cmd:
-                    full_cmd += " | " + capture_cmd
-            full_cmd += " )"
-
-        post_process_cmd = ""
-        for script in self.collection_conf["post_process_script_list"]:
-            if post_process_cmd:
-                post_process_cmd += ' | %s' % script
-            else:
-                post_process_cmd = script
-
-        if post_process_cmd:
-            full_cmd += " | " + post_process_cmd
-
-        return full_cmd
-
-
-    def execute_cmd(self, cmd: str) -> Tuple[Optional[str], Any]:
-        LOGGER.debug("%s", cmd)
-        result, error = exec_cmd(cmd)
-        if error:
-            LOGGER.warning("can't execute command '%s', %s", cmd, error)
-            LOGGER.debug("wait for seconds and retry")
-            time.sleep(5)
-            result, error = exec_cmd(cmd)
-            if error:
-                LOGGER.warning("can't execute command '%s', %s", cmd, error)
-                LOGGER.error("# can't get result from the command '%s'", cmd)
-        return (result, error)
-
-
-    def split_result_into_items(self, result) -> List[Tuple[str, str]]:
+    @staticmethod
+    def split_result_into_items(result) -> List[Tuple[str, str]]:
         LOGGER.debug("# extract_urls()")
 
         result_list = []
@@ -84,48 +39,71 @@ class NewListCollector:
             link = items[0]
             title = " ".join(items[1:])
             if not link or not title:
-                LOGGER.error("can't split a line into link and title, line='%s'", line)
+                LOGGER.error(f"Error: Can't split a line into link and title, line='{line}'")
                 return []
             result_list.append((link, title))
         return result_list
 
-
-    def compose_url_list(self) -> List[Tuple[str, str]]:
+    def _compose_url_list(self) -> List[Tuple[str, str]]:
         LOGGER.debug("# compose_url_list()")
 
         result_list: List[Tuple[str, str]] = []
-        url_list = self.collection_conf["list_url_list"]
-        cmd = self.compose_cmd(url_list)
-        LOGGER.debug("cmd='%s'", cmd)
-        result, error = self.execute_cmd(cmd)
-        if not result or error:
+        conf = self.collection_conf
+
+        crawler = Crawler(dir_path=self.feed_dir_path, render_js=conf["render_js"], method=Method.GET, timeout=conf["timeout"], num_retries=conf["num_retries"], encoding=conf["encoding"], verify_ssl=conf["verify_ssl"], copy_images_from_canvas=conf["copy_images_from_canvas"], simulate_scrolling=conf["simulate_scrolling"], disable_headless=conf["disable_headless"])
+        option_str = Crawler.get_option_str(self.collection_conf)
+        for url in conf["list_url_list"]:
+            crawler_cmd = f"crawler.py -f '{self.feed_dir_path}' {option_str} '{url}'"
+            LOGGER.debug(f"cmd={crawler_cmd}")
+            result, error, _ = crawler.run(url)
+            if not result or error:
+                LOGGER.warning("Warning: can't get response from crawler")
+                continue
+
+            capture_cmd = f"{self.collection_conf['item_capture_script']} -f '{self.feed_dir_path}'"
+            LOGGER.debug(f"cmd={capture_cmd}")
+            result, error_msg = Process.exec_cmd(capture_cmd, dir_path=self.feed_dir_path, input_data=result)
+            if not result or error_msg:
+                LOGGER.warning("Warning: can't get result from item capture script")
+                continue
+
+            for post_process_script in self.collection_conf["post_process_script_list"]:
+                program = post_process_script.split(" ")[0]
+                program_fullpath = find_executable(program)
+                if program_fullpath and program_fullpath.startswith("/usr"):
+                    post_process_cmd = f"{post_process_script}"
+                else:
+                    post_process_cmd = f"{post_process_script} -f '{self.feed_dir_path}' '{url}'"
+                LOGGER.debug(f"cmd={post_process_cmd}")
+                result, error_msg = Process.exec_cmd(post_process_cmd, dir_path=self.feed_dir_path, input_data=result)
+                if not result or error:
+                    LOGGER.warning("Warning: can't get result from post process scripts")
+
+            url_list = self.split_result_into_items(result)
+            result_list.extend(url_list)
+
+        if len(result_list) == 0:
+            LOGGER.error(f"Error: Can't get new list from {conf['list_url_list']}")
             return []
-
-        url_list = self.split_result_into_items(result)
-        result_list.extend(url_list)
-
-        result_list = remove_duplicates(result_list)
+        result_list = Data.remove_duplicates(result_list)
         return result_list
 
-
-    def save_new_list_to_file(self, new_list: List[Tuple[str, str]]) -> None:
+    def _save_new_list_to_file(self, new_list: List[Tuple[str, str]]) -> None:
         try:
-            with open(self.new_list_file_name, 'w', encoding='utf-8') as out_file:
+            with open(self.new_list_file_path, 'w', encoding='utf-8') as out_file:
                 for link, title in new_list:
-                    out_file.write("%s\t%s\n" % (link, title))
-                    LOGGER.info("%s\t%s", link, title)
+                    out_file.write(f"{link}\t{title}\n")
         except IOError as e:
-            LOGGER.error(str(e))
+            LOGGER.error("Error: %s", e)
             sys.exit(-1)
-
 
     def collect(self) -> List[Tuple[str, str]]:
         LOGGER.debug("# collect()")
 
         # collect items from specified url list
         LOGGER.debug("collecting items from specified url list...")
-        new_list = self.compose_url_list()
+        new_list = self._compose_url_list()
         if new_list and len(new_list) > 0:
-            self.save_new_list_to_file(new_list)
+            self._save_new_list_to_file(new_list)
             return new_list
         return []

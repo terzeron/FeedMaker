@@ -3,6 +3,7 @@
 
 
 import logging.config
+from typing import Dict, Any
 import requests
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
@@ -21,14 +22,14 @@ feed_manager.load_all_feeds()
 @app.route('/', defaults={'path': ''})
 def catch_all(path):
     if app.debug:
-        return requests.get('http://localhost:8080/{}'.format(path)).text
+        return requests.get(f"http://localhost:8080/{path}").text
     return render_template("index.html")
 
 
 @app.route("/exec_result", methods=["GET"])
 def get_exec_result():
-    print("/exec_result, %r -> get_exec_result()" % request.method)
-    response_object = {"status": "success"}
+    print(f"/exec_result, {request.method} -> get_exec_result()")
+    response_object: Dict[str, Any] = {"status": "success"}
     result, error = feed_manager.get_exec_result()
     if result:
         response_object["exec_result"] = result
@@ -40,33 +41,39 @@ def get_exec_result():
 
 @app.route("/problems/<data_type>", methods=["GET"])
 def get_problems(data_type):
-    print("/problems/%s, %r -> get_problems_%s()" % (data_type, request.method, data_type))
-    response_object = {"status": "success"}
-    result = None
-    error = ""
+    print(f"/problems/{data_type}, {request.method} -> get_problems_{data_type}()")
+    response_object: Dict[str, Any] = {"status": "success"}
     if data_type == "progress_info":
-        result, error = feed_manager.get_problems_progress_info()
+        progress_info, error = feed_manager.get_problems_progress_info()
+        if progress_info:
+            response_object["result"] = progress_info
     elif data_type == "public_feed_info":
-        result, error = feed_manager.get_problems_public_feed_info()
+        public_feed_info, error = feed_manager.get_problems_public_feed_info()
+        if public_feed_info:
+            response_object["result"] = public_feed_info
     elif data_type == "html_info":
-        result, error = feed_manager.get_problems_html_info()
+        html_info, error = feed_manager.get_problems_html_info()
+        if html_info:
+            response_object["result"] = html_info
     elif data_type == "element_info":
-        result, error = feed_manager.get_problems_element_info()
+        element_info, error = feed_manager.get_problems_element_info()
+        if element_info:
+            response_object["result"] = element_info
     elif data_type == "status_info":
-        result, error = feed_manager.get_problems_status_info()
-    #print(result)
-    if result:
-        response_object["result"] = result
-        response_object["status"] = "success"
-    else:
+        status_info, error = feed_manager.get_problems_status_info()
+        if status_info:
+            response_object["result"] = status_info
+    # print(result)
+    if not response_object["result"]:
         response_object["message"] = error
+        response_object["status"] = "failure"
     return jsonify(response_object)
 
 
 @app.route("/search/<keyword>", methods=["GET"])
 def search(keyword):
-    print("/search, %r -> search(%s)" % (request.method, keyword))
-    response_object = {"status": "failure"}
+    print(f"/search, {request.method} -> search({keyword})")
+    response_object: Dict[str, Any] = {"status": "failure"}
     result, error = feed_manager.search(keyword)
     if result or not error:
         response_object["feeds"] = result
@@ -79,8 +86,8 @@ def search(keyword):
 
 @app.route("/groups", methods=["GET"])
 def get_groups():
-    print("/groups, %r -> get_groups()" % request.method)
-    response_object = {"status": "failure"}
+    print("/groups, {request.method} -> get_groups()")
+    response_object: Dict[str, Any] = {"status": "failure"}
     result, error = feed_manager.get_groups()
     if result:
         response_object["groups"] = result
@@ -93,8 +100,8 @@ def get_groups():
 
 @app.route("/groups/<group_name>", methods=["DELETE"])
 def remove_group(group_name):
-    print("/groups/<group_name>, %r -> remove_group(%s)" % (request.method, group_name))
-    response_object = {"status": "failure"}
+    print(f"/groups/<group_name>, {request.method} -> remove_group({group_name})")
+    response_object: Dict[str, Any] = {"status": "failure"}
     result, error = feed_manager.remove_group(group_name)
     if result or not error:
         response_object["feeds"] = result
@@ -107,8 +114,8 @@ def remove_group(group_name):
 
 @app.route("/groups/<group_name>/feeds", methods=["GET"])
 def get_feeds_by_group(group_name):
-    print("/groups/<group_name>/feeds, %r -> get_feeds_by_group(%s)" % (request.method, group_name))
-    response_object = {"status": "failure"}
+    print(f"/groups/<group_name>/feeds, {request.method} -> get_feeds_by_group({group_name})")
+    response_object: Dict[str, Any] = {"status": "failure"}
     result, error = feed_manager.get_feeds_by_group(group_name)
     if result or not error:
         # success in case of group without any feed
@@ -122,8 +129,8 @@ def get_feeds_by_group(group_name):
 
 @app.route("/groups/<group_name>/site_config", methods=["GET", "PUT"])
 def site_config(group_name):
-    print("/groups/<group_name>/site_config, %r -> get_site_config(%s)" % (request.method, group_name))
-    response_object = {"status": "failure"}
+    print(f"/groups/<group_name>/site_config, {request.method} -> get_site_config({group_name})")
+    response_object: Dict[str, Any] = {"status": "failure"}
     if request.method == "GET":
         result, error = feed_manager.get_site_config(group_name)
         if result:
@@ -134,11 +141,11 @@ def site_config(group_name):
         else:
             response_object["message"] = error
     elif request.method == "PUT":
-        print("/groups/<group_name>/site_config, %r -> save_site_config(%s)" % (request.method, group_name))
+        print("/groups/<group_name>/site_config, {request.method} -> save_site_config({group_name})")
         post_data = request.get_json()
         print(post_data)
-        result, error = feed_manager.save_site_config(group_name, post_data)
-        if result:
+        success_or_fail, error = feed_manager.save_site_config(group_name, post_data)
+        if success_or_fail:
             response_object["status"] = "success"
         else:
             response_object["message"] = error
@@ -147,19 +154,19 @@ def site_config(group_name):
 
 @app.route("/groups/<group_name>/feeds/<feed_name>", methods=["DELETE", "POST", "GET"])
 def get_feed_info(group_name, feed_name):
-    response_object = {"status": "failure"}
+    response_object: Dict[str, Any] = {"status": "failure"}
     if request.method == "GET":
-        print("/groups/<group_name>/feeds/<feed_name>, %r -> get_feed_info(%s, %s)" % (request.method, group_name, feed_name))
-        result, error = feed_manager.get_feed_info_by_name(feed_name)
-        if result or not error:
+        print(f"/groups/<group_name>/feeds/<feed_name>, {request.method} -> get_feed_info({group_name}, {feed_name})")
+        config, error = feed_manager.get_feed_info_by_name(feed_name)
+        if config or not error:
             # success in case of feed without configuration
-            response_object["configuration"] = result
+            response_object["configuration"] = config
             print(response_object["configuration"])
             response_object["status"] = "success"
         else:
             response_object["message"] = error
     elif request.method == "POST":
-        print("/groups/<group_name>/feeds/<feed_name>, %r -> save_config_file(%s, %s)" % (request.method, group_name, feed_name))
+        print(f"/groups/<group_name>/feeds/<feed_name>, {request.method} -> save_config_file({group_name}, {feed_name})")
         post_data = request.get_json()
         result, error = feed_manager.save_config_file(group_name, feed_name, post_data)
         if result:
@@ -167,7 +174,7 @@ def get_feed_info(group_name, feed_name):
         else:
             response_object["message"] = error
     elif request.method == "DELETE":
-        print("/groups/<group_name>/feeds/<feed_name>, %r -> remove_feed(%s, %s)" % (request.method, group_name, feed_name))
+        print(f"/groups/<group_name>/feeds/<feed_name>, {request.method} -> remove_feed({group_name}, {feed_name})")
         result, error = feed_manager.remove_feed(group_name, feed_name)
         if result:
             response_object["status"] = "success"
@@ -178,8 +185,8 @@ def get_feed_info(group_name, feed_name):
 
 @app.route("/groups/<group_name>/feeds/<feed_name>/run", methods=["POST"])
 def run(group_name, feed_name):
-    print("/groups/<group_name>/feeds/<feed_name>/run, %r, %r -> run(%s, %s)" % (request.method, request.get_json(), group_name, feed_name))
-    response_object = {"status": "failure"}
+    print(f"/groups/<group_name>/feeds/<feed_name>/run, {request.method}, {request.get_json()} -> run({group_name}, {feed_name})")
+    response_object: Dict[str, Any] = {"status": "failure"}
     post_data = request.get_json()
     result, error = feed_manager.run(group_name, feed_name, post_data["alias"])
     if result:
@@ -191,8 +198,8 @@ def run(group_name, feed_name):
 
 @app.route("/groups/<group_name>/toggle", methods=["PUT"])
 def toggle_group(group_name):
-    print("/groups/<group_name>/toggle, %r -> toggle_group(%s)" % (request.method, group_name))
-    response_object = {"status": "failure"}
+    print(f"/groups/<group_name>/toggle, {request.method} -> toggle_group({group_name})")
+    response_object: Dict[str, Any] = {"status": "failure"}
     result, error = feed_manager.toggle_group(group_name)
     if result:
         response_object["status"] = "success"
@@ -204,8 +211,8 @@ def toggle_group(group_name):
 
 @app.route("/groups/<group_name>/feeds/<feed_name>/toggle", methods=["PUT"])
 def toggle_feed(group_name, feed_name):
-    print("/groups/<group_name>/feeds/<feed_name>/toggle, %r -> toggle_feed(%s, %s)" % (request.method, group_name, feed_name))
-    response_object = {"status": "failure"}
+    print(f"/groups/<group_name>/feeds/<feed_name>/toggle, {request.method} -> toggle_feed({group_name}, {feed_name})")
+    response_object: Dict[str, Any] = {"status": "failure"}
     result, error = feed_manager.toggle_feed(group_name, feed_name)
     if result:
         response_object["status"] = "success"
@@ -217,8 +224,8 @@ def toggle_feed(group_name, feed_name):
 
 @app.route("/groups/<group_name>/feeds/<feed_name>/list", methods=["DELETE"])
 def remove_list(group_name, feed_name):
-    print("/groups/<group_name>/feeds/<feed_name>/list, %r -> remove_list(%s, %s)" % (request.method, group_name, feed_name))
-    response_object = {"status": "failure"}
+    print(f"/groups/<group_name>/feeds/<feed_name>/list, {request.method} -> remove_list({group_name}, {feed_name})")
+    response_object: Dict[str, Any] = {"status": "failure"}
     feed_manager.remove_list(group_name, feed_name)
     response_object["status"] = "success"
     return jsonify(response_object)
@@ -226,8 +233,8 @@ def remove_list(group_name, feed_name):
 
 @app.route("/groups/<group_name>/feeds/<feed_name>/htmls", methods=["DELETE"])
 def remove_html(group_name, feed_name):
-    print("/groups/<group_name>/feeds/<feed_name>/htmls, %r -> remove_html(%s, %s)" % (request.method, group_name, feed_name))
-    response_object = {"status": "failure"}
+    print(f"/groups/<group_name>/feeds/<feed_name>/htmls, {request.method} -> remove_html({group_name}, {feed_name})")
+    response_object: Dict[str, Any] = {"status": "failure"}
     feed_manager.remove_html(group_name, feed_name)
     response_object["status"] = "success"
     return jsonify(response_object)
@@ -235,8 +242,8 @@ def remove_html(group_name, feed_name):
 
 @app.route("/groups/<group_name>/feeds/<feed_name>/htmls/<html_file_name>", methods=["DELETE"])
 def remove_html_file(group_name, feed_name, html_file_name):
-    print("/groups/<group_name>/feeds/<feed_name>/htmls/<html_file_name>, %r -> remove_html_file(%s, %s, %s)" % (request.method, group_name, feed_name, html_file_name))
-    response_object = {"status": "failure"}
+    print(f"/groups/<group_name>/feeds/<feed_name>/htmls/<html_file_name>, {request.method} -> remove_html_file({group_name}, {feed_name}, {html_file_name})")
+    response_object: Dict[str, Any] = {"status": "failure"}
     feed_manager.remove_html_file(group_name, feed_name, html_file_name)
     response_object["status"] = "success"
     return jsonify(response_object)
@@ -244,8 +251,8 @@ def remove_html_file(group_name, feed_name, html_file_name):
 
 @app.route("/groups/<group_name>/feeds/<feed_name>/alias", methods=["GET", "DELETE"])
 def get_alias(group_name, feed_name):
-    print("/groups/<group_name>/feeds/<feed_name>/alias, %r -> get_alias(%s, %s)" % (request.method, group_name, feed_name))
-    response_object = {"status": "failure"}
+    print(f"/groups/<group_name>/feeds/<feed_name>/alias, {request.method} -> get_alias({group_name}, {feed_name})")
+    response_object: Dict[str, Any] = {"status": "failure"}
     if request.method == "GET":
         result, error = feed_manager.get_alias(group_name, feed_name)
         if result:
@@ -265,8 +272,8 @@ def get_alias(group_name, feed_name):
 
 @app.route("/groups/<group_name>/feeds/<feed_name>/rename/<new_alias>", methods=["PUT"])
 def rename_alias(group_name, feed_name, new_alias):
-    print("/groups/<group_name>/feeds/<feed_name>/rename/<new_alias>, %r -> rename_alias(%s, %s, %s)" % (request.method, group_name, feed_name, new_alias))
-    response_object = {"status": "failure"}
+    print(f"/groups/<group_name>/feeds/<feed_name>/rename/<new_alias>, {request.method} -> rename_alias({group_name}, {feed_name}, {new_alias})")
+    response_object: Dict[str, Any] = {"status": "failure"}
     result, error = feed_manager.rename_alias(group_name, feed_name, new_alias)
     if result:
         response_object["status"] = "success"
@@ -277,8 +284,8 @@ def rename_alias(group_name, feed_name, new_alias):
 
 @app.route("/public_feeds/<feed_name>", methods=["DELETE"])
 def remove_public_feed(feed_name):
-    print("/public_feeds/<feed_name>, %r -> remove_public_feed(%s)" % (request.method, feed_name))
-    response_object = {"status": "failure"}
+    print(f"/public_feeds/<feed_name>, {request.method} -> remove_public_feed({feed_name})")
+    response_object: Dict[str, Any] = {"status": "failure"}
     feed_manager.remove_public_feed(feed_name)
     response_object["status"] = "success"
     return jsonify(response_object)

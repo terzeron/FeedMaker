@@ -4,7 +4,7 @@
 import sys
 import os
 import re
-from feed_maker_util import URL, IO, exec_cmd
+from feed_maker_util import URL, IO, Process
 
 
 def main() -> int:
@@ -18,22 +18,22 @@ def main() -> int:
         m = re.search(r"<video src='[^']*videoPath=(rtmp://[^&]*)[^']*'>", line)
         if m:
             movie_url = m.group(1)
-            image_file_name = "%s/%s_0001.jpg" % (img_dir, id_str)
+            image_file_name = f"{img_dir}/{id_str}_0001.jpg"
             if not os.path.isfile(image_file_name):
                 if not os.path.isfile(video_file):
-                    cmd = "rtmpdump -q -r '%s' > %s" % (movie_url, video_file)
-                    print("<!-- %s -->" % cmd)
-                    result, error = exec_cmd(cmd)
-                    print("<!-- %s, %s -->" % (result, error))
+                    cmd = f"rtmpdump -q -r '{movie_url}' > {video_file}"
+                    print(f"<!-- {cmd} -->")
+                    result, error = Process.exec_cmd(cmd)
+                    print(f"<!-- {result}, {error} -->")
 
-                cmd = "extract_images_from_video.sh '%s' '%s/%s_' > /dev/null 2>&1" % (video_file, img_dir, id_str)
-                print("<!-- %s -->" % cmd)
-                result, error = exec_cmd(cmd)
-                print("<!-- %s, %s -->" % (result, error))
+                cmd = f"extract_images_from_video.sh '{video_file}' '{img_dir}/{id_str}_' > /dev/null 2>&1"
+                print(f"<!-- {cmd} -->")
+                result, error = Process.exec_cmd(cmd)
+                print(f"<!-- {result}, {error}-->")
 
             for entry in os.scandir(img_dir):
-                if re.search(r"%s_\d+\.jpg" % id_str, entry.name):
-                    print("<img src='%s/%s'/>\n" % (img_url_prefix, entry.name))
+                if re.search(id_str + r"_\d+\.jpg", entry.name):
+                    print(f"<img src='{img_url_prefix}/{entry.name}'/>\n")
             # unlink(video_file)
     return 0
 

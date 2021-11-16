@@ -16,24 +16,24 @@ class CrawlerTest(unittest.TestCase):
     def test_runHttp(self):
         url = "http://info.cern.ch/"
         crawler = Crawler()
-        result, _ = crawler.run(url)
-        m = re.search(r'<title>http://info.cern.ch</title>', result)
+        actual, _, _ = crawler.run(url)
+        m = re.search(r'<title>http://info.cern.ch</title>', actual)
         self.assertTrue(m)
         del crawler
 
     def test_runHttps(self):
         url = "https://theuselessweb.site/unicodesnowmanforyou/"
         crawler = Crawler()
-        result, _ = crawler.run(url)
-        m = re.search(r'&#9731;', result)
+        actual, _, _ = crawler.run(url)
+        m = re.search(r'&#9731;', actual)
         self.assertTrue(m)
         del crawler
 
     def test_imagesInCanvas(self):
         url = "https://terzeron.com/images_in_canvas_test.html"
         crawler = Crawler(render_js=True, copy_images_from_canvas=True)
-        result, _ = crawler.run(url)
-        m = re.search(r'<div class="images_from_canvas"><img src="data:image/png;base64,iVBORw0KGgoAAAAN.*VkAAAAASUVORK5CYII="></div>', result)
+        actual, _, _ = crawler.run(url)
+        m = re.search(r'<div class="images_from_canvas"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAABkCAYAAADDhn8LAAAAAX.*KBUgI3O8Nj9LDhwKlP8DuACSYNiipSoAAAAASUVORK5CYII="></div>', actual)
         self.assertTrue(m)
         del crawler
 

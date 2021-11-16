@@ -6,10 +6,9 @@ import os
 import re
 import getopt
 import subprocess
-import logging
 import logging.config
 from typing import Set, Dict
-from feed_maker_util import IO, exec_cmd
+from feed_maker_util import IO, Process
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
@@ -17,16 +16,16 @@ LOGGER = logging.getLogger()
 
 
 def print_usage() -> None:
-    print("_usage: %s\t[ -t <threshold> ] <output file>\n" % (sys.argv[0]))
+    print(f"_usage: {sys.argv[0]}\t[ -t <threshold> ] <output file>\n")
 
 
 def main() -> int:
     threshold: float = 0.0
-    optlist, args = getopt.getopt(sys.argv[1:], "t:")
+    optlist, args = getopt.getopt(sys.argv[1:], "f:t:")
     for o, a in optlist:
         if o == "-t":
             threshold = float(a)
-            print("%f" % threshold)
+            print(threshold)
 
     if len(args) < 1:
         print_usage()
@@ -54,26 +53,28 @@ def main() -> int:
             clean_title = re.sub(r'[\s!-/:-@\[-`]*', '', clean_title)
             if clean_title not in title_existence_set:
                 title_existence_set.add(clean_title)
-            out_file.write("%s\n" % title)
+            out_file.write(f"{title}\n")
             line_num += 1
 
     # hierarchical clustering
     cluster_dir = os.environ["FEED_MAKER_HOME_DIR"] + "/../HierarchicalClustering"
-    cmd = "%s/hcluster -t '%f' -s stop_words.txt '%s' '%s'" % (cluster_dir, threshold, intermediate_file, temp_output_file)
+    cmd = f"{cluster_dir}/hcluster -t '{threshold}' -s stop_words.txt '{intermediate_file}' '{temp_output_file}'"
     LOGGER.debug(cmd)
-    result, error = exec_cmd(cmd)
+    result, error = Process.exec_cmd(cmd)
     LOGGER.debug(result, error)
 
     # convert & extract temporary output file
-    cmd = "awk -F'\\t' '$2 >= 3 { for (i = 3; i < NF; i += 2) { print $(i) FS $(i + 1) } }' '%s'" % temp_output_file
+    cmd = "awk -F'\\t' '$2 >= 3 \{ for (i = 3; i < NF; i += 2) \{ print $(i) FS $(i + 1) } }' '" + temp_output_file + "'"
     LOGGER.debug(cmd)
     with subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) as p:
         with open(output_file, 'w', encoding='utf-8') as out_file:
-            for line in p.stdout:
-                line = line.rstrip()
-                (line_num_str, title) = line.split("\t")
-                line_num = int(line_num_str)
-                out_file.write("%s\n" % (line_num_link_map[line_num]))
+            if p.stdout:
+                for buffer in p.stdout:
+                    line = str(buffer)
+                    line = line.rstrip()
+                    line_num_str, _ = line.split("\t")
+                    line_num = int(line_num_str)
+                    out_file.write(f"{line_num_link_map[line_num]}\n")
 
     return 0
 

@@ -10,7 +10,7 @@ from shutil import rmtree
 from typing import List, Dict, Any, Tuple, Optional
 from functools import cmp_to_key
 from run import FeedMakerRunner
-from feed_maker_util import Htaccess, exec_cmd
+from feed_maker_util import Htaccess, Process
 from problem_checker import ProblemChecker
 
 
@@ -29,33 +29,28 @@ class FeedManager:
         self.checker = ProblemChecker()
         self.checker.load()
 
-    def __del__(self) -> None:
-        del self.group_name_feed_title_list_map
-        del self.feed_name_config_map
-        del self.checker
-
     def _git_add(self, feed_dir_path: Path) -> Tuple[str, Optional[str]]:
-        os.chdir(self.work_dir)
         feed_name = feed_dir_path.name
         conf_file_relative = feed_dir_path.relative_to(self.work_dir)
-        cmd = "git add %s && git commit -m 'add %s'" % (conf_file_relative, feed_name)
-        return exec_cmd(cmd)
+        os.chdir(self.work_dir)
+        cmd = f"git add {conf_file_relative} && git commit -m 'add {feed_name}'"
+        return Process.exec_cmd(cmd, dir_path=self.work_dir)
 
     def _git_rm(self, feed_dir_path: Path) -> Tuple[str, Optional[str]]:
-        os.chdir(self.work_dir)
         feed_name = feed_dir_path.name
         conf_file_relative = feed_dir_path.relative_to(self.work_dir)
-        cmd = "git rm -r %s && git commit -m 'remove %s'" % (conf_file_relative, feed_name)
-        return exec_cmd(cmd)
+        os.chdir(self.work_dir)
+        cmd = f"git rm -r {conf_file_relative} && git commit -m 'remove {feed_name}'"
+        return Process.exec_cmd(cmd, dir_path=self.work_dir)
 
     def _git_mv(self, feed_dir_path: Path, new_feed_dir_path: Path) -> Tuple[str, Optional[str]]:
-        os.chdir(self.work_dir)
         feed_dir_name = feed_dir_path.name
         new_feed_dir_name = new_feed_dir_path.name
         feed_dir_path_relative = feed_dir_path.relative_to(self.work_dir)
         new_feed_dir_path_relative = new_feed_dir_path.relative_to(self.work_dir)
-        cmd = "git mv %s %s && git commit -m 'rename %s to %s' || mv %s %s" % (feed_dir_path_relative, new_feed_dir_path_relative, feed_dir_name, new_feed_dir_name, feed_dir_path_relative, new_feed_dir_path_relative)
-        return exec_cmd(cmd)
+        os.chdir(self.work_dir)
+        cmd = f"git mv {feed_dir_path_relative} {new_feed_dir_path_relative} && git commit -m 'rename {feed_dir_name} to {new_feed_dir_name}' || mv {feed_dir_path_relative} {new_feed_dir_path_relative}"
+        return Process.exec_cmd(cmd, dir_path=self.work_dir)
 
     def _read_config_file(self, feed_dir_path: Path) -> Dict[str, Any]:
         conf_file_path = feed_dir_path / self.CONF_FILE
@@ -66,7 +61,7 @@ class FeedManager:
                     line_list.append(line)
                 json_data = json.loads(''.join(line_list))
                 if "configuration" not in json_data:
-                    self.logger.error("can't find normal configuration '%s'", feed_dir_path.relative_to(self.work_dir))
+                    self.logger.error(f"can't find normal configuration '{feed_dir_path.relative_to(self.work_dir)}'")
                     return {}
                 return json_data["configuration"]
         return {}
@@ -113,7 +108,7 @@ class FeedManager:
             with open(exec_result_file_path, 'r', encoding='utf-8') as infile:
                 return infile.read(), ""
         else:
-            return "", "can't find such file '%s'" % exec_result_file_path.relative_to(self.work_dir)
+            return "", f"can't find such file '{exec_result_file_path.relative_to(self.work_dir)}'"
 
     def get_problems_status_info(self) -> Tuple[List[Dict[str, Any]], str]:
         self.logger.debug("# get_problems_status_info()")
@@ -144,8 +139,8 @@ class FeedManager:
                }, ""
 
     @staticmethod
-    def _determine_keyword_in_config_item(keyword, config, *args):
-        config_item = config
+    def _determine_keyword_in_config_item(keyword: str, config: Dict[str, Any], *args):
+        config_item: Dict[str, Any] = config
         for arg in args:
             if arg in config_item:
                 config_item = config_item[arg]
@@ -212,16 +207,16 @@ class FeedManager:
         return 0
 
     def get_site_config(self, group_name: str) -> Tuple[Dict[str, str], str]:
-        self.logger.debug("# get_site_config(%s)" % group_name)
+        self.logger.debug(f"# get_site_config({group_name})")
         path = self.work_dir / group_name / self.SITE_CONF_FILE
         if path.is_file():
             with open(path, 'r', encoding='utf-8') as infile:
                 json_data = json.load(infile)
                 return json_data, ""
-        return {}, "no feed list in group '%s'" % group_name
+        return {}, f"no feed list in group '{group_name}'"
 
     def save_site_config(self, group_name: str, post_data: Dict[str, Any]) -> Tuple[bool, str]:
-        self.logger.debug("# save_site_config(%s, %r)" % (group_name, post_data))
+        self.logger.debug(f"# save_site_config({group_name}, {post_data})")
         path = self.work_dir / group_name / self.SITE_CONF_FILE
         try:
             with open(path, 'w', encoding='utf-8') as outfile:
@@ -231,18 +226,18 @@ class FeedManager:
         return True, ""
 
     def get_feeds_by_group(self, group_name: str) -> Tuple[List[Dict[str, str]], str]:
-        self.logger.debug("# get_feeds_by_group(%s)" % group_name)
+        self.logger.debug(f"# get_feeds_by_group({group_name})")
         if group_name in self.group_name_feed_title_list_map:
             feed_title_list = self.group_name_feed_title_list_map[group_name]
             return sorted(feed_title_list, key=cmp_to_key(FeedManager._compare_title)), ""
-        return [], "no feed list in group '%s'" % group_name
+        return [], f"no feed list in group '{group_name}'"
 
     def get_feed_info_by_name(self, feed_name: str) -> Tuple[Dict[str, Any], str]:
-        self.logger.debug("# get_feed_info_by_name(%s)" % feed_name)
+        self.logger.debug(f"# get_feed_info_by_name({feed_name})")
         return self.feed_name_config_map.get(feed_name, {}), ""
 
     def save_config_file(self, group_name: str, feed_name: str, post_data: Dict[str, Any]) -> Tuple[bool, str]:
-        self.logger.debug("# save_config_file(%s, %s, %r)" % (group_name, feed_name, post_data))
+        self.logger.debug(f"# save_config_file({group_name}, {feed_name}, {post_data})")
         if "configuration" not in post_data:
             return False, "invalid configuration format (no 'configuration')"
 
@@ -263,15 +258,13 @@ class FeedManager:
         return True, ""
 
     def run(self, group_name: str, feed_name: str, alias: str) -> Tuple[bool, str]:
-        self.logger.debug("# run(%s, %s, %s)", group_name, feed_name, alias)
+        self.logger.debug(f"# run({group_name}, {feed_name}, {alias})")
         feed_dir_path = self.work_dir / group_name / feed_name
-        os.chdir(feed_dir_path)
         conf_file_path = feed_dir_path / self.CONF_FILE
         with open(conf_file_path, 'rb') as infile:
             json_data = json.load(infile)
             if "configuration" in json_data:
-                runner = FeedMakerRunner(
-                    html_archiving_period=30, list_archiving_period=7)
+                runner = FeedMakerRunner(html_archiving_period=30, list_archiving_period=7)
                 if json_data["configuration"]["collection"].get("is_completed", False):
                     result = runner.make_single_feed(
                         feed_dir_path, options={"force_collection_opt": "-c"})
@@ -282,10 +275,10 @@ class FeedManager:
                 if not result:
                     return False, "error in making a feed with recent articles"
 
-                result, _ = Htaccess.get_alias(group_name, feed_name)
-                if not result:
-                    result, _ = Htaccess.set_alias(group_name, feed_name, alias)
-                    if not result:
+                _, error = Htaccess.get_alias(group_name, feed_name)
+                if error:
+                    _, error = Htaccess.set_alias(group_name, feed_name, alias)
+                    if error:
                         return False, "error in setting alias to .htaccess"
             else:
                 return False, "invalid format of configuration file"
@@ -293,31 +286,30 @@ class FeedManager:
         return True, ""
 
     def _remove_public_img_pdf_feed_files(self, feed_name: str) -> None:
-        self.logger.debug("# _remove_public_img_pdf_feed_files(%s)" % feed_name)
+        self.logger.debug(f"# _remove_public_img_pdf_feed_files({feed_name})")
         img_dir_path = self.public_feed_dir / "img" / feed_name
         pdf_dir_path = self.public_feed_dir / "pdf" / feed_name
         feed_file_path = self.public_feed_dir / (feed_name + ".xml")
 
         # remove files
         if img_dir_path.is_dir():
-            self.logger.debug("deleting %s", img_dir_path)
+            self.logger.debug(f"deleting {img_dir_path}")
             rmtree(img_dir_path)
         if pdf_dir_path.is_dir():
-            self.logger.debug("deleting %s", pdf_dir_path)
+            self.logger.debug(f"deleting {pdf_dir_path}")
             rmtree(pdf_dir_path)
-        if feed_file_path.is_file():
-            self.logger.debug("deleting %s", feed_file_path)
-            feed_file_path.unlink()
+        self.logger.debug(f"deleting {feed_file_path}")
+        feed_file_path.unlink(missing_ok=True)
 
     def remove_list(self, group_name: str, feed_name: str) -> None:
-        self.logger.debug("# remove_list(%s, %s)" % (group_name, feed_name))
+        self.logger.debug(f"# remove_list({group_name}, {feed_name})")
         feed_dir_path = self.work_dir / group_name / feed_name
         list_dir_path = feed_dir_path / "newlist"
         if list_dir_path.is_dir():
             rmtree(list_dir_path)
 
     def remove_html(self, group_name: str, feed_name: str) -> None:
-        self.logger.debug("# remove_html(%s, %s)" % (group_name, feed_name))
+        self.logger.debug(f"# remove_html({group_name}, {feed_name})")
         feed_dir_path = self.work_dir / group_name / feed_name
         html_dir_path = feed_dir_path / "html"
         if html_dir_path.is_dir():
@@ -325,29 +317,23 @@ class FeedManager:
             self.checker.load_all_html_files(do_merge=True)
 
     def remove_html_file(self, group_name: str, feed_name: str, html_file_name: str) -> None:
-        self.logger.debug("# remove_html_file(%s, %s)" % (group_name, feed_name))
+        self.logger.debug(f"# remove_html_file({group_name}, {feed_name})")
         html_dir_path = self.work_dir / group_name / feed_name / "html" / html_file_name
-        try:
-            html_dir_path.unlink()
-            self.checker.load_all_html_files(do_merge=True)
-        except FileNotFoundError:
-            pass
+        html_dir_path.unlink(missing_ok=True)
+        self.checker.load_all_html_files(do_merge=True)
 
     def remove_public_feed(self, feed_name: str) -> None:
-        self.logger.debug("# remove_public_feed(%s)" % feed_name)
+        self.logger.debug(f"# remove_public_feed({feed_name})")
         feed_path = self.public_feed_dir / (feed_name + ".xml")
-        try:
-            feed_path.unlink()
-            self.checker.load_all_public_feed_files(do_merge=True)
-        except FileNotFoundError:
-            pass
+        feed_path.unlink(missing_ok=True)
+        self.checker.load_all_public_feed_files(do_merge=True)
 
     def remove_feed(self, group_name: str, feed_name: str) -> Tuple[bool, str]:
-        self.logger.debug("# remove_feed(%s, %s)" % (group_name, feed_name))
+        self.logger.debug(f"# remove_feed({group_name}, {feed_name})")
         feed_dir_path = self.work_dir / group_name / feed_name
         conf_file_path = feed_dir_path / self.CONF_FILE
         if not feed_dir_path or not conf_file_path:
-            return False, "can't remove feed '%s'" % feed_dir_path.relative_to(self.work_dir)
+            return False, f"can't remove feed '{feed_dir_path.relative_to(self.work_dir)}'"
 
         # remove files
         self._remove_public_img_pdf_feed_files(feed_name)
@@ -370,10 +356,10 @@ class FeedManager:
         return True, ""
 
     def remove_group(self, group_name: str) -> Tuple[bool, str]:
-        self.logger.debug("# remove_group(%s)" % group_name)
+        self.logger.debug(f"# remove_group({group_name})")
         group_dir_path = self.work_dir / group_name
         if not group_dir_path:
-            return False, "can't remove group '%s'" % group_name
+            return False, f"can't remove group '{group_name}'"
 
         # remove files
         for feed_dir_path in group_dir_path.iterdir():
@@ -393,7 +379,7 @@ class FeedManager:
         return True, ""
 
     def toggle_feed(self, group_name: str, feed_name: str) -> Tuple[str, str]:
-        self.logger.debug("# toggle_feed(%s, %s)" % (group_name, feed_name))
+        self.logger.debug(f"# toggle_feed({group_name}, {feed_name})")
         if feed_name.startswith("_"):
             new_feed_name = feed_name[1:]
         else:
@@ -403,7 +389,7 @@ class FeedManager:
         feed_dir_path = self.work_dir / group_name / feed_name
         new_feed_dir_path = self.work_dir / group_name / new_feed_name
         if not feed_dir_path.is_dir():
-            return "", "can't find such a directory '%s'" % feed_dir_path.relative_to(self.work_dir)
+            return "", f"can't find such a directory '{feed_dir_path.relative_to(self.work_dir)}'"
         # git mv & commit
         self._git_mv(feed_dir_path, new_feed_dir_path)
 
@@ -414,7 +400,7 @@ class FeedManager:
         return new_feed_name, ""
 
     def toggle_group(self, group_name: str) -> Tuple[str, str]:
-        self.logger.debug("# toggle_group(%s)" % group_name)
+        self.logger.debug(f"# toggle_group({group_name})")
         if group_name.startswith("_"):
             new_group_name = group_name[1:]
         else:
@@ -424,7 +410,7 @@ class FeedManager:
         group_dir_path = self.work_dir / group_name
         new_group_dir_path = self.work_dir / new_group_name
         if not group_dir_path.is_dir():
-            return "", "can't find such a directory '%s'" % group_dir_path.relative_to(self.work_dir)
+            return "", f"can't find such a directory '{group_dir_path.relative_to(self.work_dir)}'"
         # git mv & commit
         self._git_mv(group_dir_path, new_group_dir_path)
 
@@ -434,14 +420,14 @@ class FeedManager:
         return new_group_name, ""
 
     def get_alias(self, group_name: str, feed_name: str):
-        self.logger.debug("# get_alias(%s, %s)" % (group_name, feed_name))
+        self.logger.debug(f"# get_alias({group_name}, {feed_name})")
         result, error = Htaccess.get_alias(group_name, feed_name)
         if not result:
             return "", error
         return result, ""
 
     def remove_alias(self, group_name: str, feed_name: str):
-        self.logger.debug("# remove_alias(%s, %s)" % (group_name, feed_name))
+        self.logger.debug(f"# remove_alias({group_name}, {feed_name})")
         result, error = Htaccess.remove_alias(group_name, feed_name)
         if not result:
             return False, error
@@ -449,7 +435,7 @@ class FeedManager:
         return True, ""
 
     def rename_alias(self, group_name: str, feed_name: str, new_alias: str):
-        self.logger.debug("# rename_alias(%s, %s, %s)" % (group_name, feed_name, new_alias))
+        self.logger.debug(f"# rename_alias({group_name}, {feed_name}, {new_alias})")
         result, error = Htaccess.set_alias(group_name, feed_name, new_alias)
         if not result:
             return False, error
