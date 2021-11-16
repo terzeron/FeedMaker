@@ -12,7 +12,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, Any, Tuple, Optional, List
 import requests
-from requests.structures import CaseInsensitiveDict
 from headless_browser import HeadlessBrowser
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
@@ -61,7 +60,7 @@ class RequestsClient:
                     cookie_str = cookie_str + cookie["name"] + "=" + cookie["value"] + "; "
             self.headers["Cookie"] = cookie_str
 
-    def make_request(self, url, data=None, download_file: Path = None) -> Tuple[str, CaseInsensitiveDict[str], int]:
+    def make_request(self, url, data=None, download_file: Path = None) -> Tuple[str, Any, int]:
         LOGGER.debug(f"# make_request('{url}')")
 
         self.read_cookies_from_file()

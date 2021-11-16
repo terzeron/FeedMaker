@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
+import os
 import logging.config
 from typing import Dict, Any
 import requests
@@ -13,7 +14,9 @@ app = Flask(__name__, static_folder="../frontend/dist", template_folder="../fron
 app.config['JSON_AS_ASCII'] = False
 app.config.from_object(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
-logging.basicConfig(filename='run.log', level=logging.DEBUG)
+# logging.basicConfig(filename='run.log', level=logging.DEBUG)
+logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+LOGGER = logging.getLogger()
 
 feed_manager = FeedManager(app.logger)
 feed_manager.load_all_feeds()
@@ -166,7 +169,8 @@ def get_feed_info(group_name, feed_name):
         else:
             response_object["message"] = error
     elif request.method == "POST":
-        print(f"/groups/<group_name>/feeds/<feed_name>, {request.method} -> save_config_file({group_name}, {feed_name})")
+        print(
+            f"/groups/<group_name>/feeds/<feed_name>, {request.method} -> save_config_file({group_name}, {feed_name})")
         post_data = request.get_json()
         result, error = feed_manager.save_config_file(group_name, feed_name, post_data)
         if result:
@@ -185,7 +189,8 @@ def get_feed_info(group_name, feed_name):
 
 @app.route("/groups/<group_name>/feeds/<feed_name>/run", methods=["POST"])
 def run(group_name, feed_name):
-    print(f"/groups/<group_name>/feeds/<feed_name>/run, {request.method}, {request.get_json()} -> run({group_name}, {feed_name})")
+    print(
+        f"/groups/<group_name>/feeds/<feed_name>/run, {request.method}, {request.get_json()} -> run({group_name}, {feed_name})")
     response_object: Dict[str, Any] = {"status": "failure"}
     post_data = request.get_json()
     result, error = feed_manager.run(group_name, feed_name, post_data["alias"])
@@ -242,7 +247,8 @@ def remove_html(group_name, feed_name):
 
 @app.route("/groups/<group_name>/feeds/<feed_name>/htmls/<html_file_name>", methods=["DELETE"])
 def remove_html_file(group_name, feed_name, html_file_name):
-    print(f"/groups/<group_name>/feeds/<feed_name>/htmls/<html_file_name>, {request.method} -> remove_html_file({group_name}, {feed_name}, {html_file_name})")
+    print(
+        f"/groups/<group_name>/feeds/<feed_name>/htmls/<html_file_name>, {request.method} -> remove_html_file({group_name}, {feed_name}, {html_file_name})")
     response_object: Dict[str, Any] = {"status": "failure"}
     feed_manager.remove_html_file(group_name, feed_name, html_file_name)
     response_object["status"] = "success"
@@ -272,7 +278,8 @@ def get_alias(group_name, feed_name):
 
 @app.route("/groups/<group_name>/feeds/<feed_name>/rename/<new_alias>", methods=["PUT"])
 def rename_alias(group_name, feed_name, new_alias):
-    print(f"/groups/<group_name>/feeds/<feed_name>/rename/<new_alias>, {request.method} -> rename_alias({group_name}, {feed_name}, {new_alias})")
+    print(
+        f"/groups/<group_name>/feeds/<feed_name>/rename/<new_alias>, {request.method} -> rename_alias({group_name}, {feed_name}, {new_alias})")
     response_object: Dict[str, Any] = {"status": "failure"}
     result, error = feed_manager.rename_alias(group_name, feed_name, new_alias)
     if result:

@@ -1,5 +1,1 @@
-{ "line_access_token": "LINE_ACCESS_TOKEN_IN_BEARER", "line_receiver_id": "LINE_MESSENGER_ID", "sender_email_address":
-"somebody
-at
-domain
-.com", "receiver_email_address": "recipient at domain.com", "smtp_host": "smtp host of domain.com" }
+{ "line_access_token": "LINE_ACCESS_TOKEN_IN_BEARER", "line_receiver_id": "LINE_MESSENGER_ID", "sender_email_address": "somebody at domain.com", "receiver_email_address": "recipient at domain.com", "smtp_host": "smtp host of domain.com" }

@@ -29,5 +29,6 @@ if "/usr/bin" not in os.environ["PATH"]:
     os.environ["PATH"] = "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin"
 os.environ["PATH"] = ":".join([fm_home_dir + "/bin", fm_home_dir + "/utils", cartoon_split_home_dir, pyenv_dir, chromedriver_dir, os.environ["PATH"]])
 os.environ["PYTHONPATH"] = fm_home_dir + "/bin"
+os.chdir(fm_work_dir)
 
 from app import app as application
