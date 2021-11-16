@@ -9,9 +9,8 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import logging
 import logging.config
-from typing import List, Dict, Any, Union, Optional
+from typing import List, Dict, Any, Union
 from feed_maker import FeedMaker
-
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
 LOGGER = logging.getLogger()
@@ -77,10 +76,10 @@ class ProblemChecker:
         del self.element_name_count_list
 
     def load_htaccess_file(self, do_merge=False) -> None:
-        LOGGER.debug("# load_htaccess_file(do_merge=%r)" % do_merge)
+        LOGGER.debug(f"# load_htaccess_file(do_merge={do_merge})")
         self.feed_alias_name_map.clear()
         self.feed_name_aliases_map.clear()
-        with open(self.htaccess_file, 'r') as infile:
+        with open(self.htaccess_file, 'r', encoding="utf-8") as infile:
             for line in infile:
                 m = re.search(r'^RewriteRule\s+\^(?P<feed_alias>[^\t]+)\\\.xml\$\s+xml/(?P<feed_name>[^\t]+)\\\.xml\s*$', line)
                 if m:
@@ -91,7 +90,7 @@ class ProblemChecker:
                     aliases[feed_alias] = True
                     self.feed_name_aliases_map[feed_name] = aliases
 
-        print("* The loading of htaccess file is done. %d items" % len(self.feed_alias_name_map))
+        print(f"* The loading of htaccess file is done. {len(self.feed_alias_name_map)} items")
         if do_merge:
             self.merge_all_feeds_status()
 
@@ -110,7 +109,7 @@ class ProblemChecker:
                 feed_name = feed_path.name
                 try:
                     self.feed_name_group_map[feed_name] = group_name
-                    with open(feed_path / "conf.json", 'r') as infile:
+                    with open(feed_path / "conf.json", 'r', encoding="utf-8") as infile:
                         json_data = json.load(infile)
                         if json_data and "configuration" in json_data:
                             self.feed_name_config_map[feed_name] = json_data["configuration"]
@@ -149,12 +148,12 @@ class ProblemChecker:
         for element_name, count in element_name_count_map.items():
             self.element_name_count_list.append({"element_name": element_name, "count": count})
 
-        print("* The loading of all config files and rss files is done. %d items" % len(self.feed_name_rss_info_map))
+        print(f"* The loading of all config files and rss files is done. {len(self.feed_name_rss_info_map)} items")
         if do_merge:
             self.merge_all_feeds_status()
 
     def load_all_public_feed_files(self, do_merge=False) -> None:
-        LOGGER.debug("# load_all_public_feed_files(do_merge=%r)" % do_merge)
+        LOGGER.debug(f"# load_all_public_feed_files(do_merge={do_merge})")
         self.public_feed_info_list.clear()
         for path in self.public_feed_dir.iterdir():
             if path.suffix == ".xml":
@@ -162,17 +161,14 @@ class ProblemChecker:
                 if feed_name.startswith("_"):
                     continue
 
-                try:
-                    with path.open(encoding="utf-8") as infile:
-                        file_content = infile.read()
-                        num_items = file_content.count("<item>")
-                    s = path.stat()
-                    upload_date = datetime.fromtimestamp(s.st_mtime)
-                    self.public_feed_info_list.append({"feed_name": feed_name, "feed_title": self.feed_name_title_map.get(feed_name, ""), "group_name": self.feed_name_group_map.get(feed_name, ""), "file_path": str(path.relative_to(self.public_feed_dir)), "upload_date": self.convert_datetime_to_str(upload_date), "size": s.st_size, "num_items": num_items})
-                except Exception as e:
-                    LOGGER.error("can't get stat from public_feed '%s', %s", path, str(e))
+                with path.open("r", encoding="utf-8") as infile:
+                    file_content = infile.read()
+                    num_items = file_content.count("<item>")
+                s = path.stat()
+                upload_date = datetime.fromtimestamp(s.st_mtime)
+                self.public_feed_info_list.append({"feed_name": feed_name, "feed_title": self.feed_name_title_map.get(feed_name, ""), "group_name": self.feed_name_group_map.get(feed_name, ""), "file_path": str(path.relative_to(self.public_feed_dir)), "upload_date": self.convert_datetime_to_str(upload_date), "size": s.st_size, "num_items": num_items})
 
-        print("* The loading of public feed file is done. %d items" % len(self.public_feed_info_list))
+        print(f"* The loading of public feed file is done. {len(self.public_feed_info_list)} items")
         if do_merge:
             self.merge_all_feeds_status()
 
@@ -200,7 +196,7 @@ class ProblemChecker:
                 # would find html files with zero count of image tag
                 if s.st_size > FeedMaker.get_size_of_template_with_image_tag(path.name):
                     html_file_image_tag_count_map[path] = 0
-                with open(path, 'r') as infile:
+                with open(path, 'r', encoding="utf-8") as infile:
                     for line in infile:
                         # image tag counting
                         if re.search(r'1x1.jpg', line):
@@ -220,7 +216,7 @@ class ProblemChecker:
         for path, count in html_file_image_not_found_count_map.items():
             self.html_file_image_not_found_list.append({"file_name": self.get_html_file_name(path), "file_path": str(path.relative_to(self.work_dir)), "count": count})
 
-        print("* The loading of all html files is done. %d items" % html_file_count)
+        print(f"* The loading of all html files is done. {html_file_count} items")
         if do_merge:
             self.merge_all_feeds_status()
 
@@ -230,34 +226,33 @@ class ProblemChecker:
         for feed_name, config in self.feed_name_config_map.items():
             if feed_name.startswith("_") or self.feed_name_group_map[feed_name].startswith("_"):
                 continue
-            if "collection" in config and "is_completed" in config["collection"]:
-                if config["collection"]["is_completed"]:
-                    index = 0
-                    file_path = self.work_dir / self.feed_name_group_map[feed_name] / feed_name / "start_idx.txt"
-                    if file_path.is_file():
-                        with open(file_path, 'r') as infile:
-                            line = infile.readline()
-                            index = int(line.split('\t')[0])
+            if "collection" in config and "is_completed" in config["collection"] and config["collection"]["is_completed"]:
+                index = 0
+                file_path = self.work_dir / self.feed_name_group_map[feed_name] / feed_name / "start_idx.txt"
+                if file_path.is_file():
+                    with open(file_path, 'r', encoding="utf-8") as infile:
+                        line = infile.readline()
+                        index = int(line.split('\t')[0])
 
-                    url_list: List[str] = []
-                    dir_name = self.work_dir / self.feed_name_group_map[feed_name] / feed_name / "newlist"
-                    if dir_name.is_dir():
-                        for file in dir_name.iterdir():
-                            if file.suffix == ".txt":
-                                with open(dir_name / file, 'r') as infile:
-                                    for line in infile:
-                                        url = line.split('\t')[0]
-                                        url_list.append(url)
-                    count = len(list(set(url_list)))
+                url_list: List[str] = []
+                dir_name = self.work_dir / self.feed_name_group_map[feed_name] / feed_name / "newlist"
+                if dir_name.is_dir():
+                    for file in dir_name.iterdir():
+                        if file.suffix == ".txt":
+                            with open(dir_name / file, 'r', encoding="utf-8") as infile:
+                                for line in infile:
+                                    url = line.split('\t')[0]
+                                    url_list.append(url)
+                count = len(list(set(url_list)))
 
-                    unit_size = config["collection"].get("unit_size_per_day", 1)
-                    progress_ratio = (index + 4) * 100 / (count + 1)
-                    remainder = count - (index + 4)
-                    num_days = int(math.ceil(remainder / unit_size))
+                unit_size = config["collection"].get("unit_size_per_day", 1)
+                progress_ratio = (index + 4) * 100 / (count + 1)
+                remainder = count - (index + 4)
+                num_days = int(math.ceil(remainder / unit_size))
 
-                    self.feed_name_progress_info_list.append({"feed_name": feed_name, "feed_title": self.feed_name_title_map[feed_name], "group_name": self.feed_name_group_map[feed_name], "index": index, "count": count, "ratio": int(progress_ratio), "unit_size": unit_size, "due_date": self.convert_datetime_to_str(datetime.now() + timedelta(days=num_days))})
+                self.feed_name_progress_info_list.append({"feed_name": feed_name, "feed_title": self.feed_name_title_map[feed_name], "group_name": self.feed_name_group_map[feed_name], "index": index, "count": count, "ratio": int(progress_ratio), "unit_size": unit_size, "due_date": self.convert_datetime_to_str(datetime.now() + timedelta(days=num_days))})
 
-        print("* The loading of all progress info is done. %d items" % len(self.feed_name_progress_info_list))
+        print(f"* The loading of all progress info is done. {len(self.feed_name_progress_info_list)} items")
         if do_merge:
             self.merge_all_feeds_status()
 
@@ -271,7 +266,7 @@ class ProblemChecker:
             file_path = self.httpd_access_log_dir / ("access.log." + date_str)
             if not file_path.is_file():
                 continue
-            with open(file_path, 'r') as infile:
+            with open(file_path, 'r', encoding="utf-8") as infile:
                 for line in infile:
                     # view
                     m = re.search(r'\[(?P<date>\d+/\w+/\d+):\d+:\d+:\d+ \+\d+] "GET /img/1x1\.jpg\?feed=(?P<feed_name>[\w._\-]+)\.xml\S* HTTP\S+" (?P<status_code>\d+) (?:\d+|-) "[^"]*" "[^"]*"', line)
@@ -311,12 +306,12 @@ class ProblemChecker:
                             access_info["is_in_xml_dir"] = feed.startswith("xml/")
                             self.feed_alias_access_info_map[feed_alias] = access_info
 
-        print("* The loading of http access log is done. %d items" % len(self.feed_alias_access_info_map))
+        print(f"* The loading of http access log is done. {len(self.feed_alias_access_info_map)} items")
         if do_merge:
             self.merge_all_feeds_status()
 
     @staticmethod
-    def convert_datetime_to_str(date: Optional[Union[str, datetime]]) -> str:
+    def convert_datetime_to_str(date: Union[str, datetime]) -> str:
         if not date:
             return ""
         if isinstance(date, str):
@@ -379,11 +374,11 @@ class ProblemChecker:
                 self.feed_alias_status_info_map[feed_alias] = status_info
 
         # rss_info_map(name -> rss_info), check 'feedmaker'
-        for feed_name in self.feed_name_rss_info_map:
+        for feed_name, rss_info in self.feed_name_rss_info_map.items():
             if feed_name not in self.feed_name_aliases_map:
                 status_info = self.get_status_info_with_default(feed_name)
                 status_info["feedmaker"] = True
-                status_info["update_date"] = self.feed_name_rss_info_map[feed_name]["update_date"]
+                status_info["update_date"] = rss_info["update_date"]
                 status_info["feed_alias"] = ""
                 status_info["feed_name"] = feed_name
                 self.feed_alias_status_info_map[feed_name] = status_info
@@ -392,7 +387,7 @@ class ProblemChecker:
             for feed_alias in self.feed_name_aliases_map.get(feed_name, {}):
                 status_info = self.get_status_info_with_default(feed_alias)
                 status_info["feedmaker"] = True
-                status_info["update_date"] = self.feed_name_rss_info_map[feed_name]["update_date"]
+                status_info["update_date"] = rss_info["update_date"]
                 status_info["feed_alias"] = feed_alias
                 status_info["feed_name"] = feed_name
                 self.feed_alias_status_info_map[feed_alias] = status_info
@@ -405,15 +400,12 @@ class ProblemChecker:
             if not status_info["http_request"] and not status_info["htaccess"] and not status_info["public_html"] and not status_info["feedmaker"]:
                 # unrequested and deleted
                 continue
-            if status_info["http_request"] and not status_info["htaccess"] and not status_info["public_html"] and not status_info["feedmaker"]:
-                if status_info["access_date"] and status_info["access_date"] < datetime.today() - timedelta(days=14):
-                    # requested a few weeks ago but deleted
-                    continue
-            if status_info["http_request"] and status_info["htaccess"] and status_info["public_html"] and status_info["feedmaker"]:
-                # requested and serviced
-                if status_info["access_date"] and datetime.today() - timedelta(days=14) < status_info["access_date"] or status_info["view_date"] and datetime.today() - timedelta(days=14) < status_info["view_date"]:
-                    # accessed or viewed recently
-                    continue
+            if status_info["http_request"] and not status_info["htaccess"] and not status_info["public_html"] and not status_info["feedmaker"] and status_info["access_date"] and status_info["access_date"] < datetime.today() - timedelta(days=14):
+                # requested a few weeks ago but deleted
+                continue
+            if status_info["http_request"] and status_info["htaccess"] and status_info["public_html"] and status_info["feedmaker"] and status_info["access_date"] and datetime.today() - timedelta(days=14) < status_info["access_date"] or status_info["view_date"] and datetime.today() - timedelta(days=14) < status_info["view_date"]:
+                # accessed or viewed recently
+                continue
 
             status_info["feed_title"] = status_info.get("feed_title", self.feed_name_title_map.get(feed_name, ""))
             status_info["group_name"] = status_info.get("group_name", self.feed_name_group_map.get(feed_name, ""))

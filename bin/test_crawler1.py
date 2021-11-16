@@ -15,55 +15,70 @@ class CrawlerTest(unittest.TestCase):
             if os.path.isfile(cookie_file):
                 os.remove(cookie_file)
 
-    def test_printUsage(self):
+    def test_print_usage(self):
         with patch('sys.stdout', new=StringIO()) as stdout:
             print_usage()
-            result = stdout.getvalue()
-            m = re.search(r'--spider', result)
+            actual = stdout.getvalue()
+            m = re.search(r'--spider', actual)
             self.assertTrue(m)
-            m = re.search(r'--render-js=', result)
+            m = re.search(r'--render-js=', actual)
             self.assertTrue(m)
-            m = re.search(r'--verify-ssl=', result)
+            m = re.search(r'--verify-ssl=', actual)
             self.assertTrue(m)
-            m = re.search(r'--download=', result)
+            m = re.search(r'--download=', actual)
             self.assertTrue(m)
-            m = re.search(r'--header=', result)
+            m = re.search(r'--header=', actual)
             self.assertTrue(m)
-            m = re.search(r'--encoding=', result)
+            m = re.search(r'--encoding=', actual)
             self.assertTrue(m)
-            m = re.search(r'--user-agent=', result)
+            m = re.search(r'--user-agent=', actual)
             self.assertTrue(m)
-            m = re.search(r'--referer=', result)
+            m = re.search(r'--referer=', actual)
             self.assertTrue(m)
-            m = re.search(r'--retry=', result)
+            m = re.search(r'--retry=', actual)
             self.assertTrue(m)
 
-    def test_basicInstantiation(self):
+    def test_get_option_str(self):
+        options = {
+            "render_js": True,
+            "referer": "https://abc.com",
+            "simulate_scrolling": True,
+            "timeout": 20,
+            "user_agent": "Firefox",
+            "encoding": "cp949",
+            "header_list": ["Content-Type: application/json", "Transfer-Encoding: chunked"],
+            "copy_images_from_canvas": False
+        }
+        actual = Crawler.get_option_str(options)
+        expected = " --render-js=true --copy-images-from-canvas=false --simulate-scrolling=true --user-agent='Firefox' --referer='https://abc.com' --encoding='cp949' --header='Content-Type: application/json' --header='Transfer-Encoding: chunked' --timeout=20"
+        self.assertEqual(expected, actual)
+
+    def test_basic_nstantiation(self):
         crawler = Crawler()
         self.assertTrue(crawler)
-        result, _ = crawler.run("https://m.naver.com")
-        m = re.search(r'<!DOCTYPE html>', result, re.IGNORECASE)
+        actual, _, _ = crawler.run("https://m.naver.com")
+        m = re.search(r'<!DOCTYPE html>', actual, re.IGNORECASE)
         self.assertTrue(m)
-        m = re.search(r'<meta property="og:url" content="http://m.naver.com/">', result)
+        m = re.search(r'<meta property="og:url" content="http://m.naver.com/">', actual)
         self.assertTrue(m)
         del crawler
 
         crawler = Crawler(method=Method.HEAD)
         self.assertTrue(crawler)
-        result, _ = crawler.run("https://m.naver.com")
-        self.assertEqual("200", result)
+        actual, _, _ = crawler.run("https://m.naver.com")
+        self.assertEqual("200", actual)
         del crawler
 
-    def test_instantiateWithOptions(self):
+    def test_instantiate_with_options(self):
         # default parameter
         crawler = Crawler()
         client = crawler.requests_client
         self.assertEqual(1, crawler.num_retries)
         self.assertEqual(False, crawler.render_js)
         self.assertEqual(Method.GET, client.method)
+        self.assertEqual({"User-Agent": DEFAULT_USER_AGENT}, client.headers)
         self.assertEqual(60, client.timeout)
-        #self.assertEqual({}, client.headers)
-        self.assertEqual(None, client.encoding)
+        self.assertEqual("utf-8", client.encoding)
         self.assertEqual(True, client.verify_ssl)
         del client
         del crawler

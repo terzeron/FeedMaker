@@ -17,8 +17,8 @@ LOGGER = logging.getLogger()
 
 
 def read_config(site_config_file: str) -> Optional[Dict[str, Any]]:
-    LOGGER.debug("# read_config(site_config_file=%r)", site_config_file)
-    with open(site_config_file, "r") as f:
+    LOGGER.debug(f"# read_config(site_config_file={site_config_file})")
+    with open(site_config_file, "r", encoding="utf-8") as f:
         config = json.load(f)
         if config:
             if "url" not in config:
@@ -40,7 +40,7 @@ def read_config(site_config_file: str) -> Optional[Dict[str, Any]]:
 
 
 def get_location(headers: Dict[str, Any]):
-    LOGGER.debug("# get_location(headers=%r)", headers)
+    LOGGER.debug(f"# get_location(headers={headers})")
     new_url = ""
     if headers:
         if "Location" in headers:
@@ -51,24 +51,23 @@ def get_location(headers: Dict[str, Any]):
 
 
 def get(url: str, config: Dict[str, Any]) -> Tuple[bool, str, str]:
-    LOGGER.debug("# get(url=%s, config=%r)", url, config)
+    LOGGER.debug(f"# get(url={url}, config={config})")
     print("getting start")
     new_url = ""
     response = None
     response_headers = None
     crawler = Crawler(method=Method.GET, num_retries=config["num_retries"], render_js=config["render_js"], encoding=config["encoding"], headers=config["headers"], timeout=config["timeout"])
     try:
-        response, response_headers = crawler.run(url)
+        response, _, response_headers = crawler.run(url)
     except Crawler.ReadTimeoutException:
         print("read timeout")
         return False, "", ""
 
-    LOGGER.debug("response_headers=%r", response_headers)
-    #LOGGER.debug("response=%s", response)
+    LOGGER.debug(f"response_headers={response_headers}")
     if response_headers:
         new_url = get_location(response_headers)
         if new_url:
-            print("new_url=%s" % new_url)
+            print(f"new_url={new_url}")
 
     if not response:
         print("no response")
@@ -88,14 +87,14 @@ def get(url: str, config: Dict[str, Any]) -> Tuple[bool, str, str]:
 
 
 def get_new_url(url: str, response: str, new_pattern: str, pre: str, domain_postfix: str, post: str) -> str:
-    LOGGER.debug("# get_new_url(url=%s, response, new_pattern=%s, pre=%s, domain_postfix=%s, post=%s)", url, new_pattern, pre, domain_postfix, post)
+    LOGGER.debug(f"# get_new_url(url={url}, response, new_pattern={new_pattern}, pre={pre}, domain_postfix={domain_postfix}, post={post})")
     new_url: str = ""
     # try to find similar url
     url_count_map: Dict[str, int] = {}
     matches = re.findall(new_pattern, str(response))
     for match in matches:
         new_url = pre + match + domain_postfix + post
-        LOGGER.debug("new_url=%s", new_url)
+        LOGGER.debug(f"new_url={new_url}")
         if new_url in url_count_map:
             url_count_map[new_url] += 1
         else:
@@ -111,7 +110,7 @@ def get_new_url(url: str, response: str, new_pattern: str, pre: str, domain_post
 
 
 def get_url_pattern(url: str) -> Tuple[str, str, str, str]:
-    LOGGER.debug("# get_url_pattern(url=%s)", url)
+    LOGGER.debug(f"# get_url_pattern(url={url})")
     new_pattern: str = ""
     pre: str = ""
     domain_postfix: str = ""
@@ -124,12 +123,12 @@ def get_url_pattern(url: str) -> Tuple[str, str, str, str]:
             domain_postfix = m1.group("domain_postfix")
             post = m1.group("post")
             new_pattern = pre + '(\d+)' + domain_postfix + '(?:' + post + ')?'
-            LOGGER.debug("first pattern: %s, %s, %s, %s", pre, domain_postfix, post, new_pattern)
+            LOGGER.debug(f"first pattern: {pre}, {domain_postfix}, {post}, {new_pattern}")
         elif m2:
             pre = m2.group("pre")
             post = m2.group("post")
             new_pattern = pre + '(\.[^/]+)' + post
-            LOGGER.debug("second pattern: %s, %s, %s", pre, post, new_pattern)
+            LOGGER.debug(f"second pattern: {pre}, {post}, {new_pattern}")
     return new_pattern, pre, domain_postfix, post
 
 
@@ -143,10 +142,10 @@ def main() -> int:
 
     config = read_config(site_config_file)
     if not config:
-        print("can't read configuration file '%s'" % site_config_file)
+        print(f"can't read configuration file '{site_config_file}'")
         return -1
     url = config["url"]
-    print("url=%s" % url)
+    print(f"url: {url}")
 
     try:
         os.remove("cookies.requestsclient.json")
@@ -160,10 +159,9 @@ def main() -> int:
     if not success:
         if not new_url:
             new_url = get_new_url(url, response, new_pattern, pre, domain_postfix, post)
-            print("New url: '%s'" % new_url)
-        if url != new_url:
-            if new_url:
-                print("no service from %s\nwould you check the new site? %s" % (url, new_url))
+            print(f"New url: {url}")
+        if url != new_url and new_url:
+            print(f"no service from {url}\nwould you check the new site? {new_url}")
         return -1
 
     print("Ok")

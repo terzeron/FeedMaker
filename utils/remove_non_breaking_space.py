@@ -4,5 +4,5 @@
 import sys
 
 for line in sys.stdin:
-    line = line.replace(u"\u00A0", " ")
+    line = line.replace("\u00A0", " ")
     print(line, end='')

@@ -5,15 +5,13 @@ import sys
 import json
 import re
 import getopt
-import urllib
-import logging
+import urllib.parse
 import logging.config
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Any, Optional
 from pathlib import Path
 from bs4 import BeautifulSoup
 from crawler import Crawler, Method
 from feed_maker_util import URL, HTMLExtractor
-
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
 LOGGER = logging.getLogger()
@@ -23,26 +21,26 @@ marumaru_site_config_file_path = work_dir_path / "marumaru" / "site_config.json"
 
 
 def print_content(site_name: str, result_list: List[Tuple[str, str]]) -> None:
-    print("--------------------- %s -------------------------" % site_name)
+    print(f"--------------------- {site_name} -------------------------")
     for title, link in result_list:
-        print("%s\t%s" % (title, link))
+        print(f"{title}\t{link}")
     print("-------------------------------------------------------")
 
 
-def get_data_from_site(config, url_postfix, method=Method.GET, headers={}, data={}) -> str:
-    LOGGER.debug("# get_data_from_site(config=%r, url_postfix=%s, method=%s, headers=%r, data=%r)", config, url_postfix, method, headers, data)
+def get_data_from_site(config, url_postfix, method=Method.GET, headers: Dict[str, Any] = None, data: Dict[str, Any] = None) -> str:
+    LOGGER.debug(f"# get_data_from_site(config={config}, url_postfix={url_postfix}, method={method}, headers={headers}, data={data})")
     url_prefix: str = URL.get_url_scheme(config["url"]) + "://" + URL.get_url_domain(config["url"])
     encoding: str = config["encoding"] if "encoding" in config else None
     render_js: bool = config["render_js"] if "render_js" in config else False
-    c: Crawler = Crawler(render_js=render_js, method=method, headers=headers, encoding=encoding, timeout=240)
+    crawler: Crawler = Crawler(render_js=render_js, method=method, headers=headers, encoding=encoding, timeout=240)
     url: str = url_prefix + url_postfix
-    response, _ = c.run(url=url, data=data)
-    del c
+    response, _, _ = crawler.run(url=url, data=data)
+    del crawler
     return response
 
 
 def extract_sub_content_from_agit(site_url_prefix: str, content: str, keyword: str):
-    LOGGER.debug("# extract_sub_content_from_agit(site_url_prefix=%s)", site_url_prefix)
+    LOGGER.debug(f"# extract_sub_content_from_agit(site_url_prefix={site_url_prefix})")
     result_list = []
 
     content = re.sub(r'^var\s+\w+\s+=\s+', '', content)
@@ -53,16 +51,15 @@ def extract_sub_content_from_agit(site_url_prefix: str, content: str, keyword: s
 
     data = json.loads(content)
     for item in data:
-        if "t" in item:
-            if keyword in item["t"]:
-                link = URL.concatenate_url(site_url_prefix, item["x"] + ".html")
-                result_list.append((item["t"], link))
+        if "t" in item and keyword in item["t"]:
+            link = URL.concatenate_url(site_url_prefix, item["x"] + ".html")
+            result_list.append((item["t"], link))
     return result_list
 
 
-def extract_sub_content_by_attrs(site_url_prefix: str, content: str, attrs: Dict[str, str]) -> List[Tuple[str, str]]:
-    LOGGER.debug("# extract_sub_content_by_attrs(site_url_prefix=%s, attrs=%r)", site_url_prefix, attrs)
-    soup = BeautifulSoup(content, "html.parser")
+def extract_sub_content_by_attrs(site_url_prefix: str, html: str, attrs: Dict[str, str]) -> List[Tuple[str, str]]:
+    LOGGER.debug(f"# extract_sub_content_by_attrs(site_url_prefix={site_url_prefix}, attrs={attrs})")
+    soup = BeautifulSoup(html, "html.parser")
     result_list = []
     for key in attrs.keys():
         if key in ("id", "class"):
@@ -124,7 +121,7 @@ def extract_sub_content_by_attrs(site_url_prefix: str, content: str, attrs: Dict
             if "jmana" not in site_url_prefix and "flix" not in site_url_prefix:
                 e = re.sub(r'.*\b\d+(화|권|부|편).*', '', e)
 
-            # 모든 html 태그 제거            
+            # 모든 html 태그 제거
             e = re.sub(r'</?\w+(\s*[\w\-_]+="[^"]*")*/?>', '', e)
             # #태그 제거
             e = re.sub(r'\s*\#\S+', '', e)
@@ -143,23 +140,23 @@ def extract_sub_content_by_attrs(site_url_prefix: str, content: str, attrs: Dict
     return result_list
 
 
-def search_site(site_name: str, url_postfix: str, attrs: Dict[str, str], method=Method.GET, headers={}, data={}):
-    LOGGER.debug("# search_site(site_name=%s, url_postfix=%s, attrs=%r, method=%s, headers=%r, data=%r)", site_name, url_postfix, attrs, method, headers, data)
+def search_site(site_name: str, url_postfix: str, attrs: Dict[str, str], method=Method.GET, headers: Dict[str, Any] = None, data: Dict[str, Any] = None) -> None:
+    LOGGER.debug(f"# search_site(site_name={site_name}, url_postfix={url_postfix}, attrs={attrs}, method={method}, headers={headers}, data={data})")
     os.chdir(work_dir_path / site_name)
     with open("site_config.json", 'r', encoding='utf-8') as infile:
         config = json.load(infile)
         if site_name == "agit":
             version0 = ""
             version1 = ""
-            content = get_data_from_site(config, "")
-            m = re.search(r'src=\'/data/azi_webtoon_0.js(?P<version0>\?v=[^\']+)\'', content)
+            html = get_data_from_site(config, "")
+            m = re.search(r'src=\'/data/azi_webtoon_0.js(?P<version0>\?v=[^\']+)\'', html)
             if m:
                 version0 = m.group("version0")
-            m = re.search(r'src=\'/data/azi_webtoon_1.js(?P<version1>\?v=[^\']+)\'', content)
+            m = re.search(r'src=\'/data/azi_webtoon_1.js(?P<version1>\?v=[^\']+)\'', html)
             if m:
                 version1 = m.group("version1")
             result_list = []
-            for i in range(config["num_retries"]):
+            for _ in range(config["num_retries"]):
                 content0 = get_data_from_site(config, "/data/azi_webtoon_0.js" + version0, method=method, headers=headers, data=data)
                 result0 = extract_sub_content_from_agit(config["url"], content0, attrs["keyword"])
                 content1 = get_data_from_site(config, "/data/azi_webtoon_1.js" + version1, method=method, headers=headers, data=data)
@@ -171,8 +168,8 @@ def search_site(site_name: str, url_postfix: str, attrs: Dict[str, str], method=
                     result_list.extend(result1)
                     break
         else:
-            content = get_data_from_site(config, url_postfix, method=method, headers=headers, data=data)
-            result_list = extract_sub_content_by_attrs(config["url"], content, attrs)
+            html = get_data_from_site(config, url_postfix, method=method, headers=headers, data=data)
+            result_list = extract_sub_content_by_attrs(config["url"], html, attrs)
     print_content(site_name, result_list)
 
 
@@ -182,12 +179,12 @@ def get_marumaru_site_domain():
         return URL.get_url_domain(marumaru_site_config["url"])
     return ""
 
-    
-def main():
+
+def main() -> int:
     LOGGER.debug("# main()")
 
-    site_name: str = None
-    optlist, args = getopt.getopt(sys.argv[1:], "s:")
+    site_name: Optional[str] = None
+    optlist, args = getopt.getopt(sys.argv[1:], "f:s:")
     for o, a in optlist:
         if o == '-s':
             site_name = a
@@ -196,7 +193,7 @@ def main():
     keyword = urllib.parse.quote(original_keyword)
     keyword_cp949 = original_keyword.encode("cp949")
 
-    site_args_map = { 
+    site_args_map = {
         "jmana": ["/comic_list?keyword=" + keyword, {"class": "tit"}],
         "ornson": ["/search?skeyword=" + keyword, {"class": "tag_box"}],
         "manatoki": ["/comic?stx=" + keyword, {"class": "list-item"}],
@@ -207,16 +204,16 @@ def main():
         "marumaru": ["/bbs/search.php?stx=" + keyword, {"class": "media"}],
         "funbe": ["/bbs/search.php?stx=" + keyword, {"class": "section-item-title"}],
         "tkor": ["/bbs/search.php?stx=" + keyword, {"class": "section-item-title"}],
-        #"flix": ["/bbs/search.php?stx=" + keyword, {"class": "post-list"}, Method.POST, {"Content-Type": "application/x-www-form-urlencoded"}, {"keyword": original_keyword}],
+        # "flix": ["/bbs/search.php?stx=" + keyword, {"class": "post-list"}, Method.POST, {"Content-Type": "application/x-www-form-urlencoded"}, {"keyword": original_keyword}],
         "buzztoon": ["/bbs/search.php?stx=" + keyword, {"class": "list_info_title"}],
-        #"sektoon": ["/?post_type=post&s=" + keyword, {"class": "entry-title"}],
-        "agit":["", {"keyword": original_keyword}],
+        # "sektoon": ["/?post_type=post&s=" + keyword, {"class": "entry-title"}],
+        "agit": ["", {"keyword": original_keyword}],
     }
     for site, args_map in site_args_map.items():
         if (site_name and site_name == site) or not site_name:
             # -s 옵션을 지정하지 않았거나, 지정한 사이트에 대해서만 검색
-            search_site(site, *site_args_map[site])
-            
+            search_site(site, *args_map)
+
     return 0
 
 

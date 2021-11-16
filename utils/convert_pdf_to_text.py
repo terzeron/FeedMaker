@@ -4,10 +4,11 @@
 import sys
 import os
 import re
-import logging
+import getopt
 import logging.config
-import pdftotext
+from pathlib import Path
 from crawler import Crawler
+import pdftotext
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
@@ -19,23 +20,30 @@ def main() -> int:
     sys.stdin.flush()
     sys.stdin.close()
 
-    if len(sys.argv) > 1:
-        if os.path.isfile(sys.argv[1]):
-            pdf_file = sys.argv[1]
-        elif sys.argv[1].startswith("http"):
-            pdf_file = os.environ["FEED_MAKER_WWW_FEEDS_DIR"] + "/pdf/" + str(os.getpid()) + ".pdf"
+    _, args = getopt.getopt(sys.argv[1:], "f:")
+
+    if len(args) == 1:
+        url_or_file = args[0]
+        if os.path.isfile(url_or_file):
+            pdf_file_path = Path(Path.cwd() / url_or_file)
+        elif url_or_file.startswith("http"):
+            pid = os.getpid()
+            pdf_dir_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / "pdf"
+            pdf_file_path = pdf_dir_path / (str(pid) + ".pdf")
             crawler = Crawler()
-            _, error = crawler.run(url=sys.argv[1], download_file=pdf_file)
-            if error:
+            result, error, _ = crawler.run(url=url_or_file, download_file=pdf_file_path)
+            if not result:
                 LOGGER.error(error)
         else:
+            LOGGER.error(f"neither file or url: {url_or_file}")
             return -1
     else:
         return -1
 
-    with open(pdf_file, "rb") as f:
+    with open(pdf_file_path, "rb") as f:
         pdf = pdftotext.PDF(f)
         for page in pdf:
+            print(page)
             page = re.sub(r'\n', '<br>\n', page)
             page = re.sub(r'\s\s+', ' ', page)
             page = re.sub(r'\s{4,}', '  ', page)
@@ -43,7 +51,7 @@ def main() -> int:
             page = re.sub(r'(?<=\S)\s*(?P<bullet>[▶•])', '\n\g<bullet>', page)
             print(page)
 
-    os.unlink(pdf_file)
+    pdf_file_path.unlink()
 
     return 0
 

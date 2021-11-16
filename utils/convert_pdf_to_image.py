@@ -3,10 +3,11 @@
 
 import sys
 import os
-import logging
+import getopt
 import logging.config
+from pathlib import Path
 from pdf2image import convert_from_path
-from feed_maker_util import Cache, exec_cmd, make_path, header_str
+from feed_maker_util import Cache, header_str
 from crawler import Crawler
 
 
@@ -14,51 +15,48 @@ logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf
 LOGGER = logging.getLogger()
 
 
-def get_feed_name() -> str:
-    cmd = "basename " + os.getcwd()
-    result, error = exec_cmd(cmd)
-    if error:
-        LOGGER.warning("can't execute command '%s', %s", cmd, error)
-        return ""
-    return result.rstrip()
-
 def main() -> int:
     sys.stdin.read()
     sys.stdin.flush()
     sys.stdin.close()
 
-    if len(sys.argv) > 1:
-        if os.path.isfile(sys.argv[1]):
-            pdf_file = sys.argv[1]
-        elif sys.argv[1].startswith("http"):
-            pdf_file = os.environ["FEED_MAKER_WWW_FEEDS_DIR"] + "/pdf/" + str(os.getpid()) + ".pdf"
+    _, args = getopt.getopt(sys.argv[1:], "f:")
+
+    if len(args) == 1:
+        url_or_file = args[0]
+        if os.path.isfile(url_or_file):
+            pdf_file_path = Path(url_or_file)
+        elif url_or_file.startswith("http"):
+            pid = os.getpid()
+            pdf_dir_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / "pdf"
+            pdf_file_path = pdf_dir_path / (str(pid) + ".pdf")
             crawler = Crawler()
-            _, error = crawler.run(url=sys.argv[1], download_file=pdf_file)
-            if error:
+            result, error, _ = crawler.run(url=url_or_file, download_file=pdf_file_path)
+            if not result:
                 LOGGER.error(error)
         else:
             return -1
     else:
         return -1
 
-    feed_name = get_feed_name()
-    path_prefix = os.environ["FEED_MAKER_WWW_FEEDS_DIR"] + "/img/" + feed_name
-    make_path(path_prefix)
+    feed_name = Path.cwd().name
+    feed_img_dir_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / "img" / feed_name
+    feed_img_dir_path.mkdir(exist_ok=True)
     img_url_prefix = "https://terzeron.com/xml/img/" + feed_name
     image_type = "JPEG"
     ext = ".jpg"
 
-    images = convert_from_path(pdf_file)
-    num = 0
+    images = convert_from_path(pdf_file_path)
     print(header_str)
-    for image in images:
-        cache_file = Cache.get_cache_file_name(path_prefix, sys.argv[1])
-        cache_url = Cache.get_cache_url(img_url_prefix, sys.argv[1], "")
-        image.save(cache_file + "." + str(num) + ext, image_type)
-        print("<img src='%s%s'/>" % (cache_url + "." + str(num), ext))
-        num = num + 1
+    for num, image in enumerate(images):
+        cache_file = Cache.get_cache_file_path(feed_img_dir_path, url_or_file)
+        cache_url = Cache.get_cache_url(img_url_prefix, url_or_file, "")
+        image_file = cache_file.with_suffix("." + str(num) + ext)
+        image_url = cache_url + "." + str(num) + ext
+        image.save(image_file, image_type)
+        print(f"<img src='{image_url}'/>")
 
-    os.unlink(pdf_file)
+    pdf_file_path.unlink()
 
     return 0
 

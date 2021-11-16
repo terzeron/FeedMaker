@@ -10,8 +10,7 @@
       "user_agent": null,
       "encoding": "utf-8",
       "referer": null,
-      "timeout": null,
-      "unit_size_per_day": null,
+      "unit_size_per_day": 1.5,
       "list_url_list": [
         "http://m.navercast.naver.com/homeMain.nhn?page=1",
         "http://m.navercast.naver.com/homeMain.nhn?page=2"
@@ -22,15 +21,12 @@
     },
     "extraction": {
       "render_js": false,
-      "verify_ssl": true,
       "bypass_element_extraction": false,
       "force_sleep_between_articles": false,
       "copy_images_from_canvas": false,
       "simulate_scrolling": false,
       "user_agent": "Mozilla",
-      "encoding": "utf8",
       "referer": null,
-      "timeout": null,
       "element_id_list": [
         "ct",
         "content"
@@ -43,7 +39,7 @@
       "post_process_script_list": [
         "post_process_script_for_navercast.py"
       ],
-      "header_list": []
+      "timeout": 30
     },
     "rss": {
       "title": "네이버캐스트 모바일",
