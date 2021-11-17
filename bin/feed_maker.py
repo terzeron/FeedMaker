@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 import dateutil.parser
 import PyRSS2Gen
 from ordered_set import OrderedSet
-from crawler import Crawler
+from crawler import Crawler, Method
 from extractor import Extractor
 from feed_maker_util import Config, URL, Datetime, Process, Data, header_str
 from new_list_collector import NewListCollector
@@ -203,8 +203,9 @@ class FeedMaker:
                 ret = False
         else:
             # 파일이 존재하지 않거나 크기가 작으니 다시 생성 시도
-            crawler = Crawler(self.feed_dir_path)
-            option_str = Crawler.get_option_str(self.collection_conf)
+            conf = self.extraction_conf
+            crawler = Crawler(dir_path=self.feed_dir_path, render_js=conf["render_js"], method=Method.GET, headers=conf["header_list"], timeout=conf["timeout"], num_retries=conf["num_retries"], encoding=conf["encoding"], verify_ssl=conf["verify_ssl"], copy_images_from_canvas=conf["copy_images_from_canvas"], simulate_scrolling=conf["simulate_scrolling"], disable_headless=conf["disable_headless"])
+            option_str = Crawler.get_option_str(conf)
             crawler_cmd = f"crawler.py -f '{self.feed_dir_path}' {option_str} '{item_url}'"
             LOGGER.debug(f"cmd={crawler_cmd}")
             result, error, _ = crawler.run(item_url)
@@ -212,16 +213,16 @@ class FeedMaker:
                 LOGGER.error("Error: %s", error)
                 return False
 
-            if not self.extraction_conf.get("bypass_element_extraction", False):
+            if not conf.get("bypass_element_extraction", False):
                 extraction_cmd = f"extractor.py -f '{self.feed_dir_path}' '{item_url}'"
                 LOGGER.debug(f"cmd={extraction_cmd}")
                 extractor = Extractor()
-                result = extractor.extract_content(self.extraction_conf, item_url, input_data=result)
+                result = extractor.extract_content(conf, item_url, input_data=result)
                 del extractor
                 if not result:
                     return False
 
-            for post_process_script in self.extraction_conf["post_process_script_list"]:
+            for post_process_script in conf["post_process_script_list"]:
                 post_process_cmd = f"{post_process_script} -f '{self.feed_dir_path}' '{item_url}'"
                 result, error_msg = Process.exec_cmd(post_process_cmd, dir_path=self.feed_dir_path, input_data=result)
                 LOGGER.debug(f"cmd={post_process_cmd}")
@@ -253,7 +254,7 @@ class FeedMaker:
                 LOGGER.warning(f"Warning: excluded {item_url}\t{title}\t{html_file_path.relative_to(self.work_dir_path)} ({size} bytes <= {self._get_size_of_template()} bytes of template)")
                 ret = False
 
-            if self.extraction_conf["force_sleep_between_articles"]:
+            if conf["force_sleep_between_articles"]:
                 time.sleep(1)
         return ret
 
