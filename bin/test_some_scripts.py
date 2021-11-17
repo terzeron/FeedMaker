@@ -40,7 +40,7 @@ def main() -> int:
             f"{fm_home}/utils/download_merge_split.py -f '/Users/terzeron/workspace/fma/naver/windbreaker' -m -c fuzzy 'https://comic.naver.com/webtoon/detail.nhn?titleId=602910&no=197'"
         ],
         "naver/naverpost.businessinsight": [
-            f"{fm_home}/bin/extract.py -f '/Users/terzeron/workspace/fma/naver/naverpost.businessinsight' 'http://m.post.naver.com/viewer/postView.nhn?volumeNo=14122118&memberNo=35786474'"
+            f"{fm_home}/bin/extractor.py -f '/Users/terzeron/workspace/fma/naver/naverpost.businessinsight' 'http://m.post.naver.com/viewer/postView.nhn?volumeNo=14122118&memberNo=35786474'"
         ],
     }
 
@@ -53,7 +53,7 @@ def main() -> int:
             result, cmd = test_script(script, test_dir_path, index)
             if not result:
                 LOGGER.error(f"Error in '{cmd}'\n")
-            return -1
+                return -1
     LOGGER.info("Ok")
     return 0
 

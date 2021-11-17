@@ -212,7 +212,7 @@ class FeedMaker:
                 return False
 
             if not self.extraction_conf.get("bypass_element_extraction", False):
-                extraction_cmd = f"extract.py -f '{self.feed_dir_path}' '{item_url}"
+                extraction_cmd = f"extractor.py -f '{self.feed_dir_path}' '{item_url}'"
                 LOGGER.debug(f"cmd={extraction_cmd}")
                 extractor = Extractor()
                 result = extractor.extract_content(self.extraction_conf, item_url, input_data=result)
@@ -296,6 +296,7 @@ class FeedMaker:
         return next_start_idx, current_time_str
 
     def _fetch_old_feed_list_window(self, old_feed_list: List[Tuple[str, str]]) -> Optional[List[Tuple[str, str]]]:
+        LOGGER.debug(f"# _fetch_old_feed_list_window(old_feed_list={old_feed_list}")
         # 오름차순 정렬
         feed_id_sort_field_list: List[Dict[str, Any]] = []
         feed_item_existence_set: OrderedSet[str] = OrderedSet([])
@@ -516,10 +517,10 @@ class FeedMaker:
                 del old_feed_list[:]
                 new_feed_list = recent_feed_list
 
-            # 과거 피드항목 리스트와 최근 피드항목 리스트를 비교함
-            merged_feed_list = self._diff_feeds_and_make_htmls(recent_feed_list, old_feed_list, fetched_feed_list)
-            if not merged_feed_list or len(merged_feed_list) == 0:
-                LOGGER.info("No new feeds, no update of rss file")
+        # 과거 피드항목 리스트와 최근 피드항목 리스트를 비교함
+        merged_feed_list = self._diff_feeds_and_make_htmls(recent_feed_list, old_feed_list, fetched_feed_list)
+        if not merged_feed_list or len(merged_feed_list) == 0:
+            LOGGER.info("No new feeds, no update of rss file")
 
         if not self.do_collect_by_force:
             # generate RSS feed
