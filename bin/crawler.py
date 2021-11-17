@@ -12,6 +12,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, Any, Tuple, Optional, List
 import requests
+from requests.structures import CaseInsensitiveDict
 from headless_browser import HeadlessBrowser
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")

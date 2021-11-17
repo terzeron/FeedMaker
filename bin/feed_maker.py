@@ -193,6 +193,7 @@ class FeedMaker:
         if os.path.isfile(html_file_path) and size > FeedMaker.get_size_of_template_with_image_tag(self.rss_file_path.name):
             # 이미 성공적으로 만들어져 있으니까, 이미지 태그만 검사해보고 피드 리스트에 추가
             if FeedMaker._is_image_tag_in_html_file(html_file_path, image_tag_str):
+                LOGGER.info(f"Old: {item_url}\t{title}\t{html_file_path.relative_to(self.work_dir_path)} ({size} bytes > {self._get_size_of_template()} bytes of template)")
                 ret = True
             else:
                 LOGGER.error(f"Error: No image tag in html file '{html_file_path}'")
@@ -360,8 +361,8 @@ class FeedMaker:
         collector = NewListCollector(self.feed_dir_path, self.collection_conf, new_list_file_path)
         return collector.collect()
 
-    def _diff_feeds_and_make_htmls(self, recent_feed_list: List[Tuple[str, str]], old_feed_list: List[Tuple[str, str]], fetched_feed_list: List[Tuple[str, str]] = None) -> List[Tuple[str, str]]:
-        LOGGER.debug(f"# diff_feeds_and_make_htmls(recent_feed_list={recent_feed_list}, old_feed_list={old_feed_list}, fetched_feed_list={fetched_feed_list})")
+    def _diff_feeds_and_make_htmls(self, recent_feed_list: List[Tuple[str, str]], old_feed_list: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
+        LOGGER.debug(f"# diff_feeds_and_make_htmls(recent_feed_list={recent_feed_list}, old_feed_list={old_feed_list})")
 
         recent_set = OrderedSet(recent_feed_list)
         old_set = OrderedSet(old_feed_list)
@@ -369,7 +370,7 @@ class FeedMaker:
 
         # collect items to be generated as RSS feed
         LOGGER.info(f"Appending {len(new_feed_list)} new items to the feed list")
-        merged_feed_list: List[Tuple[str, str]] = fetched_feed_list if fetched_feed_list else []
+        merged_feed_list: List[Tuple[str, str]] = []
         for link, title in new_feed_list:
             if self._make_html_file(link, title):
                 merged_feed_list.append((link, title))
@@ -495,13 +496,10 @@ class FeedMaker:
                 LOGGER.warning("Warning: can't read old feed list from files")
 
         # 완결여부 설정값 판단
-        fetched_feed_list: List[Tuple[str, str]] = []
-        recent_feed_list: List[Tuple[str, str]] = []
-        merged_feed_list: List[Tuple[str, str]] = []
         if self.collection_conf["is_completed"]:
             # 완결된 피드는 적재된 리스트에서 일부 피드항목을 꺼내옴
-            fetched_feed_list = self._fetch_old_feed_list_window(old_feed_list)
-            if not fetched_feed_list:
+            final_feed_list = self._fetch_old_feed_list_window(old_feed_list)
+            if not final_feed_list:
                 LOGGER.error("Error: can't get collection configuration")
                 return False
         else:
@@ -510,21 +508,19 @@ class FeedMaker:
             if not recent_feed_list or len(recent_feed_list) == 0:
                 LOGGER.error("Error: Can't get recent feed list from urls")
                 return False
-            if self.do_collect_only:
-                return True
 
             if self.collection_conf["ignore_old_list"]:
                 del old_feed_list[:]
                 new_feed_list = recent_feed_list
 
-        # 과거 피드항목 리스트와 최근 피드항목 리스트를 비교함
-        merged_feed_list = self._diff_feeds_and_make_htmls(recent_feed_list, old_feed_list, fetched_feed_list)
-        if not merged_feed_list or len(merged_feed_list) == 0:
-            LOGGER.info("No new feeds, no update of rss file")
+            # 과거 피드항목 리스트와 최근 피드항목 리스트를 비교함
+            final_feed_list = self._diff_feeds_and_make_htmls(recent_feed_list, old_feed_list)
+            if not final_feed_list or len(final_feed_list) == 0:
+                LOGGER.info("No new feeds, no update of rss file")
 
         if not self.do_collect_by_force:
             # generate RSS feed
-            if not self._generate_rss_feed(merged_feed_list):
+            if not self._generate_rss_feed(final_feed_list):
                 return False
 
             # upload RSS feed file
