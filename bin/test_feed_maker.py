@@ -94,7 +94,7 @@ class TestFeedMaker(unittest.TestCase):
         shutil.rmtree(self.feed_dir_path)
 
     def test_get_image_tag_str(self):
-        actual = FeedMaker._get_image_tag_str(self.rss_file_path.name, self.item1_url)
+        actual = FeedMaker.get_image_tag_str(self.rss_file_path.name, self.item1_url)
         expected = "<img src='https://terzeron.com/img/1x1.jpg?feed=oneplusone.xml&item=3e1c485'/>"
         self.assertEqual(expected, actual)
 
@@ -104,13 +104,13 @@ class TestFeedMaker(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     def test_is_image_tag_in_html_file(self):
-        image_tag_str = FeedMaker._get_image_tag_str(self.rss_file_path.name, self.item1_url)
+        image_tag_str = FeedMaker.get_image_tag_str(self.rss_file_path.name, self.item1_url)
         actual = FeedMaker._is_image_tag_in_html_file(self.html_file1_path, image_tag_str)
         expected = True
         self.assertEqual(expected, actual)
 
     def test_append_image_tag_to_html_file(self):
-        img_tag_str = FeedMaker._get_image_tag_str(self.rss_file_path.name, self.item2_url)
+        img_tag_str = FeedMaker.get_image_tag_str(self.rss_file_path.name, self.item2_url)
 
         # no image tag in the html file
         is_found = False
