@@ -359,7 +359,11 @@ export default {
       return this.jsonData.rss['title'];
     },
     rssUrl: function () {
-      return `https://terzeron.com/${this.newFeedName}.xml`;
+      if (this.alias != '') {
+        return `https://terzeron.com/${this.alias}.xml`;
+      } else {
+        return `https://terzeron.com/${this.newFeedName}.xml`;
+      }
     }
   },
   watch: {
