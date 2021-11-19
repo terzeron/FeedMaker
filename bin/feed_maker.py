@@ -220,6 +220,7 @@ class FeedMaker:
                 LOGGER.error("Error: %s", error)
                 return False
 
+            content = result
             if not conf.get("bypass_element_extraction", False):
                 extraction_cmd = f"extractor.py -f '{self.feed_dir_path}' '{item_url}'"
                 LOGGER.debug(f"cmd={extraction_cmd}")
