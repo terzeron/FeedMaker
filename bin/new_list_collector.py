@@ -74,7 +74,7 @@ class NewListCollector:
             for post_process_script in self.collection_conf["post_process_script_list"]:
                 program = post_process_script.split(" ")[0]
                 program_fullpath = find_executable(program)
-                if program_fullpath and program_fullpath.startswith("/usr"):
+                if program_fullpath and (program_fullpath.startswith("/usr") or program_fullpath.startswith("/bin") or program_fullpath.startswith("/sbin")):
                     post_process_cmd = f"{post_process_script}"
                 else:
                     post_process_cmd = f"{post_process_script} -f '{self.feed_dir_path}' '{url}'"

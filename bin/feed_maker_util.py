@@ -133,12 +133,18 @@ class Process:
         if program.startswith("./") or program.startswith("../"):
             program_path = (dir_path / program).resolve()
         else:
-            program_fullpath = find_executable(program)
-            if program_fullpath:
-                program_path = Path(program_fullpath)
+            if program.startswith("/"):
+                program_full_path = program
+            else:
+                program_full_path = find_executable(program)
+            if program_full_path:
+                program_path = Path(program_full_path)
             else:
                 return ""
-        return str(program_path) + " " + " ".join(script.split(" ")[1:])
+        result = str(program_path)
+        if len(script.split(" ")) > 1:
+            result += " " + " ".join(script.split(" ")[1:])
+        return result
 
     @staticmethod
     def exec_cmd(cmd: str, dir_path: Path = Path.cwd(), input_data=None) -> Tuple[str, str]:
