@@ -7,6 +7,7 @@ import logging.config
 from pathlib import Path
 from typing import Dict, Any
 from selenium import webdriver
+from selenium.common.exceptions import InvalidCookieDomainException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
@@ -65,10 +66,13 @@ class HeadlessBrowser:
     SETTING_PLUGINS_SCRIPT = "Object.defineProperty(navigator, 'plugins', {get: function() {return[1, 2, 3, 4, 5];},});"
     SETTING_LANGUAGES_SCRIPT = "Object.defineProperty(navigator, 'languages', {get: function() {return ['ko-KR', 'ko']}})"
 
-    def __init__(self, dir_path: Path = Path.cwd(), headers: Dict[str, Any] = None, copy_images_from_canvas: bool = False, simulate_scrolling: bool = False, disable_headless: bool = False, timeout: int = 60) -> None:
-        LOGGER.debug(f"# HeadlessBrowser(dir_path={dir_path}, headers={headers}, copy_images_from_canvas={copy_images_from_canvas}, simulate_scrolling={simulate_scrolling}, disable_headless={disable_headless}, timeout={timeout})")
+    def __init__(self, dir_path: Path = Path.cwd(), headers: Dict[str, Any] = None,
+                 copy_images_from_canvas: bool = False, simulate_scrolling: bool = False,
+                 disable_headless: bool = False, timeout: int = 60) -> None:
+        LOGGER.debug(
+            f"# HeadlessBrowser(dir_path={dir_path}, headers={headers}, copy_images_from_canvas={copy_images_from_canvas}, simulate_scrolling={simulate_scrolling}, disable_headless={disable_headless}, timeout={timeout})")
         self.dir_path: Path = dir_path
-        self.headers: Dict[str, str] = headers if headers else { }
+        self.headers: Dict[str, str] = headers if headers else {}
         if "User-Agent" not in self.headers:
             self.headers["User-Agent"] = DEFAULT_USER_AGENT
         self.copy_images_from_canvas: bool = copy_images_from_canvas
@@ -95,7 +99,7 @@ class HeadlessBrowser:
                         if "expiry" in cookie:
                             del cookie["expiry"]
                         driver.add_cookie(cookie)
-            except selenium.common.exceptions.InvalidCookieDomainException:
+            except InvalidCookieDomainException:
                 cookie_file.unlink(missing_ok=True)
                 self._read_cookies_from_file(driver)
 
@@ -113,7 +117,6 @@ class HeadlessBrowser:
 
         chrome_driver_name = "chromedriver"
         driver = webdriver.Chrome(options=options, executable_path=chrome_driver_name)
-        self.driver = driver
         driver.set_page_load_timeout(self.timeout)
 
         if "Referer" in self.headers:
@@ -121,7 +124,8 @@ class HeadlessBrowser:
             driver.get(self.headers["Referer"])
             # bypass cloudflare test
             try:
-                WebDriverWait(driver, self.timeout).until(expected_conditions.invisibility_of_element((By.ID, "cf-content")))
+                WebDriverWait(driver, self.timeout).until(
+                    expected_conditions.invisibility_of_element((By.ID, "cf-content")))
             except selenium.common.exceptions.TimeoutException:
                 pass
             self._write_cookies_to_file(driver)
@@ -130,7 +134,8 @@ class HeadlessBrowser:
         driver.get(url)
         # bypass cloudflare test
         try:
-            WebDriverWait(driver, self.timeout).until(expected_conditions.invisibility_of_element((By.ID, "cf-content")))
+            WebDriverWait(driver, self.timeout).until(
+                expected_conditions.invisibility_of_element((By.ID, "cf-content")))
         except selenium.common.exceptions.TimeoutException:
             pass
 

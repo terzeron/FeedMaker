@@ -7,7 +7,7 @@ import os
 import unittest
 import logging.config
 from pathlib import Path
-from bs4 import BeautifulSoup, Comment
+from bs4 import BeautifulSoup
 from extractor import Extractor
 from feed_maker_util import Config, header_str
 

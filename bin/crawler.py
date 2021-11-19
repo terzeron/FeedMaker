@@ -12,7 +12,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, Any, Tuple, Optional, List
 import requests
-from requests.structures import CaseInsensitiveDict
 from headless_browser import HeadlessBrowser
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
@@ -29,8 +28,11 @@ class Method(Enum):
 class RequestsClient:
     COOKIE_FILE = "cookies.requestsclient.json"
 
-    def __init__(self, dir_path: Path = Path.cwd(), render_js: bool = False, method: Method = Method.GET, headers: Dict[str, Any] = None, timeout: int = 60, encoding: str = "utf-8", verify_ssl: bool = True) -> None:
-        LOGGER.debug(f"# RequestsClient(dir_path={dir_path}, render_js={render_js}, method={method}, headers={headers}, timeout={timeout}, encoding={encoding}, verify_ssl={verify_ssl})")
+    def __init__(self, dir_path: Path = Path.cwd(), render_js: bool = False, method: Method = Method.GET,
+                 headers: Dict[str, Any] = None, timeout: int = 60, encoding: str = "utf-8",
+                 verify_ssl: bool = True) -> None:
+        LOGGER.debug(
+            f"# RequestsClient(dir_path={dir_path}, render_js={render_js}, method={method}, headers={headers}, timeout={timeout}, encoding={encoding}, verify_ssl={verify_ssl})")
         self.dir_path: Path = dir_path
         self.method: Method = method
         self.timeout: int = timeout
@@ -61,23 +63,26 @@ class RequestsClient:
                     cookie_str = cookie_str + cookie["name"] + "=" + cookie["value"] + "; "
             self.headers["Cookie"] = cookie_str
 
-    def make_request(self, url, data=None, download_file: Path = None) -> Tuple[str, Any, int]:
+    def make_request(self, url, data=None, download_file: Path = None) -> Tuple[str, Dict[str, Any], Optional[int]]:
         LOGGER.debug(f"# make_request('{url}')")
 
         self.read_cookies_from_file()
 
+        response = None
         if self.method == Method.GET:
             response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
         elif self.method == Method.POST:
             response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, data=data)
         elif self.method == Method.HEAD:
             response = requests.head(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
-            return str(response.status_code), response.headers, response.status_code
+            return str(response.status_code), dict(response.headers), response.status_code
 
-        if response and response.status_code != 200:
+        if not response:
+            LOGGER.error(f"can't get response from '{url}'")
+            return "", {}, None
+        if response.status_code != 200:
             LOGGER.debug(f"response.status_code={response.status_code}")
-            return "", CaseInsensitiveDict({}), response.status_code
-
+            return "", {}, response.status_code
         if response.cookies:
             self.write_cookies_to_file(response.cookies)
 
@@ -87,7 +92,7 @@ class RequestsClient:
                 for chunk in response:
                     f.write(chunk)
             os.utime(download_file, (time.time(), time.time()))
-            return "200", CaseInsensitiveDict({}), response.status_code
+            return "200", {}, response.status_code
 
         if self.encoding:
             response.encoding = self.encoding
@@ -95,9 +100,10 @@ class RequestsClient:
             response.encoding = 'utf-8'
 
         if not re.search(r'<meta\s+property="og:url"\s+content="[^"]+"\s*/?>', response.text):
-            result = re.sub(r'</head>', f'<meta property="og:url" content="{response.request.url}"/>\n</head>', response.text)
-            return result, response.headers, response.status_code
-        return response.text, response.headers, response.status_code
+            result = re.sub(r'</head>', f'<meta property="og:url" content="{response.request.url}"/>\n</head>',
+                            response.text)
+            return result, dict(response.headers), response.status_code
+        return response.text, dict(response.headers), response.status_code
 
 
 class Crawler:
@@ -105,8 +111,12 @@ class Crawler:
         def __init__(self):
             super().__init__("Read timed out")
 
-    def __init__(self, dir_path: Path = Path.cwd(), render_js: bool = False, method: Method = Method.GET, headers: Dict[str, Any] = None, timeout: int = 60, num_retries: int = 1, encoding: str = "utf-8", verify_ssl: bool = True, copy_images_from_canvas: bool = False, simulate_scrolling: bool = False, disable_headless: bool = False) -> None:
-        LOGGER.debug(f"# Crawler(dir_path={dir_path}, render_js={render_js}, method={method}, headers={headers}, timeout={timeout}, num_retries={num_retries}, encoding={encoding}, verify_ssl={verify_ssl}, copy_images_from_canvas={copy_images_from_canvas}, simulate_scrolling={simulate_scrolling}, disable_headless={disable_headless})")
+    def __init__(self, dir_path: Path = Path.cwd(), render_js: bool = False, method: Method = Method.GET,
+                 headers: Dict[str, Any] = None, timeout: int = 60, num_retries: int = 1, encoding: str = "utf-8",
+                 verify_ssl: bool = True, copy_images_from_canvas: bool = False, simulate_scrolling: bool = False,
+                 disable_headless: bool = False) -> None:
+        LOGGER.debug(
+            f"# Crawler(dir_path={dir_path}, render_js={render_js}, method={method}, headers={headers}, timeout={timeout}, num_retries={num_retries}, encoding={encoding}, verify_ssl={verify_ssl}, copy_images_from_canvas={copy_images_from_canvas}, simulate_scrolling={simulate_scrolling}, disable_headless={disable_headless})")
         self.dir_path = dir_path
         self.render_js = render_js
         self.method = method
@@ -122,9 +132,13 @@ class Crawler:
         self.disable_headless = disable_headless
         if self.render_js:
             # headless browser
-            self.headless_browser = HeadlessBrowser(dir_path=self.dir_path, headers=self.headers, copy_images_from_canvas=copy_images_from_canvas, simulate_scrolling=simulate_scrolling, disable_headless=disable_headless, timeout=timeout)
+            self.headless_browser = HeadlessBrowser(dir_path=self.dir_path, headers=self.headers,
+                                                    copy_images_from_canvas=copy_images_from_canvas,
+                                                    simulate_scrolling=simulate_scrolling,
+                                                    disable_headless=disable_headless, timeout=timeout)
         else:
-            self.requests_client = RequestsClient(dir_path=self.dir_path, method=method, headers=self.headers, timeout=timeout, encoding=encoding, verify_ssl=verify_ssl)
+            self.requests_client = RequestsClient(dir_path=self.dir_path, method=method, headers=self.headers,
+                                                  timeout=timeout, encoding=encoding, verify_ssl=verify_ssl)
 
     def __del__(self):
         del self.headers
@@ -170,6 +184,7 @@ class Crawler:
 
     def run(self, url, data=None, download_file: Path = None) -> Tuple[str, bool, Optional[Dict[str, Any]]]:
         LOGGER.debug(f"# run(url={url}, data={data}, download_file={download_file})")
+        headers: Dict[str, Any] = {}
         for i in range(self.num_retries):
             if self.render_js:
                 response = self.headless_browser.make_request(url, download_file=download_file)
@@ -177,22 +192,23 @@ class Crawler:
                     return response, False, None
             else:
                 try:
-                    response, headers, status_code = self.requests_client.make_request(url, download_file=download_file, data=data)
+                    response, headers, status_code = self.requests_client.make_request(url, download_file=download_file,
+                                                                                       data=data)
                     if response:
                         return response, False, None
                 except requests.exceptions.ReadTimeout as e:
                     raise Crawler.ReadTimeoutException from e
 
-            if status_code in [401, 403, 404, 405, 410]:
-                # no retry in case of
-                #   401 Unauthorized
-                #   403 Forbidden
-                #   404 Not Found
-                #   405 Method Not Allowed
-                #   410 Gone
-                break
-            LOGGER.debug(f"wait for seconds and retry (#{i})")
-            time.sleep(5)
+                if status_code in [401, 403, 404, 405, 410]:
+                    # no retry in case of
+                    #   401 Unauthorized
+                    #   403 Forbidden
+                    #   404 Not Found
+                    #   405 Method Not Allowed
+                    #   410 Gone
+                    break
+                LOGGER.debug(f"wait for seconds and retry (#{i})")
+                time.sleep(5)
 
         LOGGER.debug(f"can't get response from '{url}'")
         return "", True, dict(headers)
@@ -219,7 +235,9 @@ def main() -> int:
     LOGGER.debug("# main()")
     feed_dir_path = Path.cwd()
     method = Method.GET
-    headers = {"Accept-Encoding": "gzip, deflate", "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36", "Accept": "*/*", "Connection": "Keep-Alive"}
+    headers = {"Accept-Encoding": "gzip, deflate",
+               "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36",
+               "Accept": "*/*", "Connection": "Keep-Alive"}
     timeout = 60
     num_retries = 1
     render_js = False
@@ -235,7 +253,10 @@ def main() -> int:
         sys.exit(-1)
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hf:", ["spider", "render-js=", "verify-ssl=", "copy-images-from-canvas=", "simulate-scrolling=", "disable-headless=", "download=", "encoding=", "user-agent=", "referer=", "header=", "timeout=", "retry="])
+        opts, args = getopt.getopt(sys.argv[1:], "hf:",
+                                   ["spider", "render-js=", "verify-ssl=", "copy-images-from-canvas=",
+                                    "simulate-scrolling=", "disable-headless=", "download=", "encoding=", "user-agent=",
+                                    "referer=", "header=", "timeout=", "retry="])
     except getopt.GetoptError:
         print_usage()
         sys.exit(-1)
@@ -279,7 +300,10 @@ def main() -> int:
 
     url = args[0]
 
-    crawler = Crawler(dir_path=feed_dir_path, render_js=render_js, method=method, timeout=timeout, num_retries=num_retries, encoding=encoding, verify_ssl=verify_ssl, copy_images_from_canvas=copy_images_from_canvas, simulate_scrolling=simulate_scrolling, disable_headless=disable_headless)
+    crawler = Crawler(dir_path=feed_dir_path, render_js=render_js, method=method, timeout=timeout,
+                      num_retries=num_retries, encoding=encoding, verify_ssl=verify_ssl,
+                      copy_images_from_canvas=copy_images_from_canvas, simulate_scrolling=simulate_scrolling,
+                      disable_headless=disable_headless)
     response, _, _ = crawler.run(url, download_file=download_file)
     print(response)
     return 0

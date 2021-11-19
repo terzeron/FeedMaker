@@ -7,7 +7,6 @@ import shutil
 import logging.config
 import unittest
 from unittest.mock import patch, call
-from io import StringIO
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -129,7 +128,7 @@ class TestFeedMakerRunner(unittest.TestCase):
     def test_5_remove_temporary_files(self):
         self.assertTrue(self.garbage_file_path.is_file())
 
-        with patch.object(LOGGER, "info") as mock_info:
+        with patch.object(LOGGER, "info") as _:
             self.runner._remove_temporary_files(self.feed_dir_path)
 
         self.assertFalse(self.garbage_file_path.is_file())
@@ -144,7 +143,8 @@ class TestFeedMakerRunner(unittest.TestCase):
         with patch.object(LOGGER, "info") as mock_info:
             self.runner._remove_all_files(self.feed_dir_path, self.rss_file_path)
 
-            self.assertTrue(assert_in_mock_logger("# deleting all files (html files, list files, rss file, various temporary files)", mock_info))
+            self.assertTrue(assert_in_mock_logger(
+                "# deleting all files (html files, list files, rss file, various temporary files)", mock_info))
             self.assertTrue(assert_in_mock_logger("# deleting temporary files", mock_info))
 
         self.assertFalse(self.garbage_file_path.is_file())

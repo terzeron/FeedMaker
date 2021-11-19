@@ -12,7 +12,7 @@ import shutil
 from pathlib import Path
 from urllib.parse import urlparse, urlunparse, quote, urljoin
 from datetime import datetime
-from typing import List, Any, Dict, Tuple, Optional, Set, Union
+from typing import List, Any, Dict, Tuple, Optional, Union
 from distutils.spawn import find_executable
 from filelock import FileLock, Timeout
 import psutil
@@ -55,10 +55,13 @@ class Notification:
                 sender_email_address = global_config["sender_email_address"]
                 smtp_host = global_config["smtp_host"]
 
+        result = False
         if Notification.USE_LINE:
-            result = Notification._send_error_msg_to_line(msg, receiver=line_receiver_id, access_token=line_access_token)
+            result = Notification._send_error_msg_to_line(msg, receiver=line_receiver_id,
+                                                          access_token=line_access_token)
         if Notification.USE_EMAIL:
-            result = Notification._send_error_msg_to_mail(msg, subject=subject, receiver=receiver_email_address, sender=sender_email_address, smtp_host=smtp_host)
+            result = Notification._send_error_msg_to_mail(msg, subject=subject, receiver=receiver_email_address,
+                                                          sender=sender_email_address, smtp_host=smtp_host)
         return result
 
     @staticmethod
@@ -92,7 +95,7 @@ class Notification:
 class Data:
     @staticmethod
     def remove_duplicates(a_list: List[Any]) -> List[Any]:
-        seen: Set[Any] = OrderedSet()
+        seen: OrderedSet[Any] = OrderedSet()
         result: List[Any] = []
         for item in a_list:
             if item not in seen:
@@ -106,13 +109,13 @@ class Data:
         with open(file, "r", encoding="utf-8") as infile:
             lines = infile.readlines()
             for line in lines:
-                line = re.sub(r"(<!\[CDATA\[|\]\]>)", "", line)
+                line = re.sub(r"(<!\[CDATA\[|]]>)", "", line)
                 line = re.sub(r"<(pubDate|lastBuildDate)>[^<>]+</(pubDate|lastBuildDate)>", "", line)
                 line = re.sub(r"</?\??\w+([^<>]*)>", "\n", line)
-                for l in line.split("\n"):
-                    if re.search(r"^\s*$", l):
+                for a_line in line.split("\n"):
+                    if re.search(r"^\s*$", a_line):
                         continue
-                    line_list.append(l)
+                    line_list.append(a_line)
         return sorted(line_list)
 
     @staticmethod
@@ -139,13 +142,15 @@ class Process:
 
     @staticmethod
     def exec_cmd(cmd: str, dir_path: Path = Path.cwd(), input_data=None) -> Tuple[str, str]:
-        LOGGER.debug(f"# Process.exec_cmd(cmd={cmd}, dir_path={dir_path}, input_data={len(input_data) if input_data else 0} bytes)")
+        LOGGER.debug(
+            f"# Process.exec_cmd(cmd={cmd}, dir_path={dir_path}, input_data={len(input_data) if input_data else 0} bytes)")
         new_cmd = Process._replace_script_path(cmd, dir_path)
         if not new_cmd:
             return "", f"Error in getting path of executable '{cmd}'"
         LOGGER.debug(new_cmd)
         try:
-            with subprocess.Popen(new_cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as p:
+            with subprocess.Popen(new_cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE) as p:
                 if input_data:
                     input_data = input_data.encode("utf-8")
                 result, error = p.communicate(input=input_data)
@@ -158,7 +163,7 @@ class Process:
         return result.decode(encoding="utf-8"), ""
 
     @staticmethod
-    def _find_process_group(parent_proc_expr: re.Pattern) -> List[int]:
+    def _find_process_group(parent_proc_expr: str) -> List[int]:
         # find a parent process id by parent process name
         parent_children_map: Dict[int, List[int]] = {}
         ppid_list = []
@@ -190,7 +195,7 @@ class Process:
         return result_pid_list
 
     @staticmethod
-    def kill_process_group(proc_expr: re.Pattern) -> int:
+    def kill_process_group(proc_expr: str) -> int:
         LOGGER.debug(f"kill_process_group(proc_expr='{proc_expr}')")
         pid_list = Process._find_process_group(proc_expr)
         count = 0
@@ -228,7 +233,8 @@ class Datetime:
 
 class HTMLExtractor:
     @staticmethod
-    def get_first_token_from_path(path_str: Optional[str]) -> Tuple[Optional[str], Optional[str], Optional[int], Optional[str], bool]:
+    def get_first_token_from_path(path_str: Optional[str]) -> Tuple[
+        Optional[str], Optional[str], Optional[int], Optional[str], bool]:
         if not path_str:
             return None, None, None, None, False
         is_anywhere: bool = False
@@ -250,9 +256,9 @@ class HTMLExtractor:
               (?P<name>\w+)
               (?:\[
                 (?P<idx>\d+)
-              \])?
+              ])?
             |
-              \*\[@id=\"(?P<id>\w+)\"\]
+              \*\[@id=\"(?P<id>\w+)\"]
             )
         ''', re.VERBOSE)
         m = pattern.match(valid_token)
@@ -430,11 +436,13 @@ class Config:
                     "verify_ssl": Config._get_bool_config_value(collection_conf, "verify_ssl", True),
                     "ignore_old_list": Config._get_bool_config_value(collection_conf, "ignore_old_list", False),
                     "is_completed": Config._get_bool_config_value(collection_conf, "is_completed", False),
-                    "copy_images_from_canvas": Config._get_bool_config_value(collection_conf, "copy_images_from_canvas", False),
+                    "copy_images_from_canvas": Config._get_bool_config_value(collection_conf, "copy_images_from_canvas",
+                                                                             False),
                     "simulate_scrolling": Config._get_bool_config_value(collection_conf, "simulate_scrolling", False),
                     "disable_headless": Config._get_bool_config_value(collection_conf, "disable_headless", False),
 
-                    "item_capture_script": Config._get_str_config_value(collection_conf, "item_capture_script", "./capture_item_link_title.py"),
+                    "item_capture_script": Config._get_str_config_value(collection_conf, "item_capture_script",
+                                                                        "./capture_item_link_title.py"),
                     "sort_field_pattern": Config._get_str_config_value(collection_conf, "sort_field_pattern"),
                     "user_agent": Config._get_str_config_value(collection_conf, "user_agent"),
                     "encoding": Config._get_str_config_value(collection_conf, "encoding", "utf-8"),
@@ -445,7 +453,8 @@ class Config:
                     "num_retries": Config._get_float_config_value(collection_conf, "num_retries", 1),
 
                     "list_url_list": Config._get_config_value_list(collection_conf, "list_url_list", []),
-                    "post_process_script_list": Config._get_config_value_list(collection_conf, "post_process_script_list", []),
+                    "post_process_script_list": Config._get_config_value_list(collection_conf,
+                                                                              "post_process_script_list", []),
                     "header_list": Config._get_config_value_list(collection_conf, "header_list", [])
                 }
         return conf
@@ -459,9 +468,12 @@ class Config:
                 conf = {
                     "render_js": Config._get_bool_config_value(extraction_conf, "render_js", False),
                     "verify_ssl": Config._get_bool_config_value(extraction_conf, "verify_ssl", True),
-                    "bypass_element_extraction": Config._get_bool_config_value(extraction_conf, "bypass_element_extraction"),
-                    "force_sleep_between_articles": Config._get_bool_config_value(extraction_conf, "force_sleep_between_articles"),
-                    "copy_images_from_canvas": Config._get_bool_config_value(extraction_conf, "copy_images_from_canvas"),
+                    "bypass_element_extraction": Config._get_bool_config_value(extraction_conf,
+                                                                               "bypass_element_extraction"),
+                    "force_sleep_between_articles": Config._get_bool_config_value(extraction_conf,
+                                                                                  "force_sleep_between_articles"),
+                    "copy_images_from_canvas": Config._get_bool_config_value(extraction_conf,
+                                                                             "copy_images_from_canvas"),
                     "simulate_scrolling": Config._get_bool_config_value(extraction_conf, "simulate_scrolling"),
                     "disable_headless": Config._get_bool_config_value(extraction_conf, "disable_headless", False),
 
@@ -475,7 +487,8 @@ class Config:
                     "element_id_list": Config._get_config_value_list(extraction_conf, "element_id_list", []),
                     "element_class_list": Config._get_config_value_list(extraction_conf, "element_class_list", []),
                     "element_path_list": Config._get_config_value_list(extraction_conf, "element_path_list", []),
-                    "post_process_script_list": Config._get_config_value_list(extraction_conf, "post_process_script_list", []),
+                    "post_process_script_list": Config._get_config_value_list(extraction_conf,
+                                                                              "post_process_script_list", []),
                     "header_list": Config._get_config_value_list(extraction_conf, "header_list", []),
                 }
         return conf
@@ -593,7 +606,8 @@ class Cache:
         return url_prefix + "/" + Cache._get_cache_info_common_postfix(img_url, postfix, index)
 
     @staticmethod
-    def get_cache_file_path(path_prefix: Path, img_url: str, postfix: Union[str, int] = None, index: int = None) -> Path:
+    def get_cache_file_path(path_prefix: Path, img_url: str, postfix: Union[str, int] = None,
+                            index: int = None) -> Path:
         LOGGER.debug(f"# get_cache_file_name(path={path_prefix}, img_url={img_url}, postfix={postfix}, index={index})")
         return path_prefix / Cache._get_cache_info_common_postfix(img_url, postfix, index)
 

@@ -6,13 +6,13 @@ import os
 import re
 import json
 import unittest
-from unittest.mock import patch, call
+from unittest.mock import patch
 from io import StringIO
 import logging.config
 from typing import List
 from datetime import datetime
 from pathlib import Path
-from unittest import TestCase
+import subprocess
 from bs4 import BeautifulSoup
 from feed_maker_util import Notification, Config, URL, HTMLExtractor, Datetime, Process, IO, Data, Cache, Htaccess
 
@@ -44,7 +44,8 @@ class NotificationTest(unittest.TestCase):
     def test_send_error_msg_to_mail(self):
         msg = "This is a messagae from python unittest"
         subject = "email notification test"
-        actual = Notification._send_error_msg_to_mail(msg, subject, self.receiver_address, self.sender_address, self.smtp_host)
+        actual = Notification._send_error_msg_to_mail(msg, subject, self.receiver_address, self.sender_address,
+                                                      self.smtp_host)
         self.assertTrue(actual)
 
 
@@ -143,7 +144,6 @@ class ProcessTest(unittest.TestCase):
         self.assertTrue("hello world" in actual)
 
     def test_find_process_group_and_kill_process_group(self):
-        import subprocess
         with subprocess.Popen(["sleep", "20"]):
             actual = len(Process._find_process_group(r"sleep 20"))
             expected = 1
@@ -165,7 +165,7 @@ class DatetimeTest(unittest.TestCase):
         e1 = expected1[:19]
         e2 = expected2[:19]
         a = actual[:19]
-        self.assertTrue(e1 == a or e2 == a)
+        self.assertIn(a, [e1, e2])
 
         # timezone
         expected = expected1[-6:]
@@ -185,7 +185,9 @@ class DatetimeTest(unittest.TestCase):
 
     def test_get_rss_date_str(self):
         actual = Datetime.get_rss_date_str()
-        m = re.search(r"^(Sun|Mon|Tue|Wed|Thu|Fri|Sat), \d+ (Jan|Feb|Mar|Apr|May|Jun|Jul|Sep|Oct|Nov|Dec) \d\d\d\d \d\d:\d\d:\d\d \+\d\d\d\d$", actual)
+        m = re.search(
+            r"^(Sun|Mon|Tue|Wed|Thu|Fri|Sat), \d+ (Jan|Feb|Mar|Apr|May|Jun|Jul|Sep|Oct|Nov|Dec) \d\d\d\d \d\d:\d\d:\d\d \+\d\d\d\d$",
+            actual)
         self.assertTrue(m)
 
     def test_get_short_date_str(self):
@@ -203,47 +205,38 @@ class HTMLExtractorTest(unittest.TestCase):
     def test_get_first_token_from_path(self):
         # id, name, idx, remainder of path, isAnywhere
         actual = HTMLExtractor.get_first_token_from_path("")
-        expected = (None, None, None, None, False)
-        self.assertEqual(expected, actual)
+        self.assertEqual((None, None, None, None, False), actual)
 
         actual = HTMLExtractor.get_first_token_from_path("/html/body")
-        expected = (None, "body", None, "", False)
-        self.assertEqual(expected, actual)
+        self.assertEqual((None, "body", None, "", False), actual)
 
         actual = HTMLExtractor.get_first_token_from_path("/html/body/div")
-        expected = (None, "div", None, "", False)
-        self.assertEqual(expected, actual)
+        self.assertEqual((None, "div", None, "", False), actual)
 
         actual = HTMLExtractor.get_first_token_from_path('//*[@id="Text_Contents"]')
-        expected = ("Text_Contents", None, None, "", True)
-        self.assertEqual(expected, actual)
+        self.assertEqual(("Text_Contents", None, None, "", True), actual)
 
         actual = HTMLExtractor.get_first_token_from_path('//*[@id="Text_Contents"]/form/select')
-        expected = ("Text_Contents", None, None, "form/select", True)
-        self.assertEqual(expected, actual)
+        self.assertEqual(("Text_Contents", None, None, "form/select", True), actual)
 
         actual = HTMLExtractor.get_first_token_from_path('/form/select')
-        expected = (None, "form", None, "select", False)
-        self.assertEqual(expected, actual)
+        self.assertEqual((None, "form", None, "select", False), actual)
 
         actual = HTMLExtractor.get_first_token_from_path('//select')
-        expected = (None, "select", None, "", True)
-        self.assertEqual(expected, actual)
+        self.assertEqual((None, "select", None, "", True), actual)
 
         actual = HTMLExtractor.get_first_token_from_path("/html/body/div[3]")
-        expected = (None, "div", 3, "", False)
-        self.assertEqual(expected, actual)
+        self.assertEqual((None, "div", 3, "", False), actual)
 
         actual = HTMLExtractor.get_first_token_from_path("/html/body/div[3]/img[2]")
-        expected = (None, "div", 3, "img[2]", False)
-        self.assertEqual(expected, actual)
+        self.assertEqual((None, "div", 3, "img[2]", False), actual)
 
         actual = HTMLExtractor.get_first_token_from_path("//img[2]")
-        expected = (None, "img", 2, "", True)
-        self.assertEqual(expected, actual)
+        self.assertEqual((None, "img", 2, "", True), actual)
 
     def test_get_node_with_path(self):
-        soup = BeautifulSoup('<html><body><div>hello</div><div id="ct"><span>text</span></div></body></html>', 'html.parser')
+        soup = BeautifulSoup('<html><body><div>hello</div><div id="ct"><span>text</span></div></body></html>',
+                             'html.parser')
 
         target_node = HTMLExtractor.get_node_with_path(soup.body, '//span')
         if target_node:
@@ -320,13 +313,13 @@ class HTMLExtractorTest(unittest.TestCase):
 class IOTest(unittest.TestCase):
     def test_read_stdin(self):
         expected = "test data from stdin\nsecond line from stdin\n"
-        with patch("sys.stdin", StringIO("test data from stdin\nsecond line from stdin\n")) as stdin:
+        with patch("sys.stdin", StringIO("test data from stdin\nsecond line from stdin\n")):
             actual = IO.read_stdin()
             self.assertEqual(expected, actual)
 
     def test_read_stdin_as_line_list(self):
         expected = ["test data from stdin\n", "second line from stdin\n"]
-        with patch("sys.stdin", StringIO("test data from stdin\nsecond line from stdin\n")) as stdin:
+        with patch("sys.stdin", StringIO("test data from stdin\nsecond line from stdin\n")):
             actual = IO.read_stdin_as_line_list()
             self.assertEqual(expected, actual)
 
@@ -341,7 +334,7 @@ class ConfigTest(unittest.TestCase):
         del self.config
 
     def test_init(self):
-        actual = self.config != None
+        actual = self.config is not None
         self.assertTrue(actual)
         actual = isinstance(self.config, Config)
         self.assertTrue(actual)
@@ -376,47 +369,39 @@ class ConfigTest(unittest.TestCase):
 
         # existent, without default
         actual = self.config._get_str_config_value(collection_conf, "encoding")
-        expected = "utf-8"
-        self.assertEqual(expected, actual)
+        self.assertEqual("utf-8", actual)
 
         # existent, with default
         actual = self.config._get_str_config_value(collection_conf, "encoding", "cp949")
-        expected = "utf-8"
-        self.assertEqual(expected, actual)
+        self.assertEqual("utf-8", actual)
 
         # not existent, with default
         actual = self.config._get_str_config_value(extraction_conf, "encoding", "cp949")
-        expected = "cp949"
-        self.assertEqual(expected, actual)
+        self.assertEqual("cp949", actual)
 
         # not existent, without default
         actual = self.config._get_str_config_value(extraction_conf, "encoding")
-        expected = None
-        self.assertEqual(expected, actual)
+        self.assertIsNone(actual)
 
     def test_get_int_config_value(self):
         collection_conf = self.config.conf["collection"]
         extraction_conf = self.config.conf["extraction"]
 
         # existent, without default
-        actual = self.config._get_str_config_value(extraction_conf, "timeout")
-        expected = 30
-        self.assertEqual(expected, actual)
+        actual = self.config._get_int_config_value(extraction_conf, "timeout")
+        self.assertEqual(30, actual)
 
         # existent, with default
-        actual = self.config._get_str_config_value(extraction_conf, "timeout", 20)
-        expected = 30
-        self.assertEqual(expected, actual)
+        actual = self.config._get_int_config_value(extraction_conf, "timeout", 20)
+        self.assertEqual(30, actual)
 
         # not existent, without default
-        actual = self.config._get_str_config_value(collection_conf, "timeout")
-        expected = None
-        self.assertEqual(expected, actual)
+        actual = self.config._get_int_config_value(collection_conf, "timeout")
+        self.assertIsNone(actual)
 
         # not existent, with default
-        actual = self.config._get_str_config_value(collection_conf, "timeout", 10)
-        expected = 10
-        self.assertEqual(expected, actual)
+        actual = self.config._get_int_config_value(collection_conf, "timeout", 10)
+        self.assertEqual(10, actual)
 
     def test_get_float_config_value(self):
         collection_conf = self.config.conf["collection"]
@@ -429,42 +414,38 @@ class ConfigTest(unittest.TestCase):
 
         # existent, with default
         actual = self.config._get_float_config_value(collection_conf, "unit_size_per_day", 3.3)
-        expected = 1.5
-        self.assertEqual(expected, actual)
+        self.assertEqual(1.5, actual)
 
         # not existent, without default
         actual = self.config._get_float_config_value(extraction_conf, "unit_size_per_day")
-        expected = None
-        self.assertEqual(expected, actual)
+        self.assertIsNone(actual)
 
         # not existent, with default
         actual = self.config._get_float_config_value(extraction_conf, "unit_size_per_day", 5.8)
-        expected = 5.8
-        self.assertEqual(expected, actual)
+        self.assertEqual(5.8, actual)
 
     def test_traverse_config_node(self):
         collection_conf = self.config.conf["collection"]
         actual = self.config._traverse_config_node(collection_conf, "render_js")
-        expected = [False]
-        self.assertEqual(expected, actual)
+        self.assertEqual([False], actual)
 
         actual = self.config._traverse_config_node(collection_conf, "list_url_list")
-        expected = ["http://m.navercast.naver.com/homeMain.nhn?page=1", "http://m.navercast.naver.com/homeMain.nhn?page=2"]
+        expected = ["http://m.navercast.naver.com/homeMain.nhn?page=1",
+                    "http://m.navercast.naver.com/homeMain.nhn?page=2"]
         self.assertEqual(expected, actual)
 
     def test_get_config_value_list(self):
         collection_conf = self.config.conf["collection"]
         actual = self.config._get_config_value_list(collection_conf, "list_url_list", [])
-        expected = ["http://m.navercast.naver.com/homeMain.nhn?page=1", "http://m.navercast.naver.com/homeMain.nhn?page=2"]
+        expected = ["http://m.navercast.naver.com/homeMain.nhn?page=1",
+                    "http://m.navercast.naver.com/homeMain.nhn?page=2"]
         self.assertEqual(expected, actual)
 
         actual = self.config._get_config_value_list(collection_conf, "header_list", [])
-        expected = []
-        self.assertEqual(expected, actual)
+        self.assertEqual([], actual)
 
         actual = self.config._get_config_value_list(collection_conf, "header_list")
-        expected = None
-        self.assertEqual(expected, actual)
+        self.assertIsNone(actual)
 
     def test_get_collection_configs(self):
         configs = self.config.get_collection_configs()
@@ -472,23 +453,20 @@ class ConfigTest(unittest.TestCase):
         self.assertTrue(actual)
 
         actual = configs["item_capture_script"]
-        expected = "./capture_item_link_title.py"
-        self.assertEqual(expected, actual)
+        self.assertEqual("./capture_item_link_title.py", actual)
 
         actual = configs["ignore_old_list"]
-        expected = False
-        self.assertEqual(expected, actual)
+        self.assertFalse(actual)
 
         actual = configs["sort_field_pattern"]
-        expected = None
-        self.assertEqual(expected, actual)
+        self.assertIsNone(actual)
 
         actual = configs["unit_size_per_day"]
-        expected = 1.5
-        self.assertEqual(expected, actual)
+        self.assertEqual(1.5, actual)
 
         actual = configs["list_url_list"]
-        expected = ["http://m.navercast.naver.com/homeMain.nhn?page=1", "http://m.navercast.naver.com/homeMain.nhn?page=2"]
+        expected = ["http://m.navercast.naver.com/homeMain.nhn?page=1",
+                    "http://m.navercast.naver.com/homeMain.nhn?page=2"]
         self.assertEqual(expected, actual)
 
         actual = configs["post_process_script_list"]
@@ -501,8 +479,7 @@ class ConfigTest(unittest.TestCase):
         self.assertTrue(actual)
 
         actual = configs["render_js"]
-        expected = False
-        self.assertEqual(expected, actual)
+        self.assertFalse(actual)
 
         actual = configs["user_agent"]
         self.assertTrue(actual)
@@ -671,7 +648,8 @@ class URLTest(unittest.TestCase):
         self.assertEqual(URL.get_short_md5_name("https://terzeron.com"), "b8025d0")
 
     def test_encode(self):
-        self.assertEqual(URL.encode('http://5rs-wc22.com/식극의-소마/post/134225?a=테스트b'), 'http://5rs-wc22.com/%EC%8B%9D%EA%B7%B9%EC%9D%98-%EC%86%8C%EB%A7%88/post/134225?a=%ED%85%8C%EC%8A%A4%ED%8A%B8b')
+        self.assertEqual(URL.encode('http://5rs-wc22.com/식극의-소마/post/134225?a=테스트b'),
+                         'http://5rs-wc22.com/%EC%8B%9D%EA%B7%B9%EC%9D%98-%EC%86%8C%EB%A7%88/post/134225?a=%ED%85%8C%EC%8A%A4%ED%8A%B8b')
 
 
 class CacheTest(unittest.TestCase):
@@ -743,7 +721,7 @@ def count_substr(member: str, container: List[str]) -> int:
     return count
 
 
-class TestHtaccess(TestCase):
+class TestHtaccess(unittest.TestCase):
     def test_1_set_alias(self):
         group_name = "naver"
         feed_name = "nonexistent_feed_name"

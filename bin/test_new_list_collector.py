@@ -65,57 +65,52 @@ http://cartoon.media.daum.net/webtoon/view/mujigaebridge\t무지개다리 파수
             actual = self.collector.split_result_into_items(test_input)
             self.assertEqual(0, len(actual))
 
-            actual = mock_error.call_args_list
-            expected = call("Error: Can't split a line into link and title, line='http://cartoon.media.daum.net/webtoon/view/haksajaeseng'")
-            self.assertIn(expected, actual)
+            args_list = mock_error.call_args_list
+            expected = call(
+                "Error: Can't split a line into link and title, line='http://cartoon.media.daum.net/webtoon/view/haksajaeseng'")
+            self.assertIn(expected, args_list)
 
+    def test_compose_url_list(self):
+        actual = self.collector._compose_url_list()
+        self.assertTrue(len(actual) >= 5 and len(actual[0]) == 2)
 
-def test_compose_url_list(self):
-    actual = self.collector._compose_url_list()
-    self.assertTrue(len(actual) >= 5 and len(actual[0]) == 2)
+    @staticmethod
+    def count_tsv_file(tsv_file_path: Path):
+        num_lines = 0
+        num_items = 0
+        with open(tsv_file_path, "r", encoding="utf-8") as infile:
+            data = infile.read()
+            line_list = data.split("\n")
+            num_lines = len(line_list)
+            for line in line_list:
+                if "\t" in line:
+                    link, title = line.split("\t")
+                    if link and title:
+                        num_items += 1
+        return num_lines, num_items
 
+    def test_save_new_list_to_file(self):
+        new_list: List[Tuple[str, str]] = [
+            ("http://cartoon.media.daum.net/webtoon/view/dontgiveheart", "그 책에 마음을 주지 마세요"),
+            ("http://cartoon.media.daum.net/webtoon/view/mujigaebridge", "무지개다리 파수꾼")
+        ]
+        self.collector._save_new_list_to_file(new_list)
+        if self.collector.new_list_file_path.is_file():
+            num_lines, num_items = NewListCollectorTest.count_tsv_file(self.collector.new_list_file_path)
+            self.assertEqual(3, num_lines)
+            self.assertEqual(2, num_items)
+        else:
+            self.fail()
 
-@staticmethod
-
-
-def count_tsv_file(tsv_file_path: Path):
-    num_lines = 0
-    num_items = 0
-    with open(tsv_file_path, "r", encoding="utf-8") as infile:
-        data = infile.read()
-        line_list = data.split("\n")
-        num_lines = len(line_list)
-        for line in line_list:
-            if "\t" in line:
-                link, title = line.split("\t")
-                if line and title:
-                    num_items += 1
-    return num_lines, num_items
-
-
-def test_save_new_list_to_file(self):
-    new_list: List[Tuple[str, str]] = [
-        ("http://cartoon.media.daum.net/webtoon/view/dontgiveheart", "그 책에 마음을 주지 마세요"),
-        ("http://cartoon.media.daum.net/webtoon/view/mujigaebridge", "무지개다리 파수꾼")
-    ]
-    self.collector._save_new_list_to_file(new_list)
-    if self.collector.new_list_file_path.is_file():
-        num_lines, num_items = NewListCollectorTest.count_tsv_file(self.collector.new_list_file_path)
-        self.assertEqual(3, num_lines)
-        self.assertEqual(2, num_items)
-    else:
-        self.fail()
-
-
-def test_collect(self):
-    actual = self.collector.collect()
-    self.assertTrue(len(actual) >= 5 and len(actual[0]) == 2)
-    if self.collector.new_list_file_path.is_file():
-        num_lines, num_items = NewListCollectorTest.count_tsv_file(self.collector.new_list_file_path)
-        self.assertGreaterEqual(num_lines, 10)
-        self.assertGreaterEqual(num_items, 10)
-    else:
-        self.fail()
+    def test_collect(self):
+        actual = self.collector.collect()
+        self.assertTrue(len(actual) >= 5 and len(actual[0]) == 2)
+        if self.collector.new_list_file_path.is_file():
+            num_lines, num_items = NewListCollectorTest.count_tsv_file(self.collector.new_list_file_path)
+            self.assertGreaterEqual(num_lines, 10)
+            self.assertGreaterEqual(num_items, 10)
+        else:
+            self.fail()
 
 
 if __name__ == "__main__":

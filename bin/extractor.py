@@ -9,8 +9,9 @@ import html
 import getopt
 import logging.config
 from pathlib import Path
-from typing import Dict, Any
-from bs4 import BeautifulSoup, Comment
+from typing import Dict, Any, Optional
+from bs4 import BeautifulSoup
+from bs4.element import Comment
 from feed_maker_util import Config, URL, HTMLExtractor, header_str
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
@@ -18,7 +19,7 @@ LOGGER = logging.getLogger()
 
 
 class Extractor:
-    def extract_content(self, extraction_conf: Dict[str, Any], item_url: str, input_data: str = None) -> str:
+    def extract_content(self, extraction_conf: Dict[str, Any], item_url: str, input_data: str = None) -> Optional[str]:
         LOGGER.debug(f"# extract_content(extraction_conf={extraction_conf}, item_url={item_url})")
 
         # configuration
@@ -84,7 +85,8 @@ class Extractor:
 
         return result
 
-    def _check_element_class(self, element, element_name, class_name) -> bool:
+    @staticmethod
+    def _check_element_class(element, element_name, class_name) -> bool:
         if element.name == element_name and element.has_attr("class") and class_name in element["class"]:
             return True
         return False
@@ -180,15 +182,9 @@ class Extractor:
             if src:
                 if element.has_attr("width"):
                     width = element["width"]
-                    attribute_str += " width='{width}'"
+                    attribute_str += f" width='{width}'"
                 result += f"<img src='{src}'{attribute_str}/>\n"
         elif element.name == "a":
-            if element.has_attr("onclick"):
-                # 주석레이어 제거
-                m = re.search(r"(open|close)FootnoteLayer\('(\d+)'", element["onclick"])
-                if m:
-                    open_or_close = m.group(1)
-                    return result
             if element.has_attr("href"):
                 # complementing href value
                 href = element["href"]
@@ -210,7 +206,8 @@ class Extractor:
                 else:
                     result += str(element)
             elif element.name in ["param", "object"]:
-                if element.has_attr("name") and element["name"] == "Src" and element.has_attr("value") and ".swf" in element["value"]:
+                if element.has_attr("name") and element["name"] == "Src" and element.has_attr("value") and ".swf" in \
+                        element["value"]:
                     src = element["value"]
                     result += f"<video src='{src}'></video><br/>\n"
                     result += f"<a href='{src}'>{src}</a><br/>\n"
@@ -287,6 +284,7 @@ def main() -> int:
 
     extractor = Extractor()
     result = extractor.extract_content(extraction_conf, args[0])
+    del extractor
     if result:
         print(result)
         return 0

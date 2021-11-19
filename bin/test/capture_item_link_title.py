@@ -6,8 +6,8 @@ import re
 import getopt
 from feed_maker_util import IO
 
-    
-def main():
+
+def main() -> int:
     link = ""
     url_prefix = "http://terms.naver.com/"
     title = ""
@@ -36,8 +36,10 @@ def main():
                 state = 0
 
     for (link, title) in result_list[:num_of_recent_feeds]:
-        print("%s\t%s" % (link, title))
-                
-            
+        print(f"{link}\t{title}")
+
+    return 0
+
+
 if __name__ == "__main__":
     sys.exit(main())

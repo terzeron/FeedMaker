@@ -3,10 +3,7 @@
 
 
 import re
-import json
 import unittest
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from headless_browser import HeadlessBrowser
 
 

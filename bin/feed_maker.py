@@ -28,8 +28,10 @@ class FeedMaker:
     WINDOW_SIZE = 5
     IMAGE_TAG_FMT_STR = "<img src='https://terzeron.com/img/1x1.jpg?feed=%s&item=%s'/>"
 
-    def __init__(self, feed_dir_path: Path, do_collect_by_force: bool, do_collect_only: bool, rss_file_path: Path) -> None:
-        LOGGER.debug(f"# FeedMaker(feed_dir_path={feed_dir_path}, do_collect_by_force={do_collect_by_force}, do_collect_only={do_collect_only}, rss_file_path={rss_file_path})")
+    def __init__(self, feed_dir_path: Path, do_collect_by_force: bool, do_collect_only: bool,
+                 rss_file_path: Path) -> None:
+        LOGGER.debug(
+            f"# FeedMaker(feed_dir_path={feed_dir_path}, do_collect_by_force={do_collect_by_force}, do_collect_only={do_collect_only}, rss_file_path={rss_file_path})")
         self.work_dir_path = Path(os.environ["FEED_MAKER_WORK_DIR"])
         self.feed_dir_path = feed_dir_path
         self.collection_conf: Dict[str, Any] = {}
@@ -91,7 +93,6 @@ class FeedMaker:
     def _cmp_int_or_str(a: Dict[str, str], b: Dict[str, str]) -> int:
         m1 = re.search(r'^\d+$', a["sf"])
         m2 = re.search(r'^\d+$', b["sf"])
-        ret: int = 0
 
         if m1 and m2:
             ret = int(a["sf"]) - int(b["sf"])
@@ -131,12 +132,12 @@ class FeedMaker:
 
         return K
 
-    def _read_old_feed_list_from_file(self) -> Optional[List[Tuple[str, str]]]:
+    def _read_old_feed_list_from_file(self) -> List[Tuple[str, str]]:
         LOGGER.debug("# read_old_feed_list_from_file()")
 
         if not self.collection_conf:
             LOGGER.error("ERROR: can't get collection configuration")
-            return None
+            return []
 
         feed_list: List[Tuple[str, str]] = []
         dt = Datetime.get_current_time()
@@ -190,10 +191,12 @@ class FeedMaker:
 
         image_tag_str = FeedMaker.get_image_tag_str(self.rss_file_path.name, item_url)
 
-        if os.path.isfile(html_file_path) and size > FeedMaker.get_size_of_template_with_image_tag(self.rss_file_path.name):
+        if os.path.isfile(html_file_path) and size > FeedMaker.get_size_of_template_with_image_tag(
+                self.rss_file_path.name):
             # 이미 성공적으로 만들어져 있으니까, 이미지 태그만 검사해보고 피드 리스트에 추가
             if FeedMaker._is_image_tag_in_html_file(html_file_path, image_tag_str):
-                LOGGER.info(f"Old: {item_url}\t{title}\t{html_file_path.relative_to(self.work_dir_path)} ({size} bytes > {self._get_size_of_template()} bytes of template)")
+                LOGGER.info(
+                    f"Old: {item_url}\t{title}\t{html_file_path.relative_to(self.work_dir_path)} ({size} bytes > {self._get_size_of_template()} bytes of template)")
                 ret = True
             else:
                 LOGGER.error(f"Error: No image tag in html file '{html_file_path}'")
@@ -204,7 +207,11 @@ class FeedMaker:
         else:
             # 파일이 존재하지 않거나 크기가 작으니 다시 생성 시도
             conf = self.extraction_conf
-            crawler = Crawler(dir_path=self.feed_dir_path, render_js=conf["render_js"], method=Method.GET, headers=conf["header_list"], timeout=conf["timeout"], num_retries=conf["num_retries"], encoding=conf["encoding"], verify_ssl=conf["verify_ssl"], copy_images_from_canvas=conf["copy_images_from_canvas"], simulate_scrolling=conf["simulate_scrolling"], disable_headless=conf["disable_headless"])
+            crawler = Crawler(dir_path=self.feed_dir_path, render_js=conf["render_js"], method=Method.GET,
+                              headers=conf["header_list"], timeout=conf["timeout"], num_retries=conf["num_retries"],
+                              encoding=conf["encoding"], verify_ssl=conf["verify_ssl"],
+                              copy_images_from_canvas=conf["copy_images_from_canvas"],
+                              simulate_scrolling=conf["simulate_scrolling"], disable_headless=conf["disable_headless"])
             option_str = Crawler.get_option_str(conf)
             crawler_cmd = f"crawler.py -f '{self.feed_dir_path}' {option_str} '{item_url}'"
             LOGGER.debug(f"cmd={crawler_cmd}")
@@ -217,14 +224,14 @@ class FeedMaker:
                 extraction_cmd = f"extractor.py -f '{self.feed_dir_path}' '{item_url}'"
                 LOGGER.debug(f"cmd={extraction_cmd}")
                 extractor = Extractor()
-                result = extractor.extract_content(conf, item_url, input_data=result)
+                content = extractor.extract_content(conf, item_url, input_data=result)
                 del extractor
-                if not result:
+                if not content:
                     return False
 
             for post_process_script in conf["post_process_script_list"]:
                 post_process_cmd = f"{post_process_script} -f '{self.feed_dir_path}' '{item_url}'"
-                result, error_msg = Process.exec_cmd(post_process_cmd, dir_path=self.feed_dir_path, input_data=result)
+                result, error_msg = Process.exec_cmd(post_process_cmd, dir_path=self.feed_dir_path, input_data=content)
                 LOGGER.debug(f"cmd={post_process_cmd}")
                 if not result:
                     LOGGER.error(f"Error: No result in executing command '{post_process_cmd}")
@@ -232,6 +239,7 @@ class FeedMaker:
                 if error_msg:
                     LOGGER.error("Error: %s", error_msg)
                     return False
+                content = result
 
             LOGGER.debug(f"writing to '{html_file_path}'")
             with open(html_file_path, "w", encoding="utf-8") as outfile:
@@ -247,11 +255,13 @@ class FeedMaker:
                     FeedMaker._append_image_tag_to_html_file(html_file_path, image_tag_str)
 
                 # 피드 리스트에 추가
-                LOGGER.info(f"New: {item_url}\t{title}\t{html_file_path.relative_to(self.work_dir_path)} ({size} bytes > {self._get_size_of_template()} bytes of template)")
+                LOGGER.info(
+                    f"New: {item_url}\t{title}\t{html_file_path.relative_to(self.work_dir_path)} ({size} bytes > {self._get_size_of_template()} bytes of template)")
                 ret = True
             else:
                 # 피드 리스트에서 제외
-                LOGGER.warning(f"Warning: excluded {item_url}\t{title}\t{html_file_path.relative_to(self.work_dir_path)} ({size} bytes <= {self._get_size_of_template()} bytes of template)")
+                LOGGER.warning(
+                    f"Warning: excluded {item_url}\t{title}\t{html_file_path.relative_to(self.work_dir_path)} ({size} bytes <= {self._get_size_of_template()} bytes of template)")
                 ret = False
 
             if conf["force_sleep_between_articles"]:
@@ -276,18 +286,20 @@ class FeedMaker:
         start_idx = 0
         end_idx = self.WINDOW_SIZE
         mtime = Datetime.get_current_time()
-        next_start_idx, current_time_str = self._write_idx_data(start_idx, mtime, True)
+        _, current_time_str = self._write_idx_data(start_idx, mtime, True)
         if not current_time_str:
             return 0, 0, None
         return start_idx, end_idx, mtime
 
-    def _write_idx_data(self, start_idx: int, mtime: datetime, do_write_initially: bool = False) -> Tuple[int, Optional[str]]:
+    def _write_idx_data(self, start_idx: int, mtime: datetime, do_write_initially: bool = False) -> Tuple[
+        int, Optional[str]]:
         LOGGER.debug(f"# write_idx_data(start_idx={start_idx}, mtime={mtime})")
 
         current_time = Datetime.get_current_time()
         delta = current_time - mtime
         increment_size = int((delta.total_seconds() * self.collection_conf["unit_size_per_day"]) / 86400)
-        LOGGER.debug(f"start_idx={start_idx}, current time={current_time}, mtime={mtime}, self.WINDOW_SIZE={self.WINDOW_SIZE}, increment_size={increment_size}")
+        LOGGER.debug(
+            f"start_idx={start_idx}, current time={current_time}, mtime={mtime}, self.WINDOW_SIZE={self.WINDOW_SIZE}, increment_size={increment_size}")
         next_start_idx = 0
         current_time_str = None
         if do_write_initially or increment_size > 0:
@@ -332,7 +344,8 @@ class FeedMaker:
 
         # 전체 리스트 중 절반 이상의 정렬필드를 검출하지 못하면 경고
         if matched_count > len(old_feed_list) / 2:
-            sorted_feed_list: List[Dict[str, Any]] = sorted(feed_id_sort_field_list, key=self._cmp_to_key(self._cmp_int_or_str))
+            sorted_feed_list: List[Dict[str, Any]] = sorted(feed_id_sort_field_list,
+                                                            key=self._cmp_to_key(self._cmp_int_or_str))
         else:
             LOGGER.warning(f"Warning: can't match the pattern /{self.collection_conf['sort_field_pattern']}/")
             sorted_feed_list = feed_id_sort_field_list
@@ -346,7 +359,7 @@ class FeedMaker:
         for i, feed in enumerate(sorted_feed_list):
             feed_id = feed["id"]
             if start_idx <= i < end_idx:
-                link, title = old_feed_list[feed_id]
+                # link, title = old_feed_list[feed_id]
                 result_feed_list.append(old_feed_list[feed_id])
 
         next_start_idx, current_time_str = self._write_idx_data(start_idx, mtime)
@@ -362,7 +375,8 @@ class FeedMaker:
         collector = NewListCollector(self.feed_dir_path, self.collection_conf, new_list_file_path)
         return collector.collect()
 
-    def _diff_feeds_and_make_htmls(self, recent_feed_list: List[Tuple[str, str]], old_feed_list: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
+    def _diff_feeds_and_make_htmls(self, recent_feed_list: List[Tuple[str, str]],
+                                   old_feed_list: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
         LOGGER.debug(f"# diff_feeds_and_make_htmls(recent_feed_list={recent_feed_list}, old_feed_list={old_feed_list})")
 
         recent_set = OrderedSet(recent_feed_list)
@@ -393,7 +407,8 @@ class FeedMaker:
         short_date_str = Datetime.get_short_date_str()
         temp_rss_file_path = self.rss_file_path.with_suffix("." + short_date_str)
         old_rss_file_path = self.rss_file_path.with_suffix(self.rss_file_path.suffix + ".old")
-        LOGGER.debug(f"rss_file_path={self.rss_file_path}, temp_rss_file_path={temp_rss_file_path}, old_rss_file_path={old_rss_file_path}")
+        LOGGER.debug(
+            f"rss_file_path={self.rss_file_path}, temp_rss_file_path={temp_rss_file_path}, old_rss_file_path={old_rss_file_path}")
 
         LOGGER.info("Generating rss feed file...")
         rss_items: List[PyRSS2Gen.RSSItem] = []
@@ -512,7 +527,7 @@ class FeedMaker:
 
             if self.collection_conf["ignore_old_list"]:
                 del old_feed_list[:]
-                new_feed_list = recent_feed_list
+                # new_feed_list = recent_feed_list
 
             # 과거 피드항목 리스트와 최근 피드항목 리스트를 비교함
             final_feed_list = self._diff_feeds_and_make_htmls(recent_feed_list, old_feed_list)

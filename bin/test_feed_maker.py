@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 import unittest
 from unittest.mock import patch, call
 from typing import Any
+from xml.dom.minidom import parse
 from feed_maker import FeedMaker
 from feed_maker_util import Config, Datetime
 
@@ -193,7 +194,10 @@ class TestFeedMaker(unittest.TestCase):
         expected = (0, 5)
         dt2 = Datetime.get_current_time()
         self.assertEqual(expected, actual[0:2])
-        self.assertTrue(dt1 < actual[2] < dt2)
+        datetime_str = actual[2]
+        self.assertIsNotNone(datetime_str)
+        if datetime_str:
+            self.assertTrue(dt1 < datetime_str < dt2)
 
     def test_write_idx_data(self):
         dt = Datetime.get_current_time()
@@ -271,7 +275,6 @@ class TestFeedMaker(unittest.TestCase):
             self.assertTrue(assert_in_mock_logger("Generating rss feed file...", mock_info))
 
             with open(self.rss_file_path, "r", encoding="utf-8") as infile:
-                from xml.dom.minidom import parse, parseString
                 document = parse(infile)
                 count = 0
                 for rss in document.childNodes:
