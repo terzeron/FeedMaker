@@ -62,6 +62,7 @@ class NewListCollector:
             result, error, _ = crawler.run(url)
             if not result or error:
                 LOGGER.warning("Warning: can't get response from crawler")
+                LOGGER.debug(error)
                 continue
 
             capture_cmd = f"{self.collection_conf['item_capture_script']} -f '{self.feed_dir_path}'"
@@ -69,6 +70,7 @@ class NewListCollector:
             result, error_msg = Process.exec_cmd(capture_cmd, dir_path=self.feed_dir_path, input_data=result)
             if not result or error_msg:
                 LOGGER.warning("Warning: can't get result from item capture script")
+                LOGGER.debug(error_msg)
                 continue
 
             for post_process_script in self.collection_conf["post_process_script_list"]:
@@ -82,6 +84,7 @@ class NewListCollector:
                 result, error_msg = Process.exec_cmd(post_process_cmd, dir_path=self.feed_dir_path, input_data=result)
                 if not result or error:
                     LOGGER.warning("Warning: can't get result from post process scripts")
+                    LOGGER.debug(error_msg)
 
             url_list = self.split_result_into_items(result)
             result_list.extend(url_list)
