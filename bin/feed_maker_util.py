@@ -487,7 +487,7 @@ class Config:
                     "encoding": Config._get_str_config_value(extraction_conf, "encoding", "utf-8"),
                     "referer": Config._get_str_config_value(extraction_conf, "referer"),
 
-                    "timeout": Config._get_int_config_value(extraction_conf, "timeout"),
+                    "timeout": Config._get_int_config_value(extraction_conf, "timeout", 60),
                     "num_retries": Config._get_int_config_value(extraction_conf, "num_retries", 1),
 
                     "element_id_list": Config._get_config_value_list(extraction_conf, "element_id_list", []),
