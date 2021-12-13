@@ -101,7 +101,7 @@ class TestFeedMaker(unittest.TestCase):
 
     def test_get_size_of_template_with_image_tag(self):
         actual = FeedMaker.get_size_of_template_with_image_tag(self.rss_file_path.name)
-        expected = 407
+        expected = 438
         self.assertEqual(expected, actual)
 
     def test_is_image_tag_in_html_file(self):
@@ -134,7 +134,7 @@ class TestFeedMaker(unittest.TestCase):
 
     def test_get_size_of_template(self):
         actual = FeedMaker._get_size_of_template()
-        expected = 328
+        expected = 359
         self.assertEqual(expected, actual)
 
     def test_get_html_file_path(self):

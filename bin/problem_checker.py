@@ -123,7 +123,7 @@ class ProblemChecker:
 
                             if "collection" in json_data["configuration"] and "list_url_list" in \
                                     json_data["configuration"]["collection"] and not group_name.startswith(
-                                    "_") and not feed_name.startswith("_"):
+                                "_") and not feed_name.startswith("_"):
                                 feed_name_list_url_count_map[feed_name] = len(
                                     json_data["configuration"]["collection"]["list_url_list"])
                             if "collection" in json_data["configuration"]:
@@ -360,24 +360,31 @@ class ProblemChecker:
     @staticmethod
     def _is_in_dormant_status(status_info) -> bool:
         if not status_info["http_request"] and not status_info["htaccess"] and not status_info["public_html"] and not \
-        status_info["feedmaker"]:
+                status_info["feedmaker"]:
             return True
         return False
 
     @staticmethod
     def _is_in_requested_ago_but_deleted_status(status_info, num_days) -> bool:
-        if status_info["http_request"] and not status_info["htaccess"] and not status_info["public_html"] and not \
-        status_info["feedmaker"] and status_info["access_date"] and status_info[
-            "access_date"] < datetime.today() - timedelta(days=num_days):
+        if status_info["http_request"] and \
+                not status_info["htaccess"] and \
+                not status_info["public_html"] and \
+                not status_info["feedmaker"] and \
+                status_info["access_date"] and \
+                status_info["access_date"] < datetime.today() - timedelta(days=num_days):
             return True
         return False
 
     @staticmethod
     def _is_in_accessed_or_viewed_recently_status(status_info, num_days) -> bool:
-        if status_info["http_request"] and status_info["htaccess"] and status_info["public_html"] and status_info[
-            "feedmaker"] and status_info["access_date"] and datetime.today() - timedelta(days=num_days) < status_info[
-            "access_date"] or status_info["view_date"] and datetime.today() - timedelta(days=num_days) < status_info[
-            "view_date"]:
+        if status_info["http_request"] and \
+                status_info["htaccess"] and \
+                status_info["public_html"] and \
+                status_info["feedmaker"] and \
+                status_info["access_date"] and \
+                datetime.today() - timedelta(days=num_days) < status_info["access_date"] or \
+                status_info["view_date"] and \
+                datetime.today() - timedelta(days=num_days) < status_info["view_date"]:
             return True
         return False
 

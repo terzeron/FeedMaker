@@ -25,6 +25,7 @@
       "force_sleep_between_articles": false,
       "copy_images_from_canvas": false,
       "simulate_scrolling": false,
+      "blob_to_dataurl": false,
       "user_agent": "Mozilla",
       "referer": null,
       "element_id_list": [

@@ -30,7 +30,7 @@ class CrawlerTest(unittest.TestCase):
         del crawler
 
     def test_imagesInCanvas(self):
-        url = "https://terzeron.com/images_in_canvas_test.html"
+        url = "https://terzeron.com/crawler/images_in_canvas_test.html"
         crawler = Crawler(render_js=True, copy_images_from_canvas=True)
         actual, _, _ = crawler.run(url)
         m = re.search(r'<div class="images_from_canvas"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAABkCAYAAADDhn8LAAAAAX.*KBUgI3O8Nj9LDhwKlP8DuACSYNiipSoAAAAASUVORK5CYII="></div>', actual)

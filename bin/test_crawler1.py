@@ -53,7 +53,7 @@ class CrawlerTest(unittest.TestCase):
         expected = " --render-js=true --copy-images-from-canvas=false --simulate-scrolling=true --user-agent='Firefox' --referer='https://abc.com' --encoding='cp949' --header='Content-Type: application/json' --header='Transfer-Encoding: chunked' --timeout=20"
         self.assertEqual(expected, actual)
 
-    def test_basic_nstantiation(self):
+    def test_crawler(self):
         crawler = Crawler()
         self.assertTrue(crawler)
         actual, _, _ = crawler.run("https://m.naver.com")
@@ -69,7 +69,7 @@ class CrawlerTest(unittest.TestCase):
         self.assertEqual("200", actual)
         del crawler
 
-    def test_instantiate_with_options(self):
+    def test_crawler_without_options(self):
         # default parameter
         crawler = Crawler()
         client = crawler.requests_client
@@ -83,33 +83,40 @@ class CrawlerTest(unittest.TestCase):
         del client
         del crawler
 
+    def test_crawler_with_num_retries(self):
         crawler = Crawler(num_retries=3)
         self.assertEqual(3, crawler.num_retries)
         del crawler
 
+    def test_crawler_with_render_js(self):
         crawler = Crawler(render_js=True)
         self.assertEqual(True, crawler.render_js)
         del crawler
+
         crawler = Crawler(render_js=False)
         self.assertEqual(False, crawler.render_js)
         del crawler
 
+    def test_crawler_with_method(self):
         crawler = Crawler(method=Method.GET)
         client = crawler.requests_client
         self.assertEqual(Method.GET, client.method)
         del client
         del crawler
+
         crawler = Crawler(method=Method.HEAD)
         client = crawler.requests_client
         self.assertEqual(Method.HEAD, client.method)
         del client
         del crawler
+
         crawler = Crawler(method=Method.POST)
         client = crawler.requests_client
         self.assertEqual(Method.POST, client.method)
         del client
         del crawler
 
+    def test_crawler_with_headers(self):
         crawler = Crawler(headers={})
         client = crawler.requests_client
         self.assertEqual({'User-Agent': DEFAULT_USER_AGENT}, client.headers)
@@ -122,23 +129,33 @@ class CrawlerTest(unittest.TestCase):
         del client
         del crawler
 
+    def test_crawler_with_timeout(self):
         crawler = Crawler(timeout=5)
         client = crawler.requests_client
         self.assertEqual(5, client.timeout)
         del client
         del crawler
 
+    def test_crawler_with_encoding(self):
         crawler = Crawler(encoding="cp949")
         client = crawler.requests_client
         self.assertEqual("cp949", client.encoding)
         del client
         del crawler
 
+        crawler = Crawler(encoding="utf-8")
+        client = crawler.requests_client
+        self.assertEqual("utf-8", client.encoding)
+        del client
+        del crawler
+
+    def test_crawler_with_verify_ssl(self):
         crawler = Crawler(verify_ssl=False)
         client = crawler.requests_client
         self.assertEqual(False, client.verify_ssl)
         del client
         del crawler
+
         crawler = Crawler(verify_ssl=True)
         client = crawler.requests_client
         self.assertEqual(True, client.verify_ssl)

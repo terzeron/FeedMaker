@@ -25,7 +25,7 @@ LOGGER = logging.getLogger()
 # noinspection PyPep8
 header_str = '''<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no"/>
-<style>img { max-width: 100%; margin-top: 0px; margin-bottom: 0px; } table { border-width: thin; border-style: dashed; }</style>
+<style>img { max-width: 100%; margin-top: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; } table { border-width: thin; border-style: dashed; }</style>
 
 '''
 
@@ -87,7 +87,7 @@ class Notification:
         try:
             mail1.send(subject=subject, text=msg, recipients=receiver, sender=sender, smtp_host=smtp_host)
         except ConnectionRefusedError as e:
-            LOGGER.warning("Warning:", str(e))
+            LOGGER.warning("Warning: %s", str(e))
             raise e
         return True
 
@@ -133,6 +133,7 @@ class Process:
         if program.startswith("./") or program.startswith("../"):
             program_path = (dir_path / program).resolve()
         else:
+            program_full_path: Optional[str]
             if program.startswith("/"):
                 program_full_path = program
             else:
@@ -446,6 +447,7 @@ class Config:
                                                                              False),
                     "simulate_scrolling": Config._get_bool_config_value(collection_conf, "simulate_scrolling", False),
                     "disable_headless": Config._get_bool_config_value(collection_conf, "disable_headless", False),
+                    "blob_to_dataurl": Config._get_bool_config_value(collection_conf, "blob_to_dataurl", False),
 
                     "item_capture_script": Config._get_str_config_value(collection_conf, "item_capture_script",
                                                                         "./capture_item_link_title.py"),
@@ -482,6 +484,7 @@ class Config:
                                                                              "copy_images_from_canvas"),
                     "simulate_scrolling": Config._get_bool_config_value(extraction_conf, "simulate_scrolling"),
                     "disable_headless": Config._get_bool_config_value(extraction_conf, "disable_headless", False),
+                    "blob_to_dataurl": Config._get_bool_config_value(extraction_conf, "blob_to_dataurl", False),
 
                     "user_agent": Config._get_str_config_value(extraction_conf, "user_agent"),
                     "encoding": Config._get_str_config_value(extraction_conf, "encoding", "utf-8"),

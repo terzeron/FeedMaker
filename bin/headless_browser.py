@@ -16,11 +16,11 @@ import selenium
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
 LOGGER = logging.getLogger()
-DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36"
 
 
 class HeadlessBrowser:
     COOKIE_FILE = "cookies.headlessbrowser.json"
+    DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36"
     GETTING_METADATA_SCRIPT = '''
         var metas = document.getElementsByTagName("meta");
         var has_og_url_property = false;
@@ -65,19 +65,49 @@ class HeadlessBrowser:
         }'''
     SETTING_PLUGINS_SCRIPT = "Object.defineProperty(navigator, 'plugins', {get: function() {return[1, 2, 3, 4, 5];},});"
     SETTING_LANGUAGES_SCRIPT = "Object.defineProperty(navigator, 'languages', {get: function() {return ['ko-KR', 'ko']}})"
+    CONVERTING_BLOB_TO_DATAURL_SCRIPT = '''
+        function readFileAsync(file, img) {
+            const reader = new FileReader();
+            const promise = new Promise((resolve) => {
+                reader.onload = ((img) => {
+                    return (e) => {
+                        resolve([e.target.result, img]);
+                    };
+                })(img);
+                reader.readAsDataURL(file);
+            });
+            return promise;
+        }
+        
+        (async function () {
+            var images = document.getElementsByTagName("img");
+            for (var i = 0; i < images.length; i++) {
+                if (images[i] && images[i].src && images[i].src.startsWith("blob:")) {
+                    const response = await fetch(images[i].src);
+                    const data = await response.arrayBuffer();
+                    var returnedBlob = new Blob([data], {type: 'image/png'});
+                    readFileAsync(returnedBlob, images[i]).then(([dataURL, img]) => {
+                        if (img && img.src) {
+                            img.src = dataURL;
+                        }
+                    })
+                }
+            }
+        }());'''
 
     def __init__(self, dir_path: Path = Path.cwd(), headers: Dict[str, Any] = None,
                  copy_images_from_canvas: bool = False, simulate_scrolling: bool = False,
-                 disable_headless: bool = False, timeout: int = 60) -> None:
+                 disable_headless: bool = False, blob_to_dataurl: bool = False, timeout: int = 60) -> None:
         LOGGER.debug(
-            f"# HeadlessBrowser(dir_path={dir_path}, headers={headers}, copy_images_from_canvas={copy_images_from_canvas}, simulate_scrolling={simulate_scrolling}, disable_headless={disable_headless}, timeout={timeout})")
+            f"# HeadlessBrowser(dir_path={dir_path}, headers={headers}, copy_images_from_canvas={copy_images_from_canvas}, simulate_scrolling={simulate_scrolling}, disable_headless={disable_headless}, blob_to_dataurl={blob_to_dataurl}, timeout={timeout})")
         self.dir_path: Path = dir_path
         self.headers: Dict[str, str] = headers if headers else {}
         if "User-Agent" not in self.headers:
-            self.headers["User-Agent"] = DEFAULT_USER_AGENT
+            self.headers["User-Agent"] = HeadlessBrowser.DEFAULT_USER_AGENT
         self.copy_images_from_canvas: bool = copy_images_from_canvas
         self.simulate_scrolling: bool = simulate_scrolling
         self.disable_headless: bool = disable_headless
+        self.blob_to_dataurl: bool = blob_to_dataurl
         self.timeout: int = timeout
 
     def __del__(self):
@@ -149,6 +179,10 @@ class HeadlessBrowser:
 
         LOGGER.debug("executing a script for metadata")
         driver.execute_script(HeadlessBrowser.GETTING_METADATA_SCRIPT)
+
+        if self.blob_to_dataurl:
+            LOGGER.debug("converting blob to dataurl")
+            driver.execute_script(HeadlessBrowser.CONVERTING_BLOB_TO_DATAURL_SCRIPT)
 
         if self.copy_images_from_canvas:
             LOGGER.debug("converting canvas to images")

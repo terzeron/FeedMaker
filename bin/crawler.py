@@ -114,9 +114,9 @@ class Crawler:
     def __init__(self, dir_path: Path = Path.cwd(), render_js: bool = False, method: Method = Method.GET,
                  headers: Dict[str, Any] = None, timeout: int = 60, num_retries: int = 1, encoding: str = "utf-8",
                  verify_ssl: bool = True, copy_images_from_canvas: bool = False, simulate_scrolling: bool = False,
-                 disable_headless: bool = False) -> None:
+                 disable_headless: bool = False, blob_to_dataurl: bool = False) -> None:
         LOGGER.debug(
-            f"# Crawler(dir_path={dir_path}, render_js={render_js}, method={method}, headers={headers}, timeout={timeout}, num_retries={num_retries}, encoding={encoding}, verify_ssl={verify_ssl}, copy_images_from_canvas={copy_images_from_canvas}, simulate_scrolling={simulate_scrolling}, disable_headless={disable_headless})")
+            f"# Crawler(dir_path={dir_path}, render_js={render_js}, method={method}, headers={headers}, timeout={timeout}, num_retries={num_retries}, encoding={encoding}, verify_ssl={verify_ssl}, copy_images_from_canvas={copy_images_from_canvas}, simulate_scrolling={simulate_scrolling}, disable_headless={disable_headless}, blob_to_dataurl={blob_to_dataurl})")
         self.dir_path = dir_path
         self.render_js = render_js
         self.method = method
@@ -130,12 +130,14 @@ class Crawler:
         self.copy_images_from_canvas = copy_images_from_canvas
         self.simulate_scrolling = simulate_scrolling
         self.disable_headless = disable_headless
+        self.blob_to_dataurl = blob_to_dataurl
         if self.render_js:
             # headless browser
             self.headless_browser = HeadlessBrowser(dir_path=self.dir_path, headers=self.headers,
                                                     copy_images_from_canvas=copy_images_from_canvas,
                                                     simulate_scrolling=simulate_scrolling,
-                                                    disable_headless=disable_headless, timeout=timeout)
+                                                    disable_headless=disable_headless, blob_to_dataurl=blob_to_dataurl,
+                                                    timeout=timeout)
         else:
             self.requests_client = RequestsClient(dir_path=self.dir_path, method=method, headers=self.headers,
                                                   timeout=timeout, encoding=encoding, verify_ssl=verify_ssl)
@@ -164,6 +166,9 @@ class Crawler:
         if "simulate_scrolling" in options:
             simulate_scrolling = "true" if options["simulate_scrolling"] else "false"
             option_str += f" --simulate-scrolling={simulate_scrolling}"
+        if "blob_to_dataurl" in options:
+            blob_to_dataurl = "true" if options["blob_to_dataurl"] else "false"
+            option_str += f" --blob-to-dataurl={blob_to_dataurl}"
         if "user_agent" in options and options["user_agent"]:
             user_agent = options["user_agent"]
             option_str += f" --user-agent='{user_agent}'"
@@ -223,6 +228,7 @@ def print_usage() -> None:
     print("\t--copy-images-from-canvas=true/false\t\timage in canvas element (in headless browser)")
     print("\t--simulate-scrolling=true/false\t\tsimulate scrolling (in headless browser)")
     print("\t--disable-headless=true/false\t\tshow browser (in headless browser)")
+    print("\t--blob-to-dataurl=true/false\t\tconvert blob to data URL (in headless browser)")
     print("\t--download=<file>\t\tdownload as a file, instead of stdout")
     print("\t--header=<header string>\tspecify header string")
     print("\t--encoding=<encoding>\t\tspecify encoding of content")
@@ -247,6 +253,7 @@ def main() -> int:
     copy_images_from_canvas: bool = False
     simulate_scrolling: bool = False
     disable_headless: bool = False
+    blob_to_dataurl: bool = False
 
     if len(sys.argv) == 1:
         print_usage()
@@ -255,8 +262,8 @@ def main() -> int:
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hf:",
                                    ["spider", "render-js=", "verify-ssl=", "copy-images-from-canvas=",
-                                    "simulate-scrolling=", "disable-headless=", "download=", "encoding=", "user-agent=",
-                                    "referer=", "header=", "timeout=", "retry="])
+                                    "simulate-scrolling=", "disable-headless=", "blob-to-dataurl=", "download=",
+                                    "encoding=", "user-agent=", "referer=", "header=", "timeout=", "retry="])
     except getopt.GetoptError:
         print_usage()
         sys.exit(-1)
@@ -283,6 +290,8 @@ def main() -> int:
             simulate_scrolling = (a == "true")
         elif o == "--disable-headless":
             disable_headless = (a == "true")
+        elif o == "--blob-to-dataurl":
+            blob_to_dataurl = (a == "true")
         elif o == "--header":
             m = re.search(r'^(?P<key>[^:]+)\s*:\s*(?P<value>.+)\s*$', a)
             if m:
@@ -303,7 +312,7 @@ def main() -> int:
     crawler = Crawler(dir_path=feed_dir_path, render_js=render_js, method=method, timeout=timeout,
                       num_retries=num_retries, encoding=encoding, verify_ssl=verify_ssl,
                       copy_images_from_canvas=copy_images_from_canvas, simulate_scrolling=simulate_scrolling,
-                      disable_headless=disable_headless)
+                      disable_headless=disable_headless, blob_to_dataurl=blob_to_dataurl)
     response, _, _ = crawler.run(url, download_file=download_file)
     print(response)
     return 0

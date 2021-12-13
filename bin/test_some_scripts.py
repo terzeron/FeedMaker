@@ -39,8 +39,8 @@ def main() -> int:
         "naver/windbreaker": [
             f"{fm_home}/utils/download_merge_split.py -f '/Users/terzeron/workspace/fma/naver/windbreaker' -m -c fuzzy 'https://comic.naver.com/webtoon/detail.nhn?titleId=602910&no=197'"
         ],
-        "naver/naverpost.businessinsight": [
-            f"{fm_home}/bin/extractor.py -f '/Users/terzeron/workspace/fma/naver/naverpost.businessinsight' 'http://m.post.naver.com/viewer/postView.nhn?volumeNo=14122118&memberNo=35786474'"
+        "naver/naverpost.interbiz": [
+            f"{fm_home}/bin/extractor.py -f '/Users/terzeron/workspace/fma/naver/naverpost.interbiz' 'http://m.post.naver.com/viewer/postView.nhn?volumeNo=14122118&memberNo=35786474'"
         ],
     }
 

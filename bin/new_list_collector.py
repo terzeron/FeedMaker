@@ -54,7 +54,8 @@ class NewListCollector:
                           headers=conf["header_list"], timeout=conf["timeout"], num_retries=conf["num_retries"],
                           encoding=conf["encoding"], verify_ssl=conf["verify_ssl"],
                           copy_images_from_canvas=conf["copy_images_from_canvas"],
-                          simulate_scrolling=conf["simulate_scrolling"], disable_headless=conf["disable_headless"])
+                          simulate_scrolling=conf["simulate_scrolling"], disable_headless=conf["disable_headless"],
+                          blob_to_dataurl=conf["blob_to_dataurl"])
         option_str = Crawler.get_option_str(self.collection_conf)
         for url in conf["list_url_list"]:
             crawler_cmd = f"crawler.py -f '{self.feed_dir_path}' {option_str} '{url}'"
@@ -76,7 +77,9 @@ class NewListCollector:
             for post_process_script in self.collection_conf["post_process_script_list"]:
                 program = post_process_script.split(" ")[0]
                 program_fullpath = find_executable(program)
-                if program_fullpath and (program_fullpath.startswith("/usr") or program_fullpath.startswith("/bin") or program_fullpath.startswith("/sbin")):
+                if program_fullpath and (program_fullpath.startswith("/usr") or
+                                         program_fullpath.startswith("/bin") or
+                                         program_fullpath.startswith("/sbin")):
                     post_process_cmd = f"{post_process_script}"
                 else:
                     post_process_cmd = f"{post_process_script} -f '{self.feed_dir_path}' '{url}'"

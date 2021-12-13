@@ -211,7 +211,8 @@ class FeedMaker:
                               headers=conf["header_list"], timeout=conf["timeout"], num_retries=conf["num_retries"],
                               encoding=conf["encoding"], verify_ssl=conf["verify_ssl"],
                               copy_images_from_canvas=conf["copy_images_from_canvas"],
-                              simulate_scrolling=conf["simulate_scrolling"], disable_headless=conf["disable_headless"])
+                              simulate_scrolling=conf["simulate_scrolling"], disable_headless=conf["disable_headless"],
+                              blob_to_dataurl=conf["blob_to_dataurl"])
             option_str = Crawler.get_option_str(conf)
             crawler_cmd = f"crawler.py -f '{self.feed_dir_path}' {option_str} '{item_url}'"
             LOGGER.debug(f"cmd={crawler_cmd}")
@@ -220,7 +221,7 @@ class FeedMaker:
                 LOGGER.error("Error: %s", error)
                 return False
 
-            content = result
+            content: Optional[str] = result
             if not conf.get("bypass_element_extraction", False):
                 extraction_cmd = f"extractor.py -f '{self.feed_dir_path}' '{item_url}'"
                 LOGGER.debug(f"cmd={extraction_cmd}")

@@ -162,7 +162,7 @@ class Extractor:
 
             if src:
                 if re.search(r'^//', src):
-                    src = re.sub(r'^//', 'http://', src)
+                    src = re.sub(r'^//', 'https://', src)
                 if element.has_attr("width"):
                     width = element["width"]
                     attribute_str += f" width='{width}'"
