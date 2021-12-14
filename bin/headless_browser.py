@@ -19,6 +19,9 @@ LOGGER = logging.getLogger()
 
 
 class HeadlessBrowser:
+    ID_OF_RENDERING_COMPLETION_IN_CONVERTING_CANVAS = "rendering_completed_in_converting_canvas"
+    ID_OF_RENDERING_COMPLETION_IN_SCROLLING = "rendering_completed_in_scrolling"
+    ID_OF_RENDERING_COMPLETION_IN_CONVERTING_BLOB = "rendering_completed_in_converting_blob"
     COOKIE_FILE = "cookies.headlessbrowser.json"
     DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36"
     GETTING_METADATA_SCRIPT = '''
@@ -36,18 +39,26 @@ class HeadlessBrowser:
             new_meta.setAttribute("property", "og:url");
             new_meta.setAttribute("content", window.location.href);
             document.head.appendChild(new_meta);
-        }'''
-    CONVERTING_CANVAS_TO_IMAGES_SCRIPT = '''
-        div = document.createElement("DIV");
-        div.className = "images_from_canvas";
-        var canvas_list = document.getElementsByTagName("canvas");
-        for (var i = 0; i < canvas_list.length; i++) {
-            img_data = canvas_list[i].toDataURL("image/png");
-            img = document.createElement("IMG");
-            img.src = img_data;
-            div.appendChild(img);
         }
-        document.body.appendChild(div);'''
+        '''
+    CONVERTING_CANVAS_TO_IMAGES_SCRIPT = '''
+        (async function () {
+            div = document.createElement("DIV");
+            div.className = "images_from_canvas";
+            var canvas_list = document.getElementsByTagName("canvas");
+            for (var i = 0; i < canvas_list.length; i++) {
+                img_data = canvas_list[i].toDataURL("image/png");
+                img = document.createElement("IMG");
+                img.src = img_data;
+                div.appendChild(img);
+            }
+            document.body.appendChild(div);
+        }());
+        
+        var div = document.createElement("DIV");
+        document.body.appendChild(div);
+        div.id = "%s";
+        ''' % ID_OF_RENDERING_COMPLETION_IN_CONVERTING_CANVAS
     SIMULATING_SCROLLING_SCRIPT = '''
         function sleep(ms) {
            return new Promise(resolve => setTimeout(resolve, ms));
@@ -61,8 +72,12 @@ class HeadlessBrowser:
         }
         for (var i = bottom; i >= 0; i -= 683) {
             window.scrollTo(0, i);
-            await sleep(400);
-        }'''
+            await sleep(200);
+        }
+        var div = document.createElement("DIV");
+        document.body.appendChild(div);
+        div.id = "%s";
+        ''' % ID_OF_RENDERING_COMPLETION_IN_SCROLLING
     SETTING_PLUGINS_SCRIPT = "Object.defineProperty(navigator, 'plugins', {get: function() {return[1, 2, 3, 4, 5];},});"
     SETTING_LANGUAGES_SCRIPT = "Object.defineProperty(navigator, 'languages', {get: function() {return ['ko-KR', 'ko']}})"
     CONVERTING_BLOB_TO_DATAURL_SCRIPT = '''
@@ -78,7 +93,6 @@ class HeadlessBrowser:
             });
             return promise;
         }
-        
         (async function () {
             var images = document.getElementsByTagName("img");
             for (var i = 0; i < images.length; i++) {
@@ -86,14 +100,18 @@ class HeadlessBrowser:
                     const response = await fetch(images[i].src);
                     const data = await response.arrayBuffer();
                     var returnedBlob = new Blob([data], {type: 'image/png'});
-                    readFileAsync(returnedBlob, images[i]).then(([dataURL, img]) => {
+                    await readFileAsync(returnedBlob, images[i]).then(([dataURL, img]) => {
                         if (img && img.src) {
                             img.src = dataURL;
                         }
                     })
                 }
             }
-        }());'''
+            var div = document.createElement("DIV");
+            document.body.appendChild(div);
+            div.id = "%s";
+        }());
+        ''' % ID_OF_RENDERING_COMPLETION_IN_CONVERTING_BLOB
 
     def __init__(self, dir_path: Path = Path.cwd(), headers: Dict[str, Any] = None,
                  copy_images_from_canvas: bool = False, simulate_scrolling: bool = False,
@@ -180,10 +198,6 @@ class HeadlessBrowser:
         LOGGER.debug("executing a script for metadata")
         driver.execute_script(HeadlessBrowser.GETTING_METADATA_SCRIPT)
 
-        if self.blob_to_dataurl:
-            LOGGER.debug("converting blob to dataurl")
-            driver.execute_script(HeadlessBrowser.CONVERTING_BLOB_TO_DATAURL_SCRIPT)
-
         if self.copy_images_from_canvas:
             LOGGER.debug("converting canvas to images")
             driver.execute_script(HeadlessBrowser.CONVERTING_CANVAS_TO_IMAGES_SCRIPT)
@@ -194,6 +208,21 @@ class HeadlessBrowser:
                 driver.execute_script(HeadlessBrowser.SIMULATING_SCROLLING_SCRIPT)
             except selenium.common.exceptions.TimeoutException:
                 pass
+
+        if self.blob_to_dataurl:
+            LOGGER.debug("converting blob to dataurl")
+            driver.execute_script(HeadlessBrowser.CONVERTING_BLOB_TO_DATAURL_SCRIPT)
+
+        for option, waiting_div_id in [
+            (self.copy_images_from_canvas, HeadlessBrowser.ID_OF_RENDERING_COMPLETION_IN_CONVERTING_CANVAS),
+            (self.simulate_scrolling, HeadlessBrowser.ID_OF_RENDERING_COMPLETION_IN_SCROLLING),
+            (self.blob_to_dataurl, HeadlessBrowser.ID_OF_RENDERING_COMPLETION_IN_CONVERTING_BLOB)]:
+            if option:
+                try:
+                    WebDriverWait(driver, self.timeout).until(
+                        expected_conditions.presence_of_element_located((By.ID, waiting_div_id)))
+                except selenium.common.exceptions.TimeoutException:
+                    pass
 
         LOGGER.debug("getting inner html")
         try:
