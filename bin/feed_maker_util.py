@@ -596,7 +596,7 @@ class Cache:
 
     @staticmethod
     def _get_cache_info_common_postfix(img_url: str, postfix: Union[str, int] = None, index: int = None) -> str:
-        LOGGER.debug(f"# get_cache_info_common(img_url={img_url}, postfix={postfix}, index={index})")
+        LOGGER.debug(f"# get_cache_info_common(img_url={img_url[:30]}, postfix={postfix}, index={index})")
         postfix_str = ""
         if postfix and postfix != "":
             postfix_str = "_" + str(postfix)
@@ -611,13 +611,13 @@ class Cache:
 
     @staticmethod
     def get_cache_url(url_prefix: str, img_url: str, postfix: Union[str, int] = None, index: int = None) -> str:
-        LOGGER.debug(f"# get_cache_url(url_prefix={url_prefix}, img_url={img_url}, postfix={postfix}, index={index})")
+        LOGGER.debug(f"# get_cache_url(url_prefix={url_prefix}, img_url={img_url[:30]}, postfix={postfix}, index={index})")
         return url_prefix + "/" + Cache._get_cache_info_common_postfix(img_url, postfix, index)
 
     @staticmethod
     def get_cache_file_path(path_prefix: Path, img_url: str, postfix: Union[str, int] = None,
                             index: int = None) -> Path:
-        LOGGER.debug(f"# get_cache_file_name(path={path_prefix}, img_url={img_url}, postfix={postfix}, index={index})")
+        LOGGER.debug(f"# get_cache_file_name(path={path_prefix}, img_url={img_url[:30]}, postfix={postfix}, index={index})")
         return path_prefix / Cache._get_cache_info_common_postfix(img_url, postfix, index)
 
 
