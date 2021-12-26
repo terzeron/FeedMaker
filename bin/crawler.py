@@ -69,13 +69,17 @@ class RequestsClient:
         self.read_cookies_from_file()
 
         response = None
-        if self.method == Method.GET:
-            response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
-        elif self.method == Method.POST:
-            response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, data=data)
-        elif self.method == Method.HEAD:
-            response = requests.head(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
-            return str(response.status_code), dict(response.headers), response.status_code
+        try:
+            if self.method == Method.GET:
+                response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
+            elif self.method == Method.POST:
+                response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, data=data)
+            elif self.method == Method.HEAD:
+                response = requests.head(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
+                return str(response.status_code), dict(response.headers), response.status_code
+        except requests.exceptions.ConnectionError as e:
+            LOGGER.warning(f"Warning: can't connect to '{url}' for temporary network error")
+            LOGGER.warning(e)
 
         if not response:
             LOGGER.error(f"can't get response from '{url}'")
