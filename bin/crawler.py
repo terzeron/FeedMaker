@@ -80,6 +80,9 @@ class RequestsClient:
         except requests.exceptions.ConnectionError as e:
             LOGGER.warning(f"Warning: can't connect to '{url}' for temporary network error")
             LOGGER.warning(e)
+        except requests.exceptions.ReadTimeout as e:
+            LOGGER.warning(f"Warning: can't read data from '{url}' for timeout")
+            LOGGER.warning(e)
 
         if not response:
             LOGGER.error(f"can't get response from '{url}'")
@@ -111,10 +114,6 @@ class RequestsClient:
 
 
 class Crawler:
-    class ReadTimeoutException(Exception):
-        def __init__(self):
-            super().__init__("Read timed out")
-
     def __init__(self, dir_path: Path = Path.cwd(), render_js: bool = False, method: Method = Method.GET,
                  headers: Dict[str, Any] = None, timeout: int = 60, num_retries: int = 1, encoding: str = "utf-8",
                  verify_ssl: bool = True, copy_images_from_canvas: bool = False, simulate_scrolling: bool = False,
@@ -200,13 +199,10 @@ class Crawler:
                 if response:
                     return response, False, None
             else:
-                try:
-                    response, headers, status_code = self.requests_client.make_request(url, download_file=download_file,
-                                                                                       data=data)
-                    if response:
-                        return response, False, None
-                except requests.exceptions.ReadTimeout as e:
-                    raise Crawler.ReadTimeoutException from e
+                response, headers, status_code = self.requests_client.make_request(url, download_file=download_file,
+                                                                                   data=data)
+                if response:
+                    return response, False, None
 
                 if status_code in [401, 403, 404, 405, 410]:
                     # no retry in case of
