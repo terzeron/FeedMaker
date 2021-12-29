@@ -4,6 +4,7 @@
 import os
 import json
 import logging.config
+import urllib3
 from pathlib import Path
 from typing import Dict, Any
 from selenium import webdriver
@@ -179,7 +180,12 @@ class HeadlessBrowser:
             self._write_cookies_to_file(driver)
 
         LOGGER.debug(f"getting the page '{url}'")
-        driver.get(url)
+        try:
+            driver.get(url)
+        except urllib3.exceptions.ProtocolError as e:
+            LOGGER.warning(f"Warning: can't connect to '{url}' for temporary network error")
+            LOGGER.warning(e)
+
         # bypass cloudflare test
         try:
             WebDriverWait(driver, self.timeout).until(
