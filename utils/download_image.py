@@ -88,7 +88,7 @@ def main() -> int:
 
     timeout = extraction_conf.get("timeout", None)
     headers: Dict[str, Any] = {"User-Agent": extraction_conf.get("user_agent", None), "Referer": URL.encode(page_url)}
-    crawler = Crawler(headers=headers, num_retries=2, timeout=timeout)
+    crawler = Crawler(dir_path=feed_dir_path, headers=headers, num_retries=2, timeout=timeout)
 
     line_list: List[str] = IO.read_stdin_as_line_list()
     for line in line_list:
