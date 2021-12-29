@@ -6,6 +6,7 @@ import os
 import re
 import json
 import unittest
+from unittest import TestCase
 from unittest.mock import patch
 from io import StringIO
 import logging.config
@@ -22,16 +23,15 @@ LOGGER = logging.getLogger()
 
 class NotificationTest(unittest.TestCase):
     def setUp(self):
-        with open(Path.cwd() / ".." / "bin" / "global_config.json", "r", encoding="utf-8") as infile:
-            global_conf = json.load(infile)
-            self.receiver_id = global_conf["line_receiver_id"]
-            self.access_token = global_conf["line_access_token"]
-            self.sender_address = global_conf["sender_email_address"]
-            self.receiver_address = global_conf["receiver_email_address"]
-            self.smtp_host = global_conf["smtp_host"]
+        global_conf = Config.get_global_config()
+        self.receiver_id = global_conf["line_receiver_id"]
+        self.access_token = global_conf["line_access_token"]
+        self.sender_address = global_conf["sender_email_address"]
+        self.receiver_address = global_conf["receiver_email_address"]
+        self.smtp_host = global_conf["smtp_host"]
 
     def test_send_error_msg(self):
-        msg = "This is a messagae from python unittest"
+        msg = "This is a message from python unittest"
         subject = "email notification test"
         actual = Notification.send_error_msg(msg, subject)
         self.assertTrue(actual)
@@ -42,7 +42,7 @@ class NotificationTest(unittest.TestCase):
         self.assertTrue(actual)
 
     def test_send_error_msg_to_mail(self):
-        msg = "This is a messagae from python unittest"
+        msg = "This is a message from python unittest"
         subject = "email notification test"
         actual = Notification._send_error_msg_to_mail(msg, subject, self.receiver_address, self.sender_address,
                                                       self.smtp_host)
@@ -395,6 +395,7 @@ class IOTest(unittest.TestCase):
 
 class ConfigTest(unittest.TestCase):
     def setUp(self):
+        self.global_conf = Config.get_global_config(Path.cwd() / "test" / "global_config.json")
         self.config = Config(feed_dir_path=Path.cwd() / "test")
         if not self.config:
             LOGGER.error("can't get configuration")
@@ -515,6 +516,29 @@ class ConfigTest(unittest.TestCase):
 
         actual = self.config._get_config_value_list(collection_conf, "header_list")
         self.assertIsNone(actual)
+
+    def test_get_global_config(self):
+        config = self.global_conf
+        actual = isinstance(config, dict)
+        self.assertTrue(actual)
+
+        actual = config["web_service_url"]
+        self.assertEqual("https://my.domain.com", actual)
+
+        actual = config["line_access_token"]
+        self.assertEqual("bogus_line_access_token", actual)
+
+        actual = config["line_receiver_id"]
+        self.assertEqual("bogus_line_receiver_id", actual)
+
+        actual = config["sender_email_address"]
+        self.assertEqual("bogus@my.smtp.com", actual)
+
+        actual = config["receiver_email_address"]
+        self.assertEqual("fake@gmail.com", actual)
+
+        actual = config["smtp_host"]
+        self.assertEqual("my.smtp.com", actual)
 
     def test_get_collection_configs(self):
         configs = self.config.get_collection_configs()

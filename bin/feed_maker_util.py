@@ -44,16 +44,14 @@ class Notification:
             receiver_email_address: str = ""
             sender_email_address: str = ""
             smtp_host: str = ""
-        global_config_file_path = Path(os.environ["FEED_MAKER_HOME_DIR"], "bin", "global_config.json")
-        with open(global_config_file_path, "r", encoding="utf-8") as infile:
-            global_config: Dict[str, Any] = json.load(infile)
-            if Notification.USE_LINE:
-                line_receiver_id = global_config["line_receiver_id"]
-                line_access_token = global_config["line_access_token"]
-            if Notification.USE_EMAIL:
-                receiver_email_address = global_config["receiver_email_address"]
-                sender_email_address = global_config["sender_email_address"]
-                smtp_host = global_config["smtp_host"]
+        global_config = Config.get_global_config()
+        if Notification.USE_LINE:
+            line_receiver_id = global_config["line_receiver_id"]
+            line_access_token = global_config["line_access_token"]
+        if Notification.USE_EMAIL:
+            receiver_email_address = global_config["receiver_email_address"]
+            sender_email_address = global_config["sender_email_address"]
+            smtp_host = global_config["smtp_host"]
 
         result = False
         if Notification.USE_LINE:
@@ -432,6 +430,18 @@ class Config:
             return result
         return default
 
+    @staticmethod
+    def get_global_config(conf_file_path=None) -> \
+            Dict[str, Any]:
+        LOGGER.debug("# get_global_config()")
+        if conf_file_path:
+            global_config_file_path = conf_file_path
+        else:
+            global_config_file_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "bin" / "global_config.json"
+        with open(global_config_file_path, "r", encoding="utf-8") as infile:
+            global_config: Dict[str, Any] = json.load(infile)
+        return global_config
+
     def get_collection_configs(self) -> Dict[str, Any]:
         LOGGER.debug("# get_collection_configs()")
         conf: Dict[str, Any] = {}
@@ -611,13 +621,15 @@ class Cache:
 
     @staticmethod
     def get_cache_url(url_prefix: str, img_url: str, postfix: Union[str, int] = None, index: int = None) -> str:
-        LOGGER.debug(f"# get_cache_url(url_prefix={url_prefix}, img_url={img_url[:30]}, postfix={postfix}, index={index})")
+        LOGGER.debug(
+            f"# get_cache_url(url_prefix={url_prefix}, img_url={img_url[:30]}, postfix={postfix}, index={index})")
         return url_prefix + "/" + Cache._get_cache_info_common_postfix(img_url, postfix, index)
 
     @staticmethod
     def get_cache_file_path(path_prefix: Path, img_url: str, postfix: Union[str, int] = None,
                             index: int = None) -> Path:
-        LOGGER.debug(f"# get_cache_file_name(path={path_prefix}, img_url={img_url[:30]}, postfix={postfix}, index={index})")
+        LOGGER.debug(
+            f"# get_cache_file_name(path={path_prefix}, img_url={img_url[:30]}, postfix={postfix}, index={index})")
         return path_prefix / Cache._get_cache_info_common_postfix(img_url, postfix, index)
 
 

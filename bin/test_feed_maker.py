@@ -30,6 +30,7 @@ def assert_in_mock_logger(param: Any, mock_logger, do_substr_match: bool = False
 
 class TestFeedMaker(unittest.TestCase):
     def setUp(self) -> None:
+        self.global_conf = Config.get_global_config()
         group_name = "naver"
         feed_name = "oneplusone"
         self.feed_dir_path = Path(os.environ["FEED_MAKER_WORK_DIR"]) / group_name / feed_name
@@ -69,7 +70,7 @@ class TestFeedMaker(unittest.TestCase):
         self.html_file1_path = self.html_dir_path / (md5_name + ".html")
         with open(self.html_file1_path, "w", encoding="utf-8") as outfile:
             outfile.write(
-                f"<div>with image tag string</div>\n<img src='https://terzeron.com/img/1x1.jpg?feed=oneplusone.xml&item={md5_name}'/>\n")
+                f"<div>with image tag string</div>\n<img src='{self.global_conf['web_service_url']}/img/1x1.jpg?feed=oneplusone.xml&item={md5_name}'/>\n")
         md5_name = "8da6dfb"
         self.html_file2_path = self.html_dir_path / (md5_name + ".html")
         with open(self.html_file2_path, "w", encoding="utf-8") as outfile:
@@ -95,23 +96,23 @@ class TestFeedMaker(unittest.TestCase):
         shutil.rmtree(self.feed_dir_path)
 
     def test_get_image_tag_str(self):
-        actual = FeedMaker.get_image_tag_str(self.rss_file_path.name, self.item1_url)
-        expected = "<img src='https://terzeron.com/img/1x1.jpg?feed=oneplusone.xml&item=3e1c485'/>"
+        actual = FeedMaker.get_image_tag_str(self.global_conf['web_service_url'], self.rss_file_path.name, self.item1_url)
+        expected = f"<img src='{self.global_conf['web_service_url']}/img/1x1.jpg?feed=oneplusone.xml&item=3e1c485'/>"
         self.assertEqual(expected, actual)
 
     def test_get_size_of_template_with_image_tag(self):
-        actual = FeedMaker.get_size_of_template_with_image_tag(self.rss_file_path.name)
+        actual = FeedMaker.get_size_of_template_with_image_tag(self.global_conf['web_service_url'], self.rss_file_path.name)
         expected = 438
         self.assertEqual(expected, actual)
 
     def test_is_image_tag_in_html_file(self):
-        image_tag_str = FeedMaker.get_image_tag_str(self.rss_file_path.name, self.item1_url)
+        image_tag_str = FeedMaker.get_image_tag_str(self.global_conf['web_service_url'], self.rss_file_path.name, self.item1_url)
         actual = FeedMaker._is_image_tag_in_html_file(self.html_file1_path, image_tag_str)
         expected = True
         self.assertEqual(expected, actual)
 
     def test_append_image_tag_to_html_file(self):
-        img_tag_str = FeedMaker.get_image_tag_str(self.rss_file_path.name, self.item2_url)
+        img_tag_str = FeedMaker.get_image_tag_str(self.global_conf['web_service_url'], self.rss_file_path.name, self.item2_url)
 
         # no image tag in the html file
         is_found = False

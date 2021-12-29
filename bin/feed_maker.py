@@ -26,12 +26,17 @@ class FeedMaker:
     MAX_CONTENT_LENGTH = 64 * 1024
     MAX_NUM_DAYS = 7
     WINDOW_SIZE = 5
-    IMAGE_TAG_FMT_STR = "<img src='https://terzeron.com/img/1x1.jpg?feed=%s&item=%s'/>"
+    IMAGE_TAG_FMT_STR = "<img src='%s/img/1x1.jpg?feed=%s&item=%s'/>"
 
     def __init__(self, feed_dir_path: Path, do_collect_by_force: bool, do_collect_only: bool,
                  rss_file_path: Path) -> None:
         LOGGER.debug(
             f"# FeedMaker(feed_dir_path={feed_dir_path}, do_collect_by_force={do_collect_by_force}, do_collect_only={do_collect_only}, rss_file_path={rss_file_path})")
+        self.global_conf: Dict[str, Any] = Config.get_global_config()
+        if not self.global_conf:
+            LOGGER.error("Error: Can't get global configuration")
+            return False
+
         self.work_dir_path = Path(os.environ["FEED_MAKER_WORK_DIR"])
         self.feed_dir_path = feed_dir_path
         self.collection_conf: Dict[str, Any] = {}
@@ -53,13 +58,14 @@ class FeedMaker:
         del self.rss_conf
 
     @staticmethod
-    def get_image_tag_str(rss_file_name: str, url: str = "any_url") -> str:
-        md5_name = URL.get_short_md5_name(URL.get_url_path(url))
-        return FeedMaker.IMAGE_TAG_FMT_STR % (rss_file_name, md5_name)
+    def get_image_tag_str(web_service_url: str, rss_file_name: str, item_url: str = "any_url") -> str:
+        md5_name = URL.get_short_md5_name(URL.get_url_path(item_url))
+        return FeedMaker.IMAGE_TAG_FMT_STR % (web_service_url, rss_file_name, md5_name)
 
     @staticmethod
-    def get_size_of_template_with_image_tag(rss_file_name: str) -> int:
-        return len(header_str) + len("\n") + len(FeedMaker.get_image_tag_str(rss_file_name)) + len("\n")
+    def get_size_of_template_with_image_tag(web_service_url: str, rss_file_name: str) -> int:
+        return len(header_str) + len("\n") + len(FeedMaker.get_image_tag_str(web_service_url, rss_file_name)) + len(
+            "\n")
 
     @staticmethod
     def _is_image_tag_in_html_file(html_file_path: Path, image_tag_str: str) -> bool:
@@ -191,8 +197,8 @@ class FeedMaker:
 
         image_tag_str = FeedMaker.get_image_tag_str(self.rss_file_path.name, item_url)
 
-        if os.path.isfile(html_file_path) and size > FeedMaker.get_size_of_template_with_image_tag(
-                self.rss_file_path.name):
+        if os.path.isfile(html_file_path) and \
+                size > FeedMaker.get_size_of_template_with_image_tag(self.global_conf["web_service_url"], self.rss_file_path.name):
             # 이미 성공적으로 만들어져 있으니까, 이미지 태그만 검사해보고 피드 리스트에 추가
             if FeedMaker._is_image_tag_in_html_file(html_file_path, image_tag_str):
                 LOGGER.info(

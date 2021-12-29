@@ -10,6 +10,8 @@ from datetime import datetime, timedelta
 import logging.config
 from typing import List, Dict, Any, Union
 from feed_maker import FeedMaker
+from feed_maker_util import Config
+
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
 LOGGER = logging.getLogger()
@@ -192,6 +194,8 @@ class ProblemChecker:
         html_file_image_not_found_count_map: Dict[Path, int] = {}
         self.html_file_size_list.clear()
         html_file_count = 0
+        global_conf = Config.get_global_config()
+        web_service_url = global_conf["web_service_url"]
 
         for path in self.work_dir.glob("*/*/html/*"):
             if path.parent.name.startswith("_") or path.parent.parent.name.startswith("_"):
@@ -207,7 +211,7 @@ class ProblemChecker:
 
                 # html file with normal size should have image tag
                 # would find html files with zero count of image tag
-                if s.st_size > FeedMaker.get_size_of_template_with_image_tag(path.name):
+                if s.st_size > FeedMaker.get_size_of_template_with_image_tag(web_service_url, path.name):
                     html_file_image_tag_count_map[path] = 0
                 with open(path, 'r', encoding="utf-8") as infile:
                     for line in infile:
