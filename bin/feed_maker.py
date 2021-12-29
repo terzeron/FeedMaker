@@ -64,8 +64,10 @@ class FeedMaker:
 
     @staticmethod
     def get_size_of_template_with_image_tag(web_service_url: str, rss_file_name: str) -> int:
-        return len(header_str) + len("\n") + len(FeedMaker.get_image_tag_str(web_service_url, rss_file_name)) + len(
-            "\n")
+        return len(header_str) + \
+               len("\n") + \
+               len(FeedMaker.get_image_tag_str(web_service_url, rss_file_name)) + \
+               len("\n")
 
     @staticmethod
     def _is_image_tag_in_html_file(html_file_path: Path, image_tag_str: str) -> bool:
@@ -195,10 +197,12 @@ class FeedMaker:
         else:
             size = 0
 
-        image_tag_str = FeedMaker.get_image_tag_str(self.rss_file_path.name, item_url)
+        image_tag_str = FeedMaker.get_image_tag_str(self.global_conf["web_service_url"],
+                                                    self.rss_file_path.name, item_url)
 
         if os.path.isfile(html_file_path) and \
-                size > FeedMaker.get_size_of_template_with_image_tag(self.global_conf["web_service_url"], self.rss_file_path.name):
+                size > FeedMaker.get_size_of_template_with_image_tag(self.global_conf["web_service_url"],
+                                                                     self.rss_file_path.name):
             # 이미 성공적으로 만들어져 있으니까, 이미지 태그만 검사해보고 피드 리스트에 추가
             if FeedMaker._is_image_tag_in_html_file(html_file_path, image_tag_str):
                 LOGGER.info(
