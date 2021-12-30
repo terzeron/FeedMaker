@@ -185,6 +185,9 @@ class HeadlessBrowser:
         except urllib3.exceptions.ProtocolError as e:
             LOGGER.warning(f"Warning: can't connect to '{url}' for temporary network error")
             LOGGER.warning(e)
+        except selenium.common.exceptions.TimeoutException as e:
+            LOGGER.warning(f"Warning: can't can't read data from '{url}' for timeout")
+            LOGGER.warning(e)
 
         # bypass cloudflare test
         try:
