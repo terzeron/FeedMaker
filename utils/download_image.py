@@ -19,7 +19,7 @@ IMAGE_NOT_FOUND_IMAGE_URL = "https://terzeron.com/image-not-found.png"
 
 
 def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str) -> Optional[Path]:
-    LOGGER.debug(f"# download_image(crawler={crawler}, feed_img_dir_path={feed_img_dir_path}, img_url={img_url})")
+    LOGGER.debug(f"# download_image(crawler={crawler}, feed_img_dir_path={feed_img_dir_path}, img_url={img_url[:30]})")
     cache_file = Cache.get_cache_file_path(feed_img_dir_path, img_url)
     for ext in ["", ".png", ".jpeg", ".jpg"]:
         cache_file_path = cache_file.with_suffix(ext)
