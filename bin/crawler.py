@@ -80,9 +80,11 @@ class RequestsClient:
         except requests.exceptions.ConnectionError as e:
             LOGGER.warning(f"Warning: can't connect to '{url}' for temporary network error")
             LOGGER.warning(e)
+            return "", {}, None
         except requests.exceptions.ReadTimeout as e:
             LOGGER.warning(f"Warning: can't read data from '{url}' for timeout")
             LOGGER.warning(e)
+            return "", {}, None
 
         if not response:
             LOGGER.error(f"can't get response from '{url}'")
