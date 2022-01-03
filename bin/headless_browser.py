@@ -185,12 +185,31 @@ class HeadlessBrowser:
         except urllib3.exceptions.ProtocolError as e:
             LOGGER.warning(f"Warning: can't connect to '{url}' for temporary network error")
             LOGGER.warning(e)
+            LOGGER.debug("exiting driver")
+            driver.close()
+            driver.quit()
+            return ""
+        except urllib3.exceptions.NewConnectionError as e:
+            LOGGER.warning(f"Warning: can't connect to '{url}' for temporary network error")
+            LOGGER.warning(e)
+            LOGGER.debug("exiting driver")
+            driver.close()
+            driver.quit()
+            return ""
         except selenium.common.exceptions.WebDriverException as e:
             LOGGER.warning(f"Warning: can't connect to '{url}' for temporary network error")
             LOGGER.warning(e)
+            LOGGER.debug("exiting driver")
+            driver.close()
+            driver.quit()
+            return ""
         except selenium.common.exceptions.TimeoutException as e:
             LOGGER.warning(f"Warning: can't can't read data from '{url}' for timeout")
             LOGGER.warning(e)
+            LOGGER.debug("exiting driver")
+            driver.close()
+            driver.quit()
+            return ""
 
         # bypass cloudflare test
         try:
