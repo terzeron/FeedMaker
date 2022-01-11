@@ -126,9 +126,11 @@ class Data:
 
 class Process:
     @staticmethod
-    def _replace_script_path(script: str, dir_path: Path) -> str:
+    def _replace_script_path(script: str, dir_path: Path) -> Optional[str]:
         program = script.split(" ")[0]
         if program.startswith("./") or program.startswith("../"):
+            if not dir_path.is_dir():
+                return None
             program_path = (dir_path / program).resolve()
         else:
             program_full_path: Optional[str]
