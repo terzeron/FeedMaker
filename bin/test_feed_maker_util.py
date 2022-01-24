@@ -105,9 +105,8 @@ class ProcessTest(unittest.TestCase):
         expected = "/capture_item_naverwebtoon.py -n 500"
         self.assertEqual(expected, actual)
 
-        actual = Process._replace_script_path(cmd, Path("/home/user/workspace/fma/naver/naverwebtoon"))
-        expected = "/System/Volumes/Data/home/user/workspace/fma/naver/capture_item_naverwebtoon.py -n 500"
-        self.assertEqual(expected, actual)
+        actual = Process._replace_script_path(cmd, Path("/no_such_a_dir/workspace/fma/naver/naverwebtoon"))
+        self.assertIsNone(actual)
 
         cmd = "./capture_item_naverwebtoon.py -n 500"
 
@@ -123,9 +122,8 @@ class ProcessTest(unittest.TestCase):
         expected = "/capture_item_naverwebtoon.py -n 500"
         self.assertEqual(expected, actual)
 
-        actual = Process._replace_script_path(cmd, Path("/home/user/workspace/fma/naver/naverwebtoon"))
-        expected = "/System/Volumes/Data/home/user/workspace/fma/naver/naverwebtoon/capture_item_naverwebtoon.py -n 500"
-        self.assertEqual(expected, actual)
+        actual = Process._replace_script_path(cmd, Path("/no_such_a_dir/workspace/fma/naver/naverwebtoon"))
+        self.assertIsNone(actual)
 
         cmd = "shuf"
 
@@ -141,7 +139,7 @@ class ProcessTest(unittest.TestCase):
         actual = Process._replace_script_path(cmd, Path("."))
         self.assertIn(actual, ["/usr/bin/shuf", "/usr/local/bin/shuf"])
 
-        actual = Process._replace_script_path(cmd, Path("/home/user/workspace/fma/naver/naverwebtoon"))
+        actual = Process._replace_script_path(cmd, Path("/no_such_a_dir/workspace/fma/naver/naverwebtoon"))
         self.assertIn(actual, ["/usr/bin/shuf", "/usr/local/bin/shuf"])
 
         cmd = "/bin/head -10"
@@ -162,7 +160,7 @@ class ProcessTest(unittest.TestCase):
         expected = "/bin/head -10"
         self.assertEqual(expected, actual)
 
-        actual = Process._replace_script_path(cmd, Path("/home/user/workspace/fma/naver/naverwebtoon"))
+        actual = Process._replace_script_path(cmd, Path("/no_such_a_dir/workspace/fma/naver/naverwebtoon"))
         expected = "/bin/head -10"
         self.assertEqual(expected, actual)
 
@@ -184,7 +182,7 @@ class ProcessTest(unittest.TestCase):
         expected = "/usr/bin/tail -5"
         self.assertEqual(expected, actual)
 
-        actual = Process._replace_script_path(cmd, Path("/home/user/workspace/fma/naver/naverwebtoon"))
+        actual = Process._replace_script_path(cmd, Path("/no_such_a_dir/workspace/fma/naver/naverwebtoon"))
         expected = "/usr/bin/tail -5"
         self.assertEqual(expected, actual)
 

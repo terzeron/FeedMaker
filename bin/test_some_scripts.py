@@ -34,13 +34,13 @@ def main() -> int:
 
     test_subjects = {
         "naver/three_kingdoms_talk": [
-            f"{fm_home}/utils/download_image.py -f '/Users/terzeron/workspace/fma/naver/three_kingdoms_talk' 'https://comic.naver.com/webtoon/detail.nhn?titleId=711422&no=1'"
+            f"{fm_home}/utils/download_image.py -f ~/workspace/fma/naver/three_kingdoms_talk 'https://comic.naver.com/webtoon/detail.nhn?titleId=711422&no=1'"
         ],
         "naver/windbreaker": [
-            f"{fm_home}/utils/download_merge_split.py -f '/Users/terzeron/workspace/fma/naver/windbreaker' -m -c fuzzy 'https://comic.naver.com/webtoon/detail.nhn?titleId=602910&no=197'"
+            f"{fm_home}/utils/download_merge_split.py -f ~/workspace/fma/naver/windbreaker -m -c fuzzy 'https://comic.naver.com/webtoon/detail.nhn?titleId=602910&no=197'"
         ],
         "naver/naverpost.interbiz": [
-            f"{fm_home}/bin/extractor.py -f '/Users/terzeron/workspace/fma/naver/naverpost.interbiz' 'http://m.post.naver.com/viewer/postView.nhn?volumeNo=14122118&memberNo=35786474'"
+            f"{fm_home}/bin/extractor.py -f ~/workspace/fma/naver/naverpost.interbiz 'http://m.post.naver.com/viewer/postView.nhn?volumeNo=14122118&memberNo=35786474'"
         ],
     }
 
