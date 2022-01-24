@@ -194,7 +194,7 @@ def main() -> int:
     keyword_cp949 = original_keyword.encode("cp949")
 
     site_args_map = {
-        "jmana": ["/comic_list?keyword=" + keyword, {"class": "tit"}],
+        #"jmana": ["/comic_list?keyword=" + keyword, {"class": "tit"}],
         "ornson": ["/search?skeyword=" + keyword, {"class": "tag_box"}],
         "manatoki": ["/comic?stx=" + keyword, {"class": "list-item"}],
         "newtoki": ["/webtoon?stx=" + keyword, {"class": "list-item"}],
