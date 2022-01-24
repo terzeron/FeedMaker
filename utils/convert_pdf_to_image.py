@@ -20,7 +20,10 @@ def main() -> int:
     sys.stdin.flush()
     sys.stdin.close()
 
-    _, args = getopt.getopt(sys.argv[1:], "f:")
+    optlist, args = getopt.getopt(sys.argv[1:], "f:")
+    for o, a in optlist:
+        if o == "-f":
+            feed_dir_path = Path(a)
 
     if len(args) == 1:
         url_or_file = args[0]
@@ -39,7 +42,7 @@ def main() -> int:
     else:
         return -1
 
-    feed_name = Path.cwd().name
+    feed_name = feed_dir_path.name
     feed_img_dir_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / "img" / feed_name
     feed_img_dir_path.mkdir(exist_ok=True)
     img_url_prefix = "https://terzeron.com/xml/img/" + feed_name
