@@ -174,6 +174,9 @@ class Crawler:
         if "blob_to_dataurl" in options:
             blob_to_dataurl = "true" if options["blob_to_dataurl"] else "false"
             option_str += f" --blob-to-dataurl={blob_to_dataurl}"
+        if "disable_headless" in options:
+            disable_headless = "true" if options["disable_headless"] else "false"
+            option_str += f" --disable-headless={disable_headless}"
         if "user_agent" in options and options["user_agent"]:
             user_agent = options["user_agent"]
             option_str += f" --user-agent='{user_agent}'"
