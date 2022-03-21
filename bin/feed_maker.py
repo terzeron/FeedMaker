@@ -277,7 +277,7 @@ class FeedMaker:
                 ret = False
 
             if conf["force_sleep_between_articles"]:
-                time.sleep(1)
+                time.sleep(5)
         return ret
 
     def _get_idx_data(self) -> Tuple[int, int, Optional[datetime]]:
