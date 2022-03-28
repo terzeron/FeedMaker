@@ -27,3 +27,4 @@ cookies.json
 global_config.json
 .python-version
 cookies.*.json
+*.pid
