@@ -30,22 +30,27 @@ Utility set and web admin page for making feeds from crawling websites
   * https://github.com/terzeron/FeedMaker/archive/master.zip
   * https://github.com/terzeron/FeedMakerApplications/archive/master.zip
   * You would be good to use $HOME/workspace/fm & $HOME/workspace/fma for these projects.
+    * ex) export FEED_MAKER_HOME_DIR=$HOME/workspace/fm
+    * ex) export FEED_MAKER_WORK_DIR=$HOME/workspace/fma
   
 ## Usage
 
 * Apply environment variables
-  * `. <feedmaker dir>/bin/setup.sh`
+  * `. <feedmaker installation dir>/bin/setup.sh`
   * ex) `. $HOME/workspace/fm/bin/setup.sh`
 * Change the current working directory to a feed directory
-  * `cd <application dir>/<sitedir>/<feeddir>`
-  * ex) `cd $HOME/workspace/fma/naver/navercast.118`
-* Run the FeedMaker
+  * `cd $FEED_MAKER_WORK_DIR/<groupdir>/<feeddir>`
+  * ex) `cd $FEED_MAKER_WORK_DIR/naver/navercast.118`
+* Run the FeedMaker for a current feed
   * `run.py`
-
+* Run the FeedMaker for all feeds
+  * `cd $FEED_MAKER_WORK_DIR`
+  * `run.py -a`
+  
 ## Test
 
 * Apply environment variables 
-  * `. <feedmaker dir>/bin/setup.sh`
+  * `. <feedmaker installation dir>/bin/setup.sh`
 * Change the current working directory to test directory
   * `cd test`
 * Run the test scripts
@@ -63,7 +68,8 @@ Utility set and web admin page for making feeds from crawling websites
 
 ## Build & Deploy
 * backend
-  * Copy backend directory to your ~/public_html or /var/www/html.
+  * Copy the backend directory to your ~/public_html or /var/www/html
+  * Otherwise, configure web server settings to be connected to the backend directory 
   * modify index.wsgi to configure your environment.
   * touch index.wsgi whenever you modify flask app codes.
 * frontend
@@ -79,23 +85,83 @@ Utility set and web admin page for making feeds from crawling websites
 ## Run
 * API
   * in production mode
-    * You can use apache and wsgi.
+    * You can use Nginx & uwsgi or Apache HTTPd & mod_wsgi. No need to consider flask runtime.
+      * Refer to the following setting guide. 
+      * access test
+        * API: `curl your.api.domain.com/fm/groups`
+        * Web: `curl your.web.domain.com`
   * in development mode
-    * `env FLASK_ENV=development flask run`
-  * access test
-    * `curl localhost:5000/fm/groups`
-    * `curl localhost:5000/fm/groups/agit/feeds`
-    * `curl localhost:5000/fm/groups/agit/feeds/gang_with_sword`
+    * You must run flask and vue dev server for yourself.
+      * Flask: `env FLASK_ENV=development flask run`
+      * Vue: `npm run serve`
+      * access test
+        * API: `curl localhost:5000/groups`
+        * Web: `curl localhost:8080`
+      
+## Nginx & Flask interconnection settings
 
-## Apache & Flask interaction settings
+### Web(frontend) Nginx settings
+* Add a new file `<nginx configuration dir>/servers/fm.conf`
+* You must modify `FEEDMAKER_BACKEND_DIR` and `FEEDMAKER_FRONTEND_DIR` to real paths and some uppercase variables to real values.
 
-### Web(frontend) Apache settings
+#### fm.conf
+```
+server {
+    listen 80_FOR_PRODUCTION_OR_8082_FOR_DEVELOPMENT;
+    server_name YOUR_DOMAIN_NAME_OR_127_DOT_0_DOT_0_DOT_1;
+
+    location / {
+        include      uwsgi_params;
+        uwsgi_pass   unix:FEEDMAKER_BACKEND_DIR/uwsgi.sock;
+    }
+    location /css {
+        root FEEDMAKER_FRONTEND_DIR/dist;
+    }
+    location /js {
+        root FEEDMAKER_FRONTEND_DIR/dist;
+    }
+}
+```
+
+`nginx`
+or 
+`nginx -g "daemon off;"`
+
+#### uwsqi.ini
+```
+[uwsgi]
+module = app:app
+
+processes = 5
+socket = ./uwsgi.sock
+chmod-socket = 666
+pidfile = ./uwsgi.pid
+demonize = ./logs/uwsgi.log
+
+plugins-dir = /usr/local/Cellar/uwsgi/2.0.19.1_2/libexec/uwsgi
+plugin = python3
+
+log-reopen = true
+die-on-term = true
+master = true
+vacuum = true
+```
+
+`uwsgi --ini uwsgi.ini`
+
+* You can this web service by http://localhost:8082
+* Also, try http://localhost:8082/groups
+
+## Apache HTTPd & Flask interconnection settings
+* You must modify `FEEDMAKER_BACKEND_DIR` and `FEEDMAKER_FRONTEND_DIR` to real paths.
+
+### Web(frontend) Apache HTTPd settings
 * to serve index.html
-  * DocumentRoot /<installation_path_of_project>/frontend/dist
+  * DocumentRoot FEEDMAKER_FRONTEND_DIR/dist
   * ex) DocumentRoot /home/user/public_html/fmw/frontend/dist
 ```
-DocumentRoot /home/user/public_html/fmw/frontend/dist
-<Directory /home/user/public_html/fmw/frontend/dist>
+DocumentRoot FEEDMAKER_FRONTEND_DIR/dist
+<Directory FEEDMAKER_FRONTEND_DIR/dist>
     RewriteEngine On
     AllowOverride All
     RewriteCond %{REQUEST_FILENAME} !-f
@@ -104,25 +170,25 @@ DocumentRoot /home/user/public_html/fmw/frontend/dist
 </Directory>
 ```
 
-If you have .htaccess RewriteEngine issue, add this configuration
+If you have .htaccess RewriteEngine issue like 403 Forbidden error, add this configuration.
 ```
-<Directory /home/user/public_html>
+<Directory WWW_ROOT_DIR>
     RewriteEngine On
     AllowOverride All
 </Directory>
 ``` 
 
-## API(backend) Apache settings
+## API(backend) Apache HTTPd settings
 ```
-<Directory /home/user/public_html/fmw/backend>
+<Directory FEEDMAKER_BACKEND_DIR>
     RewriteEngine On
     AllowOverride All
 </Directory>
 
 <IfModule wsgi_module>
     WSGIDaemonProcess fmw user=user group=user threads=2
-    WSGIScriptAlias /fm /home/user/public_html/fmw/backend/index.wsgi
-    <Directory /home/user/public_html/fmw/backend>
+    WSGIScriptAlias /fm FEEDMAKER_BACKEND_DIR/index.wsgi
+    <Directory FEEDMAKER_BACKEND_DIR>
         WSGIProcessGroup fmw
         WSGIApplicationGroup %{GLOBAL}
         Require all granted
@@ -132,13 +198,12 @@ If you have .htaccess RewriteEngine issue, add this configuration
 
 ## API(backend) Flask settings
 * index.wsgi
-  * /home/user/public_html/fmw/backend/index.wsgi
-  * `sys.path.insert(0, '/home/user/public_html/fmw/backend')`
+  * `sys.path.insert(0, 'FEEDMAKER_BACKEND_DIR')`
 * app.py
   * `@app.route("/groups", methods=["GET"])`
   * Apache mounts this Flask app on /fm path. So all routes in app.py should be relative path such as '/groups'.
 * URLs and paths in all codes
-  * frontend: `axios.get('https://userdomain.com/fm/groups')`
-  * apache: `WSGIScriptAlias /fm /home/user/public_html/fmw/backend/index.wsgi`
-  * index.wsgi: `sys.path.insert(0, '/home/user/public_html/fmw/backend')`
+  * frontend: `axios.get('https://your.domain.com/fm/groups')`
+  * apache: `WSGIScriptAlias /fm FEEDMAKER_BACKEND_DIR/index.wsgi`
+  * index.wsgi: `sys.path.insert(0, 'FEEDMAKER_BACKEND_DIR')`
   * app.py: `@app.route("/groups", methods=["GET"])`
