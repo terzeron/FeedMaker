@@ -63,11 +63,11 @@ export default {
   components: {},
   methods: {
     getApiUrlPath() {
-      let path_prefix = 'https://api.terzeron.com/fm';
+      let pathPrefix = 'https://api.terzeron.com/fm';
       if (process.env.NODE_ENV === 'development') {
-        path_prefix = 'http://localhost:5000';
+        pathPrefix = 'http://localhost:5000';
       }
-      return path_prefix;
+      return pathPrefix;
     },
     getExecResult() {
       const path = this.getApiUrlPath() + '/exec_result';
