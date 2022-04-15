@@ -180,7 +180,8 @@ class TestFeedMakerRunner(unittest.TestCase):
 def test_make_all_feeds(self):
     with patch.object(LOGGER, "warning") as mock_warning:
         with patch.object(LOGGER, "info") as mock_info:
-            actual = self.runner.make_all_feeds(num_feeds=1)
+            options = {"num_feeds": 1}
+            actual = self.runner.make_all_feeds(options)
             self.assertTrue(actual)
 
             self.assertTrue(assert_in_mock_logger("Warning: can't read old feed list from files", mock_warning))

@@ -133,6 +133,7 @@ class FeedMakerRunner:
         do_remove_all_files = options.get("do_remove_all_files", False)
         force_collection_opt = options.get("force_collection_opt", "")
         collect_only_opt = options.get("collect_only_opt", "")
+        window_size = options.get("window_size", FeedMaker.DEFAULT_WINDOW_SIZE)
 
         if do_remove_all_files:
             # -r 옵션 사용하면 html 디렉토리의 파일들, newlist 디렉토리의 파일들, 각종 로그 파일, feed xml 파일들을 삭제
@@ -144,7 +145,7 @@ class FeedMakerRunner:
 
         # make_feed.py 실행하여 feed 파일 생성
         LOGGER.info(f"* making feed file '{rss_file_path.relative_to(self.work_dir_path)}'")
-        feed_maker = FeedMaker(feed_dir_path, force_collection_opt, collect_only_opt, rss_file_path)
+        feed_maker = FeedMaker(feed_dir_path, force_collection_opt, collect_only_opt, rss_file_path, window_size)
         result = feed_maker.make()
 
         # 불필요한 파일 삭제
@@ -158,8 +159,9 @@ class FeedMakerRunner:
 
         return result
 
-    def make_all_feeds(self, num_feeds: int = 0) -> bool:
-        LOGGER.debug(f"# make_all_feeds(num_feeds={num_feeds})")
+    def make_all_feeds(self, options: Dict[str, Any]) -> bool:
+        LOGGER.debug(f"# make_all_feeds()")
+        num_feeds = options["num_feeds"]
 
         start_time = datetime.now()
 
@@ -229,8 +231,9 @@ def determine_options() -> Tuple[Dict[str, Any], List[str]]:
     force_collection_opt = ""
     collect_only_opt = ""
     num_feeds = 0
+    window_size = FeedMaker.DEFAULT_WINDOW_SIZE
 
-    optlist, args = getopt.getopt(sys.argv[1:], "ahrcln:")
+    optlist, args = getopt.getopt(sys.argv[1:], "ahrcln:w:")
     for o, a in optlist:
         if o == "-a":
             do_make_all_feeds = True
@@ -245,13 +248,16 @@ def determine_options() -> Tuple[Dict[str, Any], List[str]]:
             collect_only_opt = "-l"
         elif o == "-n":
             num_feeds = int(a)
+        elif o == "-n":
+            window_size = int(a)
 
     options = {
         "do_make_all_feeds": do_make_all_feeds,
         "do_remove_all_files": do_remove_all_files,
         "force_collection_opt": force_collection_opt,
         "collect_only_opt": collect_only_opt,
-        "num_feeds": num_feeds
+        "num_feeds": num_feeds,
+        "window_size": window_size
     }
     return options, args
 
@@ -271,7 +277,7 @@ def main() -> int:
 
     runner = FeedMakerRunner(html_archiving_period=30, list_archiving_period=7)
     if options["do_make_all_feeds"]:
-        result = runner.make_all_feeds(num_feeds=options["num_feeds"])
+        result = runner.make_all_feeds(options)
         Process.kill_process_group(r"chromedriver")
     else:
         config = Config(feed_dir_path=feed_dir_path)

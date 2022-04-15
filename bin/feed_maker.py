@@ -25,11 +25,11 @@ SECONDS_PER_DAY = 60 * 60 * 24
 class FeedMaker:
     MAX_CONTENT_LENGTH = 64 * 1024
     MAX_NUM_DAYS = 7
-    WINDOW_SIZE = 5
+    DEFAULT_WINDOW_SIZE = 5
     IMAGE_TAG_FMT_STR = "<img src='%s/img/1x1.jpg?feed=%s&item=%s'/>"
 
     def __init__(self, feed_dir_path: Path, do_collect_by_force: bool, do_collect_only: bool,
-                 rss_file_path: Path) -> None:
+                 rss_file_path: Path, window_size: int = DEFAULT_WINDOW_SIZE) -> None:
         LOGGER.debug(
             f"# FeedMaker(feed_dir_path={feed_dir_path}, do_collect_by_force={do_collect_by_force}, do_collect_only={do_collect_only}, rss_file_path={rss_file_path})")
         self.global_conf: Dict[str, Any] = Config.get_global_config()
@@ -45,6 +45,7 @@ class FeedMaker:
         self.do_collect_by_force = do_collect_by_force
         self.do_collect_only = do_collect_only
         self.rss_file_path = rss_file_path
+        self.window_size = window_size
 
         self.list_dir = self.feed_dir_path / "newlist"
         self.html_dir = self.feed_dir_path / "html"
@@ -290,13 +291,13 @@ class FeedMaker:
                 if m:
                     start_idx = int(m.group("start_idx"))
                     mtime_str = m.group("mtime")
-                    end_idx = start_idx + self.WINDOW_SIZE
+                    end_idx = start_idx + self.window_size
                     mtime = dateutil.parser.parse(mtime_str)
                     return start_idx, end_idx, mtime
 
         # 처음 생성 시, 또는 파일에 정보가 없을 때
         start_idx = 0
-        end_idx = self.WINDOW_SIZE
+        end_idx = self.window_size
         mtime = Datetime.get_current_time()
         _, current_time_str = self._write_idx_data(start_idx, mtime, True)
         if not current_time_str:
@@ -311,7 +312,7 @@ class FeedMaker:
         delta = current_time - mtime
         increment_size = int((delta.total_seconds() * self.collection_conf["unit_size_per_day"]) / 86400)
         LOGGER.debug(
-            f"start_idx={start_idx}, current time={current_time}, mtime={mtime}, self.WINDOW_SIZE={self.WINDOW_SIZE}, increment_size={increment_size}")
+            f"start_idx={start_idx}, current time={current_time}, mtime={mtime}, self.window_size={self.window_size}, increment_size={increment_size}")
         next_start_idx = 0
         current_time_str = None
         if do_write_initially or increment_size > 0:
