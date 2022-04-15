@@ -248,7 +248,7 @@ def determine_options() -> Tuple[Dict[str, Any], List[str]]:
             collect_only_opt = "-l"
         elif o == "-n":
             num_feeds = int(a)
-        elif o == "-n":
+        elif o == "-w":
             window_size = int(a)
 
     options = {
