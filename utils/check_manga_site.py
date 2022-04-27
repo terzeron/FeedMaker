@@ -9,7 +9,7 @@ import logging
 import logging.config
 from typing import Dict, Any, Optional, Tuple
 from crawler import Crawler, Method
-from feed_maker_util import URL
+from feed_maker_util import URL, Process
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
@@ -86,7 +86,7 @@ def get(url: str, config: Dict[str, Any]) -> Tuple[bool, str, str]:
     return True, response, new_url
 
 
-def get_new_url(url: str, response: str, new_pattern: str, pre: str, domain_postfix: str, post: str) -> str:
+def get_new_url(url: str, response: str, new_pattern: str, pre: str, domain_postfix: str, post: str) -> Tuple[str, int]:
     LOGGER.debug(f"# get_new_url(url={url}, response, new_pattern={new_pattern}, pre={pre}, domain_postfix={domain_postfix}, post={post})")
     new_url: str = ""
     # try to find similar url
@@ -103,10 +103,14 @@ def get_new_url(url: str, response: str, new_pattern: str, pre: str, domain_post
     if len(url_count_map) == 0:
         print("can't find new url")
         new_url = ""
+        new_number = 0
     else:
         sorted_list = sorted(url_count_map.items(), key=lambda item: item[1], reverse=True)
         new_url = sorted_list[0][0]
-    return new_url
+        m = re.search(new_pattern, new_url)
+        if m:
+            new_number = int(m.group(1))
+    return new_url, new_number
 
 
 def get_url_pattern(url: str) -> Tuple[str, str, str, str]:
@@ -158,10 +162,19 @@ def main() -> int:
     success, response, new_url = get(url, config)
     if not success:
         if not new_url:
-            new_url = get_new_url(url, response, new_pattern, pre, domain_postfix, post)
-            print(f"New url: {url}")
-        if url != new_url and new_url:
-            print(f"no service from {url}\nwould you check the new site? {new_url}")
+            new_url, new_number = get_new_url(url, response, new_pattern, pre, domain_postfix, post)
+            if new_url:
+                if url == new_url:
+                    print("same url")
+                else:
+                    print(f"no service from {url}")
+                    print(f"You can use a new url {new_url} from now on")
+                    cmd = f"update_manga_site.py {new_number}"
+                    _, error = Process.exec_cmd(cmd)
+                    if error:
+                        print(f"can't update url to '{new_url}'")
+            else:
+                print("can't get new url from old url")
         return -1
 
     print("Ok")
