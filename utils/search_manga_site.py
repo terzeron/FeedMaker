@@ -39,8 +39,8 @@ def get_data_from_site(config, url_postfix, method=Method.GET, headers: Dict[str
     return response
 
 
-def extract_sub_content_from_agit(site_url_prefix: str, content: str, keyword: str):
-    LOGGER.debug(f"# extract_sub_content_from_agit(site_url_prefix={site_url_prefix})")
+def extract_sub_content_from_agit(site_name: str, site_url_prefix: str, content: str, keyword: str):
+    LOGGER.debug(f"# extract_sub_content_from_agit(site_name={site_name}, site_url_prefix={site_url_prefix})")
     result_list = []
 
     content = re.sub(r'^var\s+\w+\s+=\s+', '', content)
@@ -57,8 +57,8 @@ def extract_sub_content_from_agit(site_url_prefix: str, content: str, keyword: s
     return result_list
 
 
-def extract_sub_content_by_attrs(site_url_prefix: str, html: str, attrs: Dict[str, str]) -> List[Tuple[str, str]]:
-    LOGGER.debug(f"# extract_sub_content_by_attrs(site_url_prefix={site_url_prefix}, attrs={attrs})")
+def extract_sub_content_by_attrs(site_name: str, site_url_prefix: str, html: str, attrs: Dict[str, str]) -> List[Tuple[str, str]]:
+    LOGGER.debug(f"# extract_sub_content_by_attrs(site_name={site_name}, site_url_prefix={site_url_prefix}, attrs={attrs})")
     soup = BeautifulSoup(html, "html.parser")
     result_list = []
     for key in attrs.keys():
@@ -71,6 +71,8 @@ def extract_sub_content_by_attrs(site_url_prefix: str, html: str, attrs: Dict[st
         title = ""
         link = ""
         for e in content:
+            LOGGER.debug(f"element={e}")
+            # 링크 추출
             m = re.search(r'<a[^>]*href="(?P<link>[^"]+)"[^>]*>', str(e))
             if m:
                 if m.group("link").startswith("http"):
@@ -80,6 +82,7 @@ def extract_sub_content_by_attrs(site_url_prefix: str, html: str, attrs: Dict[st
                 link = re.sub(r'&amp;', '&', link)
                 link = re.sub(r'&?cpa=\d+', '', link)
                 link = re.sub(r'&?stx=\d+', '', link)
+                LOGGER.debug(f"link={link}")
 
             # 주석 제거
             e = re.sub(r'<!--.*-->', '', str(e))
@@ -87,6 +90,20 @@ def extract_sub_content_by_attrs(site_url_prefix: str, html: str, attrs: Dict[st
             e = re.sub(r'<p[^>]*>[^<]*</p>', '', e)
             prev_e = e
             while True:
+                # 명시적인 타이틀 텍스트 추출
+                m = re.search(r'<\w+[^>]*class="title"[^>]*>(?P<title>[^<]+)</\w+>', e)
+                if m:
+                    title = m.group("title")
+                    LOGGER.debug(f"title={title}")
+
+                if site_name == "11toon":
+                    # 이미지 url 추출하여 link로 변경
+                    m = re.search(r'url\(\x27(https?)?//[^/]+(?P<link>/.+)\x27\)', e)
+                    if m:
+                        link = m.group("link")
+                        id = re.sub(r'/data/toon_category/(?P<id>\d+)', '\g<id>', link)
+                        link = URL.concatenate_url(site_url_prefix, "/bbs/board.php?bo_table=toons&is=" + id)
+
                 # 만화사이트에서 자주 보이는 불필요한 텍스트 제거
                 e = re.compile(r'''
                     <\w+[^>]*>
@@ -118,7 +135,7 @@ def extract_sub_content_by_attrs(site_url_prefix: str, html: str, attrs: Dict[st
                     break
                 prev_e = e
 
-            if "jmana" not in site_url_prefix and "flix" not in site_url_prefix:
+            if site_name not in ["jmana", "flix"]:
                 e = re.sub(r'.*\b\d+(화|권|부|편).*', '', e)
 
             # 모든 html 태그 제거
@@ -129,6 +146,7 @@ def extract_sub_content_by_attrs(site_url_prefix: str, html: str, attrs: Dict[st
             e = re.sub(r'^\s+', '', e)
             # 행 마지막에 연속하는 공백 제거
             e = re.sub(r'(\s|\n)+$', '', e)
+            LOGGER.debug(f"e={e}")
             if not re.search(r'^\s*$', e):
                 title = e
 
@@ -145,7 +163,7 @@ def search_site(site_name: str, url_postfix: str, attrs: Dict[str, str], method=
     os.chdir(work_dir_path / site_name)
     with open("site_config.json", 'r', encoding='utf-8') as infile:
         config = json.load(infile)
-        if site_name == "agit":
+        if site_name in ["agit", "blacktoon"]:
             version0 = ""
             version1 = ""
             html = get_data_from_site(config, "")
@@ -158,9 +176,9 @@ def search_site(site_name: str, url_postfix: str, attrs: Dict[str, str], method=
             result_list = []
             for _ in range(config["num_retries"]):
                 content0 = get_data_from_site(config, "/data/azi_webtoon_0.js" + version0, method=method, headers=headers, data=data)
-                result0 = extract_sub_content_from_agit(config["url"], content0, attrs["keyword"])
+                result0 = extract_sub_content_from_agit(site_name, config["url"], content0, attrs["keyword"])
                 content1 = get_data_from_site(config, "/data/azi_webtoon_1.js" + version1, method=method, headers=headers, data=data)
-                result1 = extract_sub_content_from_agit(config["url"], content1, attrs["keyword"])
+                result1 = extract_sub_content_from_agit(site_name, config["url"], content1, attrs["keyword"])
                 if result0:
                     result_list.extend(result0)
                     break
@@ -169,7 +187,7 @@ def search_site(site_name: str, url_postfix: str, attrs: Dict[str, str], method=
                     break
         else:
             html = get_data_from_site(config, url_postfix, method=method, headers=headers, data=data)
-            result_list = extract_sub_content_by_attrs(config["url"], html, attrs)
+            result_list = extract_sub_content_by_attrs(site_name, config["url"], html, attrs)
     print_content(site_name, result_list)
 
 
@@ -205,9 +223,12 @@ def main() -> int:
         "funbe": ["/bbs/search.php?stx=" + keyword, {"class": "section-item-title"}],
         "tkor": ["/bbs/search.php?stx=" + keyword, {"class": "section-item-title"}],
         # "flix": ["/bbs/search.php?stx=" + keyword, {"class": "post-list"}, Method.POST, {"Content-Type": "application/x-www-form-urlencoded"}, {"keyword": original_keyword}],
-        "buzztoon": ["/bbs/search.php?stx=" + keyword, {"class": "list_info_title"}],
+        #"buzztoon": ["/bbs/search.php?stx=" + keyword, {"class": "list_info_title"}],
         # "sektoon": ["/?post_type=post&s=" + keyword, {"class": "entry-title"}],
-        "agit": ["", {"keyword": original_keyword}],
+        #"agit": ["", {"keyword": original_keyword}],
+        "11toon": ["/bbs/search_stx.php?stx=" + keyword, {"class": "toons_item"}],
+        "allall": ["/search?skeyword=" + keyword, {"class": "item-card-gray"}],
+        "blacktoon": ["", {"keyword": original_keyword}],
     }
     for site, args_map in site_args_map.items():
         if (site_name and site_name == site) or not site_name:
