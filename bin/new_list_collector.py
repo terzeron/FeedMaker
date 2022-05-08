@@ -60,10 +60,15 @@ class NewListCollector:
         for url in conf["list_url_list"]:
             crawler_cmd = f"crawler.py -f '{self.feed_dir_path}' {option_str} '{url}'"
             LOGGER.debug(f"cmd={crawler_cmd}")
-            result, error, _ = crawler.run(url)
-            if not result or error:
-                LOGGER.warning("Warning: can't get response from crawler")
-                LOGGER.debug(error)
+            try:
+                result, error, _ = crawler.run(url)
+                if not result or error:
+                    LOGGER.warning("Warning: can't get response from crawler")
+                    LOGGER.debug(error)
+                    continue
+            except UnicodeDecodeError as e:
+                LOGGER.warning("Warning: can't decode wrong unicode characters")
+                LOGGER.debug(e)
                 continue
 
             capture_cmd = f"{self.collection_conf['item_capture_script']} -f '{self.feed_dir_path}'"
