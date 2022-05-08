@@ -151,12 +151,6 @@ def main() -> int:
     url = config["url"]
     print(f"url: {url}")
 
-    try:
-        os.remove("cookies.requestsclient.json")
-        os.remove("cookies.headlessbrowser.json")
-    except FileNotFoundError:
-        pass
-
     new_pattern, pre, domain_postfix, post = get_url_pattern(url)
 
     success, response, new_url = get(url, config)
