@@ -40,7 +40,7 @@ def update_domain() -> bool:
 
     with open(site_config_file, "w", encoding="utf-8") as f:
         site_config["url"] = new_url
-        json.dump(site_config, f, ensure_ascii=False)
+        json.dump(site_config, f, indent=2, ensure_ascii=False)
 
     print("- git add")
     git_cmd: str = f"git add {site_config_file}"

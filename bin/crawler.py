@@ -49,7 +49,7 @@ class RequestsClient:
             cookie_data.append({"name": k, "value": v})
         cookie_file = self.dir_path / RequestsClient.COOKIE_FILE
         with open(cookie_file, "w", encoding='utf-8') as f:
-            json.dump(cookie_data, f)
+            json.dump(cookie_data, f, indent=2, ensure_ascii=False)
 
     def read_cookies_from_file(self) -> None:
         cookie_file = self.dir_path / RequestsClient.COOKIE_FILE

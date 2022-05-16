@@ -136,7 +136,7 @@ class HeadlessBrowser:
         cookies = driver.get_cookies()
         cookie_file = self.dir_path / HeadlessBrowser.COOKIE_FILE
         with open(cookie_file, "w", encoding='utf-8') as f:
-            json.dump(cookies, f)
+            json.dump(cookies, f, indent=2, ensure_ascii=False)
 
     def _read_cookies_from_file(self, driver) -> None:
         cookie_file = self.dir_path / HeadlessBrowser.COOKIE_FILE
