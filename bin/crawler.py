@@ -49,7 +49,7 @@ class RequestsClient:
             cookie_data.append({"name": k, "value": v})
         cookie_file = self.dir_path / RequestsClient.COOKIE_FILE
         with open(cookie_file, "w", encoding='utf-8') as f:
-            json.dump(cookie_data, f)
+            json.dump(cookie_data, f, indent=2, ensure_ascii=False)
 
     def read_cookies_from_file(self) -> None:
         cookie_file = self.dir_path / RequestsClient.COOKIE_FILE
@@ -63,15 +63,15 @@ class RequestsClient:
                     cookie_str = cookie_str + cookie["name"] + "=" + cookie["value"] + "; "
             self.headers["Cookie"] = cookie_str
 
-    def make_request(self, url, data=None, download_file: Path = None) -> Tuple[str, Dict[str, Any], Optional[int]]:
-        LOGGER.debug(f"# make_request('{url}')")
+    def make_request(self, url, data=None, download_file: Path=None, allow_redirects=True) -> Tuple[str, Dict[str, Any], Optional[int]]:
+        LOGGER.debug(f"# make_request(url='{url}', allow_redirects={allow_redirects})")
 
         self.read_cookies_from_file()
 
         response = None
         try:
             if self.method == Method.GET:
-                response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
+                response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, allow_redirects=allow_redirects)
             elif self.method == Method.POST:
                 response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, data=data)
             elif self.method == Method.HEAD:
@@ -91,7 +91,7 @@ class RequestsClient:
             return "", {}, None
         if response.status_code != 200:
             LOGGER.debug(f"response.status_code={response.status_code}")
-            return "", {}, response.status_code
+            return "", dict(response.headers), response.status_code
         if response.cookies:
             self.write_cookies_to_file(response.cookies)
 
@@ -195,8 +195,8 @@ class Crawler:
 
         return option_str
 
-    def run(self, url, data=None, download_file: Path = None) -> Tuple[str, bool, Optional[Dict[str, Any]]]:
-        LOGGER.debug(f"# run(url={url}, data={data}, download_file={download_file})")
+    def run(self, url, data=None, download_file: Path=None, allow_redirects: bool=True) -> Tuple[str, bool, Optional[Dict[str, Any]]]:
+        LOGGER.debug(f"# run(url={url}, data={data}, download_file={download_file}, allow_redirects={allow_redirects})")
         headers: Dict[str, Any] = {}
         for i in range(self.num_retries):
             if self.render_js:
@@ -205,9 +205,9 @@ class Crawler:
                     return response, False, None
             else:
                 response, headers, status_code = self.requests_client.make_request(url, download_file=download_file,
-                                                                                   data=data)
+                                                                                   data=data, allow_redirects=allow_redirects)
                 if response:
-                    return response, False, None
+                    return response, False, headers
 
                 if status_code in [401, 403, 404, 405, 410]:
                     # no retry in case of

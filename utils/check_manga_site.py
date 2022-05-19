@@ -58,7 +58,7 @@ def get(url: str, config: Dict[str, Any]) -> Tuple[bool, str, str]:
     response_headers = None
     crawler = Crawler(method=Method.GET, num_retries=config["num_retries"], render_js=config["render_js"], encoding=config["encoding"], headers=config["headers"], timeout=config["timeout"])
     try:
-        response, _, response_headers = crawler.run(url)
+        response, _, response_headers = crawler.run(url, allow_redirects=False)
     except Crawler.ReadTimeoutException:
         print("read timeout")
         return False, "", ""
@@ -68,10 +68,11 @@ def get(url: str, config: Dict[str, Any]) -> Tuple[bool, str, str]:
         new_url = get_location(response_headers)
         if new_url:
             print(f"new_url={new_url}")
+            return False, response, new_url
 
     if not response:
         print("no response")
-        return False, "", ""
+        return False, "", new_url
 
     if config["keyword"] not in response:
         print("no keyword")
@@ -86,19 +87,21 @@ def get(url: str, config: Dict[str, Any]) -> Tuple[bool, str, str]:
     return True, response, new_url
 
 
-def get_new_url(url: str, response: str, new_pattern: str, pre: str, domain_postfix: str, post: str) -> Tuple[str, int]:
-    LOGGER.debug(f"# get_new_url(url={url}, response, new_pattern={new_pattern}, pre={pre}, domain_postfix={domain_postfix}, post={post})")
+def get_new_url(url: str, response: str, new_pattern: str, pre: str, num: int, domain_postfix: str, post: str) -> Tuple[str, int]:
+    LOGGER.debug(f"# get_new_url(url='{url}', new_pattern='{new_pattern}', pre='{pre}', num={num}, domain_postfix='{domain_postfix}', post='{post}')")
     new_url: str = ""
     # try to find similar url
     url_count_map: Dict[str, int] = {}
+
     matches = re.findall(new_pattern, str(response))
     for match in matches:
-        new_url = pre + match + domain_postfix + post
-        LOGGER.debug(f"new_url={new_url}")
-        if new_url in url_count_map:
-            url_count_map[new_url] += 1
-        else:
-            url_count_map[new_url] = 1
+        if int(match) > num:
+            new_url = pre + match + domain_postfix + post
+            LOGGER.debug(f"new_url={new_url}")
+            if new_url in url_count_map:
+                url_count_map[new_url] += 1
+            else:
+                url_count_map[new_url] = 1
 
     if len(url_count_map) == 0:
         print("can't find new url")
@@ -106,6 +109,7 @@ def get_new_url(url: str, response: str, new_pattern: str, pre: str, domain_post
         new_number = 0
     else:
         sorted_list = sorted(url_count_map.items(), key=lambda item: item[1], reverse=True)
+        LOGGER.debug(sorted_list)
         new_url = sorted_list[0][0]
         m = re.search(new_pattern, new_url)
         if m:
@@ -113,27 +117,34 @@ def get_new_url(url: str, response: str, new_pattern: str, pre: str, domain_post
     return new_url, new_number
 
 
-def get_url_pattern(url: str) -> Tuple[str, str, str, str]:
+def get_url_pattern(url: str) -> Tuple[str, str, int, str, str]:
     LOGGER.debug(f"# get_url_pattern(url={url})")
     new_pattern: str = ""
     pre: str = ""
     domain_postfix: str = ""
     post: str = ""
     m1 = re.search(r'(?P<pre>https?://[\w\.\-]+\D)(?P<num>\d+)(?P<domain_postfix>[^/]+)(?P<post>.*)', url)
-    m2 = re.search(r'(?P<pre>https?://[\w\.\-]+)\.[^/]+(?P<post>.*)', url)
-    if m1 or m2:
+    if m1:
         if m1:
             pre = m1.group("pre")
+            num = int(m1.group("num"))
             domain_postfix = m1.group("domain_postfix")
             post = m1.group("post")
             new_pattern = pre + '(\d+)' + domain_postfix + '(?:' + post + ')?'
-            LOGGER.debug(f"first pattern: {pre}, {domain_postfix}, {post}, {new_pattern}")
-        elif m2:
-            pre = m2.group("pre")
-            post = m2.group("post")
-            new_pattern = pre + '(\.[^/]+)' + post
-            LOGGER.debug(f"second pattern: {pre}, {post}, {new_pattern}")
-    return new_pattern, pre, domain_postfix, post
+            LOGGER.debug(f"type 1 pattern: {pre}, {domain_postfix}, {post}, {new_pattern}")
+    return new_pattern, pre, num, domain_postfix, post
+
+
+def print_new_url(url: str, new_url: str, new_number: int) -> None:
+    if url == new_url:
+        print("same url")
+    else:
+        print(f"no service from {url}")
+        print(f"You can use a new url {new_url} from now on")
+        cmd = f"update_manga_site.py {new_number}"
+        _, error = Process.exec_cmd(cmd)
+        if error:
+            print(f"can't update url to '{new_url}'")    
 
 
 def main() -> int:
@@ -151,24 +162,22 @@ def main() -> int:
     url = config["url"]
     print(f"url: {url}")
 
-    new_pattern, pre, domain_postfix, post = get_url_pattern(url)
+    new_pattern, pre, num, domain_postfix, post = get_url_pattern(url)
+    LOGGER.debug(f"new_pattern='{new_pattern}', pre='{pre}', num={num}, domain_postfix='{domain_postfix}', post='{post}'")
 
     success, response, new_url = get(url, config)
+    LOGGER.debug(f"success={success}, new_url='{new_url}'")
     if not success:
-        if not new_url:
-            new_url, new_number = get_new_url(url, response, new_pattern, pre, domain_postfix, post)
+        if new_url:
+            _, _, num, _, _ = get_url_pattern(new_url)
+            print_new_url(url, new_url, num)
+        else:
+            new_url, new_number = get_new_url(url, response, new_pattern, pre, num, domain_postfix, post)
             if new_url:
-                if url == new_url:
-                    print("same url")
-                else:
-                    print(f"no service from {url}")
-                    print(f"You can use a new url {new_url} from now on")
-                    cmd = f"update_manga_site.py {new_number}"
-                    _, error = Process.exec_cmd(cmd)
-                    if error:
-                        print(f"can't update url to '{new_url}'")
+                print_new_url(url, new_url, new_number)
             else:
                 print("can't get new url from old url")
+
         return -1
 
     print("Ok")
