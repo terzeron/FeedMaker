@@ -121,17 +121,17 @@ def get_url_pattern(url: str) -> Tuple[str, str, int, str, str]:
     LOGGER.debug(f"# get_url_pattern(url={url})")
     new_pattern: str = ""
     pre: str = ""
+    num: int = 0
     domain_postfix: str = ""
     post: str = ""
-    m1 = re.search(r'(?P<pre>https?://[\w\.\-]+\D)(?P<num>\d+)(?P<domain_postfix>[^/]+)(?P<post>.*)', url)
+    m1 = re.search(r'(?P<pre>(https?:)?//[\w\.\-]+\D)(?P<num>\d+)(?P<domain_postfix>[^/]+)(?P<post>.*)', url)
     if m1:
-        if m1:
-            pre = m1.group("pre")
-            num = int(m1.group("num"))
-            domain_postfix = m1.group("domain_postfix")
-            post = m1.group("post")
-            new_pattern = pre + '(\d+)' + domain_postfix + '(?:' + post + ')?'
-            LOGGER.debug(f"type 1 pattern: {pre}, {domain_postfix}, {post}, {new_pattern}")
+        pre = m1.group("pre")
+        num = int(m1.group("num"))
+        domain_postfix = m1.group("domain_postfix")
+        post = m1.group("post")
+        new_pattern = pre + '(\d+)' + domain_postfix + '(?:' + post + ')?'
+        LOGGER.debug(f"type 1 pattern: {pre}, {domain_postfix}, {post}, {new_pattern}")
     return new_pattern, pre, num, domain_postfix, post
 
 
