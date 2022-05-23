@@ -128,6 +128,8 @@ class ProblemChecker:
                                 if count != 1:
                                     self.feed_name_list_url_count_map[feed_name] = {
                                         "feed_name": feed_name,
+                                        "feed_title": title,
+                                        "group_name": group_name,
                                         "count": count}
                             if "collection" in json_data["configuration"]:
                                 for element in json_data["configuration"]["collection"]:
@@ -183,10 +185,12 @@ class ProblemChecker:
                 s = path.stat()
                 upload_date = datetime.fromtimestamp(s.st_mtime)
                 self.public_feed_info_map[feed_name] = {
-                    "feed_name": feed_name, "feed_title": self.feed_name_title_map.get(feed_name, ""),
+                    "feed_name": feed_name,
+                    "feed_title": self.feed_name_title_map.get(feed_name, ""),
                     "group_name": self.feed_name_group_map.get(feed_name, ""),
                     "file_path": str(path.relative_to(self.public_feed_dir)),
-                    "upload_date": self.convert_datetime_to_str(upload_date), "size": s.st_size,
+                    "upload_date": upload_date,
+                    "size": s.st_size,
                     "num_items": num_items}
 
         print(f"* The loading of public feed file is done. {len(self.public_feed_info_map)} items")
@@ -218,7 +222,7 @@ class ProblemChecker:
                         "file_name": file_name,
                         "file_path": str(path.relative_to(self.work_dir)),
                         "size": s.st_size,
-                        "update_date": self.convert_datetime_to_str(datetime.fromtimestamp(s.st_mtime))}
+                        "update_date": datetime.fromtimestamp(s.st_mtime)}
 
                 # html file with normal size should have image tag
                 # would find html files with zero count of image tag
@@ -257,9 +261,9 @@ class ProblemChecker:
                 "file_path": str(path.relative_to(self.work_dir)),
                 "count": count}
 
-            print(f"* The loading of all html files is done. {html_file_count} items")
-            if do_merge:
-                self.merge_all_feeds_status()
+        print(f"* The loading of all html files is done. {html_file_count} items")
+        if do_merge:
+            self.merge_all_feeds_status()
 
     def load_all_progress_info_from_files(self, do_merge=False) -> None:
         LOGGER.debug("# load_all_progress_info_from_files()")
@@ -329,15 +333,14 @@ class ProblemChecker:
                                 continue
                             date = datetime.strptime(m.group("date"), "%d/%b/%Y")
                             # determine the latest view date & status
-                            if not (feed_alias in self.feed_alias_access_info_map and "view_date" in
-                                    self.feed_alias_access_info_map[feed_alias]):
-                                access_info = self.feed_alias_access_info_map.get(feed_alias, {})
-                                access_info["feed_alias"] = feed_alias
-                                access_info["feed_name"] = feed_name
-                                access_info["view_date"] = date
-                                access_info["view_status"] = status_code
-                                access_info["is_in_xml_dir"] = False
-                                self.feed_alias_access_info_map[feed_alias] = access_info
+                            access_info = self.feed_alias_access_info_map.get(feed_alias, {})
+                            access_info["feed_alias"] = feed_alias
+                            access_info["feed_name"] = feed_name
+                            access_info["view_date"] = date
+                            access_info["view_status"] = status_code
+                            access_info["is_in_xml_dir"] = False
+                            self.feed_alias_access_info_map[feed_alias] = access_info
+
                     # access
                     m = re.search(
                         r'\[(?P<date>\d+/\w+/\d+):\d+:\d+:\d+ \+\d+] "GET /(?P<feed>(xml/)?(?P<feed_alias>[\w._\-]+))\.xml\S* HTTP\S+" (?P<status_code>\d+) (?:\d+|-) "[^"]*" "[^"]*"',
@@ -351,28 +354,26 @@ class ProblemChecker:
                             continue
                         date = datetime.strptime(m.group("date"), "%d/%b/%Y")
                         # determine the latest access date & status
-                        if not (feed_alias in self.feed_alias_access_info_map and "accesss_date" in
-                                self.feed_alias_access_info_map[feed_alias]):
-                            access_info = self.feed_alias_access_info_map.get(feed_alias, {})
-                            access_info["feed_alias"] = feed_alias
-                            access_info["feed_name"] = feed_name
-                            access_info["access_date"] = date
-                            access_info["access_status"] = status_code
-                            access_info["is_in_xml_dir"] = feed.startswith("xml/")
-                            self.feed_alias_access_info_map[feed_alias] = access_info
+                        access_info = self.feed_alias_access_info_map.get(feed_alias, {})
+                        access_info["feed_alias"] = feed_alias
+                        access_info["feed_name"] = feed_name
+                        access_info["access_date"] = date
+                        access_info["access_status"] = status_code
+                        access_info["is_in_xml_dir"] = feed.startswith("xml/")
+                        self.feed_alias_access_info_map[feed_alias] = access_info
 
         print(f"* The loading of http access log is done. {len(self.feed_alias_access_info_map)} items")
         if do_merge:
             self.merge_all_feeds_status()
 
     @staticmethod
-    def convert_datetime_to_str(date: Union[str, datetime]) -> str:
-        if not date:
+    def convert_datetime_to_str(d: Union[str, datetime]) -> str:
+        if not d:
             return ""
-        if isinstance(date, str):
-            return date
-        if isinstance(date, datetime):
-            return date.astimezone().strftime("%y-%m-%d")
+        if isinstance(d, str):
+            return d
+        if isinstance(d, datetime):
+            return d.astimezone().strftime("%y-%m-%d")
         return ""
 
     def get_status_info_with_default(self, alias: str) -> Dict[str, Any]:
@@ -478,18 +479,22 @@ class ProblemChecker:
                 self.feed_alias_status_info_map[feed_alias] = status_info
 
         # merge
-        for _, status_info in self.feed_alias_status_info_map.items():
+        for feed_alias in list(self.feed_alias_status_info_map.keys()):
+            status_info = self.feed_alias_status_info_map[feed_alias]
             feed_name = status_info.get("feed_name", "")
 
             # exclude very normal cases
             # 1) unrequested and deleted
             if ProblemChecker._is_in_dormant_status(status_info):
+                del self.feed_alias_status_info_map[feed_alias]
                 continue
             # 2) requested a few weeks ago but deleted
             if ProblemChecker._is_in_requested_ago_but_deleted_status(status_info, num_days=14):
+                del self.feed_alias_status_info_map[feed_alias]
                 continue
             # 3) accessed or viewed recently
             if ProblemChecker._is_in_accessed_or_viewed_recently_status(status_info, num_days=14):
+                del self.feed_alias_status_info_map[feed_alias]
                 continue
 
             status_info["feed_title"] = status_info.get("feed_title", self.feed_name_title_map.get(feed_name, ""))

@@ -2,9 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+from datetime import datetime
+from problem_checker import ProblemChecker
 
 
 class TestProblemChecker(unittest.TestCase):
+    def setUp(self) -> None:
+        self.checker = ProblemChecker()
+
     def test_load_htaccess_file(self):
         self.fail()
 
@@ -27,7 +32,14 @@ class TestProblemChecker(unittest.TestCase):
         self.fail()
 
     def test_convert_datetime_to_str(self):
-        self.fail()
+        d = "2022-01-01"
+        self.assertEqual("2022-01-01", self.checker.convert_datetime_to_str(d))
+        d = "2022-12-32 12:12:12"
+        self.assertEqual("2022-12-32 12:12:12", self.checker.convert_datetime_to_str(d))
+        d = datetime.strptime("2018-01-31", "%Y-%m-%d")
+        self.assertEqual("18-01-31", self.checker.convert_datetime_to_str(d))
+        d = datetime.strptime("2018-01-31 17:04:11", "%Y-%m-%d %H:%M:%S")
+        self.assertEqual("18-01-31", self.checker.convert_datetime_to_str(d))
 
     def test_get_status_info_with_default(self):
         self.fail()

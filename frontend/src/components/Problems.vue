@@ -607,13 +607,12 @@ export default {
                                 console.log(resElementInfo.data.message);
                               } else {
                                 this.listUrlInfoList = _.map(resElementInfo.data['result']['feed_name_list_url_count_map'], (o) => {
-                                  o['feed_title'] = o['feed_name'];
+                                  o['feed_title'] = this.getManagementLink(o['feed_title'], o['group_name'], o['feed_name']);
                                   return o;
                                 });
                                 this.elementInfoList = _.map(resElementInfo.data['result']['element_name_count_map'], (o) => {
                                   return o;
                                 })
-                                console.log(this.elementInfoList);
                               }
                             })
                             .catch((error) => {
