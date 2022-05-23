@@ -110,32 +110,32 @@ class FeedManager:
         else:
             return "", f"can't find such file '{exec_result_file_path.relative_to(self.work_dir)}'"
 
-    def get_problems_status_info(self) -> Tuple[List[Dict[str, Any]], str]:
+    def get_problems_status_info(self) -> Tuple[Dict[str, Dict[str, Any]], str]:
         self.logger.debug("# get_problems_status_info()")
-        return self.checker.feed_alias_status_info_list, ""
+        return self.checker.feed_alias_status_info_map, ""
 
-    def get_problems_progress_info(self) -> Tuple[List[Dict[str, Any]], str]:
+    def get_problems_progress_info(self) -> Tuple[Dict[str, Dict[str, Any]], str]:
         self.logger.debug("# get_problems_progress_info()")
-        return self.checker.feed_name_progress_info_list, ""
+        return self.checker.feed_name_progress_info_map, ""
 
     def get_problems_public_feed_info(self) -> Tuple[List[Dict[str, Any]], str]:
         self.logger.debug("# get_problems_public_feed_info()")
-        return self.checker.public_feed_info_list, ""
+        return self.checker.public_feed_info_map, ""
 
     def get_problems_html_info(self) -> Tuple[Dict[str, Any], str]:
         self.logger.debug("# get_problems_html_info()")
         return {
-                   "html_file_size_list": self.checker.html_file_size_list,
-                   "html_file_with_many_image_tag_list": self.checker.html_file_with_many_image_tag_list,
-                   "html_file_without_image_tag_list": self.checker.html_file_without_image_tag_list,
-                   "html_file_image_not_found_list": self.checker.html_file_image_not_found_list
+                   "html_file_size_map": self.checker.html_file_size_map,
+                   "html_file_with_many_image_tag_map": self.checker.html_file_with_many_image_tag_map,
+                   "html_file_without_image_tag_map": self.checker.html_file_without_image_tag_map,
+                   "html_file_image_not_found_map": self.checker.html_file_image_not_found_map
                }, ""
 
     def get_problems_element_info(self) -> Tuple[Dict[str, Any], str]:
         self.logger.debug("# get_problems_element_info()")
         return {
-                   "feed_name_list_url_count_list": self.checker.feed_name_list_url_count_list,
-                   "element_name_count_list": self.checker.element_name_count_list
+                   "feed_name_list_url_count_map": self.checker.feed_name_list_url_count_map,
+                   "element_name_count_map": self.checker.element_name_count_map
                }, ""
 
     @staticmethod

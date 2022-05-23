@@ -485,7 +485,7 @@ export default {
           .then((value) => {
             if (value) {
               this.removeHtmlFile(data.item['file_path']);
-              this.htmlFileSizeList = _.without(this.htmlFileSizeList, data.item);
+              this.htmlFileSizeMap = _.without(this.htmlFileSizeMap, data.item);
             }
           })
           .catch((error) => {
@@ -579,22 +579,22 @@ export default {
                         console.log(resHtmlInfo.data.message);
                       } else {
                         this.htmlFileSizeList =
-                            _.map(resHtmlInfo.data['result']['html_file_size_list'], (o) => {
+                            _.map(resHtmlInfo.data['result']['html_file_size_map'], (o) => {
                               o['action'] = '삭제';
                               return o;
                             });
                         this.htmlFileWithManyImageTagList =
-                            _.map(resHtmlInfo.data['result']['html_file_with_many_image_tag_list'], (o) => {
+                            _.map(resHtmlInfo.data['result']['html_file_with_many_image_tag_map'], (o) => {
                               o['action'] = '삭제';
                               return o;
                             });
                         this.htmlFileWithoutImageTagList =
-                            _.map(resHtmlInfo.data['result']['html_file_without_image_tag_list'], (o) => {
+                            _.map(resHtmlInfo.data['result']['html_file_without_image_tag_map'], (o) => {
                               o['action'] = '삭제';
                               return o;
                             });
                         this.htmlFileWithImageNotFoundList =
-                            _.map(resHtmlInfo.data['result']['html_file_image_not_found_list'], (o) => {
+                            _.map(resHtmlInfo.data['result']['html_file_image_not_found_map'], (o) => {
                               o['action'] = '삭제';
                               return o;
                             });
@@ -606,12 +606,14 @@ export default {
                               if (resElementInfo.data.status === 'failure') {
                                 console.log(resElementInfo.data.message);
                               } else {
-                                this.listUrlInfoList =
-                                    _.map(resElementInfo.data['result']['feed_name_list_url_count_list'], (o) => {
-                                      o['feed_title'] = this.getManagementLink(o['feed_title'], o['group_name'], o['feed_name']);
-                                      return o;
-                                    });
-                                this.elementInfoList = resElementInfo.data['result']['element_name_count_list'];
+                                this.listUrlInfoList = _.map(resElementInfo.data['result']['feed_name_list_url_count_map'], (o) => {
+                                  o['feed_title'] = o['feed_name'];
+                                  return o;
+                                });
+                                this.elementInfoList = _.map(resElementInfo.data['result']['element_name_count_map'], (o) => {
+                                  return o;
+                                })
+                                console.log(this.elementInfoList);
                               }
                             })
                             .catch((error) => {
