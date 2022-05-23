@@ -73,8 +73,8 @@ class ProblemChecker:
         del self.feed_name_list_url_count_map
         del self.element_name_count_map
 
-    def load_htaccess_file(self, do_merge=False) -> None:
-        LOGGER.debug(f"# load_htaccess_file(do_merge={do_merge})")
+    def load_htaccess_file(self) -> None:
+        LOGGER.debug(f"# load_htaccess_file()")
         self.feed_alias_name_map.clear()
         self.feed_name_aliases_map.clear()
         with open(self.htaccess_file, 'r', encoding="utf-8") as infile:
@@ -90,10 +90,8 @@ class ProblemChecker:
                     self.feed_name_aliases_map[feed_name] = aliases
 
         print(f"* The loading of htaccess file is done. {len(self.feed_alias_name_map)} items")
-        if do_merge:
-            self.merge_all_feeds_status()
 
-    def load_all_config_rss_files(self, do_merge=False) -> None:
+    def load_all_config_rss_files(self) -> None:
         LOGGER.debug("# load_all_config_rss_files()")
         self.feed_name_list_url_count_map.clear()
         self.feed_name_rss_info_map.clear()
@@ -167,11 +165,9 @@ class ProblemChecker:
                     pass
 
         print(f"* The loading of all config files and rss files is done. {len(self.feed_name_rss_info_map)} items")
-        if do_merge:
-            self.merge_all_feeds_status()
 
-    def load_all_public_feed_files(self, do_merge=False) -> None:
-        LOGGER.debug(f"# load_all_public_feed_files(do_merge={do_merge})")
+    def load_all_public_feed_files(self) -> None:
+        LOGGER.debug(f"# load_all_public_feed_files()")
         self.public_feed_info_map.clear()
         for path in self.public_feed_dir.iterdir():
             if path.suffix == ".xml":
@@ -194,23 +190,20 @@ class ProblemChecker:
                     "num_items": num_items}
 
         print(f"* The loading of public feed file is done. {len(self.public_feed_info_map)} items")
-        if do_merge:
-            self.merge_all_feeds_status()
 
     @staticmethod
     def get_html_file_name(path: Path) -> str:
         return path.parent.parent.name + "/html/" + path.name
 
-    def load_all_html_files(self, do_merge=False) -> None:
-        LOGGER.debug("# load_all_html_files()")
+    def add_html_files_in_path_to_info(self, feed_dir_path: Path) -> None:
+        LOGGER.debug(f"# add_html_files_in_path_to_info(feed_dir_path={feed_dir_path})")
         html_file_image_tag_count_map: Dict[Path, int] = {}
         html_file_image_not_found_count_map: Dict[Path, int] = {}
-        self.html_file_size_map.clear()
         html_file_count = 0
         global_conf = Config.get_global_config()
         web_service_url = global_conf["web_service_url"]
 
-        for path in self.work_dir.glob("*/*/html/*"):
+        for path in feed_dir_path.glob("html/*"):
             if path.parent.name.startswith("_") or path.parent.parent.name.startswith("_"):
                 continue
             if path.suffix == ".html":
@@ -232,84 +225,196 @@ class ProblemChecker:
                     for line in infile:
                         # image tag counting
                         if re.search(r'1x1.jpg', line):
-                            html_file_image_tag_count_map[path] = \
-                                html_file_image_tag_count_map.get(path, 0) + 1
+                            html_file_image_tag_count_map[path] = html_file_image_tag_count_map.get(path, 0) + 1
                         # image-not-found.png counting
                         if re.search(r'image-not-found\.png', line):
-                            html_file_image_not_found_count_map[path] = \
-                                html_file_image_not_found_count_map.get(path, 0) + 1
+                            html_file_image_not_found_count_map[path] = html_file_image_not_found_count_map.get(path, 0) + 1
 
-        self.html_file_with_many_image_tag_map.clear()
-        self.html_file_without_image_tag_map.clear()
-        self.html_file_image_not_found_map.clear()
         for path, count in html_file_image_tag_count_map.items():
             html_file_name = self.get_html_file_name(path)
             if count > 1:
                 self.html_file_with_many_image_tag_map[html_file_name] = {
                     "file_name": html_file_name,
                     "file_path": str(path.relative_to(self.work_dir)),
+                    "feed_dir_path": str(path.parent.relative_to(self.work_dir)),
+                    "group_dir_path": str(path.parent.parent.relative_to(self.work_dir)),
                     "count": count}
             if count < 1:
                 self.html_file_without_image_tag_map[file_name] = {
                     "file_name": html_file_name,
                     "file_path": str(path.relative_to(self.work_dir)),
+                    "feed_dir_path": str(path.parent.relative_to(self.work_dir)),
+                    "group_dir_path": str(path.parent.parent.relative_to(self.work_dir)),
                     "count": count}
+
         for path, count in html_file_image_not_found_count_map.items():
             html_file_name = self.get_html_file_name(path)
             self.html_file_image_not_found_map[html_file_name] = {
                 "file_name": html_file_name,
                 "file_path": str(path.relative_to(self.work_dir)),
+                "feed_dir_path": str(path.parent.relative_to(self.work_dir)),
+                "group_dir_path": str(path.parent.parent.relative_to(self.work_dir)),
+                "count": count}
+
+        print(f"* The adding of some html files in '{feed_dir_path}' is done. {html_file_count} items")
+
+    def remove_html_file_in_path_from_info(self, dir_type_name: str, dir_path: Path) -> None:
+        LOGGER.debug(f"# remove_html_file_in_path_from_info(dir_type_name={dir_type_name}, dir_path={dir_path})")
+        if dir_type_name not in ["file_path", "feed_dir_path", "group_dir_path"]:
+            return
+
+        count: int = 0
+        for k in list(self.html_file_size_map.keys()):
+            if dir_type_name in self.html_file_size_map[k] and \
+                    self.html_file_size_map[k][dir_type_name] == str(dir_path.relative_to(self.work_dir)):
+                del self.html_file_size_map[k]
+                count += 1
+
+        for k in list(self.html_file_with_many_image_tag_map.keys()):
+            if dir_type_name in self.html_file_with_many_image_tag_map[k] and \
+                    self.html_file_with_many_image_tag_map[k][dir_type_name] == str(dir_path.relative_to(self.work_dir)):
+                del self.html_file_with_many_image_tag_map[k]
+
+        for k in list(self.html_file_without_image_tag_map.keys()):
+            if dir_type_name in self.html_file_without_image_tag_map[k] and \
+                    self.html_file_without_image_tag_map[k][dir_type_name] == str(dir_path.relative_to(self.work_dir)):
+                del self.html_file_without_image_tag_map[k]
+
+        for k in list(self.html_file_image_not_found_map.keys()):
+            if dir_type_name in self.html_file_image_not_found_map[k] and \
+                    self.html_file_image_not_found_map[k][dir_type_name] == str(dir_path.relative_to(self.work_dir)):
+                del self.html_file_image_not_found_map[k]
+
+        print(f"* The removing of some html files in '{dir_path}' is done. {count} items")
+
+    def load_all_html_files(self) -> None:
+        LOGGER.debug("# load_all_html_files()")
+        html_file_image_tag_count_map: Dict[Path, int] = {}
+        html_file_image_not_found_count_map: Dict[Path, int] = {}
+        self.html_file_size_map.clear()
+        self.html_file_with_many_image_tag_map.clear()
+        self.html_file_without_image_tag_map.clear()
+        self.html_file_image_not_found_map.clear()
+        html_file_count = 0
+        global_conf = Config.get_global_config()
+        web_service_url = global_conf["web_service_url"]
+
+        for path in self.work_dir.glob("*/*/html/*"):
+            if path.parent.name.startswith("_") or path.parent.parent.name.startswith("_"):
+                continue
+            if path.suffix == ".html":
+                s = path.stat()
+                html_file_count += 1
+                if 124 < s.st_size < 434:
+                    file_name = self.get_html_file_name(path)
+                    self.html_file_size_map[file_name] = {
+                        "file_name": file_name,
+                        "file_path": str(path.relative_to(self.work_dir)),
+                        "feed_dir_path": str(path.parent.relative_to(self.work_dir)),
+                        "group_dir_path": str(path.parent.parent.relative_to(self.work_dir)),
+                        "size": s.st_size,
+                        "update_date": datetime.fromtimestamp(s.st_mtime)}
+
+                # html file with normal size should have image tag
+                # would find html files with zero count of image tag
+                if s.st_size > FeedMaker.get_size_of_template_with_image_tag(web_service_url, path.name):
+                    html_file_image_tag_count_map[path] = 0
+                with open(path, 'r', encoding="utf-8") as infile:
+                    for line in infile:
+                        # image tag counting
+                        if re.search(r'1x1.jpg', line):
+                            html_file_image_tag_count_map[path] = html_file_image_tag_count_map.get(path, 0) + 1
+                        # image-not-found.png counting
+                        if re.search(r'image-not-found\.png', line):
+                            html_file_image_not_found_count_map[path] = html_file_image_not_found_count_map.get(path, 0) + 1
+
+        for path, count in html_file_image_tag_count_map.items():
+            html_file_name = self.get_html_file_name(path)
+            if count > 1:
+                self.html_file_with_many_image_tag_map[html_file_name] = {
+                    "file_name": html_file_name,
+                    "file_path": str(path.relative_to(self.work_dir)),
+                    "feed_dir_path": str(path.parent.relative_to(self.work_dir)),
+                    "group_dir_path": str(path.parent.parent.relative_to(self.work_dir)),
+                    "count": count}
+            if count < 1:
+                self.html_file_without_image_tag_map[file_name] = {
+                    "file_name": html_file_name,
+                    "file_path": str(path.relative_to(self.work_dir)),
+                    "feed_dir_path": str(path.parent.relative_to(self.work_dir)),
+                    "group_dir_path": str(path.parent.parent.relative_to(self.work_dir)),
+                    "count": count}
+
+        for path, count in html_file_image_not_found_count_map.items():
+            html_file_name = self.get_html_file_name(path)
+            self.html_file_image_not_found_map[html_file_name] = {
+                "file_name": html_file_name,
+                "file_path": str(path.relative_to(self.work_dir)),
+                "feed_dir_path": str(path.parent.relative_to(self.work_dir)),
+                "group_dir_path": str(path.parent.parent.relative_to(self.work_dir)),
                 "count": count}
 
         print(f"* The loading of all html files is done. {html_file_count} items")
-        if do_merge:
-            self.merge_all_feeds_status()
 
-    def load_all_progress_info_from_files(self, do_merge=False) -> None:
+    def load_all_progress_info_from_files(self) -> None:
         LOGGER.debug("# load_all_progress_info_from_files()")
         self.feed_name_progress_info_map.clear()
-        for feed_name, config in self.feed_name_config_map.items():
-            if feed_name.startswith("_") or self.feed_name_group_map[feed_name].startswith("_"):
+        for group_dir_path in self.work_dir.iterdir():
+            if not group_dir_path.is_dir():
                 continue
-            if "collection" in config and "is_completed" in config["collection"] and config["collection"][
-                "is_completed"]:
-                index = 0
-                file_path = self.work_dir / self.feed_name_group_map[feed_name] / feed_name / "start_idx.txt"
-                if file_path.is_file():
-                    with open(file_path, 'r', encoding="utf-8") as infile:
-                        line = infile.readline()
-                        index = int(line.split('\t')[0])
 
-                url_list: List[str] = []
-                dir_name = self.work_dir / self.feed_name_group_map[feed_name] / feed_name / "newlist"
-                if dir_name.is_dir():
-                    for file in dir_name.iterdir():
-                        if file.suffix == ".txt":
-                            with open(dir_name / file, 'r', encoding="utf-8") as infile:
-                                for line in infile:
-                                    url = line.split('\t')[0]
-                                    url_list.append(url)
-                count = len(list(set(url_list)))
+            group_name = group_dir_path.name
+            if group_name in ["test", "logs"] or group_name.startswith(".") or group_name.startswith("_"):
+                continue
 
-                unit_size = config["collection"].get("unit_size_per_day", 1)
-                progress_ratio = (index + 4) * 100 / (count + 1)
-                remainder = count - (index + 4)
-                num_days = int(math.ceil(remainder / unit_size))
+            for feed_path in group_dir_path.iterdir():
+                if not feed_path.is_dir():
+                    continue
 
-                self.feed_name_progress_info_map[feed_name] = {
-                    "feed_name": feed_name,
-                    "feed_title": self.feed_name_title_map[feed_name],
-                    "group_name": self.feed_name_group_map[feed_name],
-                    "index": index, "count": count,
-                    "ratio": int(progress_ratio), "unit_size": unit_size,
-                    "due_date": self.convert_datetime_to_str(
-                        datetime.now() + timedelta(days=num_days))}
+                feed_name = feed_path.name
+                if feed_name.startswith(".") or feed_name.startswith("_"):
+                    continue
+
+                if feed_name not in self.feed_name_config_map:
+                    continue
+
+                config = self.feed_name_config_map[feed_name]
+                if "collection" in config and "is_completed" in config["collection"] and config["collection"]["is_completed"]:
+                    index = 0
+                    file_path = self.work_dir / self.feed_name_group_map[feed_name] / feed_name / "start_idx.txt"
+                    if file_path.is_file():
+                        with open(file_path, 'r', encoding="utf-8") as infile:
+                            line = infile.readline()
+                            index = int(line.split('\t')[0])
+
+                    url_list: List[str] = []
+                    dir_name = self.work_dir / self.feed_name_group_map[feed_name] / feed_name / "newlist"
+                    if dir_name.is_dir():
+                        for file in dir_name.iterdir():
+                            if file.suffix == ".txt":
+                                with open(dir_name / file, 'r', encoding="utf-8") as infile:
+                                    for line in infile:
+                                        url = line.split('\t')[0]
+                                        url_list.append(url)
+                    count = len(list(set(url_list)))
+
+                    unit_size = config["collection"].get("unit_size_per_day", 1)
+                    progress_ratio = (index + 4) * 100 / (count + 1)
+                    remainder = count - (index + 4)
+                    num_days = int(math.ceil(remainder / unit_size))
+
+                    self.feed_name_progress_info_map[feed_name] = {
+                        "feed_name": feed_name,
+                        "feed_title": self.feed_name_title_map[feed_name],
+                        "group_name": self.feed_name_group_map[feed_name],
+                        "index": index, "count": count,
+                        "ratio": int(progress_ratio),
+                        "unit_size": unit_size,
+                        "due_date": self.convert_datetime_to_str(datetime.now() + timedelta(days=num_days))}
 
         print(f"* The loading of all progress info is done. {len(self.feed_name_progress_info_map)} items")
-        if do_merge:
-            self.merge_all_feeds_status()
 
-    def load_all_httpd_access_files(self, do_merge=False) -> None:
+    def load_all_httpd_access_files(self) -> None:
         LOGGER.debug("# load_all_httpd_access_files()")
         self.feed_alias_access_info_map.clear()
         # read access.log for 1 month
@@ -363,8 +468,6 @@ class ProblemChecker:
                         self.feed_alias_access_info_map[feed_alias] = access_info
 
         print(f"* The loading of http access log is done. {len(self.feed_alias_access_info_map)} items")
-        if do_merge:
-            self.merge_all_feeds_status()
 
     @staticmethod
     def convert_datetime_to_str(d: Union[str, datetime]) -> str:
@@ -507,8 +610,8 @@ class ProblemChecker:
 
         LOGGER.info("* The merging of all information is done.")
 
-    def load(self) -> None:
-        LOGGER.debug("# load()")
+    def load_all(self) -> None:
+        LOGGER.debug("# load_all()")
         self.load_htaccess_file()
         self.load_all_config_rss_files()
         self.load_all_public_feed_files()

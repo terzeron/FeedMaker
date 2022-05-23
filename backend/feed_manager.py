@@ -27,7 +27,7 @@ class FeedManager:
         # feed_name -> configuration
         self.feed_name_config_map: Dict[str, Any] = {}
         self.checker = ProblemChecker()
-        self.checker.load()
+        self.checker.load_all()
 
     def _git_add(self, feed_dir_path: Path) -> Tuple[str, Optional[str]]:
         feed_name = feed_dir_path.name
@@ -90,8 +90,8 @@ class FeedManager:
                 feed_title_list.append({"name": path.name, "title": path.name})
         self.group_name_feed_title_list_map[group_name] = feed_title_list
 
-    def load_all_feeds(self) -> None:
-        self.logger.debug("# load_all_feeds()")
+    def scan_all_feeds(self) -> None:
+        self.logger.debug("# scan_all_feeds()")
         self.feed_name_config_map.clear()
         self.group_name_feed_title_list_map.clear()
         for group_dir_path in self.work_dir.iterdir():
@@ -253,8 +253,8 @@ class FeedManager:
         self._git_add(config_file_path)
 
         # re-scan feeds by group
-        self.load_all_feeds()
-        self.checker.load()
+        self.scan_all_feeds()
+        self.checker.load_all_config_rss_files()
         return True, ""
 
     def run(self, group_name: str, feed_name: str, alias: str) -> Tuple[bool, str]:
@@ -282,7 +282,14 @@ class FeedManager:
                         return False, "error in setting alias to .htaccess"
             else:
                 return False, "invalid format of configuration file"
-        self.checker.load()
+
+        self.checker.load_htaccess_file()
+        self.checker.load_all_config_rss_files()
+        self.checker.load_all_public_feed_files()
+        self.checker.load_all_progress_info_from_files()
+        self.checker.load_all_httpd_access_files()
+        self.checker.add_html_files_in_path_to_info(feed_dir_path)
+        self.checker.merge_all_feeds_status()
         return True, ""
 
     def _remove_public_img_pdf_feed_files(self, feed_name: str) -> None:
@@ -314,19 +321,22 @@ class FeedManager:
         html_dir_path = feed_dir_path / "html"
         if html_dir_path.is_dir():
             rmtree(html_dir_path)
-            self.checker.load_all_html_files(do_merge=True)
+        self.checker.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
+        self.checker.merge_all_feeds_status()
 
     def remove_html_file(self, group_name: str, feed_name: str, html_file_name: str) -> None:
         self.logger.debug(f"# remove_html_file({group_name}, {feed_name})")
-        html_dir_path = self.work_dir / group_name / feed_name / "html" / html_file_name
-        html_dir_path.unlink(missing_ok=True)
-        self.checker.load_all_html_files(do_merge=True)
+        html_file_path = self.work_dir / group_name / feed_name / "html" / html_file_name
+        html_file_path.unlink(missing_ok=True)
+        self.checker.remove_html_file_in_path_from_info("file_path", html_file_path)
+        self.checker.merge_all_feeds_status()
 
     def remove_public_feed(self, feed_name: str) -> None:
         self.logger.debug(f"# remove_public_feed({feed_name})")
         feed_path = self.public_feed_dir / (feed_name + ".xml")
         feed_path.unlink(missing_ok=True)
-        self.checker.load_all_public_feed_files(do_merge=True)
+        self.checker.load_all_public_feed_files()
+        self.checker.merge_all_feeds_status()
 
     def remove_feed(self, group_name: str, feed_name: str) -> Tuple[bool, str]:
         self.logger.debug(f"# remove_feed({group_name}, {feed_name})")
@@ -351,8 +361,14 @@ class FeedManager:
             return False, "error in removing alias from .htaccess"
 
         # re-scan feeds by group
-        self.load_all_feeds()
-        self.checker.load()
+        self.scan_all_feeds()
+        self.checker.load_htaccess_file()
+        self.checker.load_all_config_rss_files()
+        self.checker.load_all_public_feed_files()
+        self.checker.load_all_progress_info_from_files()
+        self.checker.load_all_httpd_access_files()
+        self.checker.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
+        self.checker.merge_all_feeds_status()
         return True, ""
 
     def remove_group(self, group_name: str) -> Tuple[bool, str]:
@@ -374,8 +390,14 @@ class FeedManager:
             rmtree(group_dir_path)
 
         # re-scan feeds by group
-        self.load_all_feeds()
-        self.checker.load()
+        self.scan_all_feeds()
+        self.checker.load_htaccess_file()
+        self.checker.load_all_config_rss_files()
+        self.checker.load_all_public_feed_files()
+        self.checker.load_all_progress_info_from_files()
+        self.checker.load_all_httpd_access_files()
+        self.checker.remove_html_file_in_path_from_info("group_dir_path", group_dir_path)
+        self.checker.merge_all_feeds_status()
         return True, ""
 
     def toggle_feed(self, group_name: str, feed_name: str) -> Tuple[str, str]:
@@ -396,7 +418,14 @@ class FeedManager:
         # re-scan feeds by group
         self._scan_feeds_by_group(group_name)
 
-        self.checker.load()
+        self.checker.load_htaccess_file()
+        self.checker.load_all_config_rss_files()
+        self.checker.load_all_public_feed_files()
+        self.checker.load_all_progress_info_from_files()
+        self.checker.load_all_httpd_access_files()
+        self.checker.add_html_files_in_path_to_info(new_feed_dir_path)
+        self.checker.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
+        self.checker.merge_all_feeds_status()
         return new_feed_name, ""
 
     def toggle_group(self, group_name: str) -> Tuple[str, str]:
@@ -415,8 +444,18 @@ class FeedManager:
         self._git_mv(group_dir_path, new_group_dir_path)
 
         # re-scan feeds by group
-        self.load_all_feeds()
-        self.checker.load()
+        self.scan_all_feeds()
+        self.checker.load_htaccess_file()
+        self.checker.load_all_config_rss_files()
+        self.checker.load_all_public_feed_files()
+        self.checker.load_all_progress_info_from_files()
+        self.checker.load_all_httpd_access_files()
+        if group_name.startswith("_"):
+            for feed_dir_path in new_group_dir_path.iterdir():
+                self.checker.add_html_files_in_path_to_info(feed_dir_path)
+        else:
+            self.checker.remove_html_file_in_path_from_info("group_dir_path", group_dir_path)
+        self.checker.merge_all_feeds_status()
         return new_group_name, ""
 
     def get_alias(self, group_name: str, feed_name: str):
@@ -431,7 +470,8 @@ class FeedManager:
         result, error = Htaccess.remove_alias(group_name, feed_name)
         if not result:
             return False, error
-        self.checker.load_htaccess_file(do_merge=True)
+        self.checker.load_htaccess_file()
+        self.checker.merge_all_feeds_status()
         return True, ""
 
     def rename_alias(self, group_name: str, feed_name: str, new_alias: str):
@@ -439,5 +479,6 @@ class FeedManager:
         result, error = Htaccess.set_alias(group_name, feed_name, new_alias)
         if not result:
             return False, error
-        self.checker.load_htaccess_file(do_merge=True)
+        self.checker.load_htaccess_file()
+        self.checker.merge_all_feeds_status()
         return True, ""
