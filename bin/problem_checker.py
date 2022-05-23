@@ -12,7 +12,6 @@ from typing import List, Dict, Any, Union
 from feed_maker import FeedMaker
 from feed_maker_util import Config
 
-
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
 LOGGER = logging.getLogger()
 
@@ -37,25 +36,24 @@ class ProblemChecker:
         # name -> update date of rss file
         self.feed_name_rss_info_map: Dict[str, Any] = {}
         # name -> progress(index,count,progress_ratio,unit_size,num_days)
-        self.feed_name_progress_info_list: List[Dict[str, Any]] = []
+        self.feed_name_progress_info_map: Dict[str, Dict[str, Any]] = {}
         # name -> public_feed_info(size, mtime)
-        self.public_feed_info_list: List[Dict[str, Any]] = []
+        self.public_feed_info_map: Dict[str, Dict[str, Any]] = {}
         # alias -> access_info(access_status,access_date,view_status,view_date,is_in_xml_dir)
         self.feed_alias_access_info_map: Dict[str, Dict[str, Any]] = {}
         # alias -> status_info(htaccess,http_request,public_html,feedmaker)
         self.feed_alias_status_info_map: Dict[str, Dict[str, Any]] = {}
-        self.feed_alias_status_info_list: List[Dict[str, Any]] = []
         # html -> size
-        self.html_file_size_list: List[Dict[str, Any]] = []
+        self.html_file_size_map: Dict[str, Dict[str, Any]] = {}
         # html -> image_tag count
-        self.html_file_with_many_image_tag_list: List[Dict[str, Any]] = []
-        self.html_file_without_image_tag_list: List[Dict[str, Any]] = []
+        self.html_file_with_many_image_tag_map: Dict[str, Dict[str, Any]] = {}
+        self.html_file_without_image_tag_map: Dict[str, Dict[str, Any]] = {}
         # html -> image-not-found count
-        self.html_file_image_not_found_list: List[Dict[str, Any]] = []
+        self.html_file_image_not_found_map: Dict[str, Dict[str, Any]] = {}
         # name -> list_url count
-        self.feed_name_list_url_count_list: List[Dict[str, Any]] = []
+        self.feed_name_list_url_count_map: Dict[str, Dict[str, Any]] = {}
         # element name -> count
-        self.element_name_count_list: List[Dict[str, Any]] = []
+        self.element_name_count_map: Dict[str, Dict[str, Any]] = {}
 
     def __del__(self) -> None:
         del self.feed_alias_name_map
@@ -64,17 +62,16 @@ class ProblemChecker:
         del self.feed_name_group_map
         del self.feed_name_config_map
         del self.feed_name_rss_info_map
-        del self.feed_name_progress_info_list
-        del self.public_feed_info_list
+        del self.feed_name_progress_info_map
+        del self.public_feed_info_map
         del self.feed_alias_access_info_map
         del self.feed_alias_status_info_map
-        del self.feed_alias_status_info_list
-        del self.html_file_size_list
-        del self.html_file_with_many_image_tag_list
-        del self.html_file_without_image_tag_list
-        del self.html_file_image_not_found_list
-        del self.feed_name_list_url_count_list
-        del self.element_name_count_list
+        del self.html_file_size_map
+        del self.html_file_with_many_image_tag_map
+        del self.html_file_without_image_tag_map
+        del self.html_file_image_not_found_map
+        del self.feed_name_list_url_count_map
+        del self.element_name_count_map
 
     def load_htaccess_file(self, do_merge=False) -> None:
         LOGGER.debug(f"# load_htaccess_file(do_merge={do_merge})")
@@ -98,9 +95,10 @@ class ProblemChecker:
 
     def load_all_config_rss_files(self, do_merge=False) -> None:
         LOGGER.debug("# load_all_config_rss_files()")
+        self.feed_name_list_url_count_map.clear()
         self.feed_name_rss_info_map.clear()
-        feed_name_list_url_count_map: Dict[str, int] = {}
-        element_name_count_map: Dict[str, int] = {}
+        self.element_name_count_map.clear()
+
         for group_path in self.work_dir.iterdir():
             group_name = group_path.name
             if not group_path.is_dir() or group_name in ["test", "logs", ".git"]:
@@ -126,17 +124,38 @@ class ProblemChecker:
                             if "collection" in json_data["configuration"] and "list_url_list" in \
                                     json_data["configuration"]["collection"] and not group_name.startswith(
                                 "_") and not feed_name.startswith("_"):
-                                feed_name_list_url_count_map[feed_name] = len(
-                                    json_data["configuration"]["collection"]["list_url_list"])
+                                count = len(json_data["configuration"]["collection"]["list_url_list"])
+                                if count != 1:
+                                    self.feed_name_list_url_count_map[feed_name] = {
+                                        "feed_name": feed_name,
+                                        "count": count}
                             if "collection" in json_data["configuration"]:
                                 for element in json_data["configuration"]["collection"]:
-                                    element_name_count_map[element] = element_name_count_map.get(element, 0) + 1
+                                    key = "c." + element
+                                    if key in self.element_name_count_map:
+                                        self.element_name_count_map[key]["count"] += 1
+                                    else:
+                                        self.element_name_count_map[key] = {
+                                            "element_name": key,
+                                            "count": 1}
                             if "extraction" in json_data["configuration"]:
                                 for element in json_data["configuration"]["extraction"]:
-                                    element_name_count_map[element] = element_name_count_map.get(element, 0) + 1
+                                    key = "e." + element
+                                    if key in self.element_name_count_map:
+                                        self.element_name_count_map[key]["count"] += 1
+                                    else:
+                                        self.element_name_count_map[key] = {
+                                            "element_name": key,
+                                            "count": 1}
                             if "rss" in json_data["configuration"]:
                                 for element in json_data["configuration"]["rss"]:
-                                    element_name_count_map[element] = element_name_count_map.get(element, 0) + 1
+                                    key = "r." + element
+                                    if key in self.element_name_count_map:
+                                        self.element_name_count_map[key]["count"] += 1
+                                    else:
+                                        self.element_name_count_map[key] = {
+                                            "element_name": key,
+                                            "count": 1}
                     rss_file_path = feed_path / (feed_name + ".xml")
                     if rss_file_path.is_file():
                         s = rss_file_path.stat()
@@ -145,23 +164,13 @@ class ProblemChecker:
                 except IOError:
                     pass
 
-        self.feed_name_list_url_count_list.clear()
-        self.element_name_count_list.clear()
-        for feed_name, count in feed_name_list_url_count_map.items():
-            if count != 1:
-                self.feed_name_list_url_count_list.append(
-                    {"feed_name": feed_name, "group_name": self.feed_name_group_map.get(feed_name, ""),
-                     "feed_title": self.feed_name_title_map.get(feed_name, ""), "count": count})
-        for element_name, count in element_name_count_map.items():
-            self.element_name_count_list.append({"element_name": element_name, "count": count})
-
         print(f"* The loading of all config files and rss files is done. {len(self.feed_name_rss_info_map)} items")
         if do_merge:
             self.merge_all_feeds_status()
 
     def load_all_public_feed_files(self, do_merge=False) -> None:
         LOGGER.debug(f"# load_all_public_feed_files(do_merge={do_merge})")
-        self.public_feed_info_list.clear()
+        self.public_feed_info_map.clear()
         for path in self.public_feed_dir.iterdir():
             if path.suffix == ".xml":
                 feed_name = path.stem
@@ -173,14 +182,14 @@ class ProblemChecker:
                     num_items = file_content.count("<item>")
                 s = path.stat()
                 upload_date = datetime.fromtimestamp(s.st_mtime)
-                self.public_feed_info_list.append(
-                    {"feed_name": feed_name, "feed_title": self.feed_name_title_map.get(feed_name, ""),
-                     "group_name": self.feed_name_group_map.get(feed_name, ""),
-                     "file_path": str(path.relative_to(self.public_feed_dir)),
-                     "upload_date": self.convert_datetime_to_str(upload_date), "size": s.st_size,
-                     "num_items": num_items})
+                self.public_feed_info_map[feed_name] = {
+                    "feed_name": feed_name, "feed_title": self.feed_name_title_map.get(feed_name, ""),
+                    "group_name": self.feed_name_group_map.get(feed_name, ""),
+                    "file_path": str(path.relative_to(self.public_feed_dir)),
+                    "upload_date": self.convert_datetime_to_str(upload_date), "size": s.st_size,
+                    "num_items": num_items}
 
-        print(f"* The loading of public feed file is done. {len(self.public_feed_info_list)} items")
+        print(f"* The loading of public feed file is done. {len(self.public_feed_info_map)} items")
         if do_merge:
             self.merge_all_feeds_status()
 
@@ -192,7 +201,7 @@ class ProblemChecker:
         LOGGER.debug("# load_all_html_files()")
         html_file_image_tag_count_map: Dict[Path, int] = {}
         html_file_image_not_found_count_map: Dict[Path, int] = {}
-        self.html_file_size_list.clear()
+        self.html_file_size_map.clear()
         html_file_count = 0
         global_conf = Config.get_global_config()
         web_service_url = global_conf["web_service_url"]
@@ -204,10 +213,12 @@ class ProblemChecker:
                 s = path.stat()
                 html_file_count += 1
                 if 124 < s.st_size < 434:
-                    self.html_file_size_list.append(
-                        {"file_name": self.get_html_file_name(path), "file_path": str(path.relative_to(self.work_dir)),
-                         "size": s.st_size,
-                         "update_date": self.convert_datetime_to_str(datetime.fromtimestamp(s.st_mtime))})
+                    file_name = self.get_html_file_name(path)
+                    self.html_file_size_map[file_name] = {
+                        "file_name": file_name,
+                        "file_path": str(path.relative_to(self.work_dir)),
+                        "size": s.st_size,
+                        "update_date": self.convert_datetime_to_str(datetime.fromtimestamp(s.st_mtime))}
 
                 # html file with normal size should have image tag
                 # would find html files with zero count of image tag
@@ -217,36 +228,42 @@ class ProblemChecker:
                     for line in infile:
                         # image tag counting
                         if re.search(r'1x1.jpg', line):
-                            html_file_image_tag_count_map[path] = html_file_image_tag_count_map.get(path, 0) + 1
+                            html_file_image_tag_count_map[path] = \
+                                html_file_image_tag_count_map.get(path, 0) + 1
                         # image-not-found.png counting
                         if re.search(r'image-not-found\.png', line):
-                            html_file_image_not_found_count_map[path] = html_file_image_not_found_count_map.get(path,
-                                                                                                                0) + 1
+                            html_file_image_not_found_count_map[path] = \
+                                html_file_image_not_found_count_map.get(path, 0) + 1
 
-        self.html_file_with_many_image_tag_list.clear()
-        self.html_file_without_image_tag_list.clear()
-        self.html_file_image_not_found_list.clear()
+        self.html_file_with_many_image_tag_map.clear()
+        self.html_file_without_image_tag_map.clear()
+        self.html_file_image_not_found_map.clear()
         for path, count in html_file_image_tag_count_map.items():
+            html_file_name = self.get_html_file_name(path)
             if count > 1:
-                self.html_file_with_many_image_tag_list.append(
-                    {"file_name": self.get_html_file_name(path), "file_path": str(path.relative_to(self.work_dir)),
-                     "count": count})
+                self.html_file_with_many_image_tag_map[html_file_name] = {
+                    "file_name": html_file_name,
+                    "file_path": str(path.relative_to(self.work_dir)),
+                    "count": count}
             if count < 1:
-                self.html_file_without_image_tag_list.append(
-                    {"file_name": self.get_html_file_name(path), "file_path": str(path.relative_to(self.work_dir)),
-                     "count": count})
+                self.html_file_without_image_tag_map[file_name] = {
+                    "file_name": html_file_name,
+                    "file_path": str(path.relative_to(self.work_dir)),
+                    "count": count}
         for path, count in html_file_image_not_found_count_map.items():
-            self.html_file_image_not_found_list.append(
-                {"file_name": self.get_html_file_name(path), "file_path": str(path.relative_to(self.work_dir)),
-                 "count": count})
+            html_file_name = self.get_html_file_name(path)
+            self.html_file_image_not_found_map[html_file_name] = {
+                "file_name": html_file_name,
+                "file_path": str(path.relative_to(self.work_dir)),
+                "count": count}
 
-        print(f"* The loading of all html files is done. {html_file_count} items")
-        if do_merge:
-            self.merge_all_feeds_status()
+            print(f"* The loading of all html files is done. {html_file_count} items")
+            if do_merge:
+                self.merge_all_feeds_status()
 
     def load_all_progress_info_from_files(self, do_merge=False) -> None:
         LOGGER.debug("# load_all_progress_info_from_files()")
-        self.feed_name_progress_info_list.clear()
+        self.feed_name_progress_info_map.clear()
         for feed_name, config in self.feed_name_config_map.items():
             if feed_name.startswith("_") or self.feed_name_group_map[feed_name].startswith("_"):
                 continue
@@ -275,13 +292,16 @@ class ProblemChecker:
                 remainder = count - (index + 4)
                 num_days = int(math.ceil(remainder / unit_size))
 
-                self.feed_name_progress_info_list.append(
-                    {"feed_name": feed_name, "feed_title": self.feed_name_title_map[feed_name],
-                     "group_name": self.feed_name_group_map[feed_name], "index": index, "count": count,
-                     "ratio": int(progress_ratio), "unit_size": unit_size,
-                     "due_date": self.convert_datetime_to_str(datetime.now() + timedelta(days=num_days))})
+                self.feed_name_progress_info_map[feed_name] = {
+                    "feed_name": feed_name,
+                    "feed_title": self.feed_name_title_map[feed_name],
+                    "group_name": self.feed_name_group_map[feed_name],
+                    "index": index, "count": count,
+                    "ratio": int(progress_ratio), "unit_size": unit_size,
+                    "due_date": self.convert_datetime_to_str(
+                        datetime.now() + timedelta(days=num_days))}
 
-        print(f"* The loading of all progress info is done. {len(self.feed_name_progress_info_list)} items")
+        print(f"* The loading of all progress info is done. {len(self.feed_name_progress_info_map)} items")
         if do_merge:
             self.merge_all_feeds_status()
 
@@ -395,7 +415,6 @@ class ProblemChecker:
     def merge_all_feeds_status(self) -> None:
         LOGGER.debug("# merge_all_feeds_status()")
         self.feed_alias_status_info_map.clear()
-        self.feed_alias_status_info_list.clear()
 
         # feed_alias_name_map(alias -> name), check 'htaccess'
         for feed_alias, feed_name in self.feed_alias_name_map.items():
@@ -416,9 +435,8 @@ class ProblemChecker:
             status_info["feed_name"] = status_info.get("feed_name", feed_name)
             self.feed_alias_status_info_map[feed_alias] = status_info
 
-        # public_feed_info_list(public_feed_info(name)), check 'public_html'
-        for public_feed_info in self.public_feed_info_list:
-            feed_name = public_feed_info["feed_name"]
+        # public_feed_info_map(public_feed_info(name)), check 'public_html'
+        for feed_name, public_feed_info in self.public_feed_info_map.items():
             file_path = public_feed_info["file_path"]
             upload_date = public_feed_info["upload_date"]
             if feed_name not in self.feed_name_aliases_map:
@@ -481,8 +499,6 @@ class ProblemChecker:
             status_info["view_date"] = self.convert_datetime_to_str(status_info["view_date"])
             status_info["upload_date"] = self.convert_datetime_to_str(status_info["upload_date"])
             status_info["update_date"] = self.convert_datetime_to_str(status_info["update_date"])
-
-            self.feed_alias_status_info_list.append(status_info)
 
         LOGGER.info("* The merging of all information is done.")
 
