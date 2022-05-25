@@ -34,12 +34,21 @@ class TestProblemChecker(unittest.TestCase):
     def test_convert_datetime_to_str(self):
         d = "2022-01-01"
         self.assertEqual("2022-01-01", self.checker.convert_datetime_to_str(d))
-        d = "2022-12-32 12:12:12"
-        self.assertEqual("2022-12-32 12:12:12", self.checker.convert_datetime_to_str(d))
-        d = datetime.strptime("2018-01-31", "%Y-%m-%d")
-        self.assertEqual("18-01-31", self.checker.convert_datetime_to_str(d))
+
+        d = "2022-12-30 12:12:12"
+        self.assertEqual("2022-12-30 12:12:12", self.checker.convert_datetime_to_str(d))
+
+        d = "2018-01-31"
+        self.assertEqual("2018-01-31", self.checker.convert_datetime_to_str(d))
+
+        d = "01-31"
+        self.assertEqual("01-31", self.checker.convert_datetime_to_str(d))
+
+        d = datetime.strptime("2018-01-13", "%Y-%m-%d")
+        self.assertEqual("01-13", self.checker.convert_datetime_to_str(d))
+
         d = datetime.strptime("2018-01-31 17:04:11", "%Y-%m-%d %H:%M:%S")
-        self.assertEqual("18-01-31", self.checker.convert_datetime_to_str(d))
+        self.assertEqual("01-31", self.checker.convert_datetime_to_str(d))
 
     def test_get_status_info_with_default(self):
         self.fail()

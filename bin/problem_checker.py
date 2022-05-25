@@ -185,7 +185,7 @@ class ProblemChecker:
                     "feed_title": self.feed_name_title_map.get(feed_name, ""),
                     "group_name": self.feed_name_group_map.get(feed_name, ""),
                     "file_path": str(path.relative_to(self.public_feed_dir)),
-                    "upload_date": upload_date,
+                    "upload_date": self.convert_datetime_to_str(upload_date),
                     "size": s.st_size,
                     "num_items": num_items}
 
@@ -476,7 +476,7 @@ class ProblemChecker:
         if isinstance(d, str):
             return d
         if isinstance(d, datetime):
-            return d.astimezone().strftime("%y-%m-%d")
+            return d.astimezone().strftime("%m-%d")
         return ""
 
     def get_status_info_with_default(self, alias: str) -> Dict[str, Any]:
