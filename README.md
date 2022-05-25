@@ -66,6 +66,13 @@ Utility set and web admin page for making feeds from crawling websites
   * `cd backend`
   * `pip install -r requirements.txt`
 
+## Modify configuration
+* frontend
+  * `mv .env.development.example .env.development`
+  * `mv .env.production.example .env.production`
+  * `vi .env.development.example .env.production.example`
+    * You should write your own Facebook APP ID and admin email address.
+
 ## Build & Deploy
 * backend
   * Copy the backend directory to your ~/public_html or /var/www/html

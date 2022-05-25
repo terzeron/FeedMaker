@@ -3,6 +3,7 @@ import Router from 'vue-router';
 import ExecResult from '../components/ExecResult';
 import Problems from '../components/Problems';
 import FeedManagement from '../components/FeedManagement';
+import Login from '../components/Login';
 
 Vue.use(Router);
 
@@ -35,6 +36,16 @@ export default new Router({
                     component: FeedManagement
                 }
             ]
-        }
+        },
+        {
+            path: '/login',
+            name: 'Login',
+            component: Login
+        },
+        {
+            path: '/logout',
+            name: 'Logout',
+            component: Login
+        },
     ]
 })

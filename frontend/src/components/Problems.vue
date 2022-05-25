@@ -209,7 +209,7 @@
 
     <b-row>
       <b-col cols="12" class="mx-auto text-center mt-5 mb-3">
-        Feed Manager by terzeron@gmail.com
+        Feed Manager by {{ adminEmail }}
       </b-col>
     </b-row>
   </b-container>
@@ -232,6 +232,11 @@ export default {
   name: 'Problems',
   components: {
     FontAwesomeIcon
+  },
+  computed: {
+    adminEmail: function () {
+      return process.env.VUE_APP_ADMIN_EMAIL;
+    },
   },
   data: function () {
     return {
@@ -628,12 +633,14 @@ export default {
           .catch((error) => {
             console.error(error);
           })
-    }
+    },
   },
   mounted: function () {
-    return this.getProblems();
-  }
-  ,
-}
-;
+    if (this.$session.get('is_authorized')) {
+      this.getProblems();
+    } else {
+      this.$router.push('/login');
+    }
+  },
+};
 </script>
