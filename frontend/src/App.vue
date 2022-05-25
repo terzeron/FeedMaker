@@ -1,8 +1,11 @@
 <template>
   <div id="app">
-    <b-navbar type="dark" variant="secondary">
-      <b-navbar-brand>FeedMaker</b-navbar-brand>
-      <b-collapse is-nav>
+    <b-navbar type="dark" variant="secondary" toggleable="sm">
+      <b-navbar-brand href="#">FeedMaker</b-navbar-brand>
+
+      <b-navbar-toggle target="nav-collapse"></b-navbar-toggle>
+
+      <b-collapse id="nav-collapse" is-nav>
         <b-navbar-nav>
           <b-nav-item>
             <router-link to="/result">
@@ -17,6 +20,16 @@
           <b-nav-item>
             <router-link to="/management">
               <b-nav-text>피드 관리</b-nav-text>
+            </router-link>
+          </b-nav-item>
+        </b-navbar-nav>
+
+        <b-navbar-nav class="ml-auto">
+          <b-nav-item>
+            <router-link to="/login">
+              <b-nav-text>
+                <font-awesome-icon :icon="['fa', 'user-circle']"/>
+              </b-nav-text>
             </router-link>
           </b-nav-item>
         </b-navbar-nav>
@@ -47,18 +60,25 @@ a.navbar-link > a {
 a:-webkit-any-link {
   text-decoration: none !important;
 }
-</style>
 
-<script>
-export default {
-  name: 'App'
-}
-</script>
-
-<style>
 #app {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   /*color: #2c3e50;*/
 }
 </style>
+
+<script>
+import {library} from '@fortawesome/fontawesome-svg-core';
+import {faUserCircle} from '@fortawesome/free-solid-svg-icons';
+import {FontAwesomeIcon} from '@fortawesome/vue-fontawesome';
+
+library.add(faUserCircle);
+
+export default {
+  name: 'App',
+  components: {
+    FontAwesomeIcon,
+  },
+};
+</script>

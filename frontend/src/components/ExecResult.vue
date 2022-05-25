@@ -5,6 +5,12 @@
         <vue-simple-markdown :source="source"></vue-simple-markdown>
       </b-col>
     </b-row>
+
+    <b-row>
+      <b-col cols="12" class="mx-auto text-center mt-5 mb-3">
+        Feed Manager by {{ adminEmail }}
+      </b-col>
+    </b-row>
   </b-container>
 </template>
 
@@ -55,21 +61,28 @@ import axios from 'axios';
 
 export default {
   name: 'ExecResult',
-  data() {
+  components: {
+  },
+  data: function () {
     return {
-      source: '### No result'
+      source: '### No result',
+      isLogged: false,
     }
   },
-  components: {},
+  computed: {
+    adminEmail: function () {
+      return process.env.VUE_APP_ADMIN_EMAIL;
+    },
+  },
   methods: {
-    getApiUrlPath() {
+    getApiUrlPath: function () {
       let path_prefix = 'https://api.terzeron.com/fm';
       if (process.env.NODE_ENV === 'development') {
         path_prefix = 'http://localhost:5000';
       }
       return path_prefix;
     },
-    getExecResult() {
+    getExecResult: function () {
       const path = this.getApiUrlPath() + '/exec_result';
       axios.get(path)
           .then((res) => {
@@ -78,10 +91,14 @@ export default {
           .catch((error) => {
             console.error(error);
           });
-    }
+    },
   },
-  created() {
-    return this.getExecResult();
+  mounted: function () {
+    if (this.$session.get('is_authorized')) {
+      this.getExecResult();
+    } else {
+      this.$router.push('/login');
+    }
   },
 };
 </script>

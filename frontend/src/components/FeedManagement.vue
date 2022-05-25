@@ -247,7 +247,7 @@
 
     <b-row>
       <b-col cols="12" class="mx-auto text-center mt-5 mb-3">
-        Feed Manager by terzeron@gmail.com
+        Feed Manager by {{ adminEmail }}
       </b-col>
     </b-row>
   </b-container>
@@ -364,7 +364,10 @@ export default {
       } else {
         return `https://terzeron.com/${this.newFeedName}.xml`;
       }
-    }
+    },
+    adminEmail: function () {
+      return process.env.VUE_APP_ADMIN_EMAIL;
+    },
   },
   watch: {
     newFeedName: function (val) {
@@ -976,12 +979,16 @@ export default {
     },
   },
   mounted: function () {
-    if (this.$route.params['group'] && this.$route.params['feed']) {
-      this.selectedGroupName = this.$route.params['group'];
-      this.selectedFeedName = this.$route.params['feed'];
-      return this.feedNameButtonClicked(this.selectedGroupName, this.selectedFeedName);
+    if (this.$session.get('is_authorized')) {
+      if (this.$route.params['group'] && this.$route.params['feed']) {
+        this.selectedGroupName = this.$route.params['group'];
+        this.selectedFeedName = this.$route.params['feed'];
+        return this.feedNameButtonClicked(this.selectedGroupName, this.selectedFeedName);
+      } else {
+        return this.getGroups();
+      }
     } else {
-      return this.getGroups();
+      this.$router.push('/login');
     }
   }
 };
