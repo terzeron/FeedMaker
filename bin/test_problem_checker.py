@@ -45,10 +45,10 @@ class TestProblemChecker(unittest.TestCase):
         self.assertEqual("01-31", self.checker.convert_datetime_to_str(d))
 
         d = datetime.strptime("2018-01-13", "%Y-%m-%d")
-        self.assertEqual("01-13", self.checker.convert_datetime_to_str(d))
+        self.assertEqual("18-01-13", self.checker.convert_datetime_to_str(d))
 
         d = datetime.strptime("2018-01-31 17:04:11", "%Y-%m-%d %H:%M:%S")
-        self.assertEqual("01-31", self.checker.convert_datetime_to_str(d))
+        self.assertEqual("18-01-31", self.checker.convert_datetime_to_str(d))
 
     def test_get_status_info_with_default(self):
         self.fail()

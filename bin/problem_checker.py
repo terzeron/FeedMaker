@@ -476,7 +476,7 @@ class ProblemChecker:
         if isinstance(d, str):
             return d
         if isinstance(d, datetime):
-            return d.astimezone().strftime("%m-%d")
+            return d.astimezone().strftime("%y-%m-%d")
         return ""
 
     def get_status_info_with_default(self, alias: str) -> Dict[str, Any]:
