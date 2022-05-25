@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@fortawesome/free-brands-svg-icons": "^6.1.1",
+    "vue-session": "^1.0.0"
+  }
+}
