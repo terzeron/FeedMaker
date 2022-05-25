@@ -28,3 +28,5 @@ global_config.json
 .python-version
 cookies.*.json
 *.pid
+.env.development
+.env.production
