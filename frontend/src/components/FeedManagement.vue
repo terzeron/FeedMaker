@@ -137,7 +137,7 @@
                 <b-td colspan="2">
                   <b-progress :max="numTotalItems" show-progress>
                     <b-progress-bar :value="currentIndexOfProgress" variant="warning">
-                      <div style="position: absolute; width: 100%; color: black; text-align: left; overflow: visible;">{{ currentIndexOfProgress }}/{{ numTotalItems }}={{ Math.floor(currentIndexOfProgress / numTotalItems * 100) }}%</div>
+                      <div style="position: absolute; width: 100%; color: black; text-align: left; overflow: visible;">{{ currentIndexOfProgress }}/{{ numTotalItems }}={{ Math.floor((currentIndexOfProgress + 4) * 100 / (numTotalItems + 1)) }}%</div>
                     </b-progress-bar>
                   </b-progress>
                   {{ unitSizePerDay }}개/일
