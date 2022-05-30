@@ -160,11 +160,11 @@ def get_feed_info(group_name, feed_name):
     response_object: Dict[str, Any] = {"status": "failure"}
     if request.method == "GET":
         print(f"/groups/{group_name}/feeds/{feed_name}, {request.method} -> get_feed_info({group_name}, {feed_name})")
-        config, error = feed_manager.get_feed_info_by_name(feed_name)
-        if config or not error:
+        feed_info, error = feed_manager.get_feed_info_by_name(group_name, feed_name)
+        if feed_info or not error:
             # success in case of feed without configuration
-            response_object["configuration"] = config
-            print(response_object["configuration"])
+            response_object["feed_info"] = feed_info
+            print(response_object["feed_info"])
             response_object["status"] = "success"
         else:
             response_object["message"] = error

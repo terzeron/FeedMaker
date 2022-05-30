@@ -84,7 +84,7 @@
       </b-col>
     </b-row>
 
-    <!-- 설정 편집기 및 액션 영역 -->
+    <!-- 설정 편집기 및 액션, 메타데이터 영역 -->
     <b-row>
       <!-- 설정 편집기 영역 -->
       <b-col id="configuration" cols="12" lg="8" class="m-0">
@@ -99,148 +99,194 @@
         </div>
       </b-col>
 
-      <!-- 액션 영역 -->
-      <b-col id="actions" cols="12" lg="4" class="m-0">
-        <b-col cols="12" class="m-0" :class="{'bg-secondary': !feedStatus}" v-if="showNewFeedNameInput">
-          <my-button :label="title" variant="transparent"/>
-          <my-button :label="selectedGroupName + '/' + selectedFeedName" variant="transparent" class="float-right"/>
+      <!-- 정보, 액션 영역 -->
+      <b-col cols="12" lg="4" class="m-0">
+
+        <!-- 정보 영역 -->
+        <b-col id="feed_info" class="m-0">
+          <b-col cols="12" class="m-0" :class="{'bg-secondary': !feedStatus}" v-if="showNewFeedNameInput">
+            <div>{{ title }}</div>
+            <div>{{ selectedGroupName + '/' + selectedFeedName }}</div>
+          </b-col>
+
+          <b-table-simple
+              id="metadata"
+              class="m-0 p-0 text-break"
+              small
+              v-if="showFeedInfo">
+            <b-thead head-variant="light" table-variant="light">
+              <b-tr>
+                <b-th colspan="4">메타데이터</b-th>
+              </b-tr>
+            </b-thead>
+            <b-tbody>
+              <b-tr>
+                <b-td>수집</b-td>
+                <b-td>{{ numCollectionUrls }}개 페이지</b-td>
+                <b-td>{{ numItemsCollected }}개 피드 URL</b-td>
+                <b-td>마지막 수집:<br>{{ collectionLastUpdateDate }}</b-td>
+              </b-tr>
+              <b-tr>
+                <b-td>결과 Feed</b-td>
+                <b-td>{{ numItemsInResult }}개 피드 아이템</b-td>
+                <b-td>{{ sizeOfResultFile }} 바이트</b-td>
+                <b-td>마지막 업로드:<br>{{ lastUploadDate }}</b-td>
+              </b-tr>
+              <b-tr v-if="numTotalItems && currentIndexOfProgress && numTotalItems && unitSizePerDay">
+                <b-td>피딩 진행 상태</b-td>
+                <b-td colspan="2">
+                  <b-progress :max="numTotalItems" show-progress>
+                    <b-progress-bar :value="currentIndexOfProgress" variant="warning">
+                      <div style="position: absolute; width: 100%; color: black; text-align: left; overflow: visible;">{{ currentIndexOfProgress }}/{{ numTotalItems }}={{ Math.floor(currentIndexOfProgress / numTotalItems * 100) }}%</div>
+                    </b-progress-bar>
+                  </b-progress>
+                  {{ unitSizePerDay }}개/일
+                </b-td>
+                <b-td>피딩 완료:<br>{{ feedCompletionDueDate }}</b-td>
+              </b-tr>
+            </b-tbody>
+          </b-table-simple>
         </b-col>
 
-        <b-alert
-            class="mb-0"
-            variant="danger"
-            dismissible
-            v-if="showAlert">
-          {{ alertMessage }}
-        </b-alert>
-
-        <b-col cols="12" class="m-0">
-          <b-input-group
-              prepend="피드"
-              class="m-0"
-              v-if="showNewFeedNameInput">
-            <b-form-input class="m-0" v-model="newFeedName">
-              {{ newFeedName }}
-            </b-form-input>
-            <b-input-group-append>
-              <my-button
-                  ref="saveButton"
-                  label="저장"
-                  @click="save"
-                  :initial-icon="['far', 'save']"
-                  :show-initial-icon="true"/>
-            </b-input-group-append>
-          </b-input-group>
-        </b-col>
-
-        <b-col cols="12" class="m-0">
-          <my-button
-              ref="runButton"
-              label="실행"
-              @click="run"
-              :initial-icon="['fas', 'play']"
-              :show-initial-icon="true"
-              v-if="showRunButton"/>
-          <my-button
-              ref="viewRssButton"
-              label="RSS 보기"
-              @click="viewRss"
-              :initial-icon="['fas', 'eye']"
-              :show-initial-icon="true"
-              v-if="showViewRssButton"/>
-          <my-button
-              ref="registerButton"
-              label="Inoreader등록"
-              @click="registerToInoreader"
-              :initial-icon="['fas', 'rss']"
-              :show-initial-icon="true"
-              v-if="showRegisterToInoreaderButton"/>
-          <my-button
-              ref="registerButton"
-              label="Feedly등록"
-              @click="registerToFeedly"
-              :initial-icon="['fas', 'rss']"
-              :show-initial-icon="true"
-              v-if="showRegisterToFeedlyButton"/>
-          <my-button
-              ref="removeListButton"
-              label="리스트 삭제"
-              @click="removeList"
-              :initial-icon="['fas', 'eraser']"
-              :show-initial-icon="true"
-              v-if="showRemoveListButton"/>
-          <my-button
-              ref="removeHtmlButton"
-              label="HTML 삭제"
-              @click="removeHtml"
-              :initial-icon="['fas', 'eraser']"
-              :show-initial-icon="true"
-              v-if="showRemoveHtmlButton"/>
-          <my-button
-              ref="toggleFeedButton"
-              :label="feedStatusLabel"
-              @click="toggleStatus('feed')"
-              :initial-icon="['fas', feedStatusIcon]"
-              :show-initial-icon="true"
-              v-if="showToggleFeedButton"/>
-          <my-button
-              ref="removeFeedButton"
-              label="피드 삭제"
-              @click="removeFeed"
-              :initial-icon="['far', 'trash-alt']"
-              :show-initial-icon="true"
+        <!-- 액션 영역 -->
+        <b-col id="actions" class="m-0">
+          <b-alert
+              class="mb-0"
               variant="danger"
-              v-if="showRemoveFeedButton"/>
-        </b-col>
+              dismissible
+              v-if="showAlert">
+            {{ alertMessage }}
+          </b-alert>
 
-        <b-col cols="12" class="m-0">
-          <my-button
-              ref="saveSiteConfigButton"
-              label="그룹 설정 저장"
-              @click="saveSiteConfig"
-              :initial-icon="['far', 'save']"
-              :show-initial-icon="true"
-              v-if="showSiteConfig"/>
-          <my-button
-              ref="toggleGroupButton"
-              :label="groupStatusLabel"
-              variant="success"
-              @click="toggleStatus('group')"
-              :initial-icon="['fas', groupStatusIcon]"
-              :show-initial-icon="true"
-              v-if="showToggleGroupButton"/>
-          <my-button
-              ref="removeGroupButton"
-              label="그룹 삭제"
-              variant="success"
-              @click="removeGroup"
-              :initial-icon="['far', 'trash-alt']"
-              :show-initial-icon="true"
-              v-if="showRemoveGroupButton"/>
-        </b-col>
+          <b-col cols="12" class="m-0">
+            <b-input-group
+                prepend="피드"
+                class="m-0"
+                v-if="showNewFeedNameInput">
+              <b-form-input class="m-0" v-model="newFeedName">
+                {{ newFeedName }}
+              </b-form-input>
+              <b-input-group-append>
+                <my-button
+                    ref="saveButton"
+                    label="저장"
+                    @click="save"
+                    :initial-icon="['far', 'save']"
+                    :show-initial-icon="true"/>
+              </b-input-group-append>
+            </b-input-group>
+          </b-col>
 
-        <b-col cols="12" class="m-0">
-          <b-input-group prepend="별명" class="m-0" v-if="showAliasInput">
-            <b-form-input class="m-0" v-model="alias">
-              {{ alias }}
-            </b-form-input>
-            <b-input-group-append>
-              <my-button
-                  ref="renameAliasButton"
-                  label="변경"
-                  @click="renameAlias"
-                  :initial-icon="['fas', 'pen']"
-                  :show-initial-icon="true"/>
-            </b-input-group-append>
-            <b-input-group-append>
-              <my-button
-                  ref="removeAliasButton"
-                  label="삭제"
-                  @click="removeAlias"
-                  :initial-icon="['fas', 'eraser']"
-                  :show-initial-icon="true"/>
-            </b-input-group-append>
-          </b-input-group>
+          <b-col cols="12" class="m-0">
+            <my-button
+                ref="runButton"
+                label="실행"
+                @click="run"
+                :initial-icon="['fas', 'play']"
+                :show-initial-icon="true"
+                v-if="showRunButton"/>
+            <my-button
+                ref="viewRssButton"
+                label="RSS"
+                @click="viewRss"
+                :initial-icon="['fas', 'rss']"
+                :show-initial-icon="true"
+                v-if="showViewRssButton"/>
+            <my-button
+                ref="registerButton"
+                label="Inoreader등록"
+                @click="registerToInoreader"
+                :initial-icon="['fas', 'rss']"
+                :show-initial-icon="true"
+                v-if="showRegisterToInoreaderButton"/>
+            <my-button
+                ref="registerButton"
+                label="Feedly등록"
+                @click="registerToFeedly"
+                :initial-icon="['fas', 'rss']"
+                :show-initial-icon="true"
+                v-if="showRegisterToFeedlyButton"/>
+            <my-button
+                ref="removeListButton"
+                label="리스트 삭제"
+                @click="removeList"
+                :initial-icon="['fas', 'eraser']"
+                :show-initial-icon="true"
+                v-if="showRemoveListButton"/>
+            <my-button
+                ref="removeHtmlButton"
+                label="HTML 삭제"
+                @click="removeHtml"
+                :initial-icon="['fas', 'eraser']"
+                :show-initial-icon="true"
+                v-if="showRemoveHtmlButton"/>
+            <my-button
+                ref="toggleFeedButton"
+                :label="feedStatusLabel"
+                @click="toggleStatus('feed')"
+                :initial-icon="['fas', feedStatusIcon]"
+                :show-initial-icon="true"
+                v-if="showToggleFeedButton"/>
+            <my-button
+                ref="removeFeedButton"
+                label="피드 삭제"
+                @click="removeFeed"
+                :initial-icon="['far', 'trash-alt']"
+                :show-initial-icon="true"
+                variant="danger"
+                v-if="showRemoveFeedButton"/>
+          </b-col>
+
+          <b-col cols="12" class="m-0">
+            <my-button
+                ref="saveSiteConfigButton"
+                label="그룹 설정 저장"
+                @click="saveSiteConfig"
+                :initial-icon="['far', 'save']"
+                :show-initial-icon="true"
+                v-if="showSiteConfig"/>
+            <my-button
+                ref="toggleGroupButton"
+                :label="groupStatusLabel"
+                variant="success"
+                @click="toggleStatus('group')"
+                :initial-icon="['fas', groupStatusIcon]"
+                :show-initial-icon="true"
+                v-if="showToggleGroupButton"/>
+            <my-button
+                ref="removeGroupButton"
+                label="그룹 삭제"
+                variant="success"
+                @click="removeGroup"
+                :initial-icon="['far', 'trash-alt']"
+                :show-initial-icon="true"
+                v-if="showRemoveGroupButton"/>
+          </b-col>
+
+          <b-col cols="12" class="m-0">
+            <b-input-group prepend="별명" class="m-0" v-if="showAliasInput">
+              <b-form-input class="m-0" v-model="alias">
+                {{ alias }}
+              </b-form-input>
+              <b-input-group-append>
+                <my-button
+                    ref="renameAliasButton"
+                    label="변경"
+                    @click="renameAlias"
+                    :initial-icon="['fas', 'pen']"
+                    :show-initial-icon="true"/>
+              </b-input-group-append>
+              <b-input-group-append>
+                <my-button
+                    ref="removeAliasButton"
+                    label="삭제"
+                    @click="removeAlias"
+                    :initial-icon="['fas', 'eraser']"
+                    :show-initial-icon="true"/>
+              </b-input-group-append>
+            </b-input-group>
+          </b-col>
+
         </b-col>
       </b-col>
     </b-row>
@@ -254,7 +300,7 @@
 </template>
 
 <style>
-#group_list, #feed_list, #configuration, #actions {
+#group_list, #feed_list, #configuration, #feed_info, #metadata, #actions {
   border: 1px lightgray solid;
   border-collapse: collapse;
   padding: 2px !important;
@@ -264,7 +310,7 @@ div.col-12 {
   padding: 2px !important;
 }
 
-div.row > div > button, div.row > div > div > button, div.input-group {
+div.row > div > button, div.row > div > div > div > button {
   margin: 2px 3px 3px 2px !important;
 }
 
@@ -276,7 +322,6 @@ div.jsoneditor-value {
   padding: 5px;
   border: 1px lightgray dotted;
 }
-
 </style>
 
 <script>
@@ -322,6 +367,7 @@ export default {
       showNewFeedNameInput: false,
       showAliasInput: false,
       showSiteConfig: false,
+      showFeedInfo: false,
 
       activeGroupIndex: undefined,
       activeFeedIndex: undefined,
@@ -333,7 +379,19 @@ export default {
       selectedFeedName: '',
       newFeedName: '',
       alias: '',
-      searchKeyword: ''
+      searchKeyword: '',
+
+      numCollectionUrls: 0,
+      numItemsCollected: 0,
+      collectionLastUpdateDate: '-',
+      numItemsInResult: 0,
+      sizeOfResultFile: 0,
+      lastUploadDate: '-',
+      percentageOfProgress: 0,
+      currentIndexOfProgress: 0,
+      numTotalItems: 0,
+      unitSizePerDay: 0,
+      feedCompletionDueDate: '-',
     };
   },
   computed: {
@@ -449,6 +507,7 @@ export default {
       this.showToggleFeedButton = true;
       this.showRemoveFeedButton = true;
       this.showAliasInput = true;
+      this.showFeedInfo = true;
     },
     hideAllRelatedToFeed: function () {
       this.showEditor = false;
@@ -462,6 +521,7 @@ export default {
       this.showToggleFeedButton = false;
       this.showRemoveFeedButton = false;
       this.showAliasInput = false;
+      this.showFeedInfo = false
       this.clearAlert();
     },
     showAllRelatedToGroup: function () {
@@ -619,6 +679,22 @@ export default {
         this.getFeedInfo(groupName, feedName);
       }
     },
+    setCollectionInfo: function (collectionInfo, config) {
+      this.numCollectionUrls = config["collection"]["list_url_list"].length;
+      this.numItemsCollected = collectionInfo["count"];
+      this.collectionLastUpdateDate = collectionInfo["collect_date"];
+    },
+    setPublicFeedInfo: function (publicFeedInfo) {
+      this.numItemsInResult = publicFeedInfo["num_items"];
+      this.sizeOfResultFile = publicFeedInfo["size"];
+      this.lastUploadDate = publicFeedInfo["upload_date"];
+    },
+    setProgressInfo: function (progressInfo) {
+      this.numTotalItems = progressInfo["count"];
+      this.currentIndexOfProgress = progressInfo["index"];
+      this.unitSizePerDay = progressInfo["unit_size"];
+      this.feedCompletionDueDate = progressInfo["due_date"];
+    },
     getFeedInfo: function (groupName, feedName) {
       console.log(`getFeedInfo(${groupName}, ${feedName})`);
       const url = this.getApiUrlPath() + `/groups/${groupName}/feeds/${feedName}`;
@@ -628,7 +704,11 @@ export default {
             if (res.data.status === 'failure') {
               this.alert(res.data.message);
             } else {
-              this.jsonData = res.data.configuration;
+              var feed_info = res.data["feed_info"];
+              this.jsonData = feed_info["config"];
+              this.setCollectionInfo(feed_info["collection_info"], feed_info["config"]);
+              this.setPublicFeedInfo(feed_info["public_feed_info"]);
+              this.setProgressInfo(feed_info["progress_info"]);
               this.determineNewFeedNameFromJsonRssLink();
               if (Object.keys(this.jsonData).length >= 3) {
                 this.showAllRelatedToFeed();

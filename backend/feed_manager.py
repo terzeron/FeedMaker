@@ -6,11 +6,12 @@ import os
 from pathlib import Path
 import json
 import logging
+from datetime import datetime
 from shutil import rmtree
 from typing import List, Dict, Any, Tuple, Optional
 from functools import cmp_to_key
 from run import FeedMakerRunner
-from feed_maker_util import Htaccess, Process
+from feed_maker_util import Htaccess, Process, Data
 from problem_checker import ProblemChecker
 
 
@@ -232,9 +233,32 @@ class FeedManager:
             return sorted(feed_title_list, key=cmp_to_key(FeedManager._compare_title)), ""
         return [], f"no feed list in group '{group_name}'"
 
-    def get_feed_info_by_name(self, feed_name: str) -> Tuple[Dict[str, Any], str]:
+    def get_feed_info_by_name(self, group_name: str, feed_name: str) -> Tuple[Dict[str, Any], str]:
         self.logger.debug(f"# get_feed_info_by_name({feed_name})")
-        return self.feed_name_config_map.get(feed_name, {}), ""
+        feed_dir_path = self.work_dir / group_name / feed_name
+        list_dir_path = feed_dir_path / "newlist"
+        last_collect_date = None
+        result_list = []
+        for list_file_path in list_dir_path.iterdir():
+            st = list_file_path.stat()
+            if not last_collect_date:
+                last_collect_date = datetime.fromtimestamp(st.st_mtime)
+            else:
+                if last_collect_date < datetime.fromtimestamp(st.st_mtime):
+                    last_collect_date = datetime.fromtimestamp(st.st_mtime)
+            with open(list_file_path, 'r', encoding='utf-8') as infile:
+                for line in infile:
+                    link, title = line.split("\t")
+                    result_list.append(link)
+        result_list = Data.remove_duplicates(result_list)
+        collection_info = {"collect_date": ProblemChecker.convert_datetime_to_str(last_collect_date), "count": len(result_list)}
+        feed_info = {
+            "config": self.feed_name_config_map.get(feed_name, {}),
+            "collection_info": collection_info,
+            "public_feed_info": self.checker.public_feed_info_map.get(feed_name, {}),
+            "progress_info": self.checker.feed_name_progress_info_map.get(feed_name, {}),
+        }
+        return feed_info, ""
 
     def save_config_file(self, group_name: str, feed_name: str, post_data: Dict[str, Any]) -> Tuple[bool, str]:
         self.logger.debug(f"# save_config_file({group_name}, {feed_name}, {post_data})")
