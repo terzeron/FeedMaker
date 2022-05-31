@@ -299,7 +299,13 @@ def main() -> int:
 
     LOGGER.info("# Checking problems and making report")
     checker = ProblemChecker()
-    checker.load()
+    checker.load_htaccess_file()
+    checker.load_all_config_rss_files()
+    checker.load_all_public_feed_files()
+    checker.load_all_progress_info_from_files()
+    checker.load_all_httpd_access_files()
+    checker.add_html_files_in_path_to_info(feed_dir_path)
+    checker.merge_all_feeds_status()
 
     return 0 if result else -1
 
