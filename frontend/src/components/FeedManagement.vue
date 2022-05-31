@@ -132,7 +132,7 @@
                 <b-td>{{ sizeOfResultFile }} 바이트</b-td>
                 <b-td>마지막 업로드:<br>{{ lastUploadDate }}</b-td>
               </b-tr>
-              <b-tr v-if="numTotalItems && currentIndexOfProgress && numTotalItems && unitSizePerDay">
+              <b-tr v-if="numTotalItems && numTotalItems && unitSizePerDay">
                 <b-td>피딩 진행 상태</b-td>
                 <b-td colspan="2">
                   <b-progress :max="numTotalItems" show-progress>
