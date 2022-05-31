@@ -122,27 +122,26 @@
             <b-tbody>
               <b-tr>
                 <b-td>수집</b-td>
-                <b-td>{{ numCollectionUrls }}개 페이지</b-td>
-                <b-td>{{ numItemsCollected }}개 피드 URL</b-td>
-                <b-td>마지막 수집:<br>{{ collectionLastUpdateDate }}</b-td>
+                <b-td>{{ numCollectionUrls }} 개 페이지</b-td>
+                <b-td>{{ numItemsCollected }} 개 피드</b-td>
+                <b-td>{{ collectionLastUpdateDate }}</b-td>
               </b-tr>
               <b-tr>
-                <b-td>결과 Feed</b-td>
-                <b-td>{{ numItemsInResult }}개 피드 아이템</b-td>
-                <b-td>{{ sizeOfResultFile }} 바이트</b-td>
-                <b-td>마지막 업로드:<br>{{ lastUploadDate }}</b-td>
+                <b-td>피드</b-td>
+                <b-td>{{ numItemsInResult }} 개 피드</b-td>
+                <b-td>{{ sizeOfResultFileWithUnit }}</b-td>
+                <b-td>{{ lastUploadDate }}</b-td>
               </b-tr>
               <b-tr v-if="numTotalItems && numTotalItems && unitSizePerDay">
-                <b-td>피딩 진행 상태</b-td>
+                <b-td>진행 상태</b-td>
                 <b-td colspan="2">
-                  <b-progress :max="numTotalItems" show-progress>
+                  <b-progress :max="numTotalItems" show-progress height="1.5rem">
                     <b-progress-bar :value="currentIndexOfProgress" variant="warning">
-                      <div style="position: absolute; width: 100%; color: black; text-align: left; overflow: visible;">{{ currentIndexOfProgress }}/{{ numTotalItems }}={{ Math.floor((currentIndexOfProgress + 4) * 100 / (numTotalItems + 1)) }}%</div>
+                      <div style="position: absolute; width: 100%; color: black; text-align: left; overflow: visible;">{{ currentIndexOfProgress }} 번 / {{ numTotalItems }} 개 = {{ Math.floor((currentIndexOfProgress + 4) * 100 / (numTotalItems + 1)) }} %, {{ unitSizePerDay }} 개/일</div>
                     </b-progress-bar>
                   </b-progress>
-                  {{ unitSizePerDay }}개/일
                 </b-td>
-                <b-td>피딩 완료:<br>{{ feedCompletionDueDate }}</b-td>
+                <b-td>{{ feedCompletionDueDate }}</b-td>
               </b-tr>
             </b-tbody>
           </b-table-simple>
@@ -425,6 +424,17 @@ export default {
     },
     adminEmail: function () {
       return process.env.VUE_APP_ADMIN_EMAIL;
+    },
+    sizeOfResultFileWithUnit: function () {
+      if (this.sizeOfResultFile > 1024 * 1024 * 1024) {
+        return (this.sizeOfResultFile / 1024 / 1024 / 1024).toFixed(2) + ' GiB';
+      } else if (this.sizeOfResultFile > 1024 * 1024) {
+        return (this.sizeOfResultFile / 1024 / 1024).toFixed(2) + ' MiB';
+      } else if (this.sizeOfResultFile > 1024) {
+        return (this.sizeOfResultFile / 1024).toFixed(2) + ' KiB';
+      } else {
+        return this.sizeOfResultFile + ' B';
+      }
     },
   },
   watch: {
