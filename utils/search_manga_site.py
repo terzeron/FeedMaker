@@ -5,15 +5,15 @@ import sys
 import json
 import re
 import getopt
-import threading
-from threading import Thread, Lock
+from threading import Thread
 import urllib.parse
 import logging.config
-from typing import Dict, Tuple, List, Any, Optional
+from typing import Dict, Tuple, List, Optional, Union
 from pathlib import Path
 from bs4 import BeautifulSoup
 from crawler import Crawler, Method
 from feed_maker_util import URL, HTMLExtractor
+
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
 LOGGER = logging.getLogger()
@@ -33,7 +33,7 @@ class Site():
     num_retries: int = 1
     method: Method = Method.GET
     headers: Optional[Dict[str, str]] = None
-    payload: Optional[Dict[str, str]] = None
+    payload: Optional[Dict[str, Union[str, bytes]]] = None
 
     def __init__(self, site_name: str) -> None:
         self.site_name = site_name
@@ -53,20 +53,16 @@ class Site():
         LOGGER.debug(f"# set_url_postfix(url_postfix={url_postfix})")
         self.url_postfix = url_postfix
 
-    def set_payload(self, keyword: str = None) -> None:
+    def set_payload(self, keyword: str = "") -> None:
         LOGGER.debug(f"# set_payload(keyword={keyword})")
         pass
 
-    def get_data_from_site(self, url:str="") -> str:
+    def get_data_from_site(self, url: str = "") -> str:
         LOGGER.debug(f"# get_data_from_site(url={url})")
         site_dir_path = work_dir_path / self.site_name
         crawler: Crawler = Crawler(dir_path=site_dir_path, render_js=self.render_js, method=self.method, headers=self.headers, encoding=self.encoding, timeout=240)
         if not url:
             url: str = URL.get_url_scheme(self.url_prefix) + "://" + URL.get_url_domain(self.url_prefix) + self.url_postfix
-            LOGGER.debug(f"self.url_prefix={self.url_prefix}")
-            LOGGER.debug(f"scheme={URL.get_url_scheme(self.url_prefix)}")
-            LOGGER.debug(f"domain={URL.get_url_domain(self.url_prefix)}")
-            LOGGER.debug(f"self.url_postfix={self.url_postfix}")
             LOGGER.debug(f"url={url}")
         response, _, _ = crawler.run(url=url, data=self.payload)
         del crawler
@@ -185,7 +181,7 @@ class Site():
                 result_list.append((item["t"], link))
         return result_list
 
-    def search(self, keyword: str) -> List[Tuple[str, str]]:
+    def search(self, keyword: str = "") -> List[Tuple[str, str]]:
         LOGGER.debug(f"# search(keyword={keyword})")
         self.set_url_postfix(keyword)
         self.set_payload(keyword)
@@ -283,7 +279,7 @@ class WtwtSite(Site):
     def set_url_postfix(self, _: str) -> None:
         self.url_postfix = "/sh"
 
-    def set_payload(self, keyword: str) -> None:
+    def set_payload(self, keyword: str = "") -> None:
         cp949_keyword = keyword.encode("cp949")
         self.payload = {"search_txt": cp949_keyword}
 
@@ -345,10 +341,7 @@ class BlacktoonSite(Site):
     def set_url_postfix(self, keyword: str = "") -> None:
         self.url_postfix = keyword
 
-    def extract_sub_content(self, content: str, keyword: str = "") -> str:
-        return self.extract_sub_content_from_site_like_agit(content, keyword)
-
-    def search(self, keyword: str) -> str:
+    def search(self, keyword: str = "") -> List[Tuple[str, str]]:
         return self.search_in_site_like_agit(keyword)
 
 
@@ -373,7 +366,7 @@ class FlixSite(Site):
         encoded_keyword = urllib.parse.quote(keyword)
         self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
 
-    def set_payload(self, keyword: str) -> None:
+    def set_payload(self, keyword: str = "") -> None:
         self.payload = {"keyword": keyword}
 
 
@@ -394,11 +387,18 @@ class AgitSite(Site):
     def set_url_postfix(self, _: str = "") -> None:
         self.url_postfix = ""
 
-    def extract_sub_content(self, content: str, keyword: str = "") -> str:
-        return self.extract_sub_content_from_site_like_agit(content, keyword)
-
-    def search(self, keyword: str) -> str:
+    def search(self, keyword: str = "") -> List[Tuple[str, str]]:
         return self.search_in_site_like_agit(keyword)
+
+
+class TorrentseeSite(Site):
+    def __init__(self, site_name: str) -> None:
+        super().__init__(site_name)
+        self.extraction_attrs = {"class": "tit"}
+
+    def set_url_postfix(self, keyword: str) -> None:
+        encoded_keyword = urllib.parse.quote(keyword)
+        self.url_postfix = "/search/index?category=0&keywords=" + encoded_keyword
 
 
 class SearchManager:
@@ -427,6 +427,7 @@ class SearchManager:
             AllallSite("allall"),
             BlacktoonSite("blacktoon"),
             AgitSite("agit"),
+            TorrentseeSite("torrentsee"),
         ]
 
         result_list: List[Tuple[str, str]] = []
@@ -464,6 +465,8 @@ def main() -> int:
 
     for title, url in result_list:
         print(f"{title}\t\t{url}")
+
+    return 0
 
 
 if __name__ == "__main__":
