@@ -15,7 +15,7 @@ async function initFacebook(appId, component) {
       version: "v2.2"
     });
 
-    component.$emit("authInitialized");
+    component.$emit("auth-initialized");
   };
 }
 

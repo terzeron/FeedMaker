@@ -16,10 +16,12 @@
     "axios": "^0.21.2",
     "bootstrap-vue": "^2.21.2",
     "core-js": "^3.6.5",
-    "dotenv": "^16.0.1",
-    "ejs": "^3.1.8",
+    "ejs": "^3.1.7",
     "eventsource": "^1.1.1",
+    "fs": "^0.0.1-security",
     "lodash": "^4.17.21",
+    "os": "^0.1.2",
+    "path": "^0.12.7",
     "vue": "^2.6.11",
     "vue-json-editor": "^1.4.3",
     "vue-router": "^3.5.2",
@@ -27,12 +29,12 @@
     "vue-simple-markdown": "^1.1.5"
   },
   "devDependencies": {
-    "@vue/cli-plugin-babel": "~4.5.0",
-    "@vue/cli-plugin-eslint": "~4.5.0",
-    "@vue/cli-service": "~4.5.0",
+    "@vue/cli-plugin-babel": "^5.0.4",
+    "@vue/cli-plugin-eslint": "^5.0.4",
+    "@vue/cli-service": "^5.0.4",
     "babel-eslint": "^10.1.0",
-    "eslint": "^6.7.2",
-    "eslint-plugin-vue": "^6.2.2",
+    "eslint": "^7.5.0",
+    "eslint-plugin-vue": "^7.0.1",
     "vue-template-compiler": "^2.6.11"
   },
   "eslintConfig": {
