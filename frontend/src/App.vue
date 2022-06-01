@@ -22,6 +22,11 @@
               <b-nav-text>피드 관리</b-nav-text>
             </router-link>
           </b-nav-item>
+          <b-nav-item>
+            <router-link to="/search">
+              <b-nav-text>사이트 검색</b-nav-text>
+            </router-link>
+          </b-nav-item>
         </b-navbar-nav>
 
         <b-navbar-nav class="ml-auto">

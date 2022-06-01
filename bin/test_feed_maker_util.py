@@ -628,6 +628,10 @@ class URLTest(unittest.TestCase):
         expected = "tkor.ws"
         self.assertEqual(expected, actual)
 
+        actual = URL.get_url_domain("https://naver.com")
+        expected = "naver.com"
+        self.assertEqual(expected, actual)
+
     def test_get_url_path(self):
         actual = URL.get_url_path("http://www.naver.com/movie/hello/test.nhn?query=test")
         expected = "/movie/hello/test.nhn?query=test"

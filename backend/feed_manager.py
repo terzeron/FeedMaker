@@ -13,6 +13,7 @@ from functools import cmp_to_key
 from run import FeedMakerRunner
 from feed_maker_util import Htaccess, Process, Data
 from problem_checker import ProblemChecker
+from search_manga_site import SearchManager
 
 
 class FeedManager:
@@ -148,7 +149,7 @@ class FeedManager:
         return keyword in config_item
 
     def search(self, keywords: str) -> Tuple[List[Dict[str, Any]], str]:
-        self.logger.debug("# search()")
+        self.logger.debug(f"# search(keywords={keywords})")
         result_list: List[Dict[str, Any]] = []
         keyword_list = keywords.split(' ')
         for feed_name, config in self.feed_name_config_map.items():
@@ -168,6 +169,13 @@ class FeedManager:
                 title = self.checker.feed_name_title_map.get(feed_name, "")
                 result_list.append({'group_name': group_name, 'feed_name': feed_name, 'feed_title': title})
 
+        return result_list, ""
+
+    def search_site(self, keyword: str) -> Tuple[List[Dict[str, Any]], str]:
+        self.logger.debug(f"# search_site(keyword={keyword})")
+        result_list: List[Dict[str, Any]] = []
+        search_manager = SearchManager()
+        result_list = search_manager.search("", keyword)
         return result_list, ""
 
     @staticmethod

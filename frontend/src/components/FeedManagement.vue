@@ -2,7 +2,7 @@
   <b-container fluid>
     <!-- 그룹과 피드 목록 제어 버튼 -->
     <b-row>
-      <b-col cols="12" class="m-0">
+      <b-col cols="12" class="m-0 p-1">
         <my-button
             ref="groupListButton"
             label="그룹 목록"
@@ -15,7 +15,7 @@
             v-if="showFeedListButton"/>
 
         <b-input-group
-            class="float-right p-1"
+            class="float-right m-0 p-1"
             style="width: 300px">
           <b-form-input
               v-model="searchKeyword"
@@ -39,7 +39,7 @@
 
     <!-- 검색 결과 -->
     <b-row>
-      <b-col id="search_result" cols="12" class="m-0" v-if="showSearchResult">
+      <b-col id="search_result" cols="12" class="m-0 p-1 button_list" v-if="showSearchResult">
         <my-button
             ref="searchResultFeedButton"
             :label="feed['group_name'] + '/' + feed['feed_title']"
@@ -53,7 +53,7 @@
 
     <!-- 그룹 목록 -->
     <b-row>
-      <b-col id="group_list" cols="12" class="m-0" v-if="showGroupList">
+      <b-col id="group_list" cols="12" class="m-0 p-1 button_list" v-if="showGroupList">
         <my-button
             ref="groupNameButton"
             :label="group.name + ' (' + group['num_feeds'] + ')'"
@@ -70,7 +70,11 @@
 
     <!-- 피드 목록 -->
     <b-row>
-      <b-col id="feed_list" ols="12" class="m-0" v-if="showFeedList">
+      <b-col
+          id="feed_list"
+          cols="12"
+          class="m-0 p-1 button_list"
+          v-if="showFeedList">
         <my-button
             ref="feedNameButton"
             :label="feed.title"
@@ -87,7 +91,11 @@
     <!-- 설정 편집기 및 액션, 메타데이터 영역 -->
     <b-row>
       <!-- 설정 편집기 영역 -->
-      <b-col id="configuration" cols="12" lg="8" class="m-0">
+      <b-col
+          id="configuration"
+          cols="12"
+          lg="8"
+          class="m-0 p-1">
         <vue-json-editor
             :expandedOnStart="true"
             :mode="'tree'"
@@ -99,65 +107,90 @@
         </div>
       </b-col>
 
-      <!-- 정보, 액션 영역 -->
-      <b-col cols="12" lg="4" class="m-0">
+      <!-- 정보, 메타데이터, 액션 영역 -->
+      <b-col
+          cols="12"
+          lg="4"
+          class="m-0 p-0">
 
         <!-- 정보 영역 -->
-        <b-col id="feed_info" class="m-0">
-          <b-col cols="12" class="m-0" :class="{'bg-secondary': !feedStatus}" v-if="showNewFeedNameInput">
+        <b-row
+            id="feed_info"
+            class="m-0 p-0">
+          <b-col
+              cols="12"
+              class="m-0 p-1"
+              :class="{'bg-secondary': !feedStatus}" v-if="showNewFeedNameInput">
             <div>{{ title }}</div>
             <div>{{ selectedGroupName + '/' + selectedFeedName }}</div>
           </b-col>
+        </b-row>
 
-          <b-table-simple
-              id="metadata"
-              class="m-0 p-0 text-break"
-              small
-              v-if="showFeedInfo">
-            <b-thead head-variant="light" table-variant="light">
-              <b-tr>
-                <b-th colspan="4">메타데이터</b-th>
-              </b-tr>
-            </b-thead>
-            <b-tbody>
-              <b-tr>
-                <b-td>수집</b-td>
-                <b-td>{{ numCollectionUrls }} 개 페이지</b-td>
-                <b-td>{{ numItemsCollected }} 개 피드</b-td>
-                <b-td>{{ collectionLastUpdateDate }}</b-td>
-              </b-tr>
-              <b-tr>
-                <b-td>피드</b-td>
-                <b-td>{{ numItemsInResult }} 개 피드</b-td>
-                <b-td>{{ sizeOfResultFileWithUnit }}</b-td>
-                <b-td>{{ lastUploadDate }}</b-td>
-              </b-tr>
-              <b-tr v-if="numTotalItems && numTotalItems && unitSizePerDay">
-                <b-td>진행 상태</b-td>
-                <b-td colspan="2">
-                  <b-progress :max="numTotalItems" show-progress height="1.5rem">
-                    <b-progress-bar :value="currentIndexOfProgress" variant="warning">
-                      <div style="position: absolute; width: 100%; color: black; text-align: left; overflow: visible;">{{ currentIndexOfProgress }} 번 / {{ numTotalItems }} 개 = {{ Math.floor((currentIndexOfProgress + 4) * 100 / (numTotalItems + 1)) }} %, {{ unitSizePerDay }} 개/일</div>
-                    </b-progress-bar>
-                  </b-progress>
-                </b-td>
-                <b-td>{{ feedCompletionDueDate }}</b-td>
-              </b-tr>
-            </b-tbody>
-          </b-table-simple>
-        </b-col>
+        <!-- 메타데이터 영역 -->
+        <b-row
+            id="metadata"
+            class="m-0 p-0">
+          <b-col
+              cols="12"
+              class="m-0 p-1">
+            <b-table-simple
+                class="m-0 p-1 text-break"
+                small
+                v-if="showFeedInfo">
+              <b-thead head-variant="light" table-variant="light">
+                <b-tr>
+                  <b-th colspan="4">메타데이터</b-th>
+                </b-tr>
+              </b-thead>
+              <b-tbody>
+                <b-tr>
+                  <b-td>수집</b-td>
+                  <b-td>{{ numCollectionUrls }} 개 페이지</b-td>
+                  <b-td>{{ numItemsCollected }} 개 피드</b-td>
+                  <b-td>{{ collectionLastUpdateDate }}</b-td>
+                </b-tr>
+                <b-tr>
+                  <b-td>피드</b-td>
+                  <b-td>{{ numItemsInResult }} 개 피드</b-td>
+                  <b-td>{{ sizeOfResultFileWithUnit }}</b-td>
+                  <b-td>{{ lastUploadDate }}</b-td>
+                </b-tr>
+                <b-tr v-if="numTotalItems && numTotalItems && unitSizePerDay">
+                  <b-td>진행 상태</b-td>
+                  <b-td colspan="2">
+                    <b-progress :max="numTotalItems" show-progress height="1.5rem">
+                      <b-progress-bar :value="currentIndexOfProgress" variant="warning">
+                        <div style="position: absolute; width: 100%; color: black; text-align: left; overflow: visible;">{{ currentIndexOfProgress }} 번 / {{ numTotalItems }} 개 = {{ Math.floor((currentIndexOfProgress + 4) * 100 / (numTotalItems + 1)) }} %, {{ unitSizePerDay }} 개/일</div>
+                      </b-progress-bar>
+                    </b-progress>
+                  </b-td>
+                  <b-td>{{ feedCompletionDueDate }}</b-td>
+                </b-tr>
+              </b-tbody>
+            </b-table-simple>
+          </b-col>
+        </b-row>
 
         <!-- 액션 영역 -->
-        <b-col id="actions" class="m-0">
-          <b-alert
-              class="mb-0"
-              variant="danger"
-              dismissible
+        <b-row
+            id="actions"
+            class="m-0 p-0">
+          <b-col
+              cols="12"
+              class="m-0 p-1"
               v-if="showAlert">
-            {{ alertMessage }}
-          </b-alert>
+            <b-alert
+                class="mb-0"
+                variant="danger"
+                dismissible
+                v-if="showAlert">
+              {{ alertMessage }}
+            </b-alert>
+          </b-col>
 
-          <b-col cols="12" class="m-0">
+          <b-col
+              cols="12"
+              class="m-0 p-1">
             <b-input-group
                 prepend="피드"
                 class="m-0"
@@ -176,7 +209,9 @@
             </b-input-group>
           </b-col>
 
-          <b-col cols="12" class="m-0">
+          <b-col
+              cols="12"
+              class="m-0 p-1 button_list">
             <my-button
                 ref="runButton"
                 label="실행"
@@ -236,7 +271,10 @@
                 v-if="showRemoveFeedButton"/>
           </b-col>
 
-          <b-col cols="12" class="m-0">
+          <b-col
+              cols="12"
+              class="m-0 p-1"
+              v-if="showSiteConfig || showToggleGroupButton || showRemoveGroupButton">
             <my-button
                 ref="saveSiteConfigButton"
                 label="그룹 설정 저장"
@@ -262,9 +300,16 @@
                 v-if="showRemoveGroupButton"/>
           </b-col>
 
-          <b-col cols="12" class="m-0">
-            <b-input-group prepend="별명" class="m-0" v-if="showAliasInput">
-              <b-form-input class="m-0" v-model="alias">
+          <b-col
+              cols="12"
+              class="m-0 p-1">
+            <b-input-group
+                prepend="별명"
+                class="m-0"
+                v-if="showAliasInput">
+              <b-form-input
+                  class="m-0"
+                  v-model="alias">
                 {{ alias }}
               </b-form-input>
               <b-input-group-append>
@@ -285,13 +330,14 @@
               </b-input-group-append>
             </b-input-group>
           </b-col>
-
-        </b-col>
+        </b-row>
       </b-col>
     </b-row>
 
     <b-row>
-      <b-col cols="12" class="mx-auto text-center mt-5 mb-3">
+      <b-col
+          cols="12"
+          class="mx-auto text-center mt-5 mb-3">
         Feed Manager by {{ adminEmail }}
       </b-col>
     </b-row>
@@ -305,11 +351,7 @@
   padding: 2px !important;
 }
 
-div.col-12 {
-  padding: 2px !important;
-}
-
-div.row > div > button, div.row > div > div > div > button {
+.button_list button {
   margin: 2px 3px 3px 2px !important;
 }
 
@@ -328,8 +370,7 @@ import vueJsonEditor from 'vue-json-editor';
 import axios from 'axios';
 import {library} from '@fortawesome/fontawesome-svg-core';
 import {faTrashAlt, faSave} from '@fortawesome/free-regular-svg-icons';
-import {faSearch, faRss, faPlay, faToggleOn, faToggleOff, faEraser, faPen, faEye} from
-      '@fortawesome/free-solid-svg-icons';
+import {faSearch, faRss, faPlay, faToggleOn, faToggleOff, faEraser, faPen, faEye} from '@fortawesome/free-solid-svg-icons';
 import MyButton from './MyButton';
 
 library.add(faTrashAlt, faSave, faSearch, faRss, faPlay, faToggleOn, faToggleOff, faEraser, faPen, faEye);

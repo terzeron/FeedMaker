@@ -87,6 +87,20 @@ def search(keyword):
     return jsonify(response_object)
 
 
+@app.route("/search_site/<keyword>", methods=["GET"])
+def search_site(keyword):
+    print(f"/search_site, {request.method} -> search_site({keyword})")
+    response_object: Dict[str, Any] = {"status": "failure"}
+    result, error = feed_manager.search_site(keyword)
+    if result or not error:
+        response_object["search_result_list"] = result
+        response_object["status"] = "success"
+        print(result)
+    else:
+        response_object["message"] = error
+    return jsonify(response_object)
+
+
 @app.route("/groups", methods=["GET"])
 def get_groups():
     print("/groups, {request.method} -> get_groups()")
@@ -295,4 +309,4 @@ def remove_public_feed(feed_name):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0")
+    app.run(host="0.0.0.0", threaded=True)

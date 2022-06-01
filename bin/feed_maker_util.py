@@ -551,6 +551,8 @@ class URL:
             first_slash_index = url[host_index:].find("/")
             if first_slash_index >= 0:
                 return url[host_index:(host_index + first_slash_index)]
+            else:
+                return url[host_index:]
         return ""
 
     # http://naver.com/api/items?page_no=3 => /api/items?page_no=3
