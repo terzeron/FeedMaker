@@ -135,16 +135,13 @@ def get_url_pattern(url: str) -> Tuple[str, str, int, str, str]:
     return new_pattern, pre, num, domain_postfix, post
 
 
-def print_new_url(url: str, new_url: str, new_number: int) -> None:
+def print_new_url(url: str, new_url: str, new_number: str) -> None:
     if url == new_url:
         print("same url")
     else:
         print(f"no service from {url}")
         print(f"You can use a new url {new_url} from now on")
-        cmd = f"update_manga_site.py {new_number}"
-        _, error = Process.exec_cmd(cmd)
-        if error:
-            print(f"can't update url to '{new_url}'")    
+        print(f"New number: {new_number}")
 
 
 def main() -> int:
