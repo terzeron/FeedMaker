@@ -7,7 +7,7 @@
           class="m-0 p-1">
         <b-input-group
             class="m-0 p-1"
-            style="width: 600px">
+            style="width: 400px">
           <b-form-input
               v-model="searchKeyword"
               class="m-0"

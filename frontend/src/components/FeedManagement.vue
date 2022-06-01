@@ -2,7 +2,7 @@
   <b-container fluid>
     <!-- 그룹과 피드 목록 제어 버튼 -->
     <b-row>
-      <b-col cols="12" class="m-0 p-1">
+      <b-col cols="12" class="m-0 p-1 button_list">
         <my-button
             ref="groupListButton"
             label="그룹 목록"
@@ -273,7 +273,7 @@
 
           <b-col
               cols="12"
-              class="m-0 p-1"
+              class="m-0 p-1 button_list"
               v-if="showSiteConfig || showToggleGroupButton || showRemoveGroupButton">
             <my-button
                 ref="saveSiteConfigButton"
