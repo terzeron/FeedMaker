@@ -296,7 +296,7 @@ class FeedMaker:
                     return start_idx, end_idx, mtime
 
         # 처음 생성 시, 또는 파일에 정보가 없을 때
-        start_idx = 0
+        start_idx = 1
         end_idx = self.window_size
         mtime = Datetime.get_current_time()
         _, current_time_str = self._write_idx_data(start_idx, mtime, True)
@@ -313,7 +313,7 @@ class FeedMaker:
         increment_size = int((delta.total_seconds() * self.collection_conf["unit_size_per_day"]) / 86400)
         LOGGER.debug(
             f"start_idx={start_idx}, current time={current_time}, mtime={mtime}, self.window_size={self.window_size}, increment_size={increment_size}")
-        next_start_idx = 0
+        next_start_idx = 1
         current_time_str = None
         if do_write_initially or increment_size > 0:
             next_start_idx = start_idx + increment_size

@@ -143,19 +143,19 @@
                 </b-tr>
               </b-thead>
               <b-tbody>
-                <b-tr>
+                <b-tr v-if="numCollectionUrls && numItemsCollected">
                   <b-td>수집</b-td>
                   <b-td>{{ numCollectionUrls }} 개 페이지</b-td>
                   <b-td>{{ numItemsCollected }} 개 피드</b-td>
                   <b-td>{{ collectionLastUpdateDate }}</b-td>
                 </b-tr>
-                <b-tr>
+                <b-tr v-if="numItemsInResult && sizeOfResultFileWithUnit">
                   <b-td>피드</b-td>
                   <b-td>{{ numItemsInResult }} 개 피드</b-td>
                   <b-td>{{ sizeOfResultFileWithUnit }}</b-td>
                   <b-td>{{ lastUploadDate }}</b-td>
                 </b-tr>
-                <b-tr v-if="numTotalItems && numTotalItems && unitSizePerDay">
+                <b-tr v-if="numTotalItems && currentIndexOfProgress && unitSizePerDay">
                   <b-td>진행 상태</b-td>
                   <b-td colspan="2">
                     <b-progress :max="numTotalItems" show-progress height="1.5rem">
