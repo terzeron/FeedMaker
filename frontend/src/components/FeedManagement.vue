@@ -2,7 +2,8 @@
   <b-container fluid>
     <!-- 그룹과 피드 목록 제어 버튼 -->
     <b-row>
-      <b-col cols="12" class="m-0 p-1 button_list">
+      <b-col cols="12" class="m-0 p-1">
+        <span class="button_list">
         <my-button
             ref="groupListButton"
             label="그룹 목록"
@@ -13,6 +14,7 @@
             :label="selectedGroupName + ' 그룹의 피드 목록'"
             @click="feedListButtonClicked"
             v-if="showFeedListButton"/>
+        </span>
 
         <b-input-group
             class="float-right m-0 p-1"
