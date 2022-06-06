@@ -197,13 +197,19 @@ class Site():
         m = re.search(r'src=\'(?P<url0>.*/data/.*webtoon_0.js\?v=[^\'"]+)[\'"]', html)
         if m:
             url0 = m.group("url0")
-            if not url0.startswith("http") and url0.startswith("//"):
-                url0 = "https:" + url0
+            if not url0.startswith("http"):
+                if url0.startswith("//"):
+                    url0 = "https:" + url0
+                else:
+                    url0 = URL.concatenate_url(self.url_prefix, url0)
         m = re.search(r'src=\'(?P<url1>.*/data/.*webtoon_1.js\?v=[^\'"]+)[\'"]', html)
         if m:
             url1 = m.group("url1")
-            if not url1.startswith("http") and url1.startswith("//"):
-                url1 = "https:" + url1
+            if not url1.startswith("http"):
+                if url1.startswith("//"):
+                    url1 = "https:" + url1
+                else:
+                    url1 = URL.concatenate_url(self.url_prefix, url1)
         LOGGER.debug(f"url0={url0}")
         LOGGER.debug(f"url1={url1}")
         result_list: List[Tuple[str, str]] = []
