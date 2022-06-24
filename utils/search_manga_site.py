@@ -407,6 +407,16 @@ class TorrentseeSite(Site):
         self.url_postfix = "/search/index?category=0&keywords=" + encoded_keyword
 
 
+class TorrentdiaSite(Site):
+    def __init__(self, site_name: str) -> None:
+        super().__init__(site_name)
+        self.extraction_attrs = {"class": "list-subject"}
+
+    def set_url_postfix(self, keyword: str) -> None:
+        encoded_keyword = urllib.parse.quote(keyword)
+        self.url_postfix = "/bbs/search.php?search_flag=search&stx=" + encoded_keyword
+
+
 class SearchManager:
     result_by_site: Dict[Site, List[Tuple[str, str]]] = {}
 
@@ -434,6 +444,7 @@ class SearchManager:
             BlacktoonSite("blacktoon"),
             AgitSite("agit"),
             TorrentseeSite("torrentsee"),
+            TorrentdiaSite("torrentdia"),
         ]
 
         result_list: List[Tuple[str, str]] = []
