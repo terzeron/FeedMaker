@@ -1,4 +1,4 @@
-#!/Usr/bin/env python
+#!/usr/bin/env python
 
 import sys
 import os
@@ -7,6 +7,7 @@ import time
 import logging.config
 from pathlib import Path
 from typing import List, Dict, Any, Tuple, Callable, Optional
+from distutils.spawn import find_executable
 from datetime import datetime, timedelta
 import dateutil.parser
 import PyRSS2Gen
@@ -243,7 +244,15 @@ class FeedMaker:
                     return False
 
             for post_process_script in conf["post_process_script_list"]:
-                post_process_cmd = f"{post_process_script} -f '{self.feed_dir_path}' '{item_url}'"
+                program = post_process_script.split(" ")[0]
+                program_fullpath = find_executable(program)
+                if program_fullpath and (program_fullpath.startswith("/usr") or
+                                         program_fullpath.startswith("/bin") or
+                                         program_fullpath.startswith("/sbin")):
+                    post_process_cmd = f"{post_process_script}"
+                else:
+                    post_process_cmd = f"{post_process_script} -f '{self.feed_dir_path}' '{item_url}'"
+                LOGGER.debug(f"cmd={post_process_cmd}")
                 result, error_msg = Process.exec_cmd(post_process_cmd, dir_path=self.feed_dir_path, input_data=content)
                 LOGGER.debug(f"cmd={post_process_cmd}")
                 if not result:
