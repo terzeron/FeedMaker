@@ -380,7 +380,7 @@ class FeedMaker:
         result_feed_list: List[Tuple[str, str]] = []
         for i, feed in enumerate(sorted_feed_list):
             feed_id = feed["id"]
-            if start_idx <= i < end_idx:
+            if start_idx <= i + 1 < end_idx:
                 # link, title = old_feed_list[feed_id]
                 result_feed_list.append(old_feed_list[feed_id])
 
