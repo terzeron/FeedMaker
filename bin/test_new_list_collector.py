@@ -72,7 +72,8 @@ http://cartoon.media.daum.net/webtoon/view/mujigaebridge\t무지개다리 파수
 
     def test_compose_url_list(self):
         actual = self.collector._compose_url_list()
-        self.assertTrue(len(actual) >= 5 and len(actual[0]) == 2)
+        self.assertGreaterEqual(len(actual), 5)
+        self.assertEqual(len(actual[0]), 2)
 
     @staticmethod
     def count_tsv_file(tsv_file_path: Path):
@@ -104,7 +105,8 @@ http://cartoon.media.daum.net/webtoon/view/mujigaebridge\t무지개다리 파수
 
     def test_collect(self):
         actual = self.collector.collect()
-        self.assertTrue(len(actual) >= 5 and len(actual[0]) == 2)
+        self.assertGreaterEqual(len(actual), 5)
+        self.assertEqual(len(actual[0]), 2)
         if self.collector.new_list_file_path.is_file():
             num_lines, num_items = NewListCollectorTest.count_tsv_file(self.collector.new_list_file_path)
             self.assertGreaterEqual(num_lines, 10)

@@ -84,7 +84,8 @@ class NewListCollector:
                 program_fullpath = find_executable(program)
                 if program_fullpath and (program_fullpath.startswith("/usr") or
                                          program_fullpath.startswith("/bin") or
-                                         program_fullpath.startswith("/sbin")):
+                                         program_fullpath.startswith("/sbin") or
+                                         program_fullpath.startswith("/opt/homebrew/bin")):
                     post_process_cmd = f"{post_process_script}"
                 else:
                     post_process_cmd = f"{post_process_script} -f '{self.feed_dir_path}' '{url}'"

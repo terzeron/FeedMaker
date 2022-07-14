@@ -128,19 +128,19 @@ class ProcessTest(unittest.TestCase):
         cmd = "shuf"
 
         actual = Process._replace_script_path(cmd, Path("/usr/bin"))
-        self.assertIn(actual, ["/usr/bin/shuf", "/usr/local/bin/shuf"])
+        self.assertIn(actual, ["/usr/bin/shuf", "/usr/local/bin/shuf", "/opt/homebrew/bin/shuf"])
 
         actual = Process._replace_script_path(cmd, Path("/usr"))
-        self.assertIn(actual, ["/usr/bin/shuf", "/usr/local/bin/shuf"])
+        self.assertIn(actual, ["/usr/bin/shuf", "/usr/local/bin/shuf", "/opt/homebrew/bin/shuf"])
 
         actual = Process._replace_script_path(cmd, Path("/"))
-        self.assertIn(actual, ["/usr/bin/shuf", "/usr/local/bin/shuf"])
+        self.assertIn(actual, ["/usr/bin/shuf", "/usr/local/bin/shuf", "/opt/homebrew/bin/shuf"])
 
         actual = Process._replace_script_path(cmd, Path("."))
-        self.assertIn(actual, ["/usr/bin/shuf", "/usr/local/bin/shuf"])
+        self.assertIn(actual, ["/usr/bin/shuf", "/usr/local/bin/shuf", "/opt/homebrew/bin/shuf"])
 
         actual = Process._replace_script_path(cmd, Path("/no_such_a_dir/workspace/fma/naver/naverwebtoon"))
-        self.assertIn(actual, ["/usr/bin/shuf", "/usr/local/bin/shuf"])
+        self.assertIn(actual, ["/usr/bin/shuf", "/usr/local/bin/shuf", "/opt/homebrew/bin/shuf"])
 
         cmd = "/bin/head -10"
 
@@ -498,15 +498,15 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual([False], actual)
 
         actual = self.config._traverse_config_node(collection_conf, "list_url_list")
-        expected = ["http://m.navercast.naver.com/homeMain.nhn?page=1",
-                    "http://m.navercast.naver.com/homeMain.nhn?page=2"]
+        expected = ["https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=1",
+                    "https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=2"]
         self.assertEqual(expected, actual)
 
     def test_get_config_value_list(self):
         collection_conf = self.config.conf["collection"]
         actual = self.config._get_config_value_list(collection_conf, "list_url_list", [])
-        expected = ["http://m.navercast.naver.com/homeMain.nhn?page=1",
-                    "http://m.navercast.naver.com/homeMain.nhn?page=2"]
+        expected = ["https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=1",
+                    "https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=2"]
         self.assertEqual(expected, actual)
 
         actual = self.config._get_config_value_list(collection_conf, "header_list", [])
@@ -556,8 +556,8 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(1.5, actual)
 
         actual = configs["list_url_list"]
-        expected = ["http://m.navercast.naver.com/homeMain.nhn?page=1",
-                    "http://m.navercast.naver.com/homeMain.nhn?page=2"]
+        expected = ["https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=1",
+                    "https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=2"]
         self.assertEqual(expected, actual)
 
         actual = configs["post_process_script_list"]

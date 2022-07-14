@@ -12,8 +12,8 @@
       "referer": null,
       "unit_size_per_day": 1.5,
       "list_url_list": [
-        "http://m.navercast.naver.com/homeMain.nhn?page=1",
-        "http://m.navercast.naver.com/homeMain.nhn?page=2"
+        "https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=1",
+        "https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=2"
       ],
       "post_process_script_list": [
         "shuf"
