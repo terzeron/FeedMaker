@@ -120,7 +120,7 @@ class FeedManager:
         self.logger.debug("# get_problems_progress_info()")
         return self.checker.feed_name_progress_info_map, ""
 
-    def get_problems_public_feed_info(self) -> Tuple[List[Dict[str, Any]], str]:
+    def get_problems_public_feed_info(self) -> Tuple[Dict[str, Dict[str, Any]], str]:
         self.logger.debug("# get_problems_public_feed_info()")
         return self.checker.public_feed_info_map, ""
 
@@ -171,12 +171,10 @@ class FeedManager:
 
         return result_list, ""
 
-    def search_site(self, keyword: str) -> Tuple[List[Dict[str, Any]], str]:
+    def search_site(self, keyword: str) -> Tuple[List[Tuple[str, str]], str]:
         self.logger.debug(f"# search_site(keyword={keyword})")
-        result_list: List[Dict[str, Any]] = []
         search_manager = SearchManager()
-        result_list = search_manager.search("", keyword)
-        return result_list, ""
+        return search_manager.search("", keyword), ""
 
     @staticmethod
     def _compare_names(x, y):

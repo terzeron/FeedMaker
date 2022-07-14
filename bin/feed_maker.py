@@ -36,7 +36,7 @@ class FeedMaker:
         self.global_conf: Dict[str, Any] = Config.get_global_config()
         if not self.global_conf:
             LOGGER.error("Error: Can't get global configuration")
-            return False
+            return
 
         self.work_dir_path = Path(os.environ["FEED_MAKER_WORK_DIR"])
         self.feed_dir_path = feed_dir_path

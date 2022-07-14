@@ -36,14 +36,13 @@ class Notification:
 
     @staticmethod
     def send_error_msg(msg: str, subject="") -> bool:
+        line_receiver_id: str = ""
+        line_access_token: str = ""
+        receiver_email_address: str = ""
+        sender_email_address: str = ""
+        smtp_host: str = ""
+
         # read global config
-        if Notification.USE_LINE:
-            line_receiver_id: str = ""
-            line_access_token: str = ""
-        if Notification.USE_EMAIL:
-            receiver_email_address: str = ""
-            sender_email_address: str = ""
-            smtp_host: str = ""
         global_config = Config.get_global_config()
         if Notification.USE_LINE:
             line_receiver_id = global_config["line_receiver_id"]

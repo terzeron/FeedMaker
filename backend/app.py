@@ -46,6 +46,7 @@ def get_exec_result():
 def get_problems(data_type):
     print(f"/problems/{data_type}, {request.method} -> get_problems_{data_type}()")
     response_object: Dict[str, Any] = {"status": "success"}
+    error = ""
     if data_type == "progress_info":
         progress_info, error = feed_manager.get_problems_progress_info()
         if progress_info:

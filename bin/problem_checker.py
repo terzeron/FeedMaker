@@ -210,9 +210,9 @@ class ProblemChecker:
                 s = path.stat()
                 html_file_count += 1
                 if 124 < s.st_size < 434:
-                    file_name = self.get_html_file_name(path)
-                    self.html_file_size_map[file_name] = {
-                        "file_name": file_name,
+                    html_file_name = self.get_html_file_name(path)
+                    self.html_file_size_map[html_file_name] = {
+                        "file_name": html_file_name,
                         "file_path": str(path.relative_to(self.work_dir)),
                         "size": s.st_size,
                         "update_date": datetime.fromtimestamp(s.st_mtime)}
@@ -240,7 +240,7 @@ class ProblemChecker:
                     "group_dir_path": str(path.parent.parent.relative_to(self.work_dir)),
                     "count": count}
             if count < 1:
-                self.html_file_without_image_tag_map[file_name] = {
+                self.html_file_without_image_tag_map[html_file_name] = {
                     "file_name": html_file_name,
                     "file_path": str(path.relative_to(self.work_dir)),
                     "feed_dir_path": str(path.parent.relative_to(self.work_dir)),
@@ -338,7 +338,7 @@ class ProblemChecker:
                     "group_dir_path": str(path.parent.parent.relative_to(self.work_dir)),
                     "count": count}
             if count < 1:
-                self.html_file_without_image_tag_map[file_name] = {
+                self.html_file_without_image_tag_map[html_file_name] = {
                     "file_name": html_file_name,
                     "file_path": str(path.relative_to(self.work_dir)),
                     "feed_dir_path": str(path.parent.relative_to(self.work_dir)),
