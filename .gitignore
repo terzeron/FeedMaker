@@ -30,3 +30,5 @@ cookies.*.json
 *.pid
 .env.development
 .env.production
+*.lock
+.*.lock

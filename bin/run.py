@@ -9,6 +9,7 @@ import random
 import logging.config
 import getopt
 from pathlib import Path
+from filelock import FileLock, Timeout
 from typing import Dict, Tuple, List, Any, Set
 from feed_maker_util import Config, Process, Notification
 from feed_maker import FeedMaker
@@ -125,31 +126,45 @@ class FeedMakerRunner:
         LOGGER.debug(f"# make_single_feed(feed_dir_path='{feed_dir_path}', options={options})")
 
         start_time = datetime.now()
-        feed_name = feed_dir_path.name
-        LOGGER.info(f"* {feed_dir_path.relative_to(self.work_dir_path)}")
-        rss_file_path = feed_dir_path / (feed_name + ".xml")
-        feed_img_dir_path = self.img_dir_path / feed_name
 
-        do_remove_all_files = options.get("do_remove_all_files", False)
-        force_collection_opt = options.get("force_collection_opt", "")
-        collect_only_opt = options.get("collect_only_opt", "")
-        window_size = options.get("window_size", FeedMaker.DEFAULT_WINDOW_SIZE)
+        lock_file_path = feed_dir_path / ".feed_maker_runner.lock"
+        if lock_file_path.is_file():
+            st = lock_file_path.stat()
+            if datetime.fromtimestamp(st.st_mtime) < datetime.now() - timedelta(days=1):
+                LOGGER.debug(f"remove old lock file '{lock_file_path}'")
+                lock_file_path.unlink(missing_ok=True)
 
-        if do_remove_all_files:
-            # -r 옵션 사용하면 html 디렉토리의 파일들, newlist 디렉토리의 파일들, 각종 로그 파일, feed xml 파일들을 삭제
-            self._remove_all_files(feed_dir_path, rss_file_path)
-        # 다운로드되어 있어야 하는 이미지가 없는 html 파일 삭제
-        self._remove_html_files_without_cached_image_files(feed_dir_path, feed_img_dir_path)
-        # 0 byte 이미지 파일 삭제
-        self._remove_image_files_with_zero_size(feed_img_dir_path)
+        try:
+            logging.getLogger("filelock").setLevel(logging.ERROR)
+            with FileLock(str(lock_file_path), timeout=5):
+                feed_name = feed_dir_path.name
+                LOGGER.info(f"* {feed_dir_path.relative_to(self.work_dir_path)}")
+                rss_file_path = feed_dir_path / (feed_name + ".xml")
+                feed_img_dir_path = self.img_dir_path / feed_name
 
-        # make_feed.py 실행하여 feed 파일 생성
-        LOGGER.info(f"* making feed file '{rss_file_path.relative_to(self.work_dir_path)}'")
-        feed_maker = FeedMaker(feed_dir_path, force_collection_opt, collect_only_opt, rss_file_path, window_size)
-        result = feed_maker.make()
+                do_remove_all_files = options.get("do_remove_all_files", False)
+                force_collection_opt = options.get("force_collection_opt", "")
+                collect_only_opt = options.get("collect_only_opt", "")
+                window_size = options.get("window_size", FeedMaker.DEFAULT_WINDOW_SIZE)
 
-        # 불필요한 파일 삭제
-        self._remove_temporary_files(feed_dir_path)
+                if do_remove_all_files:
+                    # -r 옵션 사용하면 html 디렉토리의 파일들, newlist 디렉토리의 파일들, 각종 로그 파일, feed xml 파일들을 삭제
+                    self._remove_all_files(feed_dir_path, rss_file_path)
+                # 다운로드되어 있어야 하는 이미지가 없는 html 파일 삭제
+                self._remove_html_files_without_cached_image_files(feed_dir_path, feed_img_dir_path)
+                # 0 byte 이미지 파일 삭제
+                self._remove_image_files_with_zero_size(feed_img_dir_path)
+
+                # make_feed.py 실행하여 feed 파일 생성
+                LOGGER.info(f"* making feed file '{rss_file_path.relative_to(self.work_dir_path)}'")
+                feed_maker = FeedMaker(feed_dir_path, force_collection_opt, collect_only_opt, rss_file_path, window_size)
+                result = feed_maker.make()
+
+                # 불필요한 파일 삭제
+                self._remove_temporary_files(feed_dir_path)
+        except Timeout:
+            LOGGER.error("can't run multiple feed makers concurrently")
+            return False
 
         end_time = datetime.now()
         LOGGER.info("# Running time analysis")
