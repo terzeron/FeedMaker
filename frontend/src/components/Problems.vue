@@ -51,7 +51,8 @@
 
       <b-col cols="12" lg="4" class="m-0 p-0">
         <b-card-header header-bg-variant="dark" header-text-variant="white" header-tag="header">
-          결과(public feed) 파일의 크기
+          피드별 list_url element
+          갯수
         </b-card-header>
         <b-card-body class="m-0 p-0">
           <b-table
@@ -59,24 +60,12 @@
               striped
               hover
               small
-              :fields="publicFeedInfoFields"
-              :items="publicFeedInfoList"
-              :sort-by.sync="publicFeedInfoSortBy"
-              :sort-desc.sync="publicFeedInfoSortDesc">
+              :fields="listUrlInfoFields"
+              :items="listUrlInfoList"
+              :sort-by.sync="listUrlInfoSortBy"
+              :sort-desc.sync="listUrlInfoSortDesc">
             <template #cell(feed_title)="data">
               <span v-html="data.value"></span>
-            </template>
-            <template #cell(size)="data">
-              <span v-html="data.value"></span>
-            </template>
-            <template #cell(num_items)="data">
-              <span v-html="data.value"></span>
-            </template>
-            <template #cell(upload_date)="data">
-              <span v-html="data.value"></span>
-            </template>
-            <template #cell(action)="data">
-              <font-awesome-icon :icon="['far', 'trash-alt']" @click="publicFeedInfoDeleteClicked(data)"/>
             </template>
           </b-table>
         </b-card-body>
@@ -168,28 +157,6 @@
 
       <b-col cols="12" lg="4" class="m-0 p-0">
         <b-card-header header-bg-variant="dark" header-text-variant="white" header-tag="header">
-          피드별 list_url element
-          갯수
-        </b-card-header>
-        <b-card-body class="m-0 p-0">
-          <b-table
-              class="m-0 p-0"
-              striped
-              hover
-              small
-              :fields="listUrlInfoFields"
-              :items="listUrlInfoList"
-              :sort-by.sync="listUrlInfoSortBy"
-              :sort-desc.sync="listUrlInfoSortDesc">
-            <template #cell(feed_title)="data">
-              <span v-html="data.value"></span>
-            </template>
-          </b-table>
-        </b-card-body>
-      </b-col>
-
-      <b-col cols="12" lg="4" class="m-0 p-0">
-        <b-card-header header-bg-variant="dark" header-text-variant="white" header-tag="header">
           Element별 사용 횟수
         </b-card-header>
         <b-card-body class="m-0 p-0">
@@ -202,6 +169,39 @@
               :items="elementInfoList"
               :sort-by.sync="elementInfoSortBy"
               :sort-desc.sync="elementInfoSortDesc">
+          </b-table>
+        </b-card-body>
+      </b-col>
+
+      <b-col cols="12" lg="4" class="m-0 p-0">
+        <b-card-header header-bg-variant="dark" header-text-variant="white" header-tag="header">
+          결과(public feed) 파일의 크기
+        </b-card-header>
+        <b-card-body class="m-0 p-0">
+          <b-table
+              class="m-0 p-0"
+              striped
+              hover
+              small
+              :fields="publicFeedInfoFields"
+              :items="publicFeedInfoList"
+              :sort-by.sync="publicFeedInfoSortBy"
+              :sort-desc.sync="publicFeedInfoSortDesc">
+            <template #cell(feed_title)="data">
+              <span v-html="data.value"></span>
+            </template>
+            <template #cell(size)="data">
+              <span v-html="data.value"></span>
+            </template>
+            <template #cell(num_items)="data">
+              <span v-html="data.value"></span>
+            </template>
+            <template #cell(upload_date)="data">
+              <span v-html="data.value"></span>
+            </template>
+            <template #cell(action)="data">
+              <font-awesome-icon :icon="['far', 'trash-alt']" @click="publicFeedInfoDeleteClicked(data)"/>
+            </template>
           </b-table>
         </b-card-body>
       </b-col>
