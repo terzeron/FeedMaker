@@ -300,6 +300,16 @@ def rename_alias(group_name, feed_name, new_alias):
     return jsonify(response_object)
 
 
+@app.route("/groups/<group_name>/feeds/<feed_name>/check_running", methods=["GET"])
+def check_running(group_name, feed_name):
+    #print(f"/groups/{group_name}/feeds/{feed_name}/check_running, {request.method} -> check_running({group_name}, {feed_name})")
+    response_object: Dict[str, Any] = {"status": "failure"}
+    result = feed_manager.check_running(group_name, feed_name)
+    response_object["status"] = "success"
+    response_object["running_status"] = result
+    return jsonify(response_object)
+
+
 @app.route("/public_feeds/<feed_name>", methods=["DELETE"])
 def remove_public_feed(feed_name):
     print(f"/public_feeds/{feed_name}, {request.method} -> remove_public_feed({feed_name})")

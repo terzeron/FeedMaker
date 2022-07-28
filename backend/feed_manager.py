@@ -512,3 +512,7 @@ class FeedManager:
         self.checker.load_htaccess_file()
         self.checker.merge_all_feeds_status()
         return True, ""
+
+    def check_running(self, group_name: str, feed_name: str) -> bool:
+        #self.logger.debug(f"# check_running({group_name}, {feed_name})")
+        return FeedMakerRunner.check_running(group_name, feed_name)
