@@ -229,6 +229,16 @@ class FeedMakerRunner:
             Notification.send_error_msg(", ".join(failed_feed_list), subject="Errors of FeedMaker")
         return True
 
+    @staticmethod
+    def check_running(group_name: str, feed_name: str) -> bool:
+        lock_file_path = Path(os.environ["FEED_MAKER_WORK_DIR"]) / group_name / feed_name / ".feed_maker_runner.lock"
+        try:
+            logging.getLogger("filelock").setLevel(logging.ERROR)
+            with FileLock(str(lock_file_path), timeout=1):
+                return False
+        except Timeout:
+            return True
+
 
 def print_usage() -> None:
     print("Usage:\t%s [-h] [-r] [-c] [ <feed path> ]")

@@ -770,6 +770,9 @@ export default {
               }
               this.hideAllRelatedToGroup();
               this.getAlias();
+              setInterval(() => {
+                this.checkRunning();
+              }, 3000);
             }
           })
           .catch((error) => {
@@ -1108,6 +1111,28 @@ export default {
           .catch((error) => {
             console.error(error);
             this.resetButton('renameAliasButton');
+          });
+    },
+    checkRunning: function () {
+      //console.log(`checkRunning()`);
+      const url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/check_running`;
+      axios
+          .get(url)
+          .then((res) => {
+            if (res.data.status === 'failure') {
+              this.alert(res.data.message);
+              this.resetButton('runButton');
+            } else {
+              if (res.data.running_status) {
+                this.startButton('runButton');
+              } else {
+                this.endButton('runButton');
+              }
+            }
+          })
+          .catch((error) => {
+            console.error(error);
+            this.resetButton('runButton');
           });
     },
   },
