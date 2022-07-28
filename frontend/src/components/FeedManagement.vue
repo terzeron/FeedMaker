@@ -434,6 +434,8 @@ export default {
       numTotalItems: 0,
       unitSizePerDay: 0,
       feedCompletionDueDate: '-',
+
+      checkRunningInterval: null,
     };
   },
   computed: {
@@ -770,7 +772,7 @@ export default {
               }
               this.hideAllRelatedToGroup();
               this.getAlias();
-              setInterval(() => {
+              this.checkRunningInterval = setInterval(() => {
                 this.checkRunning();
               }, 3000);
             }
@@ -1148,6 +1150,9 @@ export default {
     } else {
       this.$router.push('/login');
     }
+  },
+  beforeDestroy: function () {
+    clearInterval(this.checkRunningInterval);
   }
 };
 </script>
