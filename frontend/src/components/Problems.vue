@@ -191,13 +191,13 @@
               <span v-html="data.value"></span>
             </template>
             <template #cell(size)="data">
-              <span v-html="data.value"></span>
+              <span v-html="data.value" :class="{'text-danger': data.item.sizeIsDanger, 'text-warning': data.item.sizeIsWarning}"></span>
             </template>
             <template #cell(num_items)="data">
-              <span v-html="data.value"></span>
+              <span v-html="data.value" :class="{'text-danger': data.item.numItemsIsDanger, 'text-warning': data.item.numItemsIsWarning}"></span>
             </template>
             <template #cell(upload_date)="data">
-              <span v-html="data.value"></span>
+              <span v-html="data.value" :class="{'text-danger': data.item.uploadDateIsDanger, 'text-warning': data.item.uploadDateIsWarning}"></span>
             </template>
             <template #cell(action)="data">
               <font-awesome-icon :icon="['far', 'trash-alt']" @click="publicFeedInfoDeleteClicked(data)"/>
@@ -243,17 +243,17 @@ export default {
       problems: {},
 
       statusInfoFields: [
-        {key: 'feed_title', sortable: true},
-        {key: 'feed_alias', sortable: true},
-        {key: 'feed_name', sortable: true},
-        {key: 'http_request', sortable: true},
-        {key: 'htaccess', sortable: true},
-        {key: 'public_html', sortable: true},
+        {key: 'feed_title', label: 'Title', sortable: true},
+        {key: 'feed_alias', label: 'Alias', sortable: true},
+        {key: 'feed_name', label: 'Name', sortable: true},
         {key: 'feedmaker', sortable: true},
-        {key: 'access_date', sortable: true},
-        {key: 'view_date', sortable: true},
-        {key: 'upload_date', sortable: true},
-        {key: 'update_date', sortable: true},
+        {key: 'public_html', sortable: true},
+        {key: 'htaccess', sortable: true},
+        {key: 'http_request', label: 'Req', sortable: true},
+        {key: 'update_date', label: 'Update', sortable: true},
+        {key: 'upload_date', label: 'Upload', sortable: true},
+        {key: 'access_date', label: 'Req', sortable: true},
+        {key: 'view_date', label: 'View', sortable: true},
         {key: 'action', sortable: false},
       ],
       statusInfoSortBy: 'feed_alias',
@@ -261,30 +261,30 @@ export default {
       statusInfoList: [],
 
       progressInfoFields: [
-        {key: 'feed_title', sortable: true},
+        {key: 'feed_title', label: 'Title', sortable: true},
         {key: 'index', sortable: true},
         {key: 'count', sortable: true},
-        {key: 'unit_size', sortable: true},
+        {key: 'unit_size', label: 'Unit', sortable: true},
         {key: 'ratio', sortable: true},
-        {key: 'due_date', sortable: true},
+        {key: 'due_date', label: 'Due', sortable: true},
       ],
       progressInfoSortBy: 'ratio',
       progressInfoSortDesc: true,
       progressInfoList: [],
 
       publicFeedInfoFields: [
-        {key: 'feed_title', sortable: true},
+        {key: 'feed_title', label: 'Title', sortable: true},
         {key: 'size', sortable: true},
-        {key: 'num_items', sortable: true},
-        {key: 'upload_date', sortable: true},
+        {key: 'num_items', label: '# items', sortable: true},
+        {key: 'upload_date', label: 'Upload', sortable: true},
         {key: 'action', sortable: false},
       ],
-      publicFeedInfoSortBy: 'size',
-      publicFeedInfoSortDesc: false,
+      publicFeedInfoSortBy: 'num_items',
+      publicFeedInfoSortDesc: true,
       publicFeedInfoList: [],
 
       htmlFileWithImageNotFoundFields: [
-        {key: 'file_name', sortable: true},
+        {key: 'file_name', label: 'File', sortable: true},
         {key: 'count', sortable: true},
         {key: 'action', sortable: false},
       ],
@@ -293,7 +293,7 @@ export default {
       htmlFileWithImageNotFoundList: [],
 
       htmlFileWithoutImageTagFields: [
-        {key: 'file_name', sortable: true},
+        {key: 'file_name', label: 'File', sortable: true},
         {key: 'count', sortable: true},
         {key: 'action', sortable: false},
       ],
@@ -302,7 +302,7 @@ export default {
       htmlFileWithoutImageTagList: [],
 
       htmlFileWithManyImageTagFields: [
-        {key: 'file_name', sortable: true},
+        {key: 'file_name', label: 'File', sortable: true},
         {key: 'count', sortable: true},
         {key: 'action', sortable: false},
       ],
@@ -311,7 +311,7 @@ export default {
       htmlFileWithManyImageTagList: [],
 
       htmlFileSizeFields: [
-        {key: 'file_name', sortable: true},
+        {key: 'file_name', label: 'File', sortable: true},
         {key: 'size', sortable: true},
         {key: 'action', sortable: false},
       ],
@@ -320,7 +320,7 @@ export default {
       htmlFileSizeList: [],
 
       listUrlInfoFields: [
-        {key: 'feed_title', sortable: true},
+        {key: 'feed_title', label: 'Title', sortable: true},
         {key: 'count', sortable: true},
       ],
       listUrlInfoSortBy: 'count',
@@ -328,7 +328,7 @@ export default {
       listUrlInfoList: [],
 
       elementInfoFields: [
-        {key: 'element_name', sortable: true},
+        {key: 'element_name', label: 'Element', sortable: true},
         {key: 'count', sortable: true},
       ],
       elementInfoSortBy: 'count',
@@ -556,17 +556,17 @@ export default {
                           o['feed_title'] = this.getManagementLink(o['feed_title'], o['group_name'], o['feed_name']);
                           o['action'] = "삭제";
                           if (o['upload_date'] < day2MonthAgo) {
-                            o['upload_date'] = `<span class="text-warning">${o['upload_date']}</span>`;
+                            o['uploadDateIsWarning'] = true;
                           }
                           if (o['size'] < 1 * 1024) {
-                            o['size'] = `<span class="text-danger">${o['size']}</span>`;
+                            o['sizeIsDanger'] = true;
                           } else if (o['size'] < 4 * 1024) {
-                            o['size'] = `<span class="text-warning">${o['size']}</span>`;
+                            o['sizeIsWarning'] = true;
                           }
                           if (o['num_items'] < 5) {
-                            o['num_items'] = `<span class="text-warning">${o['num_items']}</span>`;
+                            o['numItemsIsWarning'] = true;
                           } else if (o['num_items'] > 20) {
-                            o['num_items'] = `<span class="text-danger">${o['num_items']}</span>`;
+                            o['numItemsIsDanger'] = true;
                           }
                           return o;
                         });
