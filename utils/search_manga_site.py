@@ -310,7 +310,7 @@ class FunbeSite(Site):
         self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
 
 
-class TkorSite(Site):
+class ToonkorSite(Site):
     def __init__(self, site_name: str) -> None:
         super().__init__(site_name)
         self.extraction_attrs = {"class": "section-item-title"}
@@ -438,7 +438,7 @@ class SearchManager:
             WtwtSite("wtwt"),
             MarumaruSite("marumaru"),
             FunbeSite("funbe"),
-            TkorSite("tkor"),
+            ToonkorSite("toonkor"),
             EleventoonSite("11toon"),
             AllallSite("allall"),
             BlacktoonSite("blacktoon"),
