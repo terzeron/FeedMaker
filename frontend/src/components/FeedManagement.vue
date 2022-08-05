@@ -777,6 +777,8 @@ export default {
               }
               this.hideAllRelatedToGroup();
               this.getAlias();
+
+              this.checkRunning();
               this.checkRunningInterval = setInterval(() => {
                 this.checkRunning();
               }, 3000);
