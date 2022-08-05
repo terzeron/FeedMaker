@@ -45,6 +45,9 @@
             <template #cell(feed_title)="data">
               <span v-html="data.value"></span>
             </template>
+            <template #cell(ratio)="data">
+              {{ data.value }}%
+            </template>
           </b-table>
         </b-card-body>
       </b-col>
@@ -221,6 +224,7 @@
 <script>
 import axios from 'axios';
 import _ from 'lodash';
+import moment from 'moment';
 
 import {library} from '@fortawesome/fontawesome-svg-core';
 import {faTrashAlt} from '@fortawesome/free-regular-svg-icons';
@@ -243,93 +247,93 @@ export default {
       problems: {},
 
       statusInfoFields: [
-        {key: 'feed_title', label: 'Title', sortable: true},
-        {key: 'feed_alias', label: 'Alias', sortable: true},
-        {key: 'feed_name', label: 'Name', sortable: true},
-        {key: 'feedmaker', sortable: true},
-        {key: 'public_html', sortable: true},
-        {key: 'htaccess', sortable: true},
-        {key: 'http_request', label: 'Req', sortable: true},
-        {key: 'update_date', label: 'Update', sortable: true},
-        {key: 'upload_date', label: 'Upload', sortable: true},
-        {key: 'access_date', label: 'Req', sortable: true},
-        {key: 'view_date', label: 'View', sortable: true},
-        {key: 'action', sortable: false},
+        {key: 'feed_title', label: '제목', sortable: true},
+        {key: 'feed_alias', label: '별명', sortable: true},
+        {key: 'feed_name', label: '이름', sortable: true},
+        {key: 'feedmaker', label: '생성', sortable: true},
+        {key: 'public_html', label: '등록', sortable: true},
+        {key: 'htaccess', label: '공개', sortable: true},
+        {key: 'http_request', label: '요청', sortable: true},
+        {key: 'update_date', label: '생성', sortable: true},
+        {key: 'upload_date', label: '등록', sortable: true},
+        {key: 'access_date', label: '요청', sortable: true},
+        {key: 'view_date', label: '조회', sortable: true},
+        {key: 'action', label: '작업', sortable: false},
       ],
       statusInfoSortBy: 'feed_alias',
       statusInfoSortDesc: false,
       statusInfoList: [],
 
       progressInfoFields: [
-        {key: 'feed_title', label: 'Title', sortable: true},
-        {key: 'index', sortable: true},
-        {key: 'count', sortable: true},
-        {key: 'unit_size', label: 'Unit', sortable: true},
-        {key: 'ratio', sortable: true},
-        {key: 'due_date', label: 'Due', sortable: true},
+        {key: 'feed_title', label: '제목', sortable: true},
+        {key: 'index', label: '현재', sortable: true},
+        {key: 'count', label: '갯수', sortable: true},
+        {key: 'unit_size', label: '단위', sortable: true},
+        {key: 'ratio', label: '진행', sortable: true},
+        {key: 'due_date', label: '예정', sortable: true},
       ],
       progressInfoSortBy: 'ratio',
       progressInfoSortDesc: true,
       progressInfoList: [],
 
       publicFeedInfoFields: [
-        {key: 'feed_title', label: 'Title', sortable: true},
-        {key: 'size', sortable: true},
-        {key: 'num_items', label: '# items', sortable: true},
-        {key: 'upload_date', label: 'Upload', sortable: true},
-        {key: 'action', sortable: false},
+        {key: 'feed_title', label: '제목', sortable: true},
+        {key: 'size', label: '크기', sortable: true},
+        {key: 'num_items', label: '갯수', sortable: true},
+        {key: 'upload_date', label: '등록', sortable: true},
+        {key: 'action', label: '작업', sortable: false},
       ],
       publicFeedInfoSortBy: 'num_items',
       publicFeedInfoSortDesc: true,
       publicFeedInfoList: [],
 
       htmlFileWithImageNotFoundFields: [
-        {key: 'file_name', label: 'File', sortable: true},
-        {key: 'count', sortable: true},
-        {key: 'action', sortable: false},
+        {key: 'file_name', label: '파일', sortable: true},
+        {key: 'count', label: '갯수', sortable: true},
+        {key: 'action', label: '작업', sortable: false},
       ],
       htmlFileWithImageNotFoundSortBy: 'count',
       htmlFileWithImageNotFoundSortDesc: true,
       htmlFileWithImageNotFoundList: [],
 
       htmlFileWithoutImageTagFields: [
-        {key: 'file_name', label: 'File', sortable: true},
-        {key: 'count', sortable: true},
-        {key: 'action', sortable: false},
+        {key: 'file_name', label: '파일', sortable: true},
+        {key: 'count', label: '갯수', sortable: true},
+        {key: 'action', label: '작업', sortable: false},
       ],
       htmlFileWithoutImageTagSortBy: 'count',
       htmlFileWithoutImageTagSortDesc: true,
       htmlFileWithoutImageTagList: [],
 
       htmlFileWithManyImageTagFields: [
-        {key: 'file_name', label: 'File', sortable: true},
-        {key: 'count', sortable: true},
-        {key: 'action', sortable: false},
+        {key: 'file_name', label: '파일', sortable: true},
+        {key: 'count', label: '갯수', sortable: true},
+        {key: 'action', label: '작업', sortable: false},
       ],
       htmlFileWithManyImageTagSortBy: 'count',
       htmlFileWithManyImageTagSortDesc: true,
       htmlFileWithManyImageTagList: [],
 
       htmlFileSizeFields: [
-        {key: 'file_name', label: 'File', sortable: true},
-        {key: 'size', sortable: true},
-        {key: 'action', sortable: false},
+        {key: 'file_name', label: '파일', sortable: true},
+        {key: 'size', label: '크기', sortable: true},
+        {key: 'action', label: '작업', sortable: false},
       ],
       htmlFileSizeSortBy: 'size',
       htmlFileSizeSortDesc: false,
       htmlFileSizeList: [],
 
       listUrlInfoFields: [
-        {key: 'feed_title', label: 'Title', sortable: true},
-        {key: 'count', sortable: true},
+        {key: 'feed_title', label: '제목', sortable: true},
+        {key: 'count', label: '갯수', sortable: true},
       ],
       listUrlInfoSortBy: 'count',
       listUrlInfoSortDesc: true,
       listUrlInfoList: [],
 
       elementInfoFields: [
-        {key: 'element_name', label: 'Element', sortable: true},
-        {key: 'count', sortable: true},
+        {key: 'element_name', label: '요소', sortable: true},
+        {key: 'count', label: '갯수', sortable: true},
       ],
       elementInfoSortBy: 'count',
       elementInfoSortDesc: true,
@@ -500,6 +504,17 @@ export default {
     getManagementLink(feedTitle, groupName, feedName) {
       return feedTitle ? `<a href="/management/${groupName}/${feedName}">${feedTitle}</a>` : '';
     },
+    getShortDate(date) {
+      let d = moment(date, 'YY-MM-DD');
+      if (!d.isValid()) {
+        return "";
+      }
+      const now = moment();
+      if (d.isSame(now, "year")) {
+        return d.format('MM-DD');
+      }
+      return d.format('YYYY-MM-DD');
+    },
     getProblems() {
       // 상태 정보
       const pathStatusInfo = this.getApiUrlPath() + '/problems/status_info';
@@ -515,6 +530,10 @@ export default {
                     o['htaccess'] = o['htaccess'] ? 'O' : 'X';
                     o['public_html'] = o['public_html'] ? 'O' : 'X';
                     o['feedmaker'] = o['feedmaker'] ? 'O' : 'X';
+                    o['update_date'] = this.getShortDate(o['update_date']);
+                    o['upload_date'] = this.getShortDate(o['upload_date']);
+                    o['access_date'] = this.getShortDate(o['access_date']);
+                    o['view_date'] = this.getShortDate(o['view_date']);
                     o['action'] = '삭제';
                     return o;
                   });
@@ -529,6 +548,7 @@ export default {
                       } else {
                         this.progressInfoList = _.map(resProgressInfo.data['result'], (o) => {
                           o['feed_title'] = this.getManagementLink(o['feed_title'], o['group_name'], o['feed_name']);
+                          o['due_date'] = this.getShortDate(o['due_date']);
                           return o;
                         });
                       }
@@ -554,6 +574,7 @@ export default {
                               o['num_items'] < 5 || o['num_items'] > 20;
                         }).map((o) => {
                           o['feed_title'] = this.getManagementLink(o['feed_title'], o['group_name'], o['feed_name']);
+                          o['upload_date'] = this.getShortDate(o['upload_date']);
                           o['action'] = "삭제";
                           if (o['upload_date'] < day2MonthAgo) {
                             o['uploadDateIsWarning'] = true;
