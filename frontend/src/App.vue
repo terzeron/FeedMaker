@@ -46,6 +46,10 @@
 </template>
 
 <style>
+html {
+  font-size: 14px;
+}
+
 .navbar-brand {
   margin-left: 10px;
 }

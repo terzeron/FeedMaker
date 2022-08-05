@@ -230,47 +230,18 @@
                 v-if="showViewRssButton"/>
             <my-button
                 ref="registerButton"
-                label="Inoreader등록"
+                label="Inoreader"
                 @click="registerToInoreader"
                 :initial-icon="['fas', 'rss']"
                 :show-initial-icon="true"
                 v-if="showRegisterToInoreaderButton"/>
             <my-button
                 ref="registerButton"
-                label="Feedly등록"
+                label="Feedly"
                 @click="registerToFeedly"
                 :initial-icon="['fas', 'rss']"
                 :show-initial-icon="true"
                 v-if="showRegisterToFeedlyButton"/>
-            <my-button
-                ref="removeListButton"
-                label="리스트 삭제"
-                @click="removeList"
-                :initial-icon="['fas', 'eraser']"
-                :show-initial-icon="true"
-                v-if="showRemoveListButton"/>
-            <my-button
-                ref="removeHtmlButton"
-                label="HTML 삭제"
-                @click="removeHtml"
-                :initial-icon="['fas', 'eraser']"
-                :show-initial-icon="true"
-                v-if="showRemoveHtmlButton"/>
-            <my-button
-                ref="toggleFeedButton"
-                :label="feedStatusLabel"
-                @click="toggleStatus('feed')"
-                :initial-icon="['fas', feedStatusIcon]"
-                :show-initial-icon="true"
-                v-if="showToggleFeedButton"/>
-            <my-button
-                ref="removeFeedButton"
-                label="피드 삭제"
-                @click="removeFeed"
-                :initial-icon="['far', 'trash-alt']"
-                :show-initial-icon="true"
-                variant="danger"
-                v-if="showRemoveFeedButton"/>
           </b-col>
 
           <b-col
@@ -331,6 +302,40 @@
                     :show-initial-icon="true"/>
               </b-input-group-append>
             </b-input-group>
+          </b-col>
+
+          <b-col
+              cols="12"
+              class="m-0 p-1 button_list">
+            <my-button
+                ref="removeListButton"
+                label="리스트 삭제"
+                @click="removeList"
+                :initial-icon="['fas', 'eraser']"
+                :show-initial-icon="true"
+                v-if="showRemoveListButton"/>
+            <my-button
+                ref="removeHtmlButton"
+                label="HTML 삭제"
+                @click="removeHtml"
+                :initial-icon="['fas', 'eraser']"
+                :show-initial-icon="true"
+                v-if="showRemoveHtmlButton"/>
+            <my-button
+                ref="toggleFeedButton"
+                :label="feedStatusLabel"
+                @click="toggleStatus('feed')"
+                :initial-icon="['fas', feedStatusIcon]"
+                :show-initial-icon="true"
+                v-if="showToggleFeedButton"/>
+            <my-button
+                ref="removeFeedButton"
+                label="피드 삭제"
+                @click="removeFeed"
+                :initial-icon="['far', 'trash-alt']"
+                :show-initial-icon="true"
+                variant="danger"
+                v-if="showRemoveFeedButton"/>
           </b-col>
         </b-row>
       </b-col>
