@@ -245,19 +245,21 @@ class FeedManager:
         list_dir_path = feed_dir_path / "newlist"
         last_collect_date = None
         result_list = []
-        for list_file_path in list_dir_path.iterdir():
-            st = list_file_path.stat()
-            if not last_collect_date:
-                last_collect_date = datetime.fromtimestamp(st.st_mtime)
-            else:
-                if last_collect_date < datetime.fromtimestamp(st.st_mtime):
+        collection_info = {}
+        if list_dir_path.is_dir():
+            for list_file_path in list_dir_path.iterdir():
+                st = list_file_path.stat()
+                if not last_collect_date:
                     last_collect_date = datetime.fromtimestamp(st.st_mtime)
-            with open(list_file_path, 'r', encoding='utf-8') as infile:
-                for line in infile:
-                    link, title = line.split("\t")
-                    result_list.append(link)
-        result_list = Data.remove_duplicates(result_list)
-        collection_info = {"collect_date": ProblemChecker.convert_datetime_to_str(last_collect_date), "count": len(result_list)}
+                else:
+                    if last_collect_date < datetime.fromtimestamp(st.st_mtime):
+                        last_collect_date = datetime.fromtimestamp(st.st_mtime)
+                with open(list_file_path, 'r', encoding='utf-8') as infile:
+                    for line in infile:
+                        link, title = line.split("\t")
+                        result_list.append(link)
+            result_list = Data.remove_duplicates(result_list)
+            collection_info = {"collect_date": ProblemChecker.convert_datetime_to_str(last_collect_date), "count": len(result_list)}
         feed_info = {
             "config": self.feed_name_config_map.get(feed_name, {}),
             "collection_info": collection_info,

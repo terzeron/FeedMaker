@@ -118,11 +118,12 @@
         <!-- 정보 영역 -->
         <b-row
             id="feed_info"
-            class="m-0 p-0">
+            class="m-0 p-0"
+            v-if="showNewFeedNameInput">
           <b-col
               cols="12"
               class="m-0 p-1"
-              :class="{'bg-secondary': !feedStatus}" v-if="showNewFeedNameInput">
+              :class="{'bg-secondary': !feedStatus}">
             <div>{{ title }}</div>
             <div>{{ selectedGroupName + '/' + selectedFeedName }}</div>
           </b-col>
@@ -131,14 +132,14 @@
         <!-- 메타데이터 영역 -->
         <b-row
             id="metadata"
-            class="m-0 p-0">
+            class="m-0 p-0"
+            v-if="showFeedInfo">
           <b-col
               cols="12"
               class="m-0 p-1">
             <b-table-simple
                 class="m-0 p-1 text-break"
-                small
-                v-if="showFeedInfo">
+                small>
               <b-thead head-variant="light" table-variant="light">
                 <b-tr>
                   <b-th colspan="4">메타데이터</b-th>
@@ -640,6 +641,7 @@ export default {
     },
     getGroups: function () {
       console.log(`getGroups()`);
+      clearInterval(this.checkRunningInterval);
       const url = this.getApiUrlPath() + '/groups';
       axios
           .get(url)
@@ -689,6 +691,7 @@ export default {
     },
     getFeedListByGroup: function (groupName) {
       console.log(`getFeedListByGroup(${groupName})`);
+      clearInterval(this.checkRunningInterval);
       const url = this.getApiUrlPath() + `/groups/${groupName}/feeds`;
       axios
           .get(url)
@@ -1125,6 +1128,7 @@ export default {
     checkRunning: function () {
       //console.log(`checkRunning()`);
       const url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/check_running`;
+      console.log(url);
       axios
           .get(url)
           .then((res) => {
