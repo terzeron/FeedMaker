@@ -853,6 +853,7 @@ export default {
               this.selectedFeedName = this.newFeedName;
               console.log(`selectedFeedName is set to ${this.selectedFeedName}`);
             }
+            this.getFeedInfo(this.selectedGroupName, this.newFeedName);
             this.endButton('saveButton');
           })
           .catch((error) => {
@@ -871,6 +872,7 @@ export default {
             if (res.data.status === 'failure') {
               this.alert(res.data.message);
             }
+            this.getFeedInfo(this.selectedGroupName, this.newFeedName);
             this.endButton('runButton');
           })
           .catch((error) => {
