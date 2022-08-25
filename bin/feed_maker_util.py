@@ -639,7 +639,7 @@ class Cache:
 class Htaccess:
     htaccess_file_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]).parent / ".htaccess"
     lock_file_path = htaccess_file_path.with_suffix(".lock")
-    rewrite_rule_pattern_fmt = r'RewriteRule\t\^(?P<alias>[^.]+)\\\.xml\$\txml/%s\\\.xml'
+    rewrite_rule_pattern_fmt = r'RewriteRule\t\^(?P<alias>\S+)\\\.xml\$\txml/%s\\\.xml'
     rewrite_rule_fmt = "RewriteRule\t^%s\\.xml$\txml/%s\\.xml\n"
     rewrite_rule_gone_fmt = "RewriteRule\t^(xml/)?%s\\.xml$\t- [G]\n"
     group_tag_pattern_fmt = r'^#[^(]+\(%s\)'

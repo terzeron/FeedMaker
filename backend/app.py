@@ -204,9 +204,9 @@ def remove_list(group_name, feed_name):
 
 @app.route("/groups/<group_name>/feeds/<feed_name>/alias", methods=["GET", "DELETE"])
 def get_alias(group_name, feed_name):
-    print(f"/groups/{group_name}/feeds/{feed_name}/alias, {request.method} -> get_alias({group_name}, {feed_name})")
     response_object: Dict[str, Any] = {"status": "failure"}
     if request.method == "GET":
+        print(f"/groups/{group_name}/feeds/{feed_name}/alias, {request.method} -> get_alias({group_name}, {feed_name})")
         result, error = feed_manager.get_alias(group_name, feed_name)
         if result:
             response_object["status"] = "success"
@@ -214,6 +214,7 @@ def get_alias(group_name, feed_name):
         else:
             response_object["message"] = error
     elif request.method == "DELETE":
+        print(f"/groups/{group_name}/feeds/{feed_name}/alias, {request.method} -> remove_alias({group_name}, {feed_name})")
         result, error = feed_manager.remove_alias(group_name, feed_name)
         if result:
             response_object["status"] = "success"

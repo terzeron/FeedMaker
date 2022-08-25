@@ -361,12 +361,12 @@ export default {
           .then((res) => {
             if (res.data.status === 'failure') {
               this.$bvModal
-                  .msgBoxOk('실행 중에 오류가 발생하였습니다. ' + res.data.message);
+                  .msgBoxOk('alias 삭제 중에 오류가 발생하였습니다. ' + res.data.message);
             }
           })
           .catch((error) => {
             this.$bvModal
-                .msgBoxOk('실행 중에 오류가 발생하였습니다. ' + error);
+                .msgBoxOk('alias 삭제 요청 중에 오류가 발생하였습니다. ' + error);
           });
     },
     removePublicFeed(feedName) {
@@ -376,12 +376,12 @@ export default {
           .then((res) => {
             if (res.data.status === 'failure') {
               this.$bvModal
-                  .msgBoxOk('실행 중에 오류가 발생하였습니다. ' + res.data.message);
+                  .msgBoxOk('피드 삭제 중에 오류가 발생하였습니다. ' + res.data.message);
             }
           })
           .catch((error) => {
             this.$bvModal
-                .msgBoxOk('실행 중에 오류가 발생하였습니다. ' + error);
+                .msgBoxOk('피드 삭제 요청 중에 오류가 발생하였습니다. ' + error);
           })
     },
     statusInfoDeleteClicked(data) {
@@ -437,7 +437,7 @@ export default {
           })
           .catch((error) => {
             this.$bvModal
-                .msgBoxOk('실행 중에 오류가 발생하였습니다. ' + error);
+                .msgBoxOk('실행 요청 중에 오류가 발생하였습니다. ' + error);
           })
       return true;
     },
