@@ -306,7 +306,7 @@ class FeedMaker:
 
         # 처음 생성 시, 또는 파일에 정보가 없을 때
         start_idx = 1
-        end_idx = self.window_size
+        end_idx = start_idx + self.window_size
         mtime = Datetime.get_current_time()
         _, current_time_str = self._write_idx_data(start_idx, mtime, True)
         if not current_time_str:
