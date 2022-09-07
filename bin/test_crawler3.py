@@ -14,16 +14,16 @@ class CrawlerTest(unittest.TestCase):
                 os.remove(cookie_file)
 
     def test_runHeadlessBrowser(self):
-        url = "https://kr.vuejs.org/v2/guide/index.html"
+        url = "https://sentry.io/welcome/"
         crawler = Crawler(render_js=False)
         actual, _, _ = crawler.run(url)
-        m = re.search(r'<div id="app-6" class="demo"><p>안녕하세요 Vue!</p> <input></div>', actual)
+        m = re.search(r'Join Reddit', actual)
         self.assertFalse(m)
         del crawler
 
         crawler = Crawler(render_js=True)
         actual, _, _ = crawler.run(url)
-        m = re.search(r'<div id="app-6" class="demo"><p>안녕하세요 Vue!</p> <input></div>', actual)
+        m = re.search(r'Join Reddit', actual)
         self.assertTrue(m)
         del crawler
 

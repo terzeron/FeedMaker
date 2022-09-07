@@ -470,6 +470,7 @@ class Config:
                     "timeout": Config._get_int_config_value(collection_conf, "timeout", 60),
                     "unit_size_per_day": Config._get_float_config_value(collection_conf, "unit_size_per_day", 1),
                     "num_retries": Config._get_float_config_value(collection_conf, "num_retries", 1),
+                    "window_size": Config._get_int_config_value(collection_conf, "window_size", 0),
 
                     "list_url_list": Config._get_config_value_list(collection_conf, "list_url_list", []),
                     "post_process_script_list": Config._get_config_value_list(collection_conf,

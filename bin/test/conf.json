@@ -11,6 +11,7 @@
       "encoding": "utf-8",
       "referer": null,
       "unit_size_per_day": 1.5,
+      "window_size": 10,
       "list_url_list": [
         "https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=1",
         "https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=2"

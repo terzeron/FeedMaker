@@ -399,7 +399,7 @@ class FeedMaker:
 
     def _diff_feeds_and_make_htmls(self, recent_feed_list: List[Tuple[str, str]],
                                    old_feed_list: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
-        LOGGER.debug(f"# diff_feeds_and_make_htmls(recent_feed_list={recent_feed_list}, old_feed_list={old_feed_list})")
+        LOGGER.debug(f"# _diff_feeds_and_make_htmls(recent_feed_list={recent_feed_list}, old_feed_list={old_feed_list})")
 
         recent_set = OrderedSet(recent_feed_list)
         old_set = OrderedSet(old_feed_list)
@@ -416,7 +416,7 @@ class FeedMaker:
         for link, title in old_feed_list:
             if self._make_html_file(link, title):
                 merged_feed_list.append((link, title))
-        return merged_feed_list
+        return merged_feed_list[:self.window_size]
 
     def _generate_rss_feed(self, merged_feed_list: List[Tuple[str, str]]) -> bool:
         LOGGER.debug("# generate_rss_feed()")
@@ -521,6 +521,11 @@ class FeedMaker:
         LOGGER.debug(f"self.collection_conf={self.collection_conf}")
         LOGGER.debug(f"self.extraction_conf={self.extraction_conf}")
         LOGGER.debug(f"self.rss_conf={self.rss_conf}")
+
+        # window_size (get value from configuration in case unspecified manually by run.py)
+        if self.window_size == FeedMaker.DEFAULT_WINDOW_SIZE:
+            if self.collection_conf["window_size"] > 0:
+                self.window_size = self.collection_conf["window_size"]
 
         # -c 또는 -l 옵션이 지정된 경우, 설정의 is_completed 값 무시
         if self.do_collect_by_force or self.do_collect_only:
