@@ -39,21 +39,8 @@ def read_config(site_config_file: str) -> Optional[Dict[str, Any]]:
     return None
 
 
-def get_location(headers: Dict[str, Any]):
-    LOGGER.debug(f"# get_location(headers={headers})")
-    new_url = ""
-    if headers:
-        if "Location" in headers:
-            new_url = headers["Location"]
-        elif "location" in headers:
-            new_url = headers["location"]
-    return new_url
-
-
-def get(url: str, config: Dict[str, Any]) -> Tuple[bool, str, str]:
-    LOGGER.debug(f"# get(url={url}, config={config})")
-    print("getting start")
-    new_url = ""
+def get_location_recursively(url: str, config: Dict[str, Any]) -> Tuple[str, str]:
+    LOGGER.debug(f"# get_location_recursively(url={url}, config={config})")
     response = None
     response_headers = None
     crawler = Crawler(method=Method.GET, num_retries=config["num_retries"], render_js=config["render_js"], encoding=config["encoding"], headers=config["headers"], timeout=config["timeout"])
@@ -62,14 +49,25 @@ def get(url: str, config: Dict[str, Any]) -> Tuple[bool, str, str]:
     except Crawler.ReadTimeoutException:
         print("read timeout")
         return False, "", ""
-
-    LOGGER.debug(f"response_headers={response_headers}")
+    response_size = len(response)
+    new_url = ""
     if response_headers:
-        new_url = get_location(response_headers)
-        if new_url:
-            print(f"new_url={new_url}")
-            return False, response, new_url
+        if "Location" in response_headers:
+            new_url = response_headers["Location"]
+        elif "location" in response_headers:
+            new_url = response_headers["location"]
+    del crawler
+    if new_url and response_size == 0:
+        new_url, response = get_location_recursively(new_url, config)
+    else:
+        new_url = url
+    return new_url, response
 
+
+def get(url: str, config: Dict[str, Any]) -> Tuple[bool, str, str]:
+    LOGGER.debug(f"# get(url={url}, config={config})")
+    print("getting start")
+    new_url, response = get_location_recursively(url, config)
     if not response:
         print("no response")
         return False, "", new_url
@@ -83,7 +81,7 @@ def get(url: str, config: Dict[str, Any]) -> Tuple[bool, str, str]:
         return False, response, new_url
 
     print("getting end")
-    del crawler
+    #del crawler
     return True, response, new_url
 
 
