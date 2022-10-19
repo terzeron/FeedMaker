@@ -46,9 +46,11 @@ def get_location_recursively(url: str, config: Dict[str, Any]) -> Tuple[str, str
     crawler = Crawler(method=Method.GET, num_retries=config["num_retries"], render_js=config["render_js"], encoding=config["encoding"], headers=config["headers"], timeout=config["timeout"])
     try:
         response, _, response_headers = crawler.run(url, allow_redirects=False)
-    except Crawler.ReadTimeoutException:
-        print("read timeout")
-        return False, "", ""
+    except Exception as e:
+        print("exception occurred")
+        print(e)
+        return "", ""
+
     response_size = len(response)
     new_url = ""
     if response_headers:
