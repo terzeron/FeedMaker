@@ -48,7 +48,6 @@ def clean_url(url: str, scheme: str = "https", path: str = "") -> str:
 
 def get_location_recursively(url: str, config: Dict[str, Any]) -> Tuple[str, str]:
     LOGGER.debug(f"# get_location_recursively(url={url}, config={config})")
-    print(f"# get_location_recursively(url={url}, config={config})")
     response = None
     response_headers = None
     crawler = Crawler(method=Method.GET, num_retries=config["num_retries"], render_js=config["render_js"], encoding=config["encoding"], headers=config["headers"], timeout=config["timeout"])
@@ -68,7 +67,6 @@ def get_location_recursively(url: str, config: Dict[str, Any]) -> Tuple[str, str
             new_url = response_headers["location"]
     del crawler
     if new_url and response_size == 0:
-        print(new_url)
         new_url = clean_url(new_url, URL.get_url_scheme(url), URL.get_url_path(url))
         new_url, response = get_location_recursively(new_url, config)
     else:
