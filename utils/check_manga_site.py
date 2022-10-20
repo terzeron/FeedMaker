@@ -69,8 +69,6 @@ def get_location_recursively(url: str, config: Dict[str, Any]) -> Tuple[str, str
     if new_url and response_size == 0:
         new_url = clean_url(new_url, URL.get_url_scheme(url), URL.get_url_path(url))
         new_url, response = get_location_recursively(new_url, config)
-    else:
-        new_url = url
     return new_url, response
 
 
@@ -122,6 +120,7 @@ def get_new_url(url: str, response: str, new_pattern: str, pre: str, num: int, d
         m = re.search(new_pattern, new_url)
         if m:
             new_number = int(m.group(1))
+    LOGGER.debug(f"new_url={new_url}, new_number={new_number}")
     return new_url, new_number
 
 
@@ -175,9 +174,11 @@ def main() -> int:
     if not success:
         if new_url:
             _, _, num, _, _ = get_url_pattern(new_url)
+            LOGGER.debug(f"num={num}")
             print_new_url(url, new_url, num)
         else:
             new_url, new_number = get_new_url(url, response, new_pattern, pre, num, domain_postfix, post)
+            LOGGER.debug(f"new_url={new_url}, new_number={new_number}")
             if new_url:
                 print_new_url(url, new_url, new_number)
             else:
