@@ -96,9 +96,9 @@ class Site():
                     LOGGER.debug(f"link={link}")
 
                 # 주석 제거
-                e = re.sub(r'<!--.*-->', '', str(e))
+                e = re.sub(r'<!--[^>]*-->', '', str(e))
                 # 단순(텍스트만 포함한) p 태그 제거
-                e = re.sub(r'<p[^>]*>[^<]*</p>', '', e)
+                #e = re.sub(r'<p[^>]*>[^<]*</p>', '', e)
                 prev_e = e
                 while True:
                     # 명시적인 타이틀 텍스트 추출
@@ -142,7 +142,7 @@ class Site():
                         break
                     prev_e = e
 
-                if self.site_name not in ["jmana"]:
+                if self.site_name not in ["jmana", "allall"]:
                     e = re.sub(r'.*\b\d+[화권부편].*', '', e)
 
                 # 모든 html 태그 제거
@@ -333,11 +333,11 @@ class EleventoonSite(Site):
 class AllallSite(Site):
     def __init__(self, site_name: str) -> None:
         super().__init__(site_name)
-        self.extraction_attrs = {"class": "item-card-gray"}
+        self.extraction_attrs = {"class": "video_list"}
 
     def set_url_postfix(self, keyword: str) -> None:
         encoded_keyword = urllib.parse.quote(keyword)
-        self.url_postfix = "/search?skeyword=" + encoded_keyword
+        self.url_postfix = "/searchs?skeyword=" + encoded_keyword
 
 
 class BlacktoonSite(Site):
@@ -443,7 +443,7 @@ class SearchManager:
             AllallSite("allall"),
             BlacktoonSite("blacktoon"),
             AgitSite("agit"),
-            TorrentseeSite("torrentsee"),
+            #TorrentseeSite("torrentsee"),
             TorrentdiaSite("torrentdia"),
         ]
 
