@@ -344,12 +344,8 @@ export default {
     showStatusInfoDeleteButton: function (data) {
       return data.item['feed_title'] === '' && (data.item['htaccess'] === 'O' || data.item['public_html'] === 'O');
     },
-    getApiUrlPath() {
-      let pathPrefix = 'https://api.terzeron.com/fm';
-      if (process.env.NODE_ENV === 'development') {
-        pathPrefix = 'http://localhost:5000';
-      }
-      return pathPrefix;
+    getApiUrlPath: function () {
+      return process.env.VUE_APP_API_URL;
     },
     removeAlias(groupName, feedName) {
       if (groupName === '') {

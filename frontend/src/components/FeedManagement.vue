@@ -500,11 +500,7 @@ export default {
   },
   methods: {
     getApiUrlPath: function () {
-      let pathPrefix = 'https://api.terzeron.com/fm';
-      if (process.env.NODE_ENV === 'development') {
-        pathPrefix = 'http://localhost:5000';
-      }
-      return pathPrefix;
+      return process.env.VUE_APP_API_URL;
     },
     determineNewFeedNameFromJsonRssLink: function () {
       if ('rss' in this.jsonData && 'link' in this.jsonData.rss) {
