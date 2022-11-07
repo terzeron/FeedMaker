@@ -257,8 +257,9 @@ class HeadlessBrowser:
 
         LOGGER.debug("getting inner html")
         try:
-            content = driver.find_elements(By.NAME, "html")
-            response = content.get_attribute("innerHTML")
+            response = ""
+            for element in driver.find_elements(By.NAME, "html"):
+                response = response + element.get_attribute("innerHTML")
         except selenium.common.exceptions.WebDriverException as e:
             LOGGER.error("Error: %s", str(e))
             response = ""
