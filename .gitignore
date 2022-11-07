@@ -32,3 +32,4 @@ cookies.*.json
 .env.production
 *.lock
 .*.lock
+.env
