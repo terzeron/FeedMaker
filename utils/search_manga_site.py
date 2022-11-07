@@ -82,7 +82,7 @@ class Site():
             title: str = ""
             link: str = ""
             for e in content:
-                # LOGGER.debug(f"element={e}")
+                LOGGER.debug(f"element={e}")
                 # 링크 추출
                 m = re.search(r'<a[^>]*href="(?P<link>[^"]+)"[^>]*>', str(e))
                 if m:
@@ -102,7 +102,7 @@ class Site():
                 prev_e = e
                 while True:
                     # 명시적인 타이틀 텍스트 추출
-                    m = re.search(r'<\w+[^>]*class="title"[^>]*>(?P<title>[^<]+)</\w+>', e)
+                    m = re.search(r'<\w+[^>]*class="(title|subject)"[^>]*>(?P<title>[^<]+)</\w+>', e)
                     if m:
                         title = m.group("title")
                         LOGGER.debug(f"title={title}")
