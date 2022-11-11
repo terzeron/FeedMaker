@@ -14,16 +14,16 @@ class CrawlerTest(unittest.TestCase):
                 os.remove(cookie_file)
 
     def test_runHeadlessBrowser(self):
-        url = "https://sentry.io/welcome/"
+        url = "https://facebook.com"
         crawler = Crawler(render_js=False)
         actual, _, _ = crawler.run(url)
-        m = re.search(r'Join Reddit', actual)
+        m = re.search(r'이메일', actual)
         self.assertFalse(m)
         del crawler
 
         crawler = Crawler(render_js=True)
         actual, _, _ = crawler.run(url)
-        m = re.search(r'Join Reddit', actual)
+        m = re.search(r'이메일', actual)
         self.assertTrue(m)
         del crawler
 

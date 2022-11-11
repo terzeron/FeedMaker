@@ -192,7 +192,7 @@ class TestFeedMaker(unittest.TestCase):
     def test_get_idx_data(self):
         dt1 = Datetime.get_current_time()
         actual = self.maker._get_idx_data()
-        expected = (1, 5)
+        expected = (1, 6)
         dt2 = Datetime.get_current_time()
         self.assertEqual(expected, actual[0:2])
         datetime_str = actual[2]

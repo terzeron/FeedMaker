@@ -15,11 +15,6 @@ class TestProblemChecker(unittest.TestCase):
         self.test_feed_path = Path(os.environ["FEED_MAKER_WORK_DIR"]) / "my_test_group" / "my_test_feed"
         self.test_feed_html_file_path = self.test_feed_path / "html" / "31d4598.html"
 
-    def tearDown(self) -> None:
-        self.checker = None
-        self.test_feed_path = None
-        self.test_feed_html_file_path = None
-
     def _first_item(self, d: Dict[str, Any]):
         first_key = list(d.keys())[0]
         return d[first_key]
@@ -141,11 +136,11 @@ class TestProblemChecker(unittest.TestCase):
         d = "01-31"
         self.assertEqual("01-31", self.checker.convert_datetime_to_str(d))
 
-        d = datetime.strptime("2018-01-13", "%Y-%m-%d")
-        self.assertEqual("18-01-13", self.checker.convert_datetime_to_str(d))
+        dt = datetime.strptime("2018-01-13", "%Y-%m-%d")
+        self.assertEqual("18-01-13", self.checker.convert_datetime_to_str(dt))
 
-        d = datetime.strptime("2018-01-31 17:04:11", "%Y-%m-%d %H:%M:%S")
-        self.assertEqual("18-01-31", self.checker.convert_datetime_to_str(d))
+        dt = datetime.strptime("2018-01-31 17:04:11", "%Y-%m-%d %H:%M:%S")
+        self.assertEqual("18-01-31", self.checker.convert_datetime_to_str(dt))
 
     def test_get_status_info_with_default(self):
         self.checker.merge_all_feeds_status()
