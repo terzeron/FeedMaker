@@ -63,7 +63,7 @@ class RequestsClient:
                     cookie_str = cookie_str + cookie["name"] + "=" + cookie["value"] + "; "
             self.headers["Cookie"] = cookie_str
 
-    def make_request(self, url, data=None, download_file: Path=None, allow_redirects=True) -> Tuple[str, Dict[str, Any], Optional[int]]:
+    def make_request(self, url, data=None, download_file: Path=None, allow_redirects=True) -> Tuple[str, str, Dict[str, Any], Optional[int]]:
         LOGGER.debug(f"# make_request(url='{url}', allow_redirects={allow_redirects})")
 
         self.read_cookies_from_file()
@@ -76,22 +76,21 @@ class RequestsClient:
                 response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, data=data)
             elif self.method == Method.HEAD:
                 response = requests.head(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
-                return str(response.status_code), dict(response.headers), response.status_code
+                return str(response.status_code), "", dict(response.headers), response.status_code
         except requests.exceptions.ConnectionError as e:
             LOGGER.warning(f"Warning: can't connect to '{url}' for temporary network error")
             LOGGER.warning(e)
-            return "", {}, None
+            return "", f"can't connect to '{url}' for temporary network error", {}, None
         except requests.exceptions.ReadTimeout as e:
             LOGGER.warning(f"Warning: can't read data from '{url}' for timeout")
             LOGGER.warning(e)
-            return "", {}, None
+            return "", f"Warning: can't read data from '{url}' for timeout", {}, None
 
         if not response:
-            LOGGER.error(f"can't get response from '{url}'")
-            return "", {}, None
+            return "", f"can't get response from '{url}'", {}, None
         if response.status_code != 200:
             LOGGER.debug(f"response.status_code={response.status_code}")
-            return "", dict(response.headers), response.status_code
+            return "", f"can't get response from '{url}' with status code '{response.status_code}'", dict(response.headers), response.status_code
         if response.cookies:
             self.write_cookies_to_file(response.cookies)
 
@@ -101,7 +100,7 @@ class RequestsClient:
                 for chunk in response:
                     f.write(chunk)
             os.utime(download_file, (time.time(), time.time()))
-            return "200", {}, response.status_code
+            return "200", "", {}, response.status_code
 
         if self.encoding:
             response.encoding = self.encoding
@@ -111,8 +110,8 @@ class RequestsClient:
         if not re.search(r'<meta\s+property="og:url"\s+content="[^"]+"\s*/?>', response.text):
             result = re.sub(r'</head>', f'<meta property="og:url" content="{response.request.url}"/>\n</head>',
                             response.text)
-            return result, dict(response.headers), response.status_code
-        return response.text, dict(response.headers), response.status_code
+            return result, "", dict(response.headers), response.status_code
+        return response.text, "", dict(response.headers), response.status_code
 
 
 class Crawler:
@@ -204,7 +203,7 @@ class Crawler:
                 if response:
                     return response, False, None
             else:
-                response, headers, status_code = self.requests_client.make_request(url, download_file=download_file,
+                response, error, headers, status_code = self.requests_client.make_request(url, download_file=download_file,
                                                                                    data=data, allow_redirects=allow_redirects)
                 if response:
                     return response, False, headers
@@ -220,8 +219,7 @@ class Crawler:
                 LOGGER.debug(f"wait for seconds and retry (#{i})")
                 time.sleep(5)
 
-        LOGGER.debug(f"can't get response from '{url}'")
-        return "", True, dict(headers)
+        return "", error, dict(headers)
 
 
 def print_usage() -> None:
@@ -318,7 +316,9 @@ def main() -> int:
                       num_retries=num_retries, encoding=encoding, verify_ssl=verify_ssl,
                       copy_images_from_canvas=copy_images_from_canvas, simulate_scrolling=simulate_scrolling,
                       disable_headless=disable_headless, blob_to_dataurl=blob_to_dataurl)
-    response, _, _ = crawler.run(url, download_file=download_file)
+    response, error, _ = crawler.run(url, download_file=download_file)
+    if not response:
+        LOGGER.error(error)
     print(response)
     return 0
 

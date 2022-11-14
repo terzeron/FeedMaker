@@ -4,9 +4,9 @@
 import os
 import json
 import logging.config
-import urllib3
 from pathlib import Path
 from typing import Dict, Any
+import urllib3
 from selenium import webdriver
 from selenium.common.exceptions import InvalidCookieDomainException
 from selenium.webdriver.chrome.options import Options
@@ -257,7 +257,7 @@ class HeadlessBrowser:
 
         LOGGER.debug("getting inner html")
         try:
-           response = driver.page_source
+            response = driver.page_source
         except selenium.common.exceptions.WebDriverException as e:
             LOGGER.error("Error: %s", str(e))
             response = ""

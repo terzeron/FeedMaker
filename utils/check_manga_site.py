@@ -9,7 +9,7 @@ import logging
 import logging.config
 from typing import Dict, Any, Optional, Tuple
 from crawler import Crawler, Method
-from feed_maker_util import URL, Process
+from feed_maker_util import URL
 
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
@@ -52,10 +52,11 @@ def get_location_recursively(url: str, config: Dict[str, Any]) -> Tuple[str, str
     response_headers = None
     crawler = Crawler(method=Method.GET, num_retries=config["num_retries"], render_js=config["render_js"], encoding=config["encoding"], headers=config["headers"], timeout=config["timeout"])
     try:
-        response, _, response_headers = crawler.run(url, allow_redirects=False)
+        response, error, response_headers = crawler.run(url, allow_redirects=False)
+        if not response:
+            LOGGER.error(error)
     except Exception as e:
-        print("exception occurred")
-        print(e)
+        LOGGER.error(e)
         return "", ""
 
     response_size = len(response)
@@ -142,7 +143,7 @@ def get_url_pattern(url: str) -> Tuple[str, str, int, str, str]:
     return new_pattern, pre, num, domain_postfix, post
 
 
-def print_new_url(url: str, new_url: str, new_number: str) -> None:
+def print_new_url(url: str, new_url: str, new_number: int) -> None:
     if url == new_url:
         print("same url")
     else:
