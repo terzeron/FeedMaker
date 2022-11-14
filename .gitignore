@@ -33,3 +33,4 @@ cookies.*.json
 *.lock
 .*.lock
 .env
+nohup.out
