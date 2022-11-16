@@ -7,6 +7,7 @@ import math
 import re
 from pathlib import Path
 from datetime import datetime, timedelta
+from contextlib import suppress
 import logging.config
 from typing import List, Dict, Any, Union
 from feed_maker import FeedMaker
@@ -74,7 +75,7 @@ class ProblemChecker:
         del self.element_name_count_map
 
     def load_htaccess_file(self) -> None:
-        LOGGER.debug(f"# load_htaccess_file()")
+        LOGGER.debug("# load_htaccess_file()")
         self.feed_alias_name_map.clear()
         self.feed_name_aliases_map.clear()
         with open(self.htaccess_file, 'r', encoding="utf-8") as infile:
@@ -99,13 +100,13 @@ class ProblemChecker:
 
         for group_path in self.work_dir.iterdir():
             group_name = group_path.name
-            if not group_path.is_dir() or group_name in ["test", "logs", ".git"]:
+            if not group_path.is_dir() or group_name in ("test", "logs", ".git"):
                 continue
             for feed_path in group_path.iterdir():
                 if not feed_path.is_dir():
                     continue
                 feed_name = feed_path.name
-                try:
+                with suppress(IOError):
                     self.feed_name_group_map[feed_name] = group_name
                     with open(feed_path / "conf.json", 'r', encoding="utf-8") as infile:
                         json_data = json.load(infile)
@@ -161,13 +162,11 @@ class ProblemChecker:
                         s = rss_file_path.stat()
                         update_date = datetime.fromtimestamp(s.st_mtime)
                         self.feed_name_rss_info_map[feed_name] = {"update_date": update_date}
-                except IOError:
-                    pass
 
         print(f"* The loading of all config files and rss files is done. {len(self.feed_name_rss_info_map)} items")
 
     def load_all_public_feed_files(self) -> None:
-        LOGGER.debug(f"# load_all_public_feed_files()")
+        LOGGER.debug("# load_all_public_feed_files()")
         self.public_feed_info_map.clear()
         for path in self.public_feed_dir.iterdir():
             if path.suffix == ".xml":
@@ -221,7 +220,7 @@ class ProblemChecker:
                 # would find html files with zero count of image tag
                 if s.st_size > FeedMaker.get_size_of_template_with_image_tag(web_service_url, path.name):
                     html_file_image_tag_count_map[path] = 0
-                with open(path, 'r', encoding="utf-8") as infile:
+                with path.open('r', encoding="utf-8") as infile:
                     for line in infile:
                         # image tag counting
                         if re.search(r'1x1.jpg', line):
@@ -260,7 +259,7 @@ class ProblemChecker:
 
     def remove_html_file_in_path_from_info(self, dir_type_name: str, dir_path: Path) -> None:
         LOGGER.debug(f"# remove_html_file_in_path_from_info(dir_type_name={dir_type_name}, dir_path={dir_path})")
-        if dir_type_name not in ["file_path", "feed_dir_path", "group_dir_path"]:
+        if dir_type_name not in ("file_path", "feed_dir_path", "group_dir_path"):
             return
 
         count: int = 0
@@ -319,7 +318,7 @@ class ProblemChecker:
                 # would find html files with zero count of image tag
                 if s.st_size > FeedMaker.get_size_of_template_with_image_tag(web_service_url, path.name):
                     html_file_image_tag_count_map[path] = 0
-                with open(path, 'r', encoding="utf-8") as infile:
+                with path.open('r', encoding="utf-8") as infile:
                     for line in infile:
                         # image tag counting
                         if re.search(r'1x1.jpg', line):
@@ -364,7 +363,7 @@ class ProblemChecker:
                 continue
 
             group_name = group_dir_path.name
-            if group_name in ["test", "logs"] or group_name.startswith(".") or group_name.startswith("_"):
+            if group_name in ("test", "logs") or group_name.startswith((".", "_")):
                 continue
 
             for feed_path in group_dir_path.iterdir():
@@ -372,7 +371,7 @@ class ProblemChecker:
                     continue
 
                 feed_name = feed_path.name
-                if feed_name.startswith(".") or feed_name.startswith("_"):
+                if feed_name.startswith((".", "_")):
                     continue
 
                 if feed_name not in self.feed_name_config_map:
@@ -383,7 +382,7 @@ class ProblemChecker:
                     index = 0
                     file_path = self.work_dir / self.feed_name_group_map[feed_name] / feed_name / "start_idx.txt"
                     if file_path.is_file():
-                        with open(file_path, 'r', encoding="utf-8") as infile:
+                        with file_path.open('r', encoding="utf-8") as infile:
                             line = infile.readline()
                             index = int(line.split('\t')[0])
 
@@ -424,7 +423,7 @@ class ProblemChecker:
             file_path = self.httpd_access_log_dir / ("access.log." + date_str)
             if not file_path.is_file():
                 continue
-            with open(file_path, 'r', encoding="utf-8") as infile:
+            with file_path.open('r', encoding="utf-8") as infile:
                 for line in infile:
                     # view
                     m = re.search(

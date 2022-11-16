@@ -61,19 +61,19 @@ class TestFeedMaker(unittest.TestCase):
         self.list_file1_path = self.list_dir_path / (date1_str + ".txt")
         date2_str = Datetime.get_short_date_str(datetime.now() - timedelta(days=1))
         self.list_file2_path = self.list_dir_path / (date2_str + ".txt")
-        with open(self.list_file2_path, "w", encoding="utf-8") as outfile:
+        with self.list_file2_path.open("w", encoding="utf-8") as outfile:
             outfile.write("https://comic.naver.com/webtoon/detail?titleId=725586&no=136\t136화\n")
 
         self.html_dir_path = self.feed_dir_path / "html"
         self.html_dir_path.mkdir(exist_ok=True)
         md5_name = "3e1c485"
         self.html_file1_path = self.html_dir_path / (md5_name + ".html")
-        with open(self.html_file1_path, "w", encoding="utf-8") as outfile:
+        with self.html_file1_path.open("w", encoding="utf-8") as outfile:
             outfile.write(
                 f"<div>with image tag string</div>\n<img src='{self.global_conf['web_service_url']}/img/1x1.jpg?feed=oneplusone.xml&item={md5_name}'/>\n")
         md5_name = "8da6dfb"
         self.html_file2_path = self.html_dir_path / (md5_name + ".html")
-        with open(self.html_file2_path, "w", encoding="utf-8") as outfile:
+        with self.html_file2_path.open("w", encoding="utf-8") as outfile:
             outfile.write("<div>without image tag string</div>\n")
 
         self.feed_img_dir_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / "img" / feed_name
@@ -117,7 +117,7 @@ class TestFeedMaker(unittest.TestCase):
         # no image tag in the html file
         is_found = False
         if self.html_file2_path.is_file():
-            with open(self.html_file2_path, "r", encoding="utf-8") as infile:
+            with self.html_file2_path.open("r", encoding="utf-8") as infile:
                 for line in infile:
                     if img_tag_str in line:
                         is_found = True
@@ -127,7 +127,7 @@ class TestFeedMaker(unittest.TestCase):
 
         # image tag is appended to the html file
         is_found = False
-        with open(self.html_file2_path, "r", encoding="utf-8") as infile:
+        with self.html_file2_path.open("r", encoding="utf-8") as infile:
             for line in infile:
                 if img_tag_str in line:
                     is_found = True
@@ -204,7 +204,7 @@ class TestFeedMaker(unittest.TestCase):
         dt = Datetime.get_current_time()
         ts = Datetime._get_time_str(dt)
         self.maker._write_idx_data(0, dt, True)
-        with open(self.maker.start_idx_file_path, "r", encoding="utf-8") as infile:
+        with self.maker.start_idx_file_path.open("r", encoding="utf-8") as infile:
             actual = infile.read()
             expected = f"0\t{ts}\n"
             self.assertEqual(expected, actual)
@@ -212,7 +212,7 @@ class TestFeedMaker(unittest.TestCase):
         dt = Datetime.get_current_time()
         ts = Datetime._get_time_str(dt)
         self.maker._write_idx_data(0, dt)
-        with open(self.maker.start_idx_file_path, "r", encoding="utf-8") as infile:
+        with self.maker.start_idx_file_path.open("r", encoding="utf-8") as infile:
             actual = infile.read()
             expected = f"0\t{ts}\n"
             self.assertEqual(expected, actual)
@@ -275,7 +275,7 @@ class TestFeedMaker(unittest.TestCase):
 
             self.assertTrue(assert_in_mock_logger("Generating rss feed file...", mock_info))
 
-            with open(self.rss_file_path, "r", encoding="utf-8") as infile:
+            with self.rss_file_path.open("r", encoding="utf-8") as infile:
                 document = parse(infile)
                 count = 0
                 for rss in document.childNodes:

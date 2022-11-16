@@ -103,7 +103,7 @@ class Data:
     @staticmethod
     def _get_sorted_lines_from_rss_file(file: Path) -> List[str]:
         line_list: List[str] = []
-        with open(file, "r", encoding="utf-8") as infile:
+        with file.open("r", encoding="utf-8") as infile:
             lines = infile.readlines()
             for line in lines:
                 line = re.sub(r"(<!\[CDATA\[|]]>)", "", line)
@@ -127,7 +127,7 @@ class Process:
     @staticmethod
     def _replace_script_path(script: str, dir_path: Path) -> Optional[str]:
         program = script.split(" ")[0]
-        if program.startswith("./") or program.startswith("../"):
+        if program.startswith(("./", "../")):
             if not dir_path.is_dir():
                 return None
             program_path = (dir_path / program).resolve()
@@ -358,7 +358,7 @@ class Config:
         else:
             config_file_path = feed_dir_path / "conf.json"
         if config_file_path.is_file():
-            with open(config_file_path, 'r', encoding="utf-8") as infile:
+            with config_file_path.open('r', encoding="utf-8") as infile:
                 data = json.load(infile)
                 if "configuration" in data:
                     self.conf = data["configuration"]
@@ -418,7 +418,7 @@ class Config:
                 result.append(config_node[key])
             return result
 
-        for _, v in config_node.items():
+        for v in config_node.values():
             if isinstance(v, Dict):
                 data = Config._traverse_config_node(v, key)
                 result.extend(data)
@@ -439,7 +439,7 @@ class Config:
             global_config_file_path = conf_file_path
         else:
             global_config_file_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "bin" / "global_config.json"
-        with open(global_config_file_path, "r", encoding="utf-8") as infile:
+        with global_config_file_path.open("r", encoding="utf-8") as infile:
             global_config: Dict[str, Any] = json.load(infile)
         return global_config
 
@@ -454,8 +454,7 @@ class Config:
                     "verify_ssl": Config._get_bool_config_value(collection_conf, "verify_ssl", True),
                     "ignore_old_list": Config._get_bool_config_value(collection_conf, "ignore_old_list", False),
                     "is_completed": Config._get_bool_config_value(collection_conf, "is_completed", False),
-                    "copy_images_from_canvas": Config._get_bool_config_value(collection_conf, "copy_images_from_canvas",
-                                                                             False),
+                    "copy_images_from_canvas": Config._get_bool_config_value(collection_conf, "copy_images_from_canvas", False),
                     "simulate_scrolling": Config._get_bool_config_value(collection_conf, "simulate_scrolling", False),
                     "disable_headless": Config._get_bool_config_value(collection_conf, "disable_headless", False),
                     "blob_to_dataurl": Config._get_bool_config_value(collection_conf, "blob_to_dataurl", False),
@@ -473,8 +472,7 @@ class Config:
                     "window_size": Config._get_int_config_value(collection_conf, "window_size", 0),
 
                     "list_url_list": Config._get_config_value_list(collection_conf, "list_url_list", []),
-                    "post_process_script_list": Config._get_config_value_list(collection_conf,
-                                                                              "post_process_script_list", []),
+                    "post_process_script_list": Config._get_config_value_list(collection_conf, "post_process_script_list", []),
                     "header_list": Config._get_config_value_list(collection_conf, "header_list", [])
                 }
         return conf
@@ -488,12 +486,9 @@ class Config:
                 conf = {
                     "render_js": Config._get_bool_config_value(extraction_conf, "render_js", False),
                     "verify_ssl": Config._get_bool_config_value(extraction_conf, "verify_ssl", True),
-                    "bypass_element_extraction": Config._get_bool_config_value(extraction_conf,
-                                                                               "bypass_element_extraction"),
-                    "force_sleep_between_articles": Config._get_bool_config_value(extraction_conf,
-                                                                                  "force_sleep_between_articles"),
-                    "copy_images_from_canvas": Config._get_bool_config_value(extraction_conf,
-                                                                             "copy_images_from_canvas"),
+                    "bypass_element_extraction": Config._get_bool_config_value(extraction_conf, "bypass_element_extraction"),
+                    "force_sleep_between_articles": Config._get_bool_config_value(extraction_conf, "force_sleep_between_articles"),
+                    "copy_images_from_canvas": Config._get_bool_config_value(extraction_conf, "copy_images_from_canvas"),
                     "simulate_scrolling": Config._get_bool_config_value(extraction_conf, "simulate_scrolling"),
                     "disable_headless": Config._get_bool_config_value(extraction_conf, "disable_headless", False),
                     "blob_to_dataurl": Config._get_bool_config_value(extraction_conf, "blob_to_dataurl", False),
@@ -508,8 +503,7 @@ class Config:
                     "element_id_list": Config._get_config_value_list(extraction_conf, "element_id_list", []),
                     "element_class_list": Config._get_config_value_list(extraction_conf, "element_class_list", []),
                     "element_path_list": Config._get_config_value_list(extraction_conf, "element_path_list", []),
-                    "post_process_script_list": Config._get_config_value_list(extraction_conf,
-                                                                              "post_process_script_list", []),
+                    "post_process_script_list": Config._get_config_value_list(extraction_conf, "post_process_script_list", []),
                     "header_list": Config._get_config_value_list(extraction_conf, "header_list", []),
                 }
         return conf
@@ -551,8 +545,7 @@ class URL:
             first_slash_index = url[host_index:].find("/")
             if first_slash_index >= 0:
                 return url[host_index:(host_index + first_slash_index)]
-            else:
-                return url[host_index:]
+            return url[host_index:]
         return ""
 
     # http://naver.com/api/items?page_no=3 => /api/items?page_no=3
@@ -619,7 +612,7 @@ class Cache:
         if index:
             index_str = "." + str(index)
 
-        if img_url.startswith("http") or img_url.startswith("data:image"):
+        if img_url.startswith(("http", "data:image")):
             return URL.get_short_md5_name(img_url) + postfix_str + index_str
         return URL.get_short_md5_name(img_url)
 
@@ -655,7 +648,7 @@ class Htaccess:
         try:
             logging.getLogger("filelock").setLevel(logging.ERROR)
             with FileLock(str(Htaccess.lock_file_path), timeout=5):
-                with open(Htaccess.htaccess_file_path, 'r', encoding="utf-8") as infile:
+                with Htaccess.htaccess_file_path.open('r', encoding="utf-8") as infile:
                     state = 0
                     for line in infile:
                         if state == 0:
@@ -669,7 +662,7 @@ class Htaccess:
                                 alias = m.group("alias")
                                 return alias, ""
         except Timeout as e:
-            return "", f"timeout in getting alias for feed '{feed_name}', {str(e)}"
+            return "", f"timeout in getting alias for feed '{feed_name}', {e}"
         return "", f"error in getting alias for feed '{feed_name}' from group '{group_name}'"
 
     @staticmethod
@@ -693,7 +686,7 @@ class Htaccess:
         try:
             logging.getLogger("filelock").setLevel(logging.ERROR)
             with FileLock(str(Htaccess.lock_file_path), timeout=5):
-                with open(Htaccess.htaccess_file_path, 'r', encoding="utf-8") as infile:
+                with Htaccess.htaccess_file_path.open('r', encoding="utf-8") as infile:
                     for line in infile:
                         # find feed name and replace
                         if is_found and re.search(rewrite_rule_pattern, line):
@@ -709,12 +702,11 @@ class Htaccess:
                             line_list.append(rewrite_rule)
                             is_found = True
 
-                with open(temp_file_path, 'w', encoding="utf-8") as outfile:
-                    for line in line_list:
-                        outfile.write(line)
+                with temp_file_path.open('w', encoding="utf-8") as outfile:
+                    outfile.writelines(line_list)
                 shutil.copy(temp_file_path, Htaccess.htaccess_file_path)
         except Timeout as e:
-            return False, f"timeout in renaming alias for feed '{feed_name}', {str(e)}"
+            return False, f"timeout in renaming alias for feed '{feed_name}', {e}"
         if is_found:
             return True, ""
         return False, f"can't find such group '{group_name}' or feed '{feed_name}'"
@@ -735,7 +727,7 @@ class Htaccess:
         try:
             logging.getLogger("filelock").setLevel(logging.ERROR)
             with FileLock(str(Htaccess.lock_file_path), timeout=5):
-                with open(Htaccess.htaccess_file_path, 'r', encoding="utf-8") as infile:
+                with Htaccess.htaccess_file_path.open('r', encoding="utf-8") as infile:
                     if group_name == "___":
                         state = 1
                     else:
@@ -757,12 +749,11 @@ class Htaccess:
                         LOGGER.debug(f"rewrite_rule_gone={rewrite_rule_gone}")
                         line_list.append(rewrite_rule_gone)
 
-                with open(temp_file_path, 'w', encoding="utf-8") as outfile:
-                    for line in line_list:
-                        outfile.write(line)
+                with temp_file_path.open('w', encoding="utf-8") as outfile:
+                    outfile.writelines(line_list)
                 temp_file_path.rename(Htaccess.htaccess_file_path)
         except Timeout as e:
-            return False, f"timeout in renaming alias for feed '{feed_name}', {str(e)}"
+            return False, f"timeout in renaming alias for feed '{feed_name}', {e}"
         if is_found:
             return True, ""
         return False, f"can't find such group '{group_name}' or feed '{feed_name}'"

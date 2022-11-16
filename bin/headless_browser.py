@@ -120,7 +120,7 @@ class HeadlessBrowser:
         LOGGER.debug(
             f"# HeadlessBrowser(dir_path={dir_path}, headers={headers}, copy_images_from_canvas={copy_images_from_canvas}, simulate_scrolling={simulate_scrolling}, disable_headless={disable_headless}, blob_to_dataurl={blob_to_dataurl}, timeout={timeout})")
         self.dir_path: Path = dir_path
-        self.headers: Dict[str, str] = headers if headers else {}
+        self.headers: Dict[str, str] = headers or {}
         if "User-Agent" not in self.headers:
             self.headers["User-Agent"] = HeadlessBrowser.DEFAULT_USER_AGENT
         self.copy_images_from_canvas: bool = copy_images_from_canvas
@@ -135,14 +135,14 @@ class HeadlessBrowser:
     def _write_cookies_to_file(self, driver) -> None:
         cookies = driver.get_cookies()
         cookie_file = self.dir_path / HeadlessBrowser.COOKIE_FILE
-        with open(cookie_file, "w", encoding='utf-8') as f:
+        with cookie_file.open("w", encoding='utf-8') as f:
             json.dump(cookies, f, indent=2, ensure_ascii=False)
 
     def _read_cookies_from_file(self, driver) -> None:
         cookie_file = self.dir_path / HeadlessBrowser.COOKIE_FILE
         if cookie_file.is_file():
             try:
-                with open(cookie_file, "r", encoding='utf-8') as f:
+                with cookie_file.open("r", encoding='utf-8') as f:
                     cookies = json.load(f)
                     for cookie in cookies:
                         if "expiry" in cookie:
@@ -244,10 +244,9 @@ class HeadlessBrowser:
             LOGGER.debug("converting blob to dataurl")
             driver.execute_script(HeadlessBrowser.CONVERTING_BLOB_TO_DATAURL_SCRIPT)
 
-        for option, waiting_div_id in [
-            (self.copy_images_from_canvas, HeadlessBrowser.ID_OF_RENDERING_COMPLETION_IN_CONVERTING_CANVAS),
-            (self.simulate_scrolling, HeadlessBrowser.ID_OF_RENDERING_COMPLETION_IN_SCROLLING),
-            (self.blob_to_dataurl, HeadlessBrowser.ID_OF_RENDERING_COMPLETION_IN_CONVERTING_BLOB)]:
+        for option, waiting_div_id in ((self.copy_images_from_canvas, HeadlessBrowser.ID_OF_RENDERING_COMPLETION_IN_CONVERTING_CANVAS),
+                                       (self.simulate_scrolling, HeadlessBrowser.ID_OF_RENDERING_COMPLETION_IN_SCROLLING),
+                                       (self.blob_to_dataurl, HeadlessBrowser.ID_OF_RENDERING_COMPLETION_IN_CONVERTING_BLOB)):
             if option:
                 try:
                     WebDriverWait(driver, self.timeout).until(

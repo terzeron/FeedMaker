@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import json
 import logging
+import logging.config
 from datetime import datetime
 from shutil import rmtree
 from typing import List, Dict, Any, Tuple, Optional
@@ -59,7 +60,7 @@ class FeedManager:
     def _read_config_file(self, feed_dir_path: Path) -> Dict[str, Any]:
         conf_file_path = feed_dir_path / self.CONF_FILE
         if conf_file_path.is_file():
-            with open(conf_file_path, 'r', encoding='utf-8') as infile:
+            with conf_file_path.open('r', encoding='utf-8') as infile:
                 line_list: List[str] = []
                 for line in infile:
                     line_list.append(line)
@@ -101,7 +102,7 @@ class FeedManager:
         for group_dir_path in self.work_dir.iterdir():
             if group_dir_path.is_dir():
                 group_name = group_dir_path.name
-                if group_name in ["test", "logs"] or group_name.startswith("."):
+                if group_name in ("test", "logs") or group_name.startswith("."):
                     continue
                 self._scan_feeds_by_group(group_name)
 
@@ -109,7 +110,7 @@ class FeedManager:
         LOGGER.debug("# get_exec_result()")
         exec_result_file_path = self.work_dir / "logs" / "all.log"
         if exec_result_file_path.is_file():
-            with open(exec_result_file_path, 'r', encoding='utf-8') as infile:
+            with exec_result_file_path.open('r', encoding='utf-8') as infile:
                 return infile.read(), ""
         else:
             return "", f"can't find such file '{exec_result_file_path.relative_to(self.work_dir)}'"
@@ -128,19 +129,11 @@ class FeedManager:
 
     def get_problems_html_info(self) -> Tuple[Dict[str, Any], str]:
         LOGGER.debug("# get_problems_html_info()")
-        return {
-                   "html_file_size_map": self.checker.html_file_size_map,
-                   "html_file_with_many_image_tag_map": self.checker.html_file_with_many_image_tag_map,
-                   "html_file_without_image_tag_map": self.checker.html_file_without_image_tag_map,
-                   "html_file_image_not_found_map": self.checker.html_file_image_not_found_map
-               }, ""
+        return {"html_file_size_map": self.checker.html_file_size_map, "html_file_with_many_image_tag_map": self.checker.html_file_with_many_image_tag_map, "html_file_without_image_tag_map": self.checker.html_file_without_image_tag_map, "html_file_image_not_found_map": self.checker.html_file_image_not_found_map}, ""
 
     def get_problems_element_info(self) -> Tuple[Dict[str, Any], str]:
         LOGGER.debug("# get_problems_element_info()")
-        return {
-                   "feed_name_list_url_count_map": self.checker.feed_name_list_url_count_map,
-                   "element_name_count_map": self.checker.element_name_count_map
-               }, ""
+        return {"feed_name_list_url_count_map": self.checker.feed_name_list_url_count_map, "element_name_count_map": self.checker.element_name_count_map}, ""
 
     @staticmethod
     def _determine_keyword_in_config_item(keyword: str, config: Dict[str, Any], *args):
@@ -220,7 +213,7 @@ class FeedManager:
         LOGGER.debug(f"# get_site_config({group_name})")
         path = self.work_dir / group_name / self.SITE_CONF_FILE
         if path.is_file():
-            with open(path, 'r', encoding='utf-8') as infile:
+            with path.open('r', encoding='utf-8') as infile:
                 json_data = json.load(infile)
                 return json_data, ""
         return {}, f"no feed list in group '{group_name}'"
@@ -229,7 +222,7 @@ class FeedManager:
         LOGGER.debug(f"# save_site_config({group_name}, {post_data})")
         path = self.work_dir / group_name / self.SITE_CONF_FILE
         try:
-            with open(path, 'w', encoding='utf-8') as outfile:
+            with path.open('w', encoding='utf-8') as outfile:
                 outfile.write(json.dumps(post_data, indent=2, ensure_ascii=False))
         except IOError as e:
             return False, str(e)
@@ -246,7 +239,7 @@ class FeedManager:
         LOGGER.debug(f"# get_feed_info_by_name({feed_name})")
         feed_dir_path = self.work_dir / group_name / feed_name
         list_dir_path = feed_dir_path / "newlist"
-        last_collect_date = None
+        last_collect_date = datetime.now()
         result_list = []
         collection_info = {}
         if list_dir_path.is_dir():
@@ -257,7 +250,7 @@ class FeedManager:
                 else:
                     if last_collect_date < datetime.fromtimestamp(st.st_mtime):
                         last_collect_date = datetime.fromtimestamp(st.st_mtime)
-                with open(list_file_path, 'r', encoding='utf-8') as infile:
+                with list_file_path.open('r', encoding='utf-8') as infile:
                     for line in infile:
                         link, _ = line.split("\t")
                         result_list.append(link)
@@ -282,7 +275,7 @@ class FeedManager:
 
         config_file_path = self.work_dir / group_name / feed_name / self.CONF_FILE
         config_file_path.parent.mkdir(exist_ok=True)
-        with open(config_file_path, 'w', encoding='utf-8') as outfile:
+        with config_file_path.open('w', encoding='utf-8') as outfile:
             outfile.write(json.dumps(post_data, indent=2, ensure_ascii=False))
 
         self._git_add(config_file_path)
@@ -296,7 +289,7 @@ class FeedManager:
         LOGGER.debug(f"# run({group_name}, {feed_name}, {alias})")
         feed_dir_path = self.work_dir / group_name / feed_name
         conf_file_path = feed_dir_path / self.CONF_FILE
-        with open(conf_file_path, 'rb') as infile:
+        with conf_file_path.open('rb') as infile:
             json_data = json.load(infile)
             if "configuration" in json_data:
                 runner = FeedMakerRunner(html_archiving_period=30, list_archiving_period=7)

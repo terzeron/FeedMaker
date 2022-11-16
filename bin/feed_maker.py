@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Tuple, Callable, Optional
 from distutils.spawn import find_executable
 from datetime import datetime, timedelta
+from contextlib import suppress
 import dateutil.parser
 import PyRSS2Gen
 from ordered_set import OrderedSet
@@ -29,8 +30,7 @@ class FeedMaker:
     DEFAULT_WINDOW_SIZE = 5
     IMAGE_TAG_FMT_STR = "<img src='%s/img/1x1.jpg?feed=%s&item=%s'/>"
 
-    def __init__(self, feed_dir_path: Path, do_collect_by_force: bool, do_collect_only: bool,
-                 rss_file_path: Path, window_size: int = DEFAULT_WINDOW_SIZE) -> None:
+    def __init__(self, feed_dir_path: Path, do_collect_by_force: bool, do_collect_only: bool, rss_file_path: Path, window_size: int = DEFAULT_WINDOW_SIZE) -> None:
         LOGGER.debug(
             f"# FeedMaker(feed_dir_path={feed_dir_path}, do_collect_by_force={do_collect_by_force}, do_collect_only={do_collect_only}, rss_file_path={rss_file_path})")
         self.global_conf: Dict[str, Any] = Config.get_global_config()
@@ -66,15 +66,12 @@ class FeedMaker:
 
     @staticmethod
     def get_size_of_template_with_image_tag(web_service_url: str, rss_file_name: str) -> int:
-        return len(header_str) + \
-               len("\n") + \
-               len(FeedMaker.get_image_tag_str(web_service_url, rss_file_name)) + \
-               len("\n")
+        return len(header_str) + len("\n") + len(FeedMaker.get_image_tag_str(web_service_url, rss_file_name)) + len("\n")
 
     @staticmethod
     def _is_image_tag_in_html_file(html_file_path: Path, image_tag_str: str) -> bool:
         is_image_tag_in_file: bool = False
-        with open(html_file_path, "r", encoding="utf-8") as infile:
+        with html_file_path.open("r", encoding="utf-8") as infile:
             for line in infile:
                 if image_tag_str in line:
                     is_image_tag_in_file = True
@@ -83,7 +80,7 @@ class FeedMaker:
 
     @staticmethod
     def _append_image_tag_to_html_file(html_file_path: Path, image_tag_str: str) -> None:
-        with open(html_file_path, "a", encoding="utf-8") as outfile:
+        with html_file_path.open("a", encoding="utf-8") as outfile:
             outfile.write("\n" + image_tag_str + "\n")
 
     @staticmethod
@@ -163,12 +160,12 @@ class FeedMaker:
                 if list_file_path.is_file():
                     LOGGER.info(list_file_path.relative_to(self.work_dir_path))
                     # read the old list
-                    with open(list_file_path, 'r', encoding='utf-8') as in_file:
+                    with list_file_path.open('r', encoding='utf-8') as in_file:
                         for line in in_file:
                             line = line.rstrip()
                             link, title = line.split("\t")
                             feed_list.append((link, title))
-                        if len(feed_list) > 0:
+                        if feed_list:
                             break
         else:
             # 이미 완료된 피드에 대해서는 기존 리스트를 모두 취합함
@@ -177,7 +174,7 @@ class FeedMaker:
                     continue
 
                 file_path = self.list_dir / entry.name
-                with open(file_path, 'r', encoding='utf-8') as in_file:
+                with file_path.open('r', encoding='utf-8') as in_file:
                     for line in in_file:
                         line = line.rstrip()
                         link, title = line.split("\t")
@@ -203,8 +200,7 @@ class FeedMaker:
                                                     self.rss_file_path.name, item_url)
 
         if os.path.isfile(html_file_path) and \
-                size > FeedMaker.get_size_of_template_with_image_tag(self.global_conf["web_service_url"],
-                                                                     self.rss_file_path.name):
+                size > FeedMaker.get_size_of_template_with_image_tag(self.global_conf["web_service_url"], self.rss_file_path.name):
             # 이미 성공적으로 만들어져 있으니까, 이미지 태그만 검사해보고 피드 리스트에 추가
             if FeedMaker._is_image_tag_in_html_file(html_file_path, image_tag_str):
                 LOGGER.info(
@@ -246,9 +242,7 @@ class FeedMaker:
             for post_process_script in conf["post_process_script_list"]:
                 program = post_process_script.split(" ")[0]
                 program_fullpath = find_executable(program)
-                if program_fullpath and (program_fullpath.startswith("/usr") or
-                                         program_fullpath.startswith("/bin") or
-                                         program_fullpath.startswith("/sbin")):
+                if program_fullpath and program_fullpath.startswith(("/usr", "/bin", "/sbin")):
                     post_process_cmd = f"{post_process_script}"
                 else:
                     post_process_cmd = f"{post_process_script} -f '{self.feed_dir_path}' '{item_url}'"
@@ -264,7 +258,7 @@ class FeedMaker:
                 content = result
 
             LOGGER.debug(f"writing to '{html_file_path}'")
-            with open(html_file_path, "w", encoding="utf-8") as outfile:
+            with html_file_path.open("w", encoding="utf-8") as outfile:
                 outfile.write(result)
 
             if html_file_path.is_file():
@@ -294,7 +288,7 @@ class FeedMaker:
         LOGGER.debug("# get_idx_data()")
 
         if self.start_idx_file_path.is_file():
-            with open(self.start_idx_file_path, 'r', encoding='utf-8') as in_file:
+            with self.start_idx_file_path.open('r', encoding='utf-8') as in_file:
                 line = in_file.readline()
                 m = re.search(r'(?P<start_idx>\d+)\t(?P<mtime>\S+)', line)
                 if m:
@@ -326,7 +320,7 @@ class FeedMaker:
         current_time_str = None
         if do_write_initially or increment_size > 0:
             next_start_idx = start_idx + increment_size
-            with open(self.start_idx_file_path, 'w', encoding='utf-8') as out_file:
+            with self.start_idx_file_path.open('w', encoding='utf-8') as out_file:
                 current_time_str = Datetime.get_current_time_str()
                 out_file.write(f"{next_start_idx}\t{current_time_str}\n")
         return next_start_idx, current_time_str
@@ -348,12 +342,9 @@ class FeedMaker:
             m = re.search(sort_field_pattern, link + "\t" + title)
             if m:
                 sort_field = m.group(1)
-                try:
+                with suppress(IndexError):
                     if m.group(2):
                         sort_field += " " + m.group(2)
-                except IndexError:
-                    # ignore
-                    pass
                 matched_count += 1
             else:
                 sort_field = "999999999"
@@ -397,8 +388,7 @@ class FeedMaker:
         collector = NewListCollector(self.feed_dir_path, self.collection_conf, new_list_file_path)
         return collector.collect()
 
-    def _diff_feeds_and_make_htmls(self, recent_feed_list: List[Tuple[str, str]],
-                                   old_feed_list: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
+    def _diff_feeds_and_make_htmls(self, recent_feed_list: List[Tuple[str, str]], old_feed_list: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
         LOGGER.debug(f"# _diff_feeds_and_make_htmls(recent_feed_list={recent_feed_list}, old_feed_list={old_feed_list})")
 
         recent_set = OrderedSet(recent_feed_list)
@@ -440,7 +430,7 @@ class FeedMaker:
             pub_date_str = Datetime.get_rss_date_str()
 
             content = ""
-            with open(html_file_path, "r", encoding="utf-8") as in_file:
+            with html_file_path.open("r", encoding="utf-8") as in_file:
                 for line in in_file:
                     content += line
                     # restrict big contents
@@ -469,7 +459,7 @@ class FeedMaker:
             lastBuildDate=last_build_date_str,
             items=rss_items
         )
-        with open(temp_rss_file_path, 'w', encoding="utf-8") as outfile:
+        with temp_rss_file_path.open('w', encoding="utf-8") as outfile:
             rss.write_xml(outfile, encoding='utf-8')
 
         # 이번에 만들어진 rss 파일이 이전 파일과 내용이 다른지 확인
@@ -535,7 +525,7 @@ class FeedMaker:
         if not self.do_collect_only:
             # 과거 피드항목 리스트를 가져옴
             old_feed_list = self._read_old_feed_list_from_file()
-            if not old_feed_list or len(old_feed_list) == 0:
+            if not old_feed_list:
                 LOGGER.warning("Warning: can't read old feed list from files")
 
         # 완결여부 설정값 판단
@@ -548,12 +538,12 @@ class FeedMaker:
         else:
             # 피딩 중인 피드는 최신 피드항목을 받아옴
             recent_feed_list = self._get_recent_feed_list()
-            if not recent_feed_list or len(recent_feed_list) == 0:
+            if not recent_feed_list:
                 LOGGER.error("Error: Can't get recent feed list from urls")
                 return False
 
             if self.collection_conf["ignore_old_list"]:
-                del old_feed_list[:]
+                old_feed_list.clear()
                 # new_feed_list = recent_feed_list
 
             # 과거 피드항목 리스트와 최근 피드항목 리스트를 비교함

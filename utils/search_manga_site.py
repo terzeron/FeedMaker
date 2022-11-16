@@ -55,14 +55,13 @@ class Site():
 
     def set_payload(self, keyword: str = "") -> None:
         LOGGER.debug(f"# set_payload(keyword={keyword})")
-        pass
 
     def get_data_from_site(self, url: str = "") -> str:
         LOGGER.debug(f"# get_data_from_site(url={url})")
         site_dir_path = work_dir_path / self.site_name
         crawler: Crawler = Crawler(dir_path=site_dir_path, render_js=self.render_js, method=self.method, headers=self.headers, encoding=self.encoding, timeout=240)
         if not url:
-            url: str = URL.get_url_scheme(self.url_prefix) + "://" + URL.get_url_domain(self.url_prefix) + self.url_postfix
+            url = URL.get_url_scheme(self.url_prefix) + "://" + URL.get_url_domain(self.url_prefix) + self.url_postfix
             LOGGER.debug(f"url={url}")
         response, _, _ = crawler.run(url=url, data=self.payload)
         del crawler
@@ -73,15 +72,14 @@ class Site():
         soup = BeautifulSoup(content, "html.parser")
         result_list: List[Tuple[str, str]] = []
         for key in attrs.keys():
-            content = ""
             if key in ("id", "class"):
-                content = soup.find_all(attrs={key: attrs[key]})
+                element_list = soup.find_all(attrs={key: attrs[key]})
             elif key == "path":
-                content = HTMLExtractor.get_node_with_path(soup.body, attrs[key])
+                element_list = HTMLExtractor.get_node_with_path(soup.body, attrs[key])
 
             title: str = ""
             link: str = ""
-            for e in content:
+            for e in element_list:
                 LOGGER.debug(f"element={e}")
                 # 링크 추출
                 m = re.search(r'<a[^>]*href="(?P<link>[^"]+)"[^>]*>', str(e))
@@ -420,7 +418,7 @@ class TorrentdiaSite(Site):
 class SearchManager:
     result_by_site: Dict[Site, List[Tuple[str, str]]] = {}
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.result_by_site = {}
 
     def worker(self, site, keyword) -> None:

@@ -96,7 +96,7 @@ class NewListCollector:
             url_list = self.split_result_into_items(result)
             result_list.extend(url_list)
 
-        if len(result_list) == 0:
+        if not result_list:
             LOGGER.error(f"Error: Can't get new list from {conf['list_url_list']}")
             return []
         result_list = Data.remove_duplicates(result_list)
@@ -117,7 +117,7 @@ class NewListCollector:
         # collect items from specified url list
         LOGGER.debug("collecting items from specified url list...")
         new_list = self._compose_url_list()
-        if new_list and len(new_list) > 0:
+        if new_list:
             self._save_new_list_to_file(new_list)
             return new_list
         return []

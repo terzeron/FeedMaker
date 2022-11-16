@@ -57,7 +57,7 @@ class Extractor:
             result += header_str + "\n"
 
         # main article sections
-        for parser in ["html.parser", "html5lib", "lxml"]:
+        for parser in ("html.parser", "html5lib", "lxml"):
             soup = BeautifulSoup(html_content, parser)
 
             for class_str in class_list:
@@ -143,7 +143,8 @@ class Extractor:
             # 감싸고 있는 <p>의 경우, 중복된 내용이 노출될 수 있음
             result += "</p>\n"
             return result
-        elif element.name == "img":
+
+        if element.name == "img":
             src = ""
             extra_attributes = ["data-lazy-src", "lazy-src", "lazysrc", "data-src", "data-original", "o_src"]
             for extra_attribute in extra_attributes:
@@ -167,7 +168,7 @@ class Extractor:
                     width = element["width"]
                     attribute_str += f" width='{width}'"
                 result += f"<img src='{src}'{attribute_str}/>\n"
-        elif element.name in ["input"]:
+        elif element.name == "input":
             if self._check_element_class(element, "input", "origin_src") and element.has_attr("value"):
                 value = element["value"]
                 if not re.search(r'(https?:)?//', value):
@@ -196,7 +197,7 @@ class Extractor:
                     attribute_str += f" target='{target}'"
                 result += f"<a href='{href}'{attribute_str}>"
                 open_close_tag = True
-        elif element.name in ["iframe", "embed"]:
+        elif element.name in ("iframe", "embed"):
             if element.has_attr("src"):
                 src = element["src"]
                 if "video_player.nhn" in src or ".swf" in src or "getCommonPlayer.nhn" in src:
@@ -205,7 +206,7 @@ class Extractor:
                     result += f"<a href='{src}'>{src}</a><br/>\n"
                 else:
                     result += str(element)
-            elif element.name in ["param", "object"]:
+            elif element.name in ("param", "object"):
                 if element.has_attr("name") and element["name"] == "Src" and element.has_attr("value") and ".swf" in \
                         element["value"]:
                     src = element["value"]
@@ -223,16 +224,16 @@ class Extractor:
                         if child.has_attr("alt"):
                             link_title = child["alt"]
                         result += f"<br/><br/><strong><a href='{link_href}'>{link_title}</a></strong><br/><br/>\n"
-                    elif element.name in ["o:p", "st1:time"]:
+                    elif element.name in ("o:p", "st1:time"):
                         # skip unknown element
                         return result
-        elif element.name in ["v:shapetype", "qksdmssnfl", "qksdmssnfl<span"]:
+        elif element.name in ("v:shapetype", "qksdmssnfl", "qksdmssnfl<span"):
             # skip malformed element
             return result
-        elif element.name in ["script", "style", "st1:personname"]:
+        elif element.name in ("script", "style", "st1:personname"):
             # skip sub-elements
             return result
-        elif element.name in ["pre"]:
+        elif element.name == "pre":
             # preserve all white spaces as they are
             result += str(element) + "\n"
             # skip sub-elementss

@@ -9,8 +9,8 @@ import random
 import logging.config
 import getopt
 from pathlib import Path
-from filelock import FileLock, Timeout
 from typing import Dict, Tuple, List, Any, Set
+from filelock import FileLock, Timeout
 from feed_maker_util import Config, Process, Notification
 from feed_maker import FeedMaker
 from problem_checker import ProblemChecker
@@ -57,7 +57,7 @@ class FeedMakerRunner:
     def _remove_temporary_files(feed_dir_path: Path) -> None:
         LOGGER.debug(f"# remove_temporary_files(feed_dir_path='{feed_dir_path}')")
         LOGGER.info("# deleting temporary files")
-        for file in ["nohup.out", "temp.html", "x.html"]:
+        for file in ("nohup.out", "temp.html", "x.html"):
             file_path = feed_dir_path / file
             if file_path.is_file():
                 LOGGER.info(f"* {file_path}")
@@ -76,7 +76,7 @@ class FeedMakerRunner:
 
         old_rss_file_path = rss_file_path.with_suffix(rss_file_path.suffix + ".old")
         start_idx_file_path = feed_dir_path / "start_idx.txt"
-        for file_path in [rss_file_path, old_rss_file_path, start_idx_file_path]:
+        for file_path in (rss_file_path, old_rss_file_path, start_idx_file_path):
             LOGGER.info(f"* {file_path}")
             file_path.unlink(missing_ok=True)
 
@@ -104,7 +104,7 @@ class FeedMakerRunner:
             img_html_map = {}
             for html_file_path in html_dir_path.iterdir():
                 if html_file_path.is_file():
-                    with open(html_file_path, "r", encoding="utf-8") as f:
+                    with html_file_path.open("r", encoding="utf-8") as f:
                         try:
                             for line in f:
                                 m = re.search(r'<img src=[\"\']https?://terzeron\.com/xml/img/[^/]+/(?P<img>\S+)[\"\']', line)
@@ -175,7 +175,7 @@ class FeedMakerRunner:
         return result
 
     def make_all_feeds(self, options: Dict[str, Any]) -> bool:
-        LOGGER.debug(f"# make_all_feeds()")
+        LOGGER.debug("# make_all_feeds()")
         num_feeds = options["num_feeds"]
 
         start_time = datetime.now()
@@ -225,7 +225,7 @@ class FeedMakerRunner:
         LOGGER.info(f"* End time: {end_time.astimezone().isoformat(timespec='seconds')}")
         LOGGER.info(f"* Elapsed time: {(end_time - start_time).total_seconds()}")
 
-        if len(failed_feed_list) > 0:
+        if failed_feed_list:
             Notification.send_error_msg(", ".join(failed_feed_list), subject="Errors of FeedMaker")
         return True
 
