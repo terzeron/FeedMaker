@@ -84,13 +84,14 @@ class RequestsClient:
             LOGGER.warning(e)
             return "", f"Warning: can't read data from '{url}' for timeout", {}, None
 
-        if not response:
+        # explicit null check required
+        if response == None:
             return "", f"can't get response from '{url}'", {}, None
+        if response.cookies:
+            self.write_cookies_to_file(response.cookies)
         if response.status_code != 200:
             LOGGER.debug(f"response.status_code={response.status_code}")
             return "", f"can't get response from '{url}' with status code '{response.status_code}'", dict(response.headers), response.status_code
-        if response.cookies:
-            self.write_cookies_to_file(response.cookies)
 
         if download_file:
             response.raw.decode_content = True
