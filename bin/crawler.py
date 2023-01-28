@@ -28,14 +28,14 @@ class Method(Enum):
 class RequestsClient:
     COOKIE_FILE = "cookies.requestsclient.json"
 
-    def __init__(self, dir_path: Path = Path.cwd(), render_js: bool = False, method: Method = Method.GET, headers: Dict[str, Any] = None, timeout: int = 60, encoding: str = "utf-8", verify_ssl: bool = True) -> None:
+    def __init__(self, dir_path: Path=Path.cwd(), render_js: bool=False, method: Method=Method.GET, headers: Dict[str, Any]=None, timeout: int=60, encoding: str="utf-8", verify_ssl: bool=True) -> None:
         LOGGER.debug(
             f"# RequestsClient(dir_path={dir_path}, render_js={render_js}, method={method}, headers={headers}, timeout={timeout}, encoding={encoding}, verify_ssl={verify_ssl})")
         self.dir_path: Path = dir_path
         self.method: Method = method
         self.timeout: int = timeout
         self.headers: Dict[str, str] = headers or {}
-        self.encoding: str = encoding
+        self.encoding: str = encoding or "utf-8"
         self.verify_ssl: bool = verify_ssl
 
     def __del__(self):
@@ -62,7 +62,7 @@ class RequestsClient:
             self.headers["Cookie"] = cookie_str
             LOGGER.debug("Cookie: %s", self.headers["Cookie"])
 
-    def make_request(self, url, data=None, download_file: Path = None, allow_redirects=True) -> Tuple[str, str, Dict[str, Any], Optional[int]]:
+    def make_request(self, url, data=None, download_file: Path=None, allow_redirects=True) -> Tuple[str, str, Dict[str, Any], Optional[int]]:
         LOGGER.debug(f"# make_request(url='{url}', allow_redirects={allow_redirects})")
 
         self.read_cookies_from_file()
@@ -118,8 +118,9 @@ class Crawler():
         def __init__(self):
             super().__init__("Read timed out")
 
-    def __init__(self, render_js=False, method=Method.GET, headers={}, timeout=60, num_retries=1, encoding=None, verify_ssl=True, copy_images_from_canvas=False, simulate_scrolling=False, disable_headless=False) -> None:
-        LOGGER.debug("# Crawler(render_js=%r, method=%r, headers=%r, timeout=%d, num_retries=%d, encoding=%r, verify_ssl=%r, copy_images_from_canvas=%r, simulate_scrolling=%r, disable_headless=%r)", render_js, method, headers, timeout, num_retries, encoding, verify_ssl, copy_images_from_canvas, simulate_scrolling, disable_headless)
+    def __init__(self, dir_path: Path=Path.cwd(), render_js=False, method=Method.GET, headers={}, timeout=60, num_retries=1, encoding=None, verify_ssl=True, copy_images_from_canvas=False, simulate_scrolling=False, disable_headless=False, blob_to_dataurl=False) -> None:
+        LOGGER.debug(f"# Crawler(dir_path={dir_path}, render_js={render_js}, method={method}, headers={headers}, timeout={timeout}, num_retries={num_retries}, encoding={encoding}, verify_ssl={verify_ssl}, copy_images_from_canvas={copy_images_from_canvas}, simulate_scrolling={simulate_scrolling}, disable_headless={disable_headless}, blob_to_dataurl={blob_to_dataurl})")
+        self.dir_path = dir_path
         self.render_js = render_js
         self.method = method
         self.headers = headers or {}
@@ -197,7 +198,9 @@ class Crawler():
                     return response, "", None
             else:
                 try:
-                    response, headers, status_code = self.requests_client.make_request(url, download_file=download_file, data=data)
+                    response, error, headers, status_code = self.requests_client.make_request(url, download_file=download_file, data=data, allow_redirects=allow_redirects)
+                    if response:
+                        return response, "", None
                 except requests.exceptions.ReadTimeout as e:
                     raise Crawler.ReadTimeoutException from e
 
