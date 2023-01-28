@@ -60,6 +60,7 @@ class RequestsClient:
                         del cookie["expiry"]
                     cookie_str = cookie_str + cookie["name"] + "=" + cookie["value"] + "; "
             self.headers["Cookie"] = cookie_str
+            LOGGER.debug("Cookie: %s", self.headers["Cookie"])
 
     def make_request(self, url, data=None, download_file: Path = None, allow_redirects=True) -> Tuple[str, str, Dict[str, Any], Optional[int]]:
         LOGGER.debug(f"# make_request(url='{url}', allow_redirects={allow_redirects})")
@@ -112,11 +113,13 @@ class RequestsClient:
         return response.text, "", dict(response.headers), response.status_code
 
 
-class Crawler:
-    def __init__(self, dir_path: Path = Path.cwd(), render_js: bool = False, method: Method = Method.GET, headers: Dict[str, Any] = None, timeout: int = 60, num_retries: int = 1, encoding: str = "utf-8", verify_ssl: bool = True, copy_images_from_canvas: bool = False, simulate_scrolling: bool = False, disable_headless: bool = False, blob_to_dataurl: bool = False) -> None:
-        LOGGER.debug(
-            f"# Crawler(dir_path={dir_path}, render_js={render_js}, method={method}, headers={headers}, timeout={timeout}, num_retries={num_retries}, encoding={encoding}, verify_ssl={verify_ssl}, copy_images_from_canvas={copy_images_from_canvas}, simulate_scrolling={simulate_scrolling}, disable_headless={disable_headless}, blob_to_dataurl={blob_to_dataurl})")
-        self.dir_path = dir_path
+class Crawler():
+    class ReadTimeoutException(Exception):
+        def __init__(self):
+            super().__init__("Read timed out")
+
+    def __init__(self, render_js=False, method=Method.GET, headers={}, timeout=60, num_retries=1, encoding=None, verify_ssl=True, copy_images_from_canvas=False, simulate_scrolling=False, disable_headless=False) -> None:
+        LOGGER.debug("# Crawler(render_js=%r, method=%r, headers=%r, timeout=%d, num_retries=%d, encoding=%r, verify_ssl=%r, copy_images_from_canvas=%r, simulate_scrolling=%r, disable_headless=%r)", render_js, method, headers, timeout, num_retries, encoding, verify_ssl, copy_images_from_canvas, simulate_scrolling, disable_headless)
         self.render_js = render_js
         self.method = method
         self.headers = headers or {}
@@ -193,9 +196,10 @@ class Crawler:
                 if response:
                     return response, "", None
             else:
-                response, error, headers, status_code = self.requests_client.make_request(url, download_file=download_file, data=data, allow_redirects=allow_redirects)
-                if response:
-                    return response, "", headers
+                try:
+                    response, headers, status_code = self.requests_client.make_request(url, download_file=download_file, data=data)
+                except requests.exceptions.ReadTimeout as e:
+                    raise Crawler.ReadTimeoutException from e
 
                 if status_code in (401, 403, 404, 405, 410):
                     # no retry in case of
