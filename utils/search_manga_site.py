@@ -162,15 +162,15 @@ class Site():
 
         return result_list
 
-    def extract_sub_content_from_site_like_agit(self, content: str, keyword: str):
+    def extract_sub_content_from_site_like_agit(self, content: str, keyword: str) -> List[Tuple[str, str]]:
         LOGGER.debug(f"# extract_sub_content_from_site_like_agit(keyword={keyword})")
         result_list: List[Tuple[str, str]] = []
 
-        content = re.sub(r'^var\s+\w+\s+=\s+', '', content)
-        if re.search(r';$', content):
-            content = re.sub(r';$', '', content)
+        content = re.sub(r'^(<html><head>.*</head><body><pre[^>]*>)?var\s+\w+\s+=\s+', '', content)
+        if re.search(r';(</pre></body></html>)?$', content):
+            content = re.sub(r';(</pre></body></html>)?$', '', content)
         else:
-            return None
+            return []
 
         data = json.loads(content)
         for item in data:
@@ -192,7 +192,7 @@ class Site():
         url0 = ""
         url1 = ""
         html = self.get_data_from_site()
-        m = re.search(r'src=\'(?P<url0>.*/data/.*webtoon_0.js\?v=[^\'"]+)[\'"]', html)
+        m = re.search(r'src=[\'"](?P<url0>.*/data/webtoon/(\w+_)?webtoon_0(_\d+)?.js\?([v_]=[^\'"]+)?)[\'"]', html)
         if m:
             url0 = m.group("url0")
             if not url0.startswith("http"):
@@ -200,7 +200,7 @@ class Site():
                     url0 = "https:" + url0
                 else:
                     url0 = URL.concatenate_url(self.url_prefix, url0)
-        m = re.search(r'src=\'(?P<url1>.*/data/.*webtoon_1.js\?v=[^\'"]+)[\'"]', html)
+        m = re.search(r'src=[\'"](?P<url1>.*/data/webtoon/(\w+_)?webtoon_1(_\d+)?.js\?([v_]=[^\'"]+)?)[\'"]', html)
         if m:
             url1 = m.group("url1")
             if not url1.startswith("http"):
