@@ -462,7 +462,7 @@ class SearchManager:
             BlacktoonSite("blacktoon"),
             AgitSite("agit"),
             #TorrentseeSite("torrentsee"),
-            TorrentdiaSite("torrentdia"),
+            #TorrentdiaSite("torrentdia"),
             TorrentttSite("torrenttt"),
             TorrentmodeSite("torrentmode"),
         ]
