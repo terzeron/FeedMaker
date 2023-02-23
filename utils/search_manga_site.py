@@ -461,7 +461,7 @@ class SearchManager:
             AllallSite("allall"),
             BlacktoonSite("blacktoon"),
             AgitSite("agit"),
-            #TorrentseeSite("torrentsee"),
+            TorrentseeSite("torrentsee"),
             #TorrentdiaSite("torrentdia"),
             TorrentttSite("torrenttt"),
             TorrentmodeSite("torrentmode"),
