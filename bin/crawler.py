@@ -35,6 +35,7 @@ class RequestsClient:
         self.method: Method = method
         self.timeout: int = timeout
         self.headers: Dict[str, str] = headers or {}
+        self.cookies: Dict[str, str] = {}
         self.encoding: str = encoding or "utf-8"
         self.verify_ssl: bool = verify_ssl
 
@@ -48,7 +49,7 @@ class RequestsClient:
         cookie_file = self.dir_path / RequestsClient.COOKIE_FILE
         with cookie_file.open("w", encoding='utf-8') as f:
             json.dump(cookie_data, f, indent=2, ensure_ascii=False)
-
+            
     def read_cookies_from_file(self) -> None:
         cookie_file = self.dir_path / RequestsClient.COOKIE_FILE
         if cookie_file.is_file():
@@ -58,18 +59,36 @@ class RequestsClient:
                 for cookie in cookies:
                     if "expiry" in cookie:
                         del cookie["expiry"]
-                    cookie_str = cookie_str + cookie["name"] + "=" + cookie["value"] + "; "
-            self.headers["Cookie"] = cookie_str
-            LOGGER.debug("Cookie: %s", self.headers["Cookie"])
+                    self.cookies.update({cookie["name"]: cookie["value"]})
+            LOGGER.debug(f"self.cookies={self.cookies}")
 
     def make_request(self, url, data=None, download_file: Path=None, allow_redirects=True) -> Tuple[str, str, Dict[str, Any], Optional[int]]:
         LOGGER.debug(f"# make_request(url='{url}', allow_redirects={allow_redirects})")
 
-        self.read_cookies_from_file()
+        if "Referer" in self.headers and self.headers["Referer"]:
+            LOGGER.debug(f"visiting referer page '{self.headers['Referer']}'")
+            self.read_cookies_from_file()
+            response = None
+            try:
+                response = requests.get(self.headers['Referer'], headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, allow_redirects=allow_redirects)
+            except requests.exceptions.ConnectionError as e:
+                LOGGER.warning(f"Warning: can't connect to '{url}' for temporary network error")
+                LOGGER.warning(e)
+                return "", f"can't connect to '{url}' for temporary network error", {}, None
+            except requests.exceptions.ReadTimeout as e:
+                LOGGER.warning(f"Warning: can't read data from '{url}' for timeout")
+                LOGGER.warning(e)
+                return "", f"Warning: can't read data from '{url}' for timeout", {}, None
+            if response.cookies:
+                self.write_cookies_to_file(response.cookies)
 
+        self.read_cookies_from_file()
         response = None
         try:
             if self.method == Method.GET:
+                cookie_str = '; '.join([f'{name}={value}' for name, value in self.cookies.items()])
+                self.headers["Cookie"] = cookie_str
+                LOGGER.debug(f"self.headers={self.headers}")
                 response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, allow_redirects=allow_redirects)
             elif self.method == Method.POST:
                 response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, data=data)
@@ -86,7 +105,7 @@ class RequestsClient:
             return "", f"Warning: can't read data from '{url}' for timeout", {}, None
 
         # explicit null check required
-        if response == None:
+        if response is None:
             return "", f"can't get response from '{url}'", {}, None
         if response.cookies:
             self.write_cookies_to_file(response.cookies)
@@ -303,7 +322,7 @@ def main() -> int:
 
     url = args[0]
 
-    crawler = Crawler(dir_path=feed_dir_path, render_js=render_js, method=method, timeout=timeout, num_retries=num_retries, encoding=encoding, verify_ssl=verify_ssl, copy_images_from_canvas=copy_images_from_canvas, simulate_scrolling=simulate_scrolling, disable_headless=disable_headless, blob_to_dataurl=blob_to_dataurl)
+    crawler = Crawler(dir_path=feed_dir_path, render_js=render_js, method=method, headers=headers, timeout=timeout, num_retries=num_retries, encoding=encoding, verify_ssl=verify_ssl, copy_images_from_canvas=copy_images_from_canvas, simulate_scrolling=simulate_scrolling, disable_headless=disable_headless, blob_to_dataurl=blob_to_dataurl)
     response, error, _ = crawler.run(url, download_file=download_file)
     if not response:
         LOGGER.error(error)
