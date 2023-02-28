@@ -167,9 +167,10 @@ class HeadlessBrowser:
         driver = webdriver.Chrome(options=options, executable_path=chrome_driver_name)
         driver.set_page_load_timeout(self.timeout)
 
-        if "Referer" in self.headers:
-            LOGGER.debug(f"visiting referer page '{self.headers['Referer']}'")
-            driver.get(self.headers["Referer"])
+        if "Referer" in self.headers and self.headers["Referer"]:
+            url = self.headers["Referer"]
+            LOGGER.debug(f"visiting referer page '{url}'")
+            driver.get(url)
             # bypass cloudflare test
             try:
                 WebDriverWait(driver, self.timeout).until(
