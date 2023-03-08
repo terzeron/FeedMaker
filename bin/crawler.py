@@ -209,6 +209,7 @@ class Crawler():
 
     def run(self, url, data=None, download_file: Path = None, allow_redirects: bool = True) -> Tuple[str, str, Optional[Dict[str, Any]]]:
         LOGGER.debug(f"# run(url={url}, data={data}, download_file={download_file}, allow_redirects={allow_redirects})")
+        error: str = ""
         headers: Dict[str, Any] = {}
         for i in range(self.num_retries):
             if self.render_js:
