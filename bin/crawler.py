@@ -72,8 +72,10 @@ class RequestsClient:
             try:
                 response = requests.get(self.headers['Referer'], headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, allow_redirects=allow_redirects)
             except requests.exceptions.ConnectionError as e:
-                LOGGER.warning(f"Warning: can't connect to '{url}' for temporary network error")
+                LOGGER.warning(f"<!-- Warning: can't connect to '{url}' for temporary network error -->")
+                LOGGER.warning("<!-- ")
                 LOGGER.warning(e)
+                LOGGER.warning(" -->")
                 return "", f"can't connect to '{url}' for temporary network error", {}, None
             except requests.exceptions.ReadTimeout as e:
                 LOGGER.warning(f"Warning: can't read data from '{url}' for timeout")

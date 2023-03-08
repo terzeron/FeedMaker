@@ -183,8 +183,10 @@ class HeadlessBrowser:
         try:
             driver.get(url)
         except urllib3.exceptions.ProtocolError as e:
-            LOGGER.warning(f"Warning: can't connect to '{url}' for temporary network error")
+            LOGGER.warning(f"<!-- Warning: can't connect to '{url}' for temporary network error -->")
+            LOGGER.warning("<!-- ")
             LOGGER.warning(e)
+            LOGGER.warning(" -->")
             LOGGER.debug("exiting driver")
             driver.close()
             driver.quit()
