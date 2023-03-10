@@ -54,11 +54,9 @@ class Notification:
 
         result = False
         if Notification.USE_LINE:
-            result = Notification._send_error_msg_to_line(msg, receiver=line_receiver_id,
-                                                          access_token=line_access_token)
+            result = Notification._send_error_msg_to_line(msg, receiver=line_receiver_id, access_token=line_access_token)
         if Notification.USE_EMAIL:
-            result = Notification._send_error_msg_to_mail(msg, subject=subject, receiver=receiver_email_address,
-                                                          sender=sender_email_address, smtp_host=smtp_host)
+            result = Notification._send_error_msg_to_mail(msg, subject=subject, receiver=receiver_email_address, sender=sender_email_address, smtp_host=smtp_host)
         return result
 
     @staticmethod
@@ -155,8 +153,7 @@ class Process:
             return "", f"Error in getting path of executable '{cmd}'"
         LOGGER.debug(new_cmd)
         try:
-            with subprocess.Popen(new_cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE) as p:
+            with subprocess.Popen(new_cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as p:
                 if input_data:
                     input_data = input_data.encode("utf-8")
                 result, error = p.communicate(input=input_data)
@@ -382,14 +379,14 @@ class Config:
         return value
 
     @staticmethod
-    def _get_str_config_value(config_node: Dict[str, Any], key: str, default: str = None) -> Optional[str]:
+    def _get_str_config_value(config_node: Dict[str, Any], key: str, default: Optional[str] = None) -> Optional[str]:
         value: Optional[str] = default
         if key in config_node:
             value = config_node[key]
         return value
 
     @staticmethod
-    def _get_int_config_value(config_node: Dict[str, Any], key: str, default: int = None) -> Optional[int]:
+    def _get_int_config_value(config_node: Dict[str, Any], key: str, default: Optional[int] = None) -> Optional[int]:
         value: Optional[int] = default
         if key in config_node:
             try:
@@ -399,7 +396,7 @@ class Config:
         return value
 
     @staticmethod
-    def _get_float_config_value(config_node: Dict[str, Any], key: str, default: float = None) -> Optional[float]:
+    def _get_float_config_value(config_node: Dict[str, Any], key: str, default: Optional[float] = None) -> Optional[float]:
         value: Optional[float] = default
         if key in config_node:
             try:
@@ -425,7 +422,7 @@ class Config:
         return result
 
     @staticmethod
-    def _get_config_value_list(config_node: Dict[str, Any], key: str, default: List[Any] = None) -> Optional[List[Any]]:
+    def _get_config_value_list(config_node: Dict[str, Any], key: str, default: List[Any] = []) -> Optional[List[Any]]:
         result = Config._traverse_config_node(config_node, key)
         if result:
             return result
@@ -459,8 +456,7 @@ class Config:
                     "disable_headless": Config._get_bool_config_value(collection_conf, "disable_headless", False),
                     "blob_to_dataurl": Config._get_bool_config_value(collection_conf, "blob_to_dataurl", False),
 
-                    "item_capture_script": Config._get_str_config_value(collection_conf, "item_capture_script",
-                                                                        "./capture_item_link_title.py"),
+                    "item_capture_script": Config._get_str_config_value(collection_conf, "item_capture_script", "./capture_item_link_title.py"),
                     "sort_field_pattern": Config._get_str_config_value(collection_conf, "sort_field_pattern"),
                     "user_agent": Config._get_str_config_value(collection_conf, "user_agent"),
                     "encoding": Config._get_str_config_value(collection_conf, "encoding", "utf-8"),
@@ -602,7 +598,7 @@ class Cache:
     DATA_IMAGE_PREFIX = "data:image"
 
     @staticmethod
-    def _get_cache_info_common_postfix(img_url: str, postfix: Union[str, int] = None, index: int = None) -> str:
+    def _get_cache_info_common_postfix(img_url: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None) -> str:
         LOGGER.debug(f"# get_cache_info_common(img_url={img_url[:30]}, postfix={postfix}, index={index})")
         postfix_str = ""
         if postfix and postfix != "":
@@ -617,14 +613,13 @@ class Cache:
         return URL.get_short_md5_name(img_url)
 
     @staticmethod
-    def get_cache_url(url_prefix: str, img_url: str, postfix: Union[str, int] = None, index: int = None) -> str:
+    def get_cache_url(url_prefix: str, img_url: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None) -> str:
         LOGGER.debug(
             f"# get_cache_url(url_prefix={url_prefix}, img_url={img_url[:30]}, postfix={postfix}, index={index})")
         return url_prefix + "/" + Cache._get_cache_info_common_postfix(img_url, postfix, index)
 
     @staticmethod
-    def get_cache_file_path(path_prefix: Path, img_url: str, postfix: Union[str, int] = None,
-                            index: int = None) -> Path:
+    def get_cache_file_path(path_prefix: Path, img_url: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None) -> Path:
         LOGGER.debug(
             f"# get_cache_file_name(path={path_prefix}, img_url={img_url[:30]}, postfix={postfix}, index={index})")
         return path_prefix / Cache._get_cache_info_common_postfix(img_url, postfix, index)

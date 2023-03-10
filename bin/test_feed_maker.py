@@ -43,8 +43,7 @@ class TestFeedMaker(unittest.TestCase):
         self.conf_file_path = self.feed_dir_path / "conf.json"
         shutil.copy(self.sample_conf_file_path, self.conf_file_path)
 
-        self.maker = FeedMaker(self.feed_dir_path, do_collect_by_force=False, do_collect_only=False,
-                               rss_file_path=self.rss_file_path)
+        self.maker = FeedMaker(self.feed_dir_path, do_collect_by_force=False, do_collect_only=False, rss_file_path=self.rss_file_path)
         self.config = Config(feed_dir_path=self.feed_dir_path)
         if not self.config:
             self.fail()
@@ -250,8 +249,7 @@ class TestFeedMaker(unittest.TestCase):
             old_feed_list = self.maker._read_old_feed_list_from_file()
             recent_feed_list = self.maker._get_recent_feed_list()
 
-            actual = self.maker._diff_feeds_and_make_htmls(recent_feed_list=recent_feed_list,
-                                                           old_feed_list=old_feed_list)
+            actual = self.maker._diff_feeds_and_make_htmls(recent_feed_list=recent_feed_list, old_feed_list=old_feed_list)
             # Do NOT inspect the content of recent feeds
             self.assertEqual(2, len(actual))
             expected = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화")]
@@ -264,8 +262,7 @@ class TestFeedMaker(unittest.TestCase):
         with patch.object(LOGGER, "info") as mock_info:
             old_feed_list = self.maker._read_old_feed_list_from_file()
             recent_feed_list = self.maker._get_recent_feed_list()
-            merged_feed_list = self.maker._diff_feeds_and_make_htmls(recent_feed_list=recent_feed_list,
-                                                                     old_feed_list=old_feed_list)
+            merged_feed_list = self.maker._diff_feeds_and_make_htmls(recent_feed_list=recent_feed_list, old_feed_list=old_feed_list)
 
             actual = self.maker._generate_rss_feed(merged_feed_list)
             self.assertTrue(actual)

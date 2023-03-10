@@ -114,9 +114,7 @@ class HeadlessBrowser:
         }());
         ''' % ID_OF_RENDERING_COMPLETION_IN_CONVERTING_BLOB
 
-    def __init__(self, dir_path: Path = Path.cwd(), headers: Dict[str, Any] = None,
-                 copy_images_from_canvas: bool = False, simulate_scrolling: bool = False,
-                 disable_headless: bool = False, blob_to_dataurl: bool = False, timeout: int = 60) -> None:
+    def __init__(self, dir_path: Path = Path.cwd(), headers: Dict[str, Any] = {}, copy_images_from_canvas: bool = False, simulate_scrolling: bool = False, disable_headless: bool = False, blob_to_dataurl: bool = False, timeout: int = 60) -> None:
         LOGGER.debug(
             f"# HeadlessBrowser(dir_path={dir_path}, headers={headers}, copy_images_from_canvas={copy_images_from_canvas}, simulate_scrolling={simulate_scrolling}, disable_headless={disable_headless}, blob_to_dataurl={blob_to_dataurl}, timeout={timeout})")
         self.dir_path: Path = dir_path
@@ -244,9 +242,7 @@ class HeadlessBrowser:
             LOGGER.debug("converting blob to dataurl")
             driver.execute_script(HeadlessBrowser.CONVERTING_BLOB_TO_DATAURL_SCRIPT)
 
-        for option, waiting_div_id in ((self.copy_images_from_canvas, HeadlessBrowser.ID_OF_RENDERING_COMPLETION_IN_CONVERTING_CANVAS),
-                                       (self.simulate_scrolling, HeadlessBrowser.ID_OF_RENDERING_COMPLETION_IN_SCROLLING),
-                                       (self.blob_to_dataurl, HeadlessBrowser.ID_OF_RENDERING_COMPLETION_IN_CONVERTING_BLOB)):
+        for option, waiting_div_id in ((self.copy_images_from_canvas, HeadlessBrowser.ID_OF_RENDERING_COMPLETION_IN_CONVERTING_CANVAS), (self.simulate_scrolling, HeadlessBrowser.ID_OF_RENDERING_COMPLETION_IN_SCROLLING), (self.blob_to_dataurl, HeadlessBrowser.ID_OF_RENDERING_COMPLETION_IN_CONVERTING_BLOB)):
             if option:
                 try:
                     WebDriverWait(driver, self.timeout).until(

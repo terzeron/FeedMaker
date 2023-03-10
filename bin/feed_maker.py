@@ -215,12 +215,7 @@ class FeedMaker:
         else:
             # 파일이 존재하지 않거나 크기가 작으니 다시 생성 시도
             conf = self.extraction_conf
-            crawler = Crawler(dir_path=self.feed_dir_path, render_js=conf["render_js"], method=Method.GET,
-                              headers=conf["header_list"], timeout=conf["timeout"], num_retries=conf["num_retries"],
-                              encoding=conf["encoding"], verify_ssl=conf["verify_ssl"],
-                              copy_images_from_canvas=conf["copy_images_from_canvas"],
-                              simulate_scrolling=conf["simulate_scrolling"], disable_headless=conf["disable_headless"],
-                              blob_to_dataurl=conf["blob_to_dataurl"])
+            crawler = Crawler(dir_path=self.feed_dir_path, render_js=conf["render_js"], method=Method.GET, headers=conf["header_list"], timeout=conf["timeout"], num_retries=conf["num_retries"], encoding=conf["encoding"], verify_ssl=conf["verify_ssl"], copy_images_from_canvas=conf["copy_images_from_canvas"], simulate_scrolling=conf["simulate_scrolling"], disable_headless=conf["disable_headless"], blob_to_dataurl=conf["blob_to_dataurl"])
             option_str = Crawler.get_option_str(conf)
             crawler_cmd = f"crawler.py -f '{self.feed_dir_path}' {option_str} '{item_url}'"
             LOGGER.debug(f"cmd={crawler_cmd}")
@@ -357,8 +352,7 @@ class FeedMaker:
 
         # 전체 리스트 중 절반 이상의 정렬필드를 검출하지 못하면 경고
         if matched_count > len(old_feed_list) / 2:
-            sorted_feed_list: List[Dict[str, Any]] = sorted(feed_id_sort_field_list,
-                                                            key=self._cmp_to_key(self._cmp_int_or_str))
+            sorted_feed_list: List[Dict[str, Any]] = sorted(feed_id_sort_field_list, key=self._cmp_to_key(self._cmp_int_or_str))
         else:
             LOGGER.warning(f"Warning: can't match the pattern /{self.collection_conf['sort_field_pattern']}/")
             sorted_feed_list = feed_id_sort_field_list

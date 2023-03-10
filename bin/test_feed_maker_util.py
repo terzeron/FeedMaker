@@ -42,8 +42,7 @@ class NotificationTest(unittest.TestCase):
     def test_send_error_msg_to_mail(self):
         msg = "This is a message from python unittest"
         subject = "email notification test"
-        actual = Notification._send_error_msg_to_mail(msg, subject, self.receiver_address, self.sender_address,
-                                                      self.smtp_host)
+        actual = Notification._send_error_msg_to_mail(msg, subject, self.receiver_address, self.sender_address, self.smtp_host)
         self.assertTrue(actual)
 
 
@@ -300,8 +299,7 @@ class HTMLExtractorTest(unittest.TestCase):
         self.assertEqual((None, "img", 2, "", True), actual)
 
     def test_get_node_with_path(self):
-        soup = BeautifulSoup('<html><body><div>hello</div><div id="ct"><span>text</span></div></body></html>',
-                             'html.parser')
+        soup = BeautifulSoup('<html><body><div>hello</div><div id="ct"><span>text</span></div></body></html>', 'html.parser')
 
         target_node = HTMLExtractor.get_node_with_path(soup.body, '//span')
         if target_node:
@@ -511,7 +509,7 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual([], actual)
 
         actual = self.config._get_config_value_list(collection_conf, "header_list")
-        self.assertIsNone(actual)
+        self.assertEqual([], actual)
 
     def test_get_global_config(self):
         config = self.global_conf
@@ -741,8 +739,7 @@ class URLTest(unittest.TestCase):
         self.assertEqual(URL.get_short_md5_name("https://terzeron.com"), "b8025d0")
 
     def test_encode(self):
-        self.assertEqual(URL.encode('http://5rs-wc22.com/식극의-소마/post/134225?a=테스트b'),
-                         'http://5rs-wc22.com/%EC%8B%9D%EA%B7%B9%EC%9D%98-%EC%86%8C%EB%A7%88/post/134225?a=%ED%85%8C%EC%8A%A4%ED%8A%B8b')
+        self.assertEqual(URL.encode('http://5rs-wc22.com/식극의-소마/post/134225?a=테스트b'), 'http://5rs-wc22.com/%EC%8B%9D%EA%B7%B9%EC%9D%98-%EC%86%8C%EB%A7%88/post/134225?a=%ED%85%8C%EC%8A%A4%ED%8A%B8b')
 
 
 class CacheTest(unittest.TestCase):

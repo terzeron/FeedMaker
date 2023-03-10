@@ -19,7 +19,7 @@ LOGGER = logging.getLogger()
 
 
 class Extractor:
-    def extract_content(self, extraction_conf: Dict[str, Any], item_url: str, input_data: str = None) -> Optional[str]:
+    def extract_content(self, extraction_conf: Dict[str, Any], item_url: str, input_data: str = "") -> Optional[str]:
         LOGGER.debug(f"# extract_content(extraction_conf={extraction_conf}, item_url={item_url})")
 
         # configuration
