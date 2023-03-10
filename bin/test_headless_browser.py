@@ -30,9 +30,9 @@ class TestHeadlessBrowser(unittest.TestCase):
 
     def test_make_request(self):
         browser = HeadlessBrowser()
-        url = "https://chromedriver.chromium.org/downloads/version-selection"
+        url = "https://terzeron.com/crawler/js_rendering.html"
         actual = browser.make_request(url)
-        self.assertIn('Version Selection', actual)
+        self.assertIn('<div><span>Hello, World!</span></div>', actual)
         del browser
 
     def test_headless_browser_with_copy_images_from_canvas(self):

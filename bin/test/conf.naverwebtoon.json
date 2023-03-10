@@ -6,7 +6,8 @@
         "https://comic.naver.com/webtoon/list?titleId=725586"
       ],
       "sort_field_pattern": "no=(\\d+)\\t",
-      "unit_size_per_day": 1
+      "unit_size_per_day": 1,
+      "render_js": true
     },
     "extraction": {
       "element_class_list": [

@@ -13,7 +13,7 @@ from typing import Dict, Tuple, List, Any, Set
 from filelock import FileLock, Timeout
 from feed_maker_util import Config, Process, Notification
 from feed_maker import FeedMaker
-from problem_checker import ProblemChecker
+from problem_manager import ProblemManager
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
 LOGGER = logging.getLogger()
@@ -323,14 +323,14 @@ def main() -> int:
         result = runner.make_single_feed(feed_dir_path, options)
 
     LOGGER.info("# Checking problems and making report")
-    checker = ProblemChecker()
-    checker.load_htaccess_file()
-    checker.load_all_config_rss_files()
-    checker.load_all_public_feed_files()
-    checker.load_all_progress_info_from_files()
-    checker.load_all_httpd_access_files()
-    checker.add_html_files_in_path_to_info(feed_dir_path)
-    checker.merge_all_feeds_status()
+    problem_manager = ProblemManager()
+    problem_manager.load_htaccess_file()
+    problem_manager.load_all_config_rss_files()
+    problem_manager.load_all_public_feed_files()
+    problem_manager.load_all_progress_info_from_files()
+    problem_manager.load_all_httpd_access_files()
+    problem_manager.add_html_files_in_path_to_info(feed_dir_path)
+    problem_manager.merge_all_feeds_status()
 
     return 0 if result else -1
 

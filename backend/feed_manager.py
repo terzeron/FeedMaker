@@ -13,7 +13,7 @@ from typing import List, Dict, Any, Tuple, Optional
 from functools import cmp_to_key
 from run import FeedMakerRunner
 from feed_maker_util import Htaccess, Process, Data
-from problem_checker import ProblemChecker
+from problem_manager import ProblemManager
 from search_manga_site import SearchManager
 
 logging.config.fileConfig("logging.conf", disable_existing_loggers=False)
@@ -31,8 +31,8 @@ class FeedManager:
         self.group_name_feed_title_list_map: Dict[str, List[Dict[str, str]]] = {}
         # feed_name -> configuration
         self.feed_name_config_map: Dict[str, Any] = {}
-        self.checker = ProblemChecker()
-        self.checker.load_all()
+        self.problem_manager = ProblemManager()
+        self.problem_manager.load_all()
 
     def _git_add(self, feed_dir_path: Path) -> Tuple[str, Optional[str]]:
         feed_name = feed_dir_path.name
@@ -117,23 +117,24 @@ class FeedManager:
 
     def get_problems_status_info(self) -> Tuple[Dict[str, Dict[str, Any]], str]:
         LOGGER.debug("# get_problems_status_info()")
-        return self.checker.feed_alias_status_info_map, ""
+        feed_alias_status_info = self.problem_manager.get_feed_alias_status_info_map()
+        return feed_alias_status_info, ""
 
     def get_problems_progress_info(self) -> Tuple[Dict[str, Dict[str, Any]], str]:
         LOGGER.debug("# get_problems_progress_info()")
-        return self.checker.feed_name_progress_info_map, ""
+        return self.problem_manager.get_feed_name_progress_info_map(), ""
 
     def get_problems_public_feed_info(self) -> Tuple[Dict[str, Dict[str, Any]], str]:
         LOGGER.debug("# get_problems_public_feed_info()")
-        return self.checker.public_feed_info_map, ""
+        return self.problem_manager.get_feed_name_public_feed_info_map(), ""
 
     def get_problems_html_info(self) -> Tuple[Dict[str, Any], str]:
         LOGGER.debug("# get_problems_html_info()")
-        return {"html_file_size_map": self.checker.html_file_size_map, "html_file_with_many_image_tag_map": self.checker.html_file_with_many_image_tag_map, "html_file_without_image_tag_map": self.checker.html_file_without_image_tag_map, "html_file_image_not_found_map": self.checker.html_file_image_not_found_map}, ""
+        return {"html_file_size_map": self.problem_manager.get_html_file_size_map(), "html_file_with_many_image_tag_map": self.problem_manager.get_html_file_with_many_image_tag_map(), "html_file_without_image_tag_map": self.problem_manager.get_html_file_without_image_tag_map(), "html_file_image_not_found_map": self.problem_manager.get_html_file_image_not_found_map()}, ""
 
     def get_problems_element_info(self) -> Tuple[Dict[str, Any], str]:
         LOGGER.debug("# get_problems_element_info()")
-        return {"feed_name_list_url_count_map": self.checker.feed_name_list_url_count_map, "element_name_count_map": self.checker.element_name_count_map}, ""
+        return {"feed_name_list_url_count_map": self.problem_manager.get_feed_name_list_url_count_map(), "element_name_count_map": self.problem_manager.get_element_name_count_map()}, ""
 
     @staticmethod
     def _determine_keyword_in_config_item(keyword: str, config: Dict[str, Any], *args):
@@ -160,8 +161,8 @@ class FeedManager:
                     match_count_in_description += 1
 
             if match_count_in_name == len(keyword_list) or match_count_in_title == len(keyword_list) or match_count_in_description == len(keyword_list):
-                group_name = self.checker.feed_name_group_map.get(feed_name, "")
-                title = self.checker.feed_name_title_map.get(feed_name, "")
+                group_name = self.problem_manager.feed_name_group_map.get(feed_name, "")
+                title = self.problem_manager.feed_name_title_map.get(feed_name, "")
                 result_list.append({'group_name': group_name, 'feed_name': feed_name, 'feed_title': title})
 
         return result_list, ""
@@ -255,12 +256,12 @@ class FeedManager:
                         link, _ = line.split("\t")
                         result_list.append(link)
             result_list = Data.remove_duplicates(result_list)
-            collection_info = {"collect_date": ProblemChecker.convert_datetime_to_str(last_collect_date), "count": len(result_list)}
+            collection_info = {"collect_date": ProblemManager.convert_datetime_to_str(last_collect_date), "count": len(result_list)}
         feed_info = {
             "config": self.feed_name_config_map.get(feed_name, {}),
             "collection_info": collection_info,
-            "public_feed_info": self.checker.public_feed_info_map.get(feed_name, {}),
-            "progress_info": self.checker.feed_name_progress_info_map.get(feed_name, {}),
+            "public_feed_info": self.problem_manager.public_feed_info_map.get(feed_name, {}),
+            "progress_info": self.problem_manager.feed_name_progress_info_map.get(feed_name, {}),
         }
         return feed_info, ""
 
@@ -282,7 +283,7 @@ class FeedManager:
 
         # re-scan feeds by group
         self.scan_all_feeds()
-        self.checker.load_all_config_rss_files()
+        self.problem_manager.load_all_config_rss_files()
         return True, ""
 
     def run(self, group_name: str, feed_name: str, alias: str) -> Tuple[bool, str]:
@@ -311,13 +312,13 @@ class FeedManager:
             else:
                 return False, "invalid format of configuration file"
 
-        self.checker.load_htaccess_file()
-        self.checker.load_all_config_rss_files()
-        self.checker.load_all_public_feed_files()
-        self.checker.load_all_progress_info_from_files()
-        self.checker.load_all_httpd_access_files()
-        self.checker.add_html_files_in_path_to_info(feed_dir_path)
-        self.checker.merge_all_feeds_status()
+        self.problem_manager.load_htaccess_file()
+        self.problem_manager.load_all_config_rss_files()
+        self.problem_manager.load_all_public_feed_files()
+        self.problem_manager.load_all_progress_info_from_files()
+        self.problem_manager.load_all_httpd_access_files()
+        self.problem_manager.add_html_files_in_path_to_info(feed_dir_path)
+        self.problem_manager.merge_all_feeds_status()
         return True, ""
 
     def _remove_public_img_pdf_feed_files(self, feed_name: str) -> None:
@@ -349,22 +350,22 @@ class FeedManager:
         html_dir_path = feed_dir_path / "html"
         if html_dir_path.is_dir():
             rmtree(html_dir_path)
-        self.checker.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
-        self.checker.merge_all_feeds_status()
+        self.problem_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
+        self.problem_manager.merge_all_feeds_status()
 
     def remove_html_file(self, group_name: str, feed_name: str, html_file_name: str) -> None:
         LOGGER.debug(f"# remove_html_file({group_name}, {feed_name})")
         html_file_path = self.work_dir / group_name / feed_name / "html" / html_file_name
         html_file_path.unlink(missing_ok=True)
-        self.checker.remove_html_file_in_path_from_info("file_path", html_file_path)
-        self.checker.merge_all_feeds_status()
+        self.problem_manager.remove_html_file_in_path_from_info("file_path", html_file_path)
+        self.problem_manager.merge_all_feeds_status()
 
     def remove_public_feed(self, feed_name: str) -> None:
         LOGGER.debug(f"# remove_public_feed({feed_name})")
         feed_path = self.public_feed_dir / (feed_name + ".xml")
         feed_path.unlink(missing_ok=True)
-        self.checker.load_all_public_feed_files()
-        self.checker.merge_all_feeds_status()
+        self.problem_manager.load_all_public_feed_files()
+        self.problem_manager.merge_all_feeds_status()
 
     def remove_feed(self, group_name: str, feed_name: str) -> Tuple[bool, str]:
         LOGGER.debug(f"# remove_feed({group_name}, {feed_name})")
@@ -390,13 +391,13 @@ class FeedManager:
 
         # re-scan feeds by group
         self.scan_all_feeds()
-        self.checker.load_htaccess_file()
-        self.checker.load_all_config_rss_files()
-        self.checker.load_all_public_feed_files()
-        self.checker.load_all_progress_info_from_files()
-        self.checker.load_all_httpd_access_files()
-        self.checker.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
-        self.checker.merge_all_feeds_status()
+        self.problem_manager.load_htaccess_file()
+        self.problem_manager.load_all_config_rss_files()
+        self.problem_manager.load_all_public_feed_files()
+        self.problem_manager.load_all_progress_info_from_files()
+        self.problem_manager.load_all_httpd_access_files()
+        self.problem_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
+        self.problem_manager.merge_all_feeds_status()
         return True, ""
 
     def remove_group(self, group_name: str) -> Tuple[bool, str]:
@@ -419,13 +420,13 @@ class FeedManager:
 
         # re-scan feeds by group
         self.scan_all_feeds()
-        self.checker.load_htaccess_file()
-        self.checker.load_all_config_rss_files()
-        self.checker.load_all_public_feed_files()
-        self.checker.load_all_progress_info_from_files()
-        self.checker.load_all_httpd_access_files()
-        self.checker.remove_html_file_in_path_from_info("group_dir_path", group_dir_path)
-        self.checker.merge_all_feeds_status()
+        self.problem_manager.load_htaccess_file()
+        self.problem_manager.load_all_config_rss_files()
+        self.problem_manager.load_all_public_feed_files()
+        self.problem_manager.load_all_progress_info_from_files()
+        self.problem_manager.load_all_httpd_access_files()
+        self.problem_manager.remove_html_file_in_path_from_info("group_dir_path", group_dir_path)
+        self.problem_manager.merge_all_feeds_status()
         return True, ""
 
     def toggle_feed(self, group_name: str, feed_name: str) -> Tuple[str, str]:
@@ -446,14 +447,14 @@ class FeedManager:
         # re-scan feeds by group
         self._scan_feeds_by_group(group_name)
 
-        self.checker.load_htaccess_file()
-        self.checker.load_all_config_rss_files()
-        self.checker.load_all_public_feed_files()
-        self.checker.load_all_progress_info_from_files()
-        self.checker.load_all_httpd_access_files()
-        self.checker.add_html_files_in_path_to_info(new_feed_dir_path)
-        self.checker.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
-        self.checker.merge_all_feeds_status()
+        self.problem_manager.load_htaccess_file()
+        self.problem_manager.load_all_config_rss_files()
+        self.problem_manager.load_all_public_feed_files()
+        self.problem_manager.load_all_progress_info_from_files()
+        self.problem_manager.load_all_httpd_access_files()
+        self.problem_manager.add_html_files_in_path_to_info(new_feed_dir_path)
+        self.problem_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
+        self.problem_manager.merge_all_feeds_status()
         return new_feed_name, ""
 
     def toggle_group(self, group_name: str) -> Tuple[str, str]:
@@ -473,17 +474,17 @@ class FeedManager:
 
         # re-scan feeds by group
         self.scan_all_feeds()
-        self.checker.load_htaccess_file()
-        self.checker.load_all_config_rss_files()
-        self.checker.load_all_public_feed_files()
-        self.checker.load_all_progress_info_from_files()
-        self.checker.load_all_httpd_access_files()
+        self.problem_manager.load_htaccess_file()
+        self.problem_manager.load_all_config_rss_files()
+        self.problem_manager.load_all_public_feed_files()
+        self.problem_manager.load_all_progress_info_from_files()
+        self.problem_manager.load_all_httpd_access_files()
         if group_name.startswith("_"):
             for feed_dir_path in new_group_dir_path.iterdir():
-                self.checker.add_html_files_in_path_to_info(feed_dir_path)
+                self.problem_manager.add_html_files_in_path_to_info(feed_dir_path)
         else:
-            self.checker.remove_html_file_in_path_from_info("group_dir_path", group_dir_path)
-        self.checker.merge_all_feeds_status()
+            self.problem_manager.remove_html_file_in_path_from_info("group_dir_path", group_dir_path)
+        self.problem_manager.merge_all_feeds_status()
         return new_group_name, ""
 
     @staticmethod
@@ -499,8 +500,8 @@ class FeedManager:
         result, error = Htaccess.remove_alias(group_name, feed_name)
         if not result:
             return False, error
-        self.checker.load_htaccess_file()
-        self.checker.merge_all_feeds_status()
+        self.problem_manager.load_htaccess_file()
+        self.problem_manager.merge_all_feeds_status()
         return True, ""
 
     def rename_alias(self, group_name: str, feed_name: str, new_alias: str):
@@ -508,8 +509,8 @@ class FeedManager:
         result, error = Htaccess.set_alias(group_name, feed_name, new_alias)
         if not result:
             return False, error
-        self.checker.load_htaccess_file()
-        self.checker.merge_all_feeds_status()
+        self.problem_manager.load_htaccess_file()
+        self.problem_manager.merge_all_feeds_status()
         return True, ""
 
     @staticmethod
