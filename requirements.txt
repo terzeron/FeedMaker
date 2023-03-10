@@ -11,7 +11,7 @@ platformdirs==3.0.0
 protobuf==3.20.3
 pylint==2.16.2
 pytz-deprecation-shim==0.1.0.post0
-setuptools==49.2.1
+setuptools==65.5.1
 six==1.15.0
 tomli==2.0.1
 tomlkit==0.11.6
