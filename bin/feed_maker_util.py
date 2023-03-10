@@ -579,7 +579,10 @@ class URL:
     # http://naver.com/api/view.nhn?page_no=3 + # => http://naver.com/api/view.nhn?page_no=3
     @staticmethod
     def concatenate_url(full_url: str, url2: str) -> str:
-        return urljoin(full_url, url2)
+        result = urljoin(full_url, url2)
+        if url2.endswith("?"):
+            result += "?"
+        return result
 
     @staticmethod
     def get_short_md5_name(content: str) -> str:

@@ -254,7 +254,7 @@ class FeedMaker:
 
             LOGGER.debug(f"writing to '{html_file_path}'")
             with html_file_path.open("w", encoding="utf-8") as outfile:
-                outfile.write(result)
+                outfile.write(str(content))
 
             if html_file_path.is_file():
                 size = html_file_path.stat().st_size

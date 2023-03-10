@@ -50,7 +50,10 @@ class NewListCollector:
 
         result_list: List[Tuple[str, str]] = []
         conf = self.collection_conf
-        crawler = Crawler(dir_path=self.feed_dir_path, render_js=conf["render_js"], method=Method.GET, headers=conf["header_list"], timeout=conf["timeout"], num_retries=conf["num_retries"], encoding=conf["encoding"], verify_ssl=conf["verify_ssl"], copy_images_from_canvas=conf["copy_images_from_canvas"], simulate_scrolling=conf["simulate_scrolling"], disable_headless=conf["disable_headless"], blob_to_dataurl=conf["blob_to_dataurl"])
+        headers = dict(conf["header_list"])
+        if "referer" in conf:
+            headers["Referer"] = conf["referer"]
+        crawler = Crawler(dir_path=self.feed_dir_path, render_js=conf["render_js"], method=Method.GET, headers=headers, timeout=conf["timeout"], num_retries=conf["num_retries"], encoding=conf["encoding"], verify_ssl=conf["verify_ssl"], copy_images_from_canvas=conf["copy_images_from_canvas"], simulate_scrolling=conf["simulate_scrolling"], disable_headless=conf["disable_headless"], blob_to_dataurl=conf["blob_to_dataurl"])
         option_str = Crawler.get_option_str(self.collection_conf)
         for url in conf["list_url_list"]:
             crawler_cmd = f"crawler.py -f '{self.feed_dir_path}' {option_str} '{url}'"

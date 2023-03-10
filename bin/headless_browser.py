@@ -115,8 +115,7 @@ class HeadlessBrowser:
         ''' % ID_OF_RENDERING_COMPLETION_IN_CONVERTING_BLOB
 
     def __init__(self, dir_path: Path = Path.cwd(), headers: Dict[str, Any] = {}, copy_images_from_canvas: bool = False, simulate_scrolling: bool = False, disable_headless: bool = False, blob_to_dataurl: bool = False, timeout: int = 60) -> None:
-        LOGGER.debug(
-            f"# HeadlessBrowser(dir_path={dir_path}, headers={headers}, copy_images_from_canvas={copy_images_from_canvas}, simulate_scrolling={simulate_scrolling}, disable_headless={disable_headless}, blob_to_dataurl={blob_to_dataurl}, timeout={timeout})")
+        LOGGER.debug(f"# HeadlessBrowser(dir_path={dir_path}, headers={headers}, copy_images_from_canvas={copy_images_from_canvas}, simulate_scrolling={simulate_scrolling}, disable_headless={disable_headless}, blob_to_dataurl={blob_to_dataurl}, timeout={timeout})")
         self.dir_path: Path = dir_path
         self.headers: Dict[str, str] = headers or {}
         if "User-Agent" not in self.headers:
@@ -166,9 +165,10 @@ class HeadlessBrowser:
         driver = webdriver.Chrome(options=options, executable_path=chrome_driver_name)
         driver.set_page_load_timeout(self.timeout)
 
-        if "Referer" in self.headers:
-            LOGGER.debug(f"visiting referer page '{self.headers['Referer']}'")
-            driver.get(self.headers["Referer"])
+        if "Referer" in self.headers and self.headers["Referer"]:
+            url = self.headers["Referer"]
+            LOGGER.debug(f"visiting referer page '{url}'")
+            driver.get(url)
             # bypass cloudflare test
             try:
                 WebDriverWait(driver, self.timeout).until(
@@ -181,29 +181,29 @@ class HeadlessBrowser:
         try:
             driver.get(url)
         except urllib3.exceptions.ProtocolError as e:
-            LOGGER.warning(f"Warning: can't connect to '{url}' for temporary network error")
-            LOGGER.warning(e)
+            LOGGER.warning(f"<!-- Warning: can't connect to '{url}' for temporary network error -->")
+            LOGGER.warning("<!-- ", e, " -->")
             LOGGER.debug("exiting driver")
             driver.close()
             driver.quit()
             return ""
         except urllib3.exceptions.NewConnectionError as e:
-            LOGGER.warning(f"Warning: can't connect to '{url}' for temporary network error")
-            LOGGER.warning(e)
+            LOGGER.warning(f"<!-- Warning: can't connect to '{url}' for temporary network error -->")
+            LOGGER.warning("<!-- ", e, " -->")
             LOGGER.debug("exiting driver")
             driver.close()
             driver.quit()
             return ""
         except selenium.common.exceptions.TimeoutException as e:
-            LOGGER.warning(f"Warning: can't can't read data from '{url}' for timeout")
-            LOGGER.warning(e)
+            LOGGER.warning(f"<!-- Warning: can't can't read data from '{url}' for timeout -->")
+            LOGGER.warning("<!-- ", e, " -->")
             LOGGER.debug("exiting driver")
             driver.close()
             driver.quit()
             return ""
         except selenium.common.exceptions.WebDriverException as e:
-            LOGGER.warning(f"Warning: can't connect to '{url}' for temporary network error")
-            LOGGER.warning(e)
+            LOGGER.warning(f"<!-- Warning: can't connect to '{url}' for temporary network error -->")
+            LOGGER.warning("<!-- ", e, " -->")
             LOGGER.debug("exiting driver")
             driver.close()
             driver.quit()
