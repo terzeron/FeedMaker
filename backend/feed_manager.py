@@ -260,8 +260,8 @@ class FeedManager:
         feed_info = {
             "config": self.feed_name_config_map.get(feed_name, {}),
             "collection_info": collection_info,
-            "public_feed_info": self.problem_manager.public_feed_info_map.get(feed_name, {}),
-            "progress_info": self.problem_manager.feed_name_progress_info_map.get(feed_name, {}),
+            "public_feed_info": self.problem_manager.get_feed_name_public_feed_info_map().get(feed_name, {}),
+            "progress_info": self.problem_manager.get_feed_name_progress_info_map().get(feed_name, {}),
         }
         return feed_info, ""
 

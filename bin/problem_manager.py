@@ -571,6 +571,7 @@ class ProblemManager:
         self.load_all_progress_info_from_files()
         self.load_all_httpd_access_files()
         self.load_all_html_files()
+        print("* All information is loaded.")
         return 0
 
 

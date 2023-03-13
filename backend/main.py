@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
+import sys
 import os
 import logging
 import logging.config
@@ -29,6 +30,13 @@ app.add_middleware(
 
 feed_manager = FeedManager()
 feed_manager.scan_all_feeds()
+
+
+def handle_exception(exc_type, exc_value, exc_traceback):
+    LOGGER.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+
+sys.excepthook = handle_exception
 
 
 @app.get("/exec_result")
