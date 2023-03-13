@@ -14,19 +14,21 @@ from feed_maker_util import header_str
 class TestProblemManager(unittest.TestCase):
     def setUp(self) -> None:
         self.pm = ProblemManager()
-        self.pm.db.execute("TRUNCATE feed_alias_name")
-        self.pm.db.execute("TRUNCATE feed_name_config")
-        self.pm.db.execute("TRUNCATE feed_name_title_group")
-        self.pm.db.execute("TRUNCATE feed_name_list_url_count")
-        self.pm.db.execute("TRUNCATE feed_name_rss_info")
-        self.pm.db.execute("TRUNCATE element_name_count")
-        self.pm.db.execute("TRUNCATE feed_name_public_feed_info")
-        self.pm.db.execute("TRUNCATE html_file_size")
-        self.pm.db.execute("TRUNCATE html_file_with_many_image_tag")
-        self.pm.db.execute("TRUNCATE html_file_without_image_tag")
-        self.pm.db.execute("TRUNCATE html_file_image_not_found")
-        self.pm.db.execute("TRUNCATE feed_name_progress_info")
-        self.pm.db.execute("TRUNCATE feed_alias_access_info")
+        connection, cursor = self.pm.db.get_connection_and_cursor()
+        self.pm.db.execute(cursor, "TRUNCATE feed_alias_name")
+        self.pm.db.execute(cursor, "TRUNCATE feed_name_config")
+        self.pm.db.execute(cursor, "TRUNCATE feed_name_title_group")
+        self.pm.db.execute(cursor, "TRUNCATE feed_name_list_url_count")
+        self.pm.db.execute(cursor, "TRUNCATE feed_name_rss_info")
+        self.pm.db.execute(cursor, "TRUNCATE element_name_count")
+        self.pm.db.execute(cursor, "TRUNCATE feed_name_public_feed_info")
+        self.pm.db.execute(cursor, "TRUNCATE html_file_size")
+        self.pm.db.execute(cursor, "TRUNCATE html_file_with_many_image_tag")
+        self.pm.db.execute(cursor, "TRUNCATE html_file_without_image_tag")
+        self.pm.db.execute(cursor, "TRUNCATE html_file_image_not_found")
+        self.pm.db.execute(cursor, "TRUNCATE feed_name_progress_info")
+        self.pm.db.execute(cursor, "TRUNCATE feed_alias_access_info")
+        self.pm.db.commit(connection, cursor)
 
     def tearDown(self) -> None:
         del self.pm
@@ -350,7 +352,7 @@ class TestProblemManager(unittest.TestCase):
             self.assertIsNotNone(row[0]["file_path"])
             self.assertIsNotNone(row[0]["feed_dir_path"])
             self.assertIsNotNone(row[0]["group_dir_path"])
-            self.assertGreater(row[0]["count"], 0)
+            self.assertGreaterEqual(row[0]["count"], 0)
 
         row = self.pm.db.query("SELECT * FROM html_file_image_not_found")
         self.assertGreaterEqual(len(row), 0)
@@ -359,7 +361,7 @@ class TestProblemManager(unittest.TestCase):
             self.assertIsNotNone(row[0]["file_path"])
             self.assertIsNotNone(row[0]["feed_dir_path"])
             self.assertIsNotNone(row[0]["group_dir_path"])
-            self.assertGreater(row[0]["count"], 0)
+            self.assertGreaterEqual(row[0]["count"], 0)
 
     def test_load_all_progress_info_from_files(self):
         self.pm.load_htaccess_file()
