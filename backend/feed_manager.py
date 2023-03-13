@@ -318,7 +318,6 @@ class FeedManager:
         self.problem_manager.load_all_progress_info_from_files()
         self.problem_manager.load_all_httpd_access_files()
         self.problem_manager.add_html_files_in_path_to_info(feed_dir_path)
-        self.problem_manager.merge_all_feeds_status()
         return True, ""
 
     def _remove_public_img_pdf_feed_files(self, feed_name: str) -> None:
@@ -351,21 +350,18 @@ class FeedManager:
         if html_dir_path.is_dir():
             rmtree(html_dir_path)
         self.problem_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
-        self.problem_manager.merge_all_feeds_status()
 
     def remove_html_file(self, group_name: str, feed_name: str, html_file_name: str) -> None:
         LOGGER.debug(f"# remove_html_file({group_name}, {feed_name})")
         html_file_path = self.work_dir / group_name / feed_name / "html" / html_file_name
         html_file_path.unlink(missing_ok=True)
         self.problem_manager.remove_html_file_in_path_from_info("file_path", html_file_path)
-        self.problem_manager.merge_all_feeds_status()
 
     def remove_public_feed(self, feed_name: str) -> None:
         LOGGER.debug(f"# remove_public_feed({feed_name})")
         feed_path = self.public_feed_dir / (feed_name + ".xml")
         feed_path.unlink(missing_ok=True)
         self.problem_manager.load_all_public_feed_files()
-        self.problem_manager.merge_all_feeds_status()
 
     def remove_feed(self, group_name: str, feed_name: str) -> Tuple[bool, str]:
         LOGGER.debug(f"# remove_feed({group_name}, {feed_name})")
@@ -397,7 +393,6 @@ class FeedManager:
         self.problem_manager.load_all_progress_info_from_files()
         self.problem_manager.load_all_httpd_access_files()
         self.problem_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
-        self.problem_manager.merge_all_feeds_status()
         return True, ""
 
     def remove_group(self, group_name: str) -> Tuple[bool, str]:
@@ -426,7 +421,6 @@ class FeedManager:
         self.problem_manager.load_all_progress_info_from_files()
         self.problem_manager.load_all_httpd_access_files()
         self.problem_manager.remove_html_file_in_path_from_info("group_dir_path", group_dir_path)
-        self.problem_manager.merge_all_feeds_status()
         return True, ""
 
     def toggle_feed(self, group_name: str, feed_name: str) -> Tuple[str, str]:
@@ -454,7 +448,6 @@ class FeedManager:
         self.problem_manager.load_all_httpd_access_files()
         self.problem_manager.add_html_files_in_path_to_info(new_feed_dir_path)
         self.problem_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
-        self.problem_manager.merge_all_feeds_status()
         return new_feed_name, ""
 
     def toggle_group(self, group_name: str) -> Tuple[str, str]:
@@ -484,7 +477,6 @@ class FeedManager:
                 self.problem_manager.add_html_files_in_path_to_info(feed_dir_path)
         else:
             self.problem_manager.remove_html_file_in_path_from_info("group_dir_path", group_dir_path)
-        self.problem_manager.merge_all_feeds_status()
         return new_group_name, ""
 
     @staticmethod
@@ -501,7 +493,6 @@ class FeedManager:
         if not result:
             return False, error
         self.problem_manager.load_htaccess_file()
-        self.problem_manager.merge_all_feeds_status()
         return True, ""
 
     def rename_alias(self, group_name: str, feed_name: str, new_alias: str):
@@ -510,7 +501,6 @@ class FeedManager:
         if not result:
             return False, error
         self.problem_manager.load_htaccess_file()
-        self.problem_manager.merge_all_feeds_status()
         return True, ""
 
     @staticmethod

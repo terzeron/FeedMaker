@@ -330,7 +330,6 @@ def main() -> int:
     problem_manager.load_all_progress_info_from_files()
     problem_manager.load_all_httpd_access_files()
     problem_manager.add_html_files_in_path_to_info(feed_dir_path)
-    problem_manager.merge_all_feeds_status()
 
     return 0 if result else -1
 
