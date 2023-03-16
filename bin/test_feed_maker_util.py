@@ -13,37 +13,10 @@ from datetime import datetime
 from pathlib import Path
 import subprocess
 from bs4 import BeautifulSoup
-from feed_maker_util import Notification, Config, URL, HTMLExtractor, Datetime, Process, IO, Data, Cache, Htaccess
+from feed_maker_util import Config, URL, HTMLExtractor, Datetime, Process, IO, Data, Cache, Htaccess
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
 LOGGER = logging.getLogger()
-
-
-class NotificationTest(unittest.TestCase):
-    def setUp(self):
-        global_conf = Config.get_global_config()
-        self.receiver_id = global_conf["line_receiver_id"]
-        self.access_token = global_conf["line_access_token"]
-        self.sender_address = global_conf["sender_email_address"]
-        self.receiver_address = global_conf["receiver_email_address"]
-        self.smtp_host = global_conf["smtp_host"]
-
-    def test_send_error_msg(self):
-        msg = "This is a message from python unittest"
-        subject = "email notification test"
-        actual = Notification.send_error_msg(msg, subject)
-        self.assertTrue(actual)
-
-    def test_send_error_msg_to_line(self):
-        msg = "test message"
-        actual = Notification._send_error_msg_to_line(msg, self.receiver_id, self.access_token)
-        self.assertTrue(actual)
-
-    def test_send_error_msg_to_mail(self):
-        msg = "This is a message from python unittest"
-        subject = "email notification test"
-        actual = Notification._send_error_msg_to_mail(msg, subject, self.receiver_address, self.sender_address, self.smtp_host)
-        self.assertTrue(actual)
 
 
 class DataTest(unittest.TestCase):

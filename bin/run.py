@@ -11,7 +11,8 @@ import getopt
 from pathlib import Path
 from typing import Dict, Tuple, List, Any, Set
 from filelock import FileLock, Timeout
-from feed_maker_util import Config, Process, Notification
+from feed_maker_util import Config, Process
+from notification import Notification
 from feed_maker import FeedMaker
 from problem_manager import ProblemManager
 
@@ -226,7 +227,8 @@ class FeedMakerRunner:
         LOGGER.info(f"* Elapsed time: {(end_time - start_time).total_seconds()}")
 
         if failed_feed_list:
-            Notification.send_error_msg(", ".join(failed_feed_list), subject="Errors of FeedMaker")
+            notification = Notification()
+            notification.send_msg(", ".join(failed_feed_list), subject="Errors of FeedMaker")
         return True
 
     @staticmethod

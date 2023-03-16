@@ -1,0 +1,28 @@
+{
+  "db_host": "localhost",
+  "db_port": 3306,
+  "db_name": "feedmaker",
+  "db_user": "feedmaker",
+  "db_password": "micro170433",
+  "web_service_url": "https://terzeron.com",
+  "notification": {
+    "email": {
+      "mail_sender_address": "noreply@nhncloud.com",
+      "mail_sender_name": "Notification Test",
+      "mail_recipient_list": [
+        {
+          "mail_recipient_address": "occitaniedefrance@gmail.com",
+          "mail_recipient_name": "Occitanie de France"
+        },
+        {
+          "mail_recipient_address": "carcassonneinaude@gmail.com",
+          "mail_recipient_name": "Carcassonne in Aude"
+        }
+      ],
+      "email_by_nhn_cloud": {
+        "appkey": "zre3ynFcwiUg5lyC",
+        "secretkey": "DjuOLRh6"
+      }
+    }
+  }
+}

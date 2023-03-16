@@ -30,63 +30,6 @@ header_str = '''<meta http-equiv="Content-Type" content="text/html; charset=UTF-
 '''
 
 
-class Notification:
-    USE_LINE = False
-    USE_EMAIL = True
-
-    @staticmethod
-    def send_error_msg(msg: str, subject="") -> bool:
-        line_receiver_id: str = ""
-        line_access_token: str = ""
-        receiver_email_address: str = ""
-        sender_email_address: str = ""
-        smtp_host: str = ""
-
-        # read global config
-        global_config = Config.get_global_config()
-        if Notification.USE_LINE:
-            line_receiver_id = global_config["line_receiver_id"]
-            line_access_token = global_config["line_access_token"]
-        if Notification.USE_EMAIL:
-            receiver_email_address = global_config["receiver_email_address"]
-            sender_email_address = global_config["sender_email_address"]
-            smtp_host = global_config["smtp_host"]
-
-        result = False
-        if Notification.USE_LINE:
-            result = Notification._send_error_msg_to_line(msg, receiver=line_receiver_id, access_token=line_access_token)
-        if Notification.USE_EMAIL:
-            result = Notification._send_error_msg_to_mail(msg, subject=subject, receiver=receiver_email_address, sender=sender_email_address, smtp_host=smtp_host)
-        return result
-
-    @staticmethod
-    def _send_error_msg_to_line(msg: str, receiver: str, access_token: str) -> bool:
-        if not msg:
-            return False
-        LOGGER.debug(f"send_error_msg_to_line('{msg}')")
-
-        url = "https://api.line.me/v2/bot/message/push"
-        headers: Dict[str, str] = {"Content-Type": "application/json", "Authorization": f"Bearer {access_token}"}
-        data: Dict[str, Any] = {"to": receiver, "messages": [{"type": "text", "text": msg[:1999]}]}
-        response = requests.post(url, json=data, headers=headers, timeout=10, verify=True)
-        if response:
-            return True
-        LOGGER.warning(f"Warning: can't send error message '{msg}'")
-        return False
-
-    @staticmethod
-    def _send_error_msg_to_mail(msg: str, subject: str, receiver: str, sender: str, smtp_host: str) -> bool:
-        if not msg:
-            return False
-        LOGGER.debug(f"send_error_msg_to_gmail('{subject}', '{msg}')")
-        try:
-            mail1.send(subject=subject, text=msg, recipients=receiver, sender=sender, smtp_host=smtp_host)
-        except ConnectionRefusedError as e:
-            LOGGER.warning("Warning: %s", str(e))
-            raise e
-        return True
-
-
 class Data:
     @staticmethod
     def remove_duplicates(a_list: List[Any]) -> List[Any]:
