@@ -72,11 +72,11 @@ class RequestsClient:
                 response = requests.get(self.headers['Referer'], headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, allow_redirects=allow_redirects)
             except requests.exceptions.ConnectionError as e:
                 LOGGER.warning(f"<!-- Warning: can't connect to '{url}' for temporary network error -->")
-                LOGGER.warning("<!-- ", e, " -->")
+                LOGGER.warning("<!-- %r -->", e)
                 return "", f"can't connect to '{url}' for temporary network error", {}, None
             except requests.exceptions.ReadTimeout as e:
                 LOGGER.warning(f"<!-- Warning: can't read data from '{url}' for timeout -->")
-                LOGGER.warning("<-- ", e, " -->")
+                LOGGER.warning("<!-- %r -->", e)
                 return "", f"Warning: can't read data from '{url}' for timeout", {}, None
             if response.cookies:
                 self.write_cookies_to_file(response.cookies)
@@ -96,11 +96,11 @@ class RequestsClient:
                 return str(response.status_code), "", dict(response.headers), response.status_code
         except requests.exceptions.ConnectionError as e:
             LOGGER.warning(f"<!-- Warning: can't connect to '{url}' for temporary network error -->")
-            LOGGER.warning("<!-- ", e, " -->")
+            LOGGER.warning("<!-- %r -->", e)
             return "", f"can't connect to '{url}' for temporary network error", {}, None
         except requests.exceptions.ReadTimeout as e:
             LOGGER.warning(f"<!-- Warning: can't read data from '{url}' for timeout -->")
-            LOGGER.warning(e)
+            LOGGER.warning("<!-- %r -->", e)
             return "", f"Warning: can't read data from '{url}' for timeout", {}, None
 
         # explicit null check required
