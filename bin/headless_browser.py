@@ -154,7 +154,7 @@ class HeadlessBrowser:
         options = Options()
         if not self.disable_headless:
             options.add_argument("--headless")
-        options.add_argument("--window-size=1920x1080")
+        options.add_argument("--window-size=1920,1080")
         options.add_argument("--disable-web-security")
         options.add_argument("--allow-running-insecure-content")
         options.add_argument("--disable-gpu")
