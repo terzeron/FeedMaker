@@ -106,7 +106,7 @@ class FeedManager:
                     continue
                 self._scan_feeds_by_group(group_name)
 
-    def get_exec_result(self) -> Tuple[str, str]:
+    async def get_exec_result(self) -> Tuple[str, str]:
         LOGGER.debug("# get_exec_result()")
         exec_result_file_path = self.work_dir / "logs" / "all.log"
         if exec_result_file_path.is_file():
@@ -115,24 +115,24 @@ class FeedManager:
         else:
             return "", f"can't find such file '{exec_result_file_path.relative_to(self.work_dir)}'"
 
-    def get_problems_status_info(self) -> Tuple[Dict[str, Dict[str, Any]], str]:
+    async def get_problems_status_info(self) -> Tuple[Dict[str, Dict[str, Any]], str]:
         LOGGER.debug("# get_problems_status_info()")
         feed_alias_status_info = self.problem_manager.get_feed_alias_status_info_map()
         return feed_alias_status_info, ""
 
-    def get_problems_progress_info(self) -> Tuple[Dict[str, Dict[str, Any]], str]:
+    async def get_problems_progress_info(self) -> Tuple[Dict[str, Dict[str, Any]], str]:
         LOGGER.debug("# get_problems_progress_info()")
         return self.problem_manager.get_feed_name_progress_info_map(), ""
 
-    def get_problems_public_feed_info(self) -> Tuple[Dict[str, Dict[str, Any]], str]:
+    async def get_problems_public_feed_info(self) -> Tuple[Dict[str, Dict[str, Any]], str]:
         LOGGER.debug("# get_problems_public_feed_info()")
         return self.problem_manager.get_feed_name_public_feed_info_map(), ""
 
-    def get_problems_html_info(self) -> Tuple[Dict[str, Any], str]:
+    async def get_problems_html_info(self) -> Tuple[Dict[str, Any], str]:
         LOGGER.debug("# get_problems_html_info()")
         return {"html_file_size_map": self.problem_manager.get_html_file_size_map(), "html_file_with_many_image_tag_map": self.problem_manager.get_html_file_with_many_image_tag_map(), "html_file_without_image_tag_map": self.problem_manager.get_html_file_without_image_tag_map(), "html_file_image_not_found_map": self.problem_manager.get_html_file_image_not_found_map()}, ""
 
-    def get_problems_element_info(self) -> Tuple[Dict[str, Any], str]:
+    async def get_problems_element_info(self) -> Tuple[Dict[str, Any], str]:
         LOGGER.debug("# get_problems_element_info()")
         return {"feed_name_list_url_count_map": self.problem_manager.get_feed_name_list_url_count_map(), "element_name_count_map": self.problem_manager.get_element_name_count_map()}, ""
 
@@ -144,7 +144,7 @@ class FeedManager:
                 config_item = config_item[arg]
         return keyword in config_item
 
-    def search(self, keywords: str) -> Tuple[List[Dict[str, Any]], str]:
+    async def search(self, keywords: str) -> Tuple[List[Dict[str, Any]], str]:
         LOGGER.debug(f"# search(keywords={keywords})")
         result_list: List[Dict[str, Any]] = []
         keyword_list = keywords.split(' ')
@@ -168,7 +168,7 @@ class FeedManager:
         return result_list, ""
 
     @staticmethod
-    def search_site(keyword: str) -> Tuple[List[Tuple[str, str]], str]:
+    async def search_site(keyword: str) -> Tuple[List[Tuple[str, str]], str]:
         LOGGER.debug(f"# search_site(keyword={keyword})")
         search_manager = SearchManager()
         return search_manager.search("", keyword), ""
@@ -185,7 +185,7 @@ class FeedManager:
             return 1
         return 0
 
-    def get_groups(self) -> Tuple[List[Dict[str, Any]], str]:
+    async def get_groups(self) -> Tuple[List[Dict[str, Any]], str]:
         LOGGER.debug("# get_groups()")
         group_list: List[Dict[str, Any]] = []
         if self.group_name_feed_title_list_map != {}:
@@ -210,7 +210,7 @@ class FeedManager:
             return 1
         return 0
 
-    def get_site_config(self, group_name: str) -> Tuple[Dict[str, str], str]:
+    async def get_site_config(self, group_name: str) -> Tuple[Dict[str, str], str]:
         LOGGER.debug(f"# get_site_config({group_name})")
         path = self.work_dir / group_name / self.SITE_CONF_FILE
         if path.is_file():
@@ -219,7 +219,7 @@ class FeedManager:
                 return json_data, ""
         return {}, f"no feed list in group '{group_name}'"
 
-    def save_site_config(self, group_name: str, post_data: Dict[str, Any]) -> Tuple[bool, str]:
+    async def save_site_config(self, group_name: str, post_data: Dict[str, Any]) -> Tuple[bool, str]:
         LOGGER.debug(f"# save_site_config({group_name}, {post_data})")
         path = self.work_dir / group_name / self.SITE_CONF_FILE
         try:
@@ -229,14 +229,14 @@ class FeedManager:
             return False, str(e)
         return True, ""
 
-    def get_feeds_by_group(self, group_name: str) -> Tuple[List[Dict[str, str]], str]:
+    async def get_feeds_by_group(self, group_name: str) -> Tuple[List[Dict[str, str]], str]:
         LOGGER.debug(f"# get_feeds_by_group({group_name})")
         if group_name in self.group_name_feed_title_list_map:
             feed_title_list = self.group_name_feed_title_list_map[group_name]
             return sorted(feed_title_list, key=cmp_to_key(FeedManager._compare_title)), ""
         return [], f"no feed list in group '{group_name}'"
 
-    def get_feed_info_by_name(self, group_name: str, feed_name: str) -> Tuple[Dict[str, Any], str]:
+    async def get_feed_info_by_name(self, group_name: str, feed_name: str) -> Tuple[Dict[str, Any], str]:
         LOGGER.debug(f"# get_feed_info_by_name({feed_name})")
         feed_dir_path = self.work_dir / group_name / feed_name
         list_dir_path = feed_dir_path / "newlist"
@@ -265,7 +265,7 @@ class FeedManager:
         }
         return feed_info, ""
 
-    def save_config_file(self, group_name: str, feed_name: str, post_data: Dict[str, Any]) -> Tuple[bool, str]:
+    async def save_config_file(self, group_name: str, feed_name: str, post_data: Dict[str, Any]) -> Tuple[bool, str]:
         LOGGER.debug(f"# save_config_file({group_name}, {feed_name}, {post_data})")
         if "configuration" not in post_data:
             return False, "invalid configuration format (no 'configuration')"
@@ -286,7 +286,7 @@ class FeedManager:
         self.problem_manager.load_all_config_rss_files()
         return True, ""
 
-    def run(self, group_name: str, feed_name: str, alias: str) -> Tuple[bool, str]:
+    async def run(self, group_name: str, feed_name: str, alias: str) -> Tuple[bool, str]:
         LOGGER.debug(f"# run({group_name}, {feed_name}, {alias})")
         feed_dir_path = self.work_dir / group_name / feed_name
         conf_file_path = feed_dir_path / self.CONF_FILE
@@ -336,14 +336,14 @@ class FeedManager:
         LOGGER.debug(f"deleting {feed_file_path}")
         feed_file_path.unlink(missing_ok=True)
 
-    def remove_list(self, group_name: str, feed_name: str) -> None:
+    async def remove_list(self, group_name: str, feed_name: str) -> None:
         LOGGER.debug(f"# remove_list({group_name}, {feed_name})")
         feed_dir_path = self.work_dir / group_name / feed_name
         list_dir_path = feed_dir_path / "newlist"
         if list_dir_path.is_dir():
             rmtree(list_dir_path)
 
-    def remove_html(self, group_name: str, feed_name: str) -> None:
+    async def remove_html(self, group_name: str, feed_name: str) -> None:
         LOGGER.debug(f"# remove_html({group_name}, {feed_name})")
         feed_dir_path = self.work_dir / group_name / feed_name
         html_dir_path = feed_dir_path / "html"
@@ -351,19 +351,19 @@ class FeedManager:
             rmtree(html_dir_path)
         self.problem_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
 
-    def remove_html_file(self, group_name: str, feed_name: str, html_file_name: str) -> None:
+    async def remove_html_file(self, group_name: str, feed_name: str, html_file_name: str) -> None:
         LOGGER.debug(f"# remove_html_file({group_name}, {feed_name})")
         html_file_path = self.work_dir / group_name / feed_name / "html" / html_file_name
         html_file_path.unlink(missing_ok=True)
         self.problem_manager.remove_html_file_in_path_from_info("file_path", html_file_path)
 
-    def remove_public_feed(self, feed_name: str) -> None:
+    async def remove_public_feed(self, feed_name: str) -> None:
         LOGGER.debug(f"# remove_public_feed({feed_name})")
         feed_path = self.public_feed_dir / (feed_name + ".xml")
         feed_path.unlink(missing_ok=True)
         self.problem_manager.load_all_public_feed_files()
 
-    def remove_feed(self, group_name: str, feed_name: str) -> Tuple[bool, str]:
+    async def remove_feed(self, group_name: str, feed_name: str) -> Tuple[bool, str]:
         LOGGER.debug(f"# remove_feed({group_name}, {feed_name})")
         feed_dir_path = self.work_dir / group_name / feed_name
         conf_file_path = feed_dir_path / self.CONF_FILE
@@ -395,7 +395,7 @@ class FeedManager:
         self.problem_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
         return True, ""
 
-    def remove_group(self, group_name: str) -> Tuple[bool, str]:
+    async def remove_group(self, group_name: str) -> Tuple[bool, str]:
         LOGGER.debug(f"# remove_group({group_name})")
         group_dir_path = self.work_dir / group_name
         if not group_dir_path:
@@ -423,7 +423,7 @@ class FeedManager:
         self.problem_manager.remove_html_file_in_path_from_info("group_dir_path", group_dir_path)
         return True, ""
 
-    def toggle_feed(self, group_name: str, feed_name: str) -> Tuple[str, str]:
+    async def toggle_feed(self, group_name: str, feed_name: str) -> Tuple[str, str]:
         LOGGER.debug(f"# toggle_feed({group_name}, {feed_name})")
         if feed_name.startswith("_"):
             new_feed_name = feed_name[1:]
@@ -450,7 +450,7 @@ class FeedManager:
         self.problem_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
         return new_feed_name, ""
 
-    def toggle_group(self, group_name: str) -> Tuple[str, str]:
+    async def toggle_group(self, group_name: str) -> Tuple[str, str]:
         LOGGER.debug(f"# toggle_group({group_name})")
         if group_name.startswith("_"):
             new_group_name = group_name[1:]
@@ -480,14 +480,14 @@ class FeedManager:
         return new_group_name, ""
 
     @staticmethod
-    def get_alias(group_name: str, feed_name: str):
+    async def get_alias(group_name: str, feed_name: str):
         LOGGER.debug(f"# get_alias({group_name}, {feed_name})")
         result, error = Htaccess.get_alias(group_name, feed_name)
         if not result:
             return "", error
         return result, ""
 
-    def remove_alias(self, group_name: str, feed_name: str):
+    async def remove_alias(self, group_name: str, feed_name: str):
         LOGGER.debug(f"# remove_alias({group_name}, {feed_name})")
         result, error = Htaccess.remove_alias(group_name, feed_name)
         if not result:
@@ -495,7 +495,7 @@ class FeedManager:
         self.problem_manager.load_htaccess_file()
         return True, ""
 
-    def rename_alias(self, group_name: str, feed_name: str, new_alias: str):
+    async def rename_alias(self, group_name: str, feed_name: str, new_alias: str):
         LOGGER.debug(f"# rename_alias({group_name}, {feed_name}, {new_alias})")
         result, error = Htaccess.set_alias(group_name, feed_name, new_alias)
         if not result:
@@ -504,6 +504,6 @@ class FeedManager:
         return True, ""
 
     @staticmethod
-    def check_running(group_name: str, feed_name: str) -> bool:
+    async def check_running(group_name: str, feed_name: str) -> bool:
         # LOGGER.debug(f"# check_running({group_name}, {feed_name})")
         return FeedMakerRunner.check_running(group_name, feed_name)
