@@ -34,10 +34,8 @@ class Notification:
         global_config = Config.get_global_config()
         if "notification" in global_config and global_config["notification"]:
             notification_config = global_config["notification"]
-            print("notification:", notification_config)
             if "line_messenger" in notification_config and notification_config["line_messenger"]:
                 line_config = notification_config["line_messenger"]
-                print("line:", line_config)
                 if "line_receiver_id_list" in line_config and "line_access_token" in line_config:
                     self.line_receiver_id_list = line_config["line_receiver_id_list"]
                     self.line_access_token = line_config["line_access_token"]
@@ -46,7 +44,6 @@ class Notification:
                     LOGGER.error("can't find line_receiver_id_list or line_access_token in line_messenger from global configuration")
             if "email" in notification_config and notification_config["email"]:
                 email_config = notification_config["email"]
-                print("email:", email_config)
                 if "mail_sender_address" in email_config and "mail_sender_name" in email_config and "mail_recipient_list" in email_config:
                     self.mail_sender_address = email_config["mail_sender_address"]
                     self.mail_sender_name = email_config["mail_sender_name"]
@@ -66,7 +63,6 @@ class Notification:
                     self.send_msg = self._send_email_by_nhn_cloud
                 if "smtp" in email_config and email_config["smtp"]:
                     smtp_config = email_config["smtp"]
-                    print("smtp:", smtp_config)
                     if "smtp_server" in smtp_config and "smtp_port" in smtp_config and "smtp_login_id" in smtp_config and "smtp_login_password" in smtp_config:
                         self.smtp_server = smtp_config["smtp_server"]
                         self.smtp_port = smtp_config["smtp_port"]

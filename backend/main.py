@@ -40,7 +40,7 @@ sys.excepthook = handle_exception
 
 
 @app.get("/exec_result")
-def get_exec_result():
+async def get_exec_result():
     LOGGER.debug("/exec_result -> get_exec_result()")
     response_object: Dict[str, Any] = {"status": "success"}
     result, error = feed_manager.get_exec_result()
@@ -53,7 +53,7 @@ def get_exec_result():
 
 
 @app.get("/problems/{data_type}")
-def get_problems(data_type: str):
+async def get_problems(data_type: str):
     LOGGER.debug(f"/problems/{data_type} -> get_problems_{data_type}()")
     response_object: Dict[str, Any] = {"status": "success"}
     error = ""
@@ -85,7 +85,7 @@ def get_problems(data_type: str):
 
 
 @app.get("/search/{keyword}")
-def search(keyword: str):
+async def search(keyword: str):
     LOGGER.debug(f"/search -> search({keyword})")
     response_object: Dict[str, Any] = {"status": "failure"}
     result, error = feed_manager.search(keyword)
@@ -99,7 +99,7 @@ def search(keyword: str):
 
 
 @app.get("/search_site/{keyword}")
-def search_site(keyword: str):
+async def search_site(keyword: str):
     LOGGER.debug(f"/search_site -> search_site({keyword})")
     response_object: Dict[str, Any] = {"status": "failure"}
     result, error = feed_manager.search_site(keyword)
@@ -113,7 +113,7 @@ def search_site(keyword: str):
 
 
 @app.delete("/public_feeds/{feed_name}")
-def remove_public_feed(feed_name: str):
+async def remove_public_feed(feed_name: str):
     LOGGER.debug(f"/public_feeds/{feed_name} -> remove_public_feed({feed_name})")
     response_object: Dict[str, Any] = {"status": "failure"}
     feed_manager.remove_public_feed(feed_name)
@@ -122,7 +122,7 @@ def remove_public_feed(feed_name: str):
 
 
 @app.get("/groups/{group_name}/site_config")
-def get_site_config(group_name: str):
+async def get_site_config(group_name: str):
     LOGGER.debug(f"/groups/{group_name}/site_config -> get_site_config({group_name})")
     response_object: Dict[str, Any] = {"status": "failure"}
     result, error = feed_manager.get_site_config(group_name)
@@ -150,7 +150,7 @@ async def save_site_config(group_name: str, request: Request):
 
 
 @app.put("/groups/{group_name}/toggle")
-def toggle_group(group_name: str):
+async def toggle_group(group_name: str):
     LOGGER.debug(f"/groups/{group_name}/toggle -> toggle_group({group_name})")
     response_object: Dict[str, Any] = {"status": "failure"}
     result, error = feed_manager.toggle_group(group_name)
@@ -163,7 +163,7 @@ def toggle_group(group_name: str):
 
 
 @app.delete("/groups/{group_name}/feeds/{feed_name}/htmls/{html_file_name}")
-def remove_html_file(group_name: str, feed_name: str, html_file_name: str):
+async def remove_html_file(group_name: str, feed_name: str, html_file_name: str):
     LOGGER.debug(f"/groups/{group_name}/feeds/{feed_name}/htmls/{html_file_name} -> remove_html_file({group_name}, {feed_name}, {html_file_name})")
     response_object: Dict[str, Any] = {"status": "failure"}
     feed_manager.remove_html_file(group_name, feed_name, html_file_name)
@@ -172,7 +172,7 @@ def remove_html_file(group_name: str, feed_name: str, html_file_name: str):
 
 
 @app.delete("/groups/{group_name}/feeds/{feed_name}/htmls")
-def remove_html(group_name: str, feed_name: str):
+async def remove_html(group_name: str, feed_name: str):
     LOGGER.debug(f"/groups/{group_name}/feeds/{feed_name}/htmls -> remove_html({group_name}, {feed_name})")
     response_object: Dict[str, Any] = {"status": "failure"}
     feed_manager.remove_html(group_name, feed_name)
@@ -194,7 +194,7 @@ async def run(group_name: str, feed_name: str, request: Request):
 
 
 @app.put("/groups/{group_name}/feeds/{feed_name}/toggle")
-def toggle_feed(group_name: str, feed_name: str):
+async def toggle_feed(group_name: str, feed_name: str):
     LOGGER.debug(f"/groups/{group_name}/feeds/{feed_name}/toggle -> toggle_feed({group_name}, {feed_name})")
     response_object: Dict[str, Any] = {"status": "failure"}
     result, error = feed_manager.toggle_feed(group_name, feed_name)
@@ -207,7 +207,7 @@ def toggle_feed(group_name: str, feed_name: str):
 
 
 @app.delete("/groups/{group_name}/feeds/{feed_name}/list")
-def remove_list(group_name: str, feed_name: str):
+async def remove_list(group_name: str, feed_name: str):
     LOGGER.debug(f"/groups/{group_name}/feeds/{feed_name}/list -> remove_list({group_name}, {feed_name})")
     response_object: Dict[str, Any] = {"status": "failure"}
     feed_manager.remove_list(group_name, feed_name)
@@ -216,7 +216,7 @@ def remove_list(group_name: str, feed_name: str):
 
 
 @app.get("/groups/{group_name}/feeds/{feed_name}/alias")
-def get_alias(group_name: str, feed_name: str):
+async def get_alias(group_name: str, feed_name: str):
     LOGGER.debug(f"/groups/{group_name}/feeds/{feed_name}/alias -> get_alias({group_name}, {feed_name})")
     response_object: Dict[str, Any] = {"status": "failure"}
     result, error = feed_manager.get_alias(group_name, feed_name)
@@ -229,7 +229,7 @@ def get_alias(group_name: str, feed_name: str):
 
 
 @app.delete("/groups/{group_name}/feeds/{feed_name}/alias")
-def delete_alias(group_name: str, feed_name: str):
+async def delete_alias(group_name: str, feed_name: str):
     LOGGER.debug(f"/groups/{group_name}/feeds/{feed_name}/alias -> remove_alias({group_name}, {feed_name})")
     response_object: Dict[str, Any] = {"status": "failure"}
     result, error = feed_manager.remove_alias(group_name, feed_name)
@@ -242,7 +242,7 @@ def delete_alias(group_name: str, feed_name: str):
 
 
 @app.put("/groups/{group_name}/feeds/{feed_name}/rename/{new_alias}")
-def rename_alias(group_name: str, feed_name: str, new_alias: str):
+async def rename_alias(group_name: str, feed_name: str, new_alias: str):
     LOGGER.debug(f"/groups/{group_name}/feeds/{feed_name}/rename/{new_alias} -> rename_alias({group_name}, {feed_name}, {new_alias})")
     response_object: Dict[str, Any] = {"status": "failure"}
     result, error = feed_manager.rename_alias(group_name, feed_name, new_alias)
@@ -254,7 +254,7 @@ def rename_alias(group_name: str, feed_name: str, new_alias: str):
 
 
 @app.get("/groups/{group_name}/feeds/{feed_name}/check_running")
-def check_running(group_name: str, feed_name: str):
+async def check_running(group_name: str, feed_name: str):
     # LOGGER.debug(f"/groups/{group_name}/feeds/{feed_name}/check_running, {request.method} -> check_running({group_name}, {feed_name})")
     response_object: Dict[str, Any] = {"status": "failure"}
     result = feed_manager.check_running(group_name, feed_name)
@@ -264,7 +264,7 @@ def check_running(group_name: str, feed_name: str):
 
 
 @app.get("/groups/{group_name}/feeds/{feed_name}")
-def get_feed_info(group_name: str, feed_name: str):
+async def get_feed_info(group_name: str, feed_name: str):
     LOGGER.debug(f"/groups/{group_name}/feeds/{feed_name} -> get_feed_info({group_name}, {feed_name})")
     response_object: Dict[str, Any] = {"status": "failure"}
     feed_info, error = feed_manager.get_feed_info_by_name(group_name, feed_name)
@@ -292,7 +292,7 @@ async def post_feed_info(group_name: str, feed_name: str, request: Request):
 
 
 @app.delete("/groups/{group_name}/feeds/{feed_name}")
-def delete_feed_info(group_name: str, feed_name: str):
+async def delete_feed_info(group_name: str, feed_name: str):
     LOGGER.debug(f"/groups/{group_name}/feeds/{feed_name} -> remove_feed({group_name}, {feed_name})")
     response_object: Dict[str, Any] = {"status": "failure"}
     result, error = feed_manager.remove_feed(group_name, feed_name)
@@ -304,7 +304,7 @@ def delete_feed_info(group_name: str, feed_name: str):
 
 
 @app.get("/groups/{group_name}/feeds")
-def get_feeds_by_group(group_name: str):
+async def get_feeds_by_group(group_name: str):
     LOGGER.debug(f"/groups/{group_name}/feeds -> get_feeds_by_group({group_name})")
     response_object: Dict[str, Any] = {"status": "failure"}
     result, error = feed_manager.get_feeds_by_group(group_name)
@@ -319,7 +319,7 @@ def get_feeds_by_group(group_name: str):
 
 
 @app.delete("/groups/{group_name}")
-def remove_group(group_name: str):
+async def remove_group(group_name: str):
     LOGGER.debug(f"/groups/{group_name} -> remove_group({group_name})")
     response_object: Dict[str, Any] = {"status": "failure"}
     result, error = feed_manager.remove_group(group_name)
@@ -333,7 +333,7 @@ def remove_group(group_name: str):
 
 
 @app.get("/groups")
-def get_groups():
+async def get_groups():
     LOGGER.debug("/groups -> get_groups()")
     response_object: Dict[str, Any] = {"status": "failure"}
     result, error = feed_manager.get_groups()
