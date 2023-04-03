@@ -1,0 +1,26 @@
+{
+  "db_host": "localhost",
+  "db_port": 3306,
+  "db_name": "feedmaker",
+  "db_user": "feedmaker",
+  "db_password": "micro170433",
+  "web_service_url": "https://terzeron.com",
+  "notification": {
+    "email": {
+      "mail_sender_address": "terzeron@nhncloud.com",
+      "mail_sender_name": "Notification Test",
+      "mail_recipient_list": [
+        {
+          "mail_recipient_address": "terzeron@gmail.com",
+          "mail_recipient_name": "Youngil Cho"
+        }
+      ],
+      "smtp": {
+        "smtp_server": "smtp-mail.cloud.toast.com",
+        "smtp_port": 25,
+        "smtp_login_id": "IVVy5NFvzRdekG0m",
+        "smtp_login_password": "wLmeUButEp08zdQi"
+      }
+    }
+  }
+}

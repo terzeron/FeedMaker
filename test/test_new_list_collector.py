@@ -18,7 +18,7 @@ LOGGER = logging.getLogger()
 
 class NewListCollectorTest(unittest.TestCase):
     def setUp(self):
-        work_dir_path = Path.cwd() / "test"
+        work_dir_path = Path.cwd()
         config = Config(feed_dir_path=work_dir_path)
         if not config:
             LOGGER.error("can't get configuration")

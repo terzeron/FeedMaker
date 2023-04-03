@@ -95,50 +95,55 @@ create table feed_alias_status_info
 -- html_file -> size
 create table html_file_size
 (
-    file_name      varchar(256) not null,
     file_path      varchar(512) not null,
+    file_name      varchar(256) not null,
     feed_dir_path  varchar(512) not null,
     group_dir_path varchar(512) not null,
     size           int           not null,
     update_date    timestamp default null,
-    primary key (file_name)
+    primary key (file_path)
 );
-create index html_file_size_file_path_idx on html_file_size (file_path);
 create index html_file_size_feed_dir_path_idx on html_file_size (feed_dir_path);
 create index html_file_size_group_dir_path_idx on html_file_size (group_dir_path);
 
 -- html_file -> with_many_image_tag
 create table html_file_with_many_image_tag
 (
-    file_name      varchar(256) not null,
     file_path      varchar(512) not null,
+    file_name      varchar(256) not null,
     feed_dir_path  varchar(512) not null,
     group_dir_path varchar(512) not null,
     count          int           not null,
-    primary key (file_name)
+    primary key (file_path)
 );
+create index html_file_with_many_image_tag_feed_dir_path_idx on html_file_with_many_image_tag (feed_dir_path);
+create index html_file_with_many_image_tag_group_dir_path_idx on html_file_with_many_image_tag (group_dir_path);
 
 -- html_file -> without_image_tag
 create table html_file_without_image_tag
 (
-    file_name      varchar(256) not null,
     file_path      varchar(512) not null,
+    file_name      varchar(256) not null,
     feed_dir_path  varchar(512) not null,
     group_dir_path varchar(512) not null,
     count          int           not null,
-    primary key (file_name)
+    primary key (file_path)
 );
+create index html_file_without_image_tag_feed_dir_path_idx on html_file_without_image_tag (feed_dir_path);
+create index html_file_without_image_tag_group_dir_path_idx on html_file_without_image_tag (group_dir_path);
 
 -- html_file -> image_not_found
 create table html_file_image_not_found
 (
-    file_name      varchar(256) not null,
     file_path      varchar(512) not null,
+    file_name      varchar(256) not null,
     feed_dir_path  varchar(512) not null,
     group_dir_path varchar(512) not null,
     count          int           not null,
-    primary key (file_name)
+    primary key (file_path)
 );
+create index html_file_image_not_found_feed_dir_path_idx on html_file_image_not_found (feed_dir_path);
+create index html_file_image_not_found_group_dir_path_idx on html_file_image_not_found (group_dir_path);
 
 -- feed_name -> list_url_count
 create table feed_name_list_url_count

@@ -27,7 +27,7 @@ class DataTest(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     def test_get_sorted_lines_from_rss_file(self):
-        file_path = Path.cwd() / "test" / "sportsdonga.webtoon.1.result.xml"
+        file_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "test" / "sportsdonga.webtoon.1.result.xml"
         expected = sorted([
             '<rss version="2.0"',
             ' xmlns:blogChannel="http://backend.userland.com/blogChannelModule"',
@@ -50,9 +50,9 @@ class DataTest(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     def test_compare_two_rss_files(self):
-        file_path = Path.cwd() / "test" / "sportsdonga.webtoon.1.result.xml"
-        file_different_path = Path.cwd() / "test" / "sportsdonga.webtoon.2.result.xml"
-        file_with_only_different_date = Path.cwd() / "test" / "sportsdonga.webtoon.3.result.xml"
+        file_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "test" / "sportsdonga.webtoon.1.result.xml"
+        file_different_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "test" / "sportsdonga.webtoon.2.result.xml"
+        file_with_only_different_date = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "test" / "sportsdonga.webtoon.3.result.xml"
         actual = Data.compare_two_rss_files(file_path, file_different_path)
         self.assertFalse(actual)
         actual = Data.compare_two_rss_files(file_path, file_with_only_different_date)
@@ -106,7 +106,7 @@ class ProcessTest(unittest.TestCase):
         actual = Process._replace_script_path(cmd, Path("/"))
         self.assertIn(actual, ["/usr/bin/shuf", "/usr/local/bin/shuf", "/opt/homebrew/bin/shuf"])
 
-        actual = Process._replace_script_path(cmd, Path("."))
+        actual = Process._replace_script_path(cmd, Path("../../backend"))
         self.assertIn(actual, ["/usr/bin/shuf", "/usr/local/bin/shuf", "/opt/homebrew/bin/shuf"])
 
         actual = Process._replace_script_path(cmd, Path("/no_such_a_dir/workspace/fma/naver/naverwebtoon"))
@@ -126,7 +126,7 @@ class ProcessTest(unittest.TestCase):
         expected = "/bin/head -10"
         self.assertEqual(expected, actual)
 
-        actual = Process._replace_script_path(cmd, Path("."))
+        actual = Process._replace_script_path(cmd, Path("../../backend"))
         expected = "/bin/head -10"
         self.assertEqual(expected, actual)
 
@@ -148,7 +148,7 @@ class ProcessTest(unittest.TestCase):
         expected = "/usr/bin/tail -5"
         self.assertEqual(expected, actual)
 
-        actual = Process._replace_script_path(cmd, Path("."))
+        actual = Process._replace_script_path(cmd, Path("../../backend"))
         expected = "/usr/bin/tail -5"
         self.assertEqual(expected, actual)
 
@@ -362,8 +362,8 @@ class IOTest(unittest.TestCase):
 
 class ConfigTest(unittest.TestCase):
     def setUp(self):
-        self.global_conf = Config.get_global_config(Path.cwd() / "test" / "global_config.json")
-        self.config = Config(feed_dir_path=Path.cwd() / "test")
+        self.global_conf = Config.get_global_config(Path(os.environ["FEED_MAKER_HOME_DIR"]) / "bin" / "global_config.json")
+        self.config = Config(feed_dir_path=Path.cwd())
         if not self.config:
             LOGGER.error("can't get configuration")
 
@@ -490,22 +490,40 @@ class ConfigTest(unittest.TestCase):
         self.assertTrue(actual)
 
         actual = config["web_service_url"]
-        self.assertEqual("https://my.domain.com", actual)
+        self.assertEqual("https://your.domain.com", actual)
 
-        actual = config["line_access_token"]
-        self.assertEqual("bogus_line_access_token", actual)
+        if "line_messenger" in config and config["line_messenger"]:
+            actual = config["line_messenger"]["line_access_token"]
+            self.assertEqual("line access token", actual)
 
-        actual = config["line_receiver_id"]
-        self.assertEqual("bogus_line_receiver_id", actual)
+            actual = config["line_messenger"]["line_receiver_id"]
+            self.assertEqual("bogus_line_receiver_id", actual)
 
-        actual = config["sender_email_address"]
-        self.assertEqual("bogus@my.smtp.com", actual)
+        if "email" in config and config["email"]:
+            actual = config["email"]["mail_sender_address"]
+            self.assertEqual("bogus@my.smtp.com", actual)
 
-        actual = config["receiver_email_address"]
-        self.assertEqual("fake@gmail.com", actual)
+            actual = config["email"]["mail_sender_name"]
+            self.assertEqual("sender name", actual)
 
-        actual = config["smtp_host"]
-        self.assertEqual("my.smtp.com", actual)
+            if "mail_recipient_list" in config["email"] and config["email"]["mail_recipient_list"]:
+                actual = config["email"]["mail_recipient_list"][0]["mail_recipient_address"]
+                self.assertEqual("first recipient email address", actual)
+                actual = config["email"]["mail_recipient_list"][0]["mail_recipient_name"]
+                self.assertEqual("first recipient email name", actual)
+
+        if "smtp" in config and config["smtp"]:
+            actual = config["smtp"]["smtp_host"]
+            self.assertEqual("smtp host", actual)
+
+            actual = config["smtp"]["smtp_port"]
+            self.assertEqual(25, actual)
+
+            actual = config["smtp"]["smtp_login_id"]
+            self.assertEqual("smtp login id", actual)
+
+            actual = config["smtp"]["smtp_login_password"]
+            self.assertEqual("smtp login password", actual)
 
     def test_get_collection_configs(self):
         configs = self.config.get_collection_configs()

@@ -23,7 +23,7 @@
     "extraction": {
       "render_js": false,
       "bypass_element_extraction": false,
-      "force_sleep_between_articles": false,
+      "force_sleep_between_articles": true,
       "copy_images_from_canvas": false,
       "simulate_scrolling": false,
       "blob_to_dataurl": false,
