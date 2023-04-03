@@ -22,6 +22,7 @@ www/work
 result.*.temp
 .mypy_cache/
 .idea/
+.run/
 TAGS
 cookies.json
 global_config.json
