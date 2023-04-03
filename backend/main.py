@@ -184,7 +184,7 @@ async def remove_html(group_name: str, feed_name: str):
 def run(group_name: str, feed_name: str, request: Request):
     LOGGER.debug(f"/groups/{group_name}/feeds/{feed_name}/run -> run({group_name}, {feed_name})")
     response_object: Dict[str, Any] = {"status": "failure"}
-    post_data = await request.json()
+    post_data = request.json()
     result, error = feed_manager.run(group_name, feed_name, post_data["alias"])
     if result:
         response_object["status"] = "success"
