@@ -25,6 +25,7 @@ result.*.temp
 TAGS
 cookies.json
 global_config.json
+global_config_*.json
 .python-version
 cookies.*.json
 *.pid
