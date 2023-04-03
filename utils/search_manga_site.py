@@ -32,8 +32,8 @@ class Site():
     render_js: bool = False
     num_retries: int = 1
     method: Method = Method.GET
-    headers: Optional[Dict[str, str]] = None
-    payload: Optional[Dict[str, Union[str, bytes]]] = None
+    headers: Dict[str, str] = {}
+    payload: Dict[str, Union[str, bytes]] = {}
 
     def __init__(self, site_name: str) -> None:
         self.site_name = site_name

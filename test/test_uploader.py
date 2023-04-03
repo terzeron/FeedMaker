@@ -8,7 +8,7 @@ from feed_maker_util import Process
 
 
 class UploaderTest(unittest.TestCase):
-    work_dir_path = Path.cwd() / "test"
+    work_dir_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "test"
     rss_file_path = work_dir_path / "sportsdonga.webtoon.1.result.xml"
     old_rss_file_path = rss_file_path.with_suffix(rss_file_path.suffix + ".old")
     different_rss_file_path = work_dir_path / "sportsdonga.webtoon.2.result.xml"

@@ -369,8 +369,7 @@ class Config:
         return default
 
     @staticmethod
-    def get_global_config(conf_file_path=None) -> \
-            Dict[str, Any]:
+    def get_global_config(conf_file_path=None) -> Dict[str, Any]:
         LOGGER.debug("# get_global_config()")
         if conf_file_path:
             global_config_file_path = conf_file_path

@@ -140,7 +140,7 @@ class FeedMaker:
         return K
 
     def _read_old_feed_list_from_file(self) -> List[Tuple[str, str]]:
-        LOGGER.debug("# read_old_feed_list_from_file()")
+        LOGGER.debug("# _read_old_feed_list_from_file()")
 
         if not self.collection_conf:
             LOGGER.error("ERROR: can't get collection configuration")
@@ -174,6 +174,7 @@ class FeedMaker:
                     continue
 
                 file_path = self.list_dir / entry.name
+                LOGGER.info(file_path.relative_to(self.work_dir_path))
                 with file_path.open('r', encoding='utf-8') as in_file:
                     for line in in_file:
                         line = line.rstrip()
@@ -375,7 +376,7 @@ class FeedMaker:
         return result_feed_list
 
     def _get_recent_feed_list(self) -> List[Tuple[str, str]]:
-        LOGGER.debug("# get_recent_feed_list()")
+        LOGGER.debug("# _get_recent_feed_list()")
 
         short_date_str = Datetime.get_short_date_str()
         new_list_file_path = FeedMaker._get_list_file_path(self.list_dir, short_date_str)

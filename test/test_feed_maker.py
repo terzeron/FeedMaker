@@ -39,7 +39,7 @@ class TestFeedMaker(unittest.TestCase):
         self.rss_file_path.touch()
         self.old_rss_file_path = self.feed_dir_path / (feed_name + ".xml.old")
         self.old_rss_file_path.touch()
-        self.sample_conf_file_path = Path.cwd() / "test" / "conf.naverwebtoon.json"
+        self.sample_conf_file_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "test" / "conf.naverwebtoon.json"
         self.conf_file_path = self.feed_dir_path / "conf.json"
         shutil.copy(self.sample_conf_file_path, self.conf_file_path)
 
@@ -68,8 +68,7 @@ class TestFeedMaker(unittest.TestCase):
         md5_name = "3e1c485"
         self.html_file1_path = self.html_dir_path / (md5_name + ".html")
         with self.html_file1_path.open("w", encoding="utf-8") as outfile:
-            outfile.write(
-                f"<div>with image tag string</div>\n<img src='{self.global_conf['web_service_url']}/img/1x1.jpg?feed=oneplusone.xml&item={md5_name}'/>\n")
+            outfile.write(f"<div>with image tag string</div>\n<img src='{self.global_conf['web_service_url']}/img/1x1.jpg?feed=oneplusone.xml&item={md5_name}'/>\n")
         md5_name = "8da6dfb"
         self.html_file2_path = self.html_dir_path / (md5_name + ".html")
         with self.html_file2_path.open("w", encoding="utf-8") as outfile:
@@ -101,7 +100,7 @@ class TestFeedMaker(unittest.TestCase):
 
     def test_get_size_of_template_with_image_tag(self):
         actual = FeedMaker.get_size_of_template_with_image_tag(self.global_conf['web_service_url'], self.rss_file_path.name)
-        expected = 438
+        expected = 441
         self.assertEqual(expected, actual)
 
     def test_is_image_tag_in_html_file(self):
@@ -217,27 +216,50 @@ class TestFeedMaker(unittest.TestCase):
             self.assertEqual(expected, actual)
 
     def test_1_read_old_feed_list_from_file(self):
+        self.maker.collection_conf["is_completed"] = True
         with patch.object(LOGGER, "info") as mock_info:
             actual = self.maker._read_old_feed_list_from_file()
             self.assertIsNotNone(actual)
             expected = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화")]
             self.assertEqual(expected, actual)
+            self.assertTrue(assert_in_mock_logger(self.list_file2_path.relative_to(self.maker.work_dir_path), mock_info))
 
-            self.assertTrue(
-                assert_in_mock_logger(self.list_file2_path.relative_to(self.maker.work_dir_path), mock_info))
+        self.maker.collection_conf["is_completed"] = False
+        with patch.object(LOGGER, "info") as mock_info:
+            actual = self.maker._read_old_feed_list_from_file()
+            self.assertIsNotNone(actual)
+            expected = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화")]
+            self.assertEqual(expected, actual)
+            self.assertTrue(assert_in_mock_logger(self.list_file2_path.relative_to(self.maker.work_dir_path), mock_info))
 
     def test_2_fetch_old_feed_list_window(self):
+        self.maker.collection_conf["is_completed"] = True
         with patch.object(LOGGER, "info") as mock_info:
             old_feed_list = self.maker._read_old_feed_list_from_file()
             actual = self.maker._fetch_old_feed_list_window(old_feed_list)
             expected = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화")]
             self.assertEqual(expected, actual)
+            self.assertTrue(assert_in_mock_logger(self.list_file2_path.relative_to(self.maker.work_dir_path), mock_info))
+            self.assertTrue(assert_in_mock_logger("start index", mock_info, True))
 
-            self.assertTrue(
-                assert_in_mock_logger(self.list_file2_path.relative_to(self.maker.work_dir_path), mock_info))
+        self.maker.collection_conf["is_completed"] = False
+        with patch.object(LOGGER, "info") as mock_info:
+            old_feed_list = self.maker._read_old_feed_list_from_file()
+            actual = self.maker._fetch_old_feed_list_window(old_feed_list)
+            expected = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화")]
+            self.assertEqual(expected, actual)
+            self.assertTrue(assert_in_mock_logger(self.list_file2_path.relative_to(self.maker.work_dir_path), mock_info))
             self.assertTrue(assert_in_mock_logger("start index", mock_info, True))
 
     def test_3_get_recent_feed_list(self):
+        self.maker.collection_conf["is_completed"] = True
+        actual = self.maker._get_recent_feed_list()
+        self.assertIsNotNone(actual)
+        # Do NOT inspect the content of recent feeds
+        self.assertEqual(1, len(actual))
+        self.assertEqual(2, len(actual[0]))
+
+        self.maker.collection_conf["is_completed"] = False
         actual = self.maker._get_recent_feed_list()
         self.assertIsNotNone(actual)
         # Do NOT inspect the content of recent feeds

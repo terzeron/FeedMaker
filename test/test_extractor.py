@@ -19,7 +19,7 @@ dummy_url = "https://test.com"
 
 class ExtractTest(unittest.TestCase):
     def setUp(self):
-        self.config = Config(feed_dir_path=Path.cwd() / "test")
+        self.config = Config(feed_dir_path=Path.cwd())
         if not self.config:
             LOGGER.error("can't get configuration")
             sys.exit(-1)

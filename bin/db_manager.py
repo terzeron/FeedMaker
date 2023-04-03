@@ -1,8 +1,27 @@
 #!/usr/bin/env python
 
-from typing import List, Dict, Any, Tuple, Union, Optional
+from typing import List, Any, Tuple, Optional
 from mysql.connector.pooling import MySQLConnectionPool, PooledMySQLConnection
 from mysql.connector.cursor import MySQLCursor
+import mysql.connector
+
+IntegrityError = mysql.connector.errors.IntegrityError
+
+
+class Connection:
+    def __init__(self, connection: PooledMySQLConnection):
+        self.mysql_connection: PooledMySQLConnection = connection
+
+    def __del__(self):
+        del self.mysql_connection
+
+
+class Cursor:
+    def __init__(self, cursor: MySQLCursor):
+        self.mysql_cursor: MySQLCursor = cursor
+
+    def __del__(self):
+        del self.mysql_cursor
 
 
 class DBManager:
@@ -14,25 +33,24 @@ class DBManager:
         del self.pool
         del self.connection
 
-    def get_connection_and_cursor(self) -> Tuple[PooledMySQLConnection, MySQLCursor]:
-        connection = self.pool.get_connection()
-        cursor = connection.cursor(dictionary=True)
+    def get_connection_and_cursor(self) -> Tuple[Connection, Cursor]:
+        mysql_connection = self.pool.get_connection()
+        connection = Connection(mysql_connection)
+        cursor = Cursor(mysql_connection.cursor(dictionary=True))
         return connection, cursor
 
     def query(self, query: str, *params) -> List[Any]:
         connection, cursor = self.get_connection_and_cursor()
-        cursor.execute(query, params)
-        result = cursor.fetchall()
-        cursor.close()
-        connection.close()
+        cursor.mysql_cursor.execute(query, params)
+        result = cursor.mysql_cursor.fetchall()
+        cursor.mysql_cursor.close()
+        connection.mysql_connection.close()
         return result
 
-    def execute(self, cursor: MySQLCursor, query: str, *params) -> None:
-        cursor.execute(query, params)
+    def execute(self, cursor: Cursor, query: str, *params) -> None:
+        cursor.mysql_cursor.execute(query, params)
 
-    def commit(self, connection: PooledMySQLConnection, cursor: MySQLCursor) -> None:
-        connection.commit()
-        cursor.close()
-        connection.close()
-
-
+    def commit(self, connection: Connection, cursor: Cursor) -> None:
+        connection.mysql_connection.commit()
+        cursor.mysql_cursor.close()
+        connection.mysql_connection.close()

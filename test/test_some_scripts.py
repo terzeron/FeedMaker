@@ -49,7 +49,7 @@ def main() -> int:
         for script in scripts:
             index += 1
             LOGGER.info(feed)
-            test_dir_path = Path(fm_home) / "bin" / "test" / feed
+            test_dir_path = Path(fm_home) / "test" / feed
             result, cmd = test_script(script, test_dir_path, index)
             if not result:
                 LOGGER.error(f"Error in '{cmd}'\n")

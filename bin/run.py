@@ -228,7 +228,7 @@ class FeedMakerRunner:
 
         if failed_feed_list:
             notification = Notification()
-            notification.send_msg(", ".join(failed_feed_list), subject="Errors of FeedMaker")
+            notification.send_msg(msg=", ".join(failed_feed_list), subject="Errors of FeedMaker")
         return True
 
     @staticmethod
@@ -326,12 +326,7 @@ def main() -> int:
 
     LOGGER.info("# Checking problems and making report")
     problem_manager = ProblemManager()
-    problem_manager.load_htaccess_file()
-    problem_manager.load_all_config_rss_files()
-    problem_manager.load_all_public_feed_files()
-    problem_manager.load_all_progress_info_from_files()
-    problem_manager.load_all_httpd_access_files()
-    problem_manager.add_html_files_in_path_to_info(feed_dir_path)
+    problem_manager.update_feed_info(feed_dir_path)
 
     return 0 if result else -1
 
