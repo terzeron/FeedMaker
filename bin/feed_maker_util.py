@@ -16,8 +16,6 @@ from typing import List, Any, Dict, Tuple, Optional, Union
 from distutils.spawn import find_executable
 from filelock import FileLock, Timeout
 import psutil
-import mail1
-import requests
 from ordered_set import OrderedSet
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
@@ -311,9 +309,6 @@ class Config:
             LOGGER.error(f"Error: Can't get configuration from config file '{config_file_path}', {error_msg}")
             sys.exit(-1)
 
-    def __del__(self):
-        pass
-
     @staticmethod
     def _get_bool_config_value(config_node: Dict[str, Any], key: str, default: bool = False) -> bool:
         value: bool = default
@@ -365,7 +360,9 @@ class Config:
         return result
 
     @staticmethod
-    def _get_config_value_list(config_node: Dict[str, Any], key: str, default: List[Any] = []) -> Optional[List[Any]]:
+    def _get_config_value_list(config_node: Dict[str, Any], key: str, default: Optional[List[Any]] = None) -> Optional[List[Any]]:
+        if not default:
+            default = []
         result = Config._traverse_config_node(config_node, key)
         if result:
             return result
