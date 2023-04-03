@@ -4,6 +4,7 @@
 
 import sys
 import os
+import asyncio
 import logging
 import logging.config
 from typing import Dict, Any
@@ -184,7 +185,7 @@ async def remove_html(group_name: str, feed_name: str):
 def run(group_name: str, feed_name: str, request: Request):
     LOGGER.debug(f"/groups/{group_name}/feeds/{feed_name}/run -> run({group_name}, {feed_name})")
     response_object: Dict[str, Any] = {"status": "failure"}
-    post_data = request.json()
+    post_data = asyncio.run(request.json())
     result, error = feed_manager.run(group_name, feed_name, post_data["alias"])
     if result:
         response_object["status"] = "success"
