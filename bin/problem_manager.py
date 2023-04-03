@@ -74,7 +74,6 @@ class ProblemManager:
     def reload_htaccess_file(self) -> None:
         LOGGER.debug("# reload_htaccess_file()")
         connection, cursor = self.db.get_connection_and_cursor()
-        self.db.execute(cursor, "TRUNCATE feed_alias_name")
 
         num_items = 0
         with open(self.htaccess_file, 'r', encoding="utf-8") as infile:
@@ -152,7 +151,10 @@ class ProblemManager:
             with open(feed_dir_path / "conf.json", 'r', encoding="utf-8") as infile:
                 json_data = json.load(infile)
                 if json_data and "configuration" in json_data:
-                    self.db.execute(cursor, "INSERT INTO feed_name_config (feed_name, config) VALUES (%s, %s)", feed_name, json.dumps(json_data["configuration"]))
+                    try:
+                        self.db.execute(cursor, "INSERT INTO feed_name_config (feed_name, config) VALUES (%s, %s)", feed_name, json.dumps(json_data["configuration"]))
+                    except IntegrityError:
+                        self.db.execute(cursor, "UPDATE feed_name_config SET config = %s WHERE feed_name = %s", json.dumps(json_data["configuration"]), feed_name)
                     self.feed_name_config_map[feed_name] = json_data["configuration"]
 
                 if "rss" in json_data["configuration"] and "title" in json_data["configuration"]["rss"]:
@@ -161,7 +163,10 @@ class ProblemManager:
                         title = title.split("::")[0]
                 else:
                     title = ""
-                self.db.execute(cursor, "INSERT INTO feed_name_title_group (feed_name, feed_title, group_name) VALUES (%s, %s, %s)", feed_name, title, group_name)
+                try:
+                    self.db.execute(cursor, "INSERT INTO feed_name_title_group (feed_name, feed_title, group_name) VALUES (%s, %s, %s)", feed_name, title, group_name)
+                except IntegrityError:
+                    self.db.execute(cursor, "UPDATE feed_name_title_group SET feed_title = %s, group_name = %s WHERE feed_name = %s", title, group_name, feed_name)
                 self.feed_name_title_map[feed_name] = title
 
                 if "collection" in json_data["configuration"] and "list_url_list" in \
@@ -169,7 +174,10 @@ class ProblemManager:
                     "_") and not feed_name.startswith("_"):
                     count = len(json_data["configuration"]["collection"]["list_url_list"])
                     if count != 1:
-                        self.db.execute(cursor, "INSERT INTO feed_name_list_url_count (feed_name, feed_title, group_name, count) VALUES (%s, %s, %s, %s)", feed_name, title, group_name, count)
+                        try:
+                            self.db.execute(cursor, "INSERT INTO feed_name_list_url_count (feed_name, feed_title, group_name, count) VALUES (%s, %s, %s, %s)", feed_name, title, group_name, count)
+                        except IntegrityError:
+                            self.db.execute(cursor, "UPDATE feed_name_list_url_count SET feed_title = %s, group_name = %s, count = %s WHERE feed_name = %s", title, group_name, count, feed_name)
 
                 if "collection" in json_data["configuration"]:
                     for sub_config_element in ["collection", "extraction", "rss"]:
@@ -181,7 +189,10 @@ class ProblemManager:
             if rss_file_path.is_file():
                 s = rss_file_path.stat()
                 update_date = datetime.fromtimestamp(s.st_mtime)
-                self.db.execute(cursor, "INSERT INTO feed_name_rss_info (feed_name, update_date) VALUES (%s, %s)", feed_name, self.convert_datetime_to_str(update_date))
+                try:
+                    self.db.execute(cursor, "INSERT INTO feed_name_rss_info (feed_name, update_date) VALUES (%s, %s)", feed_name, self.convert_datetime_to_str(update_date))
+                except IntegrityError:
+                    self.db.execute(cursor, "UPDATE feed_name_rss_info SET update_date = %s WHERE feed_name = %s", self.convert_datetime_to_str(update_date), feed_name)
                 num_items += 1
 
                 for feed_alias, _ in self.feed_name_aliases_map.get(feed_name, {}).items():
@@ -205,13 +216,9 @@ class ProblemManager:
     def load_all_config_rss_files(self) -> None:
         LOGGER.debug("# load_all_config_rss_files()")
         connection, cursor = self.db.get_connection_and_cursor()
-        rows = self.db.query("SELECT * FROM feed_name_config")
-        if len(rows) > 0:
-            LOGGER.debug("no need to load config files")
-            return
 
         if not self.feed_name_aliases_map:
-            LOGGER.error("can't find name to title/aliases mapping data in loading config and rss files")
+            LOGGER.error("can't find name to aliases mapping data in loading config and rss files")
             return
 
         element_name_count_map: Dict[str, int] = {}
@@ -268,7 +275,10 @@ class ProblemManager:
         upload_date = datetime.fromtimestamp(s.st_mtime)
         path_str = self.convert_path_to_str(feed_file_path)
 
-        self.db.execute(cursor, "INSERT INTO feed_name_public_feed_info (feed_name, feed_title, group_name, file_path, upload_date, file_size, num_items) VALUES (%s, %s, %s, %s, %s, %s, %s)", feed_name, feed_title, group_name, path_str, self.convert_datetime_to_str(upload_date), s.st_size, num_item_elements)
+        try:
+            self.db.execute(cursor, "INSERT INTO feed_name_public_feed_info (feed_name, feed_title, group_name, file_path, upload_date, file_size, num_items) VALUES (%s, %s, %s, %s, %s, %s, %s)", feed_name, feed_title, group_name, path_str, self.convert_datetime_to_str(upload_date), s.st_size, num_item_elements)
+        except IntegrityError:
+            self.db.execute(cursor, "UPDATE feed_name_public_feed_info SET feed_title = %s, group_name = %s, file_path = %s, upload_date = %s, file_size = %s, num_items = %s WHERE feed_name = %s", feed_title, group_name, path_str, self.convert_datetime_to_str(upload_date), s.st_size, num_item_elements, feed_name)
 
         for feed_alias, _ in self.feed_name_aliases_map.get(feed_name, {}).items():
             try:
@@ -290,13 +300,15 @@ class ProblemManager:
     def load_all_public_feed_files(self) -> None:
         LOGGER.debug("# load_all_public_feed_files()")
         connection, cursor = self.db.get_connection_and_cursor()
-        rows = self.db.query("SELECT * FROM feed_name_public_feed_info")
-        if len(rows) > 0:
-            LOGGER.debug("no need to load public feed files")
-            return
 
-        if not self.feed_name_title_map or not self.feed_name_group_map or not self.feed_name_aliases_map:
-            LOGGER.error("can't find name to title/group/aliases mapping data in loading public feed files")
+        if not self.feed_name_title_map:
+            LOGGER.error("can't find name to title mapping data in loading public feed files")
+            return
+        if not self.feed_name_group_map:
+            LOGGER.error("can't find name to group mapping data in loading public feed files")
+            return
+        if not self.feed_name_aliases_map:
+            LOGGER.error("can't find name to aliases mapping data in loading public feed files")
             return
 
         num_items = 0
@@ -470,10 +482,6 @@ class ProblemManager:
         html_file_image_tag_count_map: Dict[Path, int] = {}
         html_file_image_not_found_count_map: Dict[Path, int] = {}
         connection, cursor = self.db.get_connection_and_cursor()
-        rows = self.db.query("SELECT * FROM feed_name_public_feed_info")
-        if len(rows) > 0:
-            LOGGER.debug("no need to load public feed files")
-            return
 
         html_file_count = 0
         global_conf = Config.get_global_config()
@@ -568,14 +576,15 @@ class ProblemManager:
     def load_all_progress_info_from_files(self) -> None:
         LOGGER.debug("# load_all_progress_info_from_files()")
         connection, cursor = self.db.get_connection_and_cursor()
-        # self.db.execute(cursor, "TRUNCATE feed_name_progress_info")
-        rows = self.db.query("SELECT * FROM feed_name_progress_info")
-        if len(rows) > 0:
-            LOGGER.debug("no need to load progress info from files")
-            return
 
-        if not self.feed_name_config_map or not self.feed_name_title_map or not self.feed_name_group_map:
-            LOGGER.error("can't find name to config/title/group mapping data in loading all progress info from files")
+        if not self.feed_name_config_map:
+            LOGGER.error("can't find name to config mapping data in loading all progress info from files")
+            return
+        if not self.feed_name_title_map:
+            LOGGER.error("can't find name to title mapping data in loading all progress info from files")
+            return
+        if not self.feed_name_group_map:
+            LOGGER.error("can't find name to group mapping data in loading all progress info from files")
             return
 
         num_items = 0
@@ -658,14 +667,18 @@ class ProblemManager:
     def load_all_httpd_access_files(self) -> None:
         LOGGER.debug("# load_all_httpd_access_files()")
         connection, cursor = self.db.get_connection_and_cursor()
-        # self.db.execute(cursor, "TRUNCATE feed_alias_access_info")
-        rows = self.db.query("SELECT * FROM feed_alias_access_info")
-        if len(rows) > 0:
-            LOGGER.debug("no need to load httpd access files")
-            return
 
-        if not self.feed_alias_name_map or not self.feed_name_title_map or not self.feed_name_group_map or not self.feed_name_aliases_map:
-            LOGGER.error("can't find alias to name and name to title/group mapping data in loading all httpd access files")
+        if not self.feed_alias_name_map:
+            LOGGER.error("can't find alias to namemapping data in loading all httpd access files")
+            return
+        if not self.feed_name_title_map:
+            LOGGER.error("can't find name to title mapping data in loading all httpd access files")
+            return
+        if not self.feed_name_group_map:
+            LOGGER.error("can't find name to group mapping data in loading all httpd access files")
+            return
+        if not self.feed_name_aliases_map:
+            LOGGER.error("can't find name to alias mapping data in loading all httpd access files")
             return
 
         # read access.log for 1 month
@@ -730,6 +743,3 @@ class ProblemManager:
 if __name__ == "__main__":
     pm = ProblemManager()
     pm.load_all()
-    # info = pm.get_feed_alias_status_info_map()
-    # from pprint import pprint
-    # pprint(info)
