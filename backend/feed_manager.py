@@ -168,7 +168,7 @@ class FeedManager:
         return result_list, ""
 
     @staticmethod
-    async def search_site(keyword: str) -> Tuple[List[Tuple[str, str]], str]:
+    def search_site(keyword: str) -> Tuple[List[Tuple[str, str]], str]:
         LOGGER.debug(f"# search_site(keyword={keyword})")
         search_manager = SearchManager()
         return search_manager.search("", keyword), ""
@@ -286,7 +286,7 @@ class FeedManager:
         self.problem_manager.load_all_config_rss_files()
         return True, ""
 
-    async def run(self, group_name: str, feed_name: str, alias: str) -> Tuple[bool, str]:
+    def run(self, group_name: str, feed_name: str, alias: str) -> Tuple[bool, str]:
         LOGGER.debug(f"# run({group_name}, {feed_name}, {alias})")
         feed_dir_path = self.work_dir / group_name / feed_name
         conf_file_path = feed_dir_path / self.CONF_FILE

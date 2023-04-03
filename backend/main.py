@@ -99,10 +99,10 @@ async def search(keyword: str):
 
 
 @app.get("/search_site/{keyword}")
-async def search_site(keyword: str):
+def search_site(keyword: str):
     LOGGER.debug(f"/search_site -> search_site({keyword})")
     response_object: Dict[str, Any] = {"status": "failure"}
-    result, error = await feed_manager.search_site(keyword)
+    result, error = feed_manager.search_site(keyword)
     if result or not error:
         response_object["search_result_list"] = result
         response_object["status"] = "success"
@@ -181,11 +181,11 @@ async def remove_html(group_name: str, feed_name: str):
 
 
 @app.post("/groups/{group_name}/feeds/{feed_name}/run")
-async def run(group_name: str, feed_name: str, request: Request):
+def run(group_name: str, feed_name: str, request: Request):
     LOGGER.debug(f"/groups/{group_name}/feeds/{feed_name}/run -> run({group_name}, {feed_name})")
     response_object: Dict[str, Any] = {"status": "failure"}
     post_data = await request.json()
-    result, error = await feed_manager.run(group_name, feed_name, post_data["alias"])
+    result, error = feed_manager.run(group_name, feed_name, post_data["alias"])
     if result:
         response_object["status"] = "success"
     else:
