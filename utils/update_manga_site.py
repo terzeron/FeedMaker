@@ -6,6 +6,7 @@ import os
 import re
 import json
 import logging.config
+from typing import Optional
 from pathlib import Path
 from feed_maker_util import Process
 
@@ -21,6 +22,8 @@ def print_usage() -> None:
 def update_domain() -> bool:
     print("--- updating domain ---")
     new_postfix = sys.argv[1]
+    new_url: Optional[str] = ""
+    new_referer: Optional[str] = ""
 
     # update site config file
     print("- site_config.json")
@@ -29,6 +32,7 @@ def update_domain() -> bool:
         print("can't find site config file")
         return False
 
+    # read site config file
     with open(site_config_file, "r", encoding="utf-8") as f:
         site_config = json.load(f)
         if site_config:
@@ -37,11 +41,21 @@ def update_domain() -> bool:
             else:
                 print("no url in site config")
                 return False
+            if "referer" in site_config:
+                new_referer = re.sub(r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+|\.\w+)(?P<post>[^/]*)', r'\g<pre>' + new_postfix + r'\g<post>', site_config["referer"])
+        else:
+            print("empty site config")
+            return False
 
+    # write site config file
     with open(site_config_file, "w", encoding="utf-8") as f:
-        site_config["url"] = new_url
+        if new_url:
+            site_config["url"] = new_url
+        if new_referer:
+            site_config["referer"] = new_referer
         json.dump(site_config, f, indent=2, ensure_ascii=False)
 
+    # git add
     print("- git add")
     git_cmd: str = f"git add {site_config_file}"
     _, error = Process.exec_cmd(git_cmd)
