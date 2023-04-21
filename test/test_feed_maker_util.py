@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 import subprocess
 from bs4 import BeautifulSoup
-from feed_maker_util import Config, URL, HTMLExtractor, Datetime, Process, IO, Data, Cache, Htaccess
+from feed_maker_util import Config, URL, HTMLExtractor, Datetime, Process, IO, Data, Cache, Htaccess, PathUtil
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
 LOGGER = logging.getLogger()
@@ -836,6 +836,19 @@ class TestHtaccess(unittest.TestCase):
         feed_name = "nonexistent_feed2_name"
         actual = Htaccess.remove_alias(group_name, feed_name)
         self.assertTrue(actual)
+
+
+class TestPathUtil(unittest.TestCase):
+    def test_convert_path_to_str(self):
+        work_dir = Path(os.environ["FEED_MAKER_WORK_DIR"])
+        public_feed_dir = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"])
+        httpd_access_log_dir = Path(os.environ["FEED_MAKER_LOG_DIR"])
+        htaccess_file = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / ".htaccess"
+        self.assertEqual(PathUtil.convert_path_to_str(work_dir), ".")
+        self.assertEqual(PathUtil.convert_path_to_str(public_feed_dir), ".")
+        self.assertEqual(PathUtil.convert_path_to_str(httpd_access_log_dir), "logs")
+        self.assertEqual(PathUtil.convert_path_to_str(htaccess_file), ".htaccess")
+
 
 
 if __name__ == "__main__":

@@ -7,7 +7,6 @@ import unittest
 import logging.config
 from pathlib import Path
 import shutil
-from feed_maker_util import Config
 from notification import Notification
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")

@@ -22,7 +22,6 @@ def print_usage() -> None:
 def update_domain() -> bool:
     print("--- updating domain ---")
     new_postfix = sys.argv[1]
-    new_url: Optional[str] = ""
     new_referer: Optional[str] = ""
 
     # update site config file
@@ -99,7 +98,7 @@ def update_domain() -> bool:
 
         print(".", end='')
         try:
-            xml_file_path = Path.cwd() / entry / (entry + ".xml")
+            xml_file_path = Path.cwd() / entry / f"{entry}.xml"
             old_xml_file_path = xml_file_path.with_suffix(xml_file_path.suffix + ".old")
             xml_file_path.unlink(missing_ok=True)
             old_xml_file_path.unlink(missing_ok=True)

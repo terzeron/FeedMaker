@@ -77,7 +77,6 @@ http://cartoon.media.daum.net/webtoon/view/mujigaebridge\t무지개다리 파수
 
     @staticmethod
     def count_tsv_file(tsv_file_path: Path):
-        num_lines = 0
         num_items = 0
         with tsv_file_path.open("r", encoding="utf-8") as infile:
             data = infile.read()

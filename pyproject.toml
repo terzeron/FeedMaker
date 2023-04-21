@@ -1,0 +1,31 @@
+[tool.black]
+line-length = 120
+target-version = ["py39"]
+
+[tool.isort]
+py_version = 39
+skip = ["__init__.py"]
+skip_glob = ["migrations/*"]
+multi_line_output = 3
+include_trailing_comma = true
+
+[tool.mypy]
+python_version = "3.9"
+warn_incomplete_stub = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+#follow_imports = skip
+ignore_missing_imports = true
+check_untyped_defs = true
+disallow_untyped_calls = true
+disallow_any_generics = true
+#warn_return_any = true
+
+
+[tool.poetry.dev-dependencies]
+pylint = "2.16.2"
+mypy = "1.1.1"
+
+[tool.pylint."master"]
+ignore = [".github/*", "idea/*", ".mypy_cache/*", ".run/*", "frontend/*", "out/*"]
+disable = ["import-star-module-level", "old-octal-literal", "oct-method", "print-statement", "unpacking-in-except", "parameter-unpacking", "backtick", "old-raise-syntax", "old-ne-operator", "long-suffix", "dict-view-method", "dict-iter-method", "metaclass-assignment", "next-method-called", "raising-string", "indexing-exception", "raw_input-builtin", "long-builtin", "file-builtin", "execfile-builtin", "coerce-builtin", "cmp-builtin", "buffer-builtin", "basestring-builtin", "apply-builtin", "filter-builtin-not-iterating", "using-cmp-argument", "useless-suppression", "range-builtin-not-iterating", "suppressed-message", "no-absolute-import", "old-division", "cmp-method", "reload-builtin", "zip-builtin-not-iterating", "intern-builtin", "unichr-builtin", "reduce-builtin", "standarderror-builtin", "unicode-builtin", "xrange-builtin", "coerce-method", "delslice-method", "getslice-method", "setslice-method", "input-builtin", "round-builtin", "hex-method", "nonzero-method", "map-builtin-not-iterating", "missing-module-docstring", "missing-class-docstring", "missing-function-docstring", "line-too-long", "invalid-name", "too-many-instance-attributes", "too-few-public-methods", "too-many-arguments", "too-many-locals", "too-many-branches", "too-many-statements", "too-many-nested-block", "too-many-return-statements", "anomalous-backslash-in-string", "logging-fstring-interpolation", "protected-access"]
