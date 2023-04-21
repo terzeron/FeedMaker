@@ -67,6 +67,9 @@ class ProblemManager:
         LOGGER.debug("# reload_htaccess_file()")
         connection, cursor = self.db.get_connection_and_cursor()
 
+        self.db.execute(cursor, "DELETE FROM feed_alias_name")
+        self.db.execute(cursor, "DELETE FROM feed_alias_status_info")
+
         num_items = 0
         with open(self.htaccess_file, 'r', encoding="utf-8") as infile:
             for line in infile:
@@ -208,6 +211,8 @@ class ProblemManager:
         LOGGER.debug("# load_all_config_rss_files()")
         connection, cursor = self.db.get_connection_and_cursor()
 
+        self.db.execute(cursor, "DELETE FROM element_name_count")
+
         if not self.feed_name_aliases_map:
             LOGGER.error("can't find name to aliases mapping data in loading config and rss files")
             return
@@ -224,7 +229,10 @@ class ProblemManager:
                 num_items += self._add_config_rss_file_to_info(cursor, feed_dir_path, element_name_count_map)
 
         for element_name, count in element_name_count_map.items():
-            self.db.execute(cursor, "INSERT INTO element_name_count (element_name, count) VALUES (%s, %s)", element_name, count)
+            try:
+                self.db.execute(cursor, "INSERT INTO element_name_count (element_name, count) VALUES (%s, %s)", element_name, count)
+            except IntegrityError:
+                self.db.execute(cursor, "UPDATE element_name_count SET count = %s WHERE element_name = %s", count, element_name)
 
         self.db.commit(connection, cursor)
         print(f"* The loading of all config files and rss files is done. {num_items} items")
@@ -274,6 +282,8 @@ class ProblemManager:
             self.db.execute(cursor, "UPDATE feed_name_public_feed_info SET feed_title = %s, group_name = %s, file_path = %s, upload_date = %s, file_size = %s, num_items = %s WHERE feed_name = %s", feed_title, group_name, path_str, self.convert_datetime_to_str(upload_date), s.st_size, num_item_elements, feed_name)
 
         for feed_alias, _ in self.feed_name_aliases_map.get(feed_name, {}).items():
+            if feed_alias == "spiderman_short_stories" or feed_name == "spiderman_short_stories":
+                print(upload_date)
             try:
                 self.db.execute(cursor, "INSERT INTO feed_alias_status_info (feed_alias, feed_name, feed_title, group_name, public_html, upload_date, file_path) VALUES (%s, %s, %s, %s, %s, %s, %s)", feed_alias, feed_name, feed_title, group_name, True, upload_date, path_str)
             except IntegrityError:
@@ -290,6 +300,8 @@ class ProblemManager:
     def load_all_public_feed_files(self) -> None:
         LOGGER.debug("# load_all_public_feed_files()")
         connection, cursor = self.db.get_connection_and_cursor()
+
+        self.db.execute(cursor, "DELETE FROM feed_name_public_feed_info")
 
         if not self.feed_name_title_map:
             LOGGER.error("can't find name to title mapping data in loading public feed files")
@@ -465,6 +477,11 @@ class ProblemManager:
         html_file_image_not_found_count_map: Dict[Path, int] = {}
         connection, cursor = self.db.get_connection_and_cursor()
 
+        self.db.execute(cursor, "DELETE FROM html_file_size")
+        self.db.execute(cursor, "DELETE FROM html_file_with_many_image_tag")
+        self.db.execute(cursor, "DELETE FROM html_file_without_image_tag")
+        self.db.execute(cursor, "DELETE FROM html_file_image_not_found")
+
         html_file_count = 0
         global_conf = Config.get_global_config()
         web_service_url = global_conf["web_service_url"]
@@ -558,6 +575,8 @@ class ProblemManager:
     def load_all_progress_info_from_files(self) -> None:
         LOGGER.debug("# load_all_progress_info_from_files()")
         connection, cursor = self.db.get_connection_and_cursor()
+
+        self.db.execute(cursor, "DELETE FROM feed_name_progress_info")
 
         if not self.feed_name_config_map:
             LOGGER.error("can't find name to config mapping data in loading all progress info from files")
@@ -660,6 +679,8 @@ class ProblemManager:
     def load_all_httpd_access_files(self) -> None:
         LOGGER.debug("# load_all_httpd_access_files()")
         connection, cursor = self.db.get_connection_and_cursor()
+
+        self.db.execute(cursor, "DELETE FROM feed_alias_access_info")
 
         if not self.feed_alias_name_map:
             LOGGER.error("can't find alias to name mapping data in loading all httpd access files")
