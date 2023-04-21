@@ -38,7 +38,7 @@ class TestFeedMakerRunner(unittest.TestCase):
         self.feed_dir_path.mkdir(exist_ok=True)
         self.garbage_file_path = self.feed_dir_path / "nohup.out"
         self.garbage_file_path.touch()
-        self.rss_file_path = self.feed_dir_path / (feed_name + ".xml")
+        self.rss_file_path = self.feed_dir_path / f"{feed_name}.xml"
         self.rss_file_path.touch()
         self.old_rss_file_path = self.rss_file_path.with_suffix(self.rss_file_path.suffix + ".old")
         self.old_rss_file_path.touch()
@@ -89,14 +89,14 @@ class TestFeedMakerRunner(unittest.TestCase):
 
     def test_1_get_img_set_in_img_dir(self):
         actual = self.runner._get_img_set_in_img_dir(self.feed_img_dir_path)
-        expected = self.empty_img_file_path.relative_to(self.feed_img_dir_path).name
+        expected = self.empty_img_file_path.name
         self.assertIn(expected, actual)
 
     def test_2_remove_image_files_with_zero_size(self):
         with patch.object(LOGGER, "info") as mock_info:
             self.runner._remove_image_files_with_zero_size(self.feed_img_dir_path)
             actual = self.runner._get_img_set_in_img_dir(self.feed_img_dir_path)
-            expected = self.empty_img_file_path.relative_to(self.feed_img_dir_path).name
+            expected = self.empty_img_file_path.name
             self.assertNotIn(expected, actual)
 
             self.assertTrue(assert_in_mock_logger("# deleting image files with zero size", mock_info))
@@ -174,20 +174,17 @@ class TestFeedMakerRunner(unittest.TestCase):
             self.assertTrue(assert_in_mock_logger("* naver/oneplusone", mock_info))
             self.assertTrue(assert_in_mock_logger("Appending 1 old items to the feed list", mock_info))
             self.assertTrue(assert_in_mock_logger("Generating rss feed file...", mock_info))
-            #self.assertTrue(assert_in_mock_logger("upload success!", mock_info))
+            # self.assertTrue(assert_in_mock_logger("upload success!", mock_info))
 
     def test_make_all_feeds(self):
-        options = {"num_feeds": 1}
-        actual = self.runner.make_all_feeds(options)
-        return
-        with patch.object(LOGGER, "warning") as mock_warning:
-            with patch.object(LOGGER, "info") as mock_info:
-                options = {"num_feeds": 1}
-                actual = self.runner.make_all_feeds(options)
-                self.assertTrue(actual)
+        with patch.object(LOGGER, "info") as mock_info:
+            options = {"num_feeds": 1}
+            actual = self.runner.make_all_feeds(options)
+            self.assertTrue(actual)
 
-                self.assertTrue(assert_in_mock_logger("Warning: can't read old feed list from files", mock_warning))
-                self.assertTrue(assert_in_mock_logger("# Running time analysis", mock_info))
+            self.assertTrue(assert_in_mock_logger("# Generating feeds", mock_info))
+            self.assertTrue(assert_in_mock_logger("# deleting html files without cached image files", mock_info))
+            self.assertTrue(assert_in_mock_logger("# deleting image files with zero size", mock_info))
 
 
 if __name__ == "__main__":

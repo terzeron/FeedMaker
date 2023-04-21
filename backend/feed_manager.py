@@ -12,7 +12,7 @@ from shutil import rmtree
 from typing import List, Dict, Any, Tuple, Optional
 from functools import cmp_to_key
 from run import FeedMakerRunner
-from feed_maker_util import Htaccess, Process, Data
+from feed_maker_util import Htaccess, Process, Data, PathUtil
 from problem_manager import ProblemManager
 from search_manga_site import SearchManager
 
@@ -36,14 +36,14 @@ class FeedManager:
 
     def _git_add(self, feed_dir_path: Path) -> Tuple[str, Optional[str]]:
         feed_name = feed_dir_path.name
-        conf_file_relative = feed_dir_path.relative_to(self.work_dir)
+        conf_file_relative = PathUtil.convert_path_to_str(feed_dir_path)
         os.chdir(self.work_dir)
         cmd = f"git add {conf_file_relative} && git commit -m 'add {feed_name}'"
         return Process.exec_cmd(cmd, dir_path=self.work_dir)
 
     def _git_rm(self, feed_dir_path: Path) -> Tuple[str, Optional[str]]:
         feed_name = feed_dir_path.name
-        conf_file_relative = feed_dir_path.relative_to(self.work_dir)
+        conf_file_relative = PathUtil.convert_path_to_str(feed_dir_path)
         os.chdir(self.work_dir)
         cmd = f"git rm -r {conf_file_relative} && git commit -m 'remove {feed_name}'"
         return Process.exec_cmd(cmd, dir_path=self.work_dir)
@@ -51,8 +51,8 @@ class FeedManager:
     def _git_mv(self, feed_dir_path: Path, new_feed_dir_path: Path) -> Tuple[str, Optional[str]]:
         feed_dir_name = feed_dir_path.name
         new_feed_dir_name = new_feed_dir_path.name
-        feed_dir_path_relative = feed_dir_path.relative_to(self.work_dir)
-        new_feed_dir_path_relative = new_feed_dir_path.relative_to(self.work_dir)
+        feed_dir_path_relative = PathUtil.convert_path_to_str(feed_dir_path)
+        new_feed_dir_path_relative = PathUtil.convert_path_to_str(new_feed_dir_path)
         os.chdir(self.work_dir)
         cmd = f"git mv {feed_dir_path_relative} {new_feed_dir_path_relative} && git commit -m 'rename {feed_dir_name} to {new_feed_dir_name}' || mv {feed_dir_path_relative} {new_feed_dir_path_relative}"
         return Process.exec_cmd(cmd, dir_path=self.work_dir)
@@ -66,7 +66,7 @@ class FeedManager:
                     line_list.append(line)
                 json_data = json.loads(''.join(line_list))
                 if "configuration" not in json_data:
-                    LOGGER.error(f"can't find normal configuration '{feed_dir_path.relative_to(self.work_dir)}'")
+                    LOGGER.error(f"can't find normal configuration '{PathUtil.convert_path_to_str(feed_dir_path)}'")
                     return {}
                 return json_data["configuration"]
         return {}
@@ -113,7 +113,7 @@ class FeedManager:
             with exec_result_file_path.open('r', encoding='utf-8') as infile:
                 return infile.read(), ""
         else:
-            return "", f"can't find such file '{exec_result_file_path.relative_to(self.work_dir)}'"
+            return "", f"can't find such file '{PathUtil.convert_path_to_str(exec_result_file_path)}'"
 
     async def get_problems_status_info(self) -> Tuple[Dict[str, Dict[str, Any]], str]:
         LOGGER.debug("# get_problems_status_info()")
@@ -188,7 +188,7 @@ class FeedManager:
     async def get_groups(self) -> Tuple[List[Dict[str, Any]], str]:
         LOGGER.debug("# get_groups()")
         group_list: List[Dict[str, Any]] = []
-        if self.group_name_feed_title_list_map != {}:
+        if self.group_name_feed_title_list_map:
             for group_name, feed_title_list in self.group_name_feed_title_list_map.items():
                 group_list.append({"name": group_name, "num_feeds": len(feed_title_list)})
             return sorted(group_list, key=cmp_to_key(FeedManager._compare_names)), ""
@@ -320,7 +320,7 @@ class FeedManager:
         LOGGER.debug(f"# _remove_public_img_pdf_feed_files({feed_name})")
         img_dir_path = self.public_feed_dir / "img" / feed_name
         pdf_dir_path = self.public_feed_dir / "pdf" / feed_name
-        feed_file_path = self.public_feed_dir / (feed_name + ".xml")
+        feed_file_path = self.public_feed_dir / f"{feed_name}.xml"
 
         # remove files
         if img_dir_path.is_dir():
@@ -355,17 +355,16 @@ class FeedManager:
 
     async def remove_public_feed(self, feed_name: str) -> None:
         LOGGER.debug(f"# remove_public_feed({feed_name})")
-        feed_path = self.public_feed_dir / (feed_name + ".xml")
-        feed_path.unlink(missing_ok=True)
-        feed_dir_path = self.work_dir / "unknown" / feed_name
-        self.problem_manager.remove_public_feed_file_from_info(feed_dir_path)
+        feed_file_path = self.public_feed_dir / f"{feed_name}.xml"
+        feed_file_path.unlink(missing_ok=True)
+        self.problem_manager.remove_public_feed_file_from_info(feed_file_path)
 
     async def remove_feed(self, group_name: str, feed_name: str) -> Tuple[bool, str]:
         LOGGER.debug(f"# remove_feed({group_name}, {feed_name})")
         feed_dir_path = self.work_dir / group_name / feed_name
         conf_file_path = feed_dir_path / self.CONF_FILE
         if not feed_dir_path or not conf_file_path:
-            return False, f"can't remove feed '{feed_dir_path.relative_to(self.work_dir)}'"
+            return False, f"can't remove feed '{PathUtil.convert_path_to_str(feed_dir_path)}'"
 
         # remove files
         self._remove_public_img_pdf_feed_files(feed_name)
@@ -410,9 +409,10 @@ class FeedManager:
         self.problem_manager.reload_htaccess_file()
         for feed_dir_path in group_dir_path.iterdir():
             self.problem_manager.remove_config_rss_file_from_info(feed_dir_path)
-            self.problem_manager.remove_public_feed_file_from_info(feed_dir_path)
+            feed_file_path = self.public_feed_dir / f"{feed_dir_path.name}.xml"
+            self.problem_manager.remove_public_feed_file_from_info(feed_file_path)
             self.problem_manager.remove_progress_from_info(feed_dir_path)
-        self.problem_manager.remove_html_file_in_path_from_info("group_dir_path", group_dir_path)
+            self.problem_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
         self.problem_manager.load_all_httpd_access_files()
         return True, ""
 
@@ -427,7 +427,7 @@ class FeedManager:
         feed_dir_path = self.work_dir / group_name / feed_name
         new_feed_dir_path = self.work_dir / group_name / new_feed_name
         if not feed_dir_path.is_dir():
-            return "", f"can't find such a directory '{feed_dir_path.relative_to(self.work_dir)}'"
+            return "", f"can't find such a directory '{PathUtil.convert_path_to_str(feed_dir_path)}'"
         # git mv & commit
         self._git_mv(feed_dir_path, new_feed_dir_path)
 
@@ -449,7 +449,7 @@ class FeedManager:
         group_dir_path = self.work_dir / group_name
         new_group_dir_path = self.work_dir / new_group_name
         if not group_dir_path.is_dir():
-            return "", f"can't find such a directory '{group_dir_path.relative_to(self.work_dir)}'"
+            return "", f"can't find such a directory '{PathUtil.convert_path_to_str(group_dir_path)}'"
         # git mv & commit
         self._git_mv(group_dir_path, new_group_dir_path)
 
@@ -460,16 +460,18 @@ class FeedManager:
             # enable
             for feed_dir_path in new_group_dir_path.iterdir():
                 self.problem_manager.add_config_rss_file_to_info(feed_dir_path)
-                self.problem_manager.add_public_feed_file_to_info(feed_dir_path)
+                feed_file_path = self.public_feed_dir / f"{feed_dir_path.name}.xml"
+                self.problem_manager.add_public_feed_file_to_info(feed_file_path)
                 self.problem_manager.add_progress_to_info(feed_dir_path)
-            self.problem_manager.add_html_files_in_path_to_info("group_dir_path", group_dir_path)
+                self.problem_manager.add_html_files_in_path_to_info(feed_dir_path)
         else:
             # disable
             for feed_dir_path in group_dir_path.iterdir():
                 self.problem_manager.remove_config_rss_file_from_info(feed_dir_path)
-                self.problem_manager.remove_public_feed_file_from_info(feed_dir_path)
+                feed_file_path = self.public_feed_dir / f"{feed_dir_path.name}.xml"
+                self.problem_manager.remove_public_feed_file_from_info(feed_file_path)
                 self.problem_manager.remove_progress_from_info(feed_dir_path)
-            self.problem_manager.remove_html_file_in_path_from_info("group_dir_path", group_dir_path)
+                self.problem_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
         self.problem_manager.load_all_httpd_access_files()
         return new_group_name, ""
 

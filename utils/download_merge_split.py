@@ -110,7 +110,7 @@ def crop_image_files(feed_dir_path: Path, num_units: int, feed_img_dir_path: Pat
         f"# crop_image_files(feed_dir_path={feed_dir_path}, num_units={num_units}, feed_img_dir_path={feed_img_dir_path}, img_url={img_url})")
     # crop some image files
     for i in range(num_units):
-        img_file_path = Cache.get_cache_file_path(feed_img_dir_path, img_url, index=(i + 1))
+        img_file_path = Cache.get_cache_file_path(feed_img_dir_path, img_url, index=i + 1)
         LOGGER.debug(f"img_file={img_file_path}")
         if img_file_path.is_file():
             crop_image_file(feed_dir_path, img_file_path)
@@ -160,11 +160,11 @@ def print_image_files(num_units: int, feed_img_dir_path: Path, img_url_prefix: s
             ext = img_file_path.suffix
             split_img_path = img_file_path.with_suffix("." + str(i + 1) + ext)
         else:
-            split_img_path = Cache.get_cache_file_path(feed_img_dir_path, img_url, postfix=postfix, index=(i + 1))
+            split_img_path = Cache.get_cache_file_path(feed_img_dir_path, img_url, postfix=postfix, index=i + 1)
             ext = ""
         LOGGER.debug(f"split_img_file={split_img_path}")
         if split_img_path.is_file():
-            split_img_url = Cache.get_cache_url(img_url_prefix, img_url, postfix=postfix, index=(i + 1))
+            split_img_url = Cache.get_cache_url(img_url_prefix, img_url, postfix=postfix, index=i + 1)
             print(f"<img src='{split_img_url}{ext}'/>")
 
 
@@ -244,7 +244,7 @@ def main() -> int:
         elif o == "-h":
             print_usage(sys.argv[0])
         elif o == "--only-merge":
-            do_only_merge = (a == "true")
+            do_only_merge = a == "true"
 
     if len(args) < 1:
         print_usage(sys.argv[0])

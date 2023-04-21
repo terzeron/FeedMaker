@@ -11,7 +11,7 @@ import getopt
 from pathlib import Path
 from typing import Dict, Tuple, List, Any, Set
 from filelock import FileLock, Timeout
-from feed_maker_util import Config, Process
+from feed_maker_util import Config, Process, PathUtil
 from notification import Notification
 from feed_maker import FeedMaker
 from problem_manager import ProblemManager
@@ -139,8 +139,8 @@ class FeedMakerRunner:
             logging.getLogger("filelock").setLevel(logging.ERROR)
             with FileLock(str(lock_file_path), timeout=5):
                 feed_name = feed_dir_path.name
-                LOGGER.info(f"* {feed_dir_path.relative_to(self.work_dir_path)}")
-                rss_file_path = feed_dir_path / (feed_name + ".xml")
+                LOGGER.info(f"* {PathUtil.convert_path_to_str(feed_dir_path)}")
+                rss_file_path = feed_dir_path / f"{feed_name}.xml"
                 feed_img_dir_path = self.img_dir_path / feed_name
 
                 do_remove_all_files = options.get("do_remove_all_files", False)
@@ -157,7 +157,7 @@ class FeedMakerRunner:
                 self._remove_image_files_with_zero_size(feed_img_dir_path)
 
                 # make_feed.py 실행하여 feed 파일 생성
-                LOGGER.info(f"* making feed file '{rss_file_path.relative_to(self.work_dir_path)}'")
+                LOGGER.info(f"* making feed file '{PathUtil.convert_path_to_str(rss_file_path)}'")
                 feed_maker = FeedMaker(feed_dir_path, force_collection_opt, collect_only_opt, rss_file_path, window_size)
                 result = feed_maker.make()
 

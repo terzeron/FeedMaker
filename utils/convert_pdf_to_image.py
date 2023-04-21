@@ -32,7 +32,7 @@ def main() -> int:
         elif url_or_file.startswith("http"):
             pid = os.getpid()
             pdf_dir_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / "pdf"
-            pdf_file_path = pdf_dir_path / (str(pid) + ".pdf")
+            pdf_file_path = pdf_dir_path / f"{pid}.pdf"
             crawler = Crawler()
             result, error, _ = crawler.run(url=url_or_file, download_file=pdf_file_path)
             if not result:

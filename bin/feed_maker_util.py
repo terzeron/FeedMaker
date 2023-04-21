@@ -361,8 +361,7 @@ class Config:
 
     @staticmethod
     def _get_config_value_list(config_node: Dict[str, Any], key: str, default: Optional[List[Any]] = None) -> Optional[List[Any]]:
-        if not default:
-            default = []
+        default = default if default is not None else []
         result = Config._traverse_config_node(config_node, key)
         if result:
             return result
@@ -694,3 +693,17 @@ class Htaccess:
         if is_found:
             return True, ""
         return False, f"can't find such group '{group_name}' or feed '{feed_name}'"
+
+
+class PathUtil:
+    work_dir = Path(os.environ["FEED_MAKER_WORK_DIR"])
+    public_feed_dir = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"])
+
+    @staticmethod
+    def convert_path_to_str(path: Path) -> str:
+        ret = str(path)
+        if path.is_relative_to(PathUtil.work_dir):
+            ret = str(path.relative_to(PathUtil.work_dir))
+        elif path.is_relative_to(PathUtil.public_feed_dir):
+            ret = str(path.relative_to(PathUtil.public_feed_dir))
+        return ret

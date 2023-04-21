@@ -8,7 +8,7 @@ import getopt
 from threading import Thread
 import urllib.parse
 import logging.config
-from typing import Dict, Tuple, List, Optional, Union
+from typing import Dict, Tuple, List, Union
 from pathlib import Path
 from bs4 import BeautifulSoup
 from crawler import Crawler, Method
@@ -21,7 +21,7 @@ LOGGER = logging.getLogger()
 work_dir_path = Path(os.environ["FEED_MAKER_WORK_DIR"])
 
 
-class Site():
+class Site:
     site_name: str = ""
 
     url_prefix: str = ""
@@ -339,7 +339,7 @@ class AllallSite(Site):
 
 
 class BlacktoonSite(Site):
-    def __init__(self, site_name: str) -> None:
+    def __init__(self, site_name: str = "") -> None:
         super().__init__(site_name)
 
     def set_url_postfix(self, keyword: str = "") -> None:
@@ -385,7 +385,7 @@ class SektoonSite(Site):
 
 
 class AgitSite(Site):
-    def __init__(self, site_name: str) -> None:
+    def __init__(self, site_name: str = "") -> None:
         super().__init__(site_name)
 
     def set_url_postfix(self, _: str = "") -> None:

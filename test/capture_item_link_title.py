@@ -8,9 +8,7 @@ from feed_maker_util import IO
 
 
 def main() -> int:
-    link = ""
     url_prefix = "http://terms.naver.com/"
-    title = ""
     state = 0
 
     num_of_recent_feeds = 30

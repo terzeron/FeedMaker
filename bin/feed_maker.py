@@ -15,7 +15,7 @@ import PyRSS2Gen
 from ordered_set import OrderedSet
 from crawler import Crawler, Method
 from extractor import Extractor
-from feed_maker_util import Config, URL, Datetime, Process, Data, header_str
+from feed_maker_util import Config, URL, Datetime, Process, Data, PathUtil, header_str
 from new_list_collector import NewListCollector
 from uploader import Uploader
 
@@ -90,11 +90,11 @@ class FeedMaker:
     @staticmethod
     def _get_html_file_path(html_dir: Path, link: str) -> Path:
         md5 = URL.get_short_md5_name(URL.get_url_path(link))
-        return html_dir / (md5 + ".html")
+        return html_dir / f"{md5}.html"
 
     @staticmethod
     def _get_list_file_path(list_dir: Path, date_str: str) -> Path:
-        return list_dir / (date_str + ".txt")
+        return list_dir / f"{date_str}.txt"
 
     @staticmethod
     def _cmp_int_or_str(a: Dict[str, str], b: Dict[str, str]) -> int:
@@ -158,7 +158,7 @@ class FeedMaker:
                 list_file_path = FeedMaker._get_list_file_path(self.list_dir, short_date_str)
                 # 오늘에 가장 가까운 리스트가 존재하면 탈출
                 if list_file_path.is_file():
-                    LOGGER.info(list_file_path.relative_to(self.work_dir_path))
+                    LOGGER.info(PathUtil.convert_path_to_str(list_file_path))
                     # read the old list
                     with list_file_path.open('r', encoding='utf-8') as in_file:
                         for line in in_file:
@@ -174,7 +174,7 @@ class FeedMaker:
                     continue
 
                 file_path = self.list_dir / entry.name
-                LOGGER.info(file_path.relative_to(self.work_dir_path))
+                LOGGER.info(PathUtil.convert_path_to_str(file_path))
                 with file_path.open('r', encoding='utf-8') as in_file:
                     for line in in_file:
                         line = line.rstrip()
@@ -205,18 +205,18 @@ class FeedMaker:
             # 이미 성공적으로 만들어져 있으니까, 이미지 태그만 검사해보고 피드 리스트에 추가
             if FeedMaker._is_image_tag_in_html_file(html_file_path, image_tag_str):
                 LOGGER.info(
-                    f"Old: {item_url}\t{title}\t{html_file_path.relative_to(self.work_dir_path)} ({size} bytes > {self._get_size_of_template()} bytes of template)")
+                    f"Old: {item_url}\t{title}\t{PathUtil.convert_path_to_str(html_file_path)} ({size} bytes > {self._get_size_of_template()} bytes of template)")
                 ret = True
             else:
-                LOGGER.error(f"Error: No image tag in html file '{html_file_path}'")
+                LOGGER.error(f"Error: No image tag in html file '{PathUtil.convert_path_to_str(html_file_path)}'")
                 LOGGER.debug(f"image tag: '{image_tag_str}'")
-                LOGGER.warning(f"Warning: removing incomplete html file '{html_file_path}'")
+                LOGGER.warning(f"Warning: removing incomplete html file '{PathUtil.convert_path_to_str(html_file_path)}'")
                 html_file_path.unlink(missing_ok=True)
                 ret = False
         else:
             # 파일이 존재하지 않거나 크기가 작으니 다시 생성 시도
             conf = self.extraction_conf
-            crawler = Crawler(dir_path=self.feed_dir_path, render_js=conf["render_js"], method=Method.GET, headers=conf["header_list"], timeout=conf["timeout"], num_retries=conf["num_retries"], encoding=conf["encoding"], verify_ssl=conf["verify_ssl"], copy_images_from_canvas=conf["copy_images_from_canvas"], simulate_scrolling=conf["simulate_scrolling"], disable_headless=conf["disable_headless"], blob_to_dataurl=conf["blob_to_dataurl"])
+            crawler = Crawler(dir_path=self.feed_dir_path, render_js=conf["render_js"], method=Method.GET, headers=dict(conf["header_list"]), timeout=conf["timeout"], num_retries=conf["num_retries"], encoding=conf["encoding"], verify_ssl=conf["verify_ssl"], copy_images_from_canvas=conf["copy_images_from_canvas"], simulate_scrolling=conf["simulate_scrolling"], disable_headless=conf["disable_headless"], blob_to_dataurl=conf["blob_to_dataurl"])
             option_str = Crawler.get_option_str(conf)
             crawler_cmd = f"crawler.py -f '{self.feed_dir_path}' {option_str} '{item_url}'"
             LOGGER.debug(f"cmd={crawler_cmd}")
@@ -268,12 +268,12 @@ class FeedMaker:
 
                 # 피드 리스트에 추가
                 LOGGER.info(
-                    f"New: {item_url}\t{title}\t{html_file_path.relative_to(self.work_dir_path)} ({size} bytes > {self._get_size_of_template()} bytes of template)")
+                    f"New: {item_url}\t{title}\t{PathUtil.convert_path_to_str(html_file_path)} ({size} bytes > {self._get_size_of_template()} bytes of template)")
                 ret = True
             else:
                 # 피드 리스트에서 제외
                 LOGGER.warning(
-                    f"Warning: excluded {item_url}\t{title}\t{html_file_path.relative_to(self.work_dir_path)} ({size} bytes <= {self._get_size_of_template()} bytes of template)")
+                    f"Warning: excluded {item_url}\t{title}\t{PathUtil.convert_path_to_str(html_file_path)} ({size} bytes <= {self._get_size_of_template()} bytes of template)")
                 ret = False
 
             if conf["force_sleep_between_articles"]:
@@ -421,7 +421,7 @@ class FeedMaker:
         rss_items: List[PyRSS2Gen.RSSItem] = []
         for link, title in reversed(merged_feed_list):
             html_file_path = FeedMaker._get_html_file_path(self.html_dir, link)
-            LOGGER.info(f"{link}\t{title}\t{html_file_path.relative_to(self.work_dir_path)}")
+            LOGGER.info(f"{link}\t{title}\t{PathUtil.convert_path_to_str(html_file_path)}")
             pub_date_str = Datetime.get_rss_date_str()
 
             content = ""
@@ -484,7 +484,7 @@ class FeedMaker:
     def make(self) -> bool:
         LOGGER.debug("# make()")
         LOGGER.info("=========================================================")
-        LOGGER.info(f"{self.feed_dir_path.relative_to(self.work_dir_path)} ")
+        LOGGER.info(f"{PathUtil.convert_path_to_str(self.feed_dir_path)} ")
         LOGGER.info("=========================================================")
 
         config = Config(feed_dir_path=self.feed_dir_path)

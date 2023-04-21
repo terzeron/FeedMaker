@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from contextlib import suppress
 from typing import List, Dict, Any, Union, Optional
 from feed_maker import FeedMaker
-from feed_maker_util import Config
+from feed_maker_util import Config, PathUtil
 from db_manager import DBManager, Cursor, IntegrityError
 
 logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
@@ -49,14 +49,6 @@ class ProblemManager:
         del self.feed_name_aliases_map
         del self.db
 
-    def convert_path_to_str(self, path: Path) -> str:
-        ret = str(path)
-        if path.is_relative_to(self.work_dir):
-            ret = str(path.relative_to(self.work_dir))
-        elif path.is_relative_to(self.public_feed_dir):
-            ret = str(path.relative_to(self.public_feed_dir))
-        return ret
-
     @staticmethod
     def convert_datetime_to_str(d: Union[str, datetime]) -> str:
         if not d:
@@ -74,7 +66,6 @@ class ProblemManager:
     def reload_htaccess_file(self) -> None:
         LOGGER.debug("# reload_htaccess_file()")
         connection, cursor = self.db.get_connection_and_cursor()
-        self.db.execute(cursor, "TRUNCATE feed_alias_name")
 
         num_items = 0
         with open(self.htaccess_file, 'r', encoding="utf-8") as infile:
@@ -138,8 +129,7 @@ class ProblemManager:
         print(f"* The removing of config & rss file '{feed_name}' is done.")
 
     def _add_config_rss_file_to_info(self, cursor: Cursor, feed_dir_path: Path, element_name_count_map: Optional[Dict[str, int]] = None) -> int:
-        if not element_name_count_map:
-            element_name_count_map = {}
+        element_name_count_map = element_name_count_map if element_name_count_map is not None else {}
         if not feed_dir_path.is_dir():
             return 0
         feed_name = feed_dir_path.name
@@ -152,7 +142,10 @@ class ProblemManager:
             with open(feed_dir_path / "conf.json", 'r', encoding="utf-8") as infile:
                 json_data = json.load(infile)
                 if json_data and "configuration" in json_data:
-                    self.db.execute(cursor, "INSERT INTO feed_name_config (feed_name, config) VALUES (%s, %s)", feed_name, json.dumps(json_data["configuration"]))
+                    try:
+                        self.db.execute(cursor, "INSERT INTO feed_name_config (feed_name, config) VALUES (%s, %s)", feed_name, json.dumps(json_data["configuration"]))
+                    except IntegrityError:
+                        self.db.execute(cursor, "UPDATE feed_name_config SET config = %s WHERE feed_name = %s", json.dumps(json_data["configuration"]), feed_name)
                     self.feed_name_config_map[feed_name] = json_data["configuration"]
 
                 if "rss" in json_data["configuration"] and "title" in json_data["configuration"]["rss"]:
@@ -161,7 +154,10 @@ class ProblemManager:
                         title = title.split("::")[0]
                 else:
                     title = ""
-                self.db.execute(cursor, "INSERT INTO feed_name_title_group (feed_name, feed_title, group_name) VALUES (%s, %s, %s)", feed_name, title, group_name)
+                try:
+                    self.db.execute(cursor, "INSERT INTO feed_name_title_group (feed_name, feed_title, group_name) VALUES (%s, %s, %s)", feed_name, title, group_name)
+                except IntegrityError:
+                    self.db.execute(cursor, "UPDATE feed_name_title_group SET feed_title = %s, group_name = %s WHERE feed_name = %s", title, group_name, feed_name)
                 self.feed_name_title_map[feed_name] = title
 
                 if "collection" in json_data["configuration"] and "list_url_list" in \
@@ -169,7 +165,10 @@ class ProblemManager:
                     "_") and not feed_name.startswith("_"):
                     count = len(json_data["configuration"]["collection"]["list_url_list"])
                     if count != 1:
-                        self.db.execute(cursor, "INSERT INTO feed_name_list_url_count (feed_name, feed_title, group_name, count) VALUES (%s, %s, %s, %s)", feed_name, title, group_name, count)
+                        try:
+                            self.db.execute(cursor, "INSERT INTO feed_name_list_url_count (feed_name, feed_title, group_name, count) VALUES (%s, %s, %s, %s)", feed_name, title, group_name, count)
+                        except IntegrityError:
+                            self.db.execute(cursor, "UPDATE feed_name_list_url_count SET feed_title = %s, group_name = %s, count = %s WHERE feed_name = %s", title, group_name, count, feed_name)
 
                 if "collection" in json_data["configuration"]:
                     for sub_config_element in ["collection", "extraction", "rss"]:
@@ -177,11 +176,14 @@ class ProblemManager:
                             key = sub_config_element[0] + "." + element
                             element_name_count_map[key] = element_name_count_map.get(key, 0) + 1
 
-            rss_file_path = feed_dir_path / (feed_name + ".xml")
+            rss_file_path = feed_dir_path / f"{feed_name}.xml"
             if rss_file_path.is_file():
                 s = rss_file_path.stat()
                 update_date = datetime.fromtimestamp(s.st_mtime)
-                self.db.execute(cursor, "INSERT INTO feed_name_rss_info (feed_name, update_date) VALUES (%s, %s)", feed_name, self.convert_datetime_to_str(update_date))
+                try:
+                    self.db.execute(cursor, "INSERT INTO feed_name_rss_info (feed_name, update_date) VALUES (%s, %s)", feed_name, self.convert_datetime_to_str(update_date))
+                except IntegrityError:
+                    self.db.execute(cursor, "UPDATE feed_name_rss_info SET update_date = %s WHERE feed_name = %s", self.convert_datetime_to_str(update_date), feed_name)
                 num_items += 1
 
                 for feed_alias, _ in self.feed_name_aliases_map.get(feed_name, {}).items():
@@ -205,23 +207,21 @@ class ProblemManager:
     def load_all_config_rss_files(self) -> None:
         LOGGER.debug("# load_all_config_rss_files()")
         connection, cursor = self.db.get_connection_and_cursor()
-        rows = self.db.query("SELECT * FROM feed_name_config")
-        if len(rows) > 0:
-            LOGGER.debug("no need to load config files")
-            return
 
         if not self.feed_name_aliases_map:
-            LOGGER.error("can't find name to title/aliases mapping data in loading config and rss files")
+            LOGGER.error("can't find name to aliases mapping data in loading config and rss files")
             return
 
         element_name_count_map: Dict[str, int] = {}
         num_items = 0
-        for group_path in self.work_dir.iterdir():
-            group_name = group_path.name
-            if not group_path.is_dir() or group_name in ("test", "logs", ".git"):
+        for group_dir_path in self.work_dir.iterdir():
+            group_name = group_dir_path.name
+            if not group_dir_path.is_dir() or group_name in ("test", "logs", ".git"):
                 continue
-            for feed_path in group_path.iterdir():
-                num_items += self._add_config_rss_file_to_info(cursor, feed_path, element_name_count_map)
+            for feed_dir_path in group_dir_path.iterdir():
+                if not feed_dir_path.is_dir():
+                    continue
+                num_items += self._add_config_rss_file_to_info(cursor, feed_dir_path, element_name_count_map)
 
         for element_name, count in element_name_count_map.items():
             self.db.execute(cursor, "INSERT INTO element_name_count (element_name, count) VALUES (%s, %s)", element_name, count)
@@ -245,9 +245,9 @@ class ProblemManager:
 
         return feed_name_public_feed_info_map
 
-    def remove_public_feed_file_from_info(self, feed_dir_path: Path):
+    def remove_public_feed_file_from_info(self, feed_file_path: Path):
         connection, cursor = self.db.get_connection_and_cursor()
-        feed_name = feed_dir_path.name
+        feed_name = feed_file_path.parent.name
         self.db.execute(cursor, "DELETE FROM feed_name_public_feed_info WHERE feed_name = %s", feed_name)
         for feed_alias, _ in self.feed_name_aliases_map.get(feed_name, {}).items():
             self.db.execute(cursor, "DELETE FROM feed_alias_status_info WHERE feed_alias = %s", feed_alias)
@@ -266,9 +266,12 @@ class ProblemManager:
         group_name = self.feed_name_group_map.get(feed_name, "")
         s = feed_file_path.stat()
         upload_date = datetime.fromtimestamp(s.st_mtime)
-        path_str = self.convert_path_to_str(feed_file_path)
+        path_str = PathUtil.convert_path_to_str(feed_file_path)
 
-        self.db.execute(cursor, "INSERT INTO feed_name_public_feed_info (feed_name, feed_title, group_name, file_path, upload_date, file_size, num_items) VALUES (%s, %s, %s, %s, %s, %s, %s)", feed_name, feed_title, group_name, path_str, self.convert_datetime_to_str(upload_date), s.st_size, num_item_elements)
+        try:
+            self.db.execute(cursor, "INSERT INTO feed_name_public_feed_info (feed_name, feed_title, group_name, file_path, upload_date, file_size, num_items) VALUES (%s, %s, %s, %s, %s, %s, %s)", feed_name, feed_title, group_name, path_str, self.convert_datetime_to_str(upload_date), s.st_size, num_item_elements)
+        except IntegrityError:
+            self.db.execute(cursor, "UPDATE feed_name_public_feed_info SET feed_title = %s, group_name = %s, file_path = %s, upload_date = %s, file_size = %s, num_items = %s WHERE feed_name = %s", feed_title, group_name, path_str, self.convert_datetime_to_str(upload_date), s.st_size, num_item_elements, feed_name)
 
         for feed_alias, _ in self.feed_name_aliases_map.get(feed_name, {}).items():
             try:
@@ -279,24 +282,23 @@ class ProblemManager:
         return 1
 
     def add_public_feed_file_to_info(self, feed_file_path: Path):
-        if feed_file_path.suffix != ".xml":
-            LOGGER.warning("can't find feed xml file '%s'", feed_file_path)
-            return 0
         connection, cursor = self.db.get_connection_and_cursor()
         self._add_public_feed_file_to_info(cursor, feed_file_path)
         self.db.commit(connection, cursor)
-        print(f"* The adding of public feed file '{feed_file_path}' is done.")
+        print(f"* The adding of public feed file '{PathUtil.convert_path_to_str(feed_file_path)}' is done.")
 
     def load_all_public_feed_files(self) -> None:
         LOGGER.debug("# load_all_public_feed_files()")
         connection, cursor = self.db.get_connection_and_cursor()
-        rows = self.db.query("SELECT * FROM feed_name_public_feed_info")
-        if len(rows) > 0:
-            LOGGER.debug("no need to load public feed files")
-            return
 
-        if not self.feed_name_title_map or not self.feed_name_group_map or not self.feed_name_aliases_map:
-            LOGGER.error("can't find name to title/group/aliases mapping data in loading public feed files")
+        if not self.feed_name_title_map:
+            LOGGER.error("can't find name to title mapping data in loading public feed files")
+            return
+        if not self.feed_name_group_map:
+            LOGGER.error("can't find name to group mapping data in loading public feed files")
+            return
+        if not self.feed_name_aliases_map:
+            LOGGER.error("can't find name to aliases mapping data in loading public feed files")
             return
 
         num_items = 0
@@ -364,40 +366,32 @@ class ProblemManager:
 
         return html_file_image_not_found_map
 
-    def remove_html_file_in_path_from_info(self, dir_type_name: str, dir_path: Path) -> None:
-        LOGGER.debug(f"# remove_html_file_in_path_from_info(dir_type_name={dir_type_name}, dir_path={dir_path})")
+    def remove_html_file_in_path_from_info(self, dir_type_name: str, path: Path) -> None:
+        LOGGER.debug(f"# remove_html_file_in_path_from_info(dir_type_name={dir_type_name}, dir_path={path})")
         if dir_type_name not in ("file_path", "feed_dir_path", "group_dir_path"):
             return
 
         connection, cursor = self.db.get_connection_and_cursor()
-        if dir_type_name == "group_dir_path":
-            group_dir_path_str = self.convert_path_to_str(dir_path)
-            self.db.execute(cursor, "DELETE FROM html_file_size WHERE group_dir_path = %s", group_dir_path_str)
-            self.db.execute(cursor, "DELETE FROM html_file_with_many_image_tag WHERE group_dir_path = %s", group_dir_path_str)
-            self.db.execute(cursor, "DELETE FROM html_file_without_image_tag WHERE group_dir_path = %s", group_dir_path_str)
-            self.db.execute(cursor, "DELETE FROM html_file_image_not_found WHERE group_dir_path = %s", group_dir_path_str)
         if dir_type_name == "feed_dir_path":
-            feed_dir_path_str = self.convert_path_to_str(dir_path)
+            feed_dir_path_str = PathUtil.convert_path_to_str(path)
             self.db.execute(cursor, "DELETE FROM html_file_size WHERE feed_dir_path = %s", feed_dir_path_str)
             self.db.execute(cursor, "DELETE FROM html_file_with_many_image_tag WHERE feed_dir_path = %s", feed_dir_path_str)
             self.db.execute(cursor, "DELETE FROM html_file_without_image_tag WHERE feed_dir_path = %s", feed_dir_path_str)
             self.db.execute(cursor, "DELETE FROM html_file_image_not_found WHERE feed_dir_path = %s", feed_dir_path_str)
         if dir_type_name == "file_path":
-            file_path_str = self.convert_path_to_str(dir_path)
+            file_path_str = PathUtil.convert_path_to_str(path)
             self.db.execute(cursor, "DELETE FROM html_file_size WHERE file_path = %s", file_path_str)
             self.db.execute(cursor, "DELETE FROM html_file_with_many_image_tag WHERE file_path = %s", file_path_str)
             self.db.execute(cursor, "DELETE FROM html_file_without_image_tag WHERE file_path = %s", file_path_str)
             self.db.execute(cursor, "DELETE FROM html_file_image_not_found WHERE file_path = %s", file_path_str)
         self.db.commit(connection, cursor)
-        print(f"* The removing of some html files in '{dir_path}' is done.")
+        print(f"* The removing of some html files in '{PathUtil.convert_path_to_str(path)}' is done.")
 
     def _add_html_files_in_path_to_info(self, cursor: Cursor, feed_dir_path: Path, web_service_url: str, html_file_image_tag_count_map: Optional[Dict[Path, int]] = None, html_file_image_not_found_count_map: Optional[Dict[Path, int]] = None) -> int:
         LOGGER.debug(f"# add_html_files_in_path_to_info(feed_dir_path={feed_dir_path})")
         html_file_count = 0
-        if not html_file_image_tag_count_map:
-            html_file_image_tag_count_map = {}
-        if not html_file_image_not_found_count_map:
-            html_file_image_not_found_count_map = {}
+        html_file_image_tag_count_map = html_file_image_tag_count_map if html_file_image_tag_count_map is not None else {}
+        html_file_image_not_found_count_map = html_file_image_not_found_count_map if html_file_image_not_found_count_map is not None else {}
 
         for path in feed_dir_path.glob("html/*"):
             if path.parent.name.startswith("_") or path.parent.parent.name.startswith("_"):
@@ -406,10 +400,10 @@ class ProblemManager:
                 s = path.stat()
                 html_file_count += 1
                 if 124 < s.st_size < 434:
-                    file_path_str = self.convert_path_to_str(path)
+                    file_path_str = PathUtil.convert_path_to_str(path)
                     file_name = self.get_html_file_name(path)
-                    feed_dir_path_str = self.convert_path_to_str(feed_dir_path)
-                    group_dir_path_str = self.convert_path_to_str(feed_dir_path.parent)
+                    feed_dir_path_str = PathUtil.convert_path_to_str(feed_dir_path)
+                    group_dir_path_str = PathUtil.convert_path_to_str(feed_dir_path.parent)
                     update_date_str = self.convert_datetime_to_str(datetime.fromtimestamp(s.st_mtime))
                     try:
                         self.db.execute(cursor, "INSERT INTO html_file_size (file_path, file_name, feed_dir_path, group_dir_path, size, update_date) VALUES (%s, %s, %s, %s, %s, %s)", file_path_str, file_name, feed_dir_path_str, group_dir_path_str, s.st_size, update_date_str)
@@ -430,10 +424,10 @@ class ProblemManager:
                             html_file_image_not_found_count_map[path] = html_file_image_not_found_count_map.get(path, 0) + 1
 
         for path, count in html_file_image_tag_count_map.items():
-            file_path_str = self.convert_path_to_str(path)
+            file_path_str = PathUtil.convert_path_to_str(path)
             file_name = self.get_html_file_name(path)
-            feed_dir_path_str = self.convert_path_to_str(path.parent.parent)
-            group_dir_path_str =  self.convert_path_to_str(path.parent.parent.parent)
+            feed_dir_path_str = PathUtil.convert_path_to_str(path.parent.parent)
+            group_dir_path_str =  PathUtil.convert_path_to_str(path.parent.parent.parent)
             if count > 1:
                 try:
                     self.db.execute(cursor, "INSERT INTO html_file_with_many_image_tag (file_path, file_name, feed_dir_path, group_dir_path, count) VALUES (%s, %s, %s, %s, %s)", file_path_str, file_name, feed_dir_path_str, group_dir_path_str, count)
@@ -446,10 +440,10 @@ class ProblemManager:
                     self.db.execute(cursor, "UPDATE html_file_without_image_tag SET file_name = %s, feed_dir_path = %s, group_dir_path = %s, count = %s WHERE file_path = %s", file_name, feed_dir_path_str, group_dir_path_str, count, file_path_str)
 
         for path, count in html_file_image_not_found_count_map.items():
-            file_path_str = self.convert_path_to_str(path)
+            file_path_str = PathUtil.convert_path_to_str(path)
             file_name = self.get_html_file_name(path)
-            feed_dir_path_str = self.convert_path_to_str(path.parent.parent)
-            group_dir_path_str =  self.convert_path_to_str(path.parent.parent.parent)
+            feed_dir_path_str = PathUtil.convert_path_to_str(path.parent.parent)
+            group_dir_path_str =  PathUtil.convert_path_to_str(path.parent.parent.parent)
             try:
                 self.db.execute(cursor, "INSERT INTO html_file_image_not_found (file_path, file_name, feed_dir_path, group_dir_path, count) VALUES (%s, %s, %s, %s, %s)", file_path_str, file_name, feed_dir_path_str, group_dir_path_str, count)
             except IntegrityError:
@@ -463,17 +457,13 @@ class ProblemManager:
         web_service_url = global_conf["web_service_url"]
         html_file_count = self._add_html_files_in_path_to_info(cursor, feed_dir_path, web_service_url)
         self.db.commit(connection, cursor)
-        print(f"* The adding of some html files in '{self.convert_path_to_str(feed_dir_path)}' is done. {html_file_count} items")
+        print(f"* The adding of some html files in '{PathUtil.convert_path_to_str(feed_dir_path)}' is done. {html_file_count} items")
 
     def load_all_html_files(self) -> None:
         LOGGER.debug("# load_all_html_files()")
         html_file_image_tag_count_map: Dict[Path, int] = {}
         html_file_image_not_found_count_map: Dict[Path, int] = {}
         connection, cursor = self.db.get_connection_and_cursor()
-        rows = self.db.query("SELECT * FROM feed_name_public_feed_info")
-        if len(rows) > 0:
-            LOGGER.debug("no need to load public feed files")
-            return
 
         html_file_count = 0
         global_conf = Config.get_global_config()
@@ -563,19 +553,20 @@ class ProblemManager:
         connection, cursor = self.db.get_connection_and_cursor()
         self._add_progress_to_info(cursor, feed_dir_path)
         self.db.commit(connection, cursor)
-        print(f"* The adding of progress info of '{self.convert_path_to_str(feed_dir_path)}' is done.")
+        print(f"* The adding of progress info of '{PathUtil.convert_path_to_str(feed_dir_path)}' is done.")
 
     def load_all_progress_info_from_files(self) -> None:
         LOGGER.debug("# load_all_progress_info_from_files()")
         connection, cursor = self.db.get_connection_and_cursor()
-        # self.db.execute(cursor, "TRUNCATE feed_name_progress_info")
-        rows = self.db.query("SELECT * FROM feed_name_progress_info")
-        if len(rows) > 0:
-            LOGGER.debug("no need to load progress info from files")
-            return
 
-        if not self.feed_name_config_map or not self.feed_name_title_map or not self.feed_name_group_map:
-            LOGGER.error("can't find name to config/title/group mapping data in loading all progress info from files")
+        if not self.feed_name_config_map:
+            LOGGER.error("can't find name to config mapping data in loading all progress info from files")
+            return
+        if not self.feed_name_title_map:
+            LOGGER.error("can't find name to title mapping data in loading all progress info from files")
+            return
+        if not self.feed_name_group_map:
+            LOGGER.error("can't find name to group mapping data in loading all progress info from files")
             return
 
         num_items = 0
@@ -644,28 +635,43 @@ class ProblemManager:
 
         return num_items
 
-    def add_httpd_access_files_to_info_after_last_log(self, access_file_path: Path):
-        LOGGER.debug(f"# add_httpd_access_files_to_info_after_last_log({access_file_path})")
-        if not access_file_path.is_file():
-            LOGGER.warning("can't find access file '%s'", access_file_path)
-            return
-
+    def add_httpd_access_files_to_info_after_last_log(self, feed_dir_path: Path):
+        LOGGER.debug(f"# add_httpd_access_files_to_info_after_last_log({feed_dir_path})")
+        feed_name = feed_dir_path.name
         connection, cursor = self.db.get_connection_and_cursor()
-        self._add_http_access_file_to_info(cursor, access_file_path)
+        for feed_alias, _ in self.feed_name_aliases_map.get(feed_name, {}).items():
+            rows = self.db.query("SELECT access_date FROM feed_alias_access_info WHERE feed_alias = %s", feed_alias)
+            last_log_date = rows[0]["access_date"]
+            today = datetime.today()
+            for i in range(30, -1, -1):
+                specific_date = today - timedelta(days=i)
+                if specific_date < last_log_date:
+                    continue
+                date_str = specific_date.strftime("%y%m%d")
+                access_file_path = self.httpd_access_log_dir / f"access.log.{date_str}"
+                if not access_file_path.is_file():
+                    #LOGGER.warning("can't find access file '%s'", access_file_path)
+                    continue
+
+                self._add_http_access_file_to_info(cursor, access_file_path)
+                print(f"* The adding of access info of '{PathUtil.convert_path_to_str(access_file_path)}' is done.")
         self.db.commit(connection, cursor)
-        print(f"* The adding of access info of '{self.convert_path_to_str(access_file_path)}' is done.")
 
     def load_all_httpd_access_files(self) -> None:
         LOGGER.debug("# load_all_httpd_access_files()")
         connection, cursor = self.db.get_connection_and_cursor()
-        # self.db.execute(cursor, "TRUNCATE feed_alias_access_info")
-        rows = self.db.query("SELECT * FROM feed_alias_access_info")
-        if len(rows) > 0:
-            LOGGER.debug("no need to load httpd access files")
-            return
 
-        if not self.feed_alias_name_map or not self.feed_name_title_map or not self.feed_name_group_map or not self.feed_name_aliases_map:
-            LOGGER.error("can't find alias to name and name to title/group mapping data in loading all httpd access files")
+        if not self.feed_alias_name_map:
+            LOGGER.error("can't find alias to name mapping data in loading all httpd access files")
+            return
+        if not self.feed_name_title_map:
+            LOGGER.error("can't find name to title mapping data in loading all httpd access files")
+            return
+        if not self.feed_name_group_map:
+            LOGGER.error("can't find name to group mapping data in loading all httpd access files")
+            return
+        if not self.feed_name_aliases_map:
+            LOGGER.error("can't find name to alias mapping data in loading all httpd access files")
             return
 
         # read access.log for 1 month
@@ -673,8 +679,9 @@ class ProblemManager:
         num_items = 0
         for i in range(30, -1, -1):
             date_str = (today - timedelta(days=i)).strftime("%y%m%d")
-            access_file_path = self.httpd_access_log_dir / ("access.log." + date_str)
+            access_file_path = self.httpd_access_log_dir / f"access.log.{date_str}"
             if not access_file_path.is_file():
+                #LOGGER.warning("can't find access file '%s'", access_file_path)
                 continue
             num_items += self._add_http_access_file_to_info(cursor, access_file_path)
 
@@ -709,7 +716,8 @@ class ProblemManager:
         self.remove_config_rss_file_from_info(feed_dir_path)
         self.add_config_rss_file_to_info(feed_dir_path)
         self.remove_public_feed_file_from_info(feed_dir_path)
-        self.add_public_feed_file_to_info(feed_dir_path)
+        feed_file_path = self.public_feed_dir / f"{feed_dir_path.name}.xml"
+        self.add_public_feed_file_to_info(feed_file_path)
         self.remove_progress_from_info(feed_dir_path)
         self.add_progress_to_info(feed_dir_path)
         self.add_httpd_access_files_to_info_after_last_log(feed_dir_path)
@@ -730,6 +738,3 @@ class ProblemManager:
 if __name__ == "__main__":
     pm = ProblemManager()
     pm.load_all()
-    # info = pm.get_feed_alias_status_info_map()
-    # from pprint import pprint
-    # pprint(info)

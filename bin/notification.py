@@ -211,4 +211,3 @@ class Notification:
             LOGGER.error(f"can't send email by smtp, {e}")
             return False
         return True
-

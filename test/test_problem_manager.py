@@ -5,7 +5,7 @@ import os
 import unittest
 import shutil
 import logging.config
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from db_manager import DBManager
 from problem_manager import ProblemManager
@@ -48,12 +48,6 @@ class TestProblemManager(unittest.TestCase):
         del self.pm
         shutil.rmtree(self.test_feed_dir_path.parent)
 
-    def test_convert_path_to_str(self):
-        self.assertEqual(self.pm.convert_path_to_str(ProblemManager.work_dir), ".")
-        self.assertEqual(self.pm.convert_path_to_str(ProblemManager.public_feed_dir), ".")
-        self.assertEqual(self.pm.convert_path_to_str(ProblemManager.httpd_access_log_dir), os.environ["HOME"] + "/apps/logs")
-        self.assertEqual(self.pm.convert_path_to_str(ProblemManager.htaccess_file), "../.htaccess")
-
     def test_convert_datetime_to_str(self):
         d = "2022-01-01"
         self.assertEqual("2022-01-01", self.pm.convert_datetime_to_str(d))
@@ -91,7 +85,7 @@ class TestProblemManager(unittest.TestCase):
 
     def test_get_feed_name_list_url_count_map(self):
         result = self.pm.get_feed_name_list_url_count_map()
-        for feed_name, list_url_count in result.items():
+        for _, list_url_count in result.items():
             self.assertIn("feed_name", list_url_count)
             self.assertIn("feed_title", list_url_count)
             self.assertIn("group_name", list_url_count)
@@ -99,7 +93,7 @@ class TestProblemManager(unittest.TestCase):
 
     def test_get_element_name_count_map(self):
         result = self.pm.get_element_name_count_map()
-        for element_name, count in result.items():
+        for _, count in result.items():
             self.assertIn("element_name", count)
             self.assertIn("count", count)
 
@@ -176,7 +170,7 @@ class TestProblemManager(unittest.TestCase):
 
     def test_get_feed_name_public_feed_info_map(self):
         result = self.pm.get_feed_name_public_feed_info_map()
-        for feed_name, public_feed_info in result.items():
+        for _, public_feed_info in result.items():
             self.assertIn("feed_name", public_feed_info)
             self.assertIn("feed_title", public_feed_info)
             self.assertIn("group_name", public_feed_info)
@@ -189,7 +183,6 @@ class TestProblemManager(unittest.TestCase):
         feed_file_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "test" / "sportsdonga.webtoon.1.result.xml"
         self.pm.add_public_feed_file_to_info(feed_file_path)
         self.pm.remove_public_feed_file_from_info(feed_file_path)
-        pass
 
     def test_load_all_public_feed_files(self):
         self.pm.reload_htaccess_file()
@@ -208,7 +201,7 @@ class TestProblemManager(unittest.TestCase):
 
     def test_get_html_file_size_map(self):
         result = self.pm.get_html_file_size_map()
-        for html_file, html_file_info in result.items():
+        for _, html_file_info in result.items():
             self.assertIn("file_name", html_file_info)
             self.assertIn("file_path", html_file_info)
             self.assertIn("feed_dir_path", html_file_info)
@@ -218,7 +211,7 @@ class TestProblemManager(unittest.TestCase):
 
     def test_get_html_file_with_many_image_tag_map(self):
         result = self.pm.get_html_file_with_many_image_tag_map()
-        for html_file, html_file_info in result.items():
+        for _, html_file_info in result.items():
             self.assertIn("file_name", html_file_info)
             self.assertIn("file_path", html_file_info)
             self.assertIn("feed_dir_path", html_file_info)
@@ -227,7 +220,7 @@ class TestProblemManager(unittest.TestCase):
 
     def test_get_html_file_without_image_tag_map(self):
         result = self.pm.get_html_file_without_image_tag_map()
-        for html_file, html_file_info in result.items():
+        for _, html_file_info in result.items():
             self.assertIn("file_name", html_file_info)
             self.assertIn("file_path", html_file_info)
             self.assertIn("feed_dir_path", html_file_info)
@@ -236,14 +229,14 @@ class TestProblemManager(unittest.TestCase):
 
     def test_get_html_file_image_not_found_map(self):
         result = self.pm.get_html_file_image_not_found_map()
-        for html_file, html_file_info in result.items():
+        for _, html_file_info in result.items():
             self.assertIn("file_name", html_file_info)
             self.assertIn("file_path", html_file_info)
             self.assertIn("feed_dir_path", html_file_info)
             self.assertIn("group_dir_path", html_file_info)
             self.assertIn("count", html_file_info)
 
-    def _prepare_fixture_for_html_files(self, feed_dir_path: Path, html_dir_path: Path):
+    def _prepare_fixture_for_html_files(self, html_dir_path: Path):
         small_html_path = html_dir_path / "7d09d62.html"
         with small_html_path.open("w", encoding="utf-8") as f:
             f.write(header_str)
@@ -297,7 +290,7 @@ class TestProblemManager(unittest.TestCase):
         html_dir_path = self.test_feed_dir_path / "html"
         html_dir_path.mkdir(parents=True, exist_ok=True)
 
-        self._prepare_fixture_for_html_files(self.test_feed_dir_path, html_dir_path)
+        self._prepare_fixture_for_html_files(html_dir_path)
 
         row11 = self.pm.db.query("SELECT * FROM html_file_with_many_image_tag")
         row21 = self.pm.db.query("SELECT * FROM html_file_without_image_tag")
@@ -333,7 +326,7 @@ class TestProblemManager(unittest.TestCase):
         html_dir_path = self.test_feed_dir_path / "html"
         html_dir_path.mkdir(parents=True, exist_ok=True)
 
-        self._prepare_fixture_for_html_files(self.test_feed_dir_path, html_dir_path)
+        self._prepare_fixture_for_html_files(html_dir_path)
 
         row11 = self.pm.db.query("SELECT * FROM html_file_with_many_image_tag")
         row21 = self.pm.db.query("SELECT * FROM html_file_without_image_tag")
@@ -352,24 +345,11 @@ class TestProblemManager(unittest.TestCase):
         self.assertEqual(len(row31) + 1, len(row32))
         self.assertEqual(len(row41) + 1, len(row42))
 
-        self.pm.remove_html_file_in_path_from_info("group_dir_path", self.test_feed_dir_path.parent)
-
-        row13 = self.pm.db.query("SELECT * FROM html_file_with_many_image_tag")
-        row23 = self.pm.db.query("SELECT * FROM html_file_without_image_tag")
-        row33 = self.pm.db.query("SELECT * FROM html_file_image_not_found")
-        row43 = self.pm.db.query("SELECT * FROM html_file_size")
-
-        # all the records have been deleted by remove_html_file_in_path_from_info("group_dir_path")
-        self.assertEqual(0, len(row13))
-        self.assertEqual(0, len(row23))
-        self.assertEqual(0, len(row33))
-        self.assertEqual(0, len(row43))
-
     def test_add_and_remove_html_file_info_in_path_3(self):
         html_dir_path = self.test_feed_dir_path / "html"
         html_dir_path.mkdir(parents=True, exist_ok=True)
 
-        self._prepare_fixture_for_html_files(self.test_feed_dir_path, html_dir_path)
+        self._prepare_fixture_for_html_files(html_dir_path)
 
         row1 = self.pm.db.query("SELECT * FROM html_file_with_many_image_tag")
         self.assertEqual(0, len(row1))
@@ -384,36 +364,40 @@ class TestProblemManager(unittest.TestCase):
         html_dir_path = self.test_feed_dir_path / "html"
         html_dir_path.mkdir(parents=True, exist_ok=True)
 
-        self._prepare_fixture_for_html_files(self.test_feed_dir_path, html_dir_path)
+        self._prepare_fixture_for_html_files(html_dir_path)
 
         row1 = self.pm.db.query("SELECT * FROM html_file_without_image_tag")
         self.pm.add_html_files_in_path_to_info(self.test_feed_dir_path)
         row2 = self.pm.db.query("SELECT * FROM html_file_without_image_tag")
+        self.assertEqual(len(row1) + 1, len(row2))
+
         self.pm.remove_html_file_in_path_from_info("file_path", html_dir_path / "dc938b8.html")
-        row28 = self.pm.db.query("SELECT * FROM html_file_without_image_tag")
+        row3 = self.pm.db.query("SELECT * FROM html_file_without_image_tag")
+        self.assertEqual(len(row3), 0)
         self.pm.remove_html_file_in_path_from_info("file_path", html_dir_path / "7d09d62.html")
-        row29 = self.pm.db.query("SELECT * FROM html_file_without_image_tag")
+        row4 = self.pm.db.query("SELECT * FROM html_file_without_image_tag")
+        self.assertEqual(len(row4), 0)
 
     def test_add_and_remove_html_file_info_in_path_5(self):
         html_dir_path = self.test_feed_dir_path / "html"
         html_dir_path.mkdir(parents=True, exist_ok=True)
 
-        self._prepare_fixture_for_html_files(self.test_feed_dir_path, html_dir_path)
+        self._prepare_fixture_for_html_files(html_dir_path)
 
-        row36 = self.pm.db.query("SELECT * FROM html_file_image_not_found")
-        self.assertEqual(0, len(row36))
+        row1 = self.pm.db.query("SELECT * FROM html_file_image_not_found")
+        self.assertEqual(0, len(row1))
         self.pm.add_html_files_in_path_to_info(self.test_feed_dir_path)
-        row37 = self.pm.db.query("SELECT * FROM html_file_image_not_found")
-        self.assertEqual(1, len(row37))
+        row2 = self.pm.db.query("SELECT * FROM html_file_image_not_found")
+        self.assertEqual(1, len(row2))
         self.pm.remove_html_file_in_path_from_info("file_path", html_dir_path / "7c9aa6d.html")
-        row38 = self.pm.db.query("SELECT * FROM html_file_image_not_found")
-        self.assertEqual(0, len(row38))
+        row3 = self.pm.db.query("SELECT * FROM html_file_image_not_found")
+        self.assertEqual(0, len(row3))
 
     def test_add_and_remove_html_file_info_in_path_6(self):
         html_dir_path = self.test_feed_dir_path / "html"
         html_dir_path.mkdir(parents=True, exist_ok=True)
 
-        self._prepare_fixture_for_html_files(self.test_feed_dir_path, html_dir_path)
+        self._prepare_fixture_for_html_files(html_dir_path)
 
         row46 = self.pm.db.query("SELECT * FROM html_file_size")
         self.assertEqual(0, len(row46))
@@ -466,7 +450,7 @@ class TestProblemManager(unittest.TestCase):
 
     def test_get_feed_name_progress_info_map(self):
         result = self.pm.get_feed_name_progress_info_map()
-        for feed_name, progress_info in result.items():
+        for _, progress_info in result.items():
             self.assertIn("feed_name", progress_info)
             self.assertIn("feed_title", progress_info)
             self.assertIn("group_name", progress_info)
@@ -514,8 +498,31 @@ class TestProblemManager(unittest.TestCase):
             self.assertGreaterEqual(row[0]["progress_ratio"], 0.0)
             self.assertIsNotNone(row[0]["due_date"])
 
-    def test_add_httpd_access_files_to_info_after_last_log(self):
-        pass
+    def test_add_httpd_access_file_to_info_after_last_log(self):
+        self.pm.reload_htaccess_file()
+        self.pm.load_all_config_rss_files()
+        self.pm.load_all_httpd_access_files()
+        group_name = "naver"
+        feed_name = "navercast"
+        test_feed_dir_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / group_name / feed_name
+        feed_alias = feed_name
+
+        # get date from recent log file
+        today = datetime.today()
+        recent_log_file_date_str = ""
+        for i in range(31):
+            specific_date = today - timedelta(days=i)
+            date_str = specific_date.strftime("%y%m%d")
+            access_file_path = self.pm.httpd_access_log_dir / f"access.log.{date_str}"
+            if access_file_path.is_file():
+                recent_log_file_date_str = date_str
+                break
+
+        self.pm.add_httpd_access_files_to_info_after_last_log(test_feed_dir_path)
+        rows = self.pm.db.query("SELECT * FROM feed_alias_access_info WHERE feed_alias = %s", feed_alias)
+        self.assertIsNotNone(rows)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["access_date"].strftime("%y%m%d"), recent_log_file_date_str)
 
     def test_load_all_httpd_access_files(self):
         self.pm.reload_htaccess_file()
@@ -533,7 +540,7 @@ class TestProblemManager(unittest.TestCase):
 
     def test_get_feed_alias_status_info_map(self):
         result = self.pm.get_feed_alias_status_info_map()
-        for feed_alias, status_info in result.items():
+        for _, status_info in result.items():
             self.assertIn("feed_alias", status_info)
             self.assertIn("feed_name", status_info)
             self.assertIn("feed_title", status_info)

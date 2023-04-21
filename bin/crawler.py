@@ -33,7 +33,7 @@ class RequestsClient:
         self.dir_path: Path = dir_path
         self.method: Method = method
         self.timeout: int = timeout
-        self.headers: Dict[str, str] = headers or {}
+        self.headers: Dict[str, str] = headers if headers is not None else {}
         self.cookies: Dict[str, str] = {}
         self.encoding: str = encoding or "utf-8"
         self.verify_ssl: bool = verify_ssl
@@ -52,7 +52,6 @@ class RequestsClient:
     def read_cookies_from_file(self) -> None:
         cookie_file = self.dir_path / RequestsClient.COOKIE_FILE
         if cookie_file.is_file():
-            cookie_str: str = ""
             with cookie_file.open("r", encoding='utf-8') as f:
                 cookies = json.load(f)
                 for cookie in cookies:
@@ -67,7 +66,6 @@ class RequestsClient:
         if "Referer" in self.headers and self.headers["Referer"]:
             LOGGER.debug(f"visiting referer page '{self.headers['Referer']}'")
             self.read_cookies_from_file()
-            response = None
             try:
                 response = requests.get(self.headers['Referer'], headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, allow_redirects=allow_redirects)
             except requests.exceptions.ConnectionError as e:
@@ -141,9 +139,8 @@ class Crawler:
         self.dir_path = dir_path
         self.render_js = render_js
         self.method = method
-        self.headers = headers or {}
-        if "User-Agent" not in self.headers or not self.headers["User-Agent"]:
-            self.headers["User-Agent"] = DEFAULT_USER_AGENT
+        self.headers = headers if headers is not None else {}
+        self.headers["User-Agent"] = self.headers.get("User-Agent", DEFAULT_USER_AGENT)
         self.timeout = timeout
         self.num_retries = num_retries
         self.encoding = encoding
@@ -294,17 +291,17 @@ def main() -> int:
         elif o == "--referer":
             headers["Referer"] = a
         elif o == "--render-js":
-            render_js = (a == "true")
+            render_js = a == "true"
         elif o == "--verify-ssl":
-            verify_ssl = (a == "true")
+            verify_ssl = a == "true"
         elif o == "--copy-images-from-canvas":
-            copy_images_from_canvas = (a == "true")
+            copy_images_from_canvas = a == "true"
         elif o == "--simulate-scrolling":
-            simulate_scrolling = (a == "true")
+            simulate_scrolling = a == "true"
         elif o == "--disable-headless":
-            disable_headless = (a == "true")
+            disable_headless = a == "true"
         elif o == "--blob-to-dataurl":
-            blob_to_dataurl = (a == "true")
+            blob_to_dataurl = a == "true"
         elif o == "--header":
             m = re.search(r'^(?P<key>[^:]+)\s*:\s*(?P<value>.+)\s*$', a)
             if m:

@@ -20,10 +20,10 @@ def test_script(script: str, test_dir_path: Path, index: int):
         cmp_result = filecmp.cmp(f"{test_dir_path}/result.{index}.temp", f"{test_dir_path}/expected.output.{index}.txt")
         if not cmp_result:
             LOGGER.error(f"Error in diff '{test_dir_path}/expected.output.{index}.txt' '{test_dir_path}/result.{index}.temp'")
-            return (False, cmd)
-        return (True, cmd)
+            return False, cmd
+        return True, cmd
     LOGGER.error(error)
-    return (False, cmd)
+    return False, cmd
 
 
 def main() -> int:
