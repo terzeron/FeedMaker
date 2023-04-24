@@ -211,7 +211,11 @@ class ProblemManager:
         LOGGER.debug("# load_all_config_rss_files()")
         connection, cursor = self.db.get_connection_and_cursor()
 
+        self.db.execute(cursor, "DELETE FROM feed_name_config")
         self.db.execute(cursor, "DELETE FROM element_name_count")
+        self.db.execute(cursor, "DELETE FROM feed_name_list_url_count")
+        self.db.execute(cursor, "DELETE FROM feed_name_rss_info")
+        self.db.execute(cursor, "DELETE FROM feed_name_title_group")
 
         if not self.feed_name_aliases_map:
             LOGGER.error("can't find name to aliases mapping data in loading config and rss files")
