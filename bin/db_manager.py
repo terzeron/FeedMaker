@@ -33,9 +33,11 @@ class DBManager:
         del self.pool
         del self.connection
 
-    def get_connection_and_cursor(self) -> Tuple[Connection, Cursor]:
+    def get_connection_and_cursor(self, with_serializable_transaction=False) -> Tuple[Connection, Cursor]:
         mysql_connection = self.pool.get_connection()
         connection = Connection(mysql_connection)
+        if with_serializable_transaction:
+            connection.mysql_connection.start_transaction(isolation_level="SERIALIZABLE")
         cursor = Cursor(mysql_connection.cursor(dictionary=True))
         return connection, cursor
 
@@ -52,5 +54,10 @@ class DBManager:
 
     def commit(self, connection: Connection, cursor: Cursor) -> None:
         connection.mysql_connection.commit()
+        cursor.mysql_cursor.close()
+        connection.mysql_connection.close()
+
+    def rollback(self, connection: Connection, cursor: Cursor) -> None:
+        connection.mysql_connection.rollback()
         cursor.mysql_cursor.close()
         connection.mysql_connection.close()
