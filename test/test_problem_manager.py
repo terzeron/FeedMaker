@@ -73,7 +73,7 @@ class TestProblemManager(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     def test_reload_htaccess_file(self):
-        self.pm.reload_htaccess_file()
+        self.pm.load_htaccess_file()
         self.pm.load_all_config_rss_files()
 
         row = self.pm.db.query("SELECT * FROM feed_alias_name")
@@ -110,7 +110,7 @@ class TestProblemManager(unittest.TestCase):
         row31 = self.pm.db.query("SELECT * FROM feed_name_list_url_count")
         row41 = self.pm.db.query("SELECT * FROM feed_name_rss_info")
 
-        self.pm.add_config_rss_file_to_info(self.test_feed_dir_path)
+        self.pm.add_config_rss_info(self.test_feed_dir_path)
 
         row12 = self.pm.db.query("SELECT * FROM feed_name_config")
         row22 = self.pm.db.query("SELECT * FROM feed_name_title_group")
@@ -122,7 +122,7 @@ class TestProblemManager(unittest.TestCase):
         self.assertEqual(len(row31) + 1, len(row32))
         self.assertEqual(len(row41) + 1, len(row42))
 
-        self.pm.remove_config_rss_file_from_info(self.test_feed_dir_path)
+        self.pm.remove_config_rss_info(self.test_feed_dir_path)
 
         row13 = self.pm.db.query("SELECT * FROM feed_name_config")
         row23 = self.pm.db.query("SELECT * FROM feed_name_title_group")
@@ -135,7 +135,7 @@ class TestProblemManager(unittest.TestCase):
         self.assertEqual(len(row41), len(row43))
 
     def test_load_all_config_rss_files(self):
-        self.pm.reload_htaccess_file()
+        self.pm.load_htaccess_file()
         self.pm.load_all_config_rss_files()
 
         row = self.pm.db.query("SELECT * FROM feed_name_config")
@@ -181,11 +181,11 @@ class TestProblemManager(unittest.TestCase):
 
     def test_add_and_remove_public_feed_file(self):
         feed_file_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "test" / "sportsdonga.webtoon.1.result.xml"
-        self.pm.add_public_feed_file_to_info(feed_file_path)
-        self.pm.remove_public_feed_file_from_info(feed_file_path)
+        self.pm.add_public_feed_info(feed_file_path)
+        self.pm.remove_public_feed_info(feed_file_path)
 
     def test_load_all_public_feed_files(self):
-        self.pm.reload_htaccess_file()
+        self.pm.load_htaccess_file()
         self.pm.load_all_config_rss_files()
         self.pm.load_all_public_feed_files()
 
@@ -297,7 +297,7 @@ class TestProblemManager(unittest.TestCase):
         row31 = self.pm.db.query("SELECT * FROM html_file_image_not_found")
         row41 = self.pm.db.query("SELECT * FROM html_file_size")
 
-        self.pm.add_html_files_in_path_to_info(self.test_feed_dir_path)
+        self.pm.add_html_info(self.test_feed_dir_path)
 
         row12 = self.pm.db.query("SELECT * FROM html_file_with_many_image_tag")
         row22 = self.pm.db.query("SELECT * FROM html_file_without_image_tag")
@@ -333,7 +333,7 @@ class TestProblemManager(unittest.TestCase):
         row31 = self.pm.db.query("SELECT * FROM html_file_image_not_found")
         row41 = self.pm.db.query("SELECT * FROM html_file_size")
 
-        self.pm.add_html_files_in_path_to_info(self.test_feed_dir_path)
+        self.pm.add_html_info(self.test_feed_dir_path)
 
         row12 = self.pm.db.query("SELECT * FROM html_file_with_many_image_tag")
         row22 = self.pm.db.query("SELECT * FROM html_file_without_image_tag")
@@ -353,7 +353,7 @@ class TestProblemManager(unittest.TestCase):
 
         row1 = self.pm.db.query("SELECT * FROM html_file_with_many_image_tag")
         self.assertEqual(0, len(row1))
-        self.pm.add_html_files_in_path_to_info(self.test_feed_dir_path)
+        self.pm.add_html_info(self.test_feed_dir_path)
         row2 = self.pm.db.query("SELECT * FROM html_file_with_many_image_tag")
         self.assertEqual(1, len(row2))
         self.pm.remove_html_file_in_path_from_info("file_path", html_dir_path / "8a9aa6d.html")
@@ -367,7 +367,7 @@ class TestProblemManager(unittest.TestCase):
         self._prepare_fixture_for_html_files(html_dir_path)
 
         row1 = self.pm.db.query("SELECT * FROM html_file_without_image_tag")
-        self.pm.add_html_files_in_path_to_info(self.test_feed_dir_path)
+        self.pm.add_html_info(self.test_feed_dir_path)
         row2 = self.pm.db.query("SELECT * FROM html_file_without_image_tag")
         self.assertEqual(len(row1) + 1, len(row2))
 
@@ -386,7 +386,7 @@ class TestProblemManager(unittest.TestCase):
 
         row1 = self.pm.db.query("SELECT * FROM html_file_image_not_found")
         self.assertEqual(0, len(row1))
-        self.pm.add_html_files_in_path_to_info(self.test_feed_dir_path)
+        self.pm.add_html_info(self.test_feed_dir_path)
         row2 = self.pm.db.query("SELECT * FROM html_file_image_not_found")
         self.assertEqual(1, len(row2))
         self.pm.remove_html_file_in_path_from_info("file_path", html_dir_path / "7c9aa6d.html")
@@ -401,7 +401,7 @@ class TestProblemManager(unittest.TestCase):
 
         row46 = self.pm.db.query("SELECT * FROM html_file_size")
         self.assertEqual(0, len(row46))
-        self.pm.add_html_files_in_path_to_info(self.test_feed_dir_path)
+        self.pm.add_html_info(self.test_feed_dir_path)
         row47 = self.pm.db.query("SELECT * FROM html_file_size")
         self.assertEqual(1, len(row47))
         self.pm.remove_html_file_in_path_from_info("file_path", html_dir_path / "7d09d62.html")
@@ -465,7 +465,7 @@ class TestProblemManager(unittest.TestCase):
         conf_file_path = self.test_feed_dir_path / "conf.json"
         shutil.copy(example_conf_file_path, conf_file_path)
 
-        self.pm.reload_htaccess_file()
+        self.pm.load_htaccess_file()
         self.pm.load_all_config_rss_files()
 
         progress_file_path = self.test_feed_dir_path / "start_idx.txt"
@@ -474,15 +474,15 @@ class TestProblemManager(unittest.TestCase):
             f.write(f"157\t{date_str}\n")
 
         row1 = self.pm.db.query("SELECT * FROM feed_name_progress_info")
-        self.pm.add_progress_to_info(self.test_feed_dir_path)
+        self.pm.add_progress_info(self.test_feed_dir_path)
         row2 = self.pm.db.query("SELECT * FROM feed_name_progress_info")
         self.assertEqual(len(row1) + 1, len(row2))
-        self.pm.remove_progress_from_info(self.test_feed_dir_path)
+        self.pm.remove_progress_info(self.test_feed_dir_path)
         row3 = self.pm.db.query("SELECT * FROM feed_name_progress_info")
         self.assertEqual(len(row1), len(row3))
 
     def test_load_all_progress_info_from_files(self):
-        self.pm.reload_htaccess_file()
+        self.pm.load_htaccess_file()
         self.pm.load_all_config_rss_files()
         self.pm.load_all_progress_info_from_files()
 
@@ -499,7 +499,7 @@ class TestProblemManager(unittest.TestCase):
             self.assertIsNotNone(row[0]["due_date"])
 
     def test_add_httpd_access_file_to_info_after_last_log(self):
-        self.pm.reload_htaccess_file()
+        self.pm.load_htaccess_file()
         self.pm.load_all_config_rss_files()
         self.pm.load_all_httpd_access_files()
         group_name = "naver"
@@ -518,14 +518,14 @@ class TestProblemManager(unittest.TestCase):
                 recent_log_file_date_str = date_str
                 break
 
-        self.pm.add_httpd_access_files_to_info_after_last_log(test_feed_dir_path)
+        self.pm.add_httpd_access_info(test_feed_dir_path)
         rows = self.pm.db.query("SELECT * FROM feed_alias_access_info WHERE feed_alias = %s", feed_alias)
         self.assertIsNotNone(rows)
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["access_date"].strftime("%y%m%d"), recent_log_file_date_str)
 
     def test_load_all_httpd_access_files(self):
-        self.pm.reload_htaccess_file()
+        self.pm.load_htaccess_file()
         self.pm.load_all_config_rss_files()
         self.pm.load_all_httpd_access_files()
 

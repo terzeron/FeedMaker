@@ -283,7 +283,7 @@ class FeedManager:
 
         # re-scan feeds by group
         self.scan_all_feeds()
-        self.problem_manager.add_config_rss_file_to_info(config_file_path.parent)
+        self.problem_manager.add_config_rss_info(config_file_path.parent)
         return True, ""
 
     def run(self, group_name: str, feed_name: str, alias: str) -> Tuple[bool, str]:
@@ -312,7 +312,7 @@ class FeedManager:
             else:
                 return False, "invalid format of configuration file"
 
-        self.problem_manager.reload_htaccess_file()
+        self.problem_manager.load_htaccess_file()
         self.problem_manager.update_feed_info(feed_dir_path)
         return True, ""
 
@@ -357,7 +357,7 @@ class FeedManager:
         LOGGER.debug(f"# remove_public_feed({feed_name})")
         feed_file_path = self.public_feed_dir / f"{feed_name}.xml"
         feed_file_path.unlink(missing_ok=True)
-        self.problem_manager.remove_public_feed_file_from_info(feed_file_path)
+        self.problem_manager.remove_public_feed_info(feed_file_path)
 
     async def remove_feed(self, group_name: str, feed_name: str) -> Tuple[bool, str]:
         LOGGER.debug(f"# remove_feed({group_name}, {feed_name})")
@@ -406,12 +406,12 @@ class FeedManager:
 
         # re-scan feeds by group
         self.scan_all_feeds()
-        self.problem_manager.reload_htaccess_file()
+        self.problem_manager.load_htaccess_file()
         for feed_dir_path in group_dir_path.iterdir():
-            self.problem_manager.remove_config_rss_file_from_info(feed_dir_path)
+            self.problem_manager.remove_config_rss_info(feed_dir_path)
             feed_file_path = self.public_feed_dir / f"{feed_dir_path.name}.xml"
-            self.problem_manager.remove_public_feed_file_from_info(feed_file_path)
-            self.problem_manager.remove_progress_from_info(feed_dir_path)
+            self.problem_manager.remove_public_feed_info(feed_file_path)
+            self.problem_manager.remove_progress_info(feed_dir_path)
             self.problem_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
         self.problem_manager.load_all_httpd_access_files()
         return True, ""
@@ -434,7 +434,7 @@ class FeedManager:
         # re-scan feeds by group
         self._scan_feeds_by_group(group_name)
 
-        self.problem_manager.reload_htaccess_file()
+        self.problem_manager.load_htaccess_file()
         self.problem_manager.update_feed_info(feed_dir_path)
         return new_feed_name, ""
 
@@ -455,22 +455,22 @@ class FeedManager:
 
         # re-scan feeds by group
         self.scan_all_feeds()
-        self.problem_manager.reload_htaccess_file()
+        self.problem_manager.load_htaccess_file()
         if group_name.startswith("_"):
             # enable
             for feed_dir_path in new_group_dir_path.iterdir():
-                self.problem_manager.add_config_rss_file_to_info(feed_dir_path)
+                self.problem_manager.add_config_rss_info(feed_dir_path)
                 feed_file_path = self.public_feed_dir / f"{feed_dir_path.name}.xml"
-                self.problem_manager.add_public_feed_file_to_info(feed_file_path)
-                self.problem_manager.add_progress_to_info(feed_dir_path)
-                self.problem_manager.add_html_files_in_path_to_info(feed_dir_path)
+                self.problem_manager.add_public_feed_info(feed_file_path)
+                self.problem_manager.add_progress_info(feed_dir_path)
+                self.problem_manager.add_html_info(feed_dir_path)
         else:
             # disable
             for feed_dir_path in group_dir_path.iterdir():
-                self.problem_manager.remove_config_rss_file_from_info(feed_dir_path)
+                self.problem_manager.remove_config_rss_info(feed_dir_path)
                 feed_file_path = self.public_feed_dir / f"{feed_dir_path.name}.xml"
-                self.problem_manager.remove_public_feed_file_from_info(feed_file_path)
-                self.problem_manager.remove_progress_from_info(feed_dir_path)
+                self.problem_manager.remove_public_feed_info(feed_file_path)
+                self.problem_manager.remove_progress_info(feed_dir_path)
                 self.problem_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
         self.problem_manager.load_all_httpd_access_files()
         return new_group_name, ""
@@ -488,7 +488,7 @@ class FeedManager:
         result, error = Htaccess.remove_alias(group_name, feed_name)
         if not result:
             return False, error
-        self.problem_manager.reload_htaccess_file()
+        self.problem_manager.load_htaccess_file()
         return True, ""
 
     async def rename_alias(self, group_name: str, feed_name: str, new_alias: str):
@@ -496,7 +496,7 @@ class FeedManager:
         result, error = Htaccess.set_alias(group_name, feed_name, new_alias)
         if not result:
             return False, error
-        self.problem_manager.reload_htaccess_file()
+        self.problem_manager.load_htaccess_file()
         return True, ""
 
     @staticmethod
