@@ -35,3 +35,4 @@ cookies.*.json
 .*.lock
 .env
 nohup.out
+backend/index.wsgi
