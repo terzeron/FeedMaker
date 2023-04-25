@@ -784,8 +784,11 @@ class ProblemManager:
         connection, cursor = self.db.get_connection_and_cursor(with_serializable_transaction=True)
         rows = self.db.query("SELECT * FROM lock_for_concurrent_loading FOR UPDATE")
         if rows and len(rows) > 0:
-            self.db.rollback(connection, cursor)
-            return False
+            if rows[0]["lock_time"] and datetime.now() - rows[0]["lock_time"] < timedelta(seconds=60):
+                self.db.rollback(connection, cursor)
+                return False
+            else:
+                self.db.execute(cursor, "DELETE FROM lock_for_concurrent_loading")
         self.db.execute(cursor, "INSERT INTO lock_for_concurrent_loading VALUES (CURRENT_TIMESTAMP)")
         self.db.commit(connection, cursor)
         return True
@@ -796,7 +799,7 @@ class ProblemManager:
         if not rows or len(rows) == 0:
             self.db.rollback(connection, cursor)
             return
-        self.db.execute(cursor, "TRUNCATE lock_for_concurrent_loading")
+        self.db.execute(cursor, "DELETE FROM lock_for_concurrent_loading")
         self.db.commit(connection, cursor)
 
     def load_all(self) -> int:
