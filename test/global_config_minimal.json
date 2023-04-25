@@ -1,0 +1,8 @@
+{
+  "db_host": "localhost",
+  "db_port": "3306",
+  "db_name": "feedmaker_test",
+  "db_user": "feedmaker",
+  "db_password": "micro170433",
+  "web_service_url": "https://localhost:8081"
+}
