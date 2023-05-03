@@ -28,7 +28,7 @@ class Method(Enum):
 class RequestsClient:
     COOKIE_FILE = "cookies.requestsclient.json"
 
-    def __init__(self, dir_path: Path = Path.cwd(), render_js: bool = False, method: Method = Method.GET, headers: Optional[Dict[str, Any]] = None, timeout: int = 60, encoding: str = "utf-8", verify_ssl: bool = True) -> None:
+    def __init__(self, dir_path: Path = Path.cwd(), render_js: bool = False, method: Method = Method.GET, headers: Optional[Dict[str, str]] = None, timeout: int = 60, encoding: str = "utf-8", verify_ssl: bool = True) -> None:
         LOGGER.debug(f"# RequestsClient(dir_path={dir_path}, render_js={render_js}, method={method}, headers={headers}, timeout={timeout}, encoding={encoding}, verify_ssl={verify_ssl})")
         self.dir_path: Path = dir_path
         self.method: Method = method
@@ -134,12 +134,12 @@ class Crawler:
         def __init__(self):
             super().__init__("Read timed out")
 
-    def __init__(self, dir_path: Path = Path.cwd(), render_js: bool = False, method: Method = Method.GET, headers: Optional[Dict[str, Any]] = None, timeout: int = 60, num_retries: int = 1, encoding: str = "utf-8", verify_ssl: bool = True, copy_images_from_canvas: bool = False, simulate_scrolling: bool = False, disable_headless: bool = False, blob_to_dataurl: bool = False) -> None:
+    def __init__(self, dir_path: Path = Path.cwd(), render_js: bool = False, method: Method = Method.GET, headers: Optional[Dict[str, str]] = None, timeout: int = 60, num_retries: int = 1, encoding: str = "utf-8", verify_ssl: bool = True, copy_images_from_canvas: bool = False, simulate_scrolling: bool = False, disable_headless: bool = False, blob_to_dataurl: bool = False) -> None:
         LOGGER.debug(f"# Crawler(dir_path={dir_path}, render_js={render_js}, method={method}, headers={headers}, timeout={timeout}, num_retries={num_retries}, encoding={encoding}, verify_ssl={verify_ssl}, copy_images_from_canvas={copy_images_from_canvas}, simulate_scrolling={simulate_scrolling}, disable_headless={disable_headless}, blob_to_dataurl={blob_to_dataurl})")
         self.dir_path = dir_path
         self.render_js = render_js
         self.method = method
-        self.headers = headers if headers is not None else {}
+        self.headers: Dict[str, str] = headers if headers is not None else {}
         self.headers["User-Agent"] = self.headers.get("User-Agent", DEFAULT_USER_AGENT)
         self.timeout = timeout
         self.num_retries = num_retries
@@ -196,7 +196,12 @@ class Crawler:
             option_str += f" --encoding='{encoding}'"
         if "header_list" in options:
             for header in options["header_list"]:
-                option_str += f" --header='{header}'"
+                header_str = ""
+                for k, v in header.items():
+                    if header_str != "":
+                        header_str += "; "
+                    header_str += f"{k}: {v}"
+                option_str += f" --header='{header_str}'"
         if "timeout" in options:
             timeout = options["timeout"] or "60"
             option_str += f" --timeout={timeout}"
