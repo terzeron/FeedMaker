@@ -7,7 +7,7 @@ if [ -f "$pidfile" ]; then
     sleep 3
 fi
 
-rm -f nohup.out
+mv nohup.out nohup.out.old
 echo "Starting service..."
 nohup uvicorn main:app --reload --workers=4 --port=8010 &
 echo "$!" > "$pidfile"
