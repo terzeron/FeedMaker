@@ -196,7 +196,9 @@ class Site:
         self.set_payload(keyword)
         LOGGER.debug(f"self.url_postfix={self.url_postfix}")
         html = self.get_data_from_site()
-        return self.extract_sub_content(html, self.extraction_attrs)
+        if html:
+            return self.extract_sub_content(html, self.extraction_attrs)
+        return []
 
     def search_in_site_like_agit(self, keyword: str) -> List[Tuple[str, str]]:
         LOGGER.debug(f"# search_in_site_like_agit(keyword={keyword})")
