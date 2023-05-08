@@ -70,7 +70,7 @@ class Site:
     def extract_sub_content(self, content: str, attrs: Dict[str, str]) -> List[Tuple[str, str]]:
         LOGGER.debug(f"# extract_sub_content(attrs={attrs})")
         soup = BeautifulSoup(content, "html.parser")
-        for element in soup.body(text=lambda text: isinstance(text, Comment)):
+        for element in soup.div(text=lambda text: isinstance(text, Comment)):
             element.extract()
 
         result_list: List[Tuple[str, str]] = []
@@ -90,7 +90,7 @@ class Site:
                 for e in str(element_obj).split("\n"):
                     LOGGER.debug(f"e={e}")
                     # 링크 추출
-                    m = re.search(r'<a[^>]*href="(?P<link>[^"]+)"[^>]*>', str(e))
+                    m = re.search(r'<a[^>]*href="(?P<link>[^"]+)"[^>]*>', e)
                     if m:
                         if m.group("link").startswith("http"):
                             link = m.group("link")
@@ -102,13 +102,13 @@ class Site:
                         LOGGER.debug(f"link={link}")
 
                     # 주석 제거
-                    e = re.sub(r'<!--[^>]*-->', '', str(e))
+                    #e = re.sub(r'<!--[^>]*-->', '', str(e))
                     # 단순(텍스트만 포함한) p 태그 제거
                     #e = re.sub(r'<p[^>]*>[^<]*</p>', '', e)
                     prev_e = e
                     while True:
                         # 명시적인 타이틀 텍스트 추출
-                        m = re.search(r'<\w+[^>]*class="(tit(le)?|subject)"[^>]*>(?P<title>[^<]+)</\w+>', e)
+                        m = re.search(r'<\w+[^>]*class="[^"]*([Tt]it(le)?|[Ss]ubject)"[^>]*>(?P<title>.+?)</\w+>', e)
                         if m:
                             title = m.group("title")
                             LOGGER.debug(f"title={title}")
@@ -151,6 +151,8 @@ class Site:
                     if self.site_name not in ["jmana", "allall"]:
                         e = re.sub(r'.*\b\d+[화권부편].*', '', e)
 
+                    # 설명 텍스트 제거
+                    e = re.sub(r'<\w+ class="">.+?</\w+>', '', e)
                     # 모든 html 태그 제거
                     e = re.sub(r'</?\w+(\s*[\w\-]+="[^"]*")*/?>', '', e)
                     # #태그 제거
@@ -162,6 +164,7 @@ class Site:
                     # LOGGER.debug(f"e={e}")
                     if not re.search(r'^\s*$', e):
                         title = e
+                        LOGGER.debug(f"title={title}")
 
                     if title and link:
                         result_list.append((title, urllib.parse.unquote(link)))
