@@ -10,7 +10,7 @@ import urllib.parse
 import logging.config
 from typing import Dict, Tuple, List, Union
 from pathlib import Path
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment
 from crawler import Crawler, Method
 from feed_maker_util import URL, HTMLExtractor
 
@@ -70,6 +70,9 @@ class Site:
     def extract_sub_content(self, content: str, attrs: Dict[str, str]) -> List[Tuple[str, str]]:
         LOGGER.debug(f"# extract_sub_content(attrs={attrs})")
         soup = BeautifulSoup(content, "html.parser")
+        for element in soup.body(text=lambda text: isinstance(text, Comment)):
+            element.extract()
+
         result_list: List[Tuple[str, str]] = []
         for key in attrs.keys():
             if key in ("id", "class"):
@@ -79,86 +82,91 @@ class Site:
 
             title: str = ""
             link: str = ""
-            for e in element_list:
-                LOGGER.debug(f"element={e}")
-                # 링크 추출
-                m = re.search(r'<a[^>]*href="(?P<link>[^"]+)"[^>]*>', str(e))
-                if m:
-                    if m.group("link").startswith("http"):
-                        link = m.group("link")
-                    else:
-                        link = URL.concatenate_url(self.url_prefix, m.group("link"))
-                    link = re.sub(r'&amp;', '&', link)
-                    link = re.sub(r'&?cpa=\d+', '', link)
-                    link = re.sub(r'&?stx=\d+', '', link)
-                    LOGGER.debug(f"link={link}")
+            for element_obj in element_list:
+                LOGGER.debug(f"element_obj={element_obj}")
+                if not element_obj:
+                    continue
 
-                # 주석 제거
-                e = re.sub(r'<!--[^>]*-->', '', str(e))
-                # 단순(텍스트만 포함한) p 태그 제거
-                #e = re.sub(r'<p[^>]*>[^<]*</p>', '', e)
-                prev_e = e
-                while True:
-                    # 명시적인 타이틀 텍스트 추출
-                    m = re.search(r'<\w+[^>]*class="(title|subject)"[^>]*>(?P<title>[^<]+)</\w+>', e)
+                for e in str(element_obj).split("\n"):
+                    LOGGER.debug(f"e={e}")
+                    # 링크 추출
+                    m = re.search(r'<a[^>]*href="(?P<link>[^"]+)"[^>]*>', str(e))
                     if m:
-                        title = m.group("title")
-                        LOGGER.debug(f"title={title}")
-
-                    if self.site_name in ["11toon"]:
-                        # 이미지 url 추출하여 link로 변경
-                        m = re.search(r'url\(\x27(https?)?//[^/]+(?P<link>/.+)\x27\)', e)
-                        if m:
+                        if m.group("link").startswith("http"):
                             link = m.group("link")
-                            id_str = re.sub(r'/data/toon_category/(?P<id>\d+)', r'\g<id>', link)
-                            link = URL.concatenate_url(self.url_prefix, "/bbs/board.php?bo_table=toons&is=" + id_str)
+                        else:
+                            link = URL.concatenate_url(self.url_prefix, m.group("link"))
+                        link = re.sub(r'&amp;', '&', link)
+                        link = re.sub(r'&?cpa=\d+', '', link)
+                        link = re.sub(r'&?stx=\d+', '', link)
+                        LOGGER.debug(f"link={link}")
 
-                    # 만화사이트에서 자주 보이는 불필요한 텍스트 제거
-                    e = re.compile(r'''
-                        <\w+[^>]*>
-                        \s*
-                        (
-                            \s*
-                            [/+\-★]?
+                    # 주석 제거
+                    e = re.sub(r'<!--[^>]*-->', '', str(e))
+                    # 단순(텍스트만 포함한) p 태그 제거
+                    #e = re.sub(r'<p[^>]*>[^<]*</p>', '', e)
+                    prev_e = e
+                    while True:
+                        # 명시적인 타이틀 텍스트 추출
+                        m = re.search(r'<\w+[^>]*class="(tit(le)?|subject)"[^>]*>(?P<title>[^<]+)</\w+>', e)
+                        if m:
+                            title = m.group("title")
+                            LOGGER.debug(f"title={title}")
+
+                        if self.site_name in ["11toon"]:
+                            # 이미지 url 추출하여 link로 변경
+                            m = re.search(r'url\(\x27(https?)?//[^/]+(?P<link>/.+)\x27\)', e)
+                            if m:
+                                link = m.group("link")
+                                id_str = re.sub(r'/data/toon_category/(?P<id>\d+)', r'\g<id>', link)
+                                link = URL.concatenate_url(self.url_prefix, "/bbs/board.php?bo_table=toons&is=" + id_str)
+
+                        # 만화사이트에서 자주 보이는 불필요한 텍스트 제거
+                        e = re.compile(r'''
+                            <\w+[^>]*>
                             \s*
                             (
-                                만화제목|작가이름|(발행|초성|장르)검색|정렬|검색 결과|공지사항|북마크(업데이트)?|주간랭킹 TOP30|나의 댓?글 반응|
-                                주간|격주|격월|월간|단행본|단편|완결|연재|정기|비정기|월요일?|화요일?|수요일?|목요일?|금요일?|토요일?|일요일?|
-                                액\b|액션|판타지|성인|무협|무장|드라마|라노벨|개그|학원|스토리?|순정|로맨스|로매스|이세계|전생|일상|치유|애니|백합|미분류|시대극|투믹스|게임|카카오페|느와르|15금|18금|19금|가정부|[GB][Ll]|일반|러브코미디|화|
-                                오늘|어제|그제|(하루|이틀|사흘|[한두세네])\s?[주달]|(\d+|[일이삼사오육칠팔구십]|십일|십이)\s?[일월년]\s?전|
-                                (webtoon|cartoon|movie|drama)\d+
-                            )
-                        )+
-                        \s*
-                        </\w+>
-                    ''', re.VERBOSE).sub('', e)
-                    # 연속된 공백을 공백 1개로 교체
-                    e = re.sub(r'\s+', ' ', e)
-                    # #[] 제거
-                    e = re.sub(r'#\[]', '', e)
-                    if prev_e == e:
-                        break
-                    prev_e = e
+                                \s*
+                                [/+\-★]?
+                                \s*
+                                (
+                                    만화제목|작가이름|(발행|초성|장르)검색|정렬|검색 결과|공지사항|북마크(업데이트)?|주간랭킹 TOP30|나의 댓?글 반응|
+                                    주간|격주|격월|월간|단행본|단편|완결|연재|정기|비정기|월요일?|화요일?|수요일?|목요일?|금요일?|토요일?|일요일?|
+                                    액\b|액션|판타지|성인|무협|무장|드라마|라노벨|개그|학원|스토리?|순정|로맨스|로매스|이세계|전생|일상|치유|애니|백합|미분류|시대극|투믹스|게임|카카오페|느와르|15금|18금|19금|가정부|[GB][Ll]|일반|러브코미디|화|
+                                    오늘|어제|그제|(하루|이틀|사흘|[한두세네])\s?[주달]|(\d+|[일이삼사오육칠팔구십]|십일|십이)\s?[일월년]\s?전|
+                                    (webtoon|cartoon|movie|drama)\d+
+                                )
+                            )+
+                            \s*
+                            </\w+>
+                        ''', re.VERBOSE).sub('', e)
+                        # 연속된 공백을 공백 1개로 교체
+                        e = re.sub(r'\s+', ' ', e)
+                        # #[] 제거
+                        e = re.sub(r'#\[]', '', e)
+                        if prev_e == e:
+                            break
+                        prev_e = e
 
-                if self.site_name not in ["jmana", "allall"]:
-                    e = re.sub(r'.*\b\d+[화권부편].*', '', e)
+                    if self.site_name not in ["jmana", "allall"]:
+                        e = re.sub(r'.*\b\d+[화권부편].*', '', e)
 
-                # 모든 html 태그 제거
-                e = re.sub(r'</?\w+(\s*[\w\-]+="[^"]*")*/?>', '', e)
-                # #태그 제거
-                e = re.sub(r'\s*#\S+', '', e)
-                # 행 처음에 연속하는 공백 제거
-                e = re.sub(r'^\s+', '', e)
-                # 행 마지막에 연속하는 공백 제거
-                e = re.sub(r'\s+$', '', e)
-                # LOGGER.debug(f"e={e}")
-                if not re.search(r'^\s*$', e):
-                    title = e
+                    # 모든 html 태그 제거
+                    e = re.sub(r'</?\w+(\s*[\w\-]+="[^"]*")*/?>', '', e)
+                    # #태그 제거
+                    e = re.sub(r'\s*#\S+', '', e)
+                    # 행 처음에 연속하는 공백 제거
+                    e = re.sub(r'^\s+', '', e)
+                    # 행 마지막에 연속하는 공백 제거
+                    e = re.sub(r'\s+$', '', e)
+                    # LOGGER.debug(f"e={e}")
+                    if not re.search(r'^\s*$', e):
+                        title = e
 
-                if title and link:
-                    result_list.append((title, urllib.parse.unquote(link)))
-                    link = ""
-                    title = ""
+                    if title and link:
+                        result_list.append((title, urllib.parse.unquote(link)))
+                        link = ""
+                        title = ""
 
         return result_list
 
@@ -338,6 +346,16 @@ class AllallSite(Site):
         self.url_postfix = "/searchs?skeyword=" + encoded_keyword
 
 
+class SkytoonSite(Site):
+    def __init__(self, site_name: str) -> None:
+        super().__init__(site_name)
+        self.extraction_attrs = {"class": "list"}
+
+    def set_url_postfix(self, keyword: str) -> None:
+        encoded_keyword = urllib.parse.quote(keyword)
+        self.url_postfix = "/search?skeyword=" + encoded_keyword
+
+
 class BlacktoonSite(Site):
     def __init__(self, site_name: str = "") -> None:
         super().__init__(site_name)
@@ -465,6 +483,7 @@ class SearchManager:
             #TorrentdiaSite("torrentdia"),
             TorrentttSite("torrenttt"),
             TorrentmodeSite("torrentmode"),
+            SkytoonSite("skytoon")
         ]
 
         result_list: List[Tuple[str, str]] = []
