@@ -67,7 +67,7 @@ class RequestsClient:
             LOGGER.debug(f"visiting referer page '{self.headers['Referer']}'")
             self.read_cookies_from_file()
             try:
-                response = requests.get(self.headers['Referer'], headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, allow_redirects=allow_redirects)
+                referer_response = requests.get(self.headers['Referer'], headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, allow_redirects=allow_redirects)
             except requests.exceptions.ConnectionError as e:
                 LOGGER.warning(f"<!-- Warning: can't connect to '{url}' for temporary network error -->")
                 LOGGER.warning("<!-- %r -->", e)
@@ -76,8 +76,8 @@ class RequestsClient:
                 LOGGER.warning(f"<!-- Warning: can't read data from '{url}' for timeout -->")
                 LOGGER.warning("<!-- %r -->", e)
                 return "", f"Warning: can't read data from '{url}' for timeout", {}, None
-            if response.cookies:
-                self.write_cookies_to_file(response.cookies)
+            if referer_response.cookies:
+                self.write_cookies_to_file(referer_response.cookies)
 
         self.read_cookies_from_file()
         response = None
@@ -194,14 +194,13 @@ class Crawler:
         if "encoding" in options and options["encoding"]:
             encoding = options["encoding"]
             option_str += f" --encoding='{encoding}'"
-        if "header_list" in options:
-            for header in options["header_list"]:
-                header_str = ""
-                for k, v in header.items():
-                    if header_str != "":
-                        header_str += "; "
-                    header_str += f"{k}: {v}"
-                option_str += f" --header='{header_str}'"
+        if "headers" in options:
+            header_str = ""
+            for k, v in options["headers"].items():
+                if header_str != "":
+                    header_str += "; "
+                header_str += f"{k}: {v}"
+            option_str += f" --header='{header_str}'"
         if "timeout" in options:
             timeout = options["timeout"] or "60"
             option_str += f" --timeout={timeout}"

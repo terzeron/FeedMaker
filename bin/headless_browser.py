@@ -5,7 +5,7 @@ import os
 import json
 import logging.config
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Optional, no_type_check
 import urllib3
 from selenium import webdriver
 from selenium.common.exceptions import InvalidCookieDomainException
@@ -149,6 +149,7 @@ class HeadlessBrowser:
                 cookie_file.unlink(missing_ok=True)
                 self._read_cookies_from_file(driver)
 
+    @no_type_check
     def make_request(self, url, download_file=None) -> str:
         LOGGER.debug(f"# make_request(url={url}, download_file={download_file})")
         options = Options()

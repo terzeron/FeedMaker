@@ -104,7 +104,7 @@ class Notification:
                 }
             ]
         }
-        response = requests.post(url, json=data, headers=headers, timeout=10, verify=True)
+        response = requests.post(url, json=data, headers=headers, timeout=60, verify=True)
         if response and response.status_code == 200:
             return True
         LOGGER.error(f"can't send message to line messenger, {response.status_code}")
@@ -191,7 +191,7 @@ class Notification:
             "body": msg,
             "receiverList": receiver_list
         }
-        response = requests.post(url, headers=headers, data=json.dumps(payload))
+        response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=60)
         if response and response.status_code == 200:
             return True
         LOGGER.error(f"can't send email by nhn cloud, {response.status_code}")

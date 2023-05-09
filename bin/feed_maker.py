@@ -7,7 +7,7 @@ import time
 import logging.config
 from pathlib import Path
 from typing import List, Dict, Any, Tuple, Callable, Optional
-from distutils.spawn import find_executable
+from shutil import which
 from datetime import datetime, timedelta
 from contextlib import suppress
 import dateutil.parser
@@ -216,7 +216,7 @@ class FeedMaker:
         else:
             # 파일이 존재하지 않거나 크기가 작으니 다시 생성 시도
             conf = self.extraction_conf
-            crawler = Crawler(dir_path=self.feed_dir_path, render_js=conf["render_js"], method=Method.GET, headers=dict(conf["header_list"]), timeout=conf["timeout"], num_retries=conf["num_retries"], encoding=conf["encoding"], verify_ssl=conf["verify_ssl"], copy_images_from_canvas=conf["copy_images_from_canvas"], simulate_scrolling=conf["simulate_scrolling"], disable_headless=conf["disable_headless"], blob_to_dataurl=conf["blob_to_dataurl"])
+            crawler = Crawler(dir_path=self.feed_dir_path, render_js=conf["render_js"], method=Method.GET, headers=conf["headers"], timeout=conf["timeout"], num_retries=conf["num_retries"], encoding=conf["encoding"], verify_ssl=conf["verify_ssl"], copy_images_from_canvas=conf["copy_images_from_canvas"], simulate_scrolling=conf["simulate_scrolling"], disable_headless=conf["disable_headless"], blob_to_dataurl=conf["blob_to_dataurl"])
             option_str = Crawler.get_option_str(conf)
             crawler_cmd = f"crawler.py -f '{self.feed_dir_path}' {option_str} '{item_url}'"
             LOGGER.debug(f"cmd={crawler_cmd}")
@@ -237,7 +237,7 @@ class FeedMaker:
 
             for post_process_script in conf["post_process_script_list"]:
                 program = post_process_script.split(" ")[0]
-                program_fullpath = find_executable(program)
+                program_fullpath = which(program)
                 if program_fullpath and program_fullpath.startswith(("/usr", "/bin", "/sbin")):
                     post_process_cmd = f"{post_process_script}"
                 else:

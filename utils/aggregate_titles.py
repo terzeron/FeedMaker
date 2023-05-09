@@ -64,7 +64,7 @@ def main() -> int:
     LOGGER.debug(result, error)
 
     # convert & extract temporary output file
-    cmd = "awk -F'\\t' '$2 >= 3 \{ for (i = 3; i < NF; i += 2) \{ print $(i) FS $(i + 1) } }' '" + temp_output_file + "'"
+    cmd = "awk -F'\t' '$2 >= 3 { for (i = 3; i < NF; i += 2) { print $(i) FS $(i + 1) } }' '" + temp_output_file + "'"
     LOGGER.debug(cmd)
     with subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) as p:
         with open(output_file, 'w', encoding='utf-8') as out_file:

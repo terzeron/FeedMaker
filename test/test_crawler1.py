@@ -46,11 +46,11 @@ class CrawlerTest(unittest.TestCase):
             "timeout": 20,
             "user_agent": "Firefox",
             "encoding": "cp949",
-            "header_list": ["Content-Type: application/json", "Transfer-Encoding: chunked"],
+            "headers": {"Content-Type": "application/json", "Transfer-Encoding": "chunked"},
             "copy_images_from_canvas": False
         }
         actual = Crawler.get_option_str(options)
-        expected = " --render-js=true --copy-images-from-canvas=false --simulate-scrolling=true --user-agent='Firefox' --referer='https://abc.com' --encoding='cp949' --header='Content-Type: application/json' --header='Transfer-Encoding: chunked' --timeout=20"
+        expected = " --render-js=true --copy-images-from-canvas=false --simulate-scrolling=true --user-agent='Firefox' --referer='https://abc.com' --encoding='cp949' --header='Content-Type: application/json; Transfer-Encoding: chunked' --timeout=20"
         self.assertEqual(expected, actual)
 
     def test_crawler(self):

@@ -55,7 +55,7 @@ def get_location_recursively(url: str, config: Dict[str, Any]) -> Tuple[str, str
         response, error, response_headers = crawler.run(url, allow_redirects=False)
         if not response:
             LOGGER.error(error)
-    except Exception as e:
+    except Crawler.ReadTimeoutException as e:
         LOGGER.error(e)
         return "", ""
 
@@ -138,7 +138,7 @@ def get_url_pattern(url: str) -> Tuple[str, str, int, str, str]:
         num = int(m1.group("num"))
         domain_postfix = m1.group("domain_postfix")
         post = m1.group("post")
-        new_pattern = pre + '(\d+)' + domain_postfix + '(?:' + post + ')?'
+        new_pattern = pre + r'(\d+)' + domain_postfix + r'(?:' + post + r')?'
         LOGGER.debug(f"type 1 pattern: {pre}, {domain_postfix}, {post}, {new_pattern}")
     return new_pattern, pre, num, domain_postfix, post
 

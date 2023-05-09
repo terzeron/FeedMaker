@@ -40,6 +40,7 @@ def main() -> int:
         return -1
 
     with open(pdf_file_path, "rb") as f:
+        # type: ignore
         pdf = pdftotext.PDF(f)
         for page in pdf:
             print(page)
@@ -47,7 +48,7 @@ def main() -> int:
             page = re.sub(r'\s\s+', ' ', page)
             page = re.sub(r'\s{4,}', '  ', page)
             page = re.sub(r'^\s*\S+\s* - ', '\n - ', page)
-            page = re.sub(r'(?<=\S)\s*(?P<bullet>[▶•])', '\n\g<bullet>', page)
+            page = re.sub(r'(?<=\S)\s*(?P<bullet>[▶•])', r'\n\g<bullet>', page)
             print(page)
 
     pdf_file_path.unlink()

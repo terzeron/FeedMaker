@@ -8,7 +8,7 @@ import sys
 import logging.config
 from pathlib import Path
 from typing import Dict, List, Tuple, Any
-from distutils.spawn import find_executable
+from shutil import which
 from feed_maker_util import Process, Data
 from crawler import Crawler, Method
 
@@ -50,10 +50,7 @@ class NewListCollector:
 
         result_list: List[Tuple[str, str]] = []
         conf = self.collection_conf
-        headers: Dict[str, str] = {}
-        for header in conf["header_list"]:
-            for k, v in header.items():
-                headers[k] = v
+        headers: Dict[str, str] = conf["headers"]
         if "referer" in conf:
             headers["Referer"] = conf["referer"]
         crawler = Crawler(dir_path=self.feed_dir_path, render_js=conf["render_js"], method=Method.GET, headers=headers, timeout=conf["timeout"], num_retries=conf["num_retries"], encoding=conf["encoding"], verify_ssl=conf["verify_ssl"], copy_images_from_canvas=conf["copy_images_from_canvas"], simulate_scrolling=conf["simulate_scrolling"], disable_headless=conf["disable_headless"], blob_to_dataurl=conf["blob_to_dataurl"])
@@ -80,7 +77,7 @@ class NewListCollector:
 
             for post_process_script in self.collection_conf["post_process_script_list"]:
                 program = post_process_script.split(" ")[0]
-                program_fullpath = find_executable(program)
+                program_fullpath = which(program)
                 if program_fullpath and (program_fullpath.startswith("/usr") or program_fullpath.startswith("/bin") or program_fullpath.startswith("/sbin") or program_fullpath.startswith("/opt/homebrew/bin")):
                     post_process_cmd = f"{post_process_script}"
                 else:

@@ -13,7 +13,7 @@ from pathlib import Path
 from urllib.parse import urlparse, urlunparse, quote, urljoin
 from datetime import datetime
 from typing import List, Any, Dict, Tuple, Optional, Union
-from distutils.spawn import find_executable
+from shutil import which
 from filelock import FileLock, Timeout
 import psutil
 from ordered_set import OrderedSet
@@ -75,7 +75,7 @@ class Process:
             if program.startswith("/"):
                 program_full_path = program
             else:
-                program_full_path = find_executable(program)
+                program_full_path = which(program)
             if program_full_path:
                 program_path = Path(program_full_path)
             else:
@@ -344,28 +344,24 @@ class Config:
         return value
 
     @staticmethod
-    def _traverse_config_node(config_node: Dict[str, Any], key: str) -> List[str]:
-        result: List[str] = []
+    def _get_list_config_value(config_node: Dict[str, Any], key: str, default: Optional[List[Any]] = None) -> Optional[List[Any]]:
+        value: Optional[List[Any]] = default if default else []
         if key in config_node:
-            if isinstance(config_node[key], list):
-                result.extend(config_node[key])
-            else:
-                result.append(config_node[key])
-            return result
-
-        for v in config_node.values():
-            if isinstance(v, Dict):
-                data = Config._traverse_config_node(v, key)
-                result.extend(data)
-        return result
+            try:
+                value = config_node[key]
+            except TypeError:
+                value = None
+        return value
 
     @staticmethod
-    def _get_config_value_list(config_node: Dict[str, Any], key: str, default: Optional[List[Any]] = None) -> Optional[List[Any]]:
-        default = default if default is not None else []
-        result = Config._traverse_config_node(config_node, key)
-        if result:
-            return result
-        return default
+    def _get_dict_config_value(config_node: Dict[str, Any], key: str, default: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+        value: Optional[Dict[str, Any]] = default if default else {}
+        if key in config_node:
+            try:
+                value = config_node[key]
+            except TypeError:
+                value = None
+        return value
 
     @staticmethod
     def get_global_config(conf_file_path=None) -> Dict[str, Any]:
@@ -405,9 +401,9 @@ class Config:
                     "num_retries": Config._get_float_config_value(collection_conf, "num_retries", 1),
                     "window_size": Config._get_int_config_value(collection_conf, "window_size", 0),
 
-                    "list_url_list": Config._get_config_value_list(collection_conf, "list_url_list", []),
-                    "post_process_script_list": Config._get_config_value_list(collection_conf, "post_process_script_list", []),
-                    "header_list": Config._get_config_value_list(collection_conf, "header_list", [])
+                    "list_url_list": Config._get_list_config_value(collection_conf, "list_url_list", []),
+                    "post_process_script_list": Config._get_list_config_value(collection_conf, "post_process_script_list", []),
+                    "headers": Config._get_dict_config_value(collection_conf, "headers", {})
                 }
         return conf
 
@@ -434,11 +430,11 @@ class Config:
                     "timeout": Config._get_int_config_value(extraction_conf, "timeout", 60),
                     "num_retries": Config._get_int_config_value(extraction_conf, "num_retries", 1),
 
-                    "element_id_list": Config._get_config_value_list(extraction_conf, "element_id_list", []),
-                    "element_class_list": Config._get_config_value_list(extraction_conf, "element_class_list", []),
-                    "element_path_list": Config._get_config_value_list(extraction_conf, "element_path_list", []),
-                    "post_process_script_list": Config._get_config_value_list(extraction_conf, "post_process_script_list", []),
-                    "header_list": Config._get_config_value_list(extraction_conf, "header_list", []),
+                    "element_id_list": Config._get_list_config_value(extraction_conf, "element_id_list", []),
+                    "element_class_list": Config._get_list_config_value(extraction_conf, "element_class_list", []),
+                    "element_path_list": Config._get_list_config_value(extraction_conf, "element_path_list", []),
+                    "post_process_script_list": Config._get_list_config_value(extraction_conf, "post_process_script_list", []),
+                    "headers": Config._get_dict_config_value(extraction_conf, "headers", {}),
                 }
         return conf
 

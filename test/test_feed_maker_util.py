@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 from io import StringIO
 import logging.config
-from typing import List
+from typing import List, Dict, Any
 from datetime import datetime
 from pathlib import Path
 import subprocess
@@ -461,28 +461,18 @@ class ConfigTest(unittest.TestCase):
         actual = self.config._get_float_config_value(extraction_conf, "unit_size_per_day", 5.8)
         self.assertEqual(5.8, actual)
 
-    def test_traverse_config_node(self):
-        collection_conf = self.config.conf["collection"]
-        actual = self.config._traverse_config_node(collection_conf, "render_js")
-        self.assertEqual([False], actual)
-
-        actual = self.config._traverse_config_node(collection_conf, "list_url_list")
-        expected = ["https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=1",
-                    "https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=2"]
-        self.assertEqual(expected, actual)
-
     def test_get_config_value_list(self):
         collection_conf = self.config.conf["collection"]
-        actual = self.config._get_config_value_list(collection_conf, "list_url_list", [])
+        actual = self.config._get_list_config_value(collection_conf, "list_url_list", [])
         expected = ["https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=1",
                     "https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=2"]
         self.assertEqual(expected, actual)
 
-        actual = self.config._get_config_value_list(collection_conf, "header_list", [])
-        self.assertEqual([], actual)
+        actual2 = self.config._get_dict_config_value(collection_conf, "headers", {})
+        self.assertEqual({}, actual2)
 
-        actual = self.config._get_config_value_list(collection_conf, "header_list")
-        self.assertEqual([], actual)
+        actual2 = self.config._get_dict_config_value(collection_conf, "headers")
+        self.assertEqual({}, actual2)
 
     def test_get_global_config(self):
         config = self.global_conf
@@ -578,9 +568,8 @@ class ConfigTest(unittest.TestCase):
         expected = ["post_process_script_for_navercast.py"]
         self.assertEqual(expected, actual)
 
-        actual = configs["header_list"]
-        expected = []
-        self.assertEqual(expected, actual)
+        actual2 = configs["headers"]
+        self.assertEqual({}, actual2)
 
     def test_get_rss_configs(self):
         configs = self.config.get_rss_configs()

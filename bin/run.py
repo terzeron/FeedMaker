@@ -196,6 +196,7 @@ class FeedMakerRunner:
 
         failed_feed_list: List[str] = []
         for feed_dir_path in feed_dir_path_list:
+            print(feed_dir_path)
             feed_name = feed_dir_path.name
             config = Config(feed_dir_path=feed_dir_path)
             if not config:
@@ -228,7 +229,7 @@ class FeedMakerRunner:
 
         if failed_feed_list:
             notification = Notification()
-            notification.send_msg(msg=", ".join(failed_feed_list), subject="Errors of FeedMaker")
+            notification.send_msg(", ".join(failed_feed_list), "Errors of FeedMaker")
         return True
 
     @staticmethod

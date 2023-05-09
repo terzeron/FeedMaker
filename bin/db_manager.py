@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from typing import List, Any, Tuple, Optional
+from typing import List, Any, Optional, Iterator
 from contextlib import contextmanager
 from mysql.connector.pooling import MySQLConnectionPool, PooledMySQLConnection
 from mysql.connector.cursor import MySQLCursor
@@ -38,7 +38,7 @@ class DBManager:
             del self.connection
 
     @contextmanager
-    def get_connection_and_cursor(self, with_serializable_transaction=False) -> Tuple[Connection, Cursor]:
+    def get_connection_and_cursor(self, with_serializable_transaction=False) -> Iterator[Any]:
         mysql_connection = self.pool.get_connection()
         connection = Connection(mysql_connection)
         if with_serializable_transaction:
@@ -51,7 +51,7 @@ class DBManager:
             connection.mysql_connection.close()
 
     def query(self, query: str, *params) -> List[Any]:
-        with self.get_connection_and_cursor() as (connection, cursor):
+        with self.get_connection_and_cursor() as (_, cursor):
             cursor.mysql_cursor.execute(query, params)
             result = cursor.mysql_cursor.fetchall()
             return result

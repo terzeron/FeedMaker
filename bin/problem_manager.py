@@ -787,8 +787,7 @@ class ProblemManager:
                 if rows[0]["lock_time"] and datetime.now() - rows[0]["lock_time"] < timedelta(seconds=60):
                     self.db.rollback(connection)
                     return False
-                else:
-                    self.db.execute(cursor, "DELETE FROM lock_for_concurrent_loading")
+                self.db.execute(cursor, "DELETE FROM lock_for_concurrent_loading")
             self.db.execute(cursor, "INSERT INTO lock_for_concurrent_loading VALUES (CURRENT_TIMESTAMP)")
             self.db.commit(connection)
         return True
