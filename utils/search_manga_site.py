@@ -328,7 +328,7 @@ class ToonkorSite(Site):
 
     def set_url_postfix(self, keyword: str) -> None:
         encoded_keyword = urllib.parse.quote(keyword)
-        self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
+        self.url_postfix = "/bbs/search_webtoon.php?stx=" + encoded_keyword
 
 
 class EleventoonSite(Site):
