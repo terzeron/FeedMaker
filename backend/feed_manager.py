@@ -306,6 +306,8 @@ class FeedManager:
 
                 _, error = Htaccess.get_alias(group_name, feed_name)
                 if error:
+                    if not alias:
+                        alias = feed_name
                     _, error = Htaccess.set_alias(group_name, feed_name, alias)
                     if error:
                         return False, "error in setting alias to .htaccess"
