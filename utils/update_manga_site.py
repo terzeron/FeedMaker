@@ -5,7 +5,9 @@ import sys
 import os
 import re
 import json
+import getopt
 import logging.config
+from pprint import pprint
 from typing import Optional
 from pathlib import Path
 from feed_maker_util import Process
@@ -16,12 +18,12 @@ LOGGER = logging.getLogger()
 
 
 def print_usage() -> None:
-    print("Usage:\t%s <site number>")
+    print("Usage:\t%s [ -t ] <site number>")
+    print("\t\t\t-t: run for test (without updating)")
 
 
-def update_domain() -> bool:
+def update_domain(test_run: bool, new_number: int) -> bool:
     print("--- updating domain ---")
-    new_postfix = sys.argv[1]
     new_referer: Optional[str] = ""
 
     # update site config file
@@ -36,30 +38,36 @@ def update_domain() -> bool:
         site_config = json.load(f)
         if site_config:
             if "url" in site_config:
-                new_url = re.sub(r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+|\.\w+)(?P<post>[^/]*)', r'\g<pre>' + new_postfix + r'\g<post>', site_config["url"])
+                new_url = re.sub(r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+|\.\w+)(?P<post>[^/]*)', r'\g<pre>' + str(new_number) + r'\g<post>', site_config["url"])
             else:
                 print("no url in site config")
                 return False
             if "referer" in site_config:
-                new_referer = re.sub(r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+|\.\w+)(?P<post>[^/]*)', r'\g<pre>' + new_postfix + r'\g<post>', site_config["referer"])
+                new_referer = re.sub(r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+|\.\w+)(?P<post>[^/]*)', r'\g<pre>' + str(new_number) + r'\g<post>', site_config["referer"])
         else:
             print("empty site config")
             return False
 
     # write site config file
-    with open(site_config_file, "w", encoding="utf-8") as f:
-        if new_url:
-            site_config["url"] = new_url
-        if new_referer:
-            site_config["referer"] = new_referer
-        json.dump(site_config, f, indent=2, ensure_ascii=False)
+    if new_url:
+        site_config["url"] = new_url
+    if new_referer:
+        site_config["referer"] = new_referer
+    if test_run:
+        pprint(site_config)
+    else:
+        temp_site_config_file = site_config_file + ".temp"
+        with open(temp_site_config_file, "w", encoding="utf-8") as outfile:
+            json.dump(site_config, outfile, indent=2, ensure_ascii=False)
+            os.rename(temp_site_config_file, site_config_file)
 
     # git add
-    print("- git add")
-    git_cmd: str = f"git add {site_config_file}"
-    _, error = Process.exec_cmd(git_cmd)
-    if error:
-        LOGGER.error(f"can't execute a command '{git_cmd}', {error}")
+    if not test_run:
+        print("- git add")
+        git_cmd: str = f"git add {site_config_file}"
+        _, error = Process.exec_cmd(git_cmd)
+        if error:
+            LOGGER.error(f"can't execute a command '{git_cmd}', {error}")
 
     # update config files of all feeds which belongs to the site
     for entry in os.listdir("."):
@@ -67,7 +75,8 @@ def update_domain() -> bool:
             continue
         print(f"- {entry}: ", end='')
         conf_file = os.path.join(entry, "conf.json")
-        print(".", end='')
+        if not test_run:
+            print(".", end='')
         temp_conf_file = conf_file + ".temp"
         with open(conf_file, "r", encoding="utf-8") as infile:
             data = json.load(infile)
@@ -76,41 +85,48 @@ def update_domain() -> bool:
                 for list_url in data["configuration"]["collection"]["list_url_list"]:
                     m = re.search(r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+|\.\w+)(?P<post>(\.|/).*)', list_url)
                     if m:
-                        new_list_url = m.group("pre") + new_postfix + m.group("post")
+                        new_list_url = m.group("pre") + str(new_number) + m.group("post")
                         new_list_url_list.append(new_list_url)
                 data["configuration"]["collection"]["list_url_list"] = new_list_url_list
 
-        with open(temp_conf_file, "w", encoding="utf-8") as outfile:
-            json.dump(data, outfile, indent=2, ensure_ascii=False)
-            os.rename(temp_conf_file, conf_file)
+        if test_run:
+            pprint(data)
+        else:
+            with open(temp_conf_file, "w", encoding="utf-8") as outfile:
+                json.dump(data, outfile, indent=2, ensure_ascii=False)
+                os.rename(temp_conf_file, conf_file)
 
-        print(".", end='')
-        git_cmd = f"git add {conf_file}"
+        if not test_run:
+            print(".", end='')
+            git_cmd = f"git add {conf_file}"
+            _, error = Process.exec_cmd(git_cmd)
+            if error:
+                LOGGER.error(f"can't execute a command '{git_cmd}', {error}")
+
+        if not test_run:
+            print(".", end='')
+            if os.path.isdir(os.path.join(".", entry, "newlist")):
+                for e in os.listdir(os.path.join(".", entry, "newlist")):
+                    os.remove(os.path.join(".", entry, "newlist", e))
+                os.rmdir(os.path.join(".", entry, "newlist"))
+
+        if not test_run:
+            print(".", end='')
+            try:
+                xml_file_path = Path.cwd() / entry / f"{entry}.xml"
+                old_xml_file_path = xml_file_path.with_suffix(xml_file_path.suffix + ".old")
+                xml_file_path.unlink(missing_ok=True)
+                old_xml_file_path.unlink(missing_ok=True)
+            except FileNotFoundError:
+                pass
+            print("")
+
+    if not test_run:
+        print("- git commit")
+        git_cmd = f"git commit -m 'modify site url to {new_url}'"
         _, error = Process.exec_cmd(git_cmd)
         if error:
             LOGGER.error(f"can't execute a command '{git_cmd}', {error}")
-
-        print(".", end='')
-        if os.path.isdir(os.path.join(".", entry, "newlist")):
-            for e in os.listdir(os.path.join(".", entry, "newlist")):
-                os.remove(os.path.join(".", entry, "newlist", e))
-            os.rmdir(os.path.join(".", entry, "newlist"))
-
-        print(".", end='')
-        try:
-            xml_file_path = Path.cwd() / entry / f"{entry}.xml"
-            old_xml_file_path = xml_file_path.with_suffix(xml_file_path.suffix + ".old")
-            xml_file_path.unlink(missing_ok=True)
-            old_xml_file_path.unlink(missing_ok=True)
-        except FileNotFoundError:
-            pass
-        print("")
-
-    print("- git commit")
-    git_cmd = f"git commit -m 'modify site url to {new_url}'"
-    _, error = Process.exec_cmd(git_cmd)
-    if error:
-        LOGGER.error(f"can't execute a command '{git_cmd}', {error}")
 
     return True
 
@@ -127,12 +143,20 @@ def check_site() -> bool:
 
 
 def main() -> int:
-    if len(sys.argv) < 2:
+    test_run = False
+    optlist, args = getopt.getopt(sys.argv[1:], "t")
+    for o, a in optlist:
+        if o == "-t":
+            test_run = True
+       
+    if len(args) < 1:
         print_usage()
         return -1
 
-    if update_domain():
-        check_site()
+    new_number = int(args[0])
+    if update_domain(test_run, new_number):
+        if not test_run:
+            check_site()
 
     return 0
 
