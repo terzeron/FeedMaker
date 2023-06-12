@@ -5,6 +5,7 @@
 import os
 from pathlib import Path
 import json
+import re
 import logging
 import logging.config
 from datetime import datetime
@@ -240,11 +241,14 @@ class FeedManager:
         LOGGER.debug(f"# get_feed_info_by_name({feed_name})")
         feed_dir_path = self.work_dir / group_name / feed_name
         list_dir_path = feed_dir_path / "newlist"
-        last_collect_date = datetime.now()
+        last_collect_date = None
         result_list = []
         collection_info = {}
         if list_dir_path.is_dir():
             for list_file_path in list_dir_path.iterdir():
+                m = re.search(r'(2\d{3}\d{2}\d{2})\.txt', list_file_path.name)
+                if not m:
+                    continue
                 st = list_file_path.stat()
                 if not last_collect_date:
                     last_collect_date = datetime.fromtimestamp(st.st_mtime)
