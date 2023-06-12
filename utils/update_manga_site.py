@@ -38,12 +38,18 @@ def update_domain(test_run: bool, new_number: int) -> bool:
         site_config = json.load(f)
         if site_config:
             if "url" in site_config:
-                new_url = re.sub(r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+|\.\w+)(?P<post>[^/]*)', r'\g<pre>' + str(new_number) + r'\g<post>', site_config["url"])
+                if test_run:
+                    m = re.search(r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+)(?P<post>[^/]*)', site_config["url"])
+                    if m:
+                        print(m.group("pre"))
+                        print(str(new_number))
+                        print(m.group("post"))
+                new_url = re.sub(r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+)(?P<post>[^/]*)', r'\g<pre>' + str(new_number) + r'\g<post>', site_config["url"])
             else:
                 print("no url in site config")
                 return False
             if "referer" in site_config:
-                new_referer = re.sub(r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+|\.\w+)(?P<post>[^/]*)', r'\g<pre>' + str(new_number) + r'\g<post>', site_config["referer"])
+                new_referer = re.sub(r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+)(?P<post>[^/]*)', r'\g<pre>' + str(new_number) + r'\g<post>', site_config["referer"])
         else:
             print("empty site config")
             return False
@@ -54,6 +60,8 @@ def update_domain(test_run: bool, new_number: int) -> bool:
     if new_referer:
         site_config["referer"] = new_referer
     if test_run:
+        print(new_url)
+        print(new_referer)
         pprint(site_config)
     else:
         temp_site_config_file = site_config_file + ".temp"
@@ -83,7 +91,7 @@ def update_domain(test_run: bool, new_number: int) -> bool:
             if "configuration" in data and "collection" in data["configuration"] and "list_url_list" in data["configuration"]["collection"]:
                 new_list_url_list = []
                 for list_url in data["configuration"]["collection"]["list_url_list"]:
-                    m = re.search(r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+|\.\w+)(?P<post>(\.|/).*)', list_url)
+                    m = re.search(r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+)(?P<post>(\.|/).*)', list_url)
                     if m:
                         new_list_url = m.group("pre") + str(new_number) + m.group("post")
                         new_list_url_list.append(new_list_url)
@@ -91,6 +99,7 @@ def update_domain(test_run: bool, new_number: int) -> bool:
 
         if test_run:
             pprint(data)
+            break
         else:
             with open(temp_conf_file, "w", encoding="utf-8") as outfile:
                 json.dump(data, outfile, indent=2, ensure_ascii=False)
