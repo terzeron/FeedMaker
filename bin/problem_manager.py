@@ -690,20 +690,21 @@ class ProblemManager:
         with self.db.get_connection_and_cursor() as (connection, cursor):
             for feed_alias, _ in self.feed_name_aliases_map.get(feed_name, {}).items():
                 rows = self.db.query("SELECT access_date FROM feed_alias_access_info WHERE feed_alias = %s", feed_alias)
-                last_log_date = rows[0]["access_date"]
-                today = datetime.today()
-                for i in range(30, -1, -1):
-                    specific_date = today - timedelta(days=i)
-                    if specific_date < last_log_date:
-                        continue
-                    date_str = specific_date.strftime("%y%m%d")
-                    access_file_path = self.httpd_access_log_dir / f"access.log.{date_str}"
-                    if not access_file_path.is_file():
-                        # LOGGER.warning("can't find access file '%s'", access_file_path)
-                        continue
+                for row in rows:
+                    last_log_date = row["access_date"]
+                    today = datetime.today()
+                    for i in range(30, -1, -1):
+                        specific_date = today - timedelta(days=i)
+                        if specific_date < last_log_date:
+                            continue
+                        date_str = specific_date.strftime("%y%m%d")
+                        access_file_path = self.httpd_access_log_dir / f"access.log.{date_str}"
+                        if not access_file_path.is_file():
+                            # LOGGER.warning("can't find access file '%s'", access_file_path)
+                            continue
 
-                    self._add_http_access_info(cursor, access_file_path)
-                    LOGGER.info(f"* The adding of access info of '{PathUtil.convert_path_to_str(access_file_path)}' is done.")
+                        self._add_http_access_info(cursor, access_file_path)
+                        LOGGER.info(f"* The adding of access info of '{PathUtil.convert_path_to_str(access_file_path)}' is done.")
             self.db.commit(connection)
 
     def load_all_httpd_access_files(self) -> None:
