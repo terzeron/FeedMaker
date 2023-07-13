@@ -746,13 +746,17 @@ export default {
     setPublicFeedInfo: function (publicFeedInfo) {
       this.numItemsInResult = publicFeedInfo["num_items"];
       this.sizeOfResultFile = publicFeedInfo["size"];
-      this.lastUploadDate = publicFeedInfo["upload_date"].split("T")[0];
+      if (publicFeedInfo["upload_date"]) {
+        this.lastUploadDate = publicFeedInfo["upload_date"].split("T")[0];
+      }
     },
     setProgressInfo: function (progressInfo) {
       this.numTotalItems = progressInfo["count"];
       this.currentIndexOfProgress = progressInfo["index"];
       this.unitSizePerDay = progressInfo["unit_size"];
-      this.feedCompletionDueDate = progressInfo["due_date"].split("T")[0];
+      if (progressInfo["due_date"]) {
+        this.feedCompletionDueDate = progressInfo["due_date"].split("T")[0];
+      }
     },
     getFeedInfo: function (groupName, feedName) {
       console.log(`getFeedInfo(${groupName}, ${feedName})`);
