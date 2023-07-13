@@ -158,7 +158,7 @@
                   <b-td>{{ sizeOfResultFileWithUnit }}</b-td>
                   <b-td>{{ lastUploadDate }}</b-td>
                 </b-tr>
-                <b-tr v-if="numTotalItems && currentIndexOfProgress && unitSizePerDay">
+                <b-tr v-if="numTotalItems >= 0 && currentIndexOfProgress >=0 && unitSizePerDay >= 0">
                   <b-td>진행 상태</b-td>
                   <b-td colspan="2">
                     <b-progress :max="numTotalItems" show-progress height="1.5rem">
@@ -746,13 +746,13 @@ export default {
     setPublicFeedInfo: function (publicFeedInfo) {
       this.numItemsInResult = publicFeedInfo["num_items"];
       this.sizeOfResultFile = publicFeedInfo["size"];
-      this.lastUploadDate = publicFeedInfo["upload_date"];
+      this.lastUploadDate = publicFeedInfo["upload_date"].split("T")[0];
     },
     setProgressInfo: function (progressInfo) {
       this.numTotalItems = progressInfo["count"];
       this.currentIndexOfProgress = progressInfo["index"];
       this.unitSizePerDay = progressInfo["unit_size"];
-      this.feedCompletionDueDate = progressInfo["due_date"];
+      this.feedCompletionDueDate = progressInfo["due_date"].split("T")[0];
     },
     getFeedInfo: function (groupName, feedName) {
       console.log(`getFeedInfo(${groupName}, ${feedName})`);
@@ -1160,7 +1160,7 @@ export default {
       this.$router.push('/login');
     }
   },
-  beforeDestroy: function () {
+  beforeUnmount: function () {
     clearInterval(this.checkRunningInterval);
   }
 };
