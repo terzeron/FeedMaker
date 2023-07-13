@@ -1160,7 +1160,7 @@ export default {
       this.$router.push('/login');
     }
   },
-  beforeDestroy: function () {
+  beforeUnmount: function () {
     clearInterval(this.checkRunningInterval);
   }
 };
