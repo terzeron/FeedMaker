@@ -487,7 +487,7 @@ class SearchManager:
             TorrentseeSite("torrentsee"),
             #TorrentdiaSite("torrentdia"),
             TorrentttSite("torrenttt"),
-            TorrentmodeSite("torrentmode"),
+            #TorrentmodeSite("torrentmode"),
             SkytoonSite("skytoon")
         ]
 
