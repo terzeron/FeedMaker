@@ -304,9 +304,12 @@ def main() -> int:
     LOGGER.debug(feed_dir_path)
 
     runner = FeedMakerRunner(html_archiving_period=30, list_archiving_period=7)
+    problem_manager = ProblemManager()
+
     if options["do_make_all_feeds"]:
         result = runner.make_all_feeds(options)
         Process.kill_process_group(r"chromedriver")
+        problem_manager.load_all()
     else:
         config = Config(feed_dir_path=feed_dir_path)
         if not config:
@@ -324,10 +327,9 @@ def main() -> int:
             if not result:
                 return -1
         result = runner.make_single_feed(feed_dir_path, options)
+        problem_manager.update_feed_info(feed_dir_path)
 
     LOGGER.info("# Checking problems and making report")
-    problem_manager = ProblemManager()
-    problem_manager.update_feed_info(feed_dir_path)
 
     return 0 if result else -1
 
