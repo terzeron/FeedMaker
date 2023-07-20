@@ -50,7 +50,7 @@ class ProblemManager:
         del self.db
 
     @staticmethod
-    def convert_datetime_to_str(d: Union[str, datetime]) -> str:
+    def convert_datetime_to_str(d: Optional[Union[str, datetime]]) -> str:
         if not d:
             return ""
         if isinstance(d, str):
@@ -779,6 +779,7 @@ class ProblemManager:
         self.remove_progress_info(feed_dir_path)
         self.add_progress_info(feed_dir_path)
         self.add_httpd_access_info(feed_dir_path)
+        self.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
         self.add_html_info(feed_dir_path)
 
     def lock_problem_database(self) -> bool:
