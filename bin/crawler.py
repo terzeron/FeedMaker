@@ -199,7 +199,8 @@ class Crawler:
             for k, v in options["headers"].items():
                 if header_str != "":
                     header_str += "; "
-                header_str += f"{k}: {v}"
+                if v and v != "None":
+                    header_str += f"{k}: {v}"
             option_str += f" --header='{header_str}'"
         if "timeout" in options:
             timeout = options["timeout"] or "60"
