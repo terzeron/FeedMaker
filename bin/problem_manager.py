@@ -773,7 +773,7 @@ class ProblemManager:
         self.add_htaccess_info(feed_dir_path.name)
         self.remove_config_rss_info(feed_dir_path)
         self.add_config_rss_info(feed_dir_path)
-        self.remove_public_feed_info(feed_dir_path)
+        self.remove_public_feed_info(feed_dir_path / f"{feed_dir_path.name}.xml")
         feed_file_path = self.public_feed_dir / f"{feed_dir_path.name}.xml"
         self.add_public_feed_info(feed_file_path)
         self.remove_progress_info(feed_dir_path)
