@@ -7,11 +7,11 @@ import getopt
 import logging.config
 from pathlib import Path
 from pdf2image import convert_from_path
-from feed_maker_util import Cache, header_str
-from crawler import Crawler
+from bin.feed_maker_util import Cache, header_str
+from bin.crawler import Crawler
 
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 

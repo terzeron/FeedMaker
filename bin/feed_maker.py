@@ -13,13 +13,13 @@ from contextlib import suppress
 import dateutil.parser
 import PyRSS2Gen
 from ordered_set import OrderedSet
-from crawler import Crawler, Method
-from extractor import Extractor
-from feed_maker_util import Config, URL, Datetime, Process, Data, PathUtil, header_str
-from new_list_collector import NewListCollector
-from uploader import Uploader
+from bin.crawler import Crawler, Method
+from bin.extractor import Extractor
+from bin.feed_maker_util import Config, URL, Datetime, Process, Data, PathUtil, header_str
+from bin.new_list_collector import NewListCollector
+from bin.uploader import Uploader
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 SECONDS_PER_DAY = 60 * 60 * 24
 
@@ -243,7 +243,7 @@ class FeedMaker:
                 else:
                     post_process_cmd = f"{post_process_script} -f '{self.feed_dir_path}' '{item_url}'"
                 LOGGER.debug(f"cmd={post_process_cmd}")
-                result, error_msg = Process.exec_cmd(post_process_cmd, dir_path=self.feed_dir_path, input_data=content)
+                result, error_msg = Process.exec_cmd(post_process_cmd, input_data=content)
                 LOGGER.debug(f"cmd={post_process_cmd}")
                 if not result:
                     LOGGER.error(f"Error: No result in executing command '{post_process_cmd}")

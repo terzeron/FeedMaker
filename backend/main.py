@@ -7,12 +7,13 @@ import os
 import asyncio
 import logging
 import logging.config
+from pathlib import Path
 from typing import Dict, Any
-from feed_manager import FeedManager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from backend.feed_manager import FeedManager
 
-logging.config.fileConfig("logging.conf", disable_existing_loggers=False)
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger(__name__)
 
 app = FastAPI()

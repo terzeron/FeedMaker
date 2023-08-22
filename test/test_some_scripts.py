@@ -2,13 +2,12 @@
 
 
 import sys
-import os
 import filecmp
 import logging.config
 from pathlib import Path
-from feed_maker_util import Process
+from bin.feed_maker_util import Process
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
@@ -27,10 +26,7 @@ def test_script(script: str, test_dir_path: Path, index: int):
 
 
 def main() -> int:
-    fm_home = os.environ["FEED_MAKER_HOME_DIR"]
-    if not fm_home:
-        LOGGER.error("Error: can't get environment variable 'FEED_MAKER_HOME_DIR'")
-        return -1
+    fm_home = Path(__file__).parent.parent
 
     test_subjects = {
         "naver/three_kingdoms_talk": [
