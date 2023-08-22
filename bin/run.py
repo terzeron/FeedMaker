@@ -11,12 +11,12 @@ import getopt
 from pathlib import Path
 from typing import Dict, Tuple, List, Any, Set
 from filelock import FileLock, Timeout
-from feed_maker_util import Config, Process, PathUtil
-from notification import Notification
-from feed_maker import FeedMaker
-from problem_manager import ProblemManager
+from bin.feed_maker_util import Config, Process, PathUtil
+from bin.notification import Notification
+from bin.feed_maker import FeedMaker
+from bin.problem_manager import ProblemManager
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 
-import os
 import json
 import logging.config
 from pathlib import Path
@@ -15,7 +14,7 @@ from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.common.by import By
 import selenium
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 

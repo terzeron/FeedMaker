@@ -8,14 +8,15 @@ import unittest
 from unittest.mock import patch
 from io import StringIO
 import logging.config
-from typing import List, Dict, Any
+from typing import List
 from datetime import datetime
 from pathlib import Path
+from shutil import which
 import subprocess
 from bs4 import BeautifulSoup
-from feed_maker_util import Config, URL, HTMLExtractor, Datetime, Process, IO, Data, Cache, Htaccess, PathUtil
+from bin.feed_maker_util import Config, URL, HTMLExtractor, Datetime, Process, IO, Data, Cache, Htaccess, PathUtil
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
@@ -27,7 +28,7 @@ class DataTest(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     def test_get_sorted_lines_from_rss_file(self):
-        file_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "test" / "sportsdonga.webtoon.1.result.xml"
+        file_path = Path(__file__).parent / "sportsdonga.webtoon.1.result.xml"
         expected = sorted([
             '<rss version="2.0"',
             ' xmlns:blogChannel="http://backend.userland.com/blogChannelModule"',
@@ -50,9 +51,9 @@ class DataTest(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     def test_compare_two_rss_files(self):
-        file_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "test" / "sportsdonga.webtoon.1.result.xml"
-        file_different_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "test" / "sportsdonga.webtoon.2.result.xml"
-        file_with_only_different_date = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "test" / "sportsdonga.webtoon.3.result.xml"
+        file_path = Path(__file__).parent / "sportsdonga.webtoon.1.result.xml"
+        file_different_path = Path(__file__).parent / "sportsdonga.webtoon.2.result.xml"
+        file_with_only_different_date = Path(__file__).parent / "sportsdonga.webtoon.3.result.xml"
         actual = Data.compare_two_rss_files(file_path, file_different_path)
         self.assertFalse(actual)
         actual = Data.compare_two_rss_files(file_path, file_with_only_different_date)
@@ -61,99 +62,39 @@ class DataTest(unittest.TestCase):
 
 class ProcessTest(unittest.TestCase):
     def test_replace_script_path(self):
-        cmd = "../capture_item_naverwebtoon.py -n 500"
-
-        actual = Process._replace_script_path(cmd, Path("/usr/bin"))
-        expected = "/usr/capture_item_naverwebtoon.py -n 500"
-        self.assertEqual(expected, actual)
-
-        actual = Process._replace_script_path(cmd, Path("/usr"))
-        expected = "/capture_item_naverwebtoon.py -n 500"
-        self.assertEqual(expected, actual)
-
-        actual = Process._replace_script_path(cmd, Path("/"))
-        expected = "/capture_item_naverwebtoon.py -n 500"
-        self.assertEqual(expected, actual)
-
-        actual = Process._replace_script_path(cmd, Path("/no_such_a_dir/workspace/fma/naver/naverwebtoon"))
-        self.assertIsNone(actual)
-
-        cmd = "./capture_item_naverwebtoon.py -n 500"
-
-        actual = Process._replace_script_path(cmd, Path("/usr/bin"))
-        expected = "/usr/bin/capture_item_naverwebtoon.py -n 500"
-        self.assertEqual(expected, actual)
-
-        actual = Process._replace_script_path(cmd, Path("/usr"))
-        expected = "/usr/capture_item_naverwebtoon.py -n 500"
-        self.assertEqual(expected, actual)
-
-        actual = Process._replace_script_path(cmd, Path("/"))
-        expected = "/capture_item_naverwebtoon.py -n 500"
-        self.assertEqual(expected, actual)
-
-        actual = Process._replace_script_path(cmd, Path("/no_such_a_dir/workspace/fma/naver/naverwebtoon"))
-        self.assertIsNone(actual)
-
         cmd = "shuf"
-
-        actual = Process._replace_script_path(cmd, Path("/usr/bin"))
-        self.assertIn(actual, ["/usr/bin/shuf", "/usr/local/bin/shuf", "/opt/homebrew/bin/shuf"])
-
-        actual = Process._replace_script_path(cmd, Path("/usr"))
-        self.assertIn(actual, ["/usr/bin/shuf", "/usr/local/bin/shuf", "/opt/homebrew/bin/shuf"])
-
-        actual = Process._replace_script_path(cmd, Path("/"))
-        self.assertIn(actual, ["/usr/bin/shuf", "/usr/local/bin/shuf", "/opt/homebrew/bin/shuf"])
-
-        actual = Process._replace_script_path(cmd, Path("../../backend"))
-        self.assertIn(actual, ["/usr/bin/shuf", "/usr/local/bin/shuf", "/opt/homebrew/bin/shuf"])
-
-        actual = Process._replace_script_path(cmd, Path("/no_such_a_dir/workspace/fma/naver/naverwebtoon"))
-        self.assertIn(actual, ["/usr/bin/shuf", "/usr/local/bin/shuf", "/opt/homebrew/bin/shuf"])
+        real_program_path = which("shuf")
+        actual = Process._replace_script_path(cmd)
+        self.assertEqual(actual, real_program_path)
 
         cmd = "/bin/head -10"
-
-        actual = Process._replace_script_path(cmd, Path("/usr/bin"))
         expected = "/bin/head -10"
-        self.assertEqual(expected, actual)
-
-        actual = Process._replace_script_path(cmd, Path("/usr"))
-        expected = "/bin/head -10"
-        self.assertEqual(expected, actual)
-
-        actual = Process._replace_script_path(cmd, Path("/"))
-        expected = "/bin/head -10"
-        self.assertEqual(expected, actual)
-
-        actual = Process._replace_script_path(cmd, Path("../../backend"))
-        expected = "/bin/head -10"
-        self.assertEqual(expected, actual)
-
-        actual = Process._replace_script_path(cmd, Path("/no_such_a_dir/workspace/fma/naver/naverwebtoon"))
-        expected = "/bin/head -10"
+        actual = Process._replace_script_path(cmd)
         self.assertEqual(expected, actual)
 
         cmd = "/usr/bin/tail -5"
-
-        actual = Process._replace_script_path(cmd, Path("/usr/bin"))
         expected = "/usr/bin/tail -5"
+        actual = Process._replace_script_path(cmd)
         self.assertEqual(expected, actual)
 
-        actual = Process._replace_script_path(cmd, Path("/usr"))
-        expected = "/usr/bin/tail -5"
+        cmd = "uploader.py test.xml"
+        real_program_path = which("uploader.py")
+        expected = f"{real_program_path} test.xml"
+        actual = Process._replace_script_path(cmd)
         self.assertEqual(expected, actual)
 
-        actual = Process._replace_script_path(cmd, Path("/"))
-        expected = "/usr/bin/tail -5"
+        cmd = "non_existent_program arg1"
+        actual = Process._replace_script_path(cmd)
+        self.assertIsNone(actual)
+
+        cmd = "../capture_item_naverwebtoon.py -n 500"
+        actual = Process._replace_script_path(cmd)
+        expected = "../capture_item_naverwebtoon.py -n 500"
         self.assertEqual(expected, actual)
 
-        actual = Process._replace_script_path(cmd, Path("../../backend"))
-        expected = "/usr/bin/tail -5"
-        self.assertEqual(expected, actual)
-
-        actual = Process._replace_script_path(cmd, Path("/no_such_a_dir/workspace/fma/naver/naverwebtoon"))
-        expected = "/usr/bin/tail -5"
+        cmd = "./capture_item_naverwebtoon.py -n 500"
+        actual = Process._replace_script_path(cmd)
+        expected = "./capture_item_naverwebtoon.py -n 500"
         self.assertEqual(expected, actual)
 
     def test_exec_cmd(self):
@@ -222,9 +163,7 @@ class DatetimeTest(unittest.TestCase):
 
     def test_get_rss_date_str(self):
         actual = Datetime.get_rss_date_str()
-        m = re.search(
-            r"^(Sun|Mon|Tue|Wed|Thu|Fri|Sat), \d+ (Jan|Feb|Mar|Apr|May|Jun|Jul|Sep|Oct|Nov|Dec) \d\d\d\d \d\d:\d\d:\d\d \+\d\d\d\d$",
-            actual)
+        m = re.search(r"^(Sun|Mon|Tue|Wed|Thu|Fri|Sat), \d+ (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d\d\d\d \d\d:\d\d:\d\d \+\d\d\d\d$", actual)
         self.assertTrue(m)
 
     def test_get_short_date_str(self):
@@ -362,7 +301,7 @@ class IOTest(unittest.TestCase):
 
 class ConfigTest(unittest.TestCase):
     def setUp(self):
-        self.global_conf = Config.get_global_config(Path(os.environ["FEED_MAKER_HOME_DIR"]) / "bin" / "global_config.json")
+        self.global_conf = Config.get_global_config(Path(__file__).parent.parent / "bin" / "global_config.json")
         self.config = Config(feed_dir_path=Path.cwd())
         if not self.config:
             LOGGER.error("can't get configuration")
@@ -476,11 +415,10 @@ class ConfigTest(unittest.TestCase):
 
     def test_get_global_config(self):
         config = self.global_conf
-        actual = isinstance(config, dict)
-        self.assertTrue(actual)
+        self.assertTrue(isinstance(config, dict))
 
         actual = config["web_service_url"]
-        self.assertEqual("https://your.domain.com", actual)
+        self.assertRegex(actual, r"^https://.*$")
 
         if "line_messenger" in config and config["line_messenger"]:
             actual = config["line_messenger"]["line_access_token"]

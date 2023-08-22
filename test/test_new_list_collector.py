@@ -3,16 +3,15 @@
 
 
 import sys
-import os
 import unittest
 from unittest.mock import patch, call
 import logging.config
 from pathlib import Path
 from typing import List, Tuple
-from feed_maker_util import Config
-from new_list_collector import NewListCollector
+from bin.feed_maker_util import Config
+from bin.new_list_collector import NewListCollector
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 

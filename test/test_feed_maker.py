@@ -10,10 +10,10 @@ import unittest
 from unittest.mock import patch, call
 from typing import Any
 from xml.dom.minidom import parse
-from feed_maker import FeedMaker
-from feed_maker_util import Config, Datetime, PathUtil, header_str
+from bin.feed_maker import FeedMaker
+from bin.feed_maker_util import Config, Datetime, PathUtil, header_str
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
@@ -35,11 +35,12 @@ class TestFeedMaker(unittest.TestCase):
         feed_name = "oneplusone"
         self.feed_dir_path = Path(os.environ["FEED_MAKER_WORK_DIR"]) / group_name / feed_name
         self.feed_dir_path.mkdir(exist_ok=True)
+        os.chdir(self.feed_dir_path)
         self.rss_file_path = self.feed_dir_path / f"{feed_name}.xml"
         self.rss_file_path.touch()
         self.old_rss_file_path = self.feed_dir_path / f"{feed_name}.xml.old"
         self.old_rss_file_path.touch()
-        self.sample_conf_file_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "test" / "conf.naverwebtoon.json"
+        self.sample_conf_file_path = Path(__file__).parent / "conf.naverwebtoon.json"
         self.conf_file_path = self.feed_dir_path / "conf.json"
         shutil.copy(self.sample_conf_file_path, self.conf_file_path)
 

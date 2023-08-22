@@ -1,19 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
+
 import logging.config
 import base64
 import hmac
 import hashlib
 import json
+from pathlib import Path
 from typing import Any, Dict, Tuple, Callable, List
 from datetime import datetime
 import requests
 import mail1
-from feed_maker_util import Config
+from bin.feed_maker_util import Config
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 

@@ -12,12 +12,12 @@ from datetime import datetime
 from shutil import rmtree
 from typing import List, Dict, Any, Tuple, Optional
 from functools import cmp_to_key
-from run import FeedMakerRunner
-from feed_maker_util import Htaccess, Process, Data, PathUtil
-from problem_manager import ProblemManager
-from search_manga_site import SearchManager
+from bin.run import FeedMakerRunner
+from bin.feed_maker_util import Htaccess, Process, Data, PathUtil
+from bin.problem_manager import ProblemManager
+from utils.search_manga_site import SearchManager
 
-logging.config.fileConfig("logging.conf", disable_existing_loggers=False)
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger(__name__)
 
 
@@ -40,14 +40,14 @@ class FeedManager:
         conf_file_relative = PathUtil.convert_path_to_str(feed_dir_path)
         os.chdir(self.work_dir)
         cmd = f"git add {conf_file_relative} && git commit -m 'add {feed_name}'"
-        return Process.exec_cmd(cmd, dir_path=self.work_dir)
+        return Process.exec_cmd(cmd)
 
     def _git_rm(self, feed_dir_path: Path) -> Tuple[str, Optional[str]]:
         feed_name = feed_dir_path.name
         conf_file_relative = PathUtil.convert_path_to_str(feed_dir_path)
         os.chdir(self.work_dir)
         cmd = f"git rm -r {conf_file_relative} && git commit -m 'remove {feed_name}'"
-        return Process.exec_cmd(cmd, dir_path=self.work_dir)
+        return Process.exec_cmd(cmd)
 
     def _git_mv(self, feed_dir_path: Path, new_feed_dir_path: Path) -> Tuple[str, Optional[str]]:
         feed_dir_name = feed_dir_path.name
@@ -56,7 +56,7 @@ class FeedManager:
         new_feed_dir_path_relative = PathUtil.convert_path_to_str(new_feed_dir_path)
         os.chdir(self.work_dir)
         cmd = f"git mv {feed_dir_path_relative} {new_feed_dir_path_relative} && git commit -m 'rename {feed_dir_name} to {new_feed_dir_name}' || mv {feed_dir_path_relative} {new_feed_dir_path_relative}"
-        return Process.exec_cmd(cmd, dir_path=self.work_dir)
+        return Process.exec_cmd(cmd)
 
     def _read_config_file(self, feed_dir_path: Path) -> Dict[str, Any]:
         conf_file_path = feed_dir_path / self.CONF_FILE

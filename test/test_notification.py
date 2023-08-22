@@ -2,24 +2,23 @@
 # -*- coding: utf-8 -*-
 
 
-import os
 import unittest
 import logging.config
 from pathlib import Path
 import shutil
-from notification import Notification
+from bin.notification import Notification
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
 class NotificationTest(unittest.TestCase):
     def setUp(self):
-        self.source_conf_dir_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "test"
-        self.target_conf_file_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "bin" / "global_config.json"
+        self.source_conf_dir_path = Path(__file__).parent
+        self.target_conf_file_path = Path(__file__).parent.parent / "bin" / "global_config.json"
 
     def tearDown(self):
-        example_conf_file_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "test" / "global_config.json.example"
+        example_conf_file_path = Path(__file__).parent / "global_config.json.example"
         shutil.copy(example_conf_file_path, self.target_conf_file_path)
         del self.source_conf_dir_path
         del self.target_conf_file_path

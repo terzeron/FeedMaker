@@ -10,11 +10,11 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from contextlib import suppress
 from typing import List, Dict, Any, Union, Optional
-from feed_maker import FeedMaker
-from feed_maker_util import Config, PathUtil
-from db_manager import DBManager, Cursor, IntegrityError
+from bin.feed_maker import FeedMaker
+from bin.feed_maker_util import Config, PathUtil
+from bin.db_manager import DBManager, Cursor, IntegrityError
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
@@ -261,8 +261,9 @@ class ProblemManager:
             num_items = 0
             for group_dir_path in self.work_dir.iterdir():
                 group_name = group_dir_path.name
-                if not group_dir_path.is_dir() or group_name in ("test", "logs", ".git"):
+                if not group_dir_path.is_dir() or group_name in ("test", "logs", ".git") or group_name.startswith((".", "_")):
                     continue
+
                 for feed_dir_path in group_dir_path.iterdir():
                     if not feed_dir_path.is_dir():
                         continue
@@ -446,7 +447,7 @@ class ProblemManager:
         LOGGER.info("* The removing of some html files in '%s' is done", PathUtil.convert_path_to_str(path))
 
     def _add_html_info(self, cursor: Cursor, feed_dir_path: Path, web_service_url: str, html_file_image_tag_count_map: Optional[Dict[Path, int]] = None, html_file_image_not_found_count_map: Optional[Dict[Path, int]] = None) -> int:
-        LOGGER.debug(f"# add_html_files_in_path_to_info(feed_dir_path={feed_dir_path})")
+        LOGGER.debug(f"# _add_html_info(feed_dir_path={feed_dir_path})")
         html_file_count = 0
         html_file_image_tag_count_map = html_file_image_tag_count_map if html_file_image_tag_count_map is not None else {}
         html_file_image_not_found_count_map = html_file_image_not_found_count_map if html_file_image_not_found_count_map is not None else {}
@@ -536,9 +537,12 @@ class ProblemManager:
 
             for group_path in self.work_dir.iterdir():
                 group_name = group_path.name
-                if not group_path.is_dir() or group_name in ("test", "logs", ".git"):
+                if not group_path.is_dir() or group_name in ("test", "logs", ".git") or group_name.startswith((".", "_")):
                     continue
+
                 for feed_dir_path in group_path.iterdir():
+                    if not feed_dir_path.is_dir():
+                        continue
                     html_file_count += self._add_html_info(cursor, feed_dir_path, web_service_url, html_file_image_tag_count_map, html_file_image_not_found_count_map)
 
             self.db.commit(connection)
@@ -646,6 +650,8 @@ class ProblemManager:
                     continue
 
                 for feed_dir_path in group_dir_path.iterdir():
+                    if not feed_dir_path.is_dir():
+                        continue
                     num_items += self._add_progress_info(cursor, feed_dir_path)
             self.db.commit(connection)
         LOGGER.info("* The loading of all progress info is done. %d items", num_items)

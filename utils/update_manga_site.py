@@ -10,10 +10,10 @@ import logging.config
 from pprint import pprint
 from typing import Optional
 from pathlib import Path
-from feed_maker_util import Process
+from bin.feed_maker_util import Process
 
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
@@ -100,10 +100,10 @@ def update_domain(test_run: bool, new_number: int) -> bool:
         if test_run:
             pprint(data)
             break
-        else:
-            with open(temp_conf_file, "w", encoding="utf-8") as outfile:
-                json.dump(data, outfile, indent=2, ensure_ascii=False)
-                os.rename(temp_conf_file, conf_file)
+
+        with open(temp_conf_file, "w", encoding="utf-8") as outfile:
+            json.dump(data, outfile, indent=2, ensure_ascii=False)
+            os.rename(temp_conf_file, conf_file)
 
         if not test_run:
             print(".", end='')
@@ -154,10 +154,10 @@ def check_site() -> bool:
 def main() -> int:
     test_run = False
     optlist, args = getopt.getopt(sys.argv[1:], "t")
-    for o, a in optlist:
+    for o, _ in optlist:
         if o == "-t":
             test_run = True
-       
+
     if len(args) < 1:
         print_usage()
         return -1
