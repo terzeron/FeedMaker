@@ -11,11 +11,11 @@ import logging.config
 from typing import Dict, Tuple, List, Union
 from pathlib import Path
 from bs4 import BeautifulSoup, Comment
-from crawler import Crawler, Method
-from feed_maker_util import URL, HTMLExtractor
+from bin.crawler import Crawler, Method
+from bin.feed_maker_util import URL, HTMLExtractor
 
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 work_dir_path = Path(os.environ["FEED_MAKER_WORK_DIR"])

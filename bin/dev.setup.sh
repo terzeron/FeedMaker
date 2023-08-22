@@ -9,7 +9,7 @@ if command -v pyenv 1>/dev/null 2>&1; then
 fi
 
 # engine directory
-export FEED_MAKER_HOME_DIR=$HOME/workspace/fm.dev
+export FEED_MAKER_HOME_DIR=$HOME/workspace/fm_dev
 # feed working directory
 export FEED_MAKER_WORK_DIR=$(dirname $FEED_MAKER_HOME_DIR)/fma
 export FEED_MAKER_LOG_DIR=$FEED_MAKER_WORK_DIR/logs
@@ -18,7 +18,7 @@ export FEED_MAKER_WWW_ADMIN_DIR=$HOME/public_html/fm
 # feed directory public to feed crawlers
 export FEED_MAKER_WWW_FEEDS_DIR=$HOME/public_html/xml
 # CartoonSplit utilities
-export CARTOON_SPLIT_HOME_DIR=$HOME/workspace/cs.dev
+export CARTOON_SPLIT_HOME_DIR=$HOME/workspace/cs_dev
 
 export PATH=$FEED_MAKER_HOME_DIR/bin:$FEED_MAKER_HOME_DIR/utils:$CARTOON_SPLIT_HOME_DIR:$PATH
-export PYTHONPATH=$FEED_MAKER_HOME_DIR/bin:$FEED_MAKER_HOME_DIR/utils:$PYTHONPATH
+export PYTHONPATH=$FEED_MAKER_HOME_DIR:$PYTHONPATH

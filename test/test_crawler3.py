@@ -4,7 +4,7 @@
 import os
 import re
 import unittest
-from crawler import Crawler, HeadlessBrowser, RequestsClient
+from bin.crawler import Crawler, HeadlessBrowser, RequestsClient
 
 
 class CrawlerTest(unittest.TestCase):

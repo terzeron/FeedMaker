@@ -7,10 +7,10 @@ import re
 import getopt
 import logging.config
 from pathlib import Path
-from crawler import Crawler
 import pdftotext
+from bin.crawler import Crawler
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
@@ -40,7 +40,6 @@ def main() -> int:
         return -1
 
     with open(pdf_file_path, "rb") as f:
-        # type: ignore
         pdf = pdftotext.PDF(f)
         for page in pdf:
             print(page)

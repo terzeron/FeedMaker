@@ -9,7 +9,7 @@ import logging.config
 from pathlib import Path
 from feed_maker_util import Data
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 

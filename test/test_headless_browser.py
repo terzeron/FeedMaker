@@ -5,7 +5,7 @@
 import os
 from pathlib import Path
 import unittest
-from headless_browser import HeadlessBrowser
+from bin.headless_browser import HeadlessBrowser
 
 
 class TestHeadlessBrowser(unittest.TestCase):

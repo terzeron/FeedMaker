@@ -8,17 +8,16 @@ import subprocess
 import hashlib
 import json
 import logging.config
-import shutil
 from pathlib import Path
+from shutil import which, copy
 from urllib.parse import urlparse, urlunparse, quote, urljoin
 from datetime import datetime
 from typing import List, Any, Dict, Tuple, Optional, Union
-from shutil import which
-from filelock import FileLock, Timeout
 import psutil
+from filelock import FileLock, Timeout
 from ordered_set import OrderedSet
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 # noinspection PyPep8
 header_str = '''<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
@@ -64,32 +63,31 @@ class Data:
 
 class Process:
     @staticmethod
-    def _replace_script_path(script: str, dir_path: Path) -> Optional[str]:
+    def _replace_script_path(script: str) -> Optional[str]:
         program = script.split(" ")[0]
-        if program.startswith(("./", "../")):
-            if not dir_path.is_dir():
-                return None
-            program_path = (dir_path / program).resolve()
+        program_full_path_str: Optional[str]
+
+        if program.startswith("/"):
+            # absolute path
+            program_full_path_str = program
+        elif program.startswith("./") or program.startswith("../"):
+            # relative path
+            program_full_path_str = program
         else:
-            program_full_path: Optional[str]
-            if program.startswith("/"):
-                program_full_path = program
-            else:
-                program_full_path = which(program)
-            if program_full_path:
-                program_path = Path(program_full_path)
-            else:
-                return ""
-        result = str(program_path)
+            # non-absolute path
+            program_full_path_str = which(program)
+            if not program_full_path_str:
+                return None
+
+        result = program_full_path_str
         if len(script.split(" ")) > 1:
             result += " " + " ".join(script.split(" ")[1:])
         return result
 
     @staticmethod
-    def exec_cmd(cmd: str, dir_path: Path = Path.cwd(), input_data=None) -> Tuple[str, str]:
-        LOGGER.debug(
-            f"# Process.exec_cmd(cmd={cmd}, dir_path={dir_path}, input_data={len(input_data) if input_data else 0} bytes)")
-        new_cmd = Process._replace_script_path(cmd, dir_path)
+    def exec_cmd(cmd: str, input_data=None) -> Tuple[str, str]:
+        LOGGER.debug(f"# Process.exec_cmd(cmd={cmd}, input_data={len(input_data) if input_data else 0} bytes)")
+        new_cmd = Process._replace_script_path(cmd)
         if not new_cmd:
             return "", f"Error in getting path of executable '{cmd}'"
         LOGGER.debug(new_cmd)
@@ -369,7 +367,7 @@ class Config:
         if conf_file_path:
             global_config_file_path = conf_file_path
         else:
-            global_config_file_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "bin" / "global_config.json"
+            global_config_file_path = Path(__file__).parent / "global_config.json"
         with global_config_file_path.open("r", encoding="utf-8") as infile:
             global_config: Dict[str, Any] = json.load(infile)
         return global_config
@@ -636,7 +634,7 @@ class Htaccess:
 
                 with temp_file_path.open('w', encoding="utf-8") as outfile:
                     outfile.writelines(line_list)
-                shutil.copy(temp_file_path, Htaccess.htaccess_file_path)
+                copy(temp_file_path, Htaccess.htaccess_file_path)
         except Timeout as e:
             return False, f"timeout in renaming alias for feed '{feed_name}', {e}"
         if is_found:

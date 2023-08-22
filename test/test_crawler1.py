@@ -6,7 +6,7 @@ import re
 import unittest
 from unittest.mock import patch
 from io import StringIO
-from crawler import Method, Crawler, HeadlessBrowser, RequestsClient, print_usage, DEFAULT_USER_AGENT
+from bin.crawler import Method, Crawler, HeadlessBrowser, RequestsClient, print_usage, DEFAULT_USER_AGENT
 
 
 class CrawlerTest(unittest.TestCase):

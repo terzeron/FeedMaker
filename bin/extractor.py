@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
+
 import re
 import sys
 import signal
@@ -12,9 +12,9 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 from bs4 import BeautifulSoup
 from bs4.element import Comment
-from feed_maker_util import Config, URL, HTMLExtractor, header_str
+from bin.feed_maker_util import Config, URL, HTMLExtractor, header_str
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 

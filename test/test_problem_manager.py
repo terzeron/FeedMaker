@@ -1,24 +1,24 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
+
 import unittest
 import shutil
 import logging.config
 from datetime import datetime, timedelta
 from pathlib import Path
-from db_manager import DBManager
-from problem_manager import ProblemManager
-from feed_maker import FeedMaker
-from feed_maker_util import header_str, Config, Datetime
+from bin.db_manager import DBManager
+from bin.problem_manager import ProblemManager
+from bin.feed_maker import FeedMaker
+from bin.feed_maker_util import header_str, Config, Datetime
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
 class TestProblemManager(unittest.TestCase):
     def setUp(self) -> None:
-        global_config = Config.get_global_config(Path(os.environ["FEED_MAKER_HOME_DIR"]) / "test" / "global_config_minimal.json")
+        global_config = Config.get_global_config(Path(__file__).parent / "global_config_minimal.json")
         if not global_config:
             LOGGER.error("can't find global configuration")
             return
@@ -99,10 +99,10 @@ class TestProblemManager(unittest.TestCase):
 
     def test_add_and_remove_config_rss_file(self):
         conf_file_path = self.test_feed_dir_path / "conf.json"
-        example_conf_file_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "test" / "conf.json"
+        example_conf_file_path = Path(__file__).parent / "conf.json"
         shutil.copy(example_conf_file_path, conf_file_path)
         rss_file_path = self.test_feed_dir_path / "my_test_feed.xml"
-        example_rss_file_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "test" / "sportsdonga.webtoon.1.result.xml"
+        example_rss_file_path = Path(__file__).parent / "sportsdonga.webtoon.1.result.xml"
         shutil.copy(example_rss_file_path, rss_file_path)
 
         row11 = self.pm.db.query("SELECT * FROM feed_name_config")
@@ -180,7 +180,7 @@ class TestProblemManager(unittest.TestCase):
             self.assertIn("num_items", public_feed_info)
 
     def test_add_and_remove_public_feed_file(self):
-        feed_file_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "test" / "sportsdonga.webtoon.1.result.xml"
+        feed_file_path = Path(__file__).parent / "sportsdonga.webtoon.1.result.xml"
         self.pm.add_public_feed_info(feed_file_path)
         self.pm.remove_public_feed_info(feed_file_path)
 
@@ -461,7 +461,7 @@ class TestProblemManager(unittest.TestCase):
             self.assertIn("due_date", progress_info)
 
     def test_add_and_remove_progress_from_info(self):
-        example_conf_file_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "test" / "conf.naverwebtoon.completed.json"
+        example_conf_file_path = Path(__file__).parent / "conf.naverwebtoon.completed.json"
         conf_file_path = self.test_feed_dir_path / "conf.json"
         shutil.copy(example_conf_file_path, conf_file_path)
 
@@ -504,7 +504,7 @@ class TestProblemManager(unittest.TestCase):
         self.pm.load_all_httpd_access_files()
         group_name = "naver"
         feed_name = "navercast"
-        test_feed_dir_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / group_name / feed_name
+        test_feed_dir_path = Path(__file__).parent.parent / group_name / feed_name
         feed_alias = feed_name
 
         # get date from recent log file

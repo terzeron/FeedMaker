@@ -2,17 +2,16 @@
 # -*- coding: utf-8 -*-
 
 
-import os
 import re
 import sys
 import logging.config
 from pathlib import Path
 from typing import Dict, List, Tuple, Any
 from shutil import which
-from feed_maker_util import Process, Data
-from crawler import Crawler, Method
+from bin.feed_maker_util import Process, Data
+from bin.crawler import Crawler, Method
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
@@ -69,7 +68,7 @@ class NewListCollector:
 
             capture_cmd = f"{self.collection_conf['item_capture_script']} -f '{self.feed_dir_path}'"
             LOGGER.debug(f"cmd={capture_cmd}")
-            result, error_msg = Process.exec_cmd(capture_cmd, dir_path=self.feed_dir_path, input_data=result)
+            result, error_msg = Process.exec_cmd(capture_cmd, input_data=result)
             if not result or error_msg:
                 LOGGER.warning("Warning: can't get result from item capture script")
                 LOGGER.debug(error_msg)
@@ -83,7 +82,7 @@ class NewListCollector:
                 else:
                     post_process_cmd = f"{post_process_script} -f '{self.feed_dir_path}' '{url}'"
                 LOGGER.debug(f"cmd={post_process_cmd}")
-                result, error_msg = Process.exec_cmd(post_process_cmd, dir_path=self.feed_dir_path, input_data=result)
+                result, error_msg = Process.exec_cmd(post_process_cmd, input_data=result)
                 if not result or error:
                     LOGGER.warning("Warning: can't get result from post process scripts")
                     LOGGER.debug(error_msg)

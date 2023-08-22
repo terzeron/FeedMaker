@@ -10,10 +10,10 @@ import logging.config
 from pathlib import Path
 from base64 import b64decode
 from typing import List, Dict, Any, Optional
-from feed_maker_util import Config, IO, Cache, URL
-from crawler import Crawler
+from bin.feed_maker_util import Config, IO, Cache, URL
+from bin.crawler import Crawler
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 IMAGE_NOT_FOUND_IMAGE_URL = "https://terzeron.com/image-not-found.png"
 

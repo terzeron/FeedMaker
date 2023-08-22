@@ -7,12 +7,13 @@ import re
 import json
 import logging
 import logging.config
+from pathlib import Path
 from typing import Dict, Any, Optional, Tuple
-from crawler import Crawler, Method
-from feed_maker_util import URL
+from bin.crawler import Crawler, Method
+from bin.feed_maker_util import URL
 
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
