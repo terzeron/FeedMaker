@@ -73,6 +73,7 @@ class ProblemManager:
                     if feed_alias in self.feed_alias_name_map:
                         del self.feed_alias_name_map[feed_alias]
                 del self.feed_name_aliases_map[feed_name]
+        LOGGER.info("* The removing of htaccess info of feed '%s' is done.", feed_name)
 
     def _add_htaccess_info(self, cursor: Cursor, the_feed_name: str) -> None:
         with open(self.htaccess_file, 'r', encoding="utf-8") as infile:
@@ -99,7 +100,7 @@ class ProblemManager:
         with self.db.get_connection_and_cursor() as (connection, cursor):
             self._add_htaccess_info(cursor, feed_name)
             self.db.commit(connection)
-        LOGGER.info(f"* The adding of htaccess file for '{feed_name}' is done.")
+        LOGGER.info("* The adding of htaccess info of feed '%s' is done.", feed_name)
 
     def load_htaccess_file(self) -> None:
         LOGGER.debug("# reload_htaccess_file()")
@@ -129,7 +130,7 @@ class ProblemManager:
                         num_items += 1
 
             self.db.commit(connection)
-        LOGGER.info(f"* The loading of htaccess file is done. {num_items} items")
+        LOGGER.info("* The loading of htaccess file is done. %d items", num_items)
 
     def get_feed_name_list_url_count_map(self) -> Dict[str, Dict[str, Any]]:
         LOGGER.debug("# get_feed_name_list_url_count_map()")
@@ -157,19 +158,20 @@ class ProblemManager:
 
     def remove_config_rss_info(self, feed_dir_path: Path) -> None:
         LOGGER.debug("# remove_config_rss_file_from_info(feed_dir_path={feed_dir_path})")
-        feed_name = feed_dir_path.name
+        if not feed_dir_path.is_dir():
+            LOGGER.error("can't find a feed directory '%s'", feed_dir_path)
+            return
+        feed_name = feed_dir_path.stem
         with self.db.get_connection_and_cursor() as (connection, cursor):
             self.db.execute(cursor, "DELETE FROM feed_name_config WHERE feed_name = %s", feed_name)
             self.db.execute(cursor, "DELETE FROM feed_name_title_group WHERE feed_name = %s", feed_name)
             self.db.execute(cursor, "DELETE FROM feed_name_list_url_count WHERE feed_name = %s", feed_name)
             self.db.execute(cursor, "DELETE FROM feed_name_rss_info WHERE feed_name = %s", feed_name)
             self.db.commit(connection)
-        LOGGER.info(f"* The removing of config & rss file '{feed_name}' is done.")
+        LOGGER.info("* The removing of config & rss info of feed '%s' is done.", feed_name)
 
     def _add_config_rss_info(self, cursor: Cursor, feed_dir_path: Path, element_name_count_map: Optional[Dict[str, int]] = None) -> int:
         element_name_count_map = element_name_count_map if element_name_count_map is not None else {}
-        if not feed_dir_path.is_dir():
-            return 0
         feed_name = feed_dir_path.name
         group_name = feed_dir_path.parent.name
         feed_title = self.feed_name_title_map.get(feed_name, "")
@@ -233,12 +235,13 @@ class ProblemManager:
 
     def add_config_rss_info(self, feed_dir_path: Path) -> int:
         if not feed_dir_path.is_dir():
-            LOGGER.warning("can't find feed directory '%s'", feed_dir_path)
+            LOGGER.error("can't find a feed directory '%s'", feed_dir_path)
             return 0
+        feed_name = feed_dir_path.stem
         with self.db.get_connection_and_cursor() as (connection, cursor):
             num_items = self._add_config_rss_info(cursor, feed_dir_path)
             self.db.commit(connection)
-            LOGGER.info(f"* The adding of config & rss file '{feed_dir_path}' is done.")
+            LOGGER.info("* The adding of config & rss info of feed '%s' is done.", feed_name)
         return num_items
 
     def load_all_config_rss_files(self) -> None:
@@ -273,7 +276,7 @@ class ProblemManager:
                     self.db.execute(cursor, "UPDATE element_name_count SET count = %s WHERE element_name = %s", count, element_name)
 
             self.db.commit(connection)
-        LOGGER.info(f"* The loading of all config files and rss files is done. {num_items} items")
+        LOGGER.info("* The loading of all config files and rss files is done. %d items", num_items)
 
     def get_feed_name_public_feed_info_map(self) -> Dict[str, Dict[str, Any]]:
         LOGGER.debug("# get_feed_name_public_feed_info_map()")
@@ -291,26 +294,29 @@ class ProblemManager:
 
         return feed_name_public_feed_info_map
 
-    def remove_public_feed_info(self, feed_file_path: Path):
+    def remove_public_feed_info(self, public_feed_file_path: Path) -> None:
+        if not public_feed_file_path.is_file():
+            LOGGER.error("can't find a public feed file '%s'", public_feed_file_path)
+            return
+        feed_name = public_feed_file_path.stem
         with self.db.get_connection_and_cursor() as (connection, cursor):
-            feed_name = feed_file_path.parent.name
             self.db.execute(cursor, "DELETE FROM feed_name_public_feed_info WHERE feed_name = %s", feed_name)
             self.db.commit(connection)
-        LOGGER.info(f"* The removing of public feed file '{feed_name}' is done.")
+        LOGGER.info("* The removing of public feed info of feed '%s' is done.", feed_name)
 
-    def _add_public_feed_info(self, cursor: Cursor, feed_file_path: Path) -> int:
-        feed_name = feed_file_path.stem
+    def _add_public_feed_info(self, cursor: Cursor, public_feed_file_path: Path) -> int:
+        feed_name = public_feed_file_path.stem
         if feed_name.startswith("_"):
             return 0
 
-        with feed_file_path.open("r", encoding="utf-8") as infile:
+        with public_feed_file_path.open("r", encoding="utf-8") as infile:
             file_content = infile.read()
             num_item_elements = file_content.count("<item>")
         feed_title = self.feed_name_title_map.get(feed_name, "")
         group_name = self.feed_name_group_map.get(feed_name, "")
-        s = feed_file_path.stat()
+        s = public_feed_file_path.stat()
         upload_date = datetime.fromtimestamp(s.st_mtime)
-        path_str = PathUtil.convert_path_to_str(feed_file_path)
+        path_str = PathUtil.convert_path_to_str(public_feed_file_path)
 
         try:
             self.db.execute(cursor, "INSERT INTO feed_name_public_feed_info (feed_name, feed_title, group_name, file_path, upload_date, file_size, num_items) VALUES (%s, %s, %s, %s, %s, %s, %s)", feed_name, feed_title, group_name, path_str, self.convert_datetime_to_str(upload_date), s.st_size, num_item_elements)
@@ -325,11 +331,15 @@ class ProblemManager:
 
         return 1
 
-    def add_public_feed_info(self, feed_file_path: Path):
+    def add_public_feed_info(self, public_feed_file_path: Path) -> None:
+        if not public_feed_file_path.is_file():
+            LOGGER.error("can't find a public feed file '%s'", public_feed_file_path)
+            return
+        feed_name = public_feed_file_path.stem
         with self.db.get_connection_and_cursor() as (connection, cursor):
-            self._add_public_feed_info(cursor, feed_file_path)
+            self._add_public_feed_info(cursor, public_feed_file_path)
             self.db.commit(connection)
-        LOGGER.info(f"* The adding of public feed file '{PathUtil.convert_path_to_str(feed_file_path)}' is done.")
+        LOGGER.info("* The adding of public feed info of file '%s' is done.", feed_name)
 
     def load_all_public_feed_files(self) -> None:
         LOGGER.debug("# load_all_public_feed_files()")
@@ -352,7 +362,7 @@ class ProblemManager:
                     num_items += self._add_public_feed_info(cursor, feed_file_path)
 
             self.db.commit(connection)
-        LOGGER.info(f"* The loading of public feed file is done. {num_items} items")
+        LOGGER.info("* The loading of public feed file is done. %d items", num_items)
 
     def get_html_file_size_map(self) -> Dict[str, Dict[str, Any]]:
         LOGGER.debug("# get_html_file_size_map()")
@@ -414,6 +424,10 @@ class ProblemManager:
     def remove_html_file_in_path_from_info(self, dir_type_name: str, path: Path) -> None:
         LOGGER.debug(f"# remove_html_file_in_path_from_info(dir_type_name={dir_type_name}, dir_path={path})")
         if dir_type_name not in ("file_path", "feed_dir_path", "group_dir_path"):
+            LOGGER.error("can't identify directory/file type '%s'", dir_type_name)
+            return
+        if not path.exists():
+            LOGGER.error("can't find a directory/file '%s'", path)
             return
 
         with self.db.get_connection_and_cursor() as (connection, cursor):
@@ -430,7 +444,7 @@ class ProblemManager:
                 self.db.execute(cursor, "DELETE FROM html_file_without_image_tag WHERE file_path = %s", file_path_str)
                 self.db.execute(cursor, "DELETE FROM html_file_image_not_found WHERE file_path = %s", file_path_str)
             self.db.commit(connection)
-        LOGGER.info(f"* The removing of some html files in '{PathUtil.convert_path_to_str(path)}' is done.")
+        LOGGER.info("* The removing of some html files in '%s' is done", PathUtil.convert_path_to_str(path))
 
     def _add_html_info(self, cursor: Cursor, feed_dir_path: Path, web_service_url: str, html_file_image_tag_count_map: Optional[Dict[Path, int]] = None, html_file_image_not_found_count_map: Optional[Dict[Path, int]] = None) -> int:
         LOGGER.debug(f"# _add_html_info(feed_dir_path={feed_dir_path})")
@@ -496,13 +510,16 @@ class ProblemManager:
 
         return html_file_count
 
-    def add_html_info(self, feed_dir_path: Path):
+    def add_html_info(self, feed_dir_path: Path) -> None:
+        if not feed_dir_path.is_dir():
+            LOGGER.error("can't find a feed directory '%s'", feed_dir_path)
+            return
         with self.db.get_connection_and_cursor() as (connection, cursor):
             global_conf = Config.get_global_config()
             web_service_url = global_conf["web_service_url"]
             html_file_count = self._add_html_info(cursor, feed_dir_path, web_service_url)
             self.db.commit(connection)
-        LOGGER.info(f"* The adding of some html files in '{PathUtil.convert_path_to_str(feed_dir_path)}' is done. {html_file_count} items")
+        LOGGER.info("* The adding of some html files in '%s' is done. %d items", PathUtil.convert_path_to_str(feed_dir_path), html_file_count)
 
     def load_all_html_files(self) -> None:
         LOGGER.debug("# load_all_html_files()")
@@ -529,7 +546,7 @@ class ProblemManager:
                     html_file_count += self._add_html_info(cursor, feed_dir_path, web_service_url, html_file_image_tag_count_map, html_file_image_not_found_count_map)
 
             self.db.commit(connection)
-        LOGGER.info(f"* The loading of all html files is done. {html_file_count} items")
+        LOGGER.info("* The loading of all html files is done. %d items", html_file_count)
 
     def get_feed_name_progress_info_map(self) -> Dict[str, Dict[str, Any]]:
         LOGGER.debug("# get_feed_name_progress_info_map()")
@@ -548,12 +565,15 @@ class ProblemManager:
 
         return feed_name_progress_info_map
 
-    def remove_progress_info(self, feed_dir_path: Path):
+    def remove_progress_info(self, feed_dir_path: Path) -> None:
+        if not feed_dir_path.is_dir():
+            LOGGER.error("can't find a feed directory '%s'", feed_dir_path)
+            return
         with self.db.get_connection_and_cursor() as (connection, cursor):
             feed_name = feed_dir_path.name
             self.db.execute(cursor, "DELETE FROM feed_name_progress_info WHERE feed_name = %s", feed_name)
             self.db.commit(connection)
-        LOGGER.info(f"* The removing of progress of '{feed_name}' is done.")
+        LOGGER.info("* The removing of progress info of feed '%s' is done.", feed_name)
 
     def _add_progress_info(self, cursor: Cursor, feed_dir_path: Path) -> int:
         feed_name = feed_dir_path.name
@@ -596,16 +616,16 @@ class ProblemManager:
             self.db.execute(cursor, "UPDATE feed_name_progress_info SET feed_title = %s, group_name = %s, idx = %s, count = %s, unit_size = %s, progress_ratio = %s, due_date = %s WHERE feed_name = %s", feed_title, group_name, index, count, unit_size, progress_ratio, self.convert_datetime_to_str(due_date), feed_name)
         return 1
 
-    def add_progress_info(self, feed_dir_path: Path):
+    def add_progress_info(self, feed_dir_path: Path) -> None:
         feed_name = feed_dir_path.name
         if not feed_dir_path.is_dir() or feed_name.startswith((".", "_")) or feed_name not in self.feed_name_config_map:
-            LOGGER.warning("can't find feed directory '%s'", feed_dir_path)
+            LOGGER.error("can't find a feed directory '%s'", feed_dir_path)
             return
 
         with self.db.get_connection_and_cursor() as (connection, cursor):
             self._add_progress_info(cursor, feed_dir_path)
             self.db.commit(connection)
-        LOGGER.info(f"* The adding of progress info of '{PathUtil.convert_path_to_str(feed_dir_path)}' is done.")
+        LOGGER.info("* The adding of progress info of feed '%s' is done.", feed_name)
 
     def load_all_progress_info_from_files(self) -> None:
         LOGGER.debug("# load_all_progress_info_from_files()")
@@ -634,7 +654,7 @@ class ProblemManager:
                         continue
                     num_items += self._add_progress_info(cursor, feed_dir_path)
             self.db.commit(connection)
-        LOGGER.info(f"* The loading of all progress info is done. {num_items} items")
+        LOGGER.info("* The loading of all progress info is done. %d items", num_items)
 
     def _add_http_access_info(self, cursor: Cursor, access_file_path: Path) -> int:
         num_items = 0
@@ -690,8 +710,11 @@ class ProblemManager:
 
         return num_items
 
-    def add_httpd_access_info(self, feed_dir_path: Path):
+    def add_httpd_access_info(self, feed_dir_path: Path) -> None:
         LOGGER.debug(f"# add_httpd_access_files_to_info_after_last_log({feed_dir_path})")
+        if not feed_dir_path.is_dir():
+            LOGGER.error("can't find a feed directory '%s'", feed_dir_path)
+            return
         feed_name = feed_dir_path.name
         with self.db.get_connection_and_cursor() as (connection, cursor):
             for feed_alias, _ in self.feed_name_aliases_map.get(feed_name, {}).items():
@@ -710,7 +733,7 @@ class ProblemManager:
                             continue
 
                         self._add_http_access_info(cursor, access_file_path)
-                        LOGGER.info(f"* The adding of access info of '{PathUtil.convert_path_to_str(access_file_path)}' is done.")
+                        LOGGER.info("* The adding of access info of '%s' is done.", PathUtil.convert_path_to_str(access_file_path))
             self.db.commit(connection)
 
     def load_all_httpd_access_files(self) -> None:
@@ -743,7 +766,7 @@ class ProblemManager:
                 num_items += self._add_http_access_info(cursor, access_file_path)
 
             self.db.commit(connection)
-        LOGGER.info(f"* The loading of http access log is done. {num_items} items")
+        LOGGER.info("* The loading of http access log is done. %d items", num_items)
 
     def get_feed_alias_status_info_map(self) -> Dict[str, Dict[str, Any]]:
         LOGGER.debug("# get_feed_alias_status_info_map()")
@@ -779,9 +802,9 @@ class ProblemManager:
         self.add_htaccess_info(feed_dir_path.name)
         self.remove_config_rss_info(feed_dir_path)
         self.add_config_rss_info(feed_dir_path)
-        self.remove_public_feed_info(feed_dir_path)
-        feed_file_path = self.public_feed_dir / f"{feed_dir_path.name}.xml"
-        self.add_public_feed_info(feed_file_path)
+        public_feed_file_path = self.public_feed_dir / f"{feed_dir_path.name}.xml"
+        self.remove_public_feed_info(public_feed_file_path)
+        self.add_public_feed_info(public_feed_file_path)
         self.remove_progress_info(feed_dir_path)
         self.add_progress_info(feed_dir_path)
         self.add_httpd_access_info(feed_dir_path)
