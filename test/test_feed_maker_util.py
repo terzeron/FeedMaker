@@ -63,39 +63,111 @@ class DataTest(unittest.TestCase):
 class ProcessTest(unittest.TestCase):
     def test_replace_script_path(self):
         cmd = "shuf"
+        # OS마다 shuf가 설치된 경로가 다를 수 있음
         real_program_path = which("shuf")
-        actual = Process._replace_script_path(cmd)
-        self.assertEqual(actual, real_program_path)
-
-        cmd = "/bin/head -10"
-        expected = "/bin/head -10"
-        actual = Process._replace_script_path(cmd)
+        expected = real_program_path
+        actual = Process._replace_script_path(cmd, Path.cwd())
         self.assertEqual(expected, actual)
+        actual = Process._replace_script_path(cmd, Path("/usr/bin"))
+        self.assertEqual(expected, actual)
+        actual = Process._replace_script_path(cmd, Path("/usr"))
+        self.assertEqual(expected, actual)
+        actual = Process._replace_script_path(cmd, Path("/"))
+        self.assertEqual(expected, actual)
+        actual = Process._replace_script_path(cmd, Path("../backend"))
+        self.assertEqual(expected, actual)
+        actual = Process._replace_script_path(cmd, Path("/no_such_a_dir/workspace/fma/naver/naverwebtoon"))
+        self.assertIsNone(actual)
 
         cmd = "/usr/bin/tail -5"
+        # 어떤 디렉토리에서 실행하든 /usr/bin/tail이 실행되어야 함
         expected = "/usr/bin/tail -5"
-        actual = Process._replace_script_path(cmd)
+        actual = Process._replace_script_path(cmd, Path.cwd())
         self.assertEqual(expected, actual)
+        actual = Process._replace_script_path(cmd, Path("/usr/bin"))
+        self.assertEqual(expected, actual)
+        actual = Process._replace_script_path(cmd, Path("/usr"))
+        self.assertEqual(expected, actual)
+        actual = Process._replace_script_path(cmd, Path("/"))
+        self.assertEqual(expected, actual)
+        actual = Process._replace_script_path(cmd, Path("../backend"))
+        self.assertEqual(expected, actual)
+        actual = Process._replace_script_path(cmd, Path("/no_such_a_dir/workspace/fma/naver/naverwebtoon"))
+        self.assertIsNone(actual)
+
+        cmd = "non_existent_program arg1"
+        actual = Process._replace_script_path(cmd, Path.cwd())
+        self.assertIsNone(actual)
+        actual = Process._replace_script_path(cmd, Path("/usr/bin"))
+        self.assertIsNone(actual)
+        actual = Process._replace_script_path(cmd, Path("/usr"))
+        self.assertIsNone(actual)
+        actual = Process._replace_script_path(cmd, Path("/"))
+        self.assertIsNone(actual)
+        actual = Process._replace_script_path(cmd, Path("../backend"))
+        self.assertIsNone(actual)
+        actual = Process._replace_script_path(cmd, Path("/no_such_a_dir/workspace/fma/naver/naverwebtoon"))
+        self.assertIsNone(actual)
 
         cmd = "uploader.py test.xml"
         real_program_path = which("uploader.py")
         expected = f"{real_program_path} test.xml"
-        actual = Process._replace_script_path(cmd)
+        actual = Process._replace_script_path(cmd, Path.cwd())
         self.assertEqual(expected, actual)
-
-        cmd = "non_existent_program arg1"
-        actual = Process._replace_script_path(cmd)
+        actual = Process._replace_script_path(cmd, Path("/usr/bin"))
+        self.assertEqual(expected, actual)
+        actual = Process._replace_script_path(cmd, Path("/usr"))
+        self.assertEqual(expected, actual)
+        actual = Process._replace_script_path(cmd, Path("/"))
+        self.assertEqual(expected, actual)
+        actual = Process._replace_script_path(cmd, Path("../backend"))
+        self.assertEqual(expected, actual)
+        actual = Process._replace_script_path(cmd, Path("/no_such_a_dir/workspace/fma/naver/naverwebtoon"))
         self.assertIsNone(actual)
 
         cmd = "../capture_item_naverwebtoon.py -n 500"
-        actual = Process._replace_script_path(cmd)
-        expected = "../capture_item_naverwebtoon.py -n 500"
-        self.assertEqual(expected, actual)
+        actual = Process._replace_script_path(cmd, Path.cwd())
+        self.assertIsNone(actual)
+        actual = Process._replace_script_path(cmd, Path("/usr/bin"))
+        self.assertIsNone(actual)
+        actual = Process._replace_script_path(cmd, Path("/usr"))
+        self.assertIsNone(actual)
+        actual = Process._replace_script_path(cmd, Path("/"))
+        self.assertIsNone(actual)
+        actual = Process._replace_script_path(cmd, Path("../backend"))
+        self.assertIsNone(actual)
+        actual = Process._replace_script_path(cmd, Path("/no_such_a_dir/workspace/fma/naver/naverwebtoon"))
+        self.assertIsNone(actual)
 
         cmd = "./capture_item_naverwebtoon.py -n 500"
-        actual = Process._replace_script_path(cmd)
-        expected = "./capture_item_naverwebtoon.py -n 500"
+        actual = Process._replace_script_path(cmd, Path.cwd())
+        self.assertIsNone(actual)
+        actual = Process._replace_script_path(cmd, Path("/usr/bin"))
+        self.assertIsNone(actual)
+        actual = Process._replace_script_path(cmd, Path("/usr"))
+        self.assertIsNone(actual)
+        actual = Process._replace_script_path(cmd, Path("/"))
+        self.assertIsNone(actual)
+        actual = Process._replace_script_path(cmd, Path("../backend"))
+        self.assertIsNone(actual)
+        actual = Process._replace_script_path(cmd, Path("/no_such_a_dir/workspace/fma/naver/naverwebtoon"))
+        self.assertIsNone(actual)
+
+        cmd = "./capture_item_link_title.py"
+        actual = Process._replace_script_path(cmd, Path.cwd())
+        expected = str(Path.cwd() / "capture_item_link_title.py")
         self.assertEqual(expected, actual)
+        actual = Process._replace_script_path(cmd, Path("/usr/bin"))
+        self.assertIsNone(actual)
+        actual = Process._replace_script_path(cmd, Path("/usr"))
+        self.assertIsNone(actual)
+        actual = Process._replace_script_path(cmd, Path("/"))
+        self.assertIsNone(actual)
+        actual = Process._replace_script_path(cmd, Path("../backend"))
+        self.assertIsNone(actual)
+        actual = Process._replace_script_path(cmd, Path("/no_such_a_dir/workspace/fma/naver/naverwebtoon"))
+        self.assertIsNone(actual)
+
 
     def test_exec_cmd(self):
         valid_cmd = "ls test_feed_maker_util.py"

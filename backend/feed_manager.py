@@ -40,14 +40,14 @@ class FeedManager:
         conf_file_relative = PathUtil.convert_path_to_str(feed_dir_path)
         os.chdir(self.work_dir)
         cmd = f"git add {conf_file_relative} && git commit -m 'add {feed_name}'"
-        return Process.exec_cmd(cmd)
+        return Process.exec_cmd(cmd, dir_path=self.work_dir)
 
     def _git_rm(self, feed_dir_path: Path) -> Tuple[str, Optional[str]]:
         feed_name = feed_dir_path.name
         conf_file_relative = PathUtil.convert_path_to_str(feed_dir_path)
         os.chdir(self.work_dir)
         cmd = f"git rm -r {conf_file_relative} && git commit -m 'remove {feed_name}'"
-        return Process.exec_cmd(cmd)
+        return Process.exec_cmd(cmd, dir_path=self.work_dir)
 
     def _git_mv(self, feed_dir_path: Path, new_feed_dir_path: Path) -> Tuple[str, Optional[str]]:
         feed_dir_name = feed_dir_path.name
@@ -56,7 +56,7 @@ class FeedManager:
         new_feed_dir_path_relative = PathUtil.convert_path_to_str(new_feed_dir_path)
         os.chdir(self.work_dir)
         cmd = f"git mv {feed_dir_path_relative} {new_feed_dir_path_relative} && git commit -m 'rename {feed_dir_name} to {new_feed_dir_name}' || mv {feed_dir_path_relative} {new_feed_dir_path_relative}"
-        return Process.exec_cmd(cmd)
+        return Process.exec_cmd(cmd, dir_path=self.work_dir)
 
     def _read_config_file(self, feed_dir_path: Path) -> Dict[str, Any]:
         conf_file_path = feed_dir_path / self.CONF_FILE

@@ -68,7 +68,7 @@ class NewListCollector:
 
             capture_cmd = f"{self.collection_conf['item_capture_script']} -f '{self.feed_dir_path}'"
             LOGGER.debug(f"cmd={capture_cmd}")
-            result, error_msg = Process.exec_cmd(capture_cmd, input_data=result)
+            result, error_msg = Process.exec_cmd(capture_cmd, dir_path=self.feed_dir_path, input_data=result)
             if not result or error_msg:
                 LOGGER.warning("Warning: can't get result from item capture script")
                 LOGGER.debug(error_msg)
@@ -82,7 +82,7 @@ class NewListCollector:
                 else:
                     post_process_cmd = f"{post_process_script} -f '{self.feed_dir_path}' '{url}'"
                 LOGGER.debug(f"cmd={post_process_cmd}")
-                result, error_msg = Process.exec_cmd(post_process_cmd, input_data=result)
+                result, error_msg = Process.exec_cmd(post_process_cmd, dir_path=self.feed_dir_path, input_data=result)
                 if not result or error:
                     LOGGER.warning("Warning: can't get result from post process scripts")
                     LOGGER.debug(error_msg)

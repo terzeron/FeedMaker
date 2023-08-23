@@ -80,7 +80,7 @@ def merge_image_files(feed_dir_path: Path, img_file_list: List[Path], feed_img_d
     for cache_file in img_file_list:
         cmd += f" '{cache_file}'"
     LOGGER.debug(cmd)
-    result, error = Process.exec_cmd(cmd)
+    result, error = Process.exec_cmd(cmd, dir_path=feed_dir_path)
     LOGGER.debug(result)
     if not result:
         LOGGER.error(f"<!-- can't merge the image files, cmd='{cmd}', {error} -->")
@@ -96,7 +96,7 @@ def crop_image_file(feed_dir_path: Path, img_file_path: Path) -> None:
     temp_img_file_path = img_file_path.with_suffix(".temp")
     cmd = f"innercrop -f 4 -m crop '{img_file_path}' '{temp_img_file_path}' && mv -f '{temp_img_file_path}' '{img_file_path}'"
     LOGGER.debug(cmd)
-    _, error = Process.exec_cmd(cmd)
+    _, error = Process.exec_cmd(cmd, dir_path=feed_dir_path)
     if error:
         LOGGER.error(f"<!-- can't crop the image file '{img_file_path}', cmd='{cmd}', {error} -->")
         # sys.exit(-1)
@@ -119,7 +119,7 @@ def remove_image_files(feed_dir_path: Path, img_file_list: List[str]) -> bool:
     for cache_file in img_file_list:
         cmd = cmd + "'" + cache_file + "' "
     LOGGER.debug(cmd)
-    _, error = Process.exec_cmd(cmd)
+    _, error = Process.exec_cmd(cmd, dir_path=feed_dir_path)
     if error:
         LOGGER.error(f"<!-- can't remove files '{img_file_list}', {cmd}, {error} -->")
         return False
@@ -131,7 +131,7 @@ def split_image_file(feed_dir_path: Path, img_file_path: Path, bandwidth: int, d
     # split the image
     cmd = f"split.py -b {bandwidth} -t {diff_threshold} -s {size_threshold} -a {acceptable_diff_of_color_value} -n {num_units} {bgcolor_option} {orientation_option} {wider_scan_option} {img_file_path}"
     LOGGER.debug(cmd)
-    _, error = Process.exec_cmd(cmd)
+    _, error = Process.exec_cmd(cmd, dir_path=feed_dir_path)
     if error:
         LOGGER.error(f"<!-- can't split the image file, {cmd}, {error} -->")
         return False
