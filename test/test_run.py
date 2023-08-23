@@ -36,7 +36,6 @@ class TestFeedMakerRunner(unittest.TestCase):
 
         self.feed_dir_path = Path(os.environ["FEED_MAKER_WORK_DIR"]) / group_name / feed_name
         self.feed_dir_path.mkdir(exist_ok=True)
-        os.chdir(self.feed_dir_path)
         self.garbage_file_path = self.feed_dir_path / "nohup.out"
         self.garbage_file_path.touch()
         self.rss_file_path = self.feed_dir_path / f"{feed_name}.xml"

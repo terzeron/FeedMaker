@@ -7,7 +7,7 @@ import sys
 import shutil
 import logging.config
 from pathlib import Path
-from feed_maker_util import Data
+from bin.feed_maker_util import Data
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()

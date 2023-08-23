@@ -63,7 +63,10 @@ class Data:
 
 class Process:
     @staticmethod
-    def _replace_script_path(script: str) -> Optional[str]:
+    def _replace_script_path(script: str, dir_path: Path) -> Optional[str]:
+        if not dir_path or not dir_path.is_dir():
+            return None
+
         program = script.split(" ")[0]
         program_full_path_str: Optional[str]
 
@@ -72,12 +75,15 @@ class Process:
             program_full_path_str = program
         elif program.startswith("./") or program.startswith("../"):
             # relative path
-            program_full_path_str = program
+            program_full_path_str = str((dir_path / program).resolve())
         else:
             # non-absolute path
             program_full_path_str = which(program)
             if not program_full_path_str:
                 return None
+
+        if not which(program_full_path_str):
+            return None
 
         result = program_full_path_str
         if len(script.split(" ")) > 1:
@@ -85,9 +91,9 @@ class Process:
         return result
 
     @staticmethod
-    def exec_cmd(cmd: str, input_data=None) -> Tuple[str, str]:
-        LOGGER.debug(f"# Process.exec_cmd(cmd={cmd}, input_data={len(input_data) if input_data else 0} bytes)")
-        new_cmd = Process._replace_script_path(cmd)
+    def exec_cmd(cmd: str, dir_path: Path = Path.cwd(), input_data=None) -> Tuple[str, str]:
+        LOGGER.debug(f"# Process.exec_cmd(cmd={cmd}, dir_path={dir_path}, input_data={len(input_data) if input_data else 0} bytes)")
+        new_cmd = Process._replace_script_path(cmd, dir_path)
         if not new_cmd:
             return "", f"Error in getting path of executable '{cmd}'"
         LOGGER.debug(new_cmd)

@@ -243,7 +243,7 @@ class FeedMaker:
                 else:
                     post_process_cmd = f"{post_process_script} -f '{self.feed_dir_path}' '{item_url}'"
                 LOGGER.debug(f"cmd={post_process_cmd}")
-                result, error_msg = Process.exec_cmd(post_process_cmd, input_data=content)
+                result, error_msg = Process.exec_cmd(post_process_cmd, dir_path=self.feed_dir_path, input_data=content)
                 LOGGER.debug(f"cmd={post_process_cmd}")
                 if not result:
                     LOGGER.error(f"Error: No result in executing command '{post_process_cmd}")
