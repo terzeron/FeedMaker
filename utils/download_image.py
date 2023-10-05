@@ -10,7 +10,7 @@ import logging.config
 from pathlib import Path
 from base64 import b64decode
 from typing import List, Dict, Any, Optional
-from bin.feed_maker_util import Config, IO, Cache, URL
+from bin.feed_maker_util import Config, IO, FileManager, URL
 from bin.crawler import Crawler
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -20,7 +20,7 @@ IMAGE_NOT_FOUND_IMAGE_URL = "https://terzeron.com/image-not-found.png"
 
 def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str) -> Optional[Path]:
     LOGGER.debug(f"# download_image(crawler={crawler}, feed_img_dir_path={feed_img_dir_path}, img_url={img_url[:30]})")
-    cache_file = Cache.get_cache_file_path(feed_img_dir_path, img_url)
+    cache_file = FileManager.get_cache_file_path(feed_img_dir_path, img_url)
     for ext in ["", ".png", ".jpeg", ".jpg"]:
         cache_file_path = cache_file.with_suffix(ext)
         if cache_file_path.is_file() and cache_file_path.stat().st_size > 0:
@@ -121,7 +121,7 @@ def main() -> int:
             cache_file_path = download_image(crawler, feed_img_dir_path, img_url)
             if cache_file_path:
                 _, ext = os.path.splitext(cache_file_path)
-                cache_url = Cache.get_cache_url(img_url_prefix, img_url, "")
+                cache_url = FileManager.get_cache_url(img_url_prefix, img_url, "")
                 url_img_short = img_url if not img_url.startswith("data:image") else img_url[:30]
                 LOGGER.debug(f"{url_img_short} -> {cache_file_path} / {cache_url}{ext}")
                 print(f"<img src='{cache_url}{ext}'/>")

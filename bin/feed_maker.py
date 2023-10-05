@@ -15,7 +15,7 @@ import PyRSS2Gen
 from ordered_set import OrderedSet
 from bin.crawler import Crawler, Method
 from bin.extractor import Extractor
-from bin.feed_maker_util import Config, URL, Datetime, Process, Data, PathUtil, header_str
+from bin.feed_maker_util import Config, URL, Datetime, Process, Data, PathUtil, FileManager, header_str
 from bin.new_list_collector import NewListCollector
 from bin.uploader import Uploader
 
@@ -31,8 +31,7 @@ class FeedMaker:
     IMAGE_TAG_FMT_STR = "<img src='%s/img/1x1.jpg?feed=%s&item=%s'/>"
 
     def __init__(self, feed_dir_path: Path, do_collect_by_force: bool, do_collect_only: bool, rss_file_path: Path, window_size: int = DEFAULT_WINDOW_SIZE) -> None:
-        LOGGER.debug(
-            f"# FeedMaker(feed_dir_path={feed_dir_path}, do_collect_by_force={do_collect_by_force}, do_collect_only={do_collect_only}, rss_file_path={rss_file_path})")
+        LOGGER.debug(f"# FeedMaker(feed_dir_path={feed_dir_path}, do_collect_by_force={do_collect_by_force}, do_collect_only={do_collect_only}, rss_file_path={rss_file_path})")
         self.global_conf: Dict[str, Any] = Config.get_global_config()
         if not self.global_conf:
             LOGGER.error("Error: Can't get global configuration")
@@ -50,9 +49,11 @@ class FeedMaker:
 
         self.list_dir = self.feed_dir_path / "newlist"
         self.html_dir = self.feed_dir_path / "html"
+        self.img_dir_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / "img"
         self.start_idx_file_path = self.feed_dir_path / "start_idx.txt"
         self.list_dir.mkdir(exist_ok=True)
         self.html_dir.mkdir(exist_ok=True)
+        self.img_dir_path.mkdir(exist_ok=True)
 
     def __del__(self):
         del self.collection_conf
@@ -200,12 +201,10 @@ class FeedMaker:
         image_tag_str = FeedMaker.get_image_tag_str(self.global_conf["web_service_url"],
                                                     self.rss_file_path.name, item_url)
 
-        if os.path.isfile(html_file_path) and \
-                size > FeedMaker.get_size_of_template_with_image_tag(self.global_conf["web_service_url"], self.rss_file_path.name):
+        if os.path.isfile(html_file_path) and size > FeedMaker.get_size_of_template_with_image_tag(self.global_conf["web_service_url"], self.rss_file_path.name):
             # 이미 성공적으로 만들어져 있으니까, 이미지 태그만 검사해보고 피드 리스트에 추가
             if FeedMaker._is_image_tag_in_html_file(html_file_path, image_tag_str):
-                LOGGER.info(
-                    f"Old: {item_url}\t{title}\t{PathUtil.convert_path_to_str(html_file_path)} ({size} bytes > {self._get_size_of_template()} bytes of template)")
+                LOGGER.info(f"Old: {item_url}\t{title}\t{PathUtil.convert_path_to_str(html_file_path)} ({size} bytes > {self._get_size_of_template()} bytes of template)")
                 ret = True
             else:
                 LOGGER.error(f"Error: No image tag in html file '{PathUtil.convert_path_to_str(html_file_path)}'")
@@ -257,6 +256,11 @@ class FeedMaker:
             with html_file_path.open("w", encoding="utf-8") as outfile:
                 outfile.write(str(content))
 
+            if conf["ignore_html_with_incomplete_image"]:
+                feed_img_dir_path = self.img_dir_path / self.feed_dir_path.name
+                FileManager.remove_image_files_with_zero_size(feed_img_dir_path)
+                FileManager.remove_html_file_without_cached_image_files(html_file_path, feed_img_dir_path)
+
             if html_file_path.is_file():
                 size = html_file_path.stat().st_size
             else:
@@ -267,13 +271,11 @@ class FeedMaker:
                     FeedMaker._append_image_tag_to_html_file(html_file_path, image_tag_str)
 
                 # 피드 리스트에 추가
-                LOGGER.info(
-                    f"New: {item_url}\t{title}\t{PathUtil.convert_path_to_str(html_file_path)} ({size} bytes > {self._get_size_of_template()} bytes of template)")
+                LOGGER.info(f"New: {item_url}\t{title}\t{PathUtil.convert_path_to_str(html_file_path)} ({size} bytes > {self._get_size_of_template()} bytes of template)")
                 ret = True
             else:
                 # 피드 리스트에서 제외
-                LOGGER.warning(
-                    f"Warning: excluded {item_url}\t{title}\t{PathUtil.convert_path_to_str(html_file_path)} ({size} bytes <= {self._get_size_of_template()} bytes of template)")
+                LOGGER.warning(f"Warning: excluded {item_url}\t{title}\t{PathUtil.convert_path_to_str(html_file_path)} ({size} bytes <= {self._get_size_of_template()} bytes of template)")
                 ret = False
 
             if conf["force_sleep_between_articles"]:
@@ -303,15 +305,13 @@ class FeedMaker:
             return 0, 0, None
         return start_idx, end_idx, mtime
 
-    def _write_idx_data(self, start_idx: int, mtime: datetime, do_write_initially: bool = False) -> Tuple[
-        int, Optional[str]]:
+    def _write_idx_data(self, start_idx: int, mtime: datetime, do_write_initially: bool = False) -> Tuple[int, Optional[str]]:
         LOGGER.debug(f"# write_idx_data(start_idx={start_idx}, mtime={mtime})")
 
         current_time = Datetime.get_current_time()
         delta = current_time - mtime
         increment_size = int((delta.total_seconds() * self.collection_conf["unit_size_per_day"]) / 86400)
-        LOGGER.debug(
-            f"start_idx={start_idx}, current time={current_time}, mtime={mtime}, self.window_size={self.window_size}, increment_size={increment_size}")
+        LOGGER.debug(f"start_idx={start_idx}, current time={current_time}, mtime={mtime}, self.window_size={self.window_size}, increment_size={increment_size}")
         next_start_idx = 1
         current_time_str = None
         if do_write_initially or increment_size > 0:
@@ -414,8 +414,7 @@ class FeedMaker:
         short_date_str = Datetime.get_short_date_str()
         temp_rss_file_path = self.rss_file_path.with_suffix("." + short_date_str)
         old_rss_file_path = self.rss_file_path.with_suffix(self.rss_file_path.suffix + ".old")
-        LOGGER.debug(
-            f"rss_file_path={self.rss_file_path}, temp_rss_file_path={temp_rss_file_path}, old_rss_file_path={old_rss_file_path}")
+        LOGGER.debug(f"rss_file_path={self.rss_file_path}, temp_rss_file_path={temp_rss_file_path}, old_rss_file_path={old_rss_file_path}")
 
         LOGGER.info("Generating rss feed file...")
         rss_items: List[PyRSS2Gen.RSSItem] = []

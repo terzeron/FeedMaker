@@ -4,20 +4,32 @@
 
 import os
 import re
+import shutil
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, call
 from io import StringIO
 import logging.config
-from typing import List
+from typing import List, Any
 from datetime import datetime
 from pathlib import Path
 from shutil import which
 import subprocess
 from bs4 import BeautifulSoup
-from bin.feed_maker_util import Config, URL, HTMLExtractor, Datetime, Process, IO, Data, Cache, Htaccess, PathUtil
+from bin.feed_maker_util import Config, URL, HTMLExtractor, Datetime, Process, IO, Data, FileManager, Htaccess, PathUtil
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
+
+
+def assert_in_mock_logger(param: Any, mock_logger, do_submatch: bool = False) -> bool:
+    for arg in mock_logger.call_args_list:
+        if do_submatch:
+            if param in arg.args[0]:
+                return True
+        else:
+            if call(param) == arg:
+                return True
+    return False
 
 
 class DataTest(unittest.TestCase):
@@ -732,65 +744,141 @@ class URLTest(unittest.TestCase):
         self.assertEqual(URL.encode('http://5rs-wc22.com/식극의-소마/post/134225?a=테스트b'), 'http://5rs-wc22.com/%EC%8B%9D%EA%B7%B9%EC%9D%98-%EC%86%8C%EB%A7%88/post/134225?a=%ED%85%8C%EC%8A%A4%ED%8A%B8b')
 
 
-class CacheTest(unittest.TestCase):
+class FileManagerTest(unittest.TestCase):
     def setUp(self) -> None:
+        group_name = "naver"
         feed_name = "oneplusone"
+        self.feed_dir_path = Path(os.environ["FEED_MAKER_WORK_DIR"]) / group_name / feed_name
+        self.feed_dir_path.mkdir(exist_ok=True)
+
+        self.rss_file_path = self.feed_dir_path / f"{feed_name}.xml"
+        self.rss_file_path.touch()
+        self.old_rss_file_path = self.rss_file_path.with_suffix(self.rss_file_path.suffix + ".old")
+        self.old_rss_file_path.touch()
+        self.start_idx_file_path = self.feed_dir_path / "start_idx.txt"
+        self.start_idx_file_path.touch()
+        self.garbage_file_path = self.feed_dir_path / "nohup.out"
+        self.garbage_file_path.touch()
+
+        self.list_dir_path = self.feed_dir_path / "newlist"
+        self.list_dir_path.mkdir(exist_ok=True)
+        self.list_file_path = self.list_dir_path / "20211108.txt"
+        self.list_file_path.touch()
+
+        self.html_dir_path = self.feed_dir_path / "html"
+        self.html_dir_path.mkdir(exist_ok=True)
+        self.html_file1_path = self.html_dir_path / "0abcdef.html"
+        self.html_file1_path.touch()
+        self.html_file2_path = self.html_dir_path / "1234567.html"
+        with open(self.html_file2_path, "w", encoding="utf-8") as outfile:
+            outfile.write(f"<img src='https://terzeron.com/xml/img/{feed_name}/567890a.png'/>\n")
+
         self.feed_img_dir_path: Path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / "img" / feed_name
+        self.feed_img_dir_path.mkdir(exist_ok=True)
+        self.empty_img_file_path = self.feed_img_dir_path / "empty.png"
+        self.empty_img_file_path.touch()
+
+    def tearDown(self) -> None:
+        self.garbage_file_path.unlink(missing_ok=True)
+
+        self.html_file1_path.unlink(missing_ok=True)
+        self.html_file2_path.unlink(missing_ok=True)
+        shutil.rmtree(self.html_dir_path)
+
+        self.empty_img_file_path.unlink(missing_ok=True)
 
     def test__get_cache_info_common_postfix(self):
         img_url = "https://image-comic.pstatic.net/webtoon/759457/50/20211007123156_e8e0d3210b1b5222a92a0d12de7068b3_IMAG01_1.jpg"
-        actual = Cache._get_cache_info_common_postfix(img_url)
+        actual = FileManager._get_cache_info_common_postfix(img_url)
         expected = "e7e0b83"
         self.assertEqual(expected, actual)
 
-        actual = Cache._get_cache_info_common_postfix(img_url, postfix="part")
+        actual = FileManager._get_cache_info_common_postfix(img_url, postfix="part")
         expected = "e7e0b83_part"
         self.assertEqual(expected, actual)
 
-        actual = Cache._get_cache_info_common_postfix(img_url, postfix="part", index=0)
+        actual = FileManager._get_cache_info_common_postfix(img_url, postfix="part", index=0)
         expected = "e7e0b83_part"
         self.assertEqual(expected, actual)
 
-        actual = Cache._get_cache_info_common_postfix(img_url, postfix="part", index=1)
+        actual = FileManager._get_cache_info_common_postfix(img_url, postfix="part", index=1)
         expected = "e7e0b83_part.1"
         self.assertEqual(expected, actual)
 
     def test_get_cache_url(self):
         url_prefix = "https://terzeron.com/xml/img/test"
         img_url = "https://image-comic.pstatic.net/webtoon/759457/50/20211007123156_e8e0d3210b1b5222a92a0d12de7068b3_IMAG01_1.jpg"
-        actual = Cache.get_cache_url(url_prefix, img_url)
+        actual = FileManager.get_cache_url(url_prefix, img_url)
         expected = "https://terzeron.com/xml/img/test/e7e0b83"
         self.assertEqual(expected, actual)
 
-        actual = Cache.get_cache_url(url_prefix, img_url, postfix="part")
+        actual = FileManager.get_cache_url(url_prefix, img_url, postfix="part")
         expected = "https://terzeron.com/xml/img/test/e7e0b83_part"
         self.assertEqual(expected, actual)
 
-        actual = Cache.get_cache_url(url_prefix, img_url, postfix="part", index=0)
+        actual = FileManager.get_cache_url(url_prefix, img_url, postfix="part", index=0)
         expected = "https://terzeron.com/xml/img/test/e7e0b83_part"
         self.assertEqual(expected, actual)
 
-        actual = Cache.get_cache_url(url_prefix, img_url, postfix="part", index=1)
+        actual = FileManager.get_cache_url(url_prefix, img_url, postfix="part", index=1)
         expected = "https://terzeron.com/xml/img/test/e7e0b83_part.1"
         self.assertEqual(expected, actual)
 
     def test_get_cache_file_path(self):
         img_url = "https://image-comic.pstatic.net/webtoon/759457/50/20211007123156_e8e0d3210b1b5222a92a0d12de7068b3_IMAG01_1.jpg"
-        actual = Cache.get_cache_file_path(self.feed_img_dir_path, img_url)
+        actual = FileManager.get_cache_file_path(self.feed_img_dir_path, img_url)
         expected = self.feed_img_dir_path / "e7e0b83"
         self.assertEqual(expected, actual)
 
-        actual = Cache.get_cache_file_path(self.feed_img_dir_path, img_url, postfix="part")
+        actual = FileManager.get_cache_file_path(self.feed_img_dir_path, img_url, postfix="part")
         expected = self.feed_img_dir_path / "e7e0b83_part"
         self.assertEqual(expected, actual)
 
-        actual = Cache.get_cache_file_path(self.feed_img_dir_path, img_url, postfix="part", index=0)
+        actual = FileManager.get_cache_file_path(self.feed_img_dir_path, img_url, postfix="part", index=0)
         expected = self.feed_img_dir_path / "e7e0b83_part"
         self.assertEqual(expected, actual)
 
-        actual = Cache.get_cache_file_path(self.feed_img_dir_path, img_url, postfix="part", index=1)
+        actual = FileManager.get_cache_file_path(self.feed_img_dir_path, img_url, postfix="part", index=1)
         expected = self.feed_img_dir_path / "e7e0b83_part.1"
         self.assertEqual(expected, actual)
+
+    def test_remove_html_files_without_cached_image_files(self):
+        self.assertTrue(self.html_file2_path.is_file())
+
+        with patch.object(LOGGER, "info") as mock_info:
+            FileManager.remove_html_files_without_cached_image_files(self.feed_dir_path, self.feed_img_dir_path)
+            self.assertFalse(self.html_file2_path.is_file())
+
+            self.assertTrue(assert_in_mock_logger("# deleting html files without cached image files", mock_info))
+            self.assertTrue(assert_in_mock_logger("* '1234567.html' deleted (due to '567890a.png')", mock_info))
+
+    def test_remove_temporary_files(self):
+        self.assertTrue(self.garbage_file_path.is_file())
+
+        with patch.object(LOGGER, "info") as _:
+            FileManager.remove_temporary_files(self.feed_dir_path)
+
+        self.assertFalse(self.garbage_file_path.is_file())
+
+    def test_remove_all_files(self):
+        self.assertTrue(self.rss_file_path.is_file())
+        self.assertTrue(self.start_idx_file_path.is_file())
+        self.assertTrue(self.garbage_file_path.is_file())
+        self.assertTrue(self.list_file_path.is_file())
+        self.assertTrue(self.html_file1_path.is_file())
+
+        with patch.object(LOGGER, "info") as mock_info:
+            FileManager.remove_all_files(self.feed_dir_path)
+
+            self.assertTrue(assert_in_mock_logger("# deleting all files (html files, list files, rss file, various temporary files)", mock_info))
+            self.assertTrue(assert_in_mock_logger("# deleting temporary files", mock_info))
+
+        self.assertFalse(self.rss_file_path.is_file())
+        self.assertFalse(self.start_idx_file_path.is_file())
+        self.assertFalse(self.garbage_file_path.is_file())
+        self.assertFalse(self.list_file_path.is_file())
+        self.assertFalse(self.html_file1_path.is_file())
+
 
 
 def count_substr(member: str, container: List[str]) -> int:
