@@ -7,7 +7,7 @@ import getopt
 import logging.config
 from pathlib import Path
 from pdf2image import convert_from_path
-from bin.feed_maker_util import Cache, header_str
+from bin.feed_maker_util import FileManager, header_str
 from bin.crawler import Crawler
 
 
@@ -52,8 +52,8 @@ def main() -> int:
     images = convert_from_path(pdf_file_path)
     print(header_str)
     for num, image in enumerate(images):
-        cache_file = Cache.get_cache_file_path(feed_img_dir_path, url_or_file)
-        cache_url = Cache.get_cache_url(img_url_prefix, url_or_file, "")
+        cache_file = FileManager.get_cache_file_path(feed_img_dir_path, url_or_file)
+        cache_url = FileManager.get_cache_url(img_url_prefix, url_or_file, "")
         image_file = cache_file.with_suffix("." + str(num) + ext)
         image_url = cache_url + "." + str(num) + ext
         image.save(image_file, image_type)
