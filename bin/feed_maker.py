@@ -185,12 +185,10 @@ class FeedMaker:
         return Data.remove_duplicates(feed_list)
 
     def _make_html_file(self, item_url: str, title: str) -> bool:
-        if not self.collection_conf:
-            LOGGER.error("ERROR: can't get collection configuration")
-            return False
         if not self.extraction_conf:
             LOGGER.error("ERROR: can't get extraction configuration")
             return False
+        conf = self.extraction_conf
 
         html_file_path = FeedMaker._get_html_file_path(self.html_dir, item_url)
         if html_file_path.is_file():
@@ -214,7 +212,6 @@ class FeedMaker:
                 ret = False
         else:
             # 파일이 존재하지 않거나 크기가 작으니 다시 생성 시도
-            conf = self.extraction_conf
             crawler = Crawler(dir_path=self.feed_dir_path, render_js=conf["render_js"], method=Method.GET, headers=conf["headers"], timeout=conf["timeout"], num_retries=conf["num_retries"], encoding=conf["encoding"], verify_ssl=conf["verify_ssl"], copy_images_from_canvas=conf["copy_images_from_canvas"], simulate_scrolling=conf["simulate_scrolling"], disable_headless=conf["disable_headless"], blob_to_dataurl=conf["blob_to_dataurl"])
             option_str = Crawler.get_option_str(conf)
             crawler_cmd = f"crawler.py -f '{self.feed_dir_path}' {option_str} '{item_url}'"
@@ -256,12 +253,8 @@ class FeedMaker:
             with html_file_path.open("w", encoding="utf-8") as outfile:
                 outfile.write(str(content))
 
-            if "threshold_to_remove_html_with_incomplete_image" in conf:
-                incomplete_image_list = FileManager.get_incomplete_image_list(html_file_path)
-                if conf["threshold_to_remove_html_with_incomplete_image"] < len(incomplete_image_list):
-                    feed_img_dir_path = self.img_dir_path / self.feed_dir_path.name
-                    FileManager.remove_image_files_with_zero_size(feed_img_dir_path)
-                    FileManager.remove_html_file_without_cached_image_files(html_file_path)
+            if conf["force_sleep_between_articles"]:
+                time.sleep(5)
 
             if html_file_path.is_file():
                 size = html_file_path.stat().st_size
@@ -280,8 +273,14 @@ class FeedMaker:
                 LOGGER.warning(f"Warning: excluded {item_url}\t{title}\t{PathUtil.convert_path_to_str(html_file_path)} ({size} bytes <= {self._get_size_of_template()} bytes of template)")
                 ret = False
 
-            if conf["force_sleep_between_articles"]:
-                time.sleep(5)
+        if "threshold_to_remove_html_with_incomplete_image" in conf:
+            incomplete_image_list = FileManager.get_incomplete_image_list(html_file_path)
+            if conf["threshold_to_remove_html_with_incomplete_image"] < len(incomplete_image_list):
+                feed_img_dir_path = self.img_dir_path / self.feed_dir_path.name
+                FileManager.remove_image_files_with_zero_size(feed_img_dir_path)
+                FileManager.remove_html_file_without_cached_image_files(html_file_path)
+                ret = False
+
         return ret
 
     def _get_idx_data(self) -> Tuple[int, int, Optional[datetime]]:

@@ -538,7 +538,8 @@ class URL:
 
 class FileManager:
     DATA_IMAGE_PREFIX = "data:image"
-    IMAGE_NOT_FOUND_IMAGE_URL = "https://terzeron.com/image-not-found.png"
+    IMAGE_NOT_FOUND_IMAGE = "image-not-found.png"
+    IMAGE_NOT_FOUND_IMAGE_URL = "https://terzeron.com/" + IMAGE_NOT_FOUND_IMAGE
     IMAGE_DIR_PATH = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / "img"
 
     @staticmethod
@@ -574,12 +575,14 @@ class FileManager:
         with html_file_path.open("r", encoding="utf-8") as f:
             try:
                 for line in f:
+                    if FileManager.IMAGE_NOT_FOUND_IMAGE in line:
+                        result.append(FileManager.IMAGE_NOT_FOUND_IMAGE)
                     m = re.search(r'<img src=[\"\']https?://terzeron\.com/xml/img/[^/]+/(?P<img>\S+)[\"\']', line)
                     if m:
                         # 실제로 다운로드되어 있는지 확인
                         img_file_name = m.group("img")
                         img_file_path = FileManager.IMAGE_DIR_PATH / feed_name / img_file_name
-                        if FileManager.IMAGE_NOT_FOUND_IMAGE_URL in img_file_name or not img_file_path.is_file() or img_file_path.stat().st_size == 0:
+                        if not img_file_path.is_file() or img_file_path.stat().st_size == 0:
                             result.append(img_file_name)
             except UnicodeDecodeError as e:
                 LOGGER.error(f"Error: Unicode decode error in '{html_file_path.name}'")
