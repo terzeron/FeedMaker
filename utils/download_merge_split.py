@@ -14,7 +14,6 @@ from bin.feed_maker_util import Config, FileManager, IO, Process
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
-IMAGE_NOT_FOUND_IMAGE_URL = "https://terzeron.com/image-not-found.png"
 
 
 def download_image_and_read_metadata(feed_dir_path: Path, crawler: Crawler, feed_img_dir_path: Path, page_url: str) -> \
@@ -42,7 +41,7 @@ def download_image_and_read_metadata(feed_dir_path: Path, crawler: Crawler, feed
             cache_file_path = download_image(crawler, feed_img_dir_path, img_url)
             if not cache_file_path:
                 LOGGER.error(f"<!-- can't download the image from '{img_url}' -->")
-                print(f"<img src='{IMAGE_NOT_FOUND_IMAGE_URL}' alt='not exist or size 0'/>")
+                print(f"<img src='{FileManager.IMAGE_NOT_FOUND_IMAGE_URL}' alt='not exist or size 0'/>")
                 continue
             img_file_list.append(cache_file_path)
             img_url_list.append(img_url)

@@ -15,7 +15,6 @@ from bin.crawler import Crawler
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
-IMAGE_NOT_FOUND_IMAGE_URL = "https://terzeron.com/image-not-found.png"
 
 
 def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str) -> Optional[Path]:
@@ -127,7 +126,7 @@ def main() -> int:
                 print(f"<img src='{cache_url}{ext}'/>")
             else:
                 LOGGER.debug(f"no cache file for '{img_url}'")
-                print(f"<img src='{IMAGE_NOT_FOUND_IMAGE_URL}' alt='not exist or size 0'/>")
+                print(f"<img src='{FileManager.IMAGE_NOT_FOUND_IMAGE_URL}' alt='not exist or size 0'/>")
 
             m = re.search(r'^\s*$', post_text)
             if not m:
