@@ -180,7 +180,6 @@ class ProcessTest(unittest.TestCase):
         actual = Process._replace_script_path(cmd, Path("/no_such_a_dir/workspace/fma/naver/naverwebtoon"))
         self.assertIsNone(actual)
 
-
     def test_exec_cmd(self):
         valid_cmd = "ls test_feed_maker_util.py"
         actual, error = Process.exec_cmd(valid_cmd)
@@ -842,19 +841,30 @@ class FileManagerTest(unittest.TestCase):
         expected = self.feed_img_dir_path / "e7e0b83_part.1"
         self.assertEqual(expected, actual)
 
+    def test_get_incomplete_image(self):
+        expected = ["567890a.png"]
+        actual = FileManager.get_incomplete_image_list(self.html_file2_path)
+        self.assertEqual(expected, actual)
+
+    def test_remove_html_file_without_cached_image_files(self):
+        self.assertTrue(self.html_file2_path.is_file())
+        with patch.object(LOGGER, "info") as mock_info:
+            FileManager.remove_html_file_without_cached_image_files(self.html_file2_path)
+            self.assertTrue(assert_in_mock_logger("* '1234567.html' deleted (due to ['567890a.png'])", mock_info))
+
+        self.assertFalse(self.html_file2_path.is_file())
+
     def test_remove_html_files_without_cached_image_files(self):
         self.assertTrue(self.html_file2_path.is_file())
-
         with patch.object(LOGGER, "info") as mock_info:
             FileManager.remove_html_files_without_cached_image_files(self.feed_dir_path, self.feed_img_dir_path)
-            self.assertFalse(self.html_file2_path.is_file())
-
             self.assertTrue(assert_in_mock_logger("# deleting html files without cached image files", mock_info))
-            self.assertTrue(assert_in_mock_logger("* '1234567.html' deleted (due to '567890a.png')", mock_info))
+            self.assertTrue(assert_in_mock_logger("* '1234567.html' deleted (due to ['567890a.png'])", mock_info))
+
+        self.assertFalse(self.html_file2_path.is_file())
 
     def test_remove_temporary_files(self):
         self.assertTrue(self.garbage_file_path.is_file())
-
         with patch.object(LOGGER, "info") as _:
             FileManager.remove_temporary_files(self.feed_dir_path)
 
@@ -878,7 +888,6 @@ class FileManagerTest(unittest.TestCase):
         self.assertFalse(self.garbage_file_path.is_file())
         self.assertFalse(self.list_file_path.is_file())
         self.assertFalse(self.html_file1_path.is_file())
-
 
 
 def count_substr(member: str, container: List[str]) -> int:
@@ -935,7 +944,6 @@ class TestPathUtil(unittest.TestCase):
         self.assertEqual(PathUtil.convert_path_to_str(public_feed_dir), ".")
         self.assertEqual(PathUtil.convert_path_to_str(httpd_access_log_dir), "logs")
         self.assertEqual(PathUtil.convert_path_to_str(htaccess_file), ".htaccess")
-
 
 
 if __name__ == "__main__":

@@ -420,7 +420,7 @@ class Config:
                 conf = {
                     "render_js": Config._get_bool_config_value(extraction_conf, "render_js", False),
                     "verify_ssl": Config._get_bool_config_value(extraction_conf, "verify_ssl", True),
-                    "ignore_html_with_incomplete_image": Config._get_bool_config_value(extraction_conf, "ignore_html_with_incomplete_image", False),
+                    "threshold_to_remove_html_with_incomplete_image": Config._get_bool_config_value(extraction_conf, "threshold_to_remove_html_with_incomplete_image", False),
                     "bypass_element_extraction": Config._get_bool_config_value(extraction_conf, "bypass_element_extraction"),
                     "force_sleep_between_articles": Config._get_bool_config_value(extraction_conf, "force_sleep_between_articles"),
                     "copy_images_from_canvas": Config._get_bool_config_value(extraction_conf, "copy_images_from_canvas"),
@@ -538,6 +538,8 @@ class URL:
 
 class FileManager:
     DATA_IMAGE_PREFIX = "data:image"
+    IMAGE_NOT_FOUND_IMAGE_URL = "https://terzeron.com/image-not-found.png"
+    IMAGE_DIR_PATH = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / "img"
 
     @staticmethod
     def _get_cache_info_common_postfix(img_url: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None) -> str:
@@ -565,33 +567,33 @@ class FileManager:
         return path_prefix / FileManager._get_cache_info_common_postfix(img_url, postfix, index)
 
     @staticmethod
-    def remove_image_files_with_zero_size(feed_img_dir_path: Path) -> None:
-        LOGGER.debug("# remove_image_files_with_zero_size()")
-        LOGGER.info("# deleting image files with zero size")
-        if feed_img_dir_path.is_dir():
-            for img_file_path in feed_img_dir_path.iterdir():
-                if img_file_path.is_file() and img_file_path.stat().st_size == 0:
-                    LOGGER.info(f"* {img_file_path}")
-                    img_file_path.unlink(missing_ok=True)
-
-    @staticmethod
-    def remove_html_file_without_cached_image_files(html_file_path: Path, feed_img_dir_path: Path) -> Optional[Path]:
-        LOGGER.debug(f"# remove_html_file_without_cached_image_files(html_file_path='{html_file_path}', feed_img_dir_path='{feed_img_dir_path}')")
+    def get_incomplete_image_list(html_file_path) -> List[str]:
+        LOGGER.debug(f"# get_incomplete_image_list(html_file_path='{html_file_path}')")
+        result = []
+        feed_name = html_file_path.parent.parent.name
         with html_file_path.open("r", encoding="utf-8") as f:
             try:
                 for line in f:
                     m = re.search(r'<img src=[\"\']https?://terzeron\.com/xml/img/[^/]+/(?P<img>\S+)[\"\']', line)
                     if m:
                         # 실제로 다운로드되어 있는지 확인
-                        img_file = m.group("img")
-                        img_file_path = feed_img_dir_path / img_file
-                        if not img_file_path.is_file() or img_file_path.stat().st_size == 0:
-                            LOGGER.info(f"* '{html_file_path.name}' deleted (due to '{img_file}')")
-                            html_file_path.unlink(missing_ok=True)
-                            return html_file_path
+                        img_file_name = m.group("img")
+                        img_file_path = FileManager.IMAGE_DIR_PATH / feed_name / img_file_name
+                        if FileManager.IMAGE_NOT_FOUND_IMAGE_URL in img_file_name or not img_file_path.is_file() or img_file_path.stat().st_size == 0:
+                            result.append(img_file_name)
             except UnicodeDecodeError as e:
                 LOGGER.error(f"Error: Unicode decode error in '{html_file_path.name}'")
                 raise e
+        return result
+
+    @staticmethod
+    def remove_html_file_without_cached_image_files(html_file_path: Path) -> None:
+        LOGGER.debug(f"# remove_html_file_without_cached_image_files(html_file_path='{html_file_path}')")
+        incomplete_img_list = FileManager.get_incomplete_image_list(html_file_path)
+        if len(incomplete_img_list) > 0:
+            LOGGER.info(f"* '{html_file_path.name}' deleted (due to {str(incomplete_img_list)})")
+            html_file_path.unlink(missing_ok=True)
+
         return None
 
     @staticmethod
@@ -602,8 +604,17 @@ class FileManager:
         if html_dir_path.is_dir():
             for html_file_path in html_dir_path.iterdir():
                 if html_file_path.is_file():
-                    FileManager.remove_html_file_without_cached_image_files(html_file_path, feed_img_dir_path)
+                    FileManager.remove_html_file_without_cached_image_files(html_file_path)
 
+    @staticmethod
+    def remove_image_files_with_zero_size(feed_img_dir_path: Path) -> None:
+        LOGGER.debug("# remove_image_files_with_zero_size()")
+        LOGGER.info("# deleting image files with zero size")
+        if feed_img_dir_path.is_dir():
+            for img_file_path in feed_img_dir_path.iterdir():
+                if img_file_path.is_file() and img_file_path.stat().st_size == 0:
+                    LOGGER.info(f"* {img_file_path}")
+                    img_file_path.unlink(missing_ok=True)
 
     @staticmethod
     def remove_temporary_files(feed_dir_path: Path) -> None:

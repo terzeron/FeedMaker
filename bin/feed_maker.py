@@ -256,10 +256,12 @@ class FeedMaker:
             with html_file_path.open("w", encoding="utf-8") as outfile:
                 outfile.write(str(content))
 
-            if conf["ignore_html_with_incomplete_image"]:
-                feed_img_dir_path = self.img_dir_path / self.feed_dir_path.name
-                FileManager.remove_image_files_with_zero_size(feed_img_dir_path)
-                FileManager.remove_html_file_without_cached_image_files(html_file_path, feed_img_dir_path)
+            if "threshold_to_remove_html_with_incomplete_image" in conf:
+                incomplete_image_list = FileManager.get_incomplete_image_list(html_file_path)
+                if conf["threshold_to_remove_html_with_incomplete_image"] < len(incomplete_image_list):
+                    feed_img_dir_path = self.img_dir_path / self.feed_dir_path.name
+                    FileManager.remove_image_files_with_zero_size(feed_img_dir_path)
+                    FileManager.remove_html_file_without_cached_image_files(html_file_path)
 
             if html_file_path.is_file():
                 size = html_file_path.stat().st_size
