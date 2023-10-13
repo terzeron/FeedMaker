@@ -749,6 +749,9 @@ class FileManagerTest(unittest.TestCase):
         feed_name = "oneplusone"
         self.feed_dir_path = Path(os.environ["FEED_MAKER_WORK_DIR"]) / group_name / feed_name
         self.feed_dir_path.mkdir(exist_ok=True)
+        self.sample_conf_file_path = Path(__file__).parent / "conf.naverwebtoon.json"
+        self.conf_file_path = self.feed_dir_path / "conf.json"
+        shutil.copy(self.sample_conf_file_path, self.conf_file_path)
 
         self.rss_file_path = self.feed_dir_path / f"{feed_name}.xml"
         self.rss_file_path.touch()

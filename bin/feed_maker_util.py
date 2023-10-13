@@ -603,11 +603,15 @@ class FileManager:
     def remove_html_files_without_cached_image_files(feed_dir_path: Path, feed_img_dir_path: Path) -> None:
         LOGGER.debug(f"# remove_html_files_without_cached_image_files(feed_dir_path='{feed_dir_path}', feed_img_dir_path='{feed_img_dir_path}')")
         LOGGER.info("# deleting html files without cached image files")
+        conf = Config(feed_dir_path).get_extraction_configs()
         html_dir_path = feed_dir_path / "html"
         if html_dir_path.is_dir():
             for html_file_path in html_dir_path.iterdir():
                 if html_file_path.is_file():
-                    FileManager.remove_html_file_without_cached_image_files(html_file_path)
+                    if "threshold_to_remove_html_with_incomplete_image" in conf:
+                        incomplete_image_list = FileManager.get_incomplete_image_list(html_file_path)
+                        if conf["threshold_to_remove_html_with_incomplete_image"] < len(incomplete_image_list):
+                            FileManager.remove_html_file_without_cached_image_files(html_file_path)
 
     @staticmethod
     def remove_image_files_with_zero_size(feed_img_dir_path: Path) -> None:
