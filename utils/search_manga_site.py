@@ -471,24 +471,20 @@ class SearchManager:
         LOGGER.debug("# search()")
 
         site_list = [
+            EleventoonSite("11toon"),
+            AgitSite("agit"),
+            AllallSite("allall"),
+            BlacktoonSite("blacktoon"),
+            FunbeSite("funbe"),
             JmanaSite("jmana"),
             ManatokiSite("manatoki"),
             NewtokiSite("newtoki"),
-            CopytoonSite("copytoon"),
+            SkytoonSite("skytoon"),
+            ToonkorSite("toonkor"),
             WfwfSite("wfwf"),
             WtwtSite("wtwt"),
-            MarumaruSite("marumaru"),
-            FunbeSite("funbe"),
-            ToonkorSite("toonkor"),
-            EleventoonSite("11toon"),
-            AllallSite("allall"),
-            BlacktoonSite("blacktoon"),
-            AgitSite("agit"),
             TorrentseeSite("torrentsee"),
-            #TorrentdiaSite("torrentdia"),
             TorrentttSite("torrenttt"),
-            #TorrentmodeSite("torrentmode"),
-            SkytoonSite("skytoon")
         ]
 
         result_list: List[Tuple[str, str]] = []
