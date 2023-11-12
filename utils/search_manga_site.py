@@ -121,25 +121,24 @@ class Site:
                                 id_str = re.sub(r'/data/toon_category/(?P<id>\d+)', r'\g<id>', link)
                                 link = URL.concatenate_url(self.url_prefix, "/bbs/board.php?bo_table=toons&is=" + id_str)
 
-                        # 만화사이트에서 자주 보이는 불필요한 텍스트 제거
-                        e = re.compile(r'''
-                            <\w+[^>]*>
-                            \s*
-                            (
-                                \s*
-                                [/+\-★]?
-                                \s*
+                        # 만화사이트에서 자주 보이는 불필요한 텍스트 제거 ex. <span class="title">만화제목</span>
+                        e = re.sub(r'''
+                            <(?P<tag>\w+)[^>]*>
                                 (
-                                    만화제목|작가이름|(발행|초성|장르)검색|정렬|검색 결과|공지사항|북마크(업데이트)?|주간랭킹 TOP30|나의 댓?글 반응|
+                                    (애니|영화|게임|방송|음악|기타|유틸(리티)?|스포츠|기타)
+                                         (\s*&gt;\s*)?
+                                         (극장판|완결|액션|공포/호러|범죄/스릴러|코미디|ᆭᆩSF/판타지|아동(/가족)?|한국영화|다큐|미분류|드라마/멜로|드라마일드|드라마|시사/교양|예능/오락|국내앨범|외국앨범|축구|농구|야구|레슬링|레이싱|격투|유틸리티|미디어|그래픽|드라이버|문서/업무|유아/어린이|모바일|도서/만화|직캠/아이돌|여직캠|남직캠|코스프레)?|
+                                    한글(자막)?|자체자막|자막없음|우리말더빙|일드|무자막|
+                                    한국영화|해외영화|영화|드라마|넷플릭스|영상·음악|애니·만화|게임·유틸| 
+                                    만화제목|작가이름|(발행|초성|장르)검색|정렬|검색\s*결과|공지사항|북마크(업데이트)?|주간랭킹 TOP30|나의\s*댓?글\s*반응|
                                     주간|격주|격월|월간|단행본|단편|완결|연재|정기|비정기|월요일?|화요일?|수요일?|목요일?|금요일?|토요일?|일요일?|
-                                    액\b|액션|판타지|성인|무협|무장|드라마|라노벨|개그|학원|스토리?|순정|로맨스|로매스|이세계|전생|일상|치유|애니|백합|미분류|시대극|투믹스|게임|카카오페|느와르|15금|18금|19금|가정부|[GB][Ll]|일반|러브코미디|화|
-                                    오늘|어제|그제|(하루|이틀|사흘|[한두세네])\s?[주달]|(\d+|[일이삼사오육칠팔구십]|십일|십이)\s?[일월년]\s?전|
-                                    (webtoon|cartoon|movie|drama)\d+
+                                    액션|판타지|성인|무협|무장|드라마|라노벨|개그|학원|스토리?|순정|로맨스|로매스|이세계|전생|일상|치유|애니|백합|미분류|
+                                    시대극|투믹스|게임|카카오페|느와르|15금|18금|19금|가정부|GL|BL|일반|러브코미디|
+                                    해외영화|
+                                    오늘|어제|그제|(하루|이틀|사흘|[한두세네])\s?[주달]|(\d+|[일이삼사오육칠팔구십]|십일|십이)\s?[일월년]\s?전
                                 )
-                            )+
-                            \s*
-                            </\w+>
-                        ''', re.VERBOSE).sub('', e)
+                            </(?P=tag)>
+                        ''', '', e, flags=re.VERBOSE | re.IGNORECASE)
                         # 연속된 공백을 공백 1개로 교체
                         e = re.sub(r'\s+', ' ', e)
                         # #[] 제거
@@ -148,8 +147,9 @@ class Site:
                             break
                         prev_e = e
 
-                    if self.site_name not in ["jmana", "allall"]:
-                        e = re.sub(r'.*\b\d+[화권부편].*', '', e)
+                    # 일부 만화 사이트에서 권 단위 검색결과 노출되는 것을 제거
+                    #if self.site_name not in ["jmana", "allall", "torrentjok"]:
+                    #    e = re.sub(r'.*\b\d+[화권부편].*', '', e)
 
                     # 설명 텍스트 제거
                     e = re.sub(r'<\w+ class="">.+?</\w+>', '', e)
@@ -418,7 +418,37 @@ class AgitSite(Site):
         return self.search_in_site_like_agit(keyword)
 
 
-class TorrentseeSite(Site):
+class TorrentJokSite(Site):
+    def __init__(self, site_name: str) -> None:
+        super().__init__(site_name)
+        self.extraction_attrs = {"class": "media-heading"}
+
+    def set_url_postfix(self, keyword: str) -> None:
+        encoded_keyword = urllib.parse.quote(keyword)
+        self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
+
+
+class TorrentQqSite(Site):
+    def __init__(self, site_name: str) -> None:
+        super().__init__(site_name)
+        self.extraction_attrs = {"class": "wr-subject"}
+
+    def set_url_postfix(self, keyword: str) -> None:
+        encoded_keyword = urllib.parse.quote(keyword)
+        self.url_postfix = "/search?q=" + encoded_keyword
+
+
+class TorrentRjSite(Site):
+    def __init__(self, site_name: str) -> None:
+        super().__init__(site_name)
+        self.extraction_attrs = {"class": "flex-grow truncate"}
+
+    def set_url_postfix(self, keyword: str) -> None:
+        encoded_keyword = urllib.parse.quote(keyword)
+        self.url_postfix = "/search/index?keywords=" + encoded_keyword
+
+
+class TorrentSeeSite(Site):
     def __init__(self, site_name: str) -> None:
         super().__init__(site_name)
         self.extraction_attrs = {"class": "tit"}
@@ -438,10 +468,20 @@ class TorrentdiaSite(Site):
         self.url_postfix = "/bbs/search.php?search_flag=search&stx=" + encoded_keyword
 
 
-class TorrentttSite(Site):
+class TorrentTipSite(Site):
     def __init__(self, site_name: str) -> None:
         super().__init__(site_name)
-        self.extraction_attrs = {"class": "flex-grow truncate"}
+        self.extraction_attrs = {"class": "page-list"}
+
+    def set_url_postfix(self, keyword: str) -> None:
+        encoded_keyword = urllib.parse.quote(keyword)
+        self.url_postfix = "/search?q=" + encoded_keyword
+
+
+class TorrentTtSite(Site):
+    def __init__(self, site_name: str) -> None:
+        super().__init__(site_name)
+        self.extraction_attrs = {"class": "page-list"}
 
     def set_url_postfix(self, keyword: str) -> None:
         encoded_keyword = urllib.parse.quote(keyword)
@@ -483,8 +523,12 @@ class SearchManager:
             ToonkorSite("toonkor"),
             WfwfSite("wfwf"),
             WtwtSite("wtwt"),
-            TorrentseeSite("torrentsee"),
-            TorrentttSite("torrenttt"),
+            TorrentJokSite("torrentjok"),
+            TorrentQqSite("torrentqq"),
+            TorrentRjSite("torrentrj"),
+            TorrentSeeSite("torrentsee"),
+            TorrentTipSite("torrenttip"),
+            TorrentTtSite("torrenttt"),
         ]
 
         result_list: List[Tuple[str, str]] = []
