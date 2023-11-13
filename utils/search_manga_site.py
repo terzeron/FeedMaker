@@ -82,94 +82,105 @@ class Site:
 
             title: str = ""
             link: str = ""
+            i: int = 0
             for element_obj in element_list:
                 LOGGER.debug(f"element_obj={element_obj}")
+                #print(f"###element_obj={str(element_obj)}\n")
                 if not element_obj:
                     continue
+                e = re.sub(r"\r?\n", "", str(element_obj))
+                e = re.sub(r"\s\s+", " ", e)
 
-                for e in str(element_obj).split("\n"):
-                    LOGGER.debug(f"e={e}")
-                    # 링크 추출
-                    m = re.search(r'<a[^>]*href="(?P<link>[^"]+)"[^>]*>', e)
+
+                #print(f"i={i}, e={e}")
+                LOGGER.debug(f"e={e}")
+                # 링크 추출
+                m = re.search(r'<a[^>]*href="(?P<link>[^"]+)"[^>]*>', e)
+                if m:
+                    if m.group("link").startswith("http"):
+                        link = m.group("link")
+                    else:
+                        link = URL.concatenate_url(self.url_prefix, m.group("link"))
+                    link = re.sub(r'&amp;', '&', link)
+                    link = re.sub(r'&?cpa=\d+', '', link)
+                    link = re.sub(r'&?stx=\d+', '', link)
+                    LOGGER.debug(f"link={link}")
+
+                # 주석 제거
+                e = re.sub(r'<!--[^>]*-->', '', str(e))
+                # 단순(텍스트만 포함한) p 태그 제거
+                #e = re.sub(r'<p[^>]*>[^<]*</p>', '', e)
+                prev_e = e
+                while True:
+                    # 명시적인 타이틀 텍스트 추출
+                    m = re.search(r'<\w+[^>]*class="[^"]*([Tt]it(le)?|[Ss]ubject)"[^>]*>(?P<title>[^<>]+?)</\w+>', e)
                     if m:
-                        if m.group("link").startswith("http"):
-                            link = m.group("link")
-                        else:
-                            link = URL.concatenate_url(self.url_prefix, m.group("link"))
-                        link = re.sub(r'&amp;', '&', link)
-                        link = re.sub(r'&?cpa=\d+', '', link)
-                        link = re.sub(r'&?stx=\d+', '', link)
-                        LOGGER.debug(f"link={link}")
-
-                    # 주석 제거
-                    #e = re.sub(r'<!--[^>]*-->', '', str(e))
-                    # 단순(텍스트만 포함한) p 태그 제거
-                    #e = re.sub(r'<p[^>]*>[^<]*</p>', '', e)
-                    prev_e = e
-                    while True:
-                        # 명시적인 타이틀 텍스트 추출
-                        m = re.search(r'<\w+[^>]*class="[^"]*([Tt]it(le)?|[Ss]ubject)"[^>]*>(?P<title>.+?)</\w+>', e)
-                        if m:
-                            title = m.group("title")
-                            LOGGER.debug(f"title={title}")
-
-                        if self.site_name in ["11toon"]:
-                            # 이미지 url 추출하여 link로 변경
-                            m = re.search(r'url\(\x27(https?)?//[^/]+(?P<link>/.+)\x27\)', e)
-                            if m:
-                                link = m.group("link")
-                                id_str = re.sub(r'/data/toon_category/(?P<id>\d+)', r'\g<id>', link)
-                                link = URL.concatenate_url(self.url_prefix, "/bbs/board.php?bo_table=toons&is=" + id_str)
-
-                        # 만화사이트에서 자주 보이는 불필요한 텍스트 제거 ex. <span class="title">만화제목</span>
-                        e = re.sub(r'''
-                            <(?P<tag>\w+)[^>]*>
-                                (
-                                    (애니|영화|게임|방송|음악|기타|유틸(리티)?|스포츠|기타)
-                                         (\s*&gt;\s*)?
-                                         (극장판|완결|액션|공포/호러|범죄/스릴러|코미디|ᆭᆩSF/판타지|아동(/가족)?|한국영화|다큐|미분류|드라마/멜로|드라마일드|드라마|시사/교양|예능/오락|국내앨범|외국앨범|축구|농구|야구|레슬링|레이싱|격투|유틸리티|미디어|그래픽|드라이버|문서/업무|유아/어린이|모바일|도서/만화|직캠/아이돌|여직캠|남직캠|코스프레)?|
-                                    한글(자막)?|자체자막|자막없음|우리말더빙|일드|무자막|
-                                    한국영화|해외영화|영화|드라마|넷플릭스|영상·음악|애니·만화|게임·유틸| 
-                                    만화제목|작가이름|(발행|초성|장르)검색|정렬|검색\s*결과|공지사항|북마크(업데이트)?|주간랭킹 TOP30|나의\s*댓?글\s*반응|
-                                    주간|격주|격월|월간|단행본|단편|완결|연재|정기|비정기|월요일?|화요일?|수요일?|목요일?|금요일?|토요일?|일요일?|
-                                    액션|판타지|성인|무협|무장|드라마|라노벨|개그|학원|스토리?|순정|로맨스|로매스|이세계|전생|일상|치유|애니|백합|미분류|
-                                    시대극|투믹스|게임|카카오페|느와르|15금|18금|19금|가정부|GL|BL|일반|러브코미디|
-                                    해외영화|
-                                    오늘|어제|그제|(하루|이틀|사흘|[한두세네])\s?[주달]|(\d+|[일이삼사오육칠팔구십]|십일|십이)\s?[일월년]\s?전
-                                )
-                            </(?P=tag)>
-                        ''', '', e, flags=re.VERBOSE | re.IGNORECASE)
-                        # 연속된 공백을 공백 1개로 교체
-                        e = re.sub(r'\s+', ' ', e)
-                        # #[] 제거
-                        e = re.sub(r'#\[]', '', e)
-                        if prev_e == e:
-                            break
-                        prev_e = e
-
-                    # 일부 만화 사이트에서 권 단위 검색결과 노출되는 것을 제거
-                    #if self.site_name not in ["jmana", "allall", "torrentjok"]:
-                    #    e = re.sub(r'.*\b\d+[화권부편].*', '', e)
-
-                    # 설명 텍스트 제거
-                    e = re.sub(r'<\w+ class="">.+?</\w+>', '', e)
-                    # 모든 html 태그 제거
-                    e = re.sub(r'</?\w+(\s*[\w\-]+="[^"]*")*/?>', '', e)
-                    # #태그 제거
-                    e = re.sub(r'\s*#\S+', '', e)
-                    # 행 처음에 연속하는 공백 제거
-                    e = re.sub(r'^\s+', '', e)
-                    # 행 마지막에 연속하는 공백 제거
-                    e = re.sub(r'\s+$', '', e)
-                    # LOGGER.debug(f"e={e}")
-                    if not re.search(r'^\s*$', e):
-                        title = e
+                        title = m.group("title")
                         LOGGER.debug(f"title={title}")
 
-                    if title and link:
-                        result_list.append((title, urllib.parse.unquote(link)))
-                        link = ""
-                        title = ""
+                    if self.site_name in ["11toon"]:
+                        # 이미지 url 추출하여 link로 변경
+                        m = re.search(r'url\(\x27(https?)?//[^/]+(?P<link>/.+)\x27\)', e)
+                        if m:
+                            link = m.group("link")
+                            id_str = re.sub(r'/data/toon_category/(?P<id>\d+)', r'\g<id>', link)
+                            link = URL.concatenate_url(self.url_prefix, "/bbs/board.php?bo_table=toons&is=" + id_str)
+
+                    # 만화사이트에서 자주 보이는 불필요한 텍스트 제거 ex. <span class="title">만화제목</span>
+                    e = re.sub(r'''
+<(?P<tag>\w+)[^>]*>\s*
+    (
+        (애니|영화|게임|방송|음악|기타|유틸(리티)?|스포츠|기타)  (\s*&gt;\s*)?  (극장판|완결|액션|공포/호러|범죄/스릴러|코미디|ᆭᆩSF/판타지|아동(/가족)?|한국영화|다큐|미분류|드라마/멜로|드라마일드|드라마|시사/교양|예능/오락|국내앨범|외국앨범|축구|농구|야구|레슬링|레이싱|격투|유틸리티|미디어|그래픽|드라이버|문서/업무|유아/어린이|모바일|도서/만화|직캠/아이돌|여직캠|남직캠|코스프레)?|
+        한글(자막)?|자체자막|자막없음|우리말더빙|일드|무자막|
+        한국영화|해외영화|영화|드라마|넷플릭스|영상·음악|애니·만화|게임·유틸| 
+        만화제목|작가이름|(발행|초성|장르)검색|정렬|검색\s*결과|공지사항|북마크(업데이트)?|주간랭킹 TOP30|나의\s*댓?글\s*반응|
+        주간|격주|격월|월간|단행본|단편|완결|연재|정기|비정기|월요일?|화요일?|수요일?|목요일?|금요일?|토요일?|일요일?|
+        /액|액션|판타지/무협|판타지|성인/무협|성인|무협/성인|무협/액션/판타지|무협/액션|무협/판타지|무협|무장|드라마|라노벨|개그/무협|개그|학원|스토리?|순정|로맨스|로매스|이세계|전생|일상|치유|애니|백합|미분류|시대극|투믹스|게임|카카오페|느와르|15금|18금|19금|가정부|GL|BL/무협|BL|일반|러브코미디|
+        오늘|어제|그제|
+        (하루|이틀|사흘|나흘)\s*전?|
+        (한|두|세|네|)\s*(주|달)\s*전?|
+        (\d+|일|이|삼|사|오|육|칠|팔|구|십일|십이|십)\s*[일주월년]\s*전?|
+        \d+[화권부편]
+    )
+\s*</(?P=tag)>
+                    ''', '', e, flags=re.VERBOSE | re.IGNORECASE)
+                    # 연속된 공백을 공백 1개로 교체
+                    e = re.sub(r'\s+', ' ', e)
+                    # #[] 제거
+                    e = re.sub(r'#\[]', '', e)
+                    if prev_e == e:
+                        break
+                    prev_e = e
+                    #print(f"i={i}, e={e}")
+
+                # 일부 만화 사이트에서 권 단위 검색결과 노출되는 것을 제거
+                #if self.site_name not in ["jmana", "allall", "torrentjok"]:
+                #    e = re.sub(r'.*\b\d+[화권부편].*', '', e)
+
+                # 설명 텍스트 제거
+                e = re.sub(r'<\w+ class="">.+?</\w+>', '', e)
+                # 모든 html 태그 제거
+                e = re.sub(r'</?\w+(\s*[\w\-]+="[^"]*")*/?>', ' ', e)
+                # #태그 제거
+                e = re.sub(r'\s*#\S+', '', e)
+                # 행 처음에 연속하는 공백 제거
+                e = re.sub(r'^\s+', '', e)
+                # 행 마지막에 연속하는 공백 제거
+                e = re.sub(r'\s+$', '', e)
+                # 연속된 공백을 공백 1개로 교체
+                e = re.sub(r'\s+', ' ', e)
+                # LOGGER.debug(f"e={e}")
+                if not title and not re.search(r'^\s*$', e):
+                    title = e
+                    LOGGER.debug(f"title={title}")
+
+                if title and link and re.search(r"^\w.*$", title):
+                    result_list.append((title, urllib.parse.unquote(link)))
+                    link = ""
+                    title = ""
+
+                #print(f"i={i}, e={e}")
+                i += 1
 
         return result_list
 
@@ -289,7 +300,7 @@ class WfwfSite(Site):
 class WtwtSite(Site):
     def __init__(self, site_name: str) -> None:
         super().__init__(site_name)
-        self.extraction_attrs = {"path": '/html/body/section/div/div[2]/div/div[3]/ul/li'}
+        self.extraction_attrs = {"class": "gallery"}
         self.method = Method.POST
         self.header = {"Content-Type": "application/x-www-form-urlencoded"}
 
