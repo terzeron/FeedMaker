@@ -52,15 +52,15 @@ def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str) -> O
 
         with cache_file.open("rb") as infile:
             header = infile.read(1024)
-        print("header=", header)
+
         if header.startswith(b"<svg"):
-            print(f"convert svg file '{cache_file}' to PNG")
+            LOGGER.debug(f"convert svg file '{cache_file}' to PNG")
             new_cache_file = cache_file.with_suffix(".png")
             cairosvg.svg2png(url=str(cache_file), write_to=str(new_cache_file))
             cache_file.unlink()
             cache_file = new_cache_file
         elif b"ftypheic" in header or b"ftypheix" in header or b"ftyphevc" in header or b"ftyphevx" in header:
-            print(f"convert heic file '{cache_file}' to PNG")
+            LOGGER.debug(f"convert heic file '{cache_file}' to PNG")
             heif_file = pyheif.read(str(cache_file))
             img = Image.frombytes(mode=heif_file.mode, size=heif_file.size, data=heif_file.data)
             new_cache_file = cache_file.with_suffix(".png")
@@ -69,12 +69,12 @@ def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str) -> O
             try:
                 with Image.open(cache_file) as img:
                     if img.format == "JPEG" or img.format == "PNG" or img.format == "WEBP":
-                        print(f"append image extension '{img.format}'")
+                        LOGGER.debug(f"append image extension '{img.format}'")
                         new_cache_file = cache_file.with_suffix("." + img.format.lower())
                         cache_file.rename(new_cache_file)
                         cache_file = new_cache_file
                     if img.format == "GIF" or img.format == "BMP" or img.format == "TIFF":
-                        print(f"convert '{cache_file}' to PNG")
+                        LOGGER.debug(f"convert '{cache_file}' to PNG")
                         new_cache_file = cache_file.with_suffix(".png")
                         img.convert("RGB").save(new_cache_file, "PNG")
                         cache_file.unlink()
