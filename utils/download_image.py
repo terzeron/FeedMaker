@@ -9,6 +9,9 @@ import getopt
 import logging.config
 from pathlib import Path
 from base64 import b64decode
+from PIL import Image, UnidentifiedImageError
+import cairosvg
+import pyheif
 from typing import List, Dict, Any, Optional
 from bin.feed_maker_util import Config, IO, FileManager, URL
 from bin.crawler import Crawler
@@ -20,7 +23,7 @@ LOGGER = logging.getLogger()
 def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str) -> Optional[Path]:
     LOGGER.debug(f"# download_image(crawler={crawler}, feed_img_dir_path={feed_img_dir_path}, img_url={img_url[:30]})")
     cache_file = FileManager.get_cache_file_path(feed_img_dir_path, img_url)
-    for ext in ["", ".png", ".jpeg", ".jpg"]:
+    for ext in ["", ".png", ".jpeg", ".jpg", ".webp"]:
         cache_file_path = cache_file.with_suffix(ext)
         if cache_file_path.is_file() and cache_file_path.stat().st_size > 0:
             return cache_file_path
@@ -45,6 +48,39 @@ def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str) -> O
             time.sleep(5)
             result, _, _ = crawler.run(url=img_url, download_file=cache_file)
             if not result:
+                return None
+
+        with cache_file.open("rb") as infile:
+            header = infile.read(1024)
+        print("header=", header)
+        if header.startswith(b"<svg"):
+            print(f"convert svg file '{cache_file}' to PNG")
+            new_cache_file = cache_file.with_suffix(".png")
+            cairosvg.svg2png(url=str(cache_file), write_to=str(new_cache_file))
+            cache_file.unlink()
+            cache_file = new_cache_file
+        elif b"ftypheic" in header or b"ftypheix" in header or b"ftyphevc" in header or b"ftyphevx" in header:
+            print(f"convert heic file '{cache_file}' to PNG")
+            heif_file = pyheif.read(str(cache_file))
+            img = Image.frombytes(mode=heif_file.mode, size=heif_file.size, data=heif_file.data)
+            new_cache_file = cache_file.with_suffix(".png")
+            img.save(new_cache_file, "PNG")
+        else:
+            try:
+                with Image.open(cache_file) as img:
+                    if img.format == "JPEG" or img.format == "PNG" or img.format == "WEBP":
+                        print(f"append image extension '{img.format}'")
+                        new_cache_file = cache_file.with_suffix("." + img.format.lower())
+                        cache_file.rename(new_cache_file)
+                        cache_file = new_cache_file
+                    if img.format == "GIF" or img.format == "BMP" or img.format == "TIFF":
+                        print(f"convert '{cache_file}' to PNG")
+                        new_cache_file = cache_file.with_suffix(".png")
+                        img.convert("RGB").save(new_cache_file, "PNG")
+                        cache_file.unlink()
+                        cache_file = new_cache_file
+            except UnidentifiedImageError:
+                LOGGER.warning(f"can't identify image '{cache_file}'")
                 return None
     else:
         return None
@@ -141,3 +177,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
