@@ -1,0 +1,23 @@
+FROM python:3.11
+
+RUN mkdir -p /app /app/backend /app/bin /app/utils /app/CartoonSplit /fma /xml
+COPY requirements.txt app
+COPY __init__.py app
+COPY logging.conf app
+COPY backend /app/backend
+COPY bin /app/bin
+COPY utils /app/utils
+COPY CartoonSplit /app/CartoonSplit
+
+WORKDIR /app
+RUN apt-get update -y && apt-get install -y build-essential libpoppler-dev libpoppler-cpp-dev libheif-dev netcat-traditional && rm -rf /var/lib/apt/lists/* && pip install -r requirements.txt
+
+VOLUME /fma
+VOLUME /xml
+VOLUME /logs
+
+ENV CARTOON_SPLIT_HOME_DIR="/app/CartoonSplit"
+ENV PATH="$PATH:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin"
+ENV PYTHONPATH="/app"
+
+CMD ["uvicorn", "backend.main:app", "--workers", "1", "--host", "0.0.0.0", "--reload", "--port", "$FM_BACKEND_PORT"]

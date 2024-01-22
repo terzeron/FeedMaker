@@ -17,7 +17,7 @@ class Uploader:
     @staticmethod
     def upload(rss_file_path: Path) -> int:
         LOGGER.debug(f"# upload(rss_file_path={rss_file_path}")
-        dir_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"])
+        dir_path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"])
         old_rss_file_path = rss_file_path.with_suffix(rss_file_path.suffix + ".old")
 
         if rss_file_path.is_file():

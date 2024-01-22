@@ -32,12 +32,8 @@ class FeedMaker:
 
     def __init__(self, feed_dir_path: Path, do_collect_by_force: bool, do_collect_only: bool, rss_file_path: Path, window_size: int = DEFAULT_WINDOW_SIZE) -> None:
         LOGGER.debug(f"# FeedMaker(feed_dir_path={feed_dir_path}, do_collect_by_force={do_collect_by_force}, do_collect_only={do_collect_only}, rss_file_path={rss_file_path})")
-        self.global_conf: Dict[str, Any] = Config.get_global_config()
-        if not self.global_conf:
-            LOGGER.error("Error: Can't get global configuration")
-            return
 
-        self.work_dir_path = Path(os.environ["FEED_MAKER_WORK_DIR"])
+        self.work_dir_path = Path(os.environ["FM_WORK_DIR"])
         self.feed_dir_path = feed_dir_path
         self.collection_conf: Dict[str, Any] = {}
         self.extraction_conf: Dict[str, Any] = {}
@@ -49,7 +45,7 @@ class FeedMaker:
 
         self.list_dir = self.feed_dir_path / "newlist"
         self.html_dir = self.feed_dir_path / "html"
-        self.img_dir_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / "img"
+        self.img_dir_path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "img"
         self.start_idx_file_path = self.feed_dir_path / "start_idx.txt"
         self.list_dir.mkdir(exist_ok=True)
         self.html_dir.mkdir(exist_ok=True)
@@ -196,10 +192,9 @@ class FeedMaker:
         else:
             size = 0
 
-        image_tag_str = FeedMaker.get_image_tag_str(self.global_conf["web_service_url"],
-                                                    self.rss_file_path.name, item_url)
+        image_tag_str = FeedMaker.get_image_tag_str(os.environ["WEB_SERVICE_URL"], self.rss_file_path.name, item_url)
 
-        if os.path.isfile(html_file_path) and size > FeedMaker.get_size_of_template_with_image_tag(self.global_conf["web_service_url"], self.rss_file_path.name):
+        if os.path.isfile(html_file_path) and size > FeedMaker.get_size_of_template_with_image_tag(os.environ["WEB_SERVICE_URL"], self.rss_file_path.name):
             # 이미 성공적으로 만들어져 있으니까, 이미지 태그만 검사해보고 피드 리스트에 추가
             if FeedMaker._is_image_tag_in_html_file(html_file_path, image_tag_str):
                 LOGGER.info(f"Old: {item_url}\t{title}\t{PathUtil.convert_path_to_str(html_file_path)} ({size} bytes > {self._get_size_of_template()} bytes of template)")

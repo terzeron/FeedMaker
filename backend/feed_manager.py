@@ -13,7 +13,7 @@ from shutil import rmtree
 from typing import List, Dict, Any, Tuple, Optional
 from functools import cmp_to_key
 from bin.run import FeedMakerRunner
-from bin.feed_maker_util import Htaccess, Process, Data, PathUtil
+from bin.feed_maker_util import Process, Data, PathUtil
 from bin.problem_manager import ProblemManager
 from utils.search_manga_site import SearchManager
 
@@ -22,8 +22,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 class FeedManager:
-    work_dir = Path(os.environ["FEED_MAKER_WORK_DIR"])
-    public_feed_dir = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"])
+    work_dir = Path(os.environ["FM_WORK_DIR"])
+    public_feed_dir = Path(os.environ["WEB_SERVICE_FEEDS_DIR"])
     CONF_FILE = "conf.json"
     SITE_CONF_FILE = "site_config.json"
 
@@ -118,8 +118,8 @@ class FeedManager:
 
     async def get_problems_status_info(self) -> Tuple[Dict[str, Dict[str, Any]], str]:
         LOGGER.debug("# get_problems_status_info()")
-        feed_alias_status_info = self.problem_manager.get_feed_alias_status_info_map()
-        return feed_alias_status_info, ""
+        feed_name_status_info = self.problem_manager.get_feed_name_status_info_map()
+        return feed_name_status_info, ""
 
     async def get_problems_progress_info(self) -> Tuple[Dict[str, Dict[str, Any]], str]:
         LOGGER.debug("# get_problems_progress_info()")
@@ -290,8 +290,8 @@ class FeedManager:
         self.problem_manager.add_config_rss_info(config_file_path.parent)
         return True, ""
 
-    def run(self, group_name: str, feed_name: str, alias: str) -> Tuple[bool, str]:
-        LOGGER.debug(f"# run({group_name}, {feed_name}, {alias})")
+    def run(self, group_name: str, feed_name: str) -> Tuple[bool, str]:
+        LOGGER.debug(f"# run({group_name}, {feed_name})")
         feed_dir_path = self.work_dir / group_name / feed_name
         conf_file_path = feed_dir_path / self.CONF_FILE
         with conf_file_path.open('rb') as infile:
@@ -307,14 +307,6 @@ class FeedManager:
                 result = runner.make_single_feed(feed_dir_path, options={})
                 if not result:
                     return False, "error in making a feed with recent articles"
-
-                _, error = Htaccess.get_alias(group_name, feed_name)
-                if error:
-                    if not alias:
-                        alias = feed_name
-                    _, error = Htaccess.set_alias(group_name, feed_name, alias)
-                    if error:
-                        return False, "error in setting alias to .htaccess"
             else:
                 return False, "invalid format of configuration file"
 
@@ -381,11 +373,6 @@ class FeedManager:
         if feed_dir_path.is_dir():
             rmtree(feed_dir_path)
 
-        # remove alias
-        result, _ = Htaccess.remove_alias(group_name, feed_name)
-        if not result:
-            return False, "error in removing alias from .htaccess"
-
         # re-scan feeds by group
         self.scan_all_feeds()
         self.problem_manager.update_feed_info(feed_dir_path)
@@ -412,7 +399,6 @@ class FeedManager:
         # re-scan feeds by group
         self.scan_all_feeds()
         for feed_dir_path in group_dir_path.iterdir():
-            self.problem_manager.remove_htaccess_info(feed_dir_path.name)
             self.problem_manager.remove_config_rss_info(feed_dir_path)
             feed_file_path = self.public_feed_dir / f"{feed_dir_path.name}.xml"
             self.problem_manager.remove_public_feed_info(feed_file_path)
@@ -471,7 +457,6 @@ class FeedManager:
         else:
             # disable
             for feed_dir_path in group_dir_path.iterdir():
-                self.problem_manager.remove_htaccess_info(feed_dir_path.name)
                 self.problem_manager.remove_config_rss_info(feed_dir_path)
                 feed_file_path = self.public_feed_dir / f"{feed_dir_path.name}.xml"
                 self.problem_manager.remove_public_feed_info(feed_file_path)
@@ -479,33 +464,6 @@ class FeedManager:
                 self.problem_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
         self.problem_manager.load_all_httpd_access_files()
         return new_group_name, ""
-
-    @staticmethod
-    async def get_alias(group_name: str, feed_name: str):
-        LOGGER.debug(f"# get_alias({group_name}, {feed_name})")
-        result, error = Htaccess.get_alias(group_name, feed_name)
-        if not result:
-            return "", error
-        return result, ""
-
-    async def remove_alias(self, group_name: str, feed_name: str):
-        LOGGER.debug(f"# remove_alias({group_name}, {feed_name})")
-        result, error = Htaccess.remove_alias(group_name, feed_name)
-        if not result:
-            return False, error
-        self.problem_manager.remove_htaccess_info(feed_name)
-        return True, ""
-
-    async def rename_alias(self, group_name: str, feed_name: str, new_alias: str):
-        LOGGER.debug(f"# rename_alias({group_name}, {feed_name}, {new_alias})")
-        result, error = Htaccess.set_alias(group_name, feed_name, new_alias)
-        if not result:
-            return False, error
-        if new_alias in self.problem_manager.feed_alias_name_map:
-            old_feed_name = self.problem_manager.feed_alias_name_map[new_alias]
-            self.problem_manager.remove_htaccess_info(old_feed_name)
-        self.problem_manager.add_htaccess_info(feed_name)
-        return True, ""
 
     @staticmethod
     async def check_running(group_name: str, feed_name: str) -> bool:

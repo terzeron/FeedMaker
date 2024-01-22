@@ -24,10 +24,10 @@ class FeedMakerRunner:
         LOGGER.debug(f"# FeedMakerRunner(html_archiving_period={html_archiving_period}, list_archiving_period={list_archiving_period})")
         self.html_archiving_period = html_archiving_period
         self.list_archiving_period = list_archiving_period
-        self.work_dir_path = Path(os.environ["FEED_MAKER_WORK_DIR"])
+        self.work_dir_path = Path(os.environ["FM_WORK_DIR"])
         if not self.work_dir_path.is_dir():
             LOGGER.error(f"Error: Can't find work directory '{self.work_dir_path}'")
-        self.img_dir_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / "img"
+        self.img_dir_path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "img"
         if not self.img_dir_path.is_dir():
             LOGGER.error(f"Error: Can't find image directory '{self.img_dir_path}'")
 
@@ -148,7 +148,7 @@ class FeedMakerRunner:
 
     @staticmethod
     def check_running(group_name: str, feed_name: str) -> bool:
-        lock_file_path = Path(os.environ["FEED_MAKER_WORK_DIR"]) / group_name / feed_name / ".feed_maker_runner.lock"
+        lock_file_path = Path(os.environ["FM_WORK_DIR"]) / group_name / feed_name / ".feed_maker_runner.lock"
         try:
             logging.getLogger("filelock").setLevel(logging.ERROR)
             with FileLock(str(lock_file_path), timeout=1):

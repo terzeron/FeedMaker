@@ -15,7 +15,7 @@ from pathlib import Path
 from shutil import which
 import subprocess
 from bs4 import BeautifulSoup
-from bin.feed_maker_util import Config, URL, HTMLExtractor, Datetime, Process, IO, Data, FileManager, Htaccess, PathUtil
+from bin.feed_maker_util import Config, URL, HTMLExtractor, Datetime, Process, IO, Data, FileManager, PathUtil
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
@@ -384,7 +384,6 @@ class IOTest(unittest.TestCase):
 
 class ConfigTest(unittest.TestCase):
     def setUp(self):
-        self.global_conf = Config.get_global_config(Path(__file__).parent.parent / "bin" / "global_config.json")
         self.config = Config(feed_dir_path=Path.cwd())
         if not self.config:
             LOGGER.error("can't get configuration")
@@ -495,46 +494,6 @@ class ConfigTest(unittest.TestCase):
 
         actual2 = self.config._get_dict_config_value(collection_conf, "headers")
         self.assertEqual({}, actual2)
-
-    def test_get_global_config(self):
-        config = self.global_conf
-        self.assertTrue(isinstance(config, dict))
-
-        actual = config["web_service_url"]
-        self.assertRegex(actual, r"^https://.*$")
-
-        if "line_messenger" in config and config["line_messenger"]:
-            actual = config["line_messenger"]["line_access_token"]
-            self.assertEqual("line access token", actual)
-
-            actual = config["line_messenger"]["line_receiver_id"]
-            self.assertEqual("bogus_line_receiver_id", actual)
-
-        if "email" in config and config["email"]:
-            actual = config["email"]["mail_sender_address"]
-            self.assertEqual("bogus@my.smtp.com", actual)
-
-            actual = config["email"]["mail_sender_name"]
-            self.assertEqual("sender name", actual)
-
-            if "mail_recipient_list" in config["email"] and config["email"]["mail_recipient_list"]:
-                actual = config["email"]["mail_recipient_list"][0]["mail_recipient_address"]
-                self.assertEqual("first recipient email address", actual)
-                actual = config["email"]["mail_recipient_list"][0]["mail_recipient_name"]
-                self.assertEqual("first recipient email name", actual)
-
-        if "smtp" in config and config["smtp"]:
-            actual = config["smtp"]["smtp_host"]
-            self.assertEqual("smtp host", actual)
-
-            actual = config["smtp"]["smtp_port"]
-            self.assertEqual(25, actual)
-
-            actual = config["smtp"]["smtp_login_id"]
-            self.assertEqual("smtp login id", actual)
-
-            actual = config["smtp"]["smtp_login_password"]
-            self.assertEqual("smtp login password", actual)
 
     def test_get_collection_configs(self):
         configs = self.config.get_collection_configs()
@@ -747,7 +706,7 @@ class FileManagerTest(unittest.TestCase):
     def setUp(self) -> None:
         group_name = "naver"
         feed_name = "oneplusone"
-        self.feed_dir_path = Path(os.environ["FEED_MAKER_WORK_DIR"]) / group_name / feed_name
+        self.feed_dir_path = Path(os.environ["FM_WORK_DIR"]) / group_name / feed_name
         self.feed_dir_path.mkdir(exist_ok=True)
         self.sample_conf_file_path = Path(__file__).parent / "conf.naverwebtoon.json"
         self.conf_file_path = self.feed_dir_path / "conf.json"
@@ -775,7 +734,7 @@ class FileManagerTest(unittest.TestCase):
         with open(self.html_file2_path, "w", encoding="utf-8") as outfile:
             outfile.write(f"<img src='https://terzeron.com/xml/img/{feed_name}/567890a.png'/>\n")
 
-        self.feed_img_dir_path: Path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / "img" / feed_name
+        self.feed_img_dir_path: Path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "img" / feed_name
         self.feed_img_dir_path.mkdir(exist_ok=True)
         self.empty_img_file_path = self.feed_img_dir_path / "empty.png"
         self.empty_img_file_path.touch()
@@ -901,48 +860,12 @@ def count_substr(member: str, container: List[str]) -> int:
     return count
 
 
-class TestHtaccess(unittest.TestCase):
-    def test_1_set_alias(self):
-        group_name = "naver"
-        feed_name = "nonexistent_feed_name"
-        actual = Htaccess.set_alias(group_name, feed_name)
-        self.assertTrue(actual)
-        # check text in .htaccess
-
-        feed_name = "nonexistent_feed2_name"
-        alias = "nonexistent_feed2_alias"
-        actual = Htaccess.set_alias(group_name, feed_name, alias)
-        self.assertTrue(actual)
-        # check text in .htaccess
-
-    def test_2_get_alias(self):
-        group_name = "naver"
-        feed_name = "nonexistent_feed_name"
-        actual = Htaccess.get_alias(group_name, feed_name)
-        self.assertTrue(actual)
-        # check text in .htaccess
-
-        feed_name = "nonexistent_feed2_name"
-        actual = Htaccess.get_alias(group_name, feed_name)
-        self.assertTrue(actual)
-
-    def test_3_remove_alias(self):
-        group_name = "naver"
-        feed_name = "nonexistent_feed_name"
-        actual = Htaccess.remove_alias(group_name, feed_name)
-        self.assertTrue(actual)
-
-        feed_name = "nonexistent_feed2_name"
-        actual = Htaccess.remove_alias(group_name, feed_name)
-        self.assertTrue(actual)
-
-
 class TestPathUtil(unittest.TestCase):
     def test_convert_path_to_str(self):
-        work_dir = Path(os.environ["FEED_MAKER_WORK_DIR"])
-        public_feed_dir = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"])
-        httpd_access_log_dir = Path(os.environ["FEED_MAKER_LOG_DIR"])
-        htaccess_file = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / ".htaccess"
+        work_dir = Path(os.environ["FM_WORK_DIR"])
+        public_feed_dir = Path(os.environ["WEB_SERVICE_FEEDS_DIR"])
+        httpd_access_log_dir = Path(os.environ["FM_LOG_DIR"])
+        htaccess_file = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / ".htaccess"
         self.assertEqual(PathUtil.convert_path_to_str(work_dir), ".")
         self.assertEqual(PathUtil.convert_path_to_str(public_feed_dir), ".")
         self.assertEqual(PathUtil.convert_path_to_str(httpd_access_log_dir), "logs")
