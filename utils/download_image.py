@@ -105,7 +105,7 @@ def main() -> int:
     page_url: str = args[0]
     feed_name = feed_dir_path.name
     img_url_prefix = "https://terzeron.com/xml/img/" + feed_name
-    feed_img_dir_path: Path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / "img" / feed_name
+    feed_img_dir_path: Path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "img" / feed_name
     feed_img_dir_path.mkdir(exist_ok=True)
     LOGGER.debug(f"feed_dir_path={feed_dir_path}")
     LOGGER.debug(f"feed_name={feed_name}")

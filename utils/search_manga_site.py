@@ -18,7 +18,7 @@ from bin.feed_maker_util import URL, HTMLExtractor
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
-work_dir_path = Path(os.environ["FEED_MAKER_WORK_DIR"])
+work_dir_path = Path(os.environ["FM_WORK_DIR"])
 
 
 class Site:

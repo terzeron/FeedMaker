@@ -36,3 +36,5 @@ cookies.*.json
 .env
 nohup.out
 backend/index.wsgi
+CartoonSplit/
+mysql_data_dir/

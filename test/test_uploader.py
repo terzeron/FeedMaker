@@ -13,7 +13,7 @@ class UploaderTest(unittest.TestCase):
     old_rss_file_path = rss_file_path.with_suffix(rss_file_path.suffix + ".old")
     different_rss_file_path = work_dir_path / "sportsdonga.webtoon.2.result.xml"
 
-    www_dir_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"])
+    www_dir_path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"])
     uploaded_file_path = www_dir_path / rss_file_path.name
 
     def setUp(self):

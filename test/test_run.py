@@ -33,7 +33,7 @@ class TestFeedMakerRunner(unittest.TestCase):
 
         self.runner = FeedMakerRunner(html_archiving_period=30, list_archiving_period=7)
 
-        self.feed_dir_path = Path(os.environ["FEED_MAKER_WORK_DIR"]) / group_name / feed_name
+        self.feed_dir_path = Path(os.environ["FM_WORK_DIR"]) / group_name / feed_name
         self.feed_dir_path.mkdir(exist_ok=True)
 
         self.list_dir_path = self.feed_dir_path / "newlist"
