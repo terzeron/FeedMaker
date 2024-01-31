@@ -28,7 +28,7 @@ class Cursor:
 
 
 class DBManager:
-    def __init__(self, host, port, database, user, password, pool_size=10) -> None:
+    def __init__(self, host: str, port: int, database: str, user: str, password: str, pool_size: int = 10) -> None:
         retries = 0
         max_retries = 10
         while retries < max_retries:

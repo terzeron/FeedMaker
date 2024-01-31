@@ -28,7 +28,7 @@ class ProblemManager:
         if db_manager:
             self.db = db_manager
         else:
-            self.db = DBManager(os.environ["FM_DB_HOST"], os.environ["FM_DB_PORT"], os.environ["MYSQL_DATABASE"], os.environ["MYSQL_USER"], os.environ["MYSQL_PASSWORD"])
+            self.db = DBManager(os.environ["FM_DB_HOST"], int(os.environ["FM_DB_PORT"]), os.environ["MYSQL_DATABASE"], os.environ["MYSQL_USER"], os.environ["MYSQL_PASSWORD"])
 
         self.feed_name_title_map: Dict[str, str] = {}
         self.feed_name_group_map: Dict[str, str] = {}
