@@ -131,7 +131,7 @@ def main() -> int:
         m = re.search(r'''
         (?P<pre_text>.*)
         <img
-        \s*
+        [^>]*
         src=
         (["\'])
         (?P<img_url>[^"\']+)
