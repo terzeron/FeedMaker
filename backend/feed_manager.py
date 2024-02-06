@@ -109,7 +109,7 @@ class FeedManager:
 
     async def get_exec_result(self) -> Tuple[str, str]:
         LOGGER.debug("# get_exec_result()")
-        exec_result_file_path = self.work_dir / "logs" / "all.log"
+        exec_result_file_path = self.work_dir / "logs" / "run_all_feeds_summary.log"
         if exec_result_file_path.is_file():
             with exec_result_file_path.open('r', encoding='utf-8') as infile:
                 return infile.read(), ""
