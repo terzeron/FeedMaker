@@ -529,7 +529,6 @@ class SearchManager:
             #FunbeSite("funbe"),
             #JmanaSite("jmana"),
             ManatokiSite("manatoki"),
-            NewtokiSite("newtoki"),
             SkytoonSite("skytoon"),
             ToonkorSite("toonkor"),
             WfwfSite("wfwf"),
