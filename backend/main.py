@@ -10,6 +10,7 @@ import logging.config
 from pathlib import Path
 from typing import Dict, Any
 from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from backend.feed_manager import FeedManager
 
@@ -33,6 +34,12 @@ app.add_middleware(
 
 feed_manager: FeedManager = FeedManager()
 feed_manager.scan_all_feeds()
+
+
+@app.exception_handler(Exception)
+async def exception_handler(request, exc):
+    logging.exception("An error occurred")
+    return JSONResponse(status_code=500, content={"message": "Internal server error"})
 
 
 def handle_exception(exc_type, exc_value, exc_traceback):
@@ -184,11 +191,11 @@ async def remove_html(group_name: str, feed_name: str):
 
 
 @app.post("/groups/{group_name}/feeds/{feed_name}/run")
-def run(group_name: str, feed_name: str, request: Request):
+def run(group_name: str, feed_name: str, _request: Request):
     LOGGER.debug(f"/groups/{group_name}/feeds/{feed_name}/run -> run({group_name}, {feed_name})")
     response_object: Dict[str, Any] = {"status": "failure"}
-    post_data = asyncio.run(request.json())
-    result, error = feed_manager.run(group_name, feed_name, post_data)
+    #post_data = asyncio.run(request.json())
+    result, error = feed_manager.run(group_name, feed_name)
     if result:
         response_object["status"] = "success"
     else:
