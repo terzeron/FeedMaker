@@ -1,6 +1,7 @@
 FROM nginx:1.25
 
 COPY frontend/dist /usr/share/nginx/html
+COPY frontend/default.conf /etc/nginx/conf.d
 
 EXPOSE 80
 
