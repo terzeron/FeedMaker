@@ -8,7 +8,7 @@ import getopt
 from threading import Thread
 import urllib.parse
 import logging.config
-from typing import Dict, Tuple, List, Union
+from typing import Dict, Tuple, List, Union, Optional
 from pathlib import Path
 from bs4 import BeautifulSoup, Comment
 from bin.crawler import Crawler, Method
@@ -36,14 +36,16 @@ class Site:
     payload: Dict[str, Union[str, bytes]] = {}
 
     def __init__(self, site_name: str) -> None:
-        self.site_name = site_name
-
-        with open(work_dir_path / self.site_name / "site_config.json", 'r', encoding='utf-8') as infile:
-            config = json.load(infile)
-            self.url_prefix = config["url"] if "url" in config else None
-            self.encoding = config["encoding"] if "encoding" in config else None
-            self.render_js = config["render_js"] if "render_js" in config else False
-            self.num_retries = config["num_retries"] if "num_retries" in config else 1
+        #LOGGER.debug("# Site(site_name='%s')", site_name)
+        site_conf_file_path = work_dir_path / site_name / "site_config.json"
+        if site_conf_file_path.exists():
+            self.site_name = site_name
+            with site_conf_file_path.open("r", encoding="utf-8") as infile:
+                config = json.load(infile)
+                self.url_prefix = config["url"] if "url" in config else None
+                self.encoding = config["encoding"] if "encoding" in config else None
+                self.render_js = config["render_js"] if "render_js" in config else False
+                self.num_retries = config["num_retries"] if "num_retries" in config else 1
 
     def set_url_prefix(self, url_prefix: str) -> None:
         LOGGER.debug(f"# set_url_prefix(url_prefix={url_prefix})")
@@ -56,16 +58,18 @@ class Site:
     def set_payload(self, keyword: str = "") -> None:
         LOGGER.debug(f"# set_payload(keyword={keyword})")
 
-    def get_data_from_site(self, url: str = "") -> str:
+    def get_data_from_site(self, url: str = "") -> Optional[str]:
         LOGGER.debug(f"# get_data_from_site(url={url})")
-        site_dir_path = work_dir_path / self.site_name
-        crawler: Crawler = Crawler(dir_path=site_dir_path, render_js=self.render_js, method=self.method, headers=self.headers, encoding=self.encoding, timeout=240)
-        if not url:
-            url = URL.get_url_scheme(self.url_prefix) + "://" + URL.get_url_domain(self.url_prefix) + self.url_postfix
-            LOGGER.debug(f"url={url}")
-        response, _, _ = crawler.run(url=url, data=self.payload)
-        del crawler
-        return response
+        if self.site_name:
+            site_dir_path = work_dir_path / self.site_name
+            crawler: Crawler = Crawler(dir_path=site_dir_path, render_js=self.render_js, method=self.method, headers=self.headers, encoding=self.encoding, timeout=240)
+            if not url:
+                url = URL.get_url_scheme(self.url_prefix) + "://" + URL.get_url_domain(self.url_prefix) + self.url_postfix
+                LOGGER.debug(f"url={url}")
+            response, _, _ = crawler.run(url=url, data=self.payload)
+            del crawler
+            return response
+        return None
 
     def extract_sub_content(self, content: str, attrs: Dict[str, str]) -> List[Tuple[str, str]]:
         LOGGER.debug(f"# extract_sub_content(attrs={attrs})")
@@ -205,7 +209,7 @@ class Site:
         LOGGER.debug(f"# search(keyword={keyword})")
         self.set_url_postfix(keyword)
         self.set_payload(keyword)
-        LOGGER.debug(f"self.url_postfix={self.url_postfix}")
+        #LOGGER.debug(f"self.url_postfix={self.url_postfix}")
         html = self.get_data_from_site()
         if html:
             return self.extract_sub_content(html, self.extraction_attrs)
@@ -216,6 +220,8 @@ class Site:
         url0 = ""
         url1 = ""
         html = self.get_data_from_site()
+        if not html:
+            return []
         m = re.search(r'src=[\'"](?P<url0>.*/data/webtoon/(\w+_)?webtoon_0(_\d+)?.js\?([v_]=[^\'"]+)?)[\'"]', html)
         if m:
             url0 = m.group("url0")
@@ -234,14 +240,17 @@ class Site:
                     url1 = URL.concatenate_url(self.url_prefix, url1)
         LOGGER.debug(f"url0={url0}")
         LOGGER.debug(f"url1={url1}")
+            
         result_list: List[Tuple[str, str]] = []
         for _ in range(self.num_retries):
             content0 = self.get_data_from_site(url0)
-            result0 = self.extract_sub_content_from_site_like_agit(content0, keyword)
+            if content0:
+                result0 = self.extract_sub_content_from_site_like_agit(content0, keyword)
+                result_list.extend(result0)
             content1 = self.get_data_from_site(url1)
-            result1 = self.extract_sub_content_from_site_like_agit(content1, keyword)
-            result_list.extend(result0)
-            result_list.extend(result1)
+            if content1:
+                result1 = self.extract_sub_content_from_site_like_agit(content1, keyword)
+                result_list.extend(result1)
             if result0 or result1:
                 break
         return result_list
@@ -516,10 +525,11 @@ class SearchManager:
         self.result_by_site = {}
 
     def worker(self, site, keyword) -> None:
+        #LOGGER.debug("# worker(site='%s', keyword='%s')", site, keyword)
         self.result_by_site[site] = site.search(keyword)
 
     def search(self, site_name: str, keyword: str) -> List[Tuple[str, str]]:
-        LOGGER.debug("# search()")
+        LOGGER.debug("# search(site_name='%s', keyword='%s')", site_name, keyword)
 
         site_list = [
             EleventoonSite("11toon"),
@@ -544,6 +554,7 @@ class SearchManager:
 
         result_list: List[Tuple[str, str]] = []
         if not site_name:
+            # multi-sites
             thread_list = []
             for site in site_list:
                 t = Thread(target=self.worker, kwargs={'site': site, 'keyword': keyword})
@@ -556,6 +567,7 @@ class SearchManager:
             for _, result in self.result_by_site.items():
                 result_list.extend(result)
         else:
+            # single site
             for site in site_list:
                 if site_name == site.site_name:
                     result_list = site.search(keyword)
