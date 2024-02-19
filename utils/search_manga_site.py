@@ -534,7 +534,7 @@ class SearchManager:
         site_list = [
             EleventoonSite("11toon"),
             AgitSite("agit"),
-            AllallSite("allall"),
+            #AllallSite("allall"),
             BlacktoonSite("blacktoon"),
             FunbeSite("funbe"),
             #JmanaSite("jmana"),
