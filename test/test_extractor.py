@@ -3,15 +3,14 @@
 
 
 import sys
-import os
 import unittest
 import logging.config
 from pathlib import Path
 from bs4 import BeautifulSoup
-from extractor import Extractor
-from feed_maker_util import Config, header_str
+from bin.extractor import Extractor
+from bin.feed_maker_util import Config, header_str
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 dummy_url = "https://test.com"

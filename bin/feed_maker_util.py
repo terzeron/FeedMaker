@@ -8,17 +8,16 @@ import subprocess
 import hashlib
 import json
 import logging.config
-import shutil
-from pathlib import Path
-from urllib.parse import urlparse, urlunparse, quote, urljoin
 from datetime import datetime
+from pathlib import Path
+from shutil import which, copy
+from urllib.parse import urlparse, urlunparse, quote, urljoin
 from typing import List, Any, Dict, Tuple, Optional, Union
-from shutil import which
-from filelock import FileLock, Timeout
 import psutil
+from filelock import FileLock, Timeout
 from ordered_set import OrderedSet
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 # noinspection PyPep8
 header_str = '''<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
@@ -65,30 +64,35 @@ class Data:
 class Process:
     @staticmethod
     def _replace_script_path(script: str, dir_path: Path) -> Optional[str]:
+        if not dir_path or not dir_path.is_dir():
+            return None
+
         program = script.split(" ")[0]
-        if program.startswith(("./", "../")):
-            if not dir_path.is_dir():
-                return None
-            program_path = (dir_path / program).resolve()
+        program_full_path_str: Optional[str]
+
+        if program.startswith("/"):
+            # absolute path
+            program_full_path_str = program
+        elif program.startswith("./") or program.startswith("../"):
+            # relative path
+            program_full_path_str = str((dir_path / program).resolve())
         else:
-            program_full_path: Optional[str]
-            if program.startswith("/"):
-                program_full_path = program
-            else:
-                program_full_path = which(program)
-            if program_full_path:
-                program_path = Path(program_full_path)
-            else:
-                return ""
-        result = str(program_path)
+            # non-absolute path
+            program_full_path_str = which(program)
+            if not program_full_path_str:
+                return None
+
+        if not which(program_full_path_str):
+            return None
+
+        result = program_full_path_str
         if len(script.split(" ")) > 1:
             result += " " + " ".join(script.split(" ")[1:])
         return result
 
     @staticmethod
     def exec_cmd(cmd: str, dir_path: Path = Path.cwd(), input_data=None) -> Tuple[str, str]:
-        LOGGER.debug(
-            f"# Process.exec_cmd(cmd={cmd}, dir_path={dir_path}, input_data={len(input_data) if input_data else 0} bytes)")
+        LOGGER.debug(f"# Process.exec_cmd(cmd={cmd}, dir_path={dir_path}, input_data={len(input_data) if input_data else 0} bytes)")
         new_cmd = Process._replace_script_path(cmd, dir_path)
         if not new_cmd:
             return "", f"Error in getting path of executable '{cmd}'"
@@ -291,8 +295,8 @@ class Config:
     def __init__(self, feed_dir_path: Path = Path.cwd()) -> None:
         LOGGER.debug(f"# Config(feed_dir_path={feed_dir_path})")
         error_msg: str = ""
-        if "FEED_MAKER_CONF_FILE" in os.environ and os.environ["FEED_MAKER_CONF_FILE"]:
-            config_file_path = Path(os.environ["FEED_MAKER_CONF_FILE"])
+        if "FM_CONF_FILE" in os.environ and os.environ["FM_CONF_FILE"]:
+            config_file_path = Path(os.environ["FM_CONF_FILE"])
         else:
             config_file_path = feed_dir_path / "conf.json"
         if config_file_path.is_file():
@@ -363,17 +367,6 @@ class Config:
                 value = None
         return value
 
-    @staticmethod
-    def get_global_config(conf_file_path=None) -> Dict[str, Any]:
-        LOGGER.debug("# get_global_config()")
-        if conf_file_path:
-            global_config_file_path = conf_file_path
-        else:
-            global_config_file_path = Path(os.environ["FEED_MAKER_HOME_DIR"]) / "bin" / "global_config.json"
-        with global_config_file_path.open("r", encoding="utf-8") as infile:
-            global_config: Dict[str, Any] = json.load(infile)
-        return global_config
-
     def get_collection_configs(self) -> Dict[str, Any]:
         LOGGER.debug("# get_collection_configs()")
         conf: Dict[str, Any] = {}
@@ -416,6 +409,7 @@ class Config:
                 conf = {
                     "render_js": Config._get_bool_config_value(extraction_conf, "render_js", False),
                     "verify_ssl": Config._get_bool_config_value(extraction_conf, "verify_ssl", True),
+                    "threshold_to_remove_html_with_incomplete_image": Config._get_bool_config_value(extraction_conf, "threshold_to_remove_html_with_incomplete_image", False),
                     "bypass_element_extraction": Config._get_bool_config_value(extraction_conf, "bypass_element_extraction"),
                     "force_sleep_between_articles": Config._get_bool_config_value(extraction_conf, "force_sleep_between_articles"),
                     "copy_images_from_canvas": Config._get_bool_config_value(extraction_conf, "copy_images_from_canvas"),
@@ -531,8 +525,11 @@ class URL:
         return urlunparse(parsed)
 
 
-class Cache:
+class FileManager:
     DATA_IMAGE_PREFIX = "data:image"
+    IMAGE_NOT_FOUND_IMAGE = "image-not-found.png"
+    IMAGE_NOT_FOUND_IMAGE_URL = "https://terzeron.com/" + IMAGE_NOT_FOUND_IMAGE
+    IMAGE_DIR_PATH = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "img"
 
     @staticmethod
     def _get_cache_info_common_postfix(img_url: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None) -> str:
@@ -551,149 +548,103 @@ class Cache:
 
     @staticmethod
     def get_cache_url(url_prefix: str, img_url: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None) -> str:
-        LOGGER.debug(
-            f"# get_cache_url(url_prefix={url_prefix}, img_url={img_url[:30]}, postfix={postfix}, index={index})")
-        return url_prefix + "/" + Cache._get_cache_info_common_postfix(img_url, postfix, index)
+        LOGGER.debug(f"# get_cache_url(url_prefix={url_prefix}, img_url={img_url[:30]}, postfix={postfix}, index={index})")
+        return url_prefix + "/" + FileManager._get_cache_info_common_postfix(img_url, postfix, index)
 
     @staticmethod
     def get_cache_file_path(path_prefix: Path, img_url: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None) -> Path:
-        LOGGER.debug(
-            f"# get_cache_file_name(path={path_prefix}, img_url={img_url[:30]}, postfix={postfix}, index={index})")
-        return path_prefix / Cache._get_cache_info_common_postfix(img_url, postfix, index)
-
-
-class Htaccess:
-    htaccess_file_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]).parent / ".htaccess"
-    lock_file_path = htaccess_file_path.with_suffix(".lock")
-    rewrite_rule_pattern_fmt = r'RewriteRule\t\^(?P<alias>\S+)\\\.xml\$\txml/%s\\\.xml'
-    rewrite_rule_fmt = "RewriteRule\t^%s\\.xml$\txml/%s\\.xml\n"
-    rewrite_rule_gone_fmt = "RewriteRule\t^(xml/)?%s\\.xml$\t- [G]\n"
-    group_tag_pattern_fmt = r'^#[^(]+\(%s\)'
+        LOGGER.debug(f"# get_cache_file_name(path={path_prefix}, img_url={img_url[:30]}, postfix={postfix}, index={index})")
+        return path_prefix / FileManager._get_cache_info_common_postfix(img_url, postfix, index)
 
     @staticmethod
-    def get_alias(group_name: str, feed_name: str) -> Tuple[str, str]:
-        LOGGER.debug(f"# get_alias(group_name={group_name}, feed_name={feed_name})")
-        rewrite_rule_pattern = Htaccess.rewrite_rule_pattern_fmt % feed_name
-        group_tag_pattern = Htaccess.group_tag_pattern_fmt % group_name
-        LOGGER.debug(f"rewrite_rule_pattern={rewrite_rule_pattern}")
-        LOGGER.debug(f"group_tag_pattern={group_tag_pattern}")
-        try:
-            logging.getLogger("filelock").setLevel(logging.ERROR)
-            with FileLock(str(Htaccess.lock_file_path), timeout=5):
-                with Htaccess.htaccess_file_path.open('r', encoding="utf-8") as infile:
-                    state = 0
-                    for line in infile:
-                        if state == 0:
-                            m = re.search(group_tag_pattern, line)
-                            if m:
-                                state = 1
-                                continue
-                        elif state == 1:
-                            m = re.search(rewrite_rule_pattern, line)
-                            if m:
-                                alias = m.group("alias")
-                                return alias, ""
-        except Timeout as e:
-            return "", f"timeout in getting alias for feed '{feed_name}', {e}"
-        return "", f"error in getting alias for feed '{feed_name}' from group '{group_name}'"
+    def get_incomplete_image_list(html_file_path) -> List[str]:
+        LOGGER.debug(f"# get_incomplete_image_list(html_file_path='{html_file_path}')")
+        result = []
+        feed_name = html_file_path.parent.parent.name
+        with html_file_path.open("r", encoding="utf-8") as f:
+            try:
+                for line in f:
+                    if FileManager.IMAGE_NOT_FOUND_IMAGE in line:
+                        result.append(FileManager.IMAGE_NOT_FOUND_IMAGE)
+                    m = re.search(r'<img src=[\"\']https?://terzeron\.com/xml/img/[^/]+/(?P<img>\S+)[\"\']', line)
+                    if m:
+                        # 실제로 다운로드되어 있는지 확인
+                        img_file_name = m.group("img")
+                        img_file_path = FileManager.IMAGE_DIR_PATH / feed_name / img_file_name
+                        if not img_file_path.is_file() or img_file_path.stat().st_size == 0:
+                            result.append(img_file_name)
+            except UnicodeDecodeError as e:
+                LOGGER.error(f"Error: Unicode decode error in '{html_file_path.name}'")
+                raise e
+        return result
 
     @staticmethod
-    def set_alias(group_name: str, feed_name: str, alias: str = "") -> Tuple[bool, str]:
-        LOGGER.debug(f"# set_alias(group_name={group_name}, feed_name={feed_name}, alias={alias})")
-        rewrite_rule_pattern = Htaccess.rewrite_rule_pattern_fmt % feed_name
-        rewrite_rule = Htaccess.rewrite_rule_fmt % (alias, feed_name)
-        group_tag_pattern = Htaccess.group_tag_pattern_fmt % group_name
-        LOGGER.debug(f"rewrite_rule_pattern={rewrite_rule_pattern}")
-        LOGGER.debug(f"rewrite_rule={rewrite_rule}")
-        LOGGER.debug(f"group_tag_pattern={group_tag_pattern}")
-        is_found: bool = False
-        time_str = Datetime.get_current_time_str()
-        temp_file_path = Htaccess.htaccess_file_path.with_suffix("." + time_str)
+    def remove_html_file_without_cached_image_files(html_file_path: Path) -> None:
+        LOGGER.debug(f"# remove_html_file_without_cached_image_files(html_file_path='{html_file_path}')")
+        incomplete_img_list = FileManager.get_incomplete_image_list(html_file_path)
+        if len(incomplete_img_list) > 0:
+            LOGGER.info(f"* '{html_file_path.name}' deleted (due to {str(incomplete_img_list)})")
+            html_file_path.unlink(missing_ok=True)
 
-        _, error = Htaccess.get_alias(group_name, feed_name)
-        if not error:
-            is_found = True
-
-        line_list: List[str] = []
-        try:
-            logging.getLogger("filelock").setLevel(logging.ERROR)
-            with FileLock(str(Htaccess.lock_file_path), timeout=5):
-                with Htaccess.htaccess_file_path.open('r', encoding="utf-8") as infile:
-                    for line in infile:
-                        # find feed name and replace
-                        if is_found and re.search(rewrite_rule_pattern, line):
-                            line_list.append(rewrite_rule)
-                            continue
-
-                        line_list.append(line)
-
-                        # find group name and append after group name
-                        if not is_found and re.search(group_tag_pattern, line):
-                            if not alias:
-                                alias = feed_name
-                            line_list.append(rewrite_rule)
-                            is_found = True
-
-                with temp_file_path.open('w', encoding="utf-8") as outfile:
-                    outfile.writelines(line_list)
-                shutil.copy(temp_file_path, Htaccess.htaccess_file_path)
-        except Timeout as e:
-            return False, f"timeout in renaming alias for feed '{feed_name}', {e}"
-        if is_found:
-            return True, ""
-        return False, f"can't find such group '{group_name}' or feed '{feed_name}'"
+        return None
 
     @staticmethod
-    def remove_alias(group_name: str, feed_name: str) -> Tuple[bool, str]:
-        LOGGER.debug(f"# remove_alias(group_name={group_name}, feed_name={feed_name})")
-        rewrite_rule_pattern = Htaccess.rewrite_rule_pattern_fmt % feed_name
-        group_tag_pattern = Htaccess.group_tag_pattern_fmt % group_name
-        LOGGER.debug(f"rewrite_rule_pattern={rewrite_rule_pattern}")
-        LOGGER.debug(f"group_tag_pattern={group_tag_pattern}")
-        is_found: bool = False
-        time_str = Datetime.get_current_time_str()
-        temp_file_path = Htaccess.htaccess_file_path.with_suffix("." + time_str)
+    def remove_html_files_without_cached_image_files(feed_dir_path: Path, feed_img_dir_path: Path) -> None:
+        LOGGER.debug(f"# remove_html_files_without_cached_image_files(feed_dir_path='{feed_dir_path}', feed_img_dir_path='{feed_img_dir_path}')")
+        LOGGER.info("# deleting html files without cached image files")
+        conf = Config(feed_dir_path).get_extraction_configs()
+        html_dir_path = feed_dir_path / "html"
+        if html_dir_path.is_dir():
+            for html_file_path in html_dir_path.iterdir():
+                if html_file_path.is_file():
+                    if "threshold_to_remove_html_with_incomplete_image" in conf:
+                        incomplete_image_list = FileManager.get_incomplete_image_list(html_file_path)
+                        if conf["threshold_to_remove_html_with_incomplete_image"] < len(incomplete_image_list):
+                            FileManager.remove_html_file_without_cached_image_files(html_file_path)
 
-        line_list: List[str] = []
-        alias = ""
-        try:
-            logging.getLogger("filelock").setLevel(logging.ERROR)
-            with FileLock(str(Htaccess.lock_file_path), timeout=5):
-                with Htaccess.htaccess_file_path.open('r', encoding="utf-8") as infile:
-                    if group_name == "___":
-                        state = 1
-                    else:
-                        state = 0
-                    for line in infile:
-                        if state == 0:
-                            m = re.search(group_tag_pattern, line)
-                            if m:
-                                state = 1
-                        elif state == 1:
-                            m = re.search(rewrite_rule_pattern, line)
-                            if m:
-                                alias = m.group("alias")
-                                is_found = True
-                                continue
-                        line_list.append(line)
-                    if alias:
-                        rewrite_rule_gone = Htaccess.rewrite_rule_gone_fmt % alias
-                        LOGGER.debug(f"rewrite_rule_gone={rewrite_rule_gone}")
-                        line_list.append(rewrite_rule_gone)
+    @staticmethod
+    def remove_image_files_with_zero_size(feed_img_dir_path: Path) -> None:
+        LOGGER.debug("# remove_image_files_with_zero_size()")
+        LOGGER.info("# deleting image files with zero size")
+        if feed_img_dir_path.is_dir():
+            for img_file_path in feed_img_dir_path.iterdir():
+                if img_file_path.is_file() and img_file_path.stat().st_size == 0:
+                    LOGGER.info(f"* {img_file_path}")
+                    img_file_path.unlink(missing_ok=True)
 
-                with temp_file_path.open('w', encoding="utf-8") as outfile:
-                    outfile.writelines(line_list)
-                temp_file_path.rename(Htaccess.htaccess_file_path)
-        except Timeout as e:
-            return False, f"timeout in renaming alias for feed '{feed_name}', {e}"
-        if is_found:
-            return True, ""
-        return False, f"can't find such group '{group_name}' or feed '{feed_name}'"
+    @staticmethod
+    def remove_temporary_files(feed_dir_path: Path) -> None:
+        LOGGER.debug(f"# remove_temporary_files(feed_dir_path='{feed_dir_path}')")
+        LOGGER.info("# deleting temporary files")
+        for file in ("nohup.out", "temp.html", "x.html"):
+            file_path = feed_dir_path / file
+            if file_path.is_file():
+                LOGGER.info(f"* {file_path}")
+                file_path.unlink(missing_ok=True)
 
+    @staticmethod
+    def remove_all_files(feed_dir_path: Path) -> None:
+        LOGGER.debug(f"# remove_all_files(feed_dir_path='{feed_dir_path}')")
+        LOGGER.info("# deleting all files (html files, list files, rss file, various temporary files)")
+        for html_file_path in (feed_dir_path / "html").iterdir():
+            LOGGER.info(f"* {html_file_path}")
+            html_file_path.unlink(missing_ok=True)
+        for list_file_path in (feed_dir_path / "newlist").iterdir():
+            LOGGER.info(f"* {list_file_path}")
+            list_file_path.unlink(missing_ok=True)
+
+        rss_file_path = feed_dir_path / (feed_dir_path.name + ".xml")
+        old_rss_file_path = rss_file_path.with_suffix(rss_file_path.suffix + ".old")
+        start_idx_file_path = feed_dir_path / "start_idx.txt"
+        for file_path in (rss_file_path, old_rss_file_path, start_idx_file_path):
+            LOGGER.info(f"* {file_path}")
+            file_path.unlink(missing_ok=True)
+
+        FileManager.remove_temporary_files(feed_dir_path)
 
 class PathUtil:
-    work_dir = Path(os.environ["FEED_MAKER_WORK_DIR"])
-    public_feed_dir = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"])
+    work_dir = Path(os.environ["FM_WORK_DIR"])
+    public_feed_dir = Path(os.environ["WEB_SERVICE_FEEDS_DIR"])
 
     @staticmethod
     def convert_path_to_str(path: Path) -> str:

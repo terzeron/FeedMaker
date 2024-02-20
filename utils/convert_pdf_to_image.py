@@ -7,11 +7,11 @@ import getopt
 import logging.config
 from pathlib import Path
 from pdf2image import convert_from_path
-from feed_maker_util import Cache, header_str
-from crawler import Crawler
+from bin.feed_maker_util import FileManager, header_str
+from bin.crawler import Crawler
 
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
@@ -31,7 +31,7 @@ def main() -> int:
             pdf_file_path = Path(url_or_file)
         elif url_or_file.startswith("http"):
             pid = os.getpid()
-            pdf_dir_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / "pdf"
+            pdf_dir_path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "pdf"
             pdf_file_path = pdf_dir_path / f"{pid}.pdf"
             crawler = Crawler()
             result, error, _ = crawler.run(url=url_or_file, download_file=pdf_file_path)
@@ -43,7 +43,7 @@ def main() -> int:
         return -1
 
     feed_name = feed_dir_path.name
-    feed_img_dir_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / "img" / feed_name
+    feed_img_dir_path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "img" / feed_name
     feed_img_dir_path.mkdir(exist_ok=True)
     img_url_prefix = "https://terzeron.com/xml/img/" + feed_name
     image_type = "JPEG"
@@ -52,8 +52,8 @@ def main() -> int:
     images = convert_from_path(pdf_file_path)
     print(header_str)
     for num, image in enumerate(images):
-        cache_file = Cache.get_cache_file_path(feed_img_dir_path, url_or_file)
-        cache_url = Cache.get_cache_url(img_url_prefix, url_or_file, "")
+        cache_file = FileManager.get_cache_file_path(feed_img_dir_path, url_or_file)
+        cache_url = FileManager.get_cache_url(img_url_prefix, url_or_file, "")
         image_file = cache_file.with_suffix("." + str(num) + ext)
         image_url = cache_url + "." + str(num) + ext
         image.save(image_file, image_type)

@@ -5,56 +5,74 @@
 </template>
 
 <script>
-var apiUrl = "https://connect.facebook.net/en_US/sdk.js";
-
-async function initFacebook(appId, component) {
-  window.fbAsyncInit = async function () {
-    window.FB.init({
-      appId: appId,
-      cookie: true, // This is important, it's not enabled by default
-      version: "v2.2"
-    });
-
-    component.$emit("auth-initialized");
-  };
-}
-
 export default {
   name: "FacebookAuth",
+  data: function () {
+    return {
+      isSdkLoaded: false,
+    };
+  },
   props: {
     appId: {
       type: String,
       default: process.env.VUE_APP_FACEBOOK_APP_ID,
     },
+    version: {
+      type: String,
+      default: "v14.0",
+    },
   },
   methods: {
-    async loadFacebookSDK(d, s, id) {
-      var js,
-          fjs = d.getElementsByTagName(s)[0];
-      if (d.getElementById(id)) {
-        return;
+    loadFacebookSDK() {
+      if (!this.appId || !this.version) {
+        throw new Error("Facebook appId and version props are required");
       }
-      js = d.createElement(s);
-      js.id = id;
-      js.src = apiUrl;
-      fjs.parentNode.insertBefore(js, fjs);
+
+      return new Promise((resolve, reject) => {
+        window.fbAsyncInit = () => {
+          window.FB.init({
+            appId: this.appId,
+            cookie: true,
+            xfbml: true,
+            version: this.version
+          });
+
+          this.$emit('auth-initialized');
+        };
+
+        (function(d, s, id){
+          var js, fjs = d.getElementsByTagName(s)[0];
+          if (d.getElementById(id)) { return; }
+          js = d.createElement(s); js.id = id;
+          js.src = "https://connect.facebook.net/en_US/sdk.js";
+          js.onload = resolve;
+          js.onerror = reject;
+          fjs.parentNode.insertBefore(js, fjs);
+        })(document, 'script', 'facebook-jssdk');
+      });
     },
     async login() {
-      const loginPromise = () => {
-        return new Promise((resolve, reject) => {
+      const loginOptions = {
+        scope: 'public_profile, email', // 필요한 권한 지정
+      };
+      try {
+        const accessToken = await new Promise((resolve, reject) => {
           window.FB.login(function (response) {
             if (response.authResponse) {
               if (response.status === "connected") {
+                console.log("Login succeeded: ", response.authResponse.accessToken);
                 resolve(response.authResponse.accessToken);
               }
             } else {
               reject("User cancelled login or did not fully authorize.");
             }
-          });
-        })
-      };
-      var result = await loginPromise();
-      return result;
+          }, loginOptions);
+        });
+        return accessToken;
+      } catch (error) {
+        console.error("Login failed: ", error);
+        throw error;
+      }
     },
     async logout() {
       const logoutPromise = () => {
@@ -70,25 +88,10 @@ export default {
       };
       await logoutPromise();
     },
-    async getStatus() {
-      const statusPromise = () => {
-        return new Promise((resolve, reject) => {
-          window.FB.getLoginStatus(function (response) {
-            if (response) {
-              console.log(response);
-              resolve(response);
-            } else {
-              reject("can't get login status");
-            }
-          });
-        })
-      }
-      return await statusPromise();
-    },
     async getProfile() {
       const profilePromise = () => {
         return new Promise((resolve, reject) => {
-          window.FB.api("/me?fields=name,email", function (response) {
+          window.FB.api("/me", {fields: 'name,email'}, function (response) {
             if (response) {
               resolve(response);
             } else {
@@ -100,9 +103,11 @@ export default {
       return await profilePromise();
     },
   },
-  created: async function () {
-    await this.loadFacebookSDK(document, "script", "facebook-jssdk");
-    await initFacebook(this.appId, this);
+  // FacebookAuth.vue
+  mounted: async function () {
+    this.loadFacebookSDK().catch(error => {
+      console.error("Error loading Facebook SDK", error);
+    });
   },
 };
 </script>

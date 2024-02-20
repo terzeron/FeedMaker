@@ -7,10 +7,10 @@ import re
 import getopt
 import logging.config
 from pathlib import Path
-from crawler import Crawler
 import pdftotext
+from bin.crawler import Crawler
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
@@ -27,7 +27,7 @@ def main() -> int:
             pdf_file_path = Path(Path.cwd() / url_or_file)
         elif url_or_file.startswith("http"):
             pid = os.getpid()
-            pdf_dir_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / "pdf"
+            pdf_dir_path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "pdf"
             pdf_file_path = pdf_dir_path / f"{pid}.pdf"
             crawler = Crawler()
             result, error, _ = crawler.run(url=url_or_file, download_file=pdf_file_path)
@@ -40,7 +40,6 @@ def main() -> int:
         return -1
 
     with open(pdf_file_path, "rb") as f:
-        # type: ignore
         pdf = pdftotext.PDF(f)
         for page in pdf:
             print(page)

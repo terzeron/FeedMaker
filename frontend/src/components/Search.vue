@@ -64,7 +64,6 @@
 
 <script>
 import axios from 'axios';
-import _ from 'lodash';
 
 import {library} from '@fortawesome/fontawesome-svg-core';
 import {faSearch} from '@fortawesome/free-solid-svg-icons';
@@ -114,7 +113,7 @@ export default {
                 if (res.data.status === 'failure') {
                   this.alert(res.data.message);
                 } else {
-                  this.searchResultList = _.map(res.data['search_result_list'], (o) => {
+                  this.searchResultList = res.data['search_result_list'].map(o => {
                     o['title'] = o[0];
                     o['url'] = o[1];
                     return o;

@@ -4,14 +4,14 @@
 import sys
 import os
 import re
-from feed_maker_util import URL, IO, Process
+from bin.feed_maker_util import URL, IO, Process
 
 
 def main() -> int:
     link = sys.argv[1]
     id_str = URL.get_short_md5_name(link)
     video_file = id_str + ".avi"
-    img_dir = os.environ["FEED_MAKER_WWW_FEEDS_DIR"] + "/img/thegoodmovie"
+    img_dir = os.environ["WEB_SERVICE_FEEDS_DIR"] + "/img/thegoodmovie"
     img_url_prefix = "https://terzeron.com/xml/img/thegoodmovie"
 
     for line in IO.read_stdin_as_line_list():
