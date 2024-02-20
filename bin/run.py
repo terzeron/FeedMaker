@@ -3,20 +3,19 @@
 
 import os
 import sys
-import re
 from datetime import datetime, timedelta
 import random
 import logging.config
 import getopt
 from pathlib import Path
-from typing import Dict, Tuple, List, Any, Set
+from typing import Dict, Tuple, List, Any
 from filelock import FileLock, Timeout
-from feed_maker_util import Config, Process, PathUtil
-from notification import Notification
-from feed_maker import FeedMaker
-from problem_manager import ProblemManager
+from bin.feed_maker_util import Config, Process, PathUtil, FileManager
+from bin.notification import Notification
+from bin.feed_maker import FeedMaker
+from bin.problem_manager import ProblemManager
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
@@ -25,103 +24,18 @@ class FeedMakerRunner:
         LOGGER.debug(f"# FeedMakerRunner(html_archiving_period={html_archiving_period}, list_archiving_period={list_archiving_period})")
         self.html_archiving_period = html_archiving_period
         self.list_archiving_period = list_archiving_period
-        self.work_dir_path = Path(os.environ["FEED_MAKER_WORK_DIR"])
+        self.work_dir_path = Path(os.environ["FM_WORK_DIR"])
         if not self.work_dir_path.is_dir():
             LOGGER.error(f"Error: Can't find work directory '{self.work_dir_path}'")
-        self.img_dir_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / "img"
+        self.img_dir_path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "img"
         if not self.img_dir_path.is_dir():
             LOGGER.error(f"Error: Can't find image directory '{self.img_dir_path}'")
 
     def __del__(self):
-        pass
-
-    @staticmethod
-    def _get_img_set_in_img_dir(feed_img_dir_path: Path) -> Set[str]:
-        LOGGER.debug("# get_img_set_in_img_dir()")
-        img_set_in_img_dir = set([])
-        if feed_img_dir_path.is_dir():
-            for img_file_path in feed_img_dir_path.iterdir():
-                img_set_in_img_dir.add(img_file_path.name)
-        return img_set_in_img_dir
-
-    @staticmethod
-    def _remove_image_files_with_zero_size(feed_img_dir_path: Path) -> None:
-        LOGGER.debug("# remove_image_files_with_zero_size()")
-        LOGGER.info("# deleting image files with zero size")
-        if feed_img_dir_path.is_dir():
-            for img_file_path in feed_img_dir_path.iterdir():
-                if img_file_path.is_file() and img_file_path.stat().st_size == 0:
-                    LOGGER.info(f"* {img_file_path}")
-                    img_file_path.unlink(missing_ok=True)
-
-    @staticmethod
-    def _remove_temporary_files(feed_dir_path: Path) -> None:
-        LOGGER.debug(f"# remove_temporary_files(feed_dir_path='{feed_dir_path}')")
-        LOGGER.info("# deleting temporary files")
-        for file in ("nohup.out", "temp.html", "x.html"):
-            file_path = feed_dir_path / file
-            if file_path.is_file():
-                LOGGER.info(f"* {file_path}")
-                file_path.unlink(missing_ok=True)
-
-    @staticmethod
-    def _remove_all_files(feed_dir_path: Path, rss_file_path: Path) -> None:
-        LOGGER.debug(f"# remove_all_files(feed_dir_path='{feed_dir_path}', rss_file_path='{rss_file_path}')")
-        LOGGER.info("# deleting all files (html files, list files, rss file, various temporary files)")
-        for html_file_path in (feed_dir_path / "html").iterdir():
-            LOGGER.info(f"* {html_file_path}")
-            html_file_path.unlink(missing_ok=True)
-        for list_file_path in (feed_dir_path / "newlist").iterdir():
-            LOGGER.info(f"* {list_file_path}")
-            list_file_path.unlink(missing_ok=True)
-
-        old_rss_file_path = rss_file_path.with_suffix(rss_file_path.suffix + ".old")
-        start_idx_file_path = feed_dir_path / "start_idx.txt"
-        for file_path in (rss_file_path, old_rss_file_path, start_idx_file_path):
-            LOGGER.info(f"* {file_path}")
-            file_path.unlink(missing_ok=True)
-
-        FeedMakerRunner._remove_temporary_files(feed_dir_path)
-
-    def _remove_old_html_files(self, feed_dir_path: Path) -> None:
-        LOGGER.debug(f"# remove_old_html_files(feed_dir_path='{feed_dir_path}')")
-        LOGGER.info("# deleting old html files")
-        html_dir_path = feed_dir_path / "html"
-        if html_dir_path.is_dir():
-            # deleting older html files than archiving_period
-            for html_file_path in html_dir_path.iterdir():
-                ctime = datetime.fromtimestamp(html_file_path.stat().st_ctime)
-                if html_file_path.is_file() and ctime + timedelta(days=self.html_archiving_period) < datetime.now():
-                    LOGGER.info(f"* {html_file_path}")
-                    html_file_path.unlink(missing_ok=True)
-
-    def _remove_html_files_without_cached_image_files(self, feed_dir_path: Path, feed_img_dir_path: Path) -> None:
-        LOGGER.debug(f"# remove_html_files_without_cached_image_files(feed_dir_path='{feed_dir_path}', feed_img_dir_path='{feed_img_dir_path}')")
-        LOGGER.info("# deleting html files without cached image files")
-        img_set_in_img_dir: Set[str] = self._get_img_set_in_img_dir(feed_img_dir_path)
-
-        html_dir_path = feed_dir_path / "html"
-        if html_dir_path.is_dir():
-            img_html_map = {}
-            for html_file_path in html_dir_path.iterdir():
-                if html_file_path.is_file():
-                    with html_file_path.open("r", encoding="utf-8") as f:
-                        try:
-                            for line in f:
-                                m = re.search(r'<img src=[\"\']https?://terzeron\.com/xml/img/[^/]+/(?P<img>\S+)[\"\']', line)
-                                if m:
-                                    # 실제로 다운로드되어 있는지 확인
-                                    img_file = m.group("img")
-                                    img_html_map[img_file] = html_file_path.name
-                        except UnicodeDecodeError as e:
-                            LOGGER.error(f"Error: Unicode decode error in '{html_file_path.name}'")
-                            raise e
-
-            for img_file in set(img_html_map.keys()) - img_set_in_img_dir:
-                html_file = img_html_map[img_file]
-                html_file_path = html_dir_path / html_file
-                LOGGER.info(f"* '{html_file}' (due to '{img_file}')")
-                html_file_path.unlink(missing_ok=True)
+        self.html_archiving_period = 0
+        self.list_archiving_period = 0
+        self.work_dir_path = Path()
+        self.img_dir_path = Path()
 
     def make_single_feed(self, feed_dir_path: Path, options: Dict[str, Any]) -> bool:
         LOGGER.debug(f"# make_single_feed(feed_dir_path='{feed_dir_path}', options={options})")
@@ -150,11 +64,11 @@ class FeedMakerRunner:
 
                 if do_remove_all_files:
                     # -r 옵션 사용하면 html 디렉토리의 파일들, newlist 디렉토리의 파일들, 각종 로그 파일, feed xml 파일들을 삭제
-                    self._remove_all_files(feed_dir_path, rss_file_path)
-                # 다운로드되어 있어야 하는 이미지가 없는 html 파일 삭제
-                self._remove_html_files_without_cached_image_files(feed_dir_path, feed_img_dir_path)
+                    FileManager.remove_all_files(feed_dir_path)
                 # 0 byte 이미지 파일 삭제
-                self._remove_image_files_with_zero_size(feed_img_dir_path)
+                FileManager.remove_image_files_with_zero_size(feed_img_dir_path)
+                # 다운로드되어 있어야 하는 이미지가 없는 html 파일 삭제
+                FileManager.remove_html_files_without_cached_image_files(feed_dir_path, feed_img_dir_path)
 
                 # make_feed.py 실행하여 feed 파일 생성
                 LOGGER.info(f"* making feed file '{PathUtil.convert_path_to_str(rss_file_path)}'")
@@ -162,7 +76,7 @@ class FeedMakerRunner:
                 result = feed_maker.make()
 
                 # 불필요한 파일 삭제
-                self._remove_temporary_files(feed_dir_path)
+                FileManager.remove_temporary_files(feed_dir_path)
         except Timeout:
             LOGGER.error("can't run multiple feed makers concurrently")
             return False
@@ -234,7 +148,7 @@ class FeedMakerRunner:
 
     @staticmethod
     def check_running(group_name: str, feed_name: str) -> bool:
-        lock_file_path = Path(os.environ["FEED_MAKER_WORK_DIR"]) / group_name / feed_name / ".feed_maker_runner.lock"
+        lock_file_path = Path(os.environ["FM_WORK_DIR"]) / group_name / feed_name / ".feed_maker_runner.lock"
         try:
             logging.getLogger("filelock").setLevel(logging.ERROR)
             with FileLock(str(lock_file_path), timeout=1):

@@ -2,16 +2,16 @@
 
 
 import sys
-import os
 import re
 import getopt
 import subprocess
 import logging.config
+from pathlib import Path
 from typing import Set, Dict
-from feed_maker_util import IO, Process
+from bin.feed_maker_util import IO, Process
 
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
@@ -57,7 +57,7 @@ def main() -> int:
             line_num += 1
 
     # hierarchical clustering
-    cluster_dir = os.environ["FEED_MAKER_HOME_DIR"] + "/../HierarchicalClustering"
+    cluster_dir = Path(__file__).parent.parent / "HierarchicalClustering"
     cmd = f"{cluster_dir}/hcluster -t '{threshold}' -s stop_words.txt '{intermediate_file}' '{temp_output_file}'"
     LOGGER.debug(cmd)
     result, error = Process.exec_cmd(cmd)

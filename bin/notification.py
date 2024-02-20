@@ -1,19 +1,22 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+
 import os
+import re
 import logging.config
 import base64
 import hmac
 import hashlib
 import json
+from pathlib import Path
 from typing import Any, Dict, Tuple, Callable, List
 from datetime import datetime
 import requests
 import mail1
-from feed_maker_util import Config
+from bin.feed_maker_util import Config
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
@@ -30,47 +33,37 @@ class Notification:
         self.smtp_login_password: str = ""
         self.send_msg: Callable[[str, str], bool] = self._send_email_by_smtp
 
-        # read global config
-        global_config = Config.get_global_config()
-        if "notification" in global_config and global_config["notification"]:
-            notification_config = global_config["notification"]
-            if "line_messenger" in notification_config and notification_config["line_messenger"]:
-                line_config = notification_config["line_messenger"]
-                if "line_receiver_id_list" in line_config and "line_access_token" in line_config:
-                    self.line_receiver_id_list = line_config["line_receiver_id_list"]
-                    self.line_access_token = line_config["line_access_token"]
-                    self.send_msg = self._send_line_msg
-                else:
-                    LOGGER.error("can't find line_receiver_id_list or line_access_token in line_messenger from global configuration")
-            if "email" in notification_config and notification_config["email"]:
-                email_config = notification_config["email"]
-                if "mail_sender_address" in email_config and "mail_sender_name" in email_config and "mail_recipient_list" in email_config:
-                    self.mail_sender_address = email_config["mail_sender_address"]
-                    self.mail_sender_name = email_config["mail_sender_name"]
-                    for recipient in email_config["mail_recipient_list"]:
-                        self.mail_recipient_list.append((recipient["mail_recipient_address"], recipient["mail_recipient_name"]))
-                else:
-                    LOGGER.error("can't find mail_sender_address or mail_recipient_list in email from global configuration")
-                if "email_by_naver_cloud" in email_config and email_config["email_by_naver_cloud"]:
-                    if "access_key" in email_config["email_by_naver_cloud"] and "secret_key" in email_config["email_by_naver_cloud"]:
-                        self.naver_cloud_access_key = email_config["email_by_naver_cloud"]["access_key"]
-                        self.naver_cloud_secret_key = email_config["email_by_naver_cloud"]["secret_key"]
-                    self.send_msg = self._send_email_by_naver_cloud
-                if "email_by_nhn_cloud" in email_config and email_config["email_by_nhn_cloud"]:
-                    if "appkey" in email_config["email_by_nhn_cloud"] and "secretkey" in email_config["email_by_nhn_cloud"]:
-                        self.nhn_cloud_appkey = email_config["email_by_nhn_cloud"]["appkey"]
-                        self.nhn_cloud_secretkey = email_config["email_by_nhn_cloud"]["secretkey"]
-                    self.send_msg = self._send_email_by_nhn_cloud
-                if "smtp" in email_config and email_config["smtp"]:
-                    smtp_config = email_config["smtp"]
-                    if "smtp_server" in smtp_config and "smtp_port" in smtp_config and "smtp_login_id" in smtp_config and "smtp_login_password" in smtp_config:
-                        self.smtp_server = smtp_config["smtp_server"]
-                        self.smtp_port = smtp_config["smtp_port"]
-                        self.smtp_login_id = smtp_config["smtp_login_id"]
-                        self.smtp_login_password = smtp_config["smtp_login_password"]
-                    self.send_msg = self._send_email_by_smtp
+        if "MSG_LINE_RECEIVER_ID_LIST" in os.environ and os.environ["MSG_LINE_RECEIVER_ID_LIST"] and "MSG_LINE_ACCESS_TOKEN" in os.environ and os.environ["MSG_LINE_ACCESS_TOKEN"]:
+            self.line_receiver_id_list = os.environ["MSG_LINE_RECEIVER_ID_LIST"]
+            self.line_access_token = os.environ["MSG_LINE_ACCESS_TOKEN"]
+            self.send_msg = self._send_line_msg
         else:
-            LOGGER.error("can't find any notification configuration")
+            LOGGER.error("can't find line_receiver_id_list or line_access_token in line_messenger from global configuration")
+
+        if "MSG_EMAIL_SENDER_ADDR" in os.environ and os.environ["MSG_EMAIL_SENDER_ADDR"] and "MSG_EMAIL_SENDER_NAME" in os.environ and os.environ["MSG_EMAIL_SENDER_NAME"] and "MSG_EMAIL_RECIPIENT_LIST" in os.environ and os.environ["MSG_EMAIL_RECIPIENT_LIST"]:
+            self.mail_sender_address = os.environ["MSG_EMAIL_SENDER_ADDR"]
+            self.mail_sender_name = os.environ["MSG_EMAIL_SENDER_NAME"]
+            recipients = re.split(r"\s*,\s*", os.environ["MSG_EMAIL_RECIPIENT_LIST"])
+            for i in range(0, len(recipients), 2):
+                name = recipients[i]
+                addr = recipients[i + 1]
+                self.mail_recipient_list.append((addr, name))
+        else:
+            LOGGER.error("can't find MSG_EMAIL_SENDER_ADDR, MSG_EMAIL_SENDER_NAME or MSG_EMAIL_RECIPIENT_LIST from environment variables")
+        if "MSG_EMAIL_NAVER_CLOUD_ACCESS_KEY" in os.environ and os.environ["MSG_EMAIL_NAVER_CLOUD_ACCESS_KEY"] and "MSG_EMAIL_NAVER_CLOUD_SECRET_KEY" in os.environ and os.environ["MSG_EMAIL_NAVER_CLOUD_SECRET_KEY"]:
+            self.naver_cloud_access_key = os.environ["MSG_EMAIL_NAVER_CLOUD_ACCESS_KEY"]
+            self.naver_cloud_secret_key = os.environ["MSG_EMAIL_NAVER_CLOUD_SECRET_KEY"]
+            self.send_msg = self._send_email_by_naver_cloud
+        if "MSG_EMAIL_NHN_CLOUD_APPKEY" in os.environ and os.environ["MSG_EMAIL_NHN_CLOUD_APPKEY"] and "MSG_EMAIL_NHN_CLOUD_SECRETKEY" in os.environ and os.environ["MSG_EMAIL_NHN_CLOUD_SECRETKEY"]:
+            self.nhn_cloud_appkey = os.environ["MSG_EMAIL_NHN_CLOUD_ACCESSKEY"]
+            self.nhn_cloud_secretkey = os.environ["MSG_EMAIL_NHN_CLOUD_SECRETKEY"]
+            self.send_msg = self._send_email_by_nhn_cloud
+        if "MSG_SMTP_SERVER" in os.environ and os.environ["MSG_SMTP_SERVER"] and "MSG_SMTP_PORT" in os.environ and os.environ["MSG_SMTP_PORT"] and "MSG_SMTP_LOGIN_ID" in os.environ and os.environ["MSG_SMTP_LOGIN_ID"] and "MSG_SMTP_LOGIN_PASSWORD" in os.environ and os.environ["MSG_SMTP_LOGIN_PASSWORD"]:
+            self.smtp_server = os.environ["MSG_SMTP_SERVER"]
+            self.smtp_port = os.environ["MSG_SMTP_PORT"]
+            self.smtp_login_id = os.environ["MSG_SMTP_LOGIN_ID"]
+            self.smtp_login_password = os.environ["MSG_SMTP_LOGIN_PASSWORD"]
+            self.send_msg = self._send_email_by_smtp
 
     def __del__(self) -> None:
         del self.line_receiver_id

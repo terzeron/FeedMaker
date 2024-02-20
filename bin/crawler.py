@@ -12,9 +12,9 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, Any, Tuple, Optional, List
 import requests
-from headless_browser import HeadlessBrowser
+from bin.headless_browser import HeadlessBrowser
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36"
 
@@ -199,7 +199,8 @@ class Crawler:
             for k, v in options["headers"].items():
                 if header_str != "":
                     header_str += "; "
-                header_str += f"{k}: {v}"
+                if v and v != "None":
+                    header_str += f"{k}: {v}"
             option_str += f" --header='{header_str}'"
         if "timeout" in options:
             timeout = options["timeout"] or "60"

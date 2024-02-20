@@ -7,17 +7,24 @@ import os
 import asyncio
 import logging
 import logging.config
+from pathlib import Path
 from typing import Dict, Any
-from feed_manager import FeedManager
 from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from backend.feed_manager import FeedManager
 
-logging.config.fileConfig("logging.conf", disable_existing_loggers=False)
+
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger(__name__)
+
+print("")
+print("FM_DB_HOST=%s, FM_DB_PORT=%s, MYSQL_DATABASE=%s, MYSQL_USER=%s, MYSQL_PASSWORD=%s" % (os.environ["FM_DB_HOST"], os.environ["FM_DB_PORT"], os.environ["MYSQL_DATABASE"], os.environ["MYSQL_USER"], os.environ["MYSQL_PASSWORD"]))
+print("FM_HOME_DIR=%s, FM_WORK_DIR=%s, FM_LOG_DIR=%s, FM_BACKEND_PORT=%s, FM_FRONTEND_URL=%s" % (os.environ["FM_HOME_DIR"], os.environ["FM_WORK_DIR"], os.environ["FM_LOG_DIR"], os.environ["FM_BACKEND_PORT"], os.environ["FM_FRONTEND_URL"]))
 
 app = FastAPI()
 origins = [
-    os.environ["FEED_MAKER_URL"] if "FEED_MAKER_URL" in os.environ else "https://127.0.0.1:8081",
+    os.environ["FM_FRONTEND_URL"] if "FM_FRONTEND_URL" in os.environ else "https://127.0.0.1:8081",
     "https://127.0.0.1:8081",
     "https://localhost:8081"
 ]
@@ -31,6 +38,12 @@ app.add_middleware(
 
 feed_manager: FeedManager = FeedManager()
 feed_manager.scan_all_feeds()
+
+
+@app.exception_handler(Exception)
+async def exception_handler(request, exc):
+    logging.exception("An error occurred")
+    return JSONResponse(status_code=500, content={"message": "Internal server error"})
 
 
 def handle_exception(exc_type, exc_value, exc_traceback):
@@ -182,11 +195,11 @@ async def remove_html(group_name: str, feed_name: str):
 
 
 @app.post("/groups/{group_name}/feeds/{feed_name}/run")
-def run(group_name: str, feed_name: str, request: Request):
+def run(group_name: str, feed_name: str, _request: Request):
     LOGGER.debug(f"/groups/{group_name}/feeds/{feed_name}/run -> run({group_name}, {feed_name})")
     response_object: Dict[str, Any] = {"status": "failure"}
-    post_data = asyncio.run(request.json())
-    result, error = feed_manager.run(group_name, feed_name, post_data["alias"])
+    #post_data = asyncio.run(request.json())
+    result, error = feed_manager.run(group_name, feed_name)
     if result:
         response_object["status"] = "success"
     else:
@@ -213,44 +226,6 @@ async def remove_list(group_name: str, feed_name: str):
     response_object: Dict[str, Any] = {"status": "failure"}
     await feed_manager.remove_list(group_name, feed_name)
     response_object["status"] = "success"
-    return response_object
-
-
-@app.get("/groups/{group_name}/feeds/{feed_name}/alias")
-async def get_alias(group_name: str, feed_name: str):
-    LOGGER.debug(f"/groups/{group_name}/feeds/{feed_name}/alias -> get_alias({group_name}, {feed_name})")
-    response_object: Dict[str, Any] = {"status": "failure"}
-    result, error = await feed_manager.get_alias(group_name, feed_name)
-    if result:
-        response_object["status"] = "success"
-        response_object["alias"] = result
-    else:
-        response_object["message"] = error
-    return response_object
-
-
-@app.delete("/groups/{group_name}/feeds/{feed_name}/alias")
-async def delete_alias(group_name: str, feed_name: str):
-    LOGGER.debug(f"/groups/{group_name}/feeds/{feed_name}/alias -> remove_alias({group_name}, {feed_name})")
-    response_object: Dict[str, Any] = {"status": "failure"}
-    result, error = await feed_manager.remove_alias(group_name, feed_name)
-    if result:
-        response_object["status"] = "success"
-        response_object["alias"] = result
-    else:
-        response_object["message"] = error
-    return response_object
-
-
-@app.put("/groups/{group_name}/feeds/{feed_name}/rename/{new_alias}")
-async def rename_alias(group_name: str, feed_name: str, new_alias: str):
-    LOGGER.debug(f"/groups/{group_name}/feeds/{feed_name}/rename/{new_alias} -> rename_alias({group_name}, {feed_name}, {new_alias})")
-    response_object: Dict[str, Any] = {"status": "failure"}
-    result, error = await feed_manager.rename_alias(group_name, feed_name, new_alias)
-    if result:
-        response_object["status"] = "success"
-    else:
-        response_object["message"] = error
     return response_object
 
 

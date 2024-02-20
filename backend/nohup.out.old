@@ -1,0 +1,13 @@
+INFO:     Will watch for changes in these directories: ['/Users/terzeron/workspace/fm_dev/backend']
+INFO:     Uvicorn running on http://127.0.0.1:8010 (Press CTRL+C to quit)
+INFO:     Started reloader process [52414] using StatReload
+127.0.0.1 13306 feedmaker feedmaker micro170433
+/Users/terzeron/workspace/fm_dev /Users/terzeron/workspace/fma /Users/terzeron/workspace/fma/logs 8010 https://local-fm.terzeron.com
+* start loading information
+* The loading of all config files and rss files is done. 232 items
+* The loading of public feed file is done. 271 items
+* The loading of all progress info is done. 3 items
+* The loading of http access log is done. 0 items
+* The loading of all html files is done. 4802 items
+* finish loading information
+INFO:     Stopping reloader process [52414]

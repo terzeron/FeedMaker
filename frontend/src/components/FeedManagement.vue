@@ -284,37 +284,6 @@
 
           <b-col
               cols="12"
-              class="m-0 p-1">
-            <b-input-group
-                prepend="별명"
-                class="m-0"
-                v-if="showAliasInput">
-              <b-form-input
-                  class="m-0"
-                  v-model="alias">
-                {{ alias }}
-              </b-form-input>
-              <b-input-group-append>
-                <my-button
-                    ref="renameAliasButton"
-                    label="변경"
-                    @click="renameAlias"
-                    :initial-icon="['fas', 'pen']"
-                    :show-initial-icon="true"/>
-              </b-input-group-append>
-              <b-input-group-append>
-                <my-button
-                    ref="removeAliasButton"
-                    label="삭제"
-                    @click="removeAlias"
-                    :initial-icon="['fas', 'eraser']"
-                    :show-initial-icon="true"/>
-              </b-input-group-append>
-            </b-input-group>
-          </b-col>
-
-          <b-col
-              cols="12"
               class="m-0 p-1 button_list">
             <my-button
                 ref="viewRssButton"
@@ -413,7 +382,6 @@ export default {
       showToggleGroupButton: false,
       showRemoveHtmlButton: false,
       showNewFeedNameInput: false,
-      showAliasInput: false,
       showSiteConfig: false,
       showFeedInfo: false,
 
@@ -426,7 +394,6 @@ export default {
       selectedGroupName: '',
       selectedFeedName: '',
       newFeedName: '',
-      alias: '',
       searchKeyword: '',
 
       numCollectionUrls: 0,
@@ -467,14 +434,10 @@ export default {
       return this.jsonData.rss['title'];
     },
     rssUrl: function () {
-      if (this.alias != '') {
-        return `https://terzeron.com/${this.alias}.xml`;
-      } else {
-        return `https://terzeron.com/${this.newFeedName}.xml`;
-      }
+      return `https://terzeron.com/${this.newFeedName}.xml`;
     },
     adminEmail: function () {
-      return process.env.VUE_APP_ADMIN_EMAIL;
+      return process.env.VUE_APP_FACEBOOK_ADMIN_EMAIL;
     },
     sizeOfResultFileWithUnit: function () {
       if (this.sizeOfResultFile > 1024 * 1024 * 1024) {
@@ -491,7 +454,6 @@ export default {
   watch: {
     newFeedName: function (val) {
       this.jsonData.rss.link = 'https://terzeron.com/' + val + '.xml';
-      this.alias = val;
     },
     jsonData: function () {
       this.determineNewFeedNameFromJsonRssLink();
@@ -563,7 +525,6 @@ export default {
       this.showRemoveHtmlButton = true;
       this.showToggleFeedButton = true;
       this.showRemoveFeedButton = true;
-      this.showAliasInput = true;
       this.showFeedInfo = true;
     },
     hideAllRelatedToFeed: function () {
@@ -577,7 +538,6 @@ export default {
       this.showRemoveHtmlButton = false;
       this.showToggleFeedButton = false;
       this.showRemoveFeedButton = false;
-      this.showAliasInput = false;
       this.showFeedInfo = false
       this.clearAlert();
     },
@@ -637,7 +597,9 @@ export default {
     },
     getGroups: function () {
       console.log(`getGroups()`);
-      clearInterval(this.checkRunningInterval);
+      if (this.checkRunningInterval) {
+        clearInterval(this.checkRunningInterval);
+      }
       const url = this.getApiUrlPath() + '/groups';
       axios
           .get(url)
@@ -687,7 +649,9 @@ export default {
     },
     getFeedListByGroup: function (groupName) {
       console.log(`getFeedListByGroup(${groupName})`);
-      clearInterval(this.checkRunningInterval);
+      if (this.checkRunningInterval) {
+        clearInterval(this.checkRunningInterval);
+      }
       const url = this.getApiUrlPath() + `/groups/${groupName}/feeds`;
       axios
           .get(url)
@@ -779,7 +743,6 @@ export default {
                 this.hideAllRelatedToFeed();
               }
               this.hideAllRelatedToGroup();
-              this.getAlias();
 
               this.checkRunning();
               this.checkRunningInterval = setInterval(() => {
@@ -865,7 +828,7 @@ export default {
       console.log(`run()`);
       this.startButton('runButton');
       const url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.newFeedName}/run`;
-      const postData = {alias: this.alias};
+      const postData = {};
       axios
           .post(url, postData)
           .then((res) => {
@@ -1071,62 +1034,6 @@ export default {
             console.error(error);
           });
     },
-    getAlias: function () {
-      console.log(`getAlias()`);
-      let feedName = this.getCleanFeedName(this.selectedFeedName);
-      const url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${feedName}/alias`;
-      axios
-          .get(url)
-          .then((res) => {
-            if (res.data.status === 'failure') {
-              this.alert(res.data.message);
-              this.alias = '';
-            } else {
-              this.alias = res.data.alias;
-              this.showAliasInput = true;
-            }
-          })
-          .catch((error) => {
-            console.error(error);
-          });
-    },
-    removeAlias: function () {
-      console.log(`removeAlias()`);
-      let feedName = this.getCleanFeedName(this.selectedFeedName);
-      this.startButton('removeAliasButton');
-      const url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${feedName}/alias`;
-
-      axios
-          .delete(url)
-          .then((res) => {
-            if (res.data.status === 'failure') {
-              this.alert(res.data.message);
-            }
-            this.endButton('removeAliasButton');
-          })
-          .catch((error) => {
-            console.error(error);
-            this.resetButton('removeAliasButton');
-          });
-    },
-    renameAlias: function () {
-      console.log(`renameAlias(${this.alias})`);
-      let alias = this.getCleanFeedName(this.alias);
-      this.startButton('renameAliasButton');
-      const url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/rename/${alias}`;
-      axios
-          .put(url)
-          .then((res) => {
-            if (res.data.status === 'failure') {
-              this.alert(res.data.message);
-            }
-            this.endButton('renameAliasButton');
-          })
-          .catch((error) => {
-            console.error(error);
-            this.resetButton('renameAliasButton');
-          });
-    },
     checkRunning: function () {
       //console.log(`checkRunning()`);
       const url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/check_running`;
@@ -1165,7 +1072,14 @@ export default {
     }
   },
   beforeUnmount: function () {
-    clearInterval(this.checkRunningInterval);
-  }
+    if (this.checkRunningInterval) {
+      clearInterval(this.checkRunningInterval);
+    }
+  },
+  beforeDestroy() {
+    if (this.checkRunningInterval) {
+      clearInterval(this.checkRunningInterval);
+    }
+  },
 };
 </script>

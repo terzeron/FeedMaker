@@ -2,24 +2,22 @@
 # -*- coding: utf-8 -*-
 
 
-import os
 import re
 import sys
 import logging.config
 from pathlib import Path
 from typing import Dict, List, Tuple, Any
 from shutil import which
-from feed_maker_util import Process, Data
-from crawler import Crawler, Method
+from bin.feed_maker_util import Process, Data
+from bin.crawler import Crawler, Method
 
-logging.config.fileConfig(os.environ["FEED_MAKER_HOME_DIR"] + "/bin/logging.conf")
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
 class NewListCollector:
     def __init__(self, feed_dir_path: Path, collection_conf: Dict[str, Any], new_list_file_path: Path) -> None:
-        LOGGER.debug(
-            f"# NewListCollector(feed_dir_path={feed_dir_path}, collection_conf={collection_conf}, new_list_file_path={new_list_file_path}")
+        LOGGER.debug(f"# NewListCollector(feed_dir_path={feed_dir_path}, collection_conf={collection_conf}, new_list_file_path={new_list_file_path}")
         self.feed_dir_path: Path = feed_dir_path
         self.collection_conf: Dict[str, Any] = collection_conf
         self.new_list_file_path: Path = new_list_file_path
