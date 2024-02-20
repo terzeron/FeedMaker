@@ -1,8 +1,18 @@
+const fs = require('fs');
+
 module.exports = {
     runtimeCompiler: true,
     devServer: {
-        proxy: 'https://127.0.0.1:8081',
-        https: true,
-        port: 8081
-    }
+        port: 8081,
+        allowedHosts: "all",
+        https: true
+    },
+    configureWebpack: {
+        optimization: {
+            splitChunks: {
+                chunks: 'all',
+                maxSize: 244 * 1024, // 244 KiB
+            },
+        },
+    },
 }

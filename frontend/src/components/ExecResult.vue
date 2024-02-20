@@ -70,7 +70,7 @@ export default {
   },
   computed: {
     adminEmail: function () {
-      return process.env.VUE_APP_ADMIN_EMAIL;
+      return process.env.VUE_APP_FACEBOOK_ADMIN_EMAIL;
     },
   },
   methods: {

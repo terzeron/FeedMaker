@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
+import os
 import unittest
 import shutil
 import logging.config
@@ -18,11 +19,7 @@ LOGGER = logging.getLogger()
 
 class TestProblemManager(unittest.TestCase):
     def setUp(self) -> None:
-        global_config = Config.get_global_config(Path(__file__).parent / "global_config_minimal.json")
-        if not global_config:
-            LOGGER.error("can't find global configuration")
-            return
-        db = DBManager(global_config["db_host"], global_config["db_port"], global_config["db_name"], global_config["db_user"], global_config["db_password"])
+        db = DBManager(os.environ["FM_DB_HOST"], os.environ["FM_DB_PORT"], os.environ["MYSQL_DATABASE"], os.environ["MYSQL_USER"], os.environ["MYSQL_PASSWORD"])
         self.pm = ProblemManager(db)
         with self.pm.db.get_connection_and_cursor() as (connection, cursor):
             self.pm.db.execute(cursor, "TRUNCATE feed_alias_name")

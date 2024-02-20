@@ -9,6 +9,9 @@ import getopt
 import logging.config
 from pathlib import Path
 from base64 import b64decode
+from PIL import Image, UnidentifiedImageError
+import cairosvg
+import pyheif
 from typing import List, Dict, Any, Optional
 from bin.feed_maker_util import Config, IO, FileManager, URL
 from bin.crawler import Crawler
@@ -20,7 +23,7 @@ LOGGER = logging.getLogger()
 def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str) -> Optional[Path]:
     LOGGER.debug(f"# download_image(crawler={crawler}, feed_img_dir_path={feed_img_dir_path}, img_url={img_url[:30]})")
     cache_file = FileManager.get_cache_file_path(feed_img_dir_path, img_url)
-    for ext in ["", ".png", ".jpeg", ".jpg"]:
+    for ext in ["", ".png", ".jpeg", ".jpg", ".webp"]:
         cache_file_path = cache_file.with_suffix(ext)
         if cache_file_path.is_file() and cache_file_path.stat().st_size > 0:
             return cache_file_path
@@ -46,6 +49,39 @@ def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str) -> O
             result, _, _ = crawler.run(url=img_url, download_file=cache_file)
             if not result:
                 return None
+
+        with cache_file.open("rb") as infile:
+            header = infile.read(1024)
+
+        if header.startswith(b"<svg"):
+            LOGGER.debug(f"convert svg file '{cache_file}' to PNG")
+            new_cache_file = cache_file.with_suffix(".png")
+            cairosvg.svg2png(url=str(cache_file), write_to=str(new_cache_file))
+            cache_file.unlink()
+            cache_file = new_cache_file
+        elif b"ftypheic" in header or b"ftypheix" in header or b"ftyphevc" in header or b"ftyphevx" in header:
+            LOGGER.debug(f"convert heic file '{cache_file}' to PNG")
+            heif_file = pyheif.read(str(cache_file))
+            img = Image.frombytes(mode=heif_file.mode, size=heif_file.size, data=heif_file.data)
+            new_cache_file = cache_file.with_suffix(".png")
+            img.save(new_cache_file, "PNG")
+        else:
+            try:
+                with Image.open(cache_file) as img:
+                    if img.format == "JPEG" or img.format == "PNG" or img.format == "WEBP":
+                        LOGGER.debug(f"append image extension '{img.format}'")
+                        new_cache_file = cache_file.with_suffix("." + img.format.lower())
+                        cache_file.rename(new_cache_file)
+                        cache_file = new_cache_file
+                    if img.format == "GIF" or img.format == "BMP" or img.format == "TIFF":
+                        LOGGER.debug(f"convert '{cache_file}' to PNG")
+                        new_cache_file = cache_file.with_suffix(".png")
+                        img.convert("RGB").save(new_cache_file, "PNG")
+                        cache_file.unlink()
+                        cache_file = new_cache_file
+            except UnidentifiedImageError:
+                LOGGER.warning(f"can't identify image '{cache_file}'")
+                return None
     else:
         return None
     if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
@@ -69,7 +105,7 @@ def main() -> int:
     page_url: str = args[0]
     feed_name = feed_dir_path.name
     img_url_prefix = "https://terzeron.com/xml/img/" + feed_name
-    feed_img_dir_path: Path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / "img" / feed_name
+    feed_img_dir_path: Path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "img" / feed_name
     feed_img_dir_path.mkdir(exist_ok=True)
     LOGGER.debug(f"feed_dir_path={feed_dir_path}")
     LOGGER.debug(f"feed_name={feed_name}")
@@ -95,7 +131,7 @@ def main() -> int:
         m = re.search(r'''
         (?P<pre_text>.*)
         <img
-        \s*
+        [^>]*
         src=
         (["\'])
         (?P<img_url>[^"\']+)

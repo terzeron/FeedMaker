@@ -31,7 +31,7 @@ def main() -> int:
             pdf_file_path = Path(url_or_file)
         elif url_or_file.startswith("http"):
             pid = os.getpid()
-            pdf_dir_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / "pdf"
+            pdf_dir_path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "pdf"
             pdf_file_path = pdf_dir_path / f"{pid}.pdf"
             crawler = Crawler()
             result, error, _ = crawler.run(url=url_or_file, download_file=pdf_file_path)
@@ -43,7 +43,7 @@ def main() -> int:
         return -1
 
     feed_name = feed_dir_path.name
-    feed_img_dir_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / "img" / feed_name
+    feed_img_dir_path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "img" / feed_name
     feed_img_dir_path.mkdir(exist_ok=True)
     img_url_prefix = "https://terzeron.com/xml/img/" + feed_name
     image_type = "JPEG"

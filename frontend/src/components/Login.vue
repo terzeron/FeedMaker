@@ -2,10 +2,11 @@
   <b-container fluid>
     <b-row>
       <b-col cols="12">
-        <div id="facebookAuthDemo">
+        <div id="facebookAuthView">
           <div>
-            <FacebookAuth @authInitialized="authInitialized" ref="authRef"/>
+            <FacebookAuth @auth-initialized="authInitialized" ref="authRef"/>
             <div>
+              <div>initialized={{initialized}}, accessToken={{accessToken}}, status={{status}}, profile={{profile}}</div>
               <div v-if="name">
                 <p>{{ name }}님으로 로그인하였습니다.</p>
               </div>
@@ -63,22 +64,32 @@ export default {
       this.initialized = true;
     },
     login: async function () {
-      this.accessToken = await this.$refs.authRef.login();
-      if (this.accessToken) {
-        this.$session.set('access_token', this.accessToken);
-        console.log("logged in");
+      if (this.$session.get('is_authorized')) {
+        await this.$router.push('/result');
+        return;
       }
 
-      this.profile = await this.$refs.authRef.getProfile();
-      if (this.profile && this.profile['name']) {
-        this.$session.set('name', this.profile['name']);
-      }
-      if (this.profile && this.profile['email'] == process.env.VUE_APP_ADMIN_EMAIL) {
-        this.$session.set('is_authorized', true);
-        console.log("authorized as " + this.profile['name'] + ' (' + this.profile['email'] + ')');
-      }
+      if (this.initialized) {
+        this.accessToken = await this.$refs.authRef.login();
+        if (this.accessToken) {
+          this.$session.set('access_token', this.accessToken);
+          console.log("logged in");
+        }
 
-      await this.$router.push('/result');
+        this.profile = await this.$refs.authRef.getProfile();
+        if (this.profile && this.profile['name']) {
+          this.$session.set('name', this.profile['name']);
+        }
+        const loginAllowedEmailList = process.env.VUE_APP_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST.split(',');
+        if (this.profile && loginAllowedEmailList.includes(this.profile['email'])) {
+          this.$session.set('is_authorized', true);
+          console.log("authorized as " + this.profile['name'] + ' (' + this.profile['email'] + ')');
+        }
+
+        await this.$router.push('/result');
+      } else {
+        console.error('Facebook Auth is not initialized.');
+      }
     },
     logout: async function () {
       this.$session.set('access_token', undefined);
@@ -92,7 +103,7 @@ export default {
     },
   },
   mounted: function () {
-    //console.log(process.env);
+    console.log(this.$session.getAll());
   },
 };
 </script>

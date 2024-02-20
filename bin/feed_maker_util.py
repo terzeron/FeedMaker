@@ -295,8 +295,8 @@ class Config:
     def __init__(self, feed_dir_path: Path = Path.cwd()) -> None:
         LOGGER.debug(f"# Config(feed_dir_path={feed_dir_path})")
         error_msg: str = ""
-        if "FEED_MAKER_CONF_FILE" in os.environ and os.environ["FEED_MAKER_CONF_FILE"]:
-            config_file_path = Path(os.environ["FEED_MAKER_CONF_FILE"])
+        if "FM_CONF_FILE" in os.environ and os.environ["FM_CONF_FILE"]:
+            config_file_path = Path(os.environ["FM_CONF_FILE"])
         else:
             config_file_path = feed_dir_path / "conf.json"
         if config_file_path.is_file():
@@ -366,17 +366,6 @@ class Config:
             except TypeError:
                 value = None
         return value
-
-    @staticmethod
-    def get_global_config(conf_file_path=None) -> Dict[str, Any]:
-        LOGGER.debug("# get_global_config()")
-        if conf_file_path:
-            global_config_file_path = conf_file_path
-        else:
-            global_config_file_path = Path(__file__).parent / "global_config.json"
-        with global_config_file_path.open("r", encoding="utf-8") as infile:
-            global_config: Dict[str, Any] = json.load(infile)
-        return global_config
 
     def get_collection_configs(self) -> Dict[str, Any]:
         LOGGER.debug("# get_collection_configs()")
@@ -540,7 +529,7 @@ class FileManager:
     DATA_IMAGE_PREFIX = "data:image"
     IMAGE_NOT_FOUND_IMAGE = "image-not-found.png"
     IMAGE_NOT_FOUND_IMAGE_URL = "https://terzeron.com/" + IMAGE_NOT_FOUND_IMAGE
-    IMAGE_DIR_PATH = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]) / "img"
+    IMAGE_DIR_PATH = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "img"
 
     @staticmethod
     def _get_cache_info_common_postfix(img_url: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None) -> str:
@@ -653,138 +642,9 @@ class FileManager:
 
         FileManager.remove_temporary_files(feed_dir_path)
 
-class Htaccess:
-    htaccess_file_path = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"]).parent / ".htaccess"
-    lock_file_path = htaccess_file_path.with_suffix(".lock")
-    rewrite_rule_pattern_fmt = r'RewriteRule\t\^(?P<alias>\S+)\\\.xml\$\txml/%s\\\.xml'
-    rewrite_rule_fmt = "RewriteRule\t^%s\\.xml$\txml/%s\\.xml\n"
-    rewrite_rule_gone_fmt = "RewriteRule\t^(xml/)?%s\\.xml$\t- [G]\n"
-    group_tag_pattern_fmt = r'^#[^(]+\(%s\)'
-
-    @staticmethod
-    def get_alias(group_name: str, feed_name: str) -> Tuple[str, str]:
-        LOGGER.debug(f"# get_alias(group_name={group_name}, feed_name={feed_name})")
-        rewrite_rule_pattern = Htaccess.rewrite_rule_pattern_fmt % feed_name
-        group_tag_pattern = Htaccess.group_tag_pattern_fmt % group_name
-        LOGGER.debug(f"rewrite_rule_pattern={rewrite_rule_pattern}")
-        LOGGER.debug(f"group_tag_pattern={group_tag_pattern}")
-        try:
-            logging.getLogger("filelock").setLevel(logging.ERROR)
-            with FileLock(str(Htaccess.lock_file_path), timeout=5):
-                with Htaccess.htaccess_file_path.open('r', encoding="utf-8") as infile:
-                    state = 0
-                    for line in infile:
-                        if state == 0:
-                            m = re.search(group_tag_pattern, line)
-                            if m:
-                                state = 1
-                                continue
-                        elif state == 1:
-                            m = re.search(rewrite_rule_pattern, line)
-                            if m:
-                                alias = m.group("alias")
-                                return alias, ""
-        except Timeout as e:
-            return "", f"timeout in getting alias for feed '{feed_name}', {e}"
-        return "", f"error in getting alias for feed '{feed_name}' from group '{group_name}'"
-
-    @staticmethod
-    def set_alias(group_name: str, feed_name: str, alias: str = "") -> Tuple[bool, str]:
-        LOGGER.debug(f"# set_alias(group_name={group_name}, feed_name={feed_name}, alias={alias})")
-        rewrite_rule_pattern = Htaccess.rewrite_rule_pattern_fmt % feed_name
-        rewrite_rule = Htaccess.rewrite_rule_fmt % (alias, feed_name)
-        group_tag_pattern = Htaccess.group_tag_pattern_fmt % group_name
-        LOGGER.debug(f"rewrite_rule_pattern={rewrite_rule_pattern}")
-        LOGGER.debug(f"rewrite_rule={rewrite_rule}")
-        LOGGER.debug(f"group_tag_pattern={group_tag_pattern}")
-        is_found: bool = False
-        time_str = Datetime.get_current_time_str()
-        temp_file_path = Htaccess.htaccess_file_path.with_suffix("." + time_str)
-
-        _, error = Htaccess.get_alias(group_name, feed_name)
-        if not error:
-            is_found = True
-
-        line_list: List[str] = []
-        try:
-            logging.getLogger("filelock").setLevel(logging.ERROR)
-            with FileLock(str(Htaccess.lock_file_path), timeout=5):
-                with Htaccess.htaccess_file_path.open('r', encoding="utf-8") as infile:
-                    for line in infile:
-                        # find feed name and replace
-                        if is_found and re.search(rewrite_rule_pattern, line):
-                            line_list.append(rewrite_rule)
-                            continue
-
-                        line_list.append(line)
-
-                        # find group name and append after group name
-                        if not is_found and re.search(group_tag_pattern, line):
-                            if not alias:
-                                alias = feed_name
-                            line_list.append(rewrite_rule)
-                            is_found = True
-
-                with temp_file_path.open('w', encoding="utf-8") as outfile:
-                    outfile.writelines(line_list)
-                copy(temp_file_path, Htaccess.htaccess_file_path)
-        except Timeout as e:
-            return False, f"timeout in renaming alias for feed '{feed_name}', {e}"
-        if is_found:
-            return True, ""
-        return False, f"can't find such group '{group_name}' or feed '{feed_name}'"
-
-    @staticmethod
-    def remove_alias(group_name: str, feed_name: str) -> Tuple[bool, str]:
-        LOGGER.debug(f"# remove_alias(group_name={group_name}, feed_name={feed_name})")
-        rewrite_rule_pattern = Htaccess.rewrite_rule_pattern_fmt % feed_name
-        group_tag_pattern = Htaccess.group_tag_pattern_fmt % group_name
-        LOGGER.debug(f"rewrite_rule_pattern={rewrite_rule_pattern}")
-        LOGGER.debug(f"group_tag_pattern={group_tag_pattern}")
-        is_found: bool = False
-        time_str = Datetime.get_current_time_str()
-        temp_file_path = Htaccess.htaccess_file_path.with_suffix("." + time_str)
-
-        line_list: List[str] = []
-        alias = ""
-        try:
-            logging.getLogger("filelock").setLevel(logging.ERROR)
-            with FileLock(str(Htaccess.lock_file_path), timeout=5):
-                with Htaccess.htaccess_file_path.open('r', encoding="utf-8") as infile:
-                    if group_name == "___":
-                        state = 1
-                    else:
-                        state = 0
-                    for line in infile:
-                        if state == 0:
-                            m = re.search(group_tag_pattern, line)
-                            if m:
-                                state = 1
-                        elif state == 1:
-                            m = re.search(rewrite_rule_pattern, line)
-                            if m:
-                                alias = m.group("alias")
-                                is_found = True
-                                continue
-                        line_list.append(line)
-                    if alias:
-                        rewrite_rule_gone = Htaccess.rewrite_rule_gone_fmt % alias
-                        LOGGER.debug(f"rewrite_rule_gone={rewrite_rule_gone}")
-                        line_list.append(rewrite_rule_gone)
-
-                with temp_file_path.open('w', encoding="utf-8") as outfile:
-                    outfile.writelines(line_list)
-                temp_file_path.rename(Htaccess.htaccess_file_path)
-        except Timeout as e:
-            return False, f"timeout in renaming alias for feed '{feed_name}', {e}"
-        if is_found:
-            return True, ""
-        return False, f"can't find such group '{group_name}' or feed '{feed_name}'"
-
-
 class PathUtil:
-    work_dir = Path(os.environ["FEED_MAKER_WORK_DIR"])
-    public_feed_dir = Path(os.environ["FEED_MAKER_WWW_FEEDS_DIR"])
+    work_dir = Path(os.environ["FM_WORK_DIR"])
+    public_feed_dir = Path(os.environ["WEB_SERVICE_FEEDS_DIR"])
 
     @staticmethod
     def convert_path_to_str(path: Path) -> str:

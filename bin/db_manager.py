@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+
+import time
 from typing import List, Any, Optional, Iterator
 from contextlib import contextmanager
 from mysql.connector.pooling import MySQLConnectionPool, PooledMySQLConnection
@@ -26,9 +28,23 @@ class Cursor:
 
 
 class DBManager:
-    def __init__(self, host, port, database, user, password, pool_size=10) -> None:
-        self.pool = MySQLConnectionPool(pool_name="mypool", pool_size=pool_size, host=host, port=port, user=user, password=password, database=database)
-        self.connection: Optional[PooledMySQLConnection] = None
+    def __init__(self, host: str, port: int, database: str, user: str, password: str, pool_size: int = 10) -> None:
+        retries = 0
+        max_retries = 10
+        while retries < max_retries:
+            try:
+                self.pool = MySQLConnectionPool(pool_name="mypool", pool_size=pool_size, host=host, port=port, user=user, password=password, database=database)
+                self.connection: Optional[PooledMySQLConnection] = None
+                break
+            except mysql.connector.errors.InterfaceError:
+                print(f"can't connect to MySQL server due to interface error, retry #{retries}")
+                retries += 1
+                time.sleep(3)
+            except mysql.connector.errors.DatabaseError:
+                print(f"can't connect to MySQL server due to database error, retry #{retries}")
+                retries += 1
+                time.sleep(3)
+            
 
     def __del__(self):
         if self.pool:

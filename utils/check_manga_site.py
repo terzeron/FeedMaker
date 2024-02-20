@@ -62,15 +62,25 @@ def get_location_recursively(url: str, config: Dict[str, Any]) -> Tuple[str, str
 
     response_size = len(response)
     new_url = ""
+    LOGGER.debug("response_size=%d, new_url='%s'", response_size, new_url)
     if response_headers:
+        LOGGER.debug("response_headers=%r", response_headers)
         if "Location" in response_headers:
             new_url = response_headers["Location"]
         elif "location" in response_headers:
             new_url = response_headers["location"]
+        if new_url:
+            print(f"new_url '{new_url}' from location header")
+            
     del crawler
+
+    if not new_url and response_size > 0:
+        return url, response
+    
     if new_url and response_size == 0:
         new_url = clean_url(new_url, URL.get_url_scheme(url), URL.get_url_path(url))
         new_url, response = get_location_recursively(new_url, config)
+        
     return new_url, response
 
 
@@ -78,16 +88,17 @@ def get(url: str, config: Dict[str, Any]) -> Tuple[bool, str, str]:
     LOGGER.debug(f"# get(url={url}, config={config})")
     print("getting start")
     new_url, response = get_location_recursively(url, config)
+    LOGGER.debug("new_url='%s', len(response)=%d", new_url, len(response))
     if not response:
         print("no response")
         return False, "", new_url
 
     if config["keyword"] not in response:
         print("no keyword")
-        return False, response, new_url
+        return False, response, ""
 
     if URL.get_url_domain(url) not in response:
-        print("old url not found")
+        print(f"old url '{url}' not found")
         return False, response, new_url
 
     print("getting end")
@@ -172,7 +183,7 @@ def main() -> int:
     LOGGER.debug(f"new_pattern='{new_pattern}', pre='{pre}', num={num}, domain_postfix='{domain_postfix}', post='{post}'")
 
     success, response, new_url = get(url, config)
-    LOGGER.debug(f"success={success}, new_url='{new_url}'")
+    LOGGER.debug("success=%r, len(response)=%d, new_url='%s'", success, len(response), new_url)
     if not success:
         if new_url:
             _, _, num, _, _ = get_url_pattern(new_url)
