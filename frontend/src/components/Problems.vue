@@ -479,15 +479,11 @@ export default {
       return feedTitle ? `<a href="/management/${groupName}/${feedName}">${feedTitle}</a>` : '';
     },
     getShortDate(date) {
-      let d = moment(date, 'YY-MM-DD');
+      let d = moment(date);
       if (!d.isValid()) {
         return "";
       }
-      const now = moment();
-      if (d.isSame(now, "year")) {
-        return d.format('MM-DD');
-      }
-      return d.format('YYYY-MM-DD');
+      return d.format('YY-MM-DD');
     },
     getProblems() {
       // 상태 정보
