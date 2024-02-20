@@ -18,6 +18,10 @@ from backend.feed_manager import FeedManager
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger(__name__)
 
+print("")
+print("FM_DB_HOST=%s, FM_DB_PORT=%s, MYSQL_DATABASE=%s, MYSQL_USER=%s, MYSQL_PASSWORD=%s" % (os.environ["FM_DB_HOST"], os.environ["FM_DB_PORT"], os.environ["MYSQL_DATABASE"], os.environ["MYSQL_USER"], os.environ["MYSQL_PASSWORD"]))
+print("FM_HOME_DIR=%s, FM_WORK_DIR=%s, FM_LOG_DIR=%s, FM_BACKEND_PORT=%s, FM_FRONTEND_URL=%s" % (os.environ["FM_HOME_DIR"], os.environ["FM_WORK_DIR"], os.environ["FM_LOG_DIR"], os.environ["FM_BACKEND_PORT"], os.environ["FM_FRONTEND_URL"]))
+
 app = FastAPI()
 origins = [
     os.environ["FM_FRONTEND_URL"] if "FM_FRONTEND_URL" in os.environ else "https://127.0.0.1:8081",
