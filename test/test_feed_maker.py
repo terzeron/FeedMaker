@@ -94,7 +94,7 @@ class TestFeedMaker(unittest.TestCase):
 
     def test_get_image_tag_str(self):
         actual = FeedMaker.get_image_tag_str(os.environ["WEB_SERVICE_URL"], self.rss_file_path.name, self.item1_url)
-        expected = f"<img src='{os.environ["WEB_SERVICE_URL"]}/img/1x1.jpg?feed=oneplusone.xml&item=3e1c485'/>"
+        expected = "<img src='%s/img/1x1.jpg?feed=oneplusone.xml&item=3e1c485'/>" % os.environ["WEB_SERVICE_URL"]
         self.assertEqual(expected, actual)
 
     def test_get_size_of_template_with_image_tag(self):

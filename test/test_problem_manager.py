@@ -19,10 +19,9 @@ LOGGER = logging.getLogger()
 
 class TestProblemManager(unittest.TestCase):
     def setUp(self) -> None:
-        db = DBManager(os.environ["FM_DB_HOST"], os.environ["FM_DB_PORT"], os.environ["MYSQL_DATABASE"], os.environ["MYSQL_USER"], os.environ["MYSQL_PASSWORD"])
+        db = DBManager(os.environ["FM_DB_HOST"], int(os.environ["FM_DB_PORT"]), os.environ["MYSQL_DATABASE"], os.environ["MYSQL_USER"], os.environ["MYSQL_PASSWORD"])
         self.pm = ProblemManager(db)
         with self.pm.db.get_connection_and_cursor() as (connection, cursor):
-            self.pm.db.execute(cursor, "TRUNCATE feed_alias_name")
             self.pm.db.execute(cursor, "TRUNCATE feed_name_config")
             self.pm.db.execute(cursor, "TRUNCATE feed_name_title_group")
             self.pm.db.execute(cursor, "TRUNCATE feed_name_list_url_count")
@@ -34,7 +33,7 @@ class TestProblemManager(unittest.TestCase):
             self.pm.db.execute(cursor, "TRUNCATE html_file_without_image_tag")
             self.pm.db.execute(cursor, "TRUNCATE html_file_image_not_found")
             self.pm.db.execute(cursor, "TRUNCATE feed_name_progress_info")
-            self.pm.db.execute(cursor, "TRUNCATE feed_alias_access_info")
+            self.pm.db.execute(cursor, "TRUNCATE feed_name_access_info")
             self.pm.db.commit(connection)
 
         self.test_feed_dir_path = self.pm.work_dir / "my_test_group" / "my_test_feed"
@@ -68,17 +67,6 @@ class TestProblemManager(unittest.TestCase):
         expected = "my_test_feed/html/31d4598.html"
         actual = self.pm.get_html_file_name(self.test_feed_dir_path / "html" / "31d4598.html")
         self.assertEqual(expected, actual)
-
-    def test_reload_htaccess_file(self):
-        self.pm.load_htaccess_file()
-        self.pm.load_all_config_rss_files()
-
-        row = self.pm.db.query("SELECT * FROM feed_alias_name")
-        self.assertGreater(len(row), 0)
-        self.assertIsNotNone(row[0]["feed_alias"])
-        self.assertIsNotNone(row[0]["feed_name"])
-        self.assertGreater(len(self.pm.feed_alias_name_map), 0)
-        self.assertGreater(len(self.pm.feed_name_aliases_map), 0)
 
     def test_get_feed_name_list_url_count_map(self):
         result = self.pm.get_feed_name_list_url_count_map()
@@ -132,7 +120,6 @@ class TestProblemManager(unittest.TestCase):
         self.assertEqual(len(row41), len(row43))
 
     def test_load_all_config_rss_files(self):
-        self.pm.load_htaccess_file()
         self.pm.load_all_config_rss_files()
 
         row = self.pm.db.query("SELECT * FROM feed_name_config")
@@ -182,7 +169,6 @@ class TestProblemManager(unittest.TestCase):
         self.pm.remove_public_feed_info(feed_file_path)
 
     def test_load_all_public_feed_files(self):
-        self.pm.load_htaccess_file()
         self.pm.load_all_config_rss_files()
         self.pm.load_all_public_feed_files()
 
@@ -462,7 +448,6 @@ class TestProblemManager(unittest.TestCase):
         conf_file_path = self.test_feed_dir_path / "conf.json"
         shutil.copy(example_conf_file_path, conf_file_path)
 
-        self.pm.load_htaccess_file()
         self.pm.load_all_config_rss_files()
 
         progress_file_path = self.test_feed_dir_path / "start_idx.txt"
@@ -479,7 +464,6 @@ class TestProblemManager(unittest.TestCase):
         self.assertEqual(len(row1), len(row3))
 
     def test_load_all_progress_info_from_files(self):
-        self.pm.load_htaccess_file()
         self.pm.load_all_config_rss_files()
         self.pm.load_all_progress_info_from_files()
 
@@ -496,13 +480,11 @@ class TestProblemManager(unittest.TestCase):
             self.assertIsNotNone(row[0]["due_date"])
 
     def test_add_httpd_access_file_to_info_after_last_log(self):
-        self.pm.load_htaccess_file()
         self.pm.load_all_config_rss_files()
         self.pm.load_all_httpd_access_files()
         group_name = "naver"
         feed_name = "navercast"
         test_feed_dir_path = Path(__file__).parent.parent / group_name / feed_name
-        feed_alias = feed_name
 
         # get date from recent log file
         today = datetime.today()
@@ -516,33 +498,29 @@ class TestProblemManager(unittest.TestCase):
                 break
 
         self.pm.add_httpd_access_info(test_feed_dir_path)
-        rows = self.pm.db.query("SELECT * FROM feed_alias_access_info WHERE feed_alias = %s", feed_alias)
+        rows = self.pm.db.query("SELECT * FROM feed_name_access_info WHERE feed_name = %s", feed_name)
         self.assertIsNotNone(rows)
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["access_date"].strftime("%y%m%d"), recent_log_file_date_str)
 
     def test_load_all_httpd_access_files(self):
-        self.pm.load_htaccess_file()
         self.pm.load_all_config_rss_files()
         self.pm.load_all_httpd_access_files()
 
-        row = self.pm.db.query("SELECT * FROM feed_alias_access_info")
+        row = self.pm.db.query("SELECT * FROM feed_name_access_info")
         self.assertGreater(len(row[0]), 0)
         if len(row) > 0:
-            self.assertIsNotNone(row[0]["feed_alias"])
             self.assertIsNotNone(row[0]["feed_name"])
             self.assertIsNotNone(row[0]["access_date"])
             self.assertGreaterEqual(row[0]["access_status"], 0)
             self.assertGreaterEqual(row[0]["is_in_xml_dir"], 0)
 
-    def test_get_feed_alias_status_info_map(self):
-        result = self.pm.get_feed_alias_status_info_map()
+    def test_get_feed_name_status_info_map(self):
+        result = self.pm.get_feed_name_status_info_map()
         for _, status_info in result.items():
-            self.assertIn("feed_alias", status_info)
             self.assertIn("feed_name", status_info)
             self.assertIn("feed_title", status_info)
             self.assertIn("group_name", status_info)
-            self.assertIn("htaccess", status_info)
             self.assertIn("http_request", status_info)
             self.assertIn("public_html", status_info)
             self.assertIn("feedmaker", status_info)
@@ -559,19 +537,17 @@ class TestProblemManager(unittest.TestCase):
     def test_load_all(self):
         self.pm.load_all()
 
-        row = self.pm.db.query("SELECT * FROM feed_alias_status_info")
+        row = self.pm.db.query("SELECT * FROM feed_name_status_info")
         self.assertGreaterEqual(len(row[0]), 0)
         if len(row) > 0:
-            self.assertIsNotNone(row[0]["feed_alias"])
             self.assertIsNotNone(row[0]["feed_name"])
             self.assertIsNotNone(row[0]["feed_title"])
             self.assertIsNotNone(row[0]["group_name"])
-            self.assertGreaterEqual(row[0]["htaccess"], 0)
             self.assertGreaterEqual(row[0]["http_request"], 0)
             self.assertGreaterEqual(row[0]["public_html"], 0)
             self.assertGreaterEqual(row[0]["feedmaker"], 0)
 
-        row = self.pm.db.query("SELECT * FROM feed_alias_status_info WHERE NOT ( http_request IS NULL AND htaccess IS NULL AND public_html IS NULL AND feedmaker IS NULL ) AND NOT ( http_request IS NOT NULL AND htaccess IS NULL AND public_html IS NULL AND feedmaker IS NULL AND access_date IS NOT NULL AND DATEDIFF(access_date, current_date) > %s ) AND NOT ( http_request IS NOT NULL AND htaccess IS NOT NULL AND public_html IS NOT NULL AND feedmaker IS NOT NULL AND ( access_date IS NOT NULL AND DATEDIFF(current_date, access_date) < %s OR view_date IS NOT NULL AND DATEDIFF(current_date, view_date) < %s ) )", ProblemManager.num_days, ProblemManager.num_days, ProblemManager.num_days)
+        row = self.pm.db.query("SELECT * FROM feed_name_status_info WHERE NOT ( http_request IS NULL AND public_html IS NULL AND feedmaker IS NULL ) AND NOT ( http_request IS NOT NULL AND public_html IS NULL AND feedmaker IS NULL AND access_date IS NOT NULL AND DATEDIFF(access_date, current_date) > %s ) AND NOT ( http_request IS NOT NULL AND public_html IS NOT NULL AND feedmaker IS NOT NULL AND ( access_date IS NOT NULL AND DATEDIFF(current_date, access_date) < %s OR view_date IS NOT NULL AND DATEDIFF(current_date, view_date) < %s ) )", ProblemManager.num_days, ProblemManager.num_days, ProblemManager.num_days)
         self.assertGreaterEqual(len(row), 0)
 
 
