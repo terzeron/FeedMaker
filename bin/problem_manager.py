@@ -172,6 +172,7 @@ class ProblemManager:
             self.db.execute(cursor, "TRUNCATE element_name_count")
             self.db.execute(cursor, "TRUNCATE feed_name_list_url_count")
             self.db.execute(cursor, "TRUNCATE feed_name_rss_info")
+            self.db.execute(cursor, "TRUNCATE feed_name_status_info")
 
             element_name_count_map: Dict[str, int] = {}
             num_items = 0
