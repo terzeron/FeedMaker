@@ -1,13 +1,5 @@
 #!/bin/bash
 
-if [ -f .env.development ]; then
-    source .env.development
-    if [ "$FM_DB_HOST" = "127.0.0.1" ]; then
-        db_name="fm_db"
-    else
-        db_name="$FM_DB_HOST"
-    fi
-fi
 env | grep -E "(FM_|WEB_|MSG_|MYSQL_|PYTHON)" | sort
 
 pidfile="uvicorn.pid"

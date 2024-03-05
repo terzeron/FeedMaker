@@ -11,7 +11,9 @@ from pathlib import Path
 from bin.db_manager import DBManager
 from bin.problem_manager import ProblemManager
 from bin.feed_maker import FeedMaker
-from bin.feed_maker_util import header_str, Config, Datetime
+from bin.feed_maker_util import header_str, Datetime
+from bin.access_log import AccessLog
+
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
@@ -479,41 +481,40 @@ class TestProblemManager(unittest.TestCase):
             self.assertGreaterEqual(row[0]["progress_ratio"], 0.0)
             self.assertIsNotNone(row[0]["due_date"])
 
-    def test_add_httpd_access_file_to_info_after_last_log(self):
+    def test_add_httpd_access_info(self):
         self.pm.load_all_config_rss_files()
-        self.pm.load_all_httpd_access_files()
+        self.pm.load_all_httpd_access_info()
         group_name = "naver"
         feed_name = "navercast"
-        test_feed_dir_path = Path(__file__).parent.parent / group_name / feed_name
+        feed_dir_path_for_test = self.pm.work_dir / group_name / feed_name
 
         # get date from recent log file
         today = datetime.today()
         recent_log_file_date_str = ""
+        access_log = AccessLog()
         for i in range(31):
             specific_date = today - timedelta(days=i)
-            date_str = specific_date.strftime("%y%m%d")
-            access_file_path = self.pm.httpd_access_log_dir / f"access.log.{date_str}"
-            if access_file_path.is_file():
+            date_str = specific_date.strftime("%Y-%m-%d")
+            accessed_feed_list, viewed_feed_list = access_log.search(date_str)
+            if accessed_feed_list or viewed_feed_list:
                 recent_log_file_date_str = date_str
                 break
 
-        self.pm.add_httpd_access_info(test_feed_dir_path)
+        self.pm.add_httpd_access_info()
         rows = self.pm.db.query("SELECT * FROM feed_name_access_info WHERE feed_name = %s", feed_name)
         self.assertIsNotNone(rows)
         self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0]["access_date"].strftime("%y%m%d"), recent_log_file_date_str)
+        self.assertEqual(rows[0]["access_date"].strftime("%Y-%m-%d"), recent_log_file_date_str)
 
-    def test_load_all_httpd_access_files(self):
+    def test_load_all_httpd_access_info(self):
         self.pm.load_all_config_rss_files()
-        self.pm.load_all_httpd_access_files()
+        self.pm.load_all_httpd_access_info()
 
         row = self.pm.db.query("SELECT * FROM feed_name_access_info")
         self.assertGreater(len(row[0]), 0)
         if len(row) > 0:
             self.assertIsNotNone(row[0]["feed_name"])
             self.assertIsNotNone(row[0]["access_date"])
-            self.assertGreaterEqual(row[0]["access_status"], 0)
-            self.assertGreaterEqual(row[0]["is_in_xml_dir"], 0)
 
     def test_get_feed_name_status_info_map(self):
         result = self.pm.get_feed_name_status_info_map()

@@ -63,10 +63,7 @@ CREATE TABLE feed_name_access_info
 (
     feed_name     VARCHAR(256) NOT NULL,
     access_date   TIMESTAMP default null,
-    access_status INT       default null,
     view_date     TIMESTAMP default null,
-    view_status   INT       default null,
-    is_in_xml_dir boolean       NOT NULL,
     PRIMARY KEY (feed_name)
 );
 

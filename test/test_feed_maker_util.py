@@ -865,11 +865,9 @@ class TestPathUtil(unittest.TestCase):
         work_dir = Path(os.environ["FM_WORK_DIR"])
         public_feed_dir = Path(os.environ["WEB_SERVICE_FEEDS_DIR"])
         httpd_access_log_dir = Path(os.environ["FM_LOG_DIR"])
-        htaccess_file = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / ".htaccess"
         self.assertEqual(PathUtil.convert_path_to_str(work_dir), ".")
         self.assertEqual(PathUtil.convert_path_to_str(public_feed_dir), ".")
         self.assertEqual(PathUtil.convert_path_to_str(httpd_access_log_dir), "logs")
-        self.assertEqual(PathUtil.convert_path_to_str(htaccess_file), ".htaccess")
 
 
 if __name__ == "__main__":

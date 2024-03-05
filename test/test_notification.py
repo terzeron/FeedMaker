@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 
 
+import os
 import unittest
 import logging.config
 from pathlib import Path
-import shutil
+from dotenv import load_dotenv
 from bin.notification import Notification
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -13,6 +14,10 @@ LOGGER = logging.getLogger()
 
 
 class NotificationTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        load_dotenv(".env.test.notification", override=True)
+
     def test_send_msg(self):
         msg = "This is a message from python unittest"
         subject = "Notification test"
@@ -20,35 +25,27 @@ class NotificationTest(unittest.TestCase):
         actual = notification.send_msg(msg, subject)
         self.assertTrue(actual)
 
-    def test_send_line_msg(self):
-        notification = Notification()
-
-        msg = "This is a line message from python unittest"
-        subject = "Line messenger notification test"
-        actual = notification._send_line_msg(msg, subject)
-        self.assertTrue(actual)
-
     def test_send_email_by_naver_cloud(self):
         notification = Notification()
 
-        msg = "This is a mail by naver cloud from python unittest"
-        subject = "Email notification test"
+        msg = "This is a mail by NAVER Cloud from python unittest"
+        subject = "Email notification test (by NAVER Cloud Email)"
         actual = notification._send_email_by_naver_cloud(msg, subject)
         self.assertTrue(actual)
 
     def test_send_email_by_nhn_cloud(self):
         notification = Notification()
 
-        msg = "This is a mail by nhn cloud from python unittest"
-        subject = "Email notification test"
+        msg = "This is a mail by NHN Cloud from python unittest"
+        subject = "Email notification test (by NHN Cloud Email)"
         actual = notification._send_email_by_nhn_cloud(msg, subject)
         self.assertTrue(actual)
 
     def test_send_email_by_smtp(self):
         notification = Notification()
 
-        msg = "This is a mail by nhn cloud from python unittest"
-        subject = "Email notification test"
+        msg = "This is a mail by SMTP of NHN Cloud from python unittest"
+        subject = "Email notification test (by NHN Cloud SMTP)"
         actual = notification._send_email_by_smtp(msg, subject)
         self.assertTrue(actual)
 

@@ -22,8 +22,6 @@ LOGGER = logging.getLogger()
 
 class Notification:
     def __init__(self) -> None:
-        self.line_receiver_id: str = ""
-        self.line_access_token: str = ""
         self.mail_sender_address: str = ""
         self.mail_sender_name: str = ""
         self.mail_recipient_list: List[Tuple[str, str]] = []
@@ -32,13 +30,6 @@ class Notification:
         self.smtp_login_id: str = ""
         self.smtp_login_password: str = ""
         self.send_msg: Callable[[str, str], bool] = self._send_email_by_smtp
-
-        if "MSG_LINE_RECEIVER_ID_LIST" in os.environ and os.environ["MSG_LINE_RECEIVER_ID_LIST"] and "MSG_LINE_ACCESS_TOKEN" in os.environ and os.environ["MSG_LINE_ACCESS_TOKEN"]:
-            self.line_receiver_id_list = os.environ["MSG_LINE_RECEIVER_ID_LIST"]
-            self.line_access_token = os.environ["MSG_LINE_ACCESS_TOKEN"]
-            self.send_msg = self._send_line_msg
-        else:
-            LOGGER.error("can't find line_receiver_id_list or line_access_token in line_messenger from global configuration")
 
         if "MSG_EMAIL_SENDER_ADDR" in os.environ and os.environ["MSG_EMAIL_SENDER_ADDR"] and "MSG_EMAIL_SENDER_NAME" in os.environ and os.environ["MSG_EMAIL_SENDER_NAME"] and "MSG_EMAIL_RECIPIENT_LIST" in os.environ and os.environ["MSG_EMAIL_RECIPIENT_LIST"]:
             self.mail_sender_address = os.environ["MSG_EMAIL_SENDER_ADDR"]
@@ -49,25 +40,30 @@ class Notification:
                 addr = recipients[i + 1]
                 self.mail_recipient_list.append((addr, name))
         else:
-            LOGGER.error("can't find MSG_EMAIL_SENDER_ADDR, MSG_EMAIL_SENDER_NAME or MSG_EMAIL_RECIPIENT_LIST from environment variables")
+            LOGGER.error("can't find 'MSG_EMAIL_SENDER_ADDR', 'MSG_EMAIL_SENDER_NAME' or 'MSG_EMAIL_RECIPIENT_LIST' from environment variables")
         if "MSG_EMAIL_NAVER_CLOUD_ACCESS_KEY" in os.environ and os.environ["MSG_EMAIL_NAVER_CLOUD_ACCESS_KEY"] and "MSG_EMAIL_NAVER_CLOUD_SECRET_KEY" in os.environ and os.environ["MSG_EMAIL_NAVER_CLOUD_SECRET_KEY"]:
             self.naver_cloud_access_key = os.environ["MSG_EMAIL_NAVER_CLOUD_ACCESS_KEY"]
             self.naver_cloud_secret_key = os.environ["MSG_EMAIL_NAVER_CLOUD_SECRET_KEY"]
             self.send_msg = self._send_email_by_naver_cloud
+        else:
+            LOGGER.error("can't find 'MSG_EMAIL_NAVER_CLOUD_ACCESS_KEY' or 'MSG_EMAIL_NAVER_CLOUD_SECRET_KEY' from environment variables")
         if "MSG_EMAIL_NHN_CLOUD_APPKEY" in os.environ and os.environ["MSG_EMAIL_NHN_CLOUD_APPKEY"] and "MSG_EMAIL_NHN_CLOUD_SECRETKEY" in os.environ and os.environ["MSG_EMAIL_NHN_CLOUD_SECRETKEY"]:
-            self.nhn_cloud_appkey = os.environ["MSG_EMAIL_NHN_CLOUD_ACCESSKEY"]
+            self.nhn_cloud_appkey = os.environ["MSG_EMAIL_NHN_CLOUD_APPKEY"]
             self.nhn_cloud_secretkey = os.environ["MSG_EMAIL_NHN_CLOUD_SECRETKEY"]
             self.send_msg = self._send_email_by_nhn_cloud
+        else:
+            LOGGER.error("can't find 'MSG_EMAIL_NHN_CLOUD_APPKEY' or 'MSG_EMAIL_NHN_CLOUD_SECRETKEY' from environment variables")
+
         if "MSG_SMTP_SERVER" in os.environ and os.environ["MSG_SMTP_SERVER"] and "MSG_SMTP_PORT" in os.environ and os.environ["MSG_SMTP_PORT"] and "MSG_SMTP_LOGIN_ID" in os.environ and os.environ["MSG_SMTP_LOGIN_ID"] and "MSG_SMTP_LOGIN_PASSWORD" in os.environ and os.environ["MSG_SMTP_LOGIN_PASSWORD"]:
             self.smtp_server = os.environ["MSG_SMTP_SERVER"]
             self.smtp_port = os.environ["MSG_SMTP_PORT"]
             self.smtp_login_id = os.environ["MSG_SMTP_LOGIN_ID"]
             self.smtp_login_password = os.environ["MSG_SMTP_LOGIN_PASSWORD"]
             self.send_msg = self._send_email_by_smtp
+        else:
+            LOGGER.error("can't find 'MSG_SMTP_SERVER', 'MSG_SMTP_PORT', 'MSG_SMTP_LOGIN_ID' or 'MSG_SMTP_LOGIN_PASSWORD' from environment variables")
 
     def __del__(self) -> None:
-        del self.line_receiver_id
-        del self.line_access_token
         del self.mail_sender_address
         del self.mail_sender_name
         del self.mail_recipient_list
@@ -75,33 +71,6 @@ class Notification:
         del self.smtp_port
         del self.smtp_login_id
         del self.smtp_login_password
-
-    def _send_line_msg(self, msg: str, subject: str = "") -> bool:
-        LOGGER.debug(f"# _send_line_msg('{msg}', '{subject}')")
-        LOGGER.debug("line_access_token: %s", self.line_access_token)
-        LOGGER.debug("line_receiver_id_list: %r", self.line_receiver_id_list)
-        if not msg:
-            return False
-
-        url = "https://api.line.me/v2/bot/message/multicast"
-        headers: Dict[str, str] = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.line_access_token}"
-        }
-        data: Dict[str, Any] = {
-            "to": self.line_receiver_id_list,
-            "messages": [
-                {
-                    "type": "text",
-                    "text": msg[:1999]
-                }
-            ]
-        }
-        response = requests.post(url, json=data, headers=headers, timeout=60, verify=True)
-        if response and response.status_code == 200:
-            return True
-        LOGGER.error(f"can't send message to line messenger, {response.status_code}")
-        return False
 
     def _make_signature(self) -> Tuple[str, int]:
         space = " "  # 공백

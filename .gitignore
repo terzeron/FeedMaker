@@ -34,6 +34,7 @@ cookies.*.json
 *.lock
 .*.lock
 .env
+.env.test.notification
 nohup.out
 backend/index.wsgi
 CartoonSplit/

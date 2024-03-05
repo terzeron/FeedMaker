@@ -404,7 +404,7 @@ class FeedManager:
             self.problem_manager.remove_public_feed_info(feed_file_path)
             self.problem_manager.remove_progress_info(feed_dir_path)
             self.problem_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
-        self.problem_manager.load_all_httpd_access_files()
+            self.problem_manager.remove_httpd_access_info(feed_dir_path)
         return True, ""
 
     async def toggle_feed(self, group_name: str, feed_name: str) -> Tuple[str, str]:
@@ -448,11 +448,11 @@ class FeedManager:
         if group_name.startswith("_"):
             # enable
             for feed_dir_path in new_group_dir_path.iterdir():
-                self.problem_manager.add_htaccess_info(feed_dir_path.name)
                 self.problem_manager.add_config_rss_info(feed_dir_path)
                 feed_file_path = self.public_feed_dir / f"{feed_dir_path.name}.xml"
                 self.problem_manager.add_public_feed_info(feed_file_path)
                 self.problem_manager.add_progress_info(feed_dir_path)
+                self.problem_manager.add_httpd_access_info()
                 self.problem_manager.add_html_info(feed_dir_path)
         else:
             # disable
@@ -461,8 +461,8 @@ class FeedManager:
                 feed_file_path = self.public_feed_dir / f"{feed_dir_path.name}.xml"
                 self.problem_manager.remove_public_feed_info(feed_file_path)
                 self.problem_manager.remove_progress_info(feed_dir_path)
+                self.problem_manager.remove_httpd_access_info(feed_dir_path)
                 self.problem_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
-        self.problem_manager.load_all_httpd_access_files()
         return new_group_name, ""
 
     @staticmethod

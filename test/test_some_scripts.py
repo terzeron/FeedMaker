@@ -29,8 +29,8 @@ def main() -> int:
     fm_home = Path(__file__).parent.parent
 
     test_subjects = {
-        "naver/three_kingdoms_talk": [
-            f"{fm_home}/utils/download_image.py -f ~/workspace/fma/naver/three_kingdoms_talk 'https://comic.naver.com/webtoon/detail.nhn?titleId=711422&no=1'"
+        "naver/one_second": [
+            f"{fm_home}/utils/download_image.py -f ~/workspace/fma/naver/one_second 'https://comic.naver.com/webtoon/detail.nhn?titleId=711422&no=1'"
         ],
         "naver/windbreaker": [
             f"{fm_home}/utils/download_merge_split.py -f ~/workspace/fma/naver/windbreaker -m -c fuzzy 'https://comic.naver.com/webtoon/detail.nhn?titleId=602910&no=197'"

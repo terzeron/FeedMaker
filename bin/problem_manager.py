@@ -11,7 +11,8 @@ from datetime import datetime, timedelta
 from contextlib import suppress
 from typing import List, Dict, Any, Union, Optional
 from bin.feed_maker import FeedMaker
-from bin.feed_maker_util import Config, PathUtil
+from bin.feed_maker_util import PathUtil
+from bin.access_log import AccessLog
 from bin.db_manager import DBManager, Cursor, IntegrityError
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -21,7 +22,6 @@ LOGGER = logging.getLogger()
 class ProblemManager:
     work_dir = Path(os.environ["FM_WORK_DIR"])
     public_feed_dir = Path(os.environ["WEB_SERVICE_FEEDS_DIR"])
-    httpd_access_log_dir = Path(os.environ["HOME"]) / "apps/logs"
     num_days = 14
 
     def __init__(self, db_manager: Optional[DBManager] = None) -> None:
@@ -479,8 +479,9 @@ class ProblemManager:
         if not feed_dir_path.is_dir():
             LOGGER.error("can't find a feed directory '%s'", feed_dir_path)
             return
+
+        feed_name = feed_dir_path.name
         with self.db.get_connection_and_cursor() as (connection, cursor):
-            feed_name = feed_dir_path.name
             self.db.execute(cursor, "DELETE FROM feed_name_progress_info WHERE feed_name = %s", feed_name)
             self.db.commit(connection)
         LOGGER.info("* The removing of progress info of feed '%s' is done.", feed_name)
@@ -566,86 +567,61 @@ class ProblemManager:
             self.db.commit(connection)
         LOGGER.info("* The loading of all progress info is done. %d items", num_items)
 
-    def _add_http_access_info(self, cursor: Cursor, access_file_path: Path) -> int:
-        num_items = 0
-        with access_file_path.open('r', encoding="utf-8") as infile:
-            for line in infile:
-                # view
-                m = re.search(r'\[(?P<date>\d+/\w+/\d+):\d+:\d+:\d+ \+\d+] "GET /img/1x1\.jpg\?feed=(?P<feed_name>[\w.\-]+)\.xml\S* HTTP\S+" (?P<status_code>\d+) (?:\d+|-) "[^"]*" "[^"]*"', line)
-                if m:
-                    feed_name = m.group("feed_name")
-                    feed_title = self.feed_name_title_map.get(feed_name, "")
-                    group_name = self.feed_name_group_map.get(feed_name, "")
-
-                    status_code = int(m.group("status_code"))
-                    if status_code != 200:
-                        continue
-                    view_date = datetime.strptime(m.group("date"), "%d/%b/%Y")
-                    # determine the latest view date & status
-                    try:
-                        self.db.execute(cursor, "INSERT INTO feed_name_access_info (feed_name, view_date, view_status, is_in_xml_dir) VALUES (%s, %s, %s, %s)", feed_name, self.convert_datetime_to_str(view_date), status_code, False)
-                    except IntegrityError:
-                        self.db.execute(cursor, "UPDATE feed_name_access_info SET view_date = %s, view_status = %s, is_in_xml_dir = %s WHERE feed_name = %s", self.convert_datetime_to_str(view_date), status_code, False, feed_name)
-                    num_items += 1
-                    try:
-                        self.db.execute(cursor, "INSERT INTO feed_name_status_info (feed_name, feed_title, group_name, http_request, view_date) VALUES (%s, %s, %s, %s, %s)", feed_name, feed_title, group_name, True, view_date)
-                    except IntegrityError:
-                        self.db.execute(cursor, "UPDATE feed_name_status_info SET feed_title = %s, group_name = %s, http_request = %s, view_date = %s WHERE feed_name = %s", feed_title, group_name, True, view_date, feed_name)
-
-                # access
-                m = re.search(
-                    r'\[(?P<date>\d+/\w+/\d+):\d+:\d+:\d+ \+\d+] "GET /(?P<feed>(xml/)?(?P<feed_name>[\w.\-]+))\.xml\S* HTTP\S+" (?P<status_code>\d+)',
-                    line)
-                if m:
-                    feed = m.group("feed")
-                    feed_name = m.group("feed_name")
-                    feed_title = self.feed_name_title_map.get(feed_name, "")
-                    group_name = self.feed_name_group_map.get(feed_name, "")
-                    status_code = int(m.group("status_code"))
-                    if status_code != 200:
-                        continue
-                    access_date = datetime.strptime(m.group("date"), "%d/%b/%Y")
-                    is_in_xml_dir = feed.startswith("xml/")
-                    # determine the latest access date & status
-                    try:
-                        self.db.execute(cursor, "INSERT INTO feed_name_access_info (feed_name, access_date, access_status, is_in_xml_dir) VALUES (%s, %s, %s, %s)", feed_name, self.convert_datetime_to_str(access_date), status_code, is_in_xml_dir)
-                    except IntegrityError:
-                        self.db.execute(cursor, "UPDATE feed_name_access_info SET access_date = %s, access_status = %s, is_in_xml_dir = %s WHERE feed_name = %s", self.convert_datetime_to_str(access_date), status_code, is_in_xml_dir, feed_name)
-                    num_items += 1
-                    try:
-                        self.db.execute(cursor, "INSERT INTO feed_name_status_info (feed_name, feed_title, group_name, http_request, access_date) VALUES (%s, %s, %s, %s, %s)", feed_name, feed_title, group_name, True, access_date)
-                    except IntegrityError:
-                        self.db.execute(cursor, "UPDATE feed_name_status_info SET feed_title = %s, group_name = %s, http_request = %s, access_date = %s WHERE feed_name = %s", feed_title, group_name, True, access_date, feed_name)
-
-        return num_items
-
-    def add_httpd_access_info(self, feed_dir_path: Path) -> None:
-        LOGGER.debug(f"# add_httpd_access_files_to_info_after_last_log({feed_dir_path})")
+    def remove_httpd_access_info(self, feed_dir_path: Path) -> None:
         if not feed_dir_path.is_dir():
             LOGGER.error("can't find a feed directory '%s'", feed_dir_path)
             return
         feed_name = feed_dir_path.name
         with self.db.get_connection_and_cursor() as (connection, cursor):
-            rows = self.db.query("SELECT access_date FROM feed_name_access_info WHERE feed_name = %s", feed_name)
-            for row in rows:
-                last_log_date = row["access_date"]
-                today = datetime.today()
-                for i in range(30, -1, -1):
-                    specific_date = today - timedelta(days=i)
-                    if specific_date < last_log_date:
-                        continue
-                    date_str = specific_date.strftime("%y%m%d")
-                    access_file_path = self.httpd_access_log_dir / f"access.log.{date_str}"
-                    if not access_file_path.is_file():
-                        # LOGGER.warning("can't find access file '%s'", access_file_path)
-                        continue
-
-                    self._add_http_access_info(cursor, access_file_path)
-                    LOGGER.info("* The adding of access info of '%s' is done.", PathUtil.convert_path_to_str(access_file_path))
+            self.db.execute(cursor, "DELETE FROM feed_name_access_info WHERE feed_name = %s", feed_name)
             self.db.commit(connection)
+        LOGGER.info("* The removing of access info of feed '%s' is done.", feed_name)
 
-    def load_all_httpd_access_files(self) -> None:
-        LOGGER.debug("# load_all_httpd_access_files()")
+    def _add_httpd_access_info(self, cursor: Cursor, date_str: str = "") -> int:
+        num_items = 0
+        access_log = AccessLog()
+        accessed_feed_list, viewed_feed_list = access_log.search(date_str)
+        for view_date, feed_name in viewed_feed_list:
+            feed_title = self.feed_name_title_map.get(feed_name, "")
+            group_name = self.feed_name_group_map.get(feed_name, "")
+            view_date_str = self.convert_datetime_to_str(view_date)
+            try:
+                self.db.execute(cursor, "INSERT INTO feed_name_access_info (feed_name, view_date) VALUES (%s, %s)", feed_name, view_date_str)
+            except IntegrityError:
+                self.db.execute(cursor, "UPDATE feed_name_access_info SET view_date = %s WHERE feed_name = %s", view_date_str, feed_name)
+            num_items += 1
+            try:
+                self.db.execute(cursor, "INSERT INTO feed_name_status_info (feed_name, feed_title, group_name, http_request, view_date) VALUES (%s, %s, %s, %s, %s)", feed_name, feed_title, group_name, True, view_date_str)
+            except IntegrityError:
+                self.db.execute(cursor, "UPDATE feed_name_status_info SET feed_title = %s, group_name = %s, http_request = %s, view_date = %s WHERE feed_name = %s", feed_title, group_name, True, view_date_str, feed_name)
+
+        for access_date, feed_name in accessed_feed_list:
+            feed_title = self.feed_name_title_map.get(feed_name, "")
+            group_name = self.feed_name_group_map.get(feed_name, "")
+            access_date_str = self.convert_datetime_to_str(access_date)
+            try:
+                self.db.execute(cursor, "INSERT INTO feed_name_access_info (feed_name, access_date) VALUES (%s, %s)", feed_name, access_date_str)
+            except IntegrityError:
+                self.db.execute(cursor, "UPDATE feed_name_access_info SET access_date = %s WHERE feed_name = %s", access_date_str, feed_name)
+            num_items += 1
+            try:
+                self.db.execute(cursor, "INSERT INTO feed_name_status_info (feed_name, feed_title, group_name, http_request, access_date) VALUES (%s, %s, %s, %s, %s)", feed_name, feed_title, group_name, True, access_date_str)
+            except IntegrityError:
+                self.db.execute(cursor, "UPDATE feed_name_status_info SET feed_title = %s, group_name = %s, http_request = %s, access_date = %s WHERE feed_name = %s", feed_title, group_name, True, access_date_str, feed_name)
+
+        return num_items
+
+    def add_httpd_access_info(self) -> None:
+        LOGGER.debug("# add_httpd_access_info()")
+        with self.db.get_connection_and_cursor() as (connection, cursor):
+            for i in range(30, -1, -1):
+                date_str = (datetime.today() - timedelta(days=i)).strftime("%Y-%m-%d")
+                self._add_httpd_access_info(cursor, date_str)
+            self.db.commit(connection)
+        LOGGER.info("* The adding of access info is done.")
+
+    def load_all_httpd_access_info(self) -> None:
+        LOGGER.debug("# load_all_httpd_access_info()")
         with self.db.get_connection_and_cursor() as (connection, cursor):
             self.db.execute(cursor, "TRUNCATE feed_name_access_info")
 
@@ -660,27 +636,23 @@ class ProblemManager:
             today = datetime.today()
             num_items = 0
             for i in range(30, -1, -1):
-                date_str = (today - timedelta(days=i)).strftime("%y%m%d")
-                access_file_path = self.httpd_access_log_dir / f"access.log.{date_str}"
-                if not access_file_path.is_file():
-                    # LOGGER.warning("can't find access file '%s'", access_file_path)
-                    continue
-                num_items += self._add_http_access_info(cursor, access_file_path)
+                date_str = (today - timedelta(days=i)).strftime("%Y-%m-%d")
+                num_items += self._add_httpd_access_info(cursor, date_str=date_str)
 
             self.db.commit(connection)
-        LOGGER.info("* The loading of http access log is done. %d items", num_items)
+        LOGGER.info("* The loading of httpd access log is done. %d items", num_items)
 
     def get_feed_name_status_info_map(self) -> Dict[str, Dict[str, Any]]:
         LOGGER.debug("# get_feed_name_status_info_map()")
         feed_name_status_info_map = {}
 
-        # exclude unrequested and disallowed and unregistered and unmade feeds
+        # exclude unrequested and unregistered and unmade feeds
         # --> NOT ( http_request IS NULL AND public_html IS NULL AND feedmaker IS NULL )
-        # exclude REQUESTED and disallowed and unregistered and unmade but ACCESSED long ago feeds
+        # exclude REQUESTED and unregistered and unmade but ACCESSED long ago feeds
         # --> NOT ( http_request IS NOT NULL AND public_html IS NULL AND feedmaker IS NULL AND access_date IS NOT NULL AND DATEDIFF(access_date, current_date) > %s )
-        # exclude REQUESTED and ALLOWED and REGISTERED and MADE AND ACCESSED OR VIEWED RECENTLY feeds
+        # exclude REQUESTED and REGISTERED and MADE AND ACCESSED OR VIEWED RECENTLY feeds
         # --> NOT ( http_request IS NOT NULL AND public_html IS NOT NULL AND feedmaker IS NOT NULL AND ( access_date IS NOT NULL AND DATEDIFF(current_date, access_date) < %s OR view_date IS NOT NULL AND DATEDIFF(current_date, view_date) < %s ) )
-        for row in self.db.query("SELECT * FROM feed_name_status_info WHERE NOT ( http_request IS NULL AND public_html IS NULL AND feedmaker IS NULL ) AND NOT ( http_request IS NOT NULL AND public_html IS NULL AND feedmaker IS NULL AND access_date IS NOT NULL AND DATEDIFF(access_date, current_date) > %s ) AND NOT ( http_request IS NOT NULL AND public_html IS NOT NULL AND feedmaker IS NOT NULL AND ( access_date IS NOT NULL AND DATEDIFF(current_date, access_date) < %s OR view_date IS NOT NULL AND DATEDIFF(current_date, view_date) < %s ) )", ProblemManager.num_days, ProblemManager.num_days, ProblemManager.num_days):
+        for row in self.db.query("SELECT * FROM feed_name_status_info WHERE NOT ( http_request IS NULL AND public_html IS NULL AND feedmaker IS NULL ) AND NOT ( http_request IS NOT NULL AND public_html IS NULL AND feedmaker IS NULL AND access_date IS NOT NULL AND DATEDIFF(access_date, current_date) > %s ) AND NOT ( http_request IS NOT NULL AND public_html IS NOT NULL AND feedmaker IS NOT NULL AND ( access_date IS NOT NULL AND DATEDIFF(current_date, access_date) < %s OR view_date IS NOT NULL AND DATEDIFF(current_date, view_date) < %s ) ) ORDER BY update_date, upload_date", ProblemManager.num_days, ProblemManager.num_days, ProblemManager.num_days):
             feed_name = row["feed_name"]
             feed_title = row["feed_title"]
             group_name = row["group_name"]
@@ -700,12 +672,17 @@ class ProblemManager:
         LOGGER.debug(f"# update_feed_info(feed_dir_path={feed_dir_path})")
         self.remove_config_rss_info(feed_dir_path)
         self.add_config_rss_info(feed_dir_path)
+
         public_feed_file_path = self.public_feed_dir / f"{feed_dir_path.name}.xml"
         self.remove_public_feed_info(public_feed_file_path)
         self.add_public_feed_info(public_feed_file_path)
+
         self.remove_progress_info(feed_dir_path)
         self.add_progress_info(feed_dir_path)
-        self.add_httpd_access_info(feed_dir_path)
+
+        self.remove_httpd_access_info(feed_dir_path)
+        self.add_httpd_access_info()
+
         self.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
         self.add_html_info(feed_dir_path)
 
@@ -737,7 +714,7 @@ class ProblemManager:
             self.load_all_config_rss_files()
             self.load_all_public_feed_files()
             self.load_all_progress_info_from_files()
-            self.load_all_httpd_access_files()
+            self.load_all_httpd_access_info()
             self.load_all_html_files()
             self.unlock_problem_database()
             LOGGER.info("* finish loading information")
