@@ -2,12 +2,16 @@
 
 
 import time
+import logging.config
+from pathlib import Path
 from typing import List, Any, Optional, Iterator
 from contextlib import contextmanager
 from mysql.connector.pooling import MySQLConnectionPool, PooledMySQLConnection
 from mysql.connector.cursor import MySQLCursor
 import mysql.connector
 
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
+LOGGER = logging.getLogger()
 IntegrityError = mysql.connector.errors.IntegrityError
 
 
@@ -44,7 +48,6 @@ class DBManager:
                 print(f"can't connect to MySQL server due to database error, retry #{retries}")
                 retries += 1
                 time.sleep(3)
-            
 
     def __del__(self):
         if self.pool:
@@ -68,11 +71,13 @@ class DBManager:
 
     def query(self, query: str, *params) -> List[Any]:
         with self.get_connection_and_cursor() as (_, cursor):
+            cursor.mysql_cursor.execute("SET time_zone = '+00:00'") # explicit UTC
             cursor.mysql_cursor.execute(query, params)
             result = cursor.mysql_cursor.fetchall()
-            return result
+        return result
 
     def execute(self, cursor: Cursor, query: str, *params) -> None:
+        cursor.mysql_cursor.execute("SET time_zone = '+00:00'") # explicit UTC
         cursor.mysql_cursor.execute(query, params)
 
     def commit(self, connection: Connection) -> None:

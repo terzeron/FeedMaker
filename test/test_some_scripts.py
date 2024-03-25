@@ -5,7 +5,7 @@ import sys
 import filecmp
 import logging.config
 from pathlib import Path
-from bin.feed_maker_util import Process
+from bin.feed_maker_util import Process, PathUtil
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
@@ -18,7 +18,7 @@ def test_script(script: str, test_dir_path: Path, index: int):
     if not error:
         cmp_result = filecmp.cmp(f"{test_dir_path}/result.{index}.temp", f"{test_dir_path}/expected.output.{index}.txt")
         if not cmp_result:
-            LOGGER.error(f"Error in diff '{test_dir_path}/expected.output.{index}.txt' '{test_dir_path}/result.{index}.temp'")
+            LOGGER.error("Error in diff '%s/expected.output.%d.txt' '%s/result.%d.temp'", PathUtil.short_path(test_dir_path), index, PathUtil.short_path(test_dir_path), index)
             return False, cmd
         return True, cmd
     LOGGER.error(error)

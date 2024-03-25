@@ -1,157 +1,66 @@
 use feedmaker;
 
--- name -> title, group
-DROP TABLE IF EXISTS feed_name_title_group;
-CREATE TABLE feed_name_title_group
+DROP TABLE IF EXISTS group_info;
+CREATE TABLE group_info
 (
-    feed_name  VARCHAR(256) NOT NULL,
-    feed_title VARCHAR(256) NOT NULL,
     group_name VARCHAR(256) NOT NULL,
-    PRIMARY KEY (feed_name)
+    feed_name  VARCHAR(256) NOT NULL,
+    PRIMARY KEY (group_name)
 );
 
--- name -> public_feed_info
-DROP TABLE IF EXISTS feed_name_public_feed_info;
-CREATE TABLE feed_name_public_feed_info
+DROP TABLE IF EXISTS feed_info;
+CREATE TABLE feed_info
 (
-    feed_name   VARCHAR(256) NOT NULL,
-    feed_title  VARCHAR(256) NOT NULL,
-    group_name  VARCHAR(256) NOT NULL,
-    file_path   VARCHAR(512) NOT NULL,
-    upload_date TIMESTAMP default null,
-    file_size   INT           NOT NULL,
-    num_items   INT           NOT NULL,
-    PRIMARY KEY (feed_name)
-);
+    feed_name             VARCHAR(256) NOT NULL,
+    feed_title            VARCHAR(256) DEFAULT NULL,
+    group_name            VARCHAR(256) DEFAULT NULL,
 
--- name -> config
-DROP TABLE IF EXISTS feed_name_config;
-CREATE TABLE feed_name_config
-(
-    feed_name VARCHAR(256) NOT NULL,
-    config    text          NOT NULL,
-    PRIMARY KEY (feed_name)
-);
+    is_active             BOOLEAN      DEFAULT FALSE,
+    config                TEXT         DEFAULT NULL,
+    config_modify_date    TIMESTAMP    DEFAULT NULL,
+    url_list_count        INT          DEFAULT NULL,
 
--- name -> rss_info
-DROP TABLE IF EXISTS feed_name_rss_info;
-CREATE TABLE feed_name_rss_info
-(
-    feed_name   VARCHAR(256) NOT NULL,
-    update_date TIMESTAMP default null,
-    PRIMARY KEY (feed_name)
-);
+    collect_date          TIMESTAMP    DEFAULT NULL,
 
--- name -> progress_info
-DROP TABLE IF EXISTS feed_name_progress_info;
-CREATE TABLE feed_name_progress_info
-(
-    feed_name      VARCHAR(256) NOT NULL,
-    feed_title     VARCHAR(256) NOT NULL,
-    group_name     VARCHAR(256) NOT NULL,
-    idx            INT           NOT NULL,
-    count          INT         NOT NULL,
-    unit_size      float           NOT NULL,
-    progress_ratio float         NOT NULL,
-    due_date       TIMESTAMP default null,
-    PRIMARY KEY (feed_name)
-);
+    is_completed          BOOLEAN      DEFAULT FALSE,
+    current_index         INT          DEFAULT NULL,
+    total_item_count      INT          DEFAULT NULL,
+    unit_size_per_day     FLOAT        DEFAULT NULL,
+    progress_ratio        FLOAT        DEFAULT NULL,
+    due_date              TIMESTAMP    DEFAULT NULL,
 
--- name -> access_info
-DROP TABLE IF EXISTS feed_name_access_info;
-CREATE TABLE feed_name_access_info
-(
-    feed_name     VARCHAR(256) NOT NULL,
-    access_date   TIMESTAMP default null,
-    view_date     TIMESTAMP default null,
-    PRIMARY KEY (feed_name)
-);
+    feedmaker             BOOLEAN      DEFAULT FALSE,
+    rss_update_date       TIMESTAMP    DEFAULT NULL,
 
--- name -> status_info
-DROP TABLE IF EXISTS feed_name_status_info;
-CREATE TABLE feed_name_status_info
-(
-    feed_name    VARCHAR(256) NOT NULL,
-    feed_title   VARCHAR(256),
-    group_name   VARCHAR(256),
-    http_request boolean       default false,
-    public_html  boolean       default false,
-    feedmaker    boolean       default false,
-    access_date  TIMESTAMP     default null,
-    view_date    TIMESTAMP     default null,
-    upload_date  TIMESTAMP     default null,
-    update_date  TIMESTAMP     default null,
-    file_path    VARCHAR(512) default null,
+    public_html           BOOLEAN      DEFAULT FALSE,
+    public_feed_file_path VARCHAR(512) DEFAULT NULL,
+    file_size             INT          DEFAULT NULL,
+    num_items             INT          DEFAULT NULL,
+    upload_date           TIMESTAMP    DEFAULT NULL,
+
+    http_request          BOOLEAN      DEFAULT FALSE,
+    access_date           TIMESTAMP    DEFAULT NULL,
+    view_date             TIMESTAMP    DEFAULT NULL,
     PRIMARY KEY (feed_name)
 );
+CREATE INDEX feed_info_access_date_idx ON feed_info (access_date);
+CREATE INDEX feed_info_view_date_idx ON feed_info (view_date);
 
 -- html_file -> size
-DROP TABLE IF EXISTS html_file_size;
-CREATE TABLE html_file_size
+DROP TABLE IF EXISTS html_file_info;
+CREATE TABLE html_file_info
 (
-    file_path      VARCHAR(512) NOT NULL,
-    file_name      VARCHAR(256) NOT NULL,
-    feed_dir_path  VARCHAR(512) NOT NULL,
-    group_dir_path VARCHAR(512) NOT NULL,
-    size           INT           NOT NULL,
-    update_date    TIMESTAMP default null,
+    file_path                  VARCHAR(512) NOT NULL,
+    file_name                  VARCHAR(256) NOT NULL,
+    feed_dir_path              VARCHAR(512) DEFAULT NULL,
+    size                       INT          DEFAULT NULL,
+    count_with_many_image_tag  INT          DEFAULT NULL,
+    count_without_image_tag    INT          DEFAULT NULL,
+    count_with_image_not_found INT          DEFAULT NULL,
+    update_date                TIMESTAMP    DEFAULT NULL,
     PRIMARY KEY (file_path)
 );
-CREATE INDEX html_file_size_feed_dir_path_idx ON html_file_size (feed_dir_path);
-CREATE INDEX html_file_size_group_dir_path_idx ON html_file_size (group_dir_path);
-
--- html_file -> with_many_image_tag
-DROP TABLE IF EXISTS html_file_with_many_image_tag;
-CREATE TABLE html_file_with_many_image_tag
-(
-    file_path      VARCHAR(512) NOT NULL,
-    file_name      VARCHAR(256) NOT NULL,
-    feed_dir_path  VARCHAR(512) NOT NULL,
-    group_dir_path VARCHAR(512) NOT NULL,
-    count          INT           NOT NULL,
-    PRIMARY KEY (file_path)
-);
-CREATE INDEX html_file_with_many_image_tag_feed_dir_path_idx ON html_file_with_many_image_tag (feed_dir_path);
-CREATE INDEX html_file_with_many_image_tag_group_dir_path_idx ON html_file_with_many_image_tag (group_dir_path);
-
--- html_file -> without_image_tag
-DROP TABLE IF EXISTS html_file_without_image_tag;
-CREATE TABLE html_file_without_image_tag
-(
-    file_path      VARCHAR(512) NOT NULL,
-    file_name      VARCHAR(256) NOT NULL,
-    feed_dir_path  VARCHAR(512) NOT NULL,
-    group_dir_path VARCHAR(512) NOT NULL,
-    count          INT           NOT NULL,
-    PRIMARY KEY (file_path)
-);
-CREATE INDEX html_file_without_image_tag_feed_dir_path_idx ON html_file_without_image_tag (feed_dir_path);
-CREATE INDEX html_file_without_image_tag_group_dir_path_idx ON html_file_without_image_tag (group_dir_path);
-
--- html_file -> image_not_found
-DROP TABLE IF EXISTS html_file_image_not_found;
-CREATE TABLE html_file_image_not_found
-(
-    file_path      VARCHAR(512) NOT NULL,
-    file_name      VARCHAR(256) NOT NULL,
-    feed_dir_path  VARCHAR(512) NOT NULL,
-    group_dir_path VARCHAR(512) NOT NULL,
-    count          INT           NOT NULL,
-    PRIMARY KEY (file_path)
-);
-CREATE INDEX html_file_image_not_found_feed_dir_path_idx ON html_file_image_not_found (feed_dir_path);
-CREATE INDEX html_file_image_not_found_group_dir_path_idx ON html_file_image_not_found (group_dir_path);
-
--- feed_name -> list_url_count
-DROP TABLE IF EXISTS feed_name_list_url_count;
-CREATE TABLE feed_name_list_url_count
-(
-    feed_name  VARCHAR(256) NOT NULL,
-    feed_title VARCHAR(256) NOT NULL,
-    group_name VARCHAR(256) NOT NULL,
-    count      INT           NOT NULL,
-    PRIMARY KEY (feed_name)
-);
+CREATE INDEX html_file_info_feed_dir_path_idx ON html_file_info (feed_dir_path);
 
 -- element_name -> count
 DROP TABLE IF EXISTS element_name_count;

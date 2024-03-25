@@ -5,7 +5,6 @@ import sys
 import os
 import re
 import json
-import logging
 import logging.config
 from pathlib import Path
 from typing import Dict, Any, Optional, Tuple
@@ -71,16 +70,16 @@ def get_location_recursively(url: str, config: Dict[str, Any]) -> Tuple[str, str
             new_url = response_headers["location"]
         if new_url:
             print(f"new_url '{new_url}' from location header")
-            
+
     del crawler
 
     if not new_url and response_size > 0:
         return url, response
-    
+
     if new_url and response_size == 0:
         new_url = clean_url(new_url, URL.get_url_scheme(url), URL.get_url_path(url))
         new_url, response = get_location_recursively(new_url, config)
-        
+
     return new_url, response
 
 

@@ -31,7 +31,7 @@ class FeedMaker:
     IMAGE_TAG_FMT_STR = "<img src='%s/img/1x1.jpg?feed=%s&item=%s'/>"
 
     def __init__(self, feed_dir_path: Path, do_collect_by_force: bool, do_collect_only: bool, rss_file_path: Path, window_size: int = DEFAULT_WINDOW_SIZE) -> None:
-        LOGGER.debug(f"# FeedMaker(feed_dir_path={feed_dir_path}, do_collect_by_force={do_collect_by_force}, do_collect_only={do_collect_only}, rss_file_path={rss_file_path})")
+        LOGGER.debug("# FeedMaker(feed_dir_path=%s, do_collect_by_force=%s, do_collect_only=%s, rss_file_path=%s)", PathUtil.short_path(feed_dir_path), do_collect_by_force, do_collect_only, PathUtil.short_path(rss_file_path))
 
         self.work_dir_path = Path(os.environ["FM_WORK_DIR"])
         self.feed_dir_path = feed_dir_path
@@ -46,7 +46,7 @@ class FeedMaker:
         self.list_dir = self.feed_dir_path / "newlist"
         self.html_dir = self.feed_dir_path / "html"
         self.img_dir_path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "img"
-        self.start_idx_file_path = self.feed_dir_path / "start_idx.txt"
+        self.start_index_file_path = self.feed_dir_path / "start_idx.txt"
         self.list_dir.mkdir(exist_ok=True)
         self.html_dir.mkdir(exist_ok=True)
         self.img_dir_path.mkdir(exist_ok=True)
@@ -155,7 +155,7 @@ class FeedMaker:
                 list_file_path = FeedMaker._get_list_file_path(self.list_dir, short_date_str)
                 # 오늘에 가장 가까운 리스트가 존재하면 탈출
                 if list_file_path.is_file():
-                    LOGGER.info(PathUtil.convert_path_to_str(list_file_path))
+                    LOGGER.info(PathUtil.short_path(list_file_path))
                     # read the old list
                     with list_file_path.open('r', encoding='utf-8') as in_file:
                         for line in in_file:
@@ -171,7 +171,7 @@ class FeedMaker:
                     continue
 
                 file_path = self.list_dir / entry.name
-                LOGGER.info(PathUtil.convert_path_to_str(file_path))
+                LOGGER.info(PathUtil.short_path(file_path))
                 with file_path.open('r', encoding='utf-8') as in_file:
                     for line in in_file:
                         line = line.rstrip()
@@ -197,12 +197,12 @@ class FeedMaker:
         if os.path.isfile(html_file_path) and size > FeedMaker.get_size_of_template_with_image_tag(os.environ["WEB_SERVICE_URL"], self.rss_file_path.name):
             # 이미 성공적으로 만들어져 있으니까, 이미지 태그만 검사해보고 피드 리스트에 추가
             if FeedMaker._is_image_tag_in_html_file(html_file_path, image_tag_str):
-                LOGGER.info(f"Old: {item_url}\t{title}\t{PathUtil.convert_path_to_str(html_file_path)} ({size} bytes > {self._get_size_of_template()} bytes of template)")
+                LOGGER.info("Old: %s\t%s\t%s (%d bytes > %d bytes of template)", item_url, title, PathUtil.short_path(html_file_path), size, self._get_size_of_template())
                 ret = True
             else:
-                LOGGER.error(f"Error: No image tag in html file '{PathUtil.convert_path_to_str(html_file_path)}'")
-                LOGGER.debug(f"image tag: '{image_tag_str}'")
-                LOGGER.warning(f"Warning: removing incomplete html file '{PathUtil.convert_path_to_str(html_file_path)}'")
+                LOGGER.error("Error: No image tag in html file '%s'", PathUtil.short_path(html_file_path))
+                LOGGER.debug("image tag: '%s'", image_tag_str)
+                LOGGER.warning("Warning: removing incomplete html file '%s'", PathUtil.short_path(html_file_path))
                 html_file_path.unlink(missing_ok=True)
                 ret = False
         else:
@@ -244,7 +244,7 @@ class FeedMaker:
                     return False
                 content = result
 
-            LOGGER.debug(f"writing to '{html_file_path}'")
+            LOGGER.debug("writing to '%s'", PathUtil.short_path(html_file_path))
             with html_file_path.open("w", encoding="utf-8") as outfile:
                 outfile.write(str(content))
 
@@ -261,11 +261,11 @@ class FeedMaker:
                     FeedMaker._append_image_tag_to_html_file(html_file_path, image_tag_str)
 
                 # 피드 리스트에 추가
-                LOGGER.info(f"New: {item_url}\t{title}\t{PathUtil.convert_path_to_str(html_file_path)} ({size} bytes > {self._get_size_of_template()} bytes of template)")
+                LOGGER.info("New: %s\t%s\t%s (%d bytes > %d bytes of template)", item_url, title, PathUtil.short_path(html_file_path), size, self._get_size_of_template())
                 ret = True
             else:
                 # 피드 리스트에서 제외
-                LOGGER.warning(f"Warning: excluded {item_url}\t{title}\t{PathUtil.convert_path_to_str(html_file_path)} ({size} bytes <= {self._get_size_of_template()} bytes of template)")
+                LOGGER.warning("Warning: excluded %s\t%s\t%s (%d bytes <= %d bytes of template)", item_url, title, PathUtil.short_path(html_file_path), size, self._get_size_of_template())
                 ret = False
 
         if "threshold_to_remove_html_with_incomplete_image" in conf:
@@ -278,44 +278,44 @@ class FeedMaker:
 
         return ret
 
-    def _get_idx_data(self) -> Tuple[int, int, Optional[datetime]]:
-        LOGGER.debug("# get_idx_data()")
+    def _get_index_data(self) -> Tuple[int, int, Optional[datetime]]:
+        LOGGER.debug("# get_index_data()")
 
-        if self.start_idx_file_path.is_file():
-            with self.start_idx_file_path.open('r', encoding='utf-8') as in_file:
+        if self.start_index_file_path.is_file():
+            with self.start_index_file_path.open('r', encoding='utf-8') as in_file:
                 line = in_file.readline()
-                m = re.search(r'(?P<start_idx>\d+)\t(?P<mtime>\S+)', line)
+                m = re.search(r'(?P<start_index>\d+)\t(?P<mtime>\S+)', line)
                 if m:
-                    start_idx = int(m.group("start_idx"))
+                    start_index = int(m.group("start_index"))
                     mtime_str = m.group("mtime")
-                    end_idx = start_idx + self.window_size
+                    end_index = start_index + self.window_size
                     mtime = dateutil.parser.parse(mtime_str)
-                    return start_idx, end_idx, mtime
+                    return start_index, end_index, mtime
 
         # 처음 생성 시, 또는 파일에 정보가 없을 때
-        start_idx = 1
-        end_idx = start_idx + self.window_size
+        start_index = 1
+        end_index = start_index + self.window_size
         mtime = Datetime.get_current_time()
-        _, current_time_str = self._write_idx_data(start_idx, mtime, True)
+        _, current_time_str = self._write_index_data(start_index, mtime, True)
         if not current_time_str:
             return 0, 0, None
-        return start_idx, end_idx, mtime
+        return start_index, end_index, mtime
 
-    def _write_idx_data(self, start_idx: int, mtime: datetime, do_write_initially: bool = False) -> Tuple[int, Optional[str]]:
-        LOGGER.debug(f"# write_idx_data(start_idx={start_idx}, mtime={mtime})")
+    def _write_index_data(self, start_index: int, mtime: datetime, do_write_initially: bool = False) -> Tuple[int, Optional[str]]:
+        LOGGER.debug(f"# write_index_data(start_index={start_index}, mtime={mtime})")
 
         current_time = Datetime.get_current_time()
         delta = current_time - mtime
         increment_size = int((delta.total_seconds() * self.collection_conf["unit_size_per_day"]) / 86400)
-        LOGGER.debug(f"start_idx={start_idx}, current time={current_time}, mtime={mtime}, self.window_size={self.window_size}, increment_size={increment_size}")
-        next_start_idx = 1
+        LOGGER.debug(f"start_index={start_index}, current time={current_time}, mtime={mtime}, self.window_size={self.window_size}, increment_size={increment_size}")
+        next_start_index = 1
         current_time_str = None
         if do_write_initially or increment_size > 0:
-            next_start_idx = start_idx + increment_size
-            with self.start_idx_file_path.open('w', encoding='utf-8') as out_file:
+            next_start_index = start_index + increment_size
+            with self.start_index_file_path.open('w', encoding='utf-8') as out_file:
                 current_time_str = Datetime.get_current_time_str()
-                out_file.write(f"{next_start_idx}\t{current_time_str}\n")
-        return next_start_idx, current_time_str
+                out_file.write(f"{next_start_index}\t{current_time_str}\n")
+        return next_start_index, current_time_str
 
     def _fetch_old_feed_list_window(self, old_feed_list: List[Tuple[str, str]]) -> Optional[List[Tuple[str, str]]]:
         LOGGER.debug(f"# _fetch_old_feed_list_window(old_feed_list={old_feed_list}")
@@ -354,21 +354,21 @@ class FeedMaker:
             LOGGER.warning(f"Warning: can't match the pattern /{self.collection_conf['sort_field_pattern']}/")
             sorted_feed_list = feed_id_sort_field_list
 
-        start_idx, end_idx, mtime = self._get_idx_data()
+        start_index, end_index, mtime = self._get_index_data()
         if not mtime:
             LOGGER.error("ERROR: can't read start_idx.txt file")
             return None
-        LOGGER.info(f"start index: {start_idx}, end index: {end_idx}, last modified time: {mtime}")
+        LOGGER.info(f"start index: {start_index}, end index: {end_index}, last modified time: {mtime}")
         result_feed_list: List[Tuple[str, str]] = []
         for i, feed in enumerate(sorted_feed_list):
             feed_id = feed["id"]
-            if start_idx <= i + 1 < end_idx:
+            if start_index <= i + 1 < end_index:
                 # link, title = old_feed_list[feed_id]
                 result_feed_list.append(old_feed_list[feed_id])
 
-        next_start_idx, current_time_str = self._write_idx_data(start_idx, mtime)
+        next_start_index, current_time_str = self._write_index_data(start_index, mtime)
         if current_time_str:
-            LOGGER.info(f"next start index: {next_start_idx}, current time: {current_time_str}")
+            LOGGER.info(f"next start index: {next_start_index}, current time: {current_time_str}")
         return result_feed_list
 
     def _get_recent_feed_list(self) -> List[Tuple[str, str]]:
@@ -410,13 +410,13 @@ class FeedMaker:
         short_date_str = Datetime.get_short_date_str()
         temp_rss_file_path = self.rss_file_path.with_suffix("." + short_date_str)
         old_rss_file_path = self.rss_file_path.with_suffix(self.rss_file_path.suffix + ".old")
-        LOGGER.debug(f"rss_file_path={self.rss_file_path}, temp_rss_file_path={temp_rss_file_path}, old_rss_file_path={old_rss_file_path}")
+        LOGGER.debug("rss_file_path=%s, temp_rss_file_path=%s, old_rss_file_path=%s", PathUtil.short_path(self.rss_file_path), PathUtil.short_path(temp_rss_file_path), PathUtil.short_path(old_rss_file_path))
 
         LOGGER.info("Generating rss feed file...")
         rss_items: List[PyRSS2Gen.RSSItem] = []
         for link, title in reversed(merged_feed_list):
             html_file_path = FeedMaker._get_html_file_path(self.html_dir, link)
-            LOGGER.info(f"{link}\t{title}\t{PathUtil.convert_path_to_str(html_file_path)}")
+            LOGGER.info("%s\t%s\t%s", link, title, PathUtil.short_path(html_file_path))
             pub_date_str = Datetime.get_rss_date_str()
 
             content = ""
@@ -464,11 +464,11 @@ class FeedMaker:
         if is_different:
             # 이전 파일을 old 파일로 이름 바꾸기
             if self.rss_file_path.is_file():
-                LOGGER.debug(f"renaming '{self.rss_file_path}' to '{old_rss_file_path}'")
+                LOGGER.debug("renaming '%s' to '%s'", PathUtil.short_path(self.rss_file_path), PathUtil.short_path(old_rss_file_path))
                 self.rss_file_path.rename(old_rss_file_path)
             # 이번에 만들어진 파일을 정식 파일 이름으로 바꾸기
             if temp_rss_file_path.is_file():
-                LOGGER.debug(f"renaming '{temp_rss_file_path}' to '{self.rss_file_path}'")
+                LOGGER.debug("renaming '%s' to '%s'", PathUtil.short_path(temp_rss_file_path), PathUtil.short_path(self.rss_file_path))
                 temp_rss_file_path.rename(self.rss_file_path)
         else:
             # 이번에 만들어진 파일을 지우기
@@ -479,7 +479,7 @@ class FeedMaker:
     def make(self) -> bool:
         LOGGER.debug("# make()")
         LOGGER.info("=========================================================")
-        LOGGER.info(f"{PathUtil.convert_path_to_str(self.feed_dir_path)} ")
+        LOGGER.info("%s", PathUtil.short_path(self.feed_dir_path))
         LOGGER.info("=========================================================")
 
         config = Config(feed_dir_path=self.feed_dir_path)

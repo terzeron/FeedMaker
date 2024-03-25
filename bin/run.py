@@ -8,7 +8,7 @@ import random
 import logging.config
 import getopt
 from pathlib import Path
-from typing import Dict, Tuple, List, Any
+from typing import Dict, Tuple, List, Any, Optional
 from filelock import FileLock, Timeout
 from bin.feed_maker_util import Config, Process, PathUtil, FileManager
 from bin.notification import Notification
@@ -26,10 +26,10 @@ class FeedMakerRunner:
         self.list_archiving_period = list_archiving_period
         self.work_dir_path = Path(os.environ["FM_WORK_DIR"])
         if not self.work_dir_path.is_dir():
-            LOGGER.error(f"Error: Can't find work directory '{self.work_dir_path}'")
+            LOGGER.error("Error: Can't find work directory '%s'", PathUtil.short_path(self.work_dir_path))
         self.img_dir_path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "img"
         if not self.img_dir_path.is_dir():
-            LOGGER.error(f"Error: Can't find image directory '{self.img_dir_path}'")
+            LOGGER.error("Error: Can't find image directory '%s'", PathUtil.short_path(self.img_dir_path))
 
     def __del__(self):
         self.html_archiving_period = 0
@@ -38,7 +38,7 @@ class FeedMakerRunner:
         self.img_dir_path = Path()
 
     def make_single_feed(self, feed_dir_path: Path, options: Dict[str, Any]) -> bool:
-        LOGGER.debug(f"# make_single_feed(feed_dir_path='{feed_dir_path}', options={options})")
+        LOGGER.debug("# make_single_feed(feed_dir_path='%s', options=%r)", PathUtil.short_path(feed_dir_path), options)
 
         start_time = datetime.now()
 
@@ -46,14 +46,14 @@ class FeedMakerRunner:
         if lock_file_path.is_file():
             st = lock_file_path.stat()
             if datetime.fromtimestamp(st.st_mtime) < datetime.now() - timedelta(days=1):
-                LOGGER.debug(f"remove old lock file '{lock_file_path}'")
+                LOGGER.debug("remove old lock file '%s'", PathUtil.short_path(lock_file_path))
                 lock_file_path.unlink(missing_ok=True)
 
         try:
             logging.getLogger("filelock").setLevel(logging.ERROR)
             with FileLock(str(lock_file_path), timeout=5):
                 feed_name = feed_dir_path.name
-                LOGGER.info(f"* {PathUtil.convert_path_to_str(feed_dir_path)}")
+                LOGGER.info("* %s", PathUtil.short_path(feed_dir_path))
                 rss_file_path = feed_dir_path / f"{feed_name}.xml"
                 feed_img_dir_path = self.img_dir_path / feed_name
 
@@ -71,7 +71,7 @@ class FeedMakerRunner:
                 FileManager.remove_html_files_without_cached_image_files(feed_dir_path, feed_img_dir_path)
 
                 # make_feed.py 실행하여 feed 파일 생성
-                LOGGER.info(f"* making feed file '{PathUtil.convert_path_to_str(rss_file_path)}'")
+                LOGGER.info("* making feed file '%s'", PathUtil.short_path(rss_file_path))
                 feed_maker = FeedMaker(feed_dir_path, force_collection_opt, collect_only_opt, rss_file_path, window_size)
                 result = feed_maker.make()
 
@@ -147,14 +147,18 @@ class FeedMakerRunner:
         return True
 
     @staticmethod
-    def check_running(group_name: str, feed_name: str) -> bool:
+    def check_running(group_name: str, feed_name: str) -> Optional[bool]:
         lock_file_path = Path(os.environ["FM_WORK_DIR"]) / group_name / feed_name / ".feed_maker_runner.lock"
         try:
             logging.getLogger("filelock").setLevel(logging.ERROR)
             with FileLock(str(lock_file_path), timeout=1):
+                # unlocked
                 return False
         except Timeout:
+            # locked
             return True
+        except FileNotFoundError:
+            return None
 
 
 def print_usage() -> None:
@@ -215,7 +219,7 @@ def main() -> int:
             return -1
         feed_dir_path = Path(sys.argv[0])
     LOGGER.debug(options)
-    LOGGER.debug(feed_dir_path)
+    LOGGER.debug(PathUtil.short_path(feed_dir_path))
 
     runner = FeedMakerRunner(html_archiving_period=30, list_archiving_period=7)
     problem_manager = ProblemManager()

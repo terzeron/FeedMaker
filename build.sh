@@ -11,6 +11,8 @@ docker build -f Dockerfile.backend --build-arg FM_BACKEND_PORT="$FM_BACKEND_PORT
 docker tag terzeron/fm_backend:latest localhost:32000/terzeron/fm_backend:latest && \
 docker push localhost:32000/terzeron/fm_backend:latest
 
+rm -rf CartoonSplit
+
 (cd frontend && npm install -y > /dev/null && \
      npx browserslist@latest > /dev/null && \
      npm run build > /dev/null) && \

@@ -45,7 +45,7 @@
             <template #cell(feed_title)="data">
               <span v-html="data.value"></span>
             </template>
-            <template #cell(ratio)="data">
+            <template #cell(progress_ratio)="data">
               {{ data.value }}%
             </template>
           </b-table>
@@ -54,8 +54,7 @@
 
       <b-col cols="12" lg="4" class="m-0 p-0">
         <b-card-header header-bg-variant="dark" header-text-variant="white" header-tag="header">
-          피드별 list_url element
-          갯수
+          피드별 수집대상 URL 갯수
         </b-card-header>
         <b-card-body class="m-0 p-0">
           <b-table
@@ -264,13 +263,13 @@ export default {
 
       progressInfoFields: [
         {key: 'feed_title', label: '제목', sortable: true},
-        {key: 'index', label: '현재', sortable: true},
-        {key: 'count', label: '갯수', sortable: true},
-        {key: 'unit_size', label: '단위', sortable: true},
-        {key: 'ratio', label: '진행', sortable: true},
+        {key: 'current_index', label: '현재', sortable: true},
+        {key: 'total_item_count', label: '갯수', sortable: true},
+        {key: 'unit_size_per_day', label: '단위', sortable: true},
+        {key: 'progress_ratio', label: '진행', sortable: true},
         {key: 'due_date', label: '예정', sortable: true},
       ],
-      progressInfoSortBy: 'ratio',
+      progressInfoSortBy: 'progress_ratio',
       progressInfoSortDesc: true,
       progressInfoList: [],
 
@@ -541,27 +540,25 @@ export default {
               // transformation & filtering
               let day2MonthAgo = new Date();
               day2MonthAgo.setTime(day2MonthAgo.getTime() - 2 * 30 * 24 * 60 * 60 * 1000); // 2 months ago
-              day2MonthAgo = day2MonthAgo.toISOString().substring(2, 10);
+              day2MonthAgo = day2MonthAgo.toISOString().substring(0, 12);
               this.publicFeedInfoList = _.filter(resPublicFeedInfo.data['result'], o => {
-                return o['upload_date'] < day2MonthAgo ||
-                    o['size'] < 4 * 1024 ||
-                    o['num_items'] < 5 || o['num_items'] > 20;
+                return o['upload_date'] < day2MonthAgo || o['size'] < 4 * 1024 || o['num_items'] < 5 || o['num_items'] > 20;
               }).map(o => {
-                o['feed_title'] = this.getManagementLink(o['feed_title'], o['group_name'], o['feed_name']);
-                o['upload_date'] = this.getShortDate(o['upload_date']);
-                o['action'] = "삭제";
-                if (o['upload_date'] < day2MonthAgo) {
-                  o['uploadDateIsWarning'] = true;
-                }
-                if (o['size'] < 1 * 1024) {
+                o['feed_title'] = this.getManagementLink(o['feed_title'], o['group_name'], o['feed_name']) || o['feed_name'];
+                if (o['file_size'] < 1 * 1024) {
                   o['sizeIsDanger'] = true;
-                } else if (o['size'] < 4 * 1024) {
+                } else if (o['file_size'] < 4 * 1024) {
                   o['sizeIsWarning'] = true;
                 }
                 if (o['num_items'] < 5) {
                   o['numItemsIsWarning'] = true;
                 } else if (o['num_items'] > 20) {
                   o['numItemsIsDanger'] = true;
+                }
+                o['upload_date'] = this.getShortDate(o['upload_date']);
+                o['action'] = "삭제";
+                if (o['upload_date'] < day2MonthAgo) {
+                  o['uploadDateIsWarning'] = true;
                 }
                 return o;
               });
@@ -607,13 +604,26 @@ export default {
             if (resElementInfo.data.status === 'failure') {
               console.log(resElementInfo.data.message);
             } else {
-              this.listUrlInfoList = _.map(resElementInfo.data['result']['feed_name_list_url_count_map'], o => {
+              this.elementInfoList = _.map(resElementInfo.data['result'], o => {
+                return o;
+              })
+            }
+          })
+          .catch((error) => {
+            console.error(error);
+          });
+
+      // listUrlCount 정보
+      const listUrlInfo = this.getApiUrlPath() + '/problems/list_url_info';
+      axios.get(listUrlInfo)
+          .then((resListUrlInfo) => {
+            if (resListUrlInfo.data.status === 'failure') {
+              console.log(resListUrlInfo.data.message);
+            } else {
+              this.listUrlInfoList = _.map(resListUrlInfo.data['result'], o => {
                 o['feed_title'] = this.getManagementLink(o['feed_title'], o['group_name'], o['feed_name']);
                 return o;
               });
-              this.elementInfoList = _.map(resElementInfo.data['result']['element_name_count_map'], o => {
-                return o;
-              })
             }
           })
           .catch((error) => {

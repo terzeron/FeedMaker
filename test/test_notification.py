@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 
-import os
 import unittest
 import logging.config
 from pathlib import Path

@@ -38,10 +38,10 @@ class Extractor:
             id_list = extraction_conf["element_id_list"]
             path_list = extraction_conf["element_path_list"]
             encoding = extraction_conf["encoding"]
-            LOGGER.debug(f"# element_id: {id_list}")
-            LOGGER.debug(f"# element_class: {class_list}")
-            LOGGER.debug(f"# element_path: {path_list}")
-            LOGGER.debug(f"# encoding: {encoding}")
+            LOGGER.debug("# element_id: %r", id_list)
+            LOGGER.debug("# element_class: %r", class_list)
+            LOGGER.debug("# element_path: %r", path_list)
+            LOGGER.debug("# encoding: %s", encoding)
         else:
             return html_content
 

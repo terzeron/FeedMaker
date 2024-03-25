@@ -21,11 +21,11 @@
     },
     "rss": {
       "copyright": "Copyright (c) NAVER Corp. All rights reserved.",
-      "description": "원플러스원_테스트피드'::네이버",
+      "description": "네이버웹툰_완결_테스트피드'::네이버",
       "generator": "Terzeron's Feed Generator",
       "language": "ko",
-      "link": "https://terzeron.com/oneplusone.xml",
-      "title": "원플러스원_테스트피드::네이버"
+      "link": "https://terzeron.com/certain_webtoon.xml",
+      "title": "네이버웹툰_완결_테스트피드::네이버"
     }
   }
 }

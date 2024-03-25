@@ -17,13 +17,14 @@ logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
-def assert_in_mock_logger(param: Any, mock_logger, do_substr_match: bool = False) -> bool:
-    for arg in mock_logger.call_args_list:
-        if do_substr_match:
-            if str(param) in str(arg.args[0]):
+def assert_in_mock_logger(message: str, mock_logger, do_submatch: bool = False) -> bool:
+    for mock_call in mock_logger.call_args_list:
+        formatted_message = mock_call.args[0] % mock_call.args[1:]
+        if do_submatch:
+            if message in formatted_message:
                 return True
         else:
-            if call(param) == arg:
+            if formatted_message == message:
                 return True
     return False
 
@@ -31,7 +32,7 @@ def assert_in_mock_logger(param: Any, mock_logger, do_substr_match: bool = False
 class TestFeedMaker(unittest.TestCase):
     def setUp(self) -> None:
         group_name = "naver"
-        feed_name = "oneplusone"
+        feed_name = "certain_webtoon"
         self.feed_dir_path = Path(os.environ["FM_WORK_DIR"]) / group_name / feed_name
         self.feed_dir_path.mkdir(exist_ok=True)
         self.rss_file_path = self.feed_dir_path / f"{feed_name}.xml"
@@ -67,7 +68,7 @@ class TestFeedMaker(unittest.TestCase):
         md5_name = "3e1c485"
         self.html_file1_path = self.html_dir_path / f"{md5_name}.html"
         with self.html_file1_path.open("w", encoding="utf-8") as outfile:
-            outfile.write(f"<div>with image tag string</div>\n<img src='{os.environ['WEB_SERVICE_URL']}/img/1x1.jpg?feed=oneplusone.xml&item={md5_name}'/>\n")
+            outfile.write(f"<div>with image tag string</div>\n<img src='{os.environ['WEB_SERVICE_URL']}/img/1x1.jpg?feed=certain_webtoon.xml&item={md5_name}'/>\n")
         md5_name = "8da6dfb"
         self.html_file2_path = self.html_dir_path / f"{md5_name}.html"
         with self.html_file2_path.open("w", encoding="utf-8") as outfile:
@@ -94,7 +95,7 @@ class TestFeedMaker(unittest.TestCase):
 
     def test_get_image_tag_str(self):
         actual = FeedMaker.get_image_tag_str(os.environ["WEB_SERVICE_URL"], self.rss_file_path.name, self.item1_url)
-        expected = "<img src='%s/img/1x1.jpg?feed=oneplusone.xml&item=3e1c485'/>" % os.environ["WEB_SERVICE_URL"]
+        expected = "<img src='%s/img/1x1.jpg?feed=certain_webtoon.xml&item=3e1c485'/>" % os.environ["WEB_SERVICE_URL"]
         self.assertEqual(expected, actual)
 
     def test_get_size_of_template_with_image_tag(self):
@@ -187,12 +188,12 @@ class TestFeedMaker(unittest.TestCase):
             self.assertTrue(actual)
 
             self.assertTrue(assert_in_mock_logger(
-                "New: https://comic.naver.com/webtoon/detail?titleId=725586&no=137\t137화\tnaver/oneplusone/html/3e1c485.html",
+                "New: https://comic.naver.com/webtoon/detail?titleId=725586&no=137\t137화\tnaver/certain_webtoon/html/3e1c485.html",
                 mock_info, True))
 
-    def test_get_idx_data(self):
+    def test_get_index_data(self):
         dt1 = Datetime.get_current_time()
-        actual = self.maker._get_idx_data()
+        actual = self.maker._get_index_data()
         expected = (1, 6)
         dt2 = Datetime.get_current_time()
         self.assertEqual(expected, actual[0:2])
@@ -201,19 +202,19 @@ class TestFeedMaker(unittest.TestCase):
         if datetime_str:
             self.assertTrue(dt1 < datetime_str < dt2)
 
-    def test_write_idx_data(self):
+    def test_write_index_data(self):
         dt = Datetime.get_current_time()
         ts = Datetime._get_time_str(dt)
-        self.maker._write_idx_data(0, dt, True)
-        with self.maker.start_idx_file_path.open("r", encoding="utf-8") as infile:
+        self.maker._write_index_data(0, dt, True)
+        with self.maker.start_index_file_path.open("r", encoding="utf-8") as infile:
             actual = infile.read()
             expected = f"0\t{ts}\n"
             self.assertEqual(expected, actual)
 
         dt = Datetime.get_current_time()
         ts = Datetime._get_time_str(dt)
-        self.maker._write_idx_data(0, dt)
-        with self.maker.start_idx_file_path.open("r", encoding="utf-8") as infile:
+        self.maker._write_index_data(0, dt)
+        with self.maker.start_index_file_path.open("r", encoding="utf-8") as infile:
             actual = infile.read()
             expected = f"0\t{ts}\n"
             self.assertEqual(expected, actual)
@@ -225,7 +226,7 @@ class TestFeedMaker(unittest.TestCase):
             self.assertIsNotNone(actual)
             expected = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화")]
             self.assertEqual(expected, actual)
-            self.assertTrue(assert_in_mock_logger(PathUtil.convert_path_to_str(self.list_file2_path), mock_info))
+            self.assertTrue(assert_in_mock_logger(PathUtil.short_path(self.list_file2_path), mock_info))
 
         self.maker.collection_conf["is_completed"] = False
         with patch.object(LOGGER, "info") as mock_info:
@@ -233,7 +234,7 @@ class TestFeedMaker(unittest.TestCase):
             self.assertIsNotNone(actual)
             expected = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화")]
             self.assertEqual(expected, actual)
-            self.assertTrue(assert_in_mock_logger(PathUtil.convert_path_to_str(self.list_file2_path), mock_info))
+            self.assertTrue(assert_in_mock_logger(PathUtil.short_path(self.list_file2_path), mock_info))
 
     def test_2_fetch_old_feed_list_window(self):
         self.maker.collection_conf["is_completed"] = True
@@ -242,7 +243,7 @@ class TestFeedMaker(unittest.TestCase):
             actual = self.maker._fetch_old_feed_list_window(old_feed_list)
             expected = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화")]
             self.assertEqual(expected, actual)
-            self.assertTrue(assert_in_mock_logger(PathUtil.convert_path_to_str(self.list_file2_path), mock_info))
+            self.assertTrue(assert_in_mock_logger(PathUtil.short_path(self.list_file2_path), mock_info))
             self.assertTrue(assert_in_mock_logger("start index", mock_info, True))
 
         self.maker.collection_conf["is_completed"] = False
@@ -251,7 +252,7 @@ class TestFeedMaker(unittest.TestCase):
             actual = self.maker._fetch_old_feed_list_window(old_feed_list)
             expected = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화")]
             self.assertEqual(expected, actual)
-            self.assertTrue(assert_in_mock_logger(PathUtil.convert_path_to_str(self.list_file2_path), mock_info))
+            self.assertTrue(assert_in_mock_logger(PathUtil.short_path(self.list_file2_path), mock_info))
             self.assertTrue(assert_in_mock_logger("start index", mock_info, True))
 
     def test_3_get_recent_feed_list(self):

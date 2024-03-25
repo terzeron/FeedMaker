@@ -13,6 +13,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.common.by import By
 import selenium
+from bin.feed_maker_util import PathUtil
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
@@ -114,7 +115,7 @@ class HeadlessBrowser:
         ''' % ID_OF_RENDERING_COMPLETION_IN_CONVERTING_BLOB
 
     def __init__(self, dir_path: Path = Path.cwd(), headers: Optional[Dict[str, str]] = None, copy_images_from_canvas: bool = False, simulate_scrolling: bool = False, disable_headless: bool = False, blob_to_dataurl: bool = False, timeout: int = 60) -> None:
-        LOGGER.debug(f"# HeadlessBrowser(dir_path={dir_path}, headers={headers}, copy_images_from_canvas={copy_images_from_canvas}, simulate_scrolling={simulate_scrolling}, disable_headless={disable_headless}, blob_to_dataurl={blob_to_dataurl}, timeout={timeout})")
+        LOGGER.debug("# HeadlessBrowser(dir_path=%s, headers=%r, copy_images_from_canvas=%s, simulate_scrolling=%s, disable_headless=%s, blob_to_dataurl=%s, timeout=%d)", PathUtil.short_path(dir_path), headers, copy_images_from_canvas, simulate_scrolling, disable_headless, blob_to_dataurl, timeout)
         self.dir_path: Path = dir_path
         self.headers: Dict[str, str] = headers if headers is not None else {}
         if "User-Agent" not in self.headers:

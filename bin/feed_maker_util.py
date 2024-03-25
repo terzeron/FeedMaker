@@ -10,12 +10,11 @@ import json
 import logging.config
 from datetime import datetime
 from pathlib import Path
-from shutil import which, copy
+from shutil import which
 from urllib.parse import urlparse, urlunparse, quote, urljoin
 from typing import List, Any, Dict, Tuple, Optional, Union
 import psutil
-from filelock import FileLock, Timeout
-from ordered_set import OrderedSet
+
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
@@ -29,14 +28,25 @@ header_str = '''<meta http-equiv="Content-Type" content="text/html; charset=UTF-
 
 class Data:
     @staticmethod
+    def _to_hashable(item: Any) -> Any:
+        if isinstance(item, dict):
+            return tuple((k, Data._to_hashable(v)) for k, v in sorted(item.items()))
+        if isinstance(item, list):
+            return tuple(Data._to_hashable(x) for x in item)
+        return item
+
+    @staticmethod
     def remove_duplicates(a_list: List[Any]) -> List[Any]:
-        seen: OrderedSet[Any] = OrderedSet()
-        result: List[Any] = []
+        seen: Dict[Any, bool] = {}
+        unique_result = []
         for item in a_list:
-            if item not in seen:
-                seen.add(item)
-                result.append(item)
-        return result
+            hashable_item = Data._to_hashable(item)
+
+            if hashable_item in seen and seen[hashable_item]:
+                continue
+            seen[hashable_item] = True
+            unique_result.append(item)
+        return unique_result
 
     @staticmethod
     def _get_sorted_lines_from_rss_file(file: Path) -> List[str]:
@@ -92,7 +102,7 @@ class Process:
 
     @staticmethod
     def exec_cmd(cmd: str, dir_path: Path = Path.cwd(), input_data=None) -> Tuple[str, str]:
-        LOGGER.debug(f"# Process.exec_cmd(cmd={cmd}, dir_path={dir_path}, input_data={len(input_data) if input_data else 0} bytes)")
+        LOGGER.debug("# Process.exec_cmd(cmd=%s, dir_path=%s, input_data=%d bytes)", cmd, PathUtil.short_path(dir_path), len(input_data) if input_data else 0)
         new_cmd = Process._replace_script_path(cmd, dir_path)
         if not new_cmd:
             return "", f"Error in getting path of executable '{cmd}'"
@@ -178,6 +188,16 @@ class Datetime:
             dt = Datetime.get_current_time()
         return dt.strftime("%Y%m%d")
 
+    @staticmethod
+    def convert_datetime_to_str(d: Optional[Union[str, datetime]]) -> Optional[str]:
+        if not d:
+            return None
+        if isinstance(d, str):
+            return d
+        if isinstance(d, datetime):
+            return d.strftime("%Y-%m-%d %H:%M:%S")
+        return None
+
 
 class HTMLExtractor:
     @staticmethod
@@ -203,7 +223,7 @@ class HTMLExtractor:
             (
               (?P<name>\w+)
               (?:\[
-                (?P<idx>\d+)
+                (?P<index>\d+)
               ])?
             |
               \*\[@id=\"(?P<id>\w+)\"]
@@ -212,13 +232,13 @@ class HTMLExtractor:
         m = pattern.match(valid_token)
         if m:
             name = m.group("name")
-            idx = int(m.group("idx")) if m.group("idx") else None
+            index = int(m.group("index")) if m.group("index") else None
             id_str = m.group("id")
         else:
             return None, None, None, None, False
 
         # id, name, idx, path의 나머지 부분, is_anywhere을 반환
-        return id_str, name, idx, "/".join(tokens[i:]), is_anywhere
+        return id_str, name, index, "/".join(tokens[i:]), is_anywhere
 
     @staticmethod
     def get_node_with_path(node, path_str: Optional[str]) -> Optional[List[Any]]:
@@ -293,7 +313,7 @@ class Config:
     conf: Dict[str, Dict[str, Any]] = {}
 
     def __init__(self, feed_dir_path: Path = Path.cwd()) -> None:
-        LOGGER.debug(f"# Config(feed_dir_path={feed_dir_path})")
+        LOGGER.debug("# Config(feed_dir_path=%s)", PathUtil.short_path(feed_dir_path))
         error_msg: str = ""
         if "FM_CONF_FILE" in os.environ and os.environ["FM_CONF_FILE"]:
             config_file_path = Path(os.environ["FM_CONF_FILE"])
@@ -310,7 +330,7 @@ class Config:
             error_msg = "no such file"
 
         if error_msg:
-            LOGGER.error(f"Error: Can't get configuration from config file '{config_file_path}', {error_msg}")
+            LOGGER.error("Error: Can't get configuration from config file '%s', %s", PathUtil.short_path(config_file_path), error_msg)
             sys.exit(-1)
 
     @staticmethod
@@ -553,12 +573,12 @@ class FileManager:
 
     @staticmethod
     def get_cache_file_path(path_prefix: Path, img_url: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None) -> Path:
-        LOGGER.debug(f"# get_cache_file_name(path={path_prefix}, img_url={img_url[:30]}, postfix={postfix}, index={index})")
+        LOGGER.debug("# get_cache_file_name(path_prefix=%s, img_url=%s, postfix=%r, index=%r)", PathUtil.short_path(path_prefix), img_url[:30], postfix, index)
         return path_prefix / FileManager._get_cache_info_common_postfix(img_url, postfix, index)
 
     @staticmethod
     def get_incomplete_image_list(html_file_path) -> List[str]:
-        LOGGER.debug(f"# get_incomplete_image_list(html_file_path='{html_file_path}')")
+        LOGGER.debug("# get_incomplete_image_list(html_file_path='%s')", PathUtil.short_path(html_file_path))
         result = []
         feed_name = html_file_path.parent.parent.name
         with html_file_path.open("r", encoding="utf-8") as f:
@@ -574,23 +594,21 @@ class FileManager:
                         if not img_file_path.is_file() or img_file_path.stat().st_size == 0:
                             result.append(img_file_name)
             except UnicodeDecodeError as e:
-                LOGGER.error(f"Error: Unicode decode error in '{html_file_path.name}'")
+                LOGGER.error("Error: Unicode decode error in '%s'", PathUtil.short_path(html_file_path))
                 raise e
         return result
 
     @staticmethod
     def remove_html_file_without_cached_image_files(html_file_path: Path) -> None:
-        LOGGER.debug(f"# remove_html_file_without_cached_image_files(html_file_path='{html_file_path}')")
+        LOGGER.debug("# remove_html_file_without_cached_image_files(html_file_path='%s')", PathUtil.short_path(html_file_path))
         incomplete_img_list = FileManager.get_incomplete_image_list(html_file_path)
         if len(incomplete_img_list) > 0:
-            LOGGER.info(f"* '{html_file_path.name}' deleted (due to {str(incomplete_img_list)})")
+            LOGGER.info("* '%s' deleted (due to %r)", PathUtil.short_path(html_file_path), incomplete_img_list)
             html_file_path.unlink(missing_ok=True)
-
-        return None
 
     @staticmethod
     def remove_html_files_without_cached_image_files(feed_dir_path: Path, feed_img_dir_path: Path) -> None:
-        LOGGER.debug(f"# remove_html_files_without_cached_image_files(feed_dir_path='{feed_dir_path}', feed_img_dir_path='{feed_img_dir_path}')")
+        LOGGER.debug("# remove_html_files_without_cached_image_files(feed_dir_path='%s', feed_img_dir_path='%s')", PathUtil.short_path(feed_dir_path), PathUtil.short_path(feed_img_dir_path))
         LOGGER.info("# deleting html files without cached image files")
         conf = Config(feed_dir_path).get_extraction_configs()
         html_dir_path = feed_dir_path / "html"
@@ -609,35 +627,35 @@ class FileManager:
         if feed_img_dir_path.is_dir():
             for img_file_path in feed_img_dir_path.iterdir():
                 if img_file_path.is_file() and img_file_path.stat().st_size == 0:
-                    LOGGER.info(f"* {img_file_path}")
+                    LOGGER.info("* %s", PathUtil.short_path(img_file_path))
                     img_file_path.unlink(missing_ok=True)
 
     @staticmethod
     def remove_temporary_files(feed_dir_path: Path) -> None:
-        LOGGER.debug(f"# remove_temporary_files(feed_dir_path='{feed_dir_path}')")
+        LOGGER.debug("# remove_temporary_files(feed_dir_path='%s')", PathUtil.short_path(feed_dir_path))
         LOGGER.info("# deleting temporary files")
         for file in ("nohup.out", "temp.html", "x.html"):
             file_path = feed_dir_path / file
             if file_path.is_file():
-                LOGGER.info(f"* {file_path}")
+                LOGGER.info("* %s", PathUtil.short_path(file_path))
                 file_path.unlink(missing_ok=True)
 
     @staticmethod
     def remove_all_files(feed_dir_path: Path) -> None:
-        LOGGER.debug(f"# remove_all_files(feed_dir_path='{feed_dir_path}')")
+        LOGGER.debug("# remove_all_files(feed_dir_path='%s')", PathUtil.short_path(feed_dir_path))
         LOGGER.info("# deleting all files (html files, list files, rss file, various temporary files)")
         for html_file_path in (feed_dir_path / "html").iterdir():
-            LOGGER.info(f"* {html_file_path}")
+            LOGGER.info("* %s", PathUtil.short_path(html_file_path))
             html_file_path.unlink(missing_ok=True)
         for list_file_path in (feed_dir_path / "newlist").iterdir():
-            LOGGER.info(f"* {list_file_path}")
+            LOGGER.info("* %s", PathUtil.short_path(list_file_path))
             list_file_path.unlink(missing_ok=True)
 
         rss_file_path = feed_dir_path / (feed_dir_path.name + ".xml")
         old_rss_file_path = rss_file_path.with_suffix(rss_file_path.suffix + ".old")
-        start_idx_file_path = feed_dir_path / "start_idx.txt"
-        for file_path in (rss_file_path, old_rss_file_path, start_idx_file_path):
-            LOGGER.info(f"* {file_path}")
+        start_index_file_path = feed_dir_path / "start_idx.txt"
+        for file_path in (rss_file_path, old_rss_file_path, start_index_file_path):
+            LOGGER.info("* %s", PathUtil.short_path(file_path))
             file_path.unlink(missing_ok=True)
 
         FileManager.remove_temporary_files(feed_dir_path)
@@ -647,7 +665,9 @@ class PathUtil:
     public_feed_dir = Path(os.environ["WEB_SERVICE_FEEDS_DIR"])
 
     @staticmethod
-    def convert_path_to_str(path: Path) -> str:
+    def short_path(path: Optional[Path]) -> str:
+        if not path:
+            return ""
         ret = str(path)
         if path.is_relative_to(PathUtil.work_dir):
             ret = str(path.relative_to(PathUtil.work_dir))

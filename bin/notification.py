@@ -10,11 +10,10 @@ import hmac
 import hashlib
 import json
 from pathlib import Path
-from typing import Any, Dict, Tuple, Callable, List
+from typing import Tuple, Callable, List
 from datetime import datetime
 import requests
 import mail1
-from bin.feed_maker_util import Config
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()

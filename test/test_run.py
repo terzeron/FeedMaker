@@ -15,13 +15,14 @@ logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
-def assert_in_mock_logger(param: Any, mock_logger, do_submatch: bool = False) -> bool:
-    for arg in mock_logger.call_args_list:
+def assert_in_mock_logger(message: str, mock_logger, do_submatch: bool = False) -> bool:
+    for mock_call in mock_logger.call_args_list:
+        formatted_message = mock_call.args[0] % mock_call.args[1:]
         if do_submatch:
-            if param in arg.args[0]:
+            if message in formatted_message:
                 return True
         else:
-            if call(param) == arg:
+            if formatted_message == message:
                 return True
     return False
 
@@ -29,7 +30,7 @@ def assert_in_mock_logger(param: Any, mock_logger, do_submatch: bool = False) ->
 class TestFeedMakerRunner(unittest.TestCase):
     def setUp(self) -> None:
         group_name = "naver"
-        feed_name = "oneplusone"
+        feed_name = "certain_webtoon"
 
         self.runner = FeedMakerRunner(html_archiving_period=30, list_archiving_period=7)
 
@@ -59,7 +60,7 @@ class TestFeedMakerRunner(unittest.TestCase):
                 self.assertTrue(actual)
 
                 self.assertTrue(assert_in_mock_logger("Warning: can't read old feed list from files", mock_warning))
-                self.assertTrue(assert_in_mock_logger("* naver/oneplusone", mock_info))
+                self.assertTrue(assert_in_mock_logger("* naver/certain_webtoon", mock_info))
                 self.assertTrue(assert_in_mock_logger("Appending 1 new items to the feed list", mock_info))
 
         # without -c
@@ -68,7 +69,7 @@ class TestFeedMakerRunner(unittest.TestCase):
             actual = self.runner.make_single_feed(self.feed_dir_path, options)
             self.assertTrue(actual)
 
-            self.assertTrue(assert_in_mock_logger("* naver/oneplusone", mock_info))
+            self.assertTrue(assert_in_mock_logger("* naver/certain_webtoon", mock_info))
             self.assertTrue(assert_in_mock_logger("Appending 1 old items to the feed list", mock_info))
             self.assertTrue(assert_in_mock_logger("Generating rss feed file...", mock_info))
             # self.assertTrue(assert_in_mock_logger("upload success!", mock_info))

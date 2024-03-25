@@ -12,6 +12,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, Any, Tuple, Optional, List
 import requests
+from bin.feed_maker_util import PathUtil
 from bin.headless_browser import HeadlessBrowser
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -29,7 +30,7 @@ class RequestsClient:
     COOKIE_FILE = "cookies.requestsclient.json"
 
     def __init__(self, dir_path: Path = Path.cwd(), render_js: bool = False, method: Method = Method.GET, headers: Optional[Dict[str, str]] = None, timeout: int = 60, encoding: str = "utf-8", verify_ssl: bool = True) -> None:
-        LOGGER.debug(f"# RequestsClient(dir_path={dir_path}, render_js={render_js}, method={method}, headers={headers}, timeout={timeout}, encoding={encoding}, verify_ssl={verify_ssl})")
+        LOGGER.debug("# RequestsClient(dir_path=%s, render_js=%s, method=%s, headers=%r, timeout=%d, encoding=%s, verify_ssl=%s)", PathUtil.short_path(dir_path), render_js, method, headers, timeout, encoding, verify_ssl)
         self.dir_path: Path = dir_path
         self.method: Method = method
         self.timeout: int = timeout
@@ -135,7 +136,7 @@ class Crawler:
             super().__init__("Read timed out")
 
     def __init__(self, dir_path: Path = Path.cwd(), render_js: bool = False, method: Method = Method.GET, headers: Optional[Dict[str, str]] = None, timeout: int = 60, num_retries: int = 1, encoding: str = "utf-8", verify_ssl: bool = True, copy_images_from_canvas: bool = False, simulate_scrolling: bool = False, disable_headless: bool = False, blob_to_dataurl: bool = False) -> None:
-        LOGGER.debug(f"# Crawler(dir_path={dir_path}, render_js={render_js}, method={method}, headers={headers}, timeout={timeout}, num_retries={num_retries}, encoding={encoding}, verify_ssl={verify_ssl}, copy_images_from_canvas={copy_images_from_canvas}, simulate_scrolling={simulate_scrolling}, disable_headless={disable_headless}, blob_to_dataurl={blob_to_dataurl})")
+        LOGGER.debug("# Crawler(dir_path=%s, render_js=%s, method=%s, headers=%r, timeout=%d, num_retries=%d, encoding=%s, verify_ssl=%s, copy_images_from_canvas=%s, simulate_scrolling=%s, disable_headless=%s, blob_to_dataurl=%s)", PathUtil.short_path(dir_path), render_js, method, headers, timeout, num_retries, encoding, verify_ssl, copy_images_from_canvas, simulate_scrolling, disable_headless, blob_to_dataurl)
         self.dir_path = dir_path
         self.render_js = render_js
         self.method = method

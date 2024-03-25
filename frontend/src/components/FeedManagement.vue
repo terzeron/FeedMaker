@@ -146,11 +146,11 @@
                 </b-tr>
               </b-thead>
               <b-tbody>
-                <b-tr v-if="numCollectionUrls && numItemsCollected">
+                <b-tr v-if="numCollectionUrls && totalItemCount">
                   <b-td>수집</b-td>
                   <b-td>{{ numCollectionUrls }} 개 페이지</b-td>
-                  <b-td>{{ numItemsCollected }} 개 피드</b-td>
-                  <b-td>{{ collectionLastUpdateDate }}</b-td>
+                  <b-td>{{ totalItemCount }} 개 피드</b-td>
+                  <b-td>{{ collectDate }}</b-td>
                 </b-tr>
                 <b-tr v-if="numItemsInResult && sizeOfResultFileWithUnit">
                   <b-td>피드</b-td>
@@ -158,12 +158,12 @@
                   <b-td>{{ sizeOfResultFileWithUnit }}</b-td>
                   <b-td>{{ lastUploadDate }}</b-td>
                 </b-tr>
-                <b-tr v-if="numTotalItems >= 0 && currentIndexOfProgress >=0 && unitSizePerDay >= 0">
+                <b-tr v-if="totalItemCount >= 0 && currentIndex >=0 && unitSizePerDay >= 0">
                   <b-td>진행 상태</b-td>
                   <b-td colspan="2">
-                    <b-progress :max="numTotalItems" show-progress height="1.5rem">
-                      <b-progress-bar :value="currentIndexOfProgress" variant="warning">
-                        <div style="position: absolute; width: 100%; color: black; text-align: left; overflow: visible;">{{ currentIndexOfProgress }} 번 / {{ numTotalItems }} 개 = {{ Math.floor((currentIndexOfProgress + 4) * 100 / (numTotalItems + 1)) }} %, {{ unitSizePerDay }} 개/일</div>
+                    <b-progress :max="totalItemCount" show-progress height="1.5rem">
+                      <b-progress-bar :value="currentIndex" variant="warning">
+                        <div style="position: absolute; width: 100%; color: black; text-align: left; overflow: visible;">{{ currentIndex }} 번 / {{ totalItemCount }} 개 = {{ progressRatio }} %, {{ unitSizePerDay }} 개/일</div>
                       </b-progress-bar>
                     </b-progress>
                   </b-td>
@@ -397,15 +397,15 @@ export default {
       searchKeyword: '',
 
       numCollectionUrls: 0,
-      numItemsCollected: 0,
-      collectionLastUpdateDate: '-',
+      collectDate: '-',
+      urlListCount: 0,
       numItemsInResult: 0,
       sizeOfResultFile: 0,
       lastUploadDate: '-',
-      percentageOfProgress: 0,
-      currentIndexOfProgress: 0,
-      numTotalItems: 0,
+      currentIndex: 0,
+      totalItemCount: 0,
       unitSizePerDay: 0,
+      progressRatio: 0.0,
       feedCompletionDueDate: '-',
 
       checkRunningInterval: null,
@@ -464,8 +464,14 @@ export default {
     getApiUrlPath: function () {
       return process.env.VUE_APP_API_URL;
     },
+    getShortDateStr: function(dateStr) {
+      if (!dateStr) {
+        return '';
+      }
+      return dateStr.split("T")[0];
+    },
     determineNewFeedNameFromJsonRssLink: function () {
-      if ('rss' in this.jsonData && 'link' in this.jsonData.rss) {
+      if ('rss' in this.jsonData && 'link' in this.jsonData['rss']) {
         const re = /https:\/\/terzeron.com\/_?(.+)\.xml/;
         const matched = this.jsonData.rss.link.match(re);
         if (matched) {
@@ -702,29 +708,33 @@ export default {
         this.getFeedInfo(groupName, feedName);
       }
     },
-    setCollectionInfo: function (collectionInfo, config) {
-      this.numCollectionUrls = config["collection"]["list_url_list"].length;
-      this.numItemsCollected = collectionInfo["count"];
-      this.collectionLastUpdateDate = collectionInfo["collect_date"];
+    setCollectionInfo: function (collectionInfo, list_url_list_count) {
+      this.numCollectionUrls = list_url_list_count;
+      this.collectDate = this.getShortDateStr(collectionInfo["collect_date"]);
+      this.totalItemCount = collectionInfo["total_item_count"];
     },
     setPublicFeedInfo: function (publicFeedInfo) {
       this.numItemsInResult = publicFeedInfo["num_items"];
-      this.sizeOfResultFile = publicFeedInfo["size"];
+      this.sizeOfResultFile = publicFeedInfo["file_size"];
       if (publicFeedInfo["upload_date"]) {
-        this.lastUploadDate = publicFeedInfo["upload_date"].split("T")[0];
+        this.lastUploadDate = this.getShortDateStr(publicFeedInfo["upload_date"]);
       }
     },
     setProgressInfo: function (progressInfo) {
-      this.numTotalItems = progressInfo["count"];
-      this.currentIndexOfProgress = progressInfo["index"];
-      this.unitSizePerDay = progressInfo["unit_size"];
+      this.currentIndex = progressInfo["current_index"];
+      this.totalItemCount = progressInfo["total_item_count"];
+      this.unitSizePerDay = progressInfo["unit_size_per_day"];
+      this.progressRatio = progressInfo["progress_ratio"];
       if (progressInfo["due_date"]) {
-        this.feedCompletionDueDate = progressInfo["due_date"].split("T")[0];
+        this.feedCompletionDueDate = this.getShortDateStr(progressInfo["due_date"]);
       }
     },
     getFeedInfo: function (groupName, feedName) {
       console.log(`getFeedInfo(${groupName}, ${feedName})`);
       const url = this.getApiUrlPath() + `/groups/${groupName}/feeds/${feedName}`;
+      if (this.checkRunningInterval) {
+        clearInterval(this.checkRunningInterval);
+      }
       axios
           .get(url)
           .then((res) => {
@@ -733,7 +743,8 @@ export default {
             } else {
               var feed_info = res.data["feed_info"];
               this.jsonData = feed_info["config"];
-              this.setCollectionInfo(feed_info["collection_info"], feed_info["config"]);
+
+              this.setCollectionInfo(feed_info["collection_info"], feed_info["config"]["collection"]["list_url_list"].length);
               this.setPublicFeedInfo(feed_info["public_feed_info"]);
               this.setProgressInfo(feed_info["progress_info"]);
               this.determineNewFeedNameFromJsonRssLink();
@@ -1044,6 +1055,9 @@ export default {
             if (res.data.status === 'failure') {
               this.alert(res.data.message);
               this.resetButton('runButton');
+              if (this.checkRunningInterval) {
+                clearInterval(this.checkRunningInterval);
+              }
             } else {
               if (res.data.running_status) {
                 this.startButton('runButton');

@@ -9,11 +9,11 @@ import getopt
 import logging.config
 from pathlib import Path
 from base64 import b64decode
-from PIL import Image, UnidentifiedImageError
+from typing import List, Dict, Any, Optional
 import cairosvg
 import pyheif
-from typing import List, Dict, Any, Optional
-from bin.feed_maker_util import Config, IO, FileManager, URL
+from PIL import Image, UnidentifiedImageError
+from bin.feed_maker_util import Config, IO, FileManager, URL, PathUtil
 from bin.crawler import Crawler
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -21,7 +21,7 @@ LOGGER = logging.getLogger()
 
 
 def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str) -> Optional[Path]:
-    LOGGER.debug(f"# download_image(crawler={crawler}, feed_img_dir_path={feed_img_dir_path}, img_url={img_url[:30]})")
+    LOGGER.debug("# download_image(crawler=%r, feed_img_dir_path='%s', img_url='%s')", crawler, PathUtil.short_path(feed_img_dir_path), img_url[:30])
     cache_file = FileManager.get_cache_file_path(feed_img_dir_path, img_url)
     for ext in ["", ".png", ".jpeg", ".jpg", ".webp"]:
         cache_file_path = cache_file.with_suffix(ext)
@@ -68,12 +68,12 @@ def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str) -> O
         else:
             try:
                 with Image.open(cache_file) as img:
-                    if img.format == "JPEG" or img.format == "PNG" or img.format == "WEBP":
+                    if img.format in ("JPEG", "PNG", "WEBP"):
                         LOGGER.debug(f"append image extension '{img.format}'")
                         new_cache_file = cache_file.with_suffix("." + img.format.lower())
                         cache_file.rename(new_cache_file)
                         cache_file = new_cache_file
-                    if img.format == "GIF" or img.format == "BMP" or img.format == "TIFF":
+                    if img.format in ("GIF", "BMP", "TIFF"):
                         LOGGER.debug(f"convert '{cache_file}' to PNG")
                         new_cache_file = cache_file.with_suffix(".png")
                         img.convert("RGB").save(new_cache_file, "PNG")
@@ -99,7 +99,7 @@ def main() -> int:
             feed_dir_path = Path(a)
 
     if not feed_dir_path or not feed_dir_path.is_dir():
-        LOGGER.error(f"can't find such a directory '{feed_dir_path}'")
+        LOGGER.error("can't find such a directory '%s'", PathUtil.short_path(feed_dir_path))
         return -1
 
     page_url: str = args[0]
@@ -107,10 +107,10 @@ def main() -> int:
     img_url_prefix = "https://terzeron.com/xml/img/" + feed_name
     feed_img_dir_path: Path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "img" / feed_name
     feed_img_dir_path.mkdir(exist_ok=True)
-    LOGGER.debug(f"feed_dir_path={feed_dir_path}")
-    LOGGER.debug(f"feed_name={feed_name}")
-    LOGGER.debug(f"item_url_prefix={img_url_prefix}")
-    LOGGER.debug(f"feed_img_dir_path={feed_img_dir_path}")
+    LOGGER.debug("feed_dir_path='%s'", PathUtil.short_path(feed_dir_path))
+    LOGGER.debug("feed_name='%s'", feed_name)
+    LOGGER.debug("item_url_prefix='%s'", img_url_prefix)
+    LOGGER.debug("feed_img_dir_path='%s'", PathUtil.short_path(feed_img_dir_path))
 
     config = Config(feed_dir_path=feed_dir_path)
     if not config:
@@ -158,7 +158,7 @@ def main() -> int:
                 _, ext = os.path.splitext(cache_file_path)
                 cache_url = FileManager.get_cache_url(img_url_prefix, img_url, "")
                 url_img_short = img_url if not img_url.startswith("data:image") else img_url[:30]
-                LOGGER.debug(f"{url_img_short} -> {cache_file_path} / {cache_url}{ext}")
+                LOGGER.debug("%s -> %s / %s%s", url_img_short, PathUtil.short_path(cache_file_path), cache_url, ext)
                 print(f"<img src='{cache_url}{ext}'/>")
             else:
                 LOGGER.debug(f"no cache file for '{img_url}'")

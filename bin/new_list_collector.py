@@ -8,7 +8,7 @@ import logging.config
 from pathlib import Path
 from typing import Dict, List, Tuple, Any
 from shutil import which
-from bin.feed_maker_util import Process, Data
+from bin.feed_maker_util import Process, Data, PathUtil
 from bin.crawler import Crawler, Method
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -17,7 +17,7 @@ LOGGER = logging.getLogger()
 
 class NewListCollector:
     def __init__(self, feed_dir_path: Path, collection_conf: Dict[str, Any], new_list_file_path: Path) -> None:
-        LOGGER.debug(f"# NewListCollector(feed_dir_path={feed_dir_path}, collection_conf={collection_conf}, new_list_file_path={new_list_file_path}")
+        LOGGER.debug("# NewListCollector(feed_dir_path=%s, collection_conf=%r, new_list_file_path=%s", PathUtil.short_path(feed_dir_path), collection_conf, PathUtil.short_path(new_list_file_path))
         self.feed_dir_path: Path = feed_dir_path
         self.collection_conf: Dict[str, Any] = collection_conf
         self.new_list_file_path: Path = new_list_file_path
@@ -38,7 +38,7 @@ class NewListCollector:
             link = items[0]
             title = " ".join(items[1:])
             if not link or not title:
-                LOGGER.error(f"Error: Can't split a line into link and title, line='{line}'")
+                LOGGER.error("Error: Can't split a line into link and title, line='%s'", line)
                 return []
             result_list.append((link, title))
         return result_list
@@ -55,7 +55,7 @@ class NewListCollector:
         option_str = Crawler.get_option_str(self.collection_conf)
         for url in conf["list_url_list"]:
             crawler_cmd = f"crawler.py -f '{self.feed_dir_path}' {option_str} '{url}'"
-            LOGGER.debug(f"cmd={crawler_cmd}")
+            LOGGER.debug("cmd=%s", crawler_cmd)
             try:
                 result, error, _ = crawler.run(url)
                 if not result:
@@ -66,7 +66,7 @@ class NewListCollector:
                 continue
 
             capture_cmd = f"{self.collection_conf['item_capture_script']} -f '{self.feed_dir_path}'"
-            LOGGER.debug(f"cmd={capture_cmd}")
+            LOGGER.debug("cmd=%s", capture_cmd)
             result, error_msg = Process.exec_cmd(capture_cmd, dir_path=self.feed_dir_path, input_data=result)
             if not result or error_msg:
                 LOGGER.warning("Warning: can't get result from item capture script")
@@ -80,7 +80,7 @@ class NewListCollector:
                     post_process_cmd = f"{post_process_script}"
                 else:
                     post_process_cmd = f"{post_process_script} -f '{self.feed_dir_path}' '{url}'"
-                LOGGER.debug(f"cmd={post_process_cmd}")
+                LOGGER.debug("cmd=%s", post_process_cmd)
                 result, error_msg = Process.exec_cmd(post_process_cmd, dir_path=self.feed_dir_path, input_data=result)
                 if not result or error:
                     LOGGER.warning("Warning: can't get result from post process scripts")
@@ -90,7 +90,7 @@ class NewListCollector:
             result_list.extend(url_list)
 
         if not result_list:
-            LOGGER.error(f"Error: Can't get new list from {conf['list_url_list']}")
+            LOGGER.error("Error: Can't get new list from '%s'", conf["list_url_list"])
             return []
         result_list = Data.remove_duplicates(result_list)
         return result_list

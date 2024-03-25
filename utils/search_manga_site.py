@@ -240,7 +240,7 @@ class Site:
                     url1 = URL.concatenate_url(self.url_prefix, url1)
         LOGGER.debug(f"url0={url0}")
         LOGGER.debug(f"url1={url1}")
-            
+
         result_list: List[Tuple[str, str]] = []
         for _ in range(self.num_retries):
             content0 = self.get_data_from_site(url0)
