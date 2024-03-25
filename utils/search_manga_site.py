@@ -46,6 +46,7 @@ class Site:
                 self.encoding = config["encoding"] if "encoding" in config else None
                 self.render_js = config["render_js"] if "render_js" in config else False
                 self.num_retries = config["num_retries"] if "num_retries" in config else 1
+                self.headers = {"Referer": config["referer"] if "referer" in config else ""}
 
     def set_url_prefix(self, url_prefix: str) -> None:
         LOGGER.debug(f"# set_url_prefix(url_prefix={url_prefix})")
@@ -247,12 +248,14 @@ class Site:
             if content0:
                 result0 = self.extract_sub_content_from_site_like_agit(content0, keyword)
                 result_list.extend(result0)
+                if result0:
+                    break
             content1 = self.get_data_from_site(url1)
             if content1:
                 result1 = self.extract_sub_content_from_site_like_agit(content1, keyword)
                 result_list.extend(result1)
-            if result0 or result1:
-                break
+                if result1:
+                    break
         return result_list
 
 
