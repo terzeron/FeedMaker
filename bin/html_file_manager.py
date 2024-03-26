@@ -119,7 +119,7 @@ class HtmlFileManager:
             if dir_type_name == "file_path":
                 file_path_str = PathUtil.short_path(path)
                 self.db.execute(cursor, "DELETE FROM html_file_info WHERE file_path = %s", file_path_str)
-                path.unlink()
+                path.unlink(missing_ok=True)
             self.db.commit(connection)
 
         LOGGER.info("* The removing of some html files in '%s' is done", PathUtil.short_path(path))

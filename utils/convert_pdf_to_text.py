@@ -50,7 +50,7 @@ def main() -> int:
             page = re.sub(r'(?<=\S)\s*(?P<bullet>[▶•])', r'\n\g<bullet>', page)
             print(page)
 
-    pdf_file_path.unlink()
+    pdf_file_path.unlink(missing_ok=True)
 
     return 0
 
