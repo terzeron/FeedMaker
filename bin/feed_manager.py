@@ -60,6 +60,7 @@ class FeedManager:
     def remove_config_info(self, feed_dir_path: Path) -> None:
         LOGGER.debug("# remove_config_info(feed_dir_path='%s')", PathUtil.short_path(feed_dir_path))
         feed_name = feed_dir_path.stem
+        (feed_dir_path / "conf.json").unlink(missing_ok=True)
         with self.db.get_connection_and_cursor() as (connection, cursor):
             self.db.execute(cursor, "UPDATE feed_info SET config = NULL, config_modify_date = NULL WHERE feed_name = %s", feed_name)
             self.db.commit(connection)
@@ -158,6 +159,7 @@ class FeedManager:
     def remove_rss_info(self, feed_dir_path: Path) -> None:
         LOGGER.debug("# remove_rss_info(feed_dir_path='%s')", PathUtil.short_path(feed_dir_path))
         feed_name = feed_dir_path.stem
+        (feed_dir_path / f"{feed_name}.xml").unlink(missing_ok=True)
         with self.db.get_connection_and_cursor() as (connection, cursor):
             self.db.execute(cursor, "UPDATE feed_info SET feedmaker = NULL, rss_update_date = NULL WHERE feed_name = %s", feed_name)
             self.db.commit(connection)
@@ -237,6 +239,7 @@ class FeedManager:
 
     def remove_public_feed(self, public_feed_file_path: Path) -> None:
         feed_name = public_feed_file_path.stem
+        public_feed_file_path.unlink(missing_ok=True)
         with self.db.get_connection_and_cursor() as (connection, cursor):
             self.db.execute(cursor, "UPDATE feed_info SET public_html = NULL, public_feed_file_path = NULL, file_size = NULL, num_items = NULL, upload_date = NULL WHERE feed_name = %s", feed_name)
             self.db.commit(connection)
@@ -329,6 +332,7 @@ class FeedManager:
 
     def remove_progress_info(self, feed_dir_path: Path) -> None:
         feed_name = feed_dir_path.name
+        (feed_dir_path / "start_idx.txt").unlink(missing_ok=True)
         with self.db.get_connection_and_cursor() as (connection, cursor):
             self.db.execute(cursor, "UPDATE feed_info SET is_completed = NULL, current_index = NULL, total_item_count = NULL, unit_size_per_day = NULL, progress_ratio = NULL AND due_date = NULL WHERE feed_name = %s", feed_name)
             self.db.commit(connection)
