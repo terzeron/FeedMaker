@@ -59,7 +59,7 @@ def main() -> int:
         image.save(image_file, image_type)
         print(f"<img src='{image_url}'/>")
 
-    pdf_file_path.unlink()
+    pdf_file_path.unlink(missing_ok=True)
 
     return 0
 

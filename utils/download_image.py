@@ -57,7 +57,7 @@ def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str) -> O
             LOGGER.debug(f"convert svg file '{cache_file}' to PNG")
             new_cache_file = cache_file.with_suffix(".png")
             cairosvg.svg2png(url=str(cache_file), write_to=str(new_cache_file))
-            cache_file.unlink()
+            cache_file.unlink(missing_ok=True)
             cache_file = new_cache_file
         elif b"ftypheic" in header or b"ftypheix" in header or b"ftyphevc" in header or b"ftyphevx" in header:
             LOGGER.debug(f"convert heic file '{cache_file}' to PNG")
@@ -77,7 +77,7 @@ def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str) -> O
                         LOGGER.debug(f"convert '{cache_file}' to PNG")
                         new_cache_file = cache_file.with_suffix(".png")
                         img.convert("RGB").save(new_cache_file, "PNG")
-                        cache_file.unlink()
+                        cache_file.unlink(missing_ok=True)
                         cache_file = new_cache_file
             except UnidentifiedImageError:
                 LOGGER.warning(f"can't identify image '{cache_file}'")
