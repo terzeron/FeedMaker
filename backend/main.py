@@ -71,27 +71,27 @@ async def get_problems(data_type: str):
     error = ""
     if data_type == "progress_info":
         progress_info, error = await feed_maker_manager.get_problems_progress_info()
-        if progress_info:
+        if progress_info or not error:
             response_object["result"] = progress_info
     elif data_type == "public_feed_info":
         public_feed_info, error = await feed_maker_manager.get_problems_public_feed_info()
-        if public_feed_info:
+        if public_feed_info or not error:
             response_object["result"] = public_feed_info
     elif data_type == "html_info":
         html_info, error = await feed_maker_manager.get_problems_html_info()
-        if html_info:
+        if html_info or not error:
             response_object["result"] = html_info
     elif data_type == "element_info":
         element_info, error = await feed_maker_manager.get_problems_element_info()
-        if element_info:
+        if element_info or not error:
             response_object["result"] = element_info
     elif data_type == "list_url_info":
         list_url_info, error = await feed_maker_manager.get_problems_list_url_info()
-        if list_url_info:
+        if list_url_info or not error:
             response_object["result"] = list_url_info
     elif data_type == "status_info":
         status_info, error = await feed_maker_manager.get_problems_status_info()
-        if status_info:
+        if status_info or not error:
             response_object["result"] = status_info
 
     if "result" not in response_object or not response_object["result"]:
@@ -142,7 +142,7 @@ async def get_site_config(group_name: str):
     LOGGER.info("/groups/%s/site_config -> get_site_config(%s)", group_name, group_name)
     response_object: Dict[str, Any] = {"status": "failure"}
     result, error = await feed_maker_manager.get_site_config(group_name)
-    if result:
+    if result or not error:
         response_object["configuration"] = result
         LOGGER.debug(response_object["configuration"])
         response_object["status"] = "success"
@@ -158,7 +158,7 @@ async def save_site_config(group_name: str, request: Request):
     response_object: Dict[str, Any] = {"status": "failure"}
     post_data = await request.json()
     success_or_fail, error = await feed_maker_manager.save_site_config(group_name, post_data)
-    if success_or_fail:
+    if success_or_fail or not error:
         response_object["status"] = "success"
     else:
         response_object["message"] = error
@@ -170,7 +170,7 @@ async def toggle_group(group_name: str):
     LOGGER.info("PUT /groups/%s/toggle -> toggle_group(%s)", group_name, group_name)
     response_object: Dict[str, Any] = {"status": "failure"}
     result, error = await feed_maker_manager.toggle_group(group_name)
-    if result:
+    if result or not error:
         response_object["status"] = "success"
         response_object["new_name"] = result
     else:
@@ -202,7 +202,7 @@ def run(group_name: str, feed_name: str, _request: Request):
     response_object: Dict[str, Any] = {"status": "failure"}
     #post_data = asyncio.run(request.json())
     result, error = feed_maker_manager.run(group_name, feed_name)
-    if result:
+    if result or not error:
         response_object["status"] = "success"
     else:
         response_object["message"] = error
@@ -214,7 +214,7 @@ async def toggle_feed(group_name: str, feed_name: str):
     LOGGER.info("/groups/%s/feeds/%s/toggle -> toggle_feed(%s, %s)", group_name, feed_name, group_name, feed_name)
     response_object: Dict[str, Any] = {"status": "failure"}
     result, error = await feed_maker_manager.toggle_feed(feed_name)
-    if result:
+    if result or not error:
         response_object["status"] = "success"
         response_object["new_name"] = result
     else:
@@ -266,7 +266,7 @@ async def post_feed_info(group_name: str, feed_name: str, request: Request):
     response_object: Dict[str, Any] = {"status": "failure"}
     post_data = await request.json()
     result, error = await feed_maker_manager.save_config_file(group_name, feed_name, post_data)
-    if result:
+    if result or not error:
         response_object["status"] = "success"
     else:
         response_object["message"] = error
@@ -278,7 +278,7 @@ async def delete_feed_info(group_name: str, feed_name: str):
     LOGGER.info("DELETE /groups/%s/feeds/%s -> remove_feed(%s, %s)", group_name, feed_name, group_name, feed_name)
     response_object: Dict[str, Any] = {"status": "failure"}
     result, error = await feed_maker_manager.remove_feed(group_name, feed_name)
-    if result:
+    if result or not error:
         response_object["status"] = "success"
     else:
         response_object["message"] = error
@@ -319,7 +319,7 @@ async def get_groups():
     LOGGER.debug("/groups -> get_groups()")
     response_object: Dict[str, Any] = {"status": "failure"}
     result, error = await feed_maker_manager.get_groups()
-    if result:
+    if result or not error:
         response_object["groups"] = result
         response_object["status"] = "success"
         LOGGER.debug(result)
