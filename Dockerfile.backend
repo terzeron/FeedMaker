@@ -14,7 +14,6 @@ USER terzeron
 WORKDIR /app
 
 COPY requirements.txt /app
-COPY __init__.py /app
 COPY logging.conf /app
 COPY backend /app/backend
 COPY bin /app/bin
