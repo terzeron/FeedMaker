@@ -60,7 +60,7 @@ class FeedManager:
     def remove_config_info(self, feed_dir_path: Path) -> None:
         LOGGER.debug("# remove_config_info(feed_dir_path='%s')", PathUtil.short_path(feed_dir_path))
         feed_name = feed_dir_path.stem
-        (feed_dir_path / "conf.json").unlink(missing_ok=True)
+        #(feed_dir_path / "conf.json").unlink(missing_ok=True)
         with self.db.get_connection_and_cursor() as (connection, cursor):
             self.db.execute(cursor, "UPDATE feed_info SET config = NULL, config_modify_date = NULL WHERE feed_name = %s", feed_name)
             self.db.commit(connection)
