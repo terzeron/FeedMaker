@@ -278,17 +278,17 @@ class FeedMakerManager:
         html_dir_path = feed_dir_path / "html"
         if html_dir_path.is_dir():
             rmtree(html_dir_path)
-        self.html_file_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
+        self.html_file_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path, do_remove_file=True)
 
     async def remove_html_file(self, group_name: str, feed_name: str, html_file_name: str) -> None:
         LOGGER.debug("# remove_html_file(group_name='%s', feed_name='%s')", group_name, feed_name)
         html_file_path = self.work_dir / group_name / feed_name / "html" / html_file_name
         html_file_path.unlink(missing_ok=True)
-        self.html_file_manager.remove_html_file_in_path_from_info("file_path", html_file_path)
+        self.html_file_manager.remove_html_file_in_path_from_info("file_path", html_file_path, do_remove_file=True)
 
     async def remove_public_feed(self, feed_name: str) -> None:
         LOGGER.debug("# remove_public_feed(feed_name='%s')", feed_name)
-        self.feed_manager.remove_public_feed_by_feed_name(feed_name)
+        self.feed_manager.remove_public_feed_by_feed_name(feed_name, do_remove_file=True)
 
     async def remove_feed(self, group_name: str, feed_name: str) -> Tuple[bool, str]:
         LOGGER.debug(f"# remove_feed({group_name}, {feed_name})")
@@ -308,12 +308,12 @@ class FeedMakerManager:
             rmtree(feed_dir_path)
 
         # re-scan feed
-        self.feed_manager.remove_config_info(feed_dir_path)
-        self.feed_manager.remove_rss_info(feed_dir_path)
-        self.feed_manager.remove_public_feed_by_feed_name(feed_name)
-        self.feed_manager.remove_progress_info(feed_dir_path)
+        self.feed_manager.remove_config_info(feed_dir_path, do_remove_file=True)
+        self.feed_manager.remove_rss_info(feed_dir_path, do_remove_file=True)
+        self.feed_manager.remove_public_feed_by_feed_name(feed_name, do_remove_file=True)
+        self.feed_manager.remove_progress_info(feed_dir_path, do_remove_file=True)
         self.access_log_manager.remove_httpd_access_info(feed_dir_path)
-        self.html_file_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
+        self.html_file_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path, do_remove_file=True)
         return True, ""
 
     async def remove_group(self, group_name: str) -> Tuple[bool, str]:
@@ -336,12 +336,12 @@ class FeedMakerManager:
 
         # re-scan feeds by group
         for feed_dir_path in group_dir_path.iterdir():
-            self.feed_manager.remove_config_info(feed_dir_path)
-            self.feed_manager.remove_rss_info(feed_dir_path)
-            self.feed_manager.remove_public_feed_by_feed_name(feed_dir_path.name)
-            self.feed_manager.remove_progress_info(feed_dir_path)
+            self.feed_manager.remove_config_info(feed_dir_path, do_remove_file=True)
+            self.feed_manager.remove_rss_info(feed_dir_path, do_remove_file=True)
+            self.feed_manager.remove_public_feed_by_feed_name(feed_dir_path.name, do_remove_file=True)
+            self.feed_manager.remove_progress_info(feed_dir_path, do_remove_file=True)
             self.access_log_manager.remove_httpd_access_info(feed_dir_path)
-            self.html_file_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path)
+            self.html_file_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path, do_remove_file=True)
         return True, ""
 
     async def toggle_feed(self, feed_name: str) -> Tuple[str, str]:

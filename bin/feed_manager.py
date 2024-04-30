@@ -57,10 +57,11 @@ class FeedManager:
 
         return element_name_count_map
 
-    def remove_config_info(self, feed_dir_path: Path) -> None:
-        LOGGER.debug("# remove_config_info(feed_dir_path='%s')", PathUtil.short_path(feed_dir_path))
+    def remove_config_info(self, feed_dir_path: Path, do_remove_file: bool = False) -> None:
+        LOGGER.debug("# remove_config_info(feed_dir_path='%s', do_remove_file=%r)", PathUtil.short_path(feed_dir_path), do_remove_file)
         feed_name = feed_dir_path.stem
-        #(feed_dir_path / "conf.json").unlink(missing_ok=True)
+        if do_remove_file:
+            (feed_dir_path / "conf.json").unlink(missing_ok=True)
         with self.db.get_connection_and_cursor() as (connection, cursor):
             self.db.execute(cursor, "UPDATE feed_info SET config = NULL, config_modify_date = NULL WHERE feed_name = %s", feed_name)
             self.db.commit(connection)
@@ -156,10 +157,11 @@ class FeedManager:
         end_ts = datetime.now()
         LOGGER.info("* The loading of all config files is done. %d items / %s sec", num_items, (end_ts - start_ts))
 
-    def remove_rss_info(self, feed_dir_path: Path) -> None:
-        LOGGER.debug("# remove_rss_info(feed_dir_path='%s')", PathUtil.short_path(feed_dir_path))
+    def remove_rss_info(self, feed_dir_path: Path, do_remove_file: bool = False) -> None:
+        LOGGER.debug("# remove_rss_info(feed_dir_path='%s', do_remove_file=%r)", PathUtil.short_path(feed_dir_path), do_remove_file)
         feed_name = feed_dir_path.stem
-        (feed_dir_path / f"{feed_name}.xml").unlink(missing_ok=True)
+        if do_remove_file:
+            (feed_dir_path / f"{feed_name}.xml").unlink(missing_ok=True)
         with self.db.get_connection_and_cursor() as (connection, cursor):
             self.db.execute(cursor, "UPDATE feed_info SET feedmaker = NULL, rss_update_date = NULL WHERE feed_name = %s", feed_name)
             self.db.commit(connection)
@@ -237,17 +239,18 @@ class FeedManager:
 
         return feed_name_public_feed_info_map
 
-    def remove_public_feed(self, public_feed_file_path: Path) -> None:
+    def remove_public_feed(self, public_feed_file_path: Path, do_remove_file: bool = False) -> None:
         feed_name = public_feed_file_path.stem
-        public_feed_file_path.unlink(missing_ok=True)
+        if do_remove_file:
+            public_feed_file_path.unlink(missing_ok=True)
         with self.db.get_connection_and_cursor() as (connection, cursor):
             self.db.execute(cursor, "UPDATE feed_info SET public_html = NULL, public_feed_file_path = NULL, file_size = NULL, num_items = NULL, upload_date = NULL WHERE feed_name = %s", feed_name)
             self.db.commit(connection)
         LOGGER.info("* The removing of public feed info of feed '%s' is done.", feed_name)
 
-    def remove_public_feed_by_feed_name(self, feed_name: str) -> None:
+    def remove_public_feed_by_feed_name(self, feed_name: str, do_remove_file: bool = False) -> None:
         public_feed_file_path = self.public_feed_dir / f"{feed_name}.xml"
-        self.remove_public_feed(public_feed_file_path)
+        self.remove_public_feed(public_feed_file_path, do_remove_file=do_remove_file)
 
     def _add_public_feed(self, cursor: Cursor, public_feed_file_path: Path) -> int:
         if not public_feed_file_path.is_file():
@@ -330,9 +333,10 @@ class FeedManager:
 
         return feed_name_progress_info_map
 
-    def remove_progress_info(self, feed_dir_path: Path) -> None:
+    def remove_progress_info(self, feed_dir_path: Path, do_remove_file: bool = False) -> None:
         feed_name = feed_dir_path.name
-        (feed_dir_path / "start_idx.txt").unlink(missing_ok=True)
+        if do_remove_file:
+            (feed_dir_path / "start_idx.txt").unlink(missing_ok=True)
         with self.db.get_connection_and_cursor() as (connection, cursor):
             self.db.execute(cursor, "UPDATE feed_info SET is_completed = NULL, current_index = NULL, total_item_count = NULL, unit_size_per_day = NULL, progress_ratio = NULL AND due_date = NULL WHERE feed_name = %s", feed_name)
             self.db.commit(connection)
@@ -346,7 +350,7 @@ class FeedManager:
         group_name = feed_dir_path.parent.name
 
         is_completed: Optional[bool] = None
-        unit_size_per_day = 1 # prevent "divided by zero"
+        unit_size_per_day = 1  # prevent "divided by zero"
         current_index: Optional[int] = None
         total_item_count: Optional[int] = None
         progress_ratio: Optional[float] = None

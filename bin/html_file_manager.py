@@ -102,7 +102,7 @@ class HtmlFileManager:
 
         return html_file_image_not_found_map
 
-    def remove_html_file_in_path_from_info(self, dir_type_name: str, path: Path) -> None:
+    def remove_html_file_in_path_from_info(self, dir_type_name: str, path: Path, do_remove_file: bool = False) -> None:
         LOGGER.debug("# remove_html_file_in_path_from_info(dir_type_name='%s'', path='%s')", dir_type_name, PathUtil.short_path(path))
         if dir_type_name not in ("file_path", "feed_dir_path"):
             LOGGER.error("can't identify directory/file type '%s'", dir_type_name)
@@ -114,12 +114,14 @@ class HtmlFileManager:
                 rows = self.db.query("SELECT * FROM html_file_info WHERE feed_dir_path = %s", feed_dir_path_str)
                 for row in rows:
                     file_path = row["file_path"]
-                    (self.work_dir / file_path).unlink(missing_ok=True)
+                    if do_remove_file:
+                        (self.work_dir / file_path).unlink(missing_ok=True)
                 self.db.execute(cursor, "DELETE FROM html_file_info WHERE feed_dir_path = %s", feed_dir_path_str)
             if dir_type_name == "file_path":
                 file_path_str = PathUtil.short_path(path)
                 self.db.execute(cursor, "DELETE FROM html_file_info WHERE file_path = %s", file_path_str)
-                path.unlink(missing_ok=True)
+                if do_remove_file:
+                    path.unlink(missing_ok=True)
             self.db.commit(connection)
 
         LOGGER.info("* The removing of some html files in '%s' is done", PathUtil.short_path(path))
