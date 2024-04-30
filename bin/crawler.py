@@ -17,7 +17,7 @@ from bin.headless_browser import HeadlessBrowser
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
-DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36"
+DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
 
 class Method(Enum):

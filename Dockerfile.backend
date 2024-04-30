@@ -2,7 +2,8 @@ FROM python:3.11
 
 # root
 RUN apt-get update > /dev/null && \
-    apt-get install -y apt-utils build-essential libpoppler-dev libpoppler-cpp-dev libheif-dev > /dev/null && \
+    apt-get install -y apt-utils libpoppler-dev libpoppler-cpp-dev libheif-dev > /dev/null && \
+    apt-get clean autoclean && apt-get autoremove -y && \
     useradd -u 1000 terzeron && \
     mkdir -p /app /app/backend /app/bin /app/utils /fma /xml /home/terzeron/.cache/pip /home/terzeron/.local /home/terzeron/.local/bin /run/dbus && \
     chown -R terzeron /app /fma /xml /home/terzeron/.cache/pip /home/terzeron/.local /home/terzeron/.local
