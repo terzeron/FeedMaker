@@ -40,12 +40,12 @@ class ProblemManager:
         feed_name_status_info_map = {}
 
         # exclude unrequested and unregistered and unmade feeds
-        # --> NOT ( http_request IS NULL AND public_html IS NULL AND feedmaker IS NULL )
+        # --> NOT ( http_request = 0 AND public_html = 0 AND feedmaker = 0 )
         # exclude REQUESTED and unregistered and unmade but ACCESSED long ago feeds
-        # --> NOT ( http_request IS NOT NULL AND public_html IS NULL AND feedmaker IS NULL AND access_date IS NOT NULL AND DATEDIFF(access_date, current_date) > %s )
+        # --> NOT ( http_request = 1 AND public_html = 0 AND feedmaker = 0 AND access_date IS NOT NULL AND DATEDIFF(access_date, current_date) > %s )
         # exclude REQUESTED and REGISTERED and MADE AND ACCESSED OR VIEWED RECENTLY feeds
-        # --> NOT ( http_request IS NOT NULL AND public_html IS NOT NULL AND feedmaker IS NOT NULL AND ( access_date IS NOT NULL AND DATEDIFF(current_date, access_date) < %s OR view_date IS NOT NULL AND DATEDIFF(current_date, view_date) < %s ) )
-        for row in self.db.query("SELECT * FROM feed_info WHERE NOT ( http_request IS NULL AND public_html IS NULL AND feedmaker IS NULL ) AND NOT ( http_request IS NOT NULL AND public_html IS NULL AND feedmaker IS NULL AND access_date IS NOT NULL AND DATEDIFF(access_date, current_date) > %s ) AND NOT ( http_request IS NOT NULL AND public_html IS NOT NULL AND feedmaker IS NOT NULL AND ( access_date IS NOT NULL AND DATEDIFF(current_date, access_date) < %s OR view_date IS NOT NULL AND DATEDIFF(current_date, view_date) < %s ) ) ORDER BY rss_update_date, upload_date", self.num_days, self.num_days, self.num_days):
+        # --> NOT ( http_request = 1 AND public_html = 1 AND feedmaker = 1 AND ( access_date IS NOT NULL AND DATEDIFF(current_date, access_date) < %s OR view_date IS NOT NULL AND DATEDIFF(current_date, view_date) < %s ) )
+        for row in self.db.query("SELECT * FROM feed_info WHERE NOT ( http_request = 0 AND public_html = 0 AND feedmaker = 0 ) AND NOT ( http_request = 1 AND public_html = 0 AND feedmaker = 0 AND access_date IS NOT NULL AND DATEDIFF(access_date, current_date) > %s ) AND NOT ( http_request = 1 AND public_html = 1 AND feedmaker = 1 AND ( access_date IS NOT NULL AND DATEDIFF(current_date, access_date) < %s OR view_date IS NOT NULL AND DATEDIFF(current_date, view_date) < %s ) ) ORDER BY rss_update_date, upload_date", self.num_days, self.num_days, self.num_days):
             feed_name = row["feed_name"]
             feed_name_status_info_map[feed_name] = {
                 "feed_name": feed_name,
