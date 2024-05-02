@@ -467,7 +467,7 @@ export default {
           .then((value) => {
             if (value) {
               this.removeHtmlFile(data.item['file_path']);
-              this.htmlFileSizeMap = this.htmlFileSizeMap.filter(item => item !== data.item);
+              this.htmlFileSizeList = this.htmlFileSizeList.filter(item => item !== data.item);
             }
           })
           .catch((error) => {
