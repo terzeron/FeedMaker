@@ -18,7 +18,7 @@
     "bootstrap": "^5.3.2",
     "bootstrap-vue": "^2.23.1",
     "core-js": "^3.6.5",
-    "ejs": "^3.1.7",
+    "ejs": "^3.1.10",
     "eventsource": "^1.1.1",
     "fs": "^0.0.1-security",
     "lodash": "^4.17.21",
