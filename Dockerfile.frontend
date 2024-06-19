@@ -1,6 +1,16 @@
+FROM node:18 as build
+
+WORKDIR /app
+COPY frontend/package.json .
+RUN npm install && npx browserslist@latest --update-db
+
+COPY frontend/ .
+RUN npm run build
+
+
 FROM nginx:1.25
 
-COPY frontend/dist /usr/share/nginx/html
+COPY --from=build /app/dist /usr/share/nginx/html
 COPY frontend/default.conf /etc/nginx/conf.d
 
 EXPOSE 80
