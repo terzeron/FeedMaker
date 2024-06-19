@@ -17,7 +17,7 @@ LOGGER = logging.getLogger()
 
 
 class ProblemManager:
-    num_days = 14
+    num_days = 60
 
     def __init__(self, db_manager: Optional[DBManager] = None) -> None:
         if db_manager:
@@ -39,13 +39,13 @@ class ProblemManager:
         LOGGER.debug("# get_feed_name_status_info_map()")
         feed_name_status_info_map = {}
 
-        # exclude unrequested and unregistered and unmade feeds
+        # exclude feeds unrequested and unregistered and unmade
         # --> NOT ( http_request = 0 AND public_html = 0 AND feedmaker = 0 )
-        # exclude REQUESTED and unregistered and unmade but ACCESSED long ago feeds
+        # exclude feeds REQUESTED and unregistered and unmade but ACCESSED long ago
         # --> NOT ( http_request = 1 AND public_html = 0 AND feedmaker = 0 AND access_date IS NOT NULL AND DATEDIFF(access_date, current_date) > %s )
-        # exclude REQUESTED and REGISTERED and MADE AND ACCESSED OR VIEWED RECENTLY feeds
+        # exclude feeds REQUESTED and REGISTERED and MADE AND ACCESSED OR VIEWED RECENTLY
         # --> NOT ( http_request = 1 AND public_html = 1 AND feedmaker = 1 AND ( access_date IS NOT NULL AND DATEDIFF(current_date, access_date) < %s OR view_date IS NOT NULL AND DATEDIFF(current_date, view_date) < %s ) )
-        for row in self.db.query("SELECT * FROM feed_info WHERE NOT ( http_request = 0 AND public_html = 0 AND feedmaker = 0 ) AND NOT ( http_request = 1 AND public_html = 0 AND feedmaker = 0 AND access_date IS NOT NULL AND DATEDIFF(access_date, current_date) > %s ) AND NOT ( http_request = 1 AND public_html = 1 AND feedmaker = 1 AND ( access_date IS NOT NULL AND DATEDIFF(current_date, access_date) < %s OR view_date IS NOT NULL AND DATEDIFF(current_date, view_date) < %s ) ) ORDER BY rss_update_date, upload_date", self.num_days, self.num_days, self.num_days):
+        for row in self.db.query("SELECT * FROM feed_info WHERE NOT ( http_request = 0 AND public_html = 0 AND feedmaker = 0 ) AND NOT ( http_request = 1 AND public_html = 0 AND feedmaker = 0 AND access_date IS NOT NULL AND DATEDIFF(access_date, current_date) > %s ) AND NOT ( http_request = 1 AND public_html = 1 AND feedmaker = 1 AND config IS NOT NULL AND ( access_date IS NOT NULL AND DATEDIFF(current_date, access_date) < %s OR view_date IS NOT NULL AND DATEDIFF(current_date, view_date) < %s ) ) ORDER BY config, feedmaker, public_html, http_request, config_modify_date, collect_date, rss_update_date, upload_date, access_date, view_date", self.num_days, self.num_days, self.num_days):
             feed_name = row["feed_name"]
             feed_name_status_info_map[feed_name] = {
                 "feed_name": feed_name,
