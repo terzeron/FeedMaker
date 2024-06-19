@@ -13,9 +13,6 @@ docker push registry.terzeron.com/terzeron/fm_backend:latest
 
 rm -rf CartoonSplit
 
-(cd frontend && npm install -y > /dev/null && \
-     npx browserslist@latest > /dev/null && \
-     npm run build > /dev/null) && \
 docker build -f Dockerfile.frontend -t terzeron/fm_frontend . && \
 docker tag terzeron/fm_frontend:latest registry.terzeron.com/terzeron/fm_frontend:latest && \
 docker push registry.terzeron.com/terzeron/fm_frontend:latest
