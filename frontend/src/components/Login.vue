@@ -63,6 +63,12 @@ export default {
     authInitialized: function () {
       this.initialized = true;
     },
+    safeSplit: function(str, delimiter) {
+      if (str && str.includes(delimiter)) {
+        return str.split(delimiter);
+      }
+      return [str];
+    },
     login: async function () {
       if (this.$session.get('is_authorized')) {
         await this.$router.push('/result');
@@ -78,9 +84,10 @@ export default {
 
         this.profile = await this.$refs.authRef.getProfile();
         if (this.profile && this.profile['name']) {
+          this.profile = this.$session.profile;
           this.$session.set('name', this.profile['name']);
         }
-        const loginAllowedEmailList = process.env.VUE_APP_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST.split(',');
+        const loginAllowedEmailList = this.safeSplit(process.env.VUE_APP_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST, ",");
         if (this.profile && loginAllowedEmailList.includes(this.profile['email'])) {
           this.$session.set('is_authorized', true);
           console.log("authorized as " + this.profile['name'] + ' (' + this.profile['email'] + ')');
