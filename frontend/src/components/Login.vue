@@ -84,7 +84,6 @@ export default {
 
         this.profile = await this.$refs.authRef.getProfile();
         if (this.profile && this.profile['name']) {
-          this.profile = this.$session.profile;
           this.$session.set('name', this.profile['name']);
         }
         const loginAllowedEmailList = this.safeSplit(process.env.VUE_APP_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST, ",");
