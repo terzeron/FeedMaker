@@ -12,6 +12,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from backend.feed_maker_manager import FeedMakerManager
+import uvicorn
 
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -326,3 +327,6 @@ async def get_groups():
     else:
         response_object["message"] = error
     return response_object
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8010)

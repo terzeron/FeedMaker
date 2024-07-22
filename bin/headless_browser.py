@@ -6,8 +6,10 @@ import logging.config
 from pathlib import Path
 from typing import Dict, Optional, no_type_check
 import urllib3
+from shutil import which
 from selenium import webdriver
 from selenium.common.exceptions import InvalidCookieDomainException
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
@@ -162,8 +164,11 @@ class HeadlessBrowser:
         options.add_argument("--lang=ko_KR")
         options.add_argument(f"--user-agent={self.headers['User-Agent']}")
 
-        chrome_driver_name = "chromedriver"
-        driver = webdriver.Chrome(options=options, executable_path=chrome_driver_name)
+        chrome_driver_path = which("chromedriver")
+        if not chrome_driver_path:
+            raise FileNotFoundError("chromedriver not found in PATH")
+        service = Service(executable_path=chrome_driver_path)
+        driver = webdriver.Chrome(service=service, options=options)
         driver.set_page_load_timeout(self.timeout)
 
         if "Referer" in self.headers and self.headers["Referer"]:

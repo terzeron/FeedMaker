@@ -3,7 +3,7 @@
 
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import random
 import logging.config
 import getopt
@@ -45,7 +45,7 @@ class FeedMakerRunner:
         lock_file_path = feed_dir_path / ".feed_maker_runner.lock"
         if lock_file_path.is_file():
             st = lock_file_path.stat()
-            if datetime.fromtimestamp(st.st_mtime) < datetime.now() - timedelta(days=1):
+            if datetime.fromtimestamp(st.st_mtime, timezone.utc) < datetime.now(timezone.utc) - timedelta(days=1):
                 LOGGER.debug("remove old lock file '%s'", PathUtil.short_path(lock_file_path))
                 lock_file_path.unlink(missing_ok=True)
 

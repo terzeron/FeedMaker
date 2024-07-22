@@ -22,18 +22,18 @@ LOGGER = logging.getLogger()
 
 def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str) -> Optional[Path]:
     LOGGER.debug("# download_image(crawler=%r, feed_img_dir_path='%s', img_url='%s')", crawler, PathUtil.short_path(feed_img_dir_path), img_url[:30])
-    cache_file = FileManager.get_cache_file_path(feed_img_dir_path, img_url)
-    for ext in ["", ".png", ".jpeg", ".jpg", ".webp"]:
-        cache_file_path = cache_file.with_suffix(ext)
-        if cache_file_path.is_file() and cache_file_path.stat().st_size > 0:
-            return cache_file_path
+    # cache file
+    cache_file_path = FileManager.get_cache_file_path(feed_img_dir_path, img_url)
+    if cache_file_path.is_file() and cache_file_path.stat().st_size > 0:
+        return cache_file_path
 
+    # image data uri
     m = re.search(r'^data:image/(?P<img_ext>png|jpeg|jpg);base64,(?P<img_data>.+)', img_url)
     if m:
         img_data = m.group("img_data")
-        img_ext = "." + m.group("img_ext")
-        LOGGER.debug(f"image data '{img_data[:30]}' as base64 to cache file '{cache_file}{img_ext}'")
-        img_file_path = cache_file.with_suffix(img_ext)
+        suffix = "." + m.group("img_ext")
+        LOGGER.debug(f"image data '{img_data[:30]}' as base64 to cache file '{cache_file_path}{suffix}'")
+        img_file_path = cache_file_path.with_suffix(suffix)
         if img_file_path.is_file() and img_file_path.stat().st_size > 0:
             return img_file_path
         with open(img_file_path, "wb") as outfile:
@@ -41,51 +41,53 @@ def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str) -> O
             outfile.write(decoded_data)
         return img_file_path
 
+    # http uri
     if img_url.startswith("http"):
-        LOGGER.debug(f"image url '{img_url}' to cache file '{cache_file}'")
-        result, _, _ = crawler.run(img_url, download_file=cache_file)
+        result, _, _ = crawler.run(img_url, download_file=cache_file_path)
         if not result:
             time.sleep(5)
-            result, _, _ = crawler.run(url=img_url, download_file=cache_file)
+            result, _, _ = crawler.run(url=img_url, download_file=cache_file_path)
             if not result:
                 return None
 
-        with cache_file.open("rb") as infile:
+        with cache_file_path.open("rb") as infile:
             header = infile.read(1024)
 
         if header.startswith(b"<svg"):
-            LOGGER.debug(f"convert svg file '{cache_file}' to PNG")
-            new_cache_file = cache_file.with_suffix(".png")
-            cairosvg.svg2png(url=str(cache_file), write_to=str(new_cache_file))
-            cache_file.unlink(missing_ok=True)
-            cache_file = new_cache_file
+            LOGGER.debug(f"convert svg file '{cache_file_path}' to PNG")
+            new_cache_file_path = cache_file_path.with_suffix(".png")
+            cairosvg.svg2png(url=str(cache_file_path), write_to=str(new_cache_file_path))
+            cache_file_path.unlink(missing_ok=True)
+            cache_file_path = new_cache_file_path
         elif b"ftypheic" in header or b"ftypheix" in header or b"ftyphevc" in header or b"ftyphevx" in header:
-            LOGGER.debug(f"convert heic file '{cache_file}' to PNG")
-            heif_file = pyheif.read(str(cache_file))
+            LOGGER.debug(f"convert heic file '{cache_file_path}' to PNG")
+            heif_file = pyheif.read(str(cache_file_path))
             img = Image.frombytes(mode=heif_file.mode, size=heif_file.size, data=heif_file.data)
-            new_cache_file = cache_file.with_suffix(".png")
-            img.save(new_cache_file, "PNG")
+            new_cache_file_path = cache_file_path.with_suffix(".png")
+            img.save(new_cache_file_path, "PNG")
         else:
+            # normal image file
+            LOGGER.debug(f"{cache_file_path=}")
             try:
-                with Image.open(cache_file) as img:
-                    if img.format in ("JPEG", "PNG", "WEBP"):
-                        LOGGER.debug(f"append image extension '{img.format}'")
-                        new_cache_file = cache_file.with_suffix("." + img.format.lower())
-                        cache_file.rename(new_cache_file)
-                        cache_file = new_cache_file
-                    if img.format in ("GIF", "BMP", "TIFF"):
-                        LOGGER.debug(f"convert '{cache_file}' to PNG")
-                        new_cache_file = cache_file.with_suffix(".png")
-                        img.convert("RGB").save(new_cache_file, "PNG")
-                        cache_file.unlink(missing_ok=True)
-                        cache_file = new_cache_file
+                with Image.open(cache_file_path) as img:
+                    if img.format in ("JPEG", "PNG", "WEBP", "GIF"):
+                        LOGGER.debug(f"append image extension '{img.format.lower()}'")
+                        new_cache_file_path = cache_file_path.with_suffix("." + img.format.lower())
+                        cache_file_path.rename(new_cache_file_path)
+                    else:
+                        LOGGER.debug(f"convert '{cache_file_path}' to PNG")
+                        new_cache_file_path = cache_file_path.with_suffix(".png")
+                        img.convert("RGB").save(new_cache_file_path, "PNG")
+                        cache_file_path.unlink(missing_ok=True)
+
+                    cache_file_path = new_cache_file_path
             except UnidentifiedImageError:
-                LOGGER.warning(f"can't identify image '{cache_file}'")
+                LOGGER.warning(f"can't identify image '{cache_file_path}'")
                 return None
     else:
         return None
-    if os.path.isfile(cache_file) and os.stat(cache_file).st_size > 0:
-        return cache_file
+    if cache_file_path.is_file() and cache_file_path.stat().st_size > 0:
+        return cache_file_path
     return None
 
 
@@ -154,12 +156,12 @@ def main() -> int:
 
             # download
             cache_file_path = download_image(crawler, feed_img_dir_path, img_url)
-            if cache_file_path:
-                _, ext = os.path.splitext(cache_file_path)
+            if cache_file_path.is_file():
+                suffix = cache_file_path.suffix
                 cache_url = FileManager.get_cache_url(img_url_prefix, img_url, "")
                 url_img_short = img_url if not img_url.startswith("data:image") else img_url[:30]
-                LOGGER.debug("%s -> %s / %s%s", url_img_short, PathUtil.short_path(cache_file_path), cache_url, ext)
-                print(f"<img src='{cache_url}{ext}'/>")
+                LOGGER.debug("%s -> %s / %s%s", url_img_short, PathUtil.short_path(cache_file_path), cache_url, suffix)
+                print(f"<img src='{cache_url}{suffix}'/>")
             else:
                 LOGGER.debug(f"no cache file for '{img_url}'")
                 print(f"<img src='{FileManager.IMAGE_NOT_FOUND_IMAGE_URL}' alt='not exist or size 0'/>")

@@ -28,7 +28,7 @@ class AccessLogManager:
     def loki_search(self, params) -> Tuple[List[str], Dict[str, Any]]:
         logs: List[str] = []
         stats: Dict[str, Any] = {}
-        response = requests.get(self.loki_url, params=params, timeout=60)
+        response = requests.get(self.loki_url, params=params, timeout=60, verify=False)
         if response:
             json_data = response.json()
             if "status" in json_data and json_data["status"] == "success":

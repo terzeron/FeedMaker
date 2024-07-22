@@ -553,11 +553,14 @@ class FileManager:
 
     @staticmethod
     def _get_cache_info_common_postfix(img_url: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None) -> str:
-        LOGGER.debug(f"# get_cache_info_common(img_url={img_url[:30]}, postfix={postfix}, index={index})")
+        LOGGER.debug(f"# get_cache_info_common(img_url='%s'', postfix='%s', index=%r)", img_url[:30], postfix, index)
+
+        # postfix: _pfxstr (valid string)
         postfix_str = ""
         if postfix and postfix != "":
             postfix_str = "_" + str(postfix)
 
+        # index: .1, .2, .3, ... (0 is ignored)
         index_str = ""
         if index:
             index_str = "." + str(index)
@@ -567,14 +570,20 @@ class FileManager:
         return URL.get_short_md5_name(img_url)
 
     @staticmethod
-    def get_cache_url(url_prefix: str, img_url: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None) -> str:
-        LOGGER.debug(f"# get_cache_url(url_prefix={url_prefix}, img_url={img_url[:30]}, postfix={postfix}, index={index})")
-        return url_prefix + "/" + FileManager._get_cache_info_common_postfix(img_url, postfix, index)
+    def get_cache_url(url_prefix: str, img_url: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None, suffix: Optional[str] = None) -> str:
+        LOGGER.debug(f"# get_cache_url(url_prefix='%s'', img_url='%s', postfix='%r', index=%r, suffix='%r')", url_prefix, img_url[:30], postfix, index, suffix)
+        url = url_prefix + "/" + FileManager._get_cache_info_common_postfix(img_url=img_url, postfix=postfix, index=index)
+        if suffix:
+            url += suffix
+        return url
 
     @staticmethod
-    def get_cache_file_path(path_prefix: Path, img_url: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None) -> Path:
-        LOGGER.debug("# get_cache_file_name(path_prefix=%s, img_url=%s, postfix=%r, index=%r)", PathUtil.short_path(path_prefix), img_url[:30], postfix, index)
-        return path_prefix / FileManager._get_cache_info_common_postfix(img_url, postfix, index)
+    def get_cache_file_path(path_prefix: Path, img_url: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None, suffix: Optional[str] = None) -> Optional[Path]:
+        LOGGER.debug(f"# get_cache_file_name(path_prefix='%r', img_url='%s', postfix='%s', index=%r, suffix='%r')", PathUtil.short_path(path_prefix), img_url[:30], postfix, index, suffix)
+        file_path = path_prefix / FileManager._get_cache_info_common_postfix(img_url=img_url, postfix=postfix, index=index)
+        if suffix:
+            return file_path.with_suffix(file_path.suffix + suffix)
+        return file_path
 
     @staticmethod
     def get_incomplete_image_list(html_file_path) -> List[str]:

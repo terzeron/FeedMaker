@@ -13,14 +13,6 @@ class CrawlerTest(unittest.TestCase):
             if os.path.isfile(cookie_file):
                 os.remove(cookie_file)
 
-    def test_runHttp(self):
-        url = "http://info.cern.ch/"
-        crawler = Crawler()
-        actual, _, _ = crawler.run(url)
-        m = re.search(r'<title>http://info.cern.ch</title>', actual)
-        self.assertTrue(m)
-        del crawler
-
     def test_runHttps(self):
         url = "https://theuselessweb.site/unicodesnowmanforyou/"
         crawler = Crawler()

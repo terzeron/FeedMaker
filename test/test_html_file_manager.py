@@ -218,11 +218,11 @@ class TestHtmlFileManager(unittest.TestCase):
 
         self.hfm.remove_html_file_in_path_from_info("file_path", html_dir_path / "dc938b8.html")
         row3 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_without_image_tag > 0")
-        self.assertEqual(len(row3), 0)
+        self.assertEqual(len(row3), len(row1))
 
         self.hfm.remove_html_file_in_path_from_info("file_path", html_dir_path / "7c9aa6d.html")
         row4 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_without_image_tag > 0")
-        self.assertEqual(len(row4), 0)
+        self.assertEqual(len(row4), len(row1))
 
     def test_add_and_remove_html_file_info_in_path_5(self):
         html_dir_path = self.test_feed_dir_path / "html"

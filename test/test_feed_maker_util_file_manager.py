@@ -66,6 +66,14 @@ class FileManagerTest(unittest.TestCase):
 
         self.feed_img_dir_path: Path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "img" / feed_name
         self.feed_img_dir_path.mkdir(exist_ok=True)
+        self.img_file1_path = self.feed_img_dir_path / "e7e0b83"
+        self.img_file1_path.touch()
+        self.img_file2_path = self.feed_img_dir_path / "e7e0b83.jpg"
+        self.img_file2_path.touch()
+        self.img_file3_path = self.feed_img_dir_path / "e7e0b83_part.jpg"
+        self.img_file3_path.touch()
+        self.img_file4_path = self.feed_img_dir_path / "e7e0b83_part.1.jpg"
+        self.img_file4_path.touch()
         self.empty_img_file_path = self.feed_img_dir_path / "empty.png"
         self.empty_img_file_path.touch()
 
@@ -99,20 +107,25 @@ class FileManagerTest(unittest.TestCase):
     def test_get_cache_url(self):
         url_prefix = "https://terzeron.com/xml/img/test"
         img_url = "https://image-comic.pstatic.net/webtoon/759457/50/20211007123156_e8e0d3210b1b5222a92a0d12de7068b3_IMAG01_1.jpg"
+
         actual = FileManager.get_cache_url(url_prefix, img_url)
         expected = "https://terzeron.com/xml/img/test/e7e0b83"
         self.assertEqual(expected, actual)
 
-        actual = FileManager.get_cache_url(url_prefix, img_url, postfix="part")
-        expected = "https://terzeron.com/xml/img/test/e7e0b83_part"
+        actual = FileManager.get_cache_url(url_prefix, img_url, suffix=".jpg")
+        expected = "https://terzeron.com/xml/img/test/e7e0b83.jpg"
         self.assertEqual(expected, actual)
 
-        actual = FileManager.get_cache_url(url_prefix, img_url, postfix="part", index=0)
-        expected = "https://terzeron.com/xml/img/test/e7e0b83_part"
+        actual = FileManager.get_cache_url(url_prefix, img_url, postfix="part", suffix=".jpg")
+        expected = "https://terzeron.com/xml/img/test/e7e0b83_part.jpg"
         self.assertEqual(expected, actual)
 
-        actual = FileManager.get_cache_url(url_prefix, img_url, postfix="part", index=1)
-        expected = "https://terzeron.com/xml/img/test/e7e0b83_part.1"
+        actual = FileManager.get_cache_url(url_prefix, img_url, postfix="part", index=0, suffix=".jpg")
+        expected = "https://terzeron.com/xml/img/test/e7e0b83_part.jpg"
+        self.assertEqual(expected, actual)
+
+        actual = FileManager.get_cache_url(url_prefix, img_url, postfix="part", index=1, suffix=".jpg")
+        expected = "https://terzeron.com/xml/img/test/e7e0b83_part.1.jpg"
         self.assertEqual(expected, actual)
 
     def test_get_cache_file_path(self):
@@ -121,16 +134,20 @@ class FileManagerTest(unittest.TestCase):
         expected = self.feed_img_dir_path / "e7e0b83"
         self.assertEqual(expected, actual)
 
-        actual = FileManager.get_cache_file_path(self.feed_img_dir_path, img_url, postfix="part")
-        expected = self.feed_img_dir_path / "e7e0b83_part"
+        actual = FileManager.get_cache_file_path(self.feed_img_dir_path, img_url, suffix=".jpg")
+        expected = self.feed_img_dir_path / "e7e0b83.jpg"
         self.assertEqual(expected, actual)
 
-        actual = FileManager.get_cache_file_path(self.feed_img_dir_path, img_url, postfix="part", index=0)
-        expected = self.feed_img_dir_path / "e7e0b83_part"
+        actual = FileManager.get_cache_file_path(self.feed_img_dir_path, img_url, postfix="part", suffix=".jpg")
+        expected = self.feed_img_dir_path / "e7e0b83_part.jpg"
         self.assertEqual(expected, actual)
 
-        actual = FileManager.get_cache_file_path(self.feed_img_dir_path, img_url, postfix="part", index=1)
-        expected = self.feed_img_dir_path / "e7e0b83_part.1"
+        actual = FileManager.get_cache_file_path(self.feed_img_dir_path, img_url, postfix="part", index=0, suffix=".jpg")
+        expected = self.feed_img_dir_path / "e7e0b83_part.jpg"
+        self.assertEqual(expected, actual)
+
+        actual = FileManager.get_cache_file_path(self.feed_img_dir_path, img_url, postfix="part", index=1, suffix=".jpg")
+        expected = self.feed_img_dir_path / "e7e0b83_part.1.jpg"
         self.assertEqual(expected, actual)
 
     def test_get_incomplete_image(self):

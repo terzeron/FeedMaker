@@ -157,7 +157,8 @@ class Crawler:
             self.requests_client = RequestsClient(dir_path=self.dir_path, method=method, headers=self.headers, timeout=timeout, encoding=encoding, verify_ssl=verify_ssl)
 
     def __del__(self):
-        del self.headers
+        if self.headers:
+            del self.headers
         if self.render_js:
             del self.headless_browser
         else:

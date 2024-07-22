@@ -408,7 +408,7 @@ class FeedMaker:
 
         last_build_date_str = Datetime.get_rss_date_str()
         short_date_str = Datetime.get_short_date_str()
-        temp_rss_file_path = self.rss_file_path.with_suffix("." + short_date_str)
+        temp_rss_file_path = self.rss_file_path.with_suffix(self.rss_file_path.suffix + "." + short_date_str)
         old_rss_file_path = self.rss_file_path.with_suffix(self.rss_file_path.suffix + ".old")
         LOGGER.debug("rss_file_path=%s, temp_rss_file_path=%s, old_rss_file_path=%s", PathUtil.short_path(self.rss_file_path), PathUtil.short_path(temp_rss_file_path), PathUtil.short_path(old_rss_file_path))
 

@@ -47,15 +47,15 @@ def main() -> int:
     feed_img_dir_path.mkdir(exist_ok=True)
     img_url_prefix = "https://terzeron.com/xml/img/" + feed_name
     image_type = "JPEG"
-    ext = ".jpg"
+    suffix = ".jpg"
 
     images = convert_from_path(pdf_file_path)
     print(header_str)
     for num, image in enumerate(images):
-        cache_file = FileManager.get_cache_file_path(feed_img_dir_path, url_or_file)
+        cache_file_path = FileManager.get_cache_file_path(feed_img_dir_path, url_or_file)
         cache_url = FileManager.get_cache_url(img_url_prefix, url_or_file, "")
-        image_file = cache_file.with_suffix("." + str(num) + ext)
-        image_url = cache_url + "." + str(num) + ext
+        image_file = cache_file_path.with_stem(cache_file_path.stem + "_" + str(num))
+        image_url = cache_url + "_" + str(num) + suffix
         image.save(image_file, image_type)
         print(f"<img src='{image_url}'/>")
 

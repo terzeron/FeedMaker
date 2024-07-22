@@ -6,7 +6,7 @@ import json
 import math
 import logging.config
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from itertools import islice
 from typing import Dict, Any, Optional, List
 from bin.feed_maker_util import PathUtil, Datetime, Data
@@ -95,7 +95,7 @@ class FeedManager:
             conf_json_file_path = feed_dir_path / "conf.json"
             if feed_dir_path.is_dir() and conf_json_file_path.is_file():
                 s = feed_dir_path.stat()
-                config_modify_date = datetime.utcfromtimestamp(s.st_mtime)
+                config_modify_date = datetime.fromtimestamp(s.st_mtime, timezone.utc)
                 config_modify_date_str = Datetime.convert_datetime_to_str(config_modify_date)
 
                 with conf_json_file_path.open("r", encoding="utf-8") as infile:
@@ -189,7 +189,7 @@ class FeedManager:
             if rss_file_path.is_file():
                 feedmaker = True
                 s = rss_file_path.stat()
-                rss_update_date = datetime.utcfromtimestamp(s.st_mtime)
+                rss_update_date = datetime.fromtimestamp(s.st_mtime, timezone.utc)
                 rss_update_date_str = Datetime.convert_datetime_to_str(rss_update_date)
 
         try:
@@ -280,7 +280,7 @@ class FeedManager:
             num_item_elements = file_content.count("<item>")
             s = public_feed_file_path.stat()
             size = s.st_size
-            upload_date = datetime.utcfromtimestamp(s.st_mtime)
+            upload_date = datetime.fromtimestamp(s.st_mtime, timezone.utc)
             upload_date_str = Datetime.convert_datetime_to_str(upload_date)
 
         try:
@@ -387,7 +387,7 @@ class FeedManager:
                     for list_file_path in list_dir_path.iterdir():
                         if list_file_path.suffix == ".txt":
                             s = list_file_path.stat()
-                            temp_dt = datetime.utcfromtimestamp(s.st_mtime)
+                            temp_dt = datetime.fromtimestamp(s.st_mtime, timezone.utc)
                             if not collect_date or collect_date < temp_dt:
                                 collect_date = temp_dt
                             with list_file_path.open('r', encoding="utf-8") as infile:

@@ -53,6 +53,7 @@ class TestAccessLogManager(unittest.TestCase):
         accessed_feed_list, viewed_feed_list = access_log_manager.search(date_str)
         self.assertGreater(len(accessed_feed_list), 0)
         self.assertGreaterEqual(len(viewed_feed_list), 0)
+
     def test_add_httpd_access_info(self):
         self.alm.load_all_httpd_access_info(max_num_days=14)
         feed_name = "navercast"

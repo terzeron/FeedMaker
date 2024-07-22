@@ -71,9 +71,6 @@ def split_image_list(img_file_list: List[Path]) -> List[List[Path]]:
 
 def merge_image_files(feed_dir_path: Path, img_file_list: List[Path], feed_img_dir_path: Path, img_url: str, unit_num: int) -> Path:
     LOGGER.debug("# merge_image_files(feed_dir_path=%s, img_file_list=%r, feed_img_dir_path='%s', img_url='%s', unit_num=%d)", PathUtil.short_path(feed_dir_path), img_file_list, feed_img_dir_path, img_url, unit_num)
-    #
-    # merge mode
-    #
     merged_img_file_path = FileManager.get_cache_file_path(feed_img_dir_path, img_url, postfix=str(unit_num))
     cmd = f"merge.py '{str(merged_img_file_path)}' "
     for cache_file in img_file_list:
@@ -89,10 +86,7 @@ def merge_image_files(feed_dir_path: Path, img_file_list: List[Path], feed_img_d
 
 def crop_image_file(feed_dir_path: Path, img_file_path: Path) -> None:
     LOGGER.debug("# crop_image_file(feed_dir_path='%s', img_file_path='%s')", PathUtil.short_path(feed_dir_path), PathUtil.short_path(img_file_path))
-    #
-    # crop mode (optional)
-    #
-    temp_img_file_path = img_file_path.with_suffix(".temp")
+    temp_img_file_path = img_file_path.with_suffix(img_file_path.suffix + ".temp")
     cmd = f"innercrop -f 4 -m crop '{img_file_path}' '{temp_img_file_path}' && mv -f '{temp_img_file_path}' '{img_file_path}'"
     LOGGER.debug(cmd)
     _, error = Process.exec_cmd(cmd, dir_path=feed_dir_path)
@@ -147,24 +141,25 @@ def print_image_files(num_units: int, feed_img_dir_path: Path, img_url_prefix: s
         custom_range = list(reversed(range(num_units)))
     for i in custom_range:
         if img_file_path:
-            ext = img_file_path.suffix
-            split_img_path = img_file_path.with_suffix("." + str(i + 1) + ext)
+            suffix = img_file_path.suffix
+            split_img_path = img_file_path.with_stem(img_file_path.stem + "_" + str(i + 1))
         else:
-            split_img_path = FileManager.get_cache_file_path(feed_img_dir_path, img_url, postfix=postfix, index=i + 1)
-            ext = ""
-        LOGGER.debug("split_img_file='%s'", PathUtil.short_path(split_img_path))
+            split_img_path = FileManager.get_cache_file_path(path_prefix=feed_img_dir_path, img_url=img_url, postfix=postfix, index=i + 1)
+            suffix = ""
+        LOGGER.debug("split_img_file='%s', %s", PathUtil.short_path(split_img_path), split_img_path)
         if split_img_path.is_file():
             split_img_url = FileManager.get_cache_url(img_url_prefix, img_url, postfix=postfix, index=i + 1)
-            print(f"<img src='{split_img_url}{ext}'/>")
+            print(f"<img src='{split_img_url}{suffix}'/>")
 
 
 def print_cached_image_file(feed_img_dir_path: Path, img_url_prefix: str, img_url: str, unit_num: Optional[int] = None) -> None:
     img_url_str = img_url if not img_url.startswith("data:image") else img_url[:30]
-    LOGGER.debug("# print_cached_image_file(feed_img_dir_path='%s', img_url_prefix='%s', img_url='%s' unit_num=%d)", PathUtil.short_path(feed_img_dir_path), img_url_prefix, img_url_str, unit_num)
-    img_file_path = FileManager.get_cache_file_path(feed_img_dir_path, img_url, postfix=unit_num)
+    LOGGER.debug(f"# print_cached_image_file(feed_img_dir_path='%s', img_url_prefix='%s', img_url='%s', unit_num=%d)", PathUtil.short_path(feed_img_dir_path), img_url_prefix, img_url, unit_num)
+    img_file_path = FileManager.get_cache_file_path(path_prefix=feed_img_dir_path, img_url=img_url, postfix=unit_num)
     LOGGER.debug("img_file='%s'", PathUtil.short_path(img_file_path))
     if img_file_path.is_file():
-        img_url = FileManager.get_cache_url(img_url_prefix, img_url, postfix=unit_num)
+        suffix = img_file_path.suffix
+        img_url = FileManager.get_cache_url(url_prefix=img_url_prefix, img_url=img_url, postfix=unit_num, suffix=suffix)
         print(f"<img src='{img_url}'/>")
 
 
@@ -287,14 +282,14 @@ def main() -> int:
                 crop_image_file(feed_dir_path, merged_img_file)
 
             if do_only_merge:
-                print_cached_image_file(feed_img_dir_path, img_url_prefix, page_url, unit_num)
+                print_cached_image_file(feed_img_dir_path=feed_img_dir_path, img_url_prefix=img_url_prefix, img_url=page_url, unit_num=unit_num)
             else:
                 # remove_image_files(feed_dir_path, img_file_partition)
                 if split_image_file(feed_dir_path, merged_img_file, bandwidth, diff_threshold, size_threshold,
                                     acceptable_diff_of_color_value, num_units, bgcolor_option, orientation_option,
                                     wider_scan_option):
                     # remove_image_files([merged_img_file])
-                    print_image_files(num_units, feed_img_dir_path, img_url_prefix, page_url, None, str(unit_num), do_flip_right_to_left)
+                    print_image_files(num_units=num_units, feed_img_dir_path=feed_img_dir_path, img_url_prefix=img_url_prefix, img_url=page_url, img_file_path=None, postfix=str(unit_num), do_flip_right_to_left=do_flip_right_to_left)
 
             unit_num = unit_num + 1
     else:
@@ -308,9 +303,9 @@ def main() -> int:
                                 wider_scan_option):
                 if do_innercrop:
                     crop_image_files(feed_dir_path, num_units, feed_img_dir_path, img_url)
-                print_image_files(num_units, feed_img_dir_path, img_url_prefix, img_url, img_file, None, do_flip_right_to_left)
+                print_image_files(num_units=num_units, feed_img_dir_path=feed_img_dir_path, img_url_prefix=img_url_prefix, img_url=img_url, img_file_path=img_file, postfix=None, do_flip_right_to_left=do_flip_right_to_left)
             else:
-                print_cached_image_file(feed_img_dir_path, img_url_prefix, img_url)
+                print_cached_image_file(feed_img_dir_path=feed_img_dir_path, img_url_prefix=img_url_prefix, img_url=img_url)
 
     return 0
 

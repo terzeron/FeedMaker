@@ -179,8 +179,8 @@ class TestFeedManager(unittest.TestCase):
         self.assertEqual(len(row1), len(row3))
 
     def test_load_all_progress_info_from_files(self):
-        self.fm.load_all_config_files(max_num_feeds=30)
-        self.fm.load_all_progress_info_from_files(max_num_feeds=30)
+        self.fm.load_all_config_files(max_num_feeds=100)
+        self.fm.load_all_progress_info_from_files(max_num_feeds=300)
 
         rows = self.fm.db.query("SELECT * FROM feed_info WHERE is_completed = True")
         self.assertGreater(len(rows), 0)

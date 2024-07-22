@@ -5,7 +5,7 @@ import os
 import re
 import logging.config
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from itertools import islice
 from typing import Dict, Any, Optional
 from bin.feed_maker_util import PathUtil, Datetime
@@ -145,7 +145,7 @@ class HtmlFileManager:
                 file_path_str = PathUtil.short_path(path)
                 file_name = self.get_html_file_name(path)
                 feed_dir_path_str = PathUtil.short_path(feed_dir_path)
-                update_date = datetime.utcfromtimestamp(s.st_mtime)
+                update_date = datetime.fromtimestamp(s.st_mtime, timezone.utc)
                 update_date_str = Datetime.convert_datetime_to_str(update_date)
                 size = s.st_size
 

@@ -66,7 +66,7 @@ http://cartoon.media.daum.net/webtoon/view/mujigaebridge\t무지개다리 파수
 
             args_list = mock_error.call_args_list
             expected = call(
-                "Error: Can't split a line into link and title, line='http://cartoon.media.daum.net/webtoon/view/haksajaeseng'")
+                "Error: Can't split a line into link and title, line='%s'", 'http://cartoon.media.daum.net/webtoon/view/haksajaeseng')
             self.assertIn(expected, args_list)
 
     def test_compose_url_list(self):
