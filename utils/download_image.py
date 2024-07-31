@@ -156,7 +156,7 @@ def main() -> int:
 
             # download
             cache_file_path = download_image(crawler, feed_img_dir_path, img_url)
-            if cache_file_path.is_file():
+            if cache_file_path and cache_file_path.is_file():
                 suffix = cache_file_path.suffix
                 cache_url = FileManager.get_cache_url(img_url_prefix, img_url, "")
                 url_img_short = img_url if not img_url.startswith("data:image") else img_url[:30]
