@@ -553,7 +553,7 @@ class FileManager:
 
     @staticmethod
     def _get_cache_info_common_postfix(img_url: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None) -> str:
-        LOGGER.debug(f"# get_cache_info_common(img_url='%s'', postfix='%s', index=%r)", img_url[:30], postfix, index)
+        LOGGER.debug("# get_cache_info_common(img_url='%s'', postfix='%s', index=%r)", img_url[:30], postfix, index)
 
         # postfix: _pfxstr (valid string)
         postfix_str = ""
@@ -571,15 +571,15 @@ class FileManager:
 
     @staticmethod
     def get_cache_url(url_prefix: str, img_url: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None, suffix: Optional[str] = None) -> str:
-        LOGGER.debug(f"# get_cache_url(url_prefix='%s'', img_url='%s', postfix='%r', index=%r, suffix='%r')", url_prefix, img_url[:30], postfix, index, suffix)
+        LOGGER.debug("# get_cache_url(url_prefix='%s', img_url='%s', postfix=%r, index=%r, suffix=%r)", url_prefix, img_url[:30], postfix, index, suffix)
         url = url_prefix + "/" + FileManager._get_cache_info_common_postfix(img_url=img_url, postfix=postfix, index=index)
         if suffix:
             url += suffix
         return url
 
     @staticmethod
-    def get_cache_file_path(path_prefix: Path, img_url: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None, suffix: Optional[str] = None) -> Optional[Path]:
-        LOGGER.debug(f"# get_cache_file_name(path_prefix='%r', img_url='%s', postfix='%s', index=%r, suffix='%r')", PathUtil.short_path(path_prefix), img_url[:30], postfix, index, suffix)
+    def get_cache_file_path(path_prefix: Path, img_url: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None, suffix: Optional[str] = None) -> Path:
+        LOGGER.debug("# get_cache_file_path(path_prefix=%r, img_url='%s', postfix='%s', index=%r, suffix=%r)", PathUtil.short_path(path_prefix), img_url[:30], postfix, index, suffix)
         file_path = path_prefix / FileManager._get_cache_info_common_postfix(img_url=img_url, postfix=postfix, index=index)
         if suffix:
             return file_path.with_suffix(file_path.suffix + suffix)
