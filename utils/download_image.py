@@ -21,11 +21,17 @@ LOGGER = logging.getLogger()
 
 
 def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str) -> Optional[Path]:
-    LOGGER.debug("# download_image(crawler=%r, feed_img_dir_path='%s', img_url='%s')", crawler, PathUtil.short_path(feed_img_dir_path), img_url[:30])
+    LOGGER.debug("# download_image(crawler=%r, feed_img_dir_path=%r, img_url='%s')", crawler, PathUtil.short_path(feed_img_dir_path), img_url[:30])
     # cache file
     cache_file_path = FileManager.get_cache_file_path(feed_img_dir_path, img_url)
     if cache_file_path.is_file() and cache_file_path.stat().st_size > 0:
+        LOGGER.debug("already exists, cache_file_path=%r", cache_file_path)
         return cache_file_path
+    for suffix in (".jpeg", ".png", ".webp", ".gif"):
+        temp_cache_file_path = cache_file_path.with_suffix(suffix)
+        if temp_cache_file_path.is_file() and temp_cache_file_path.stat().st_size > 0:
+            LOGGER.debug("already exists, temp_cache_file_path=%r", temp_cache_file_path)
+            return temp_cache_file_path
 
     # image data uri
     m = re.search(r'^data:image/(?P<img_ext>png|jpeg|jpg);base64,(?P<img_data>.+)', img_url)
@@ -39,6 +45,7 @@ def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str) -> O
         with open(img_file_path, "wb") as outfile:
             decoded_data = b64decode(img_data)
             outfile.write(decoded_data)
+        LOGGER.debug("from data uri: img_file_path=%r", img_file_path)
         return img_file_path
 
     # http uri
@@ -67,7 +74,7 @@ def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str) -> O
             img.save(new_cache_file_path, "PNG")
         else:
             # normal image file
-            LOGGER.debug(f"{cache_file_path=}")
+            LOGGER.debug("from http uri: cache_file_path=%r", cache_file_path)
             try:
                 with Image.open(cache_file_path) as img:
                     if img.format in ("JPEG", "PNG", "WEBP", "GIF"):
@@ -86,6 +93,7 @@ def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str) -> O
                 return None
     else:
         return None
+
     if cache_file_path.is_file() and cache_file_path.stat().st_size > 0:
         return cache_file_path
     return None
@@ -109,10 +117,10 @@ def main() -> int:
     img_url_prefix = "https://terzeron.com/xml/img/" + feed_name
     feed_img_dir_path: Path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "img" / feed_name
     feed_img_dir_path.mkdir(exist_ok=True)
-    LOGGER.debug("feed_dir_path='%s'", PathUtil.short_path(feed_dir_path))
+    LOGGER.debug("feed_dir_path=%r", PathUtil.short_path(feed_dir_path))
     LOGGER.debug("feed_name='%s'", feed_name)
     LOGGER.debug("item_url_prefix='%s'", img_url_prefix)
-    LOGGER.debug("feed_img_dir_path='%s'", PathUtil.short_path(feed_img_dir_path))
+    LOGGER.debug("feed_img_dir_path=%r", PathUtil.short_path(feed_img_dir_path))
 
     config = Config(feed_dir_path=feed_dir_path)
     if not config:

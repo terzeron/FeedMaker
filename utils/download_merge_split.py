@@ -18,7 +18,7 @@ LOGGER = logging.getLogger()
 
 def download_image_and_read_metadata(feed_dir_path: Path, crawler: Crawler, feed_img_dir_path: Path, page_url: str) -> \
         Tuple[List[Path], List[str], List[str]]:
-    LOGGER.debug("# download_image_and_read_metadata(crawler=%r, feed_img_dir_path='%s', page_url='%s')", crawler, PathUtil.short_path(feed_img_dir_path), page_url)
+    LOGGER.debug("# download_image_and_read_metadata(crawler=%r, feed_img_dir_path=%r, page_url='%s')", crawler, PathUtil.short_path(feed_img_dir_path), page_url)
     #
     # read input and collect image files into the list
     # (file name, url and dimension)
@@ -46,7 +46,7 @@ def download_image_and_read_metadata(feed_dir_path: Path, crawler: Crawler, feed
             img_file_list.append(cache_file_path)
             img_url_list.append(img_url)
             img_url_str = img_url if not img_url.startswith("data:image") else img_url[:30]
-            LOGGER.debug("<!-- %s -> %s -->", img_url_str, PathUtil.short_path(cache_file_path))
+            LOGGER.debug("%s -> %s", img_url_str, PathUtil.short_path(cache_file_path))
         else:
             m = re.search(r'^</?br>$', line)
             if not m:
@@ -62,7 +62,7 @@ def split_image_list(img_file_list: List[Path]) -> List[List[Path]]:
     #
     img_file_partition_list: List[List[Path]] = []
     partition_size = int((len(img_file_list) + 3) / 4)
-    LOGGER.debug(f"<!-- length={len(img_file_list)}, partition_size={partition_size} -->")
+    LOGGER.debug(f"length={len(img_file_list)}, partition_size={partition_size}")
     for i in range(int((len(img_file_list) + partition_size - 1) / partition_size)):
         img_file_partition_list.append(img_file_list[i * partition_size: (i + 1) * partition_size])
     # LOGGER.debug(pprint.pformat(img_file_partition_list))
@@ -70,8 +70,9 @@ def split_image_list(img_file_list: List[Path]) -> List[List[Path]]:
 
 
 def merge_image_files(feed_dir_path: Path, img_file_list: List[Path], feed_img_dir_path: Path, img_url: str, unit_num: int) -> Path:
-    LOGGER.debug("# merge_image_files(feed_dir_path=%s, img_file_list=%r, feed_img_dir_path='%s', img_url='%s', unit_num=%d)", PathUtil.short_path(feed_dir_path), img_file_list, feed_img_dir_path, img_url, unit_num)
-    merged_img_file_path = FileManager.get_cache_file_path(feed_img_dir_path, img_url, postfix=str(unit_num))
+    LOGGER.debug("# merge_image_files(feed_dir_path=%s, img_file_list=%r, feed_img_dir_path=%r, img_url='%s', unit_num=%d)", PathUtil.short_path(feed_dir_path), img_file_list, feed_img_dir_path, img_url, unit_num)
+    suffix = img_file_list[0].suffix
+    merged_img_file_path = FileManager.get_cache_file_path(feed_img_dir_path, img_url, postfix=str(unit_num), suffix=suffix)
     cmd = f"merge.py '{str(merged_img_file_path)}' "
     for cache_file in img_file_list:
         cmd += f" '{cache_file}'"
@@ -81,11 +82,12 @@ def merge_image_files(feed_dir_path: Path, img_file_list: List[Path], feed_img_d
     if not result:
         LOGGER.error(f"<!-- can't merge the image files, cmd='{cmd}', {error} -->")
         sys.exit(-1)
+    LOGGER.debug("merged_img_file_path=%r", merged_img_file_path)
     return merged_img_file_path
 
 
 def crop_image_file(feed_dir_path: Path, img_file_path: Path) -> None:
-    LOGGER.debug("# crop_image_file(feed_dir_path='%s', img_file_path='%s')", PathUtil.short_path(feed_dir_path), PathUtil.short_path(img_file_path))
+    LOGGER.debug("# crop_image_file(feed_dir_path=%r, img_file_path=%r)", PathUtil.short_path(feed_dir_path), PathUtil.short_path(img_file_path))
     temp_img_file_path = img_file_path.with_suffix(img_file_path.suffix + ".temp")
     cmd = f"innercrop -f 4 -m crop '{img_file_path}' '{temp_img_file_path}' && mv -f '{temp_img_file_path}' '{img_file_path}'"
     LOGGER.debug(cmd)
@@ -96,7 +98,7 @@ def crop_image_file(feed_dir_path: Path, img_file_path: Path) -> None:
 
 
 def crop_image_files(feed_dir_path: Path, num_units: int, feed_img_dir_path: Path, img_url: str) -> None:
-    LOGGER.debug("# crop_image_files(feed_dir_path='%s', num_units=%d, feed_img_dir_path='%s', img_url='%s')", PathUtil.short_path(feed_dir_path), num_units, PathUtil.short_path(feed_img_dir_path), img_url)
+    LOGGER.debug("# crop_image_files(feed_dir_path=%r, num_units=%d, feed_img_dir_path=%r, img_url='%s')", PathUtil.short_path(feed_dir_path), num_units, PathUtil.short_path(feed_img_dir_path), img_url)
     # crop some image files
     for i in range(num_units):
         img_file_path = FileManager.get_cache_file_path(feed_img_dir_path, img_url, index=i + 1)
@@ -106,7 +108,7 @@ def crop_image_files(feed_dir_path: Path, num_units: int, feed_img_dir_path: Pat
 
 
 def remove_image_files(feed_dir_path: Path, img_file_list: List[str]) -> bool:
-    LOGGER.debug("# remove_image_files(feed_dir_path='%s', img_file_list=%r)", PathUtil.short_path(feed_dir_path), img_file_list)
+    LOGGER.debug("# remove_image_files(feed_dir_path=%r, img_file_list=%r)", PathUtil.short_path(feed_dir_path), img_file_list)
     # remove the original image
     cmd = "rm -f "
     for cache_file in img_file_list:
@@ -120,7 +122,7 @@ def remove_image_files(feed_dir_path: Path, img_file_list: List[str]) -> bool:
 
 
 def split_image_file(feed_dir_path: Path, img_file_path: Path, bandwidth: int, diff_threshold: float, size_threshold: float, acceptable_diff_of_color_value: int, num_units: int, bgcolor_option: str, orientation_option: str, wider_scan_option: str) -> bool:
-    LOGGER.debug("# split_image_file(feed_dir_path='%s'', img_file_path='%s', bandwidth=%d, diff_threshold=%f, size_threshold=%f, acceptable_diff_of_color_value=%d, num_units=%d, bgcolor_option=%s, orientation_option=%s, wider_scan_option=%s)", PathUtil.short_path(feed_dir_path), PathUtil.short_path(img_file_path), bandwidth, diff_threshold, size_threshold, acceptable_diff_of_color_value, num_units, bgcolor_option, orientation_option, wider_scan_option)
+    LOGGER.debug("# split_image_file(feed_dir_path=%r, img_file_path=%r, bandwidth=%d, diff_threshold=%f, size_threshold=%f, acceptable_diff_of_color_value=%d, num_units=%d, bgcolor_option=%s, orientation_option=%s, wider_scan_option=%s)", PathUtil.short_path(feed_dir_path), PathUtil.short_path(img_file_path), bandwidth, diff_threshold, size_threshold, acceptable_diff_of_color_value, num_units, bgcolor_option, orientation_option, wider_scan_option)
     # split the image
     cmd = f"split.py -b {bandwidth} -t {diff_threshold} -s {size_threshold} -a {acceptable_diff_of_color_value} -n {num_units} {bgcolor_option} {orientation_option} {wider_scan_option} {img_file_path}"
     LOGGER.debug(cmd)
@@ -133,7 +135,7 @@ def split_image_file(feed_dir_path: Path, img_file_path: Path, bandwidth: int, d
 
 def print_image_files(num_units: int, feed_img_dir_path: Path, img_url_prefix: str, img_url: str, img_file_path: Optional[Path], postfix: Optional[str], do_flip_right_to_left: bool) -> None:
     img_url_str = img_url if not img_url.startswith("data:image") else img_url[:30]
-    LOGGER.debug("# print_image_files(num_units=%d, feed_img_dir_path='%s', img_url_prefix='%s', img_url='%s', img_file_path='%s', postfix='%s', do_flip_right_to_left=%s)", num_units, PathUtil.short_path(feed_img_dir_path), img_url_prefix, img_url_str, PathUtil.short_path(img_file_path), postfix, do_flip_right_to_left)
+    LOGGER.debug("# print_image_files(num_units=%d, feed_img_dir_path=%r, img_url_prefix='%s', img_url='%s', img_file_path=%r, postfix='%s', do_flip_right_to_left=%r)", num_units, PathUtil.short_path(feed_img_dir_path), img_url_prefix, img_url_str, PathUtil.short_path(img_file_path), postfix, do_flip_right_to_left)
     # print some split images
     if not do_flip_right_to_left:
         custom_range = list(range(num_units))
@@ -141,12 +143,12 @@ def print_image_files(num_units: int, feed_img_dir_path: Path, img_url_prefix: s
         custom_range = list(reversed(range(num_units)))
     for i in custom_range:
         if img_file_path:
+            split_img_path = img_file_path.with_stem(img_file_path.stem + "." + str(i + 1))
             suffix = img_file_path.suffix
-            split_img_path = img_file_path.with_stem(img_file_path.stem + "_" + str(i + 1))
         else:
             split_img_path = FileManager.get_cache_file_path(path_prefix=feed_img_dir_path, img_url=img_url, postfix=postfix, index=i + 1)
             suffix = ""
-        LOGGER.debug("split_img_file='%s', %s", PathUtil.short_path(split_img_path), split_img_path)
+        LOGGER.debug(f"{split_img_path=}, {suffix=}")
         if split_img_path.is_file():
             split_img_url = FileManager.get_cache_url(img_url_prefix, img_url, postfix=postfix, index=i + 1)
             print(f"<img src='{split_img_url}{suffix}'/>")
@@ -154,7 +156,7 @@ def print_image_files(num_units: int, feed_img_dir_path: Path, img_url_prefix: s
 
 def print_cached_image_file(feed_img_dir_path: Path, img_url_prefix: str, img_url: str, unit_num: Optional[int] = None) -> None:
     img_url_str = img_url if not img_url.startswith("data:image") else img_url[:30]
-    LOGGER.debug(f"# print_cached_image_file(feed_img_dir_path='%s', img_url_prefix='%s', img_url='%s', unit_num=%d)", PathUtil.short_path(feed_img_dir_path), img_url_prefix, img_url, unit_num)
+    LOGGER.debug("# print_cached_image_file(feed_img_dir_path=%r, img_url_prefix='%s', img_url='%s', unit_num=%d)", PathUtil.short_path(feed_img_dir_path), img_url_prefix, img_url_str, unit_num)
     img_file_path = FileManager.get_cache_file_path(path_prefix=feed_img_dir_path, img_url=img_url, postfix=unit_num)
     LOGGER.debug("img_file='%s'", PathUtil.short_path(img_file_path))
     if img_file_path.is_file():
@@ -241,8 +243,8 @@ def main() -> int:
     feed_img_dir_path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "img" / feed_name
     feed_img_dir_path.mkdir(exist_ok=True)
     img_url_prefix = "https://terzeron.com/xml/img/" + feed_name
-    LOGGER.debug("<!-- feed_name=%s -->", feed_name)
-    LOGGER.debug("<!--- feed_img_dir_path=%s -->", feed_img_dir_path)
+    LOGGER.debug("feed_name=%s", feed_name)
+    LOGGER.debug("feed_img_dir_path=%r", feed_img_dir_path)
 
     config = Config(feed_dir_path=feed_dir_path)
     if not config:
@@ -276,20 +278,18 @@ def main() -> int:
             if len(img_file_partition) == 0:
                 continue
 
-            merged_img_file = merge_image_files(feed_dir_path, img_file_partition, feed_img_dir_path, page_url, unit_num)
+            merged_img_file_path = merge_image_files(feed_dir_path, img_file_partition, feed_img_dir_path, page_url, unit_num)
 
             if do_innercrop:
-                crop_image_file(feed_dir_path, merged_img_file)
+                crop_image_file(feed_dir_path, merged_img_file_path)
 
             if do_only_merge:
                 print_cached_image_file(feed_img_dir_path=feed_img_dir_path, img_url_prefix=img_url_prefix, img_url=page_url, unit_num=unit_num)
             else:
                 # remove_image_files(feed_dir_path, img_file_partition)
-                if split_image_file(feed_dir_path, merged_img_file, bandwidth, diff_threshold, size_threshold,
-                                    acceptable_diff_of_color_value, num_units, bgcolor_option, orientation_option,
-                                    wider_scan_option):
+                if split_image_file(feed_dir_path, merged_img_file_path, bandwidth, diff_threshold, size_threshold, acceptable_diff_of_color_value, num_units, bgcolor_option, orientation_option, wider_scan_option):
                     # remove_image_files([merged_img_file])
-                    print_image_files(num_units=num_units, feed_img_dir_path=feed_img_dir_path, img_url_prefix=img_url_prefix, img_url=page_url, img_file_path=None, postfix=str(unit_num), do_flip_right_to_left=do_flip_right_to_left)
+                    print_image_files(num_units=num_units, feed_img_dir_path=feed_img_dir_path, img_url_prefix=img_url_prefix, img_url=page_url, img_file_path=merged_img_file_path, postfix=str(unit_num), do_flip_right_to_left=do_flip_right_to_left)
 
             unit_num = unit_num + 1
     else:
@@ -298,9 +298,7 @@ def main() -> int:
             LOGGER.debug(f"img_file={img_file}", )
             img_url_short = img_url if not img_url.startswith("data:image") else img_url[:30]
             LOGGER.debug(f"img_url={img_url_short}")
-            if split_image_file(feed_dir_path, img_file, bandwidth, diff_threshold, size_threshold,
-                                acceptable_diff_of_color_value, num_units, bgcolor_option, orientation_option,
-                                wider_scan_option):
+            if split_image_file(feed_dir_path, img_file, bandwidth, diff_threshold, size_threshold, acceptable_diff_of_color_value, num_units, bgcolor_option, orientation_option, wider_scan_option):
                 if do_innercrop:
                     crop_image_files(feed_dir_path, num_units, feed_img_dir_path, img_url)
                 print_image_files(num_units=num_units, feed_img_dir_path=feed_img_dir_path, img_url_prefix=img_url_prefix, img_url=img_url, img_file_path=img_file, postfix=None, do_flip_right_to_left=do_flip_right_to_left)
