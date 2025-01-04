@@ -10,15 +10,14 @@ from pathlib import Path
 from typing import List, Tuple, Optional, Dict, Any
 from utils.download_image import download_image
 from bin.crawler import Crawler
-from bin.feed_maker_util import Config, FileManager, IO, Process, PathUtil
+from bin.feed_maker_util import Config, FileManager, IO, Process, PathUtil, URL
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
-def download_image_and_read_metadata(feed_dir_path: Path, crawler: Crawler, feed_img_dir_path: Path, page_url: str) -> \
-        Tuple[List[Path], List[str], List[str]]:
-    LOGGER.debug("# download_image_and_read_metadata(crawler=%r, feed_img_dir_path=%r, page_url='%s')", crawler, PathUtil.short_path(feed_img_dir_path), page_url)
+def download_image_and_read_metadata(feed_dir_path: Path, crawler: Crawler, feed_img_dir_path: Path, page_url: str) -> Tuple[List[Path], List[str], List[str]]:
+    LOGGER.debug("# download_image_and_read_metadata(feed_dir_path=%r, crawler=%r, feed_img_dir_path=%r, page_url='%s')", PathUtil.short_path(feed_dir_path), crawler, PathUtil.short_path(feed_img_dir_path), page_url)
     #
     # read input and collect image files into the list
     # (file name, url and dimension)
@@ -26,7 +25,7 @@ def download_image_and_read_metadata(feed_dir_path: Path, crawler: Crawler, feed
     img_file_list: List[Path] = []
     img_url_list: List[str] = []
 
-    crawler = Crawler(dir_path=feed_dir_path, headers={"Referer": page_url}, num_retries=2)
+    #crawler = Crawler(dir_path=feed_dir_path, headers={"Referer": page_url}, num_retries=2)
 
     normal_html_lines = []
     line_list: List[str] = IO.read_stdin_as_line_list()
@@ -40,8 +39,9 @@ def download_image_and_read_metadata(feed_dir_path: Path, crawler: Crawler, feed
             # download
             cache_file_path = download_image(crawler, feed_img_dir_path, img_url)
             if not cache_file_path:
-                LOGGER.error(f"<!-- can't download the image from '{img_url}' -->")
-                print(f"<img src='{FileManager.IMAGE_NOT_FOUND_IMAGE_URL}' alt='not exist or size 0'/>")
+                if not img_url.startswith("data:image/svg+xml;base64"):
+                    LOGGER.error(f"<!-- can't download the image from '{img_url}' -->")
+                    print(f"<img src='{FileManager.IMAGE_NOT_FOUND_IMAGE_URL}' alt='not exist or size 0'/>")
                 continue
             img_file_list.append(cache_file_path)
             img_url_list.append(img_url)
@@ -58,10 +58,10 @@ def download_image_and_read_metadata(feed_dir_path: Path, crawler: Crawler, feed
 def split_image_list(img_file_list: List[Path]) -> List[List[Path]]:
     LOGGER.debug(f"# split_image_list(img_file_list={img_file_list})")
     #
-    # split array into 4 sub-array
+    # split array into 8 sub-array
     #
     img_file_partition_list: List[List[Path]] = []
-    partition_size = int((len(img_file_list) + 3) / 4)
+    partition_size = int((len(img_file_list) + 7) / 8)
     LOGGER.debug(f"length={len(img_file_list)}, partition_size={partition_size}")
     for i in range(int((len(img_file_list) + partition_size - 1) / partition_size)):
         img_file_partition_list.append(img_file_list[i * partition_size: (i + 1) * partition_size])
@@ -258,7 +258,8 @@ def main() -> int:
     headers: Dict[str, Any] = {}
     if "user_agent" in extraction_conf:
         headers["User-Agent"] = extraction_conf["user_agent"]
-    headers["Referer"] = page_url
+    headers["Referer"] = URL.encode_suffix(page_url)
+
     crawler = Crawler(dir_path=feed_dir_path, headers=headers, num_retries=2)
 
     img_file_list, img_url_list, normal_html_lines = download_image_and_read_metadata(feed_dir_path, crawler, feed_img_dir_path, page_url)

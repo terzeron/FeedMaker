@@ -249,7 +249,7 @@ class FeedMaker:
                 outfile.write(str(content))
 
             if conf["force_sleep_between_articles"]:
-                time.sleep(5)
+                time.sleep(2)
 
             if html_file_path.is_file():
                 size = html_file_path.stat().st_size
