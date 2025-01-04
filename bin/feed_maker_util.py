@@ -7,11 +7,12 @@ import re
 import subprocess
 import hashlib
 import json
+import base64
 import logging.config
 from datetime import datetime
 from pathlib import Path
 from shutil import which
-from urllib.parse import urlparse, urlunparse, quote, urljoin
+from urllib.parse import urlparse, urlunparse, quote, urljoin, urlsplit
 from typing import List, Any, Dict, Tuple, Optional, Union
 import psutil
 
@@ -543,6 +544,14 @@ class URL:
         quoted_query = quote(parsed.query, safe='=')
         parsed = parsed._replace(path=quoted_path, query=quoted_query)
         return urlunparse(parsed)
+
+    @staticmethod
+    def encode_suffix(url: str) -> str:
+        parsed_url = urlsplit(url)
+        prefix = f"{parsed_url.scheme}://{parsed_url.netloc}/"
+        url_suffix = url[len(prefix):]
+        encoded_suffix = base64.b64encode(url_suffix.encode("utf-8")).decode("utf-8")
+        return prefix + encoded_suffix
 
 
 class FileManager:
