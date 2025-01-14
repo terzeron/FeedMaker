@@ -36,6 +36,7 @@ cookies.*.json
 .env
 .env.test.notification
 nohup.out
+nohup.out.old
 backend/index.wsgi
 CartoonSplit/
 mysql_data_dir/
