@@ -547,12 +547,12 @@ class SearchManager:
             ToonkorSite("toonkor"),
             WfwfSite("wfwf"),
             WtwtSite("wtwt"),
-            TorrentJokSite("torrentjok"),
-            TorrentQqSite("torrentqq"),
-            TorrentRjSite("torrentrj"),
-            TorrentSeeSite("torrentsee"),
-            TorrentTipSite("torrenttip"),
-            TorrentTtSite("torrenttt"),
+            #TorrentJokSite("torrentjok"),
+            #TorrentQqSite("torrentqq"),
+            #TorrentRjSite("torrentrj"),
+            #TorrentSeeSite("torrentsee"),
+            #TorrentTipSite("torrenttip"),
+            #TorrentTtSite("torrenttt"),
         ]
 
         result_list: List[Tuple[str, str]] = []
