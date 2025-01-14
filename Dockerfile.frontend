@@ -1,8 +1,8 @@
-FROM node:18 as build
+FROM node:18.20.5 as build
 
 WORKDIR /app
-COPY frontend/package.json .
-RUN npm install && npx browserslist@latest --update-db
+COPY frontend/package.json frontend/package-lock.json .
+RUN npm install -g npm@10.8.2 && npm install && npx browserslist@latest --update-db
 
 COPY frontend/ .
 RUN npm run build
