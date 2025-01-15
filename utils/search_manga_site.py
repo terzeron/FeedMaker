@@ -531,8 +531,8 @@ class SearchManager:
         #LOGGER.debug("# worker(site='%s', keyword='%s')", site, keyword)
         self.result_by_site[site] = site.search(keyword)
 
-    def search(self, site_name: str, keyword: str) -> List[Tuple[str, str]]:
-        LOGGER.debug("# search(site_name='%s', keyword='%s')", site_name, keyword)
+    def search(self, site_name: str, keyword: str, do_include_torrent_sites: bool = False) -> List[Tuple[str, str]]:
+        LOGGER.debug("# search(site_name='%s', keyword='%s', do_include_torrent_sites=%r)", site_name, keyword, do_include_torrent_sites)
 
         site_list = [
             EleventoonSite("11toon"),
@@ -547,12 +547,12 @@ class SearchManager:
             ToonkorSite("toonkor"),
             WfwfSite("wfwf"),
             WtwtSite("wtwt"),
-            #TorrentJokSite("torrentjok"),
-            #TorrentQqSite("torrentqq"),
-            #TorrentRjSite("torrentrj"),
-            #TorrentSeeSite("torrentsee"),
-            #TorrentTipSite("torrenttip"),
-            #TorrentTtSite("torrenttt"),
+            TorrentJokSite("torrentjok"),
+            TorrentQqSite("torrentqq"),
+            TorrentRjSite("torrentrj"),
+            TorrentSeeSite("torrentsee"),
+            TorrentTipSite("torrenttip"),
+            TorrentTtSite("torrenttt"),
         ]
 
         result_list: List[Tuple[str, str]] = []
@@ -560,6 +560,9 @@ class SearchManager:
             # multi-sites
             thread_list = []
             for site in site_list:
+                if not do_include_torrent_sites:
+                    if site.site_name.startswith("torrent"):
+                        continue
                 t = Thread(target=self.worker, kwargs={'site': site, 'keyword': keyword})
                 thread_list.append(t)
                 t.start()
@@ -580,15 +583,18 @@ class SearchManager:
 
 def main() -> int:
     site_name: str = ""
-    optlist, args = getopt.getopt(sys.argv[1:], "f:s:")
+    do_include_torrent_sites = False
+    optlist, args = getopt.getopt(sys.argv[1:], "f:s:t")
     for o, a in optlist:
-        if o == '-s':
+        if o == "-s":
             site_name = a
+        if o == "-t":
+            do_include_torrent_sites = True
 
     keyword = args[0]
 
     search_manager = SearchManager()
-    result_list = search_manager.search(site_name, keyword)
+    result_list = search_manager.search(site_name, keyword, do_include_torrent_sites)
 
     for title, url in result_list:
         print(f"{title}\t\t{url}")
