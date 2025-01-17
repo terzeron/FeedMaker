@@ -756,7 +756,8 @@ export default {
               this.hideAllRelatedToGroup();
 
               this.checkRunning();
-              this.checkRunningInterval = { this.checkRunning(); setInterval(() => { this.checkRunning(); }, 3000);
+              this.checkRunningInterval = () => {
+                  this.checkRunning(); setInterval(() => { this.checkRunning(); }, 3000);
               };
             }
           })
