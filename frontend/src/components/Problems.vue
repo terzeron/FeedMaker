@@ -12,9 +12,7 @@
               hover
               small
               :fields="statusInfoFields"
-              :items="statusInfoList"
-              :sort-by.sync="statusInfoSortBy"
-              :sort-desc.sync="statusInfoSortDesc">
+              :items="statusInfoList">
             <template #cell(feed_title)="data">
               <span v-html="data.value"></span>
             </template>
@@ -257,8 +255,6 @@ export default {
         {key: 'view_date', label: '조회', sortable: true},
         {key: 'action', label: '작업', sortable: false},
       ],
-      statusInfoSortBy: 'feed_title',
-      statusInfoSortDesc: false,
       statusInfoList: [],
 
       progressInfoFields: [
