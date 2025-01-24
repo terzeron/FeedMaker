@@ -198,6 +198,7 @@ class FeedMakerManager:
         LOGGER.debug("# get_feeds_by_group(group_name='%s')", group_name)
         result = self.feed_manager.get_feeds_by_group(group_name)
         if result:
+            result.sort(key=lambda obj: obj["title"])
             return result, ""
         return [], f"no feed list in group '{group_name}'"
 
