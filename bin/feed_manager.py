@@ -59,7 +59,7 @@ class FeedManager:
 
     def remove_config_info(self, feed_dir_path: Path, do_remove_file: bool = False) -> None:
         LOGGER.debug("# remove_config_info(feed_dir_path='%s', do_remove_file=%r)", PathUtil.short_path(feed_dir_path), do_remove_file)
-        feed_name = feed_dir_path.stem
+        feed_name = feed_dir_path.name
         if do_remove_file:
             (feed_dir_path / "conf.json").unlink(missing_ok=True)
         with self.db.get_connection_and_cursor() as (connection, cursor):
@@ -122,7 +122,7 @@ class FeedManager:
             self.db.execute(cursor, "UPDATE feed_info SET feed_title = %s, group_name = %s, config = %s, config_modify_date = %s, url_list_count = %s, is_completed = %s, unit_size_per_day = %s WHERE feed_name = %s", title, group_name, config_str, config_modify_date_str, url_list_count, is_completed, unit_size_per_day, feed_name)
 
     def add_config_info(self, feed_dir_path: Path) -> None:
-        feed_name = feed_dir_path.stem
+        feed_name = feed_dir_path.name
         with self.db.get_connection_and_cursor() as (connection, cursor):
             element_name_count_map: Dict[str, int] = {}
             self._add_config_info(cursor, feed_dir_path, element_name_count_map)
@@ -159,7 +159,7 @@ class FeedManager:
 
     def remove_rss_info(self, feed_dir_path: Path, do_remove_file: bool = False) -> None:
         LOGGER.debug("# remove_rss_info(feed_dir_path='%s', do_remove_file=%r)", PathUtil.short_path(feed_dir_path), do_remove_file)
-        feed_name = feed_dir_path.stem
+        feed_name = feed_dir_path.name
         if do_remove_file:
             (feed_dir_path / f"{feed_name}.xml").unlink(missing_ok=True)
         with self.db.get_connection_and_cursor() as (connection, cursor):
@@ -198,7 +198,7 @@ class FeedManager:
             self.db.execute(cursor, "UPDATE feed_info SET feedmaker = %s, rss_update_date = %s WHERE feed_name = %s", feedmaker, rss_update_date_str, feed_name)
 
     def add_rss_info(self, feed_dir_path: Path) -> None:
-        feed_name = feed_dir_path.stem
+        feed_name = feed_dir_path.name
         with self.db.get_connection_and_cursor() as (connection, cursor):
             self._add_rss_info(cursor, feed_dir_path)
             self.db.commit(connection)
@@ -240,7 +240,7 @@ class FeedManager:
         return feed_name_public_feed_info_map
 
     def remove_public_feed(self, public_feed_file_path: Path, do_remove_file: bool = False) -> None:
-        feed_name = public_feed_file_path.stem
+        feed_name = public_feed_file_path.name
         if do_remove_file:
             public_feed_file_path.unlink(missing_ok=True)
         with self.db.get_connection_and_cursor() as (connection, cursor):
@@ -256,7 +256,7 @@ class FeedManager:
         if not public_feed_file_path.is_file():
             LOGGER.error("can't find a public feed file '%s'", PathUtil.short_path(public_feed_file_path))
             return 0
-        feed_name = public_feed_file_path.stem
+        feed_name = public_feed_file_path.name
         group_name = public_feed_file_path.parent.name
 
         public_html = None
@@ -291,7 +291,7 @@ class FeedManager:
         return 1
 
     def add_public_feed(self, public_feed_file_path: Path) -> None:
-        feed_name = public_feed_file_path.stem
+        feed_name = public_feed_file_path.name
         with self.db.get_connection_and_cursor() as (connection, cursor):
             self._add_public_feed(cursor, public_feed_file_path)
             self.db.commit(connection)
