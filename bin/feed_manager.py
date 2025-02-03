@@ -240,7 +240,7 @@ class FeedManager:
         return feed_name_public_feed_info_map
 
     def remove_public_feed(self, public_feed_file_path: Path, do_remove_file: bool = False) -> None:
-        feed_name = public_feed_file_path.name
+        feed_name = public_feed_file_path.stem
         if do_remove_file:
             public_feed_file_path.unlink(missing_ok=True)
         with self.db.get_connection_and_cursor() as (connection, cursor):
@@ -256,7 +256,7 @@ class FeedManager:
         if not public_feed_file_path.is_file():
             LOGGER.error("can't find a public feed file '%s'", PathUtil.short_path(public_feed_file_path))
             return 0
-        feed_name = public_feed_file_path.name
+        feed_name = public_feed_file_path.stem
         group_name = public_feed_file_path.parent.name
 
         public_html = None
@@ -291,7 +291,7 @@ class FeedManager:
         return 1
 
     def add_public_feed(self, public_feed_file_path: Path) -> None:
-        feed_name = public_feed_file_path.name
+        feed_name = public_feed_file_path.stem
         with self.db.get_connection_and_cursor() as (connection, cursor):
             self._add_public_feed(cursor, public_feed_file_path)
             self.db.commit(connection)
