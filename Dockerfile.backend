@@ -1,9 +1,10 @@
-FROM bitnami/python:3.11.9
+FROM debian:bookworm-slim
 
 # root
 RUN apt-get update > /dev/null && \
-    apt-get install -y apt-utils libpoppler-dev libpoppler-cpp-dev libheif-dev libcairo2-dev > /dev/null && \
+    apt-get install -y apt-utils python3 python3-pip python3-venv libpoppler-dev libpoppler-cpp-dev libheif-dev libcairo2-dev > /dev/null && \
     apt-get clean autoclean && apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/* && \
     useradd -u 1000 terzeron && \
     mkdir -p /app /app/backend /app/bin /app/utils /fma /xml /home/terzeron/.cache/pip /home/terzeron/.local /home/terzeron/.local/bin /run/dbus && \
     chown -R terzeron /app /fma /xml /home/terzeron/.cache/pip /home/terzeron/.local /home/terzeron/.local
@@ -20,16 +21,16 @@ COPY bin /app/bin
 COPY utils /app/utils
 COPY CartoonSplit /app/CartoonSplit
 
-RUN pip install -r requirements.txt > /dev/null
+RUN python3 -m venv /app/venv && /app/venv/bin/pip3 install --no-cache-dir -r requirements.txt > /dev/null
 
 VOLUME /fma
 VOLUME /xml
 VOLUME /logs
 
 ENV CARTOON_SPLIT_HOME_DIR="/app/CartoonSplit"
-ENV PATH="$PATH:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/home/terzeron/.local/bin:/app/bin:/app/utils:/app/CartoonSplit"
+ENV PATH="$PATH:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/home/terzeron/.local/bin:/app/bin:/app/utils:/app/CartoonSplit:/app/venv/bin"
 ENV PYTHONPATH="/app"
 ARG FM_BACKEND_DEFAULT_PORT=8010
 ENV FM_BACKEND_PORT=$FM_BACKEND_DEFAULT_PORT
 
-CMD uvicorn backend.main:app --workers 1 --host 0.0.0.0 --reload --port $FM_BACKEND_PORT
+CMD uvicorn backend.main:app --workers 4 --host 0.0.0.0 --reload --port $FM_BACKEND_PORT
