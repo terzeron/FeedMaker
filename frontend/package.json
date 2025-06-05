@@ -33,7 +33,7 @@
     "vue-router": "^3.5.2",
     "vue-session": "^1.0.0",
     "vue-simple-markdown": "^1.1.5",
-    "webpack-dev-server": "^4.15.1"
+    "webpack-dev-server": "^5.2.1"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "^5.0.4",
