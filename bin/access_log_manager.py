@@ -89,7 +89,7 @@ class AccessLogManager:
         feed_name = feed_dir_path.name
         with DB.session_ctx() as s:
             s.query(FeedInfo).filter_by(feed_name=feed_name).update({
-                FeedInfo.http_request: None, 
+                FeedInfo.http_request: False, 
                 FeedInfo.access_date: None
             })
         LOGGER.info("* The removing of access info of feed '%s' is done.", feed_name)
