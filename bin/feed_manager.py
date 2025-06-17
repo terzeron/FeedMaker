@@ -483,10 +483,11 @@ class FeedManager:
         results: list[dict[str, Any]] = []
         with DB.session_ctx() as s:
             for keyword in keywords:
-                pat = f"%{keyword.replace('%', '\\%').replace('_', '\\_')}%"
-                rows = s.query(FeedInfo).where((FeedInfo.feed_name.like(pat) |
-                                                FeedInfo.feed_title.like(pat) |
-                                                FeedInfo.group_name.like(pat)) &
+                escaped = keyword.replace('%', r'\%').replace('_', r'\_')
+                pat = f"%{escaped}%"
+                rows = s.query(FeedInfo).where((FeedInfo.feed_name.like(pat, escape='\\') |
+                                                FeedInfo.feed_title.like(pat, escape='\\') |
+                                                FeedInfo.group_name.like(pat, escape='\\')) &
                                                FeedInfo.feedmaker).order_by(FeedInfo.group_name, FeedInfo.feed_name).all()
                 results.extend([{"feed_name": row.feed_name, "feed_title": row.feed_title, "group_name": row.group_name} for row in rows])
         return results
@@ -511,7 +512,7 @@ class FeedManager:
 
         with DB.session_ctx() as s:
             rows = s.query(FeedInfo).where(FeedInfo.group_name == group_name).order_by(FeedInfo.feed_name).all()
-            return [{"feed_name": row.feed_name, "feed_title": row.feed_title, "group_name": row.group_name} for row in rows]
+            return [{"feed_name": row.feed_name, "title": row.feed_title, "group_name": row.group_name} for row in rows]
 
     @classmethod
     def get_feed_info(cls, group_name: str, feed_name: str) -> dict[str, Any]:
