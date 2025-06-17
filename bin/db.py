@@ -2,6 +2,8 @@
 
 
 import json
+import logging.config
+from pathlib import Path
 from contextlib import contextmanager
 from threading import RLock
 from typing import Iterator, Any, Optional, Literal, TypedDict, Union
@@ -13,6 +15,10 @@ from sqlalchemy.orm.session import Session as _Session
 
 from bin.feed_maker_util import Env
 from bin.models import Base
+
+
+logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
+LOGGER = logging.getLogger(__name__)
 
 func = _func
 and_ = _and_
@@ -131,18 +137,21 @@ class DB:
 
     @classmethod
     def create_all_tables(cls, db_config: Optional[dict[str, Any]] = None, **engine_opts: Any) -> None:
+        LOGGER.debug("# create_all_tables()")
         actual_config: dict[str, Any] = db_config or cls._db_config
         ds = cls._source(cls._env_url(actual_config), **engine_opts)
-        Base.metadata.create_all(ds.engine)
+        Base.metadata.create_all(ds.engine, checkfirst=True)
 
     @classmethod
     def drop_all_tables(cls, db_config: Optional[dict[str, Any]] = None, **engine_opts: Any) -> None:
+        LOGGER.debug("# drop_all_tables()")
         actual_config: dict[str, Any] = db_config or cls._db_config
         ds = cls._source(cls._env_url(actual_config), **engine_opts)
-        Base.metadata.drop_all(ds.engine)
+        Base.metadata.drop_all(ds.engine, checkfirst=True)
 
     @classmethod
     def dispose_all(cls) -> None:
+        LOGGER.debug("# dispose_all()")
         with cls._lock:
             for ds in cls._sources.values():
                 ds.dispose()

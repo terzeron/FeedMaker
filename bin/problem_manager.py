@@ -3,14 +3,13 @@
 
 import logging.config
 from pathlib import Path
-from datetime import datetime, timezone
 from typing import Any, Optional
 from bin.feed_maker_util import PathUtil
 from bin.feed_manager import FeedManager
 from bin.access_log_manager import AccessLogManager
 from bin.html_file_manager import HtmlFileManager
 from bin.db import DB, not_, and_, or_, func
-from bin.models import LockForConcurrentLoading, FeedInfo
+from bin.models import FeedInfo
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
@@ -126,43 +125,13 @@ class ProblemManager:
         self.access_log_manager.add_httpd_access_info()
         self.html_file_manager.add_html_file(new_feed_dir_path)
 
-    @staticmethod
-    def lock_problem_database() -> bool:
-        with DB.session_ctx(isolation_level="SERIALIZABLE") as s:
-            rows = s.query(LockForConcurrentLoading).all()
-            if not rows:
-                s.add(LockForConcurrentLoading(lock_time=datetime.now(timezone.utc)))
-                return True
-            row = rows[0]
-            lock_time = row.lock_time
-            if (datetime.now(timezone.utc) - lock_time).total_seconds() < 60:
-                return False
-            s.query(LockForConcurrentLoading).delete()
-            s.add(LockForConcurrentLoading(lock_time=datetime.now(timezone.utc)))
-            return True
-
-    @staticmethod
-    def unlock_problem_database() -> None:
-        with DB.session_ctx(isolation_level="SERIALIZABLE") as s:
-            rows = s.query(LockForConcurrentLoading).all()
-            if not rows or len(rows) == 0:
-                return
-            s.query(LockForConcurrentLoading).delete()
 
     def load_all(self, max_num_feeds: Optional[int] = None, max_num_public_feeds: Optional[int] = None, max_num_days: int = 30) -> int:
         LOGGER.debug("# load_all(max_num_feeds=%r, max_num_public_feds=%r, max_num_days=%d)", max_num_feeds, max_num_public_feeds, max_num_days)
-        if ProblemManager.lock_problem_database():
-            LOGGER.info("* start loading information")
-            self.feed_manager.load_all_config_files(max_num_feeds)
-            self.feed_manager.load_all_rss_files(max_num_feeds)
-            self.feed_manager.load_all_public_feed_files(max_num_public_feeds)
-            self.feed_manager.load_all_progress_info_from_files(max_num_feeds)
-            self.access_log_manager.load_all_httpd_access_info(max_num_days)
-            self.html_file_manager.load_all_html_files(max_num_feeds)
-            ProblemManager.unlock_problem_database()
-            LOGGER.info("* finish loading information")
-        else:
-            LOGGER.info("* abort loading information")
+        LOGGER.info("* start loading information")
+        self.feed_manager.load_all(max_num_feeds=max_num_feeds, max_num_public_feeds=max_num_public_feeds)
+        self.access_log_manager.load_all_httpd_access_info(max_num_days)
+        self.html_file_manager.load_all_html_files(max_num_feeds)
         return 0
 
 

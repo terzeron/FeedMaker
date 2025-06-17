@@ -1,10 +1,14 @@
 #!/bin/bash
 
-source backend/.env.development
-env | grep -E "(FM_|WEB_|MSG_|MYSQL_|PYTHON)" | sort
+SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
+absolute_path="$(dirname "$SCRIPT_PATH")"
+cd "$absolute_path"
+pwd
+
+export $(grep -v '^#' .env.development | xargs)
+env | grep -E "^(FM_|WEB_|MYSQL_)" | sort
 
 db_name="fm_db"
-absolute_parent_dir="$(dirname $(pwd))"
 
 pidfile="uvicorn.pid"
 if [ -f "$pidfile" ]; then
@@ -32,16 +36,21 @@ if docker inspect -f '{{.State.Running}}' "$db_name" | grep true > /dev/null 2>&
     echo "###### DB server is already running ######"
 else
     echo "###### run DB server ######"
+    mkdir -p "$absolute_path/mysql_data_dir" > /dev/null 2>&1
+    chmod 755 "$absolute_path/mysql_data_dir" > /dev/null 2>&1
+
+    docker rm fm_db > /dev/null 2>&1
     docker pull mysql:8.0.35 > /dev/null
+
+    echo "docker run --name $db_name -d -p $FM_DB_PORT:3306 --network fm_network --user $(id -u):$(id -g) -v $absolute_path/mysql_data_dir:/var/lib/mysql --env-file .env.development mysql:8.0.35"
     docker run \
         --name "$db_name" \
         -d \
         -p "$FM_DB_PORT":3306 \
         --network fm_network \
         --user "$(id -u):$(id -g)" \
-        -v "absolute_parent_dir"/init.sql:/docker-entrypoint-initdb.d/init.sql \
-        -v "absolute_parent_dir"/mysql_data_dir:/var/lib/mysql \
-        --env-file .env \
+        -v "$absolute_path/mysql_data_dir:/var/lib/mysql" \
+        --env-file .env.development \
         mysql:8.0.35
     echo "###### mysql is running ######"
     sleep 2
@@ -50,8 +59,9 @@ fi
 docker ps
 
 echo "###### run backend ######"
-nohup uvicorn backend.main:app --reload --workers=4 --port="$FM_BACKEND_PORT" &
-echo "$!" > "$pidfile"
-sleep 2
-tail nohup.out
+#nohup uvicorn backend.main:app --reload --workers=4 --port="$FM_BACKEND_PORT" &
+#echo "$!" > "$pidfile"
+#sleep 2
+#tail nohup.out
+uvicorn backend.main:app --reload --port="$FM_BACKEND_PORT"
 

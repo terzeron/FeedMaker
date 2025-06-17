@@ -19,7 +19,7 @@ LOGGER = logging.getLogger()
 class FeedManager:
     work_dir_path = Path(Env.get("FM_WORK_DIR"))
     public_feed_dir_path = Path(Env.get("WEB_SERVICE_FEED_DIR_PREFIX"))
-
+    
     @classmethod
     def get_feed_name_list_url_count_map(cls) -> dict[str, dict[str, Any]]:
         LOGGER.debug("# get_feed_name_list_url_count_map()")
@@ -133,7 +133,6 @@ class FeedManager:
         else:
             s.add(FeedInfo(feed_name=feed_name, group_name=group_name, feed_title=title, is_active=is_active, config=config_str, config_modify_date=config_modify_date, url_list_count=url_list_count, is_completed=is_completed, unit_size_per_day=unit_size_per_day))
         
-        # 여러 피드를 연속 처리할 때 안전하도록 flush
         s.flush()
 
     @classmethod
@@ -204,20 +203,23 @@ class FeedManager:
             return
         if group_name.startswith("_") or feed_name.startswith("_"):
             # disabled feed
+            is_active = False
+            if group_name.startswith("_"):
+                group_name = group_name[1:]
             if feed_name.startswith("_"):
                 feed_name = feed_name[1:]
         else:
             # active feed
+            is_active = True
             rss_file_path = feed_dir_path / f"{feed_name}.xml"
             if rss_file_path.is_file():
                 feedmaker = True
                 st = rss_file_path.stat()
                 rss_update_date = datetime.fromtimestamp(st.st_mtime, timezone.utc)
 
-        existing_feeds = s.query(FeedInfo).filter_by(feed_name=feed_name).all()
+        existing_feeds = s.query(FeedInfo).filter_by(feed_name=feed_name, is_active=is_active).all()
         if existing_feeds:
             for feed in existing_feeds:
-                feed.group_name = group_name
                 feed.feedmaker = feedmaker
                 feed.rss_update_date = rss_update_date
         else:
@@ -233,6 +235,7 @@ class FeedManager:
     def load_all_rss_files(self, max_num_feeds: Optional[int] = None) -> None:
         LOGGER.debug("# load_all_rss_files(max_num_feeds=%r)", max_num_feeds)
         start_ts = datetime.now(timezone.utc)
+        
         with DB.session_ctx() as s:
             num_items = 0
             for group_dir_path in islice(self.work_dir_path.iterdir(), max_num_feeds):
@@ -244,6 +247,7 @@ class FeedManager:
                         continue
                     FeedManager._add_rss_info(s, feed_dir_path)
                     num_items += 1
+            
         end_ts = datetime.now(timezone.utc)
         LOGGER.info("* The loading of all rss files is done. %d items / %s sec", num_items, (end_ts - start_ts))
 
@@ -335,10 +339,12 @@ class FeedManager:
     def load_all_public_feed_files(self, max_num_public_feeds: Optional[int] = None) -> None:
         LOGGER.debug("# load_all_public_feed_files(max_num_public_feeds=%r)", max_num_public_feeds)
         start_ts = datetime.now(timezone.utc)
+        
         with DB.session_ctx() as s:
             num_items = 0
             for public_feed_file_path in islice(self.public_feed_dir_path.glob("*.xml"), max_num_public_feeds):
                 num_items += FeedManager._add_public_feed(s, public_feed_file_path)
+            
         end_ts = datetime.now(timezone.utc)
         LOGGER.info("* The loading of all public feed files is done. %d items / %s sec", num_items, (end_ts - start_ts))
 
@@ -401,6 +407,18 @@ class FeedManager:
 
         if group_name in (".mypy_cache", ".git", "test") or feed_name in (".mypy_cache", ".git", "test"):
             return 0
+        
+        if group_name.startswith("_") or feed_name.startswith("_"):
+            # disabled feed
+            is_active = False
+            if group_name.startswith("_"):
+                group_name = group_name[1:]
+            if feed_name.startswith("_"):
+                feed_name = feed_name[1:]
+        else:
+            # active feed
+            is_active = True
+       
         row = s.query(FeedInfo).where(FeedInfo.feed_name == feed_name, FeedInfo.is_completed).first()
         if row is not None:
             unit_size_per_day = row.unit_size_per_day
@@ -437,10 +455,9 @@ class FeedManager:
             due_date = datetime.now(timezone.utc) + timedelta(days=num_days)
 
         # feed_name만으로 검색 (기본키가 feed_name이므로)
-        existing_feeds = s.query(FeedInfo).filter_by(feed_name=feed_name).all()
+        existing_feeds = s.query(FeedInfo).filter_by(feed_name=feed_name, group_name=group_name).all()
         if existing_feeds:
             for feed in existing_feeds:
-                feed.group_name = group_name
                 feed.is_completed = is_completed
                 feed.current_index = current_index
                 feed.total_item_count = total_item_count
@@ -448,7 +465,7 @@ class FeedManager:
                 feed.due_date = due_date
                 feed.collect_date = collect_date
         else:
-            s.add(FeedInfo(feed_name=feed_name, group_name=group_name, is_completed=is_completed, current_index=current_index, total_item_count=total_item_count, progress_ratio=progress_ratio, due_date=due_date, collect_date=collect_date))
+            s.add(FeedInfo(feed_name=feed_name, group_name=group_name, is_active=is_active, is_completed=is_completed, current_index=current_index, total_item_count=total_item_count, progress_ratio=progress_ratio, due_date=due_date, collect_date=collect_date))
         
         return 1
 
@@ -462,6 +479,7 @@ class FeedManager:
     def load_all_progress_info_from_files(self, max_num_feeds: Optional[int] = None) -> None:
         LOGGER.debug("# load_all_progress_info_from_files(max_num_feeds=%r)", max_num_feeds)
         start_ts = datetime.now(timezone.utc)
+        
         with DB.session_ctx() as s:
             num_items = 0
             for group_dir_path in islice(self.work_dir_path.iterdir(), max_num_feeds):
@@ -472,6 +490,7 @@ class FeedManager:
                     if not feed_dir_path.is_dir():
                         continue
                     num_items += FeedManager._add_progress_info(s, feed_dir_path)
+            
         end_ts = datetime.now(timezone.utc)
         LOGGER.info("* The loading of all progress info from files is done. %d items / %s sec", num_items, (end_ts - start_ts))
 
@@ -483,10 +502,11 @@ class FeedManager:
         results: list[dict[str, Any]] = []
         with DB.session_ctx() as s:
             for keyword in keywords:
-                pat = f"%{keyword.replace('%', '\\%').replace('_', '\\_')}%"
-                rows = s.query(FeedInfo).where((FeedInfo.feed_name.like(pat) |
-                                                FeedInfo.feed_title.like(pat) |
-                                                FeedInfo.group_name.like(pat)) &
+                escaped = keyword.replace('%', r'\%').replace('_', r'\_')
+                pat = f"%{escaped}%"
+                rows = s.query(FeedInfo).where((FeedInfo.feed_name.like(pat, escape='\\') |
+                                                FeedInfo.feed_title.like(pat, escape='\\') |
+                                                FeedInfo.group_name.like(pat, escape='\\')) &
                                                FeedInfo.feedmaker).order_by(FeedInfo.group_name, FeedInfo.feed_name).all()
                 results.extend([{"feed_name": row.feed_name, "feed_title": row.feed_title, "group_name": row.group_name} for row in rows])
         return results
@@ -497,7 +517,7 @@ class FeedManager:
 
         with DB.session_ctx() as s:
             # 모든 그룹 이름을 가져와서 중복 제거
-            group_names = [row.group_name for row in s.query(FeedInfo.group_name).where(FeedInfo.group_name.isnot(None)).distinct().all()]
+            group_names = [row.group_name for row in s.query(FeedInfo.group_name).where(FeedInfo.group_name != "").distinct().all()]
             result: list[dict[str, Any]] = []
             for group_name in sorted(group_names):
                 # 각 그룹별 피드 수 계산
@@ -511,7 +531,7 @@ class FeedManager:
 
         with DB.session_ctx() as s:
             rows = s.query(FeedInfo).where(FeedInfo.group_name == group_name).order_by(FeedInfo.feed_name).all()
-            return [{"feed_name": row.feed_name, "feed_title": row.feed_title, "group_name": row.group_name} for row in rows]
+            return [{"name": row.feed_name, "title": row.feed_title if row.feed_title else row.feed_name, "group_name": row.group_name} for row in rows]
 
     @classmethod
     def get_feed_info(cls, group_name: str, feed_name: str) -> dict[str, Any]:
@@ -587,3 +607,11 @@ class FeedManager:
                     FeedInfo.is_active: is_active
                 })
         return True
+
+    def load_all(self, max_num_feeds: Optional[int] = None, max_num_public_feeds: Optional[int] = None) -> None:
+        LOGGER.debug("* start loading information")
+        self.load_all_config_files(max_num_feeds)
+        self.load_all_rss_files(max_num_feeds)
+        self.load_all_public_feed_files(max_num_public_feeds)
+        self.load_all_progress_info_from_files(max_num_feeds)
+        LOGGER.debug("* finish loading information")
