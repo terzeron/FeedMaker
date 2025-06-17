@@ -28,18 +28,22 @@ class FeedMakerManager:
     SITE_CONF_FILE = "site_config.json"
 
     def __init__(self) -> None:
+        LOGGER.debug("# FeedMakerManager.__init__()")
         self.feed_manager = FeedManager()
         self.access_log_manager = AccessLogManager()
         self.html_file_manager = HtmlFileManager()
         self.problem_manager = ProblemManager()
 
     def __del__(self) -> None:
+        LOGGER.debug("# FeedMakerManager.__del__()")
         del self.feed_manager
         del self.access_log_manager
         del self.html_file_manager
         del self.problem_manager
 
     async def aclose(self) -> None:
+        LOGGER.debug("# FeedMakerManager.aclose()")
+        self.__del__()
         return None
 
     def _git_add(self, feed_dir_path: Path) -> tuple[str, Optional[str]]:

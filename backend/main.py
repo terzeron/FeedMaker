@@ -17,14 +17,21 @@ import uvicorn
 
 from backend.feed_maker_manager import FeedMakerManager
 from bin.feed_maker_util import Env
+from bin.db import DB
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # pylint: disable=redefined-outer-name
-    app.state.feed_maker_manager = FeedMakerManager()
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]: # pylint: disable-redefined-outer-name
+    try:
+        DB.create_all_tables()
+        app.state.feed_maker_manager = FeedMakerManager()
+    except Exception as e:
+        DB.drop_all_tables()
+        raise e
+
     try:
         yield
     finally:
@@ -370,4 +377,5 @@ async def get_groups(feed_maker_manager: FeedMakerManager = Depends(get_feed_mak
 
 
 if __name__ == "__main__":
+    LOGGER.debug("# main()")
     uvicorn.run(app, host="0.0.0.0", port=8010)
