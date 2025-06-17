@@ -323,6 +323,16 @@ class WtwtSite(Site):
         self.payload = {"search_txt": cp949_keyword}
 
 
+class XtoonSite(Site):
+    def __init__(self, site_name: str) -> None:
+        super().__init__(site_name)
+        self.extraction_attrs = {"class": "katoon-box"}
+
+    def set_url_postfix(self, keyword: str) -> None:
+        encoded_keyword = urllib.parse.quote(keyword)
+        self.url_postfix = "/index.php/search?key=" + encoded_keyword
+
+
 class MarumaruSite(Site):
     def __init__(self, site_name: str) -> None:
         super().__init__(site_name)
@@ -546,6 +556,7 @@ class SearchManager:
             ToonkorSite("toonkor"),
             WfwfSite("wfwf"),
             WtwtSite("wtwt"),
+            XtoonSite("xtoon"),
             TorrentJokSite("torrentjok"),
             TorrentQqSite("torrentqq"),
             TorrentRjSite("torrentrj"),
