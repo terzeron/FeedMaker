@@ -14,5 +14,5 @@ module.exports = {
                 maxSize: 244 * 1024, // 244 KiB
             },
         },
-    },
+    }
 }
