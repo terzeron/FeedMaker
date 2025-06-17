@@ -1,33 +1,66 @@
 #!/usr/bin/env python
 
 
-from __future__ import annotations
-from threading import RLock
+import json
 from contextlib import contextmanager
-from typing import Iterator
-
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.engine import URL
+from threading import RLock
+from typing import Iterator, Any, Optional, Literal, TypedDict, Union
+from collections.abc import Hashable
+from sqlalchemy import create_engine, event, func as _func, and_ as _and_, or_ as _or_, not_ as _not_
+from sqlalchemy.engine import Engine, URL, Connection
+from sqlalchemy.orm import Session as _Session, sessionmaker as _sessionmaker
+from sqlalchemy.orm.session import Session as _Session
 
 from bin.feed_maker_util import Env
+from bin.models import Base
+
+func = _func
+and_ = _and_
+or_ = _or_
+not_ = _not_
+
+class Session(_Session):
+    __slots__ = ()
+
+
+class EngineOptions(TypedDict, total=False):
+    pool_pre_ping: bool
+    future: bool
+    echo: bool
+    isolation_level: Literal['SERIALIZABLE', 'REPEATABLE READ', 'READ COMMITTED', 'READ UNCOMMITTED', 'AUTOCOMMIT']
 
 
 class _DataSource:
-    def __init__(self, url: str, **engine_opts):
-        self._backend = create_engine(url, pool_pre_ping=True, future=True, **engine_opts)
+    def __init__(self, url: URL, **engine_opts: Any) -> None:
+        self._engine: Engine = create_engine(
+            url,
+            pool_pre_ping=True,
+            future=True,
+            echo=False,
+            **engine_opts,
+        )
 
-        # 접속 시 UTC 고정 같은 공통 세팅
-        @event.listens_for(self._backend, "connect")
-        def _set_utc(dbapi_conn, _):
-            with dbapi_conn.cursor() as cur:
+        # 커넥션마다 UTC 고정
+        @event.listens_for(self._engine, "connect")
+        def _set_utc(conn: Any, _: Any) -> None:  # type: ignore
+            with conn.cursor() as cur:
                 cur.execute("SET time_zone = '+00:00'")
 
-        self._Session = sessionmaker(bind=self._backend, autoflush=False, expire_on_commit=False, future=True)
+        self._Session: Any = _sessionmaker(
+            bind=self._engine,
+            autoflush=False,
+            expire_on_commit=False,
+            future=True,
+        )
 
+    # 컨텍스트 매니저: 자동 commit / rollback
     @contextmanager
-    def session(self) -> Iterator[Session]:
+    def session(self, *, autoflush: Optional[bool] = None, isolation_level: Optional[Literal['SERIALIZABLE', 'REPEATABLE READ', 'READ COMMITTED', 'READ UNCOMMITTED', 'AUTOCOMMIT']] = None) -> Iterator[Session]:
         sess: Session = self._Session()
+        if autoflush is not None:  # 필요 시 동적으로 변경
+            sess.autoflush = autoflush
+        if isolation_level:  # 필요 시 동적으로 변경
+            sess.connection(execution_options={"isolation_level": isolation_level})
         try:
             yield sess
             sess.commit()
@@ -37,39 +70,80 @@ class _DataSource:
         finally:
             sess.close()
 
+    def dispose(self) -> None:
+        self._engine.dispose()
 
-class DataSourceRegistry:
-    _cache: dict[str, _DataSource] = {}
+    @property
+    def engine(self) -> Union[Engine, Connection]:
+        return self._engine
+
+
+class DB:
+    _sources: dict[str, _DataSource] = {}
     _lock = RLock()
-
-    @staticmethod
-    def _url_from_env() -> str:
-        return str(
-            URL.create(
-                "mysql+pymysql",
-                username=Env.get("MYSQL_USER"),
-                password=Env.get("MYSQL_PASSWORD"),
-                host=Env.get("FM_DB_HOST"),
-                port=int(Env.get("FM_DB_PORT")),
-                database=Env.get("MYSQL_DATABASE"),
-                query={"charset": "utf8mb4"},
-            )
-        )
+    _db_config: dict[str, Any] = {}
 
     @classmethod
-    def _get_source(cls, url: str, **opts) -> _DataSource:
-        key = f"{url}|{hash(frozenset(opts.items()))}"
-        if key in cls._cache:  # fast-path
-            return cls._cache[key]
+    def init(cls, db_config: Optional[dict[str, Any]] = None) -> None:
+        cls._db_config = db_config or {}
 
-        with cls._lock:  # slow-path
-            if key not in cls._cache:  # double-check
-                cls._cache[key] = _DataSource(url, **opts)
-            return cls._cache[key]
+    @staticmethod
+    def _env_url(db_config: Optional[dict[str, Any]]) -> URL:
+        if not db_config:
+            db_config = {}
+        return URL.create(
+            drivername="mysql+pymysql",
+            username=db_config.get("user", Env.get("MYSQL_USER")),
+            password=db_config.get("password", Env.get("MYSQL_PASSWORD")),
+            host=db_config.get("host", Env.get("FM_DB_HOST")),
+            port=int(db_config.get("port", Env.get("FM_DB_PORT"))),
+            database=db_config.get("database", Env.get("MYSQL_DATABASE")),
+            query={"charset": "utf8mb4"}
+        )
+
+    @staticmethod
+    def _make_key(url: URL, opts: dict[str, Any]) -> str:
+        try:
+            opts_key: Hashable = frozenset(opts.items())
+        except TypeError:
+            opts_key = json.dumps(opts, sort_keys=True)
+        return f"{url}|{hash(opts_key)}"
+
+    @classmethod
+    def _source(cls, url: URL, **engine_opts: Any) -> _DataSource:
+        key = cls._make_key(url, engine_opts)
+
+        if key in cls._sources:  # fast-path
+            return cls._sources[key]
+
+        with cls._lock:  # slow-path (최초 생성)
+            if key not in cls._sources:  # double-check
+                cls._sources[key] = _DataSource(url, **engine_opts)
+            return cls._sources[key]
 
     @classmethod
     @contextmanager
-    def session_ctx(cls, url: str | None = None, **engine_opts, ) -> Iterator[Session]:
-        ds = cls._get_source(url or cls._url_from_env(), **engine_opts)
-        with ds.session() as sess:
+    def session_ctx(cls, *, db_config: Optional[dict[str, Any]] = None, autoflush: Optional[bool] = None, isolation_level: Optional[Literal['SERIALIZABLE', 'REPEATABLE READ', 'READ COMMITTED', 'READ UNCOMMITTED', 'AUTOCOMMIT']] = None, **engine_opts: EngineOptions) -> Iterator[Session]:
+        actual_config: dict[str, Any] = db_config or cls._db_config
+        ds = cls._source(cls._env_url(actual_config), **engine_opts)
+        with ds.session(autoflush=autoflush, isolation_level=isolation_level) as sess:
             yield sess
+
+    @classmethod
+    def create_all_tables(cls, db_config: Optional[dict[str, Any]] = None, **engine_opts: Any) -> None:
+        actual_config: dict[str, Any] = db_config or cls._db_config
+        ds = cls._source(cls._env_url(actual_config), **engine_opts)
+        Base.metadata.create_all(ds.engine)
+
+    @classmethod
+    def drop_all_tables(cls, db_config: Optional[dict[str, Any]] = None, **engine_opts: Any) -> None:
+        actual_config: dict[str, Any] = db_config or cls._db_config
+        ds = cls._source(cls._env_url(actual_config), **engine_opts)
+        Base.metadata.drop_all(ds.engine)
+
+    @classmethod
+    def dispose_all(cls) -> None:
+        with cls._lock:
+            for ds in cls._sources.values():
+                ds.dispose()
+            cls._sources.clear()

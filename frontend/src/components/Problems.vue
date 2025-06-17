@@ -12,7 +12,7 @@
               hover
               small
               :fields="statusInfoFields"
-              :items="statusInfoList">
+              :items="statusInfolist">
             <template #cell(feed_title)="data">
               <span v-html="data.value"></span>
             </template>
@@ -37,7 +37,7 @@
               hover
               small
               :fields="progressInfoFields"
-              :items="progressInfoList"
+              :items="progressInfolist"
               :sort-by.sync="progressInfoSortBy"
               :sort-desc.sync="progressInfoSortDesc">
             <template #cell(feed_title)="data">
@@ -61,7 +61,7 @@
               hover
               small
               :fields="listUrlInfoFields"
-              :items="listUrlInfoList"
+              :items="listUrlInfolist"
               :sort-by.sync="listUrlInfoSortBy"
               :sort-desc.sync="listUrlInfoSortDesc">
             <template #cell(feed_title)="data">
@@ -82,7 +82,7 @@
               hover
               small
               :fields="htmlFileSizeFields"
-              :items="htmlFileSizeList"
+              :items="htmlFileSizelist"
               :sort-by.sync="htmlFileSizeSortBy"
               :sort-desc.sync="htmlFileSizeSortDesc">
             <template #cell(action)="data">
@@ -103,7 +103,7 @@
               hover
               small
               :fields="htmlFileWithoutImageTagFields"
-              :items="htmlFileWithoutImageTagList"
+              :items="htmlFileWithoutImageTaglist"
               :sort-by.sync="htmlFileWithoutImageTagSortBy"
               :sort-desc.sync="htmlFileWithoutImageTagSortDesc">
             <template #cell(action)="data">
@@ -124,7 +124,7 @@
               hover
               small
               :fields="htmlFileWithManyImageTagFields"
-              :items="htmlFileWithManyImageTagList"
+              :items="htmlFileWithManyImageTaglist"
               :sort-by.sync="htmlFileWithManyImageTagSortBy"
               :sort-desc.sync="htmlFileWithManyImageTagSortDesc">
             <template #cell(action)="data">
@@ -145,7 +145,7 @@
               hover
               small
               :fields="htmlFileWithImageNotFoundFields"
-              :items="htmlFileWithImageNotFoundList"
+              :items="htmlFileWithImageNotFoundlist"
               :sort-by.sync="htmlFileWithImageNotFoundSortBy"
               :sort-desc.sync="htmlFileWithImageNotFoundSortDesc">
             <template #cell(action)="data">
@@ -166,7 +166,7 @@
               hover
               small
               :fields="elementInfoFields"
-              :items="elementInfoList"
+              :items="elementInfolist"
               :sort-by.sync="elementInfoSortBy"
               :sort-desc.sync="elementInfoSortDesc">
           </b-table>
@@ -184,7 +184,7 @@
               hover
               small
               :fields="publicFeedInfoFields"
-              :items="publicFeedInfoList"
+              :items="publicFeedInfolist"
               :sort-by.sync="publicFeedInfoSortBy"
               :sort-desc.sync="publicFeedInfoSortDesc">
             <template #cell(feed_title)="data">
@@ -255,7 +255,7 @@ export default {
         {key: 'view_date', label: '조회', sortable: true},
         {key: 'action', label: '작업', sortable: false},
       ],
-      statusInfoList: [],
+      statusInfolist: [],
 
       progressInfoFields: [
         {key: 'feed_title', label: '제목', sortable: true},
@@ -267,7 +267,7 @@ export default {
       ],
       progressInfoSortBy: 'progress_ratio',
       progressInfoSortDesc: true,
-      progressInfoList: [],
+      progressInfolist: [],
 
       publicFeedInfoFields: [
         {key: 'feed_title', label: '제목', sortable: true},
@@ -278,7 +278,7 @@ export default {
       ],
       publicFeedInfoSortBy: 'num_items',
       publicFeedInfoSortDesc: true,
-      publicFeedInfoList: [],
+      publicFeedInfolist: [],
 
       htmlFileWithImageNotFoundFields: [
         {key: 'file_name', label: '파일', sortable: true},
@@ -287,7 +287,7 @@ export default {
       ],
       htmlFileWithImageNotFoundSortBy: 'count',
       htmlFileWithImageNotFoundSortDesc: true,
-      htmlFileWithImageNotFoundList: [],
+      htmlFileWithImageNotFoundlist: [],
 
       htmlFileWithoutImageTagFields: [
         {key: 'file_name', label: '파일', sortable: true},
@@ -296,7 +296,7 @@ export default {
       ],
       htmlFileWithoutImageTagSortBy: 'count',
       htmlFileWithoutImageTagSortDesc: true,
-      htmlFileWithoutImageTagList: [],
+      htmlFileWithoutImageTaglist: [],
 
       htmlFileWithManyImageTagFields: [
         {key: 'file_name', label: '파일', sortable: true},
@@ -305,7 +305,7 @@ export default {
       ],
       htmlFileWithManyImageTagSortBy: 'count',
       htmlFileWithManyImageTagSortDesc: true,
-      htmlFileWithManyImageTagList: [],
+      htmlFileWithManyImageTaglist: [],
 
       htmlFileSizeFields: [
         {key: 'file_name', label: '파일', sortable: true},
@@ -314,7 +314,7 @@ export default {
       ],
       htmlFileSizeSortBy: 'size',
       htmlFileSizeSortDesc: false,
-      htmlFileSizeList: [],
+      htmlFileSizelist: [],
 
       listUrlInfoFields: [
         {key: 'feed_title', label: '제목', sortable: true},
@@ -322,7 +322,7 @@ export default {
       ],
       listUrlInfoSortBy: 'count',
       listUrlInfoSortDesc: true,
-      listUrlInfoList: [],
+      listUrlInfolist: [],
 
       elementInfoFields: [
         {key: 'element_name', label: '요소', sortable: true},
@@ -330,7 +330,7 @@ export default {
       ],
       elementInfoSortBy: 'count',
       elementInfoSortDesc: true,
-      elementInfoList: [],
+      elementInfolist: [],
     }
   },
   methods: {
@@ -365,7 +365,7 @@ export default {
               const feedName = data.item['feed_name']
 
               this.removePublicFeed(feedName);
-              this.statusInfoList = this.statusInfoList.filter(item => item !== data.item);
+              this.statusInfolist = this.statusInfolist.filter(item => item !== data.item);
             }
           })
           .catch((error) => {
@@ -381,7 +381,7 @@ export default {
             if (value) {
               const feedName = data.item['feed_name']
               this.removePublicFeed(feedName);
-              this.publicFeedInfoList = this.publicFeedInfoList.filter(item => item !== data.item);
+              this.publicFeedInfolist = this.publicFeedInfolist.filter(item => item !== data.item);
             }
           })
           .catch((error) => {
@@ -418,7 +418,7 @@ export default {
           .then((value) => {
             if (value) {
               this.removeHtmlFile(data.item['file_path']);
-              this.htmlFileWithoutImageTagList = this.htmlFileWithoutImageTagList.filter(item => item !== data.item);
+              this.htmlFileWithoutImageTaglist = this.htmlFileWithoutImageTaglist.filter(item => item !== data.item);
             }
           })
           .catch((error) => {
@@ -433,7 +433,7 @@ export default {
           .then((value) => {
             if (value) {
               this.removeHtmlFile(data.item['file_path']);
-              this.htmlFileWithManyImageTagList = this.htmlFileWithManyImageTagList.filter(item => item !== data.item);
+              this.htmlFileWithManyImageTaglist = this.htmlFileWithManyImageTaglist.filter(item => item !== data.item);
             }
           })
           .catch((error) => {
@@ -448,7 +448,7 @@ export default {
           .then((value) => {
             if (value) {
               this.removeHtmlFile(data.item['file_path']);
-              this.htmlFileWithImageNotFoundList = this.htmlFileWithImageNotFoundList.filter(item => item !== data.item);
+              this.htmlFileWithImageNotFoundlist = this.htmlFileWithImageNotFoundlist.filter(item => item !== data.item);
             }
           })
           .catch((error) => {
@@ -463,7 +463,7 @@ export default {
           .then((value) => {
             if (value) {
               this.removeHtmlFile(data.item['file_path']);
-              this.htmlFileSizeList = this.htmlFileSizeList.filter(item => item !== data.item);
+              this.htmlFileSizelist = this.htmlFileSizelist.filter(item => item !== data.item);
             }
           })
           .catch((error) => {
@@ -489,7 +489,7 @@ export default {
               console.log(resStatusInfo.data.message);
             } else {
               // transformation
-              this.statusInfoList = _.map(resStatusInfo.data['result'], o => {
+              this.statusInfolist = _.map(resStatusInfo.data['result'], o => {
                 o['feed_title'] = this.getManagementLink(o['feed_title'], o['group_name'], o['feed_name']);
                 o['http_request'] = o['http_request'] ? 'O' : 'X';
                 o['public_html'] = o['public_html'] ? 'O' : 'X';
@@ -501,7 +501,7 @@ export default {
                 o['action'] = '삭제';
                 return o;
               });
-              console.log(this.statusInfoList);
+              console.log(this.statusInfolist);
             }
           })
           .catch((error) => {
@@ -515,7 +515,7 @@ export default {
             if (resProgressInfo.data.status === 'failure') {
               console.log(resProgressInfo.data.message);
             } else {
-              this.progressInfoList = _.map(resProgressInfo.data['result'], o => {
+              this.progressInfolist = _.map(resProgressInfo.data['result'], o => {
                 o['feed_title'] = this.getManagementLink(o['feed_title'], o['group_name'], o['feed_name']);
                 o['due_date'] = this.getShortDate(o['due_date']);
                 return o;
@@ -537,11 +537,11 @@ export default {
               let day2MonthAgo = new Date();
               day2MonthAgo.setTime(day2MonthAgo.getTime() - 2 * 30 * 24 * 60 * 60 * 1000); // 2 months ago
               day2MonthAgo = day2MonthAgo.toISOString().substring(0, 12);
-              this.publicFeedInfoList = _.filter(resPublicFeedInfo.data['result'], o => {
+              this.publicFeedInfolist = _.filter(resPublicFeedInfo.data['result'], o => {
                 return o['upload_date'] < day2MonthAgo || o['size'] < 4 * 1024 || o['num_items'] < 5 || o['num_items'] > 20;
               }).map(o => {
                 o['feed_title'] = this.getManagementLink(o['feed_title'], o['group_name'], o['feed_name']) || o['feed_name'];
-                if (o['file_size'] < 1 * 1024) {
+                if (o['file_size'] < 1024) {
                   o['sizeIsDanger'] = true;
                 } else if (o['file_size'] < 4 * 1024) {
                   o['sizeIsWarning'] = true;
@@ -571,19 +571,19 @@ export default {
             if (resHtmlInfo.data.status === 'failure') {
               console.log(resHtmlInfo.data.message);
             } else {
-              this.htmlFileSizeList = _.map(resHtmlInfo.data['result']['html_file_size_map'], o => {
+              this.htmlFileSizelist = _.map(resHtmlInfo.data['result']['html_file_size_map'], o => {
                 o['action'] = '삭제';
                 return o;
               });
-              this.htmlFileWithManyImageTagList = _.map(resHtmlInfo.data['result']['html_file_with_many_image_tag_map'], o => {
+              this.htmlFileWithManyImageTaglist = _.map(resHtmlInfo.data['result']['html_file_with_many_image_tag_map'], o => {
                 o['action'] = '삭제';
                 return o;
               });
-              this.htmlFileWithoutImageTagList = _.map(resHtmlInfo.data['result']['html_file_without_image_tag_map'], o => {
+              this.htmlFileWithoutImageTaglist = _.map(resHtmlInfo.data['result']['html_file_without_image_tag_map'], o => {
                 o['action'] = '삭제';
                 return o;
               });
-              this.htmlFileWithImageNotFoundList = _.map(resHtmlInfo.data['result']['html_file_image_not_found_map'], o => {
+              this.htmlFileWithImageNotFoundlist = _.map(resHtmlInfo.data['result']['html_file_image_not_found_map'], o => {
                 o['action'] = '삭제';
                 return o;
               });
@@ -600,7 +600,7 @@ export default {
             if (resElementInfo.data.status === 'failure') {
               console.log(resElementInfo.data.message);
             } else {
-              this.elementInfoList = _.map(resElementInfo.data['result'], o => {
+              this.elementInfolist = _.map(resElementInfo.data['result'], o => {
                 return o;
               })
             }
@@ -612,11 +612,11 @@ export default {
       // listUrlCount 정보
       const listUrlInfo = this.getApiUrlPath() + '/problems/list_url_info';
       axios.get(listUrlInfo)
-          .then((resListUrlInfo) => {
-            if (resListUrlInfo.data.status === 'failure') {
-              console.log(resListUrlInfo.data.message);
+          .then((reslistUrlInfo) => {
+            if (reslistUrlInfo.data.status === 'failure') {
+              console.log(reslistUrlInfo.data.message);
             } else {
-              this.listUrlInfoList = _.map(resListUrlInfo.data['result'], o => {
+              this.listUrlInfolist = _.map(reslistUrlInfo.data['result'], o => {
                 o['feed_title'] = this.getManagementLink(o['feed_title'], o['group_name'], o['feed_name']);
                 return o;
               });

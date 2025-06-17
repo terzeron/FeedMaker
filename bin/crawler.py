@@ -10,15 +10,17 @@ import json
 import logging.config
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Any, Tuple, Optional, List
+from typing import Any, Optional, Union
+
 import requests
+from requests.cookies import RequestsCookieJar
+
 from bin.feed_maker_util import PathUtil
 from bin.headless_browser import HeadlessBrowser
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-
 
 class Method(Enum):
     GET = 1
@@ -29,22 +31,22 @@ class Method(Enum):
 class RequestsClient:
     COOKIE_FILE = "cookies.requestsclient.json"
 
-    def __init__(self, dir_path: Path = Path.cwd(), render_js: bool = False, method: Method = Method.GET, headers: Optional[Dict[str, str]] = None, timeout: int = 60, encoding: str = "utf-8", verify_ssl: bool = True) -> None:
+    def __init__(self, *, dir_path: Path = Path.cwd(), render_js: bool = False, method: Method = Method.GET, headers: Optional[dict[str, str]] = None, timeout: int = 60, encoding: str = "utf-8", verify_ssl: bool = True) -> None:
         LOGGER.debug("# RequestsClient(dir_path=%s, render_js=%s, method=%s, headers=%r, timeout=%d, encoding=%s, verify_ssl=%s)", PathUtil.short_path(dir_path), render_js, method, headers, timeout, encoding, verify_ssl)
         self.dir_path: Path = dir_path
         self.method: Method = method
         self.timeout: int = timeout
-        self.headers: Dict[str, str] = headers if headers is not None else {}
-        self.cookies: Dict[str, str] = {}
+        self.headers: dict[str, str] = headers if headers is not None else {}
+        self.cookies: dict[str, str] = {}
         self.encoding: str = encoding or "utf-8"
         self.verify_ssl: bool = verify_ssl
 
-    def __del__(self):
+    def __del__(self) -> None:
         del self.headers
 
-    def write_cookies_to_file(self, cookies) -> None:
-        cookie_data: List[Dict[str, Any]] = []
-        for k, v in cookies.iteritems():
+    def write_cookies_to_file(self, cookies: RequestsCookieJar) -> None:
+        cookie_data: list[dict[str, Any]] = []
+        for k, v in cookies.items():  # type: ignore
             cookie_data.append({"name": k, "value": v})
         cookie_file = self.dir_path / RequestsClient.COOKIE_FILE
         with cookie_file.open("w", encoding='utf-8') as f:
@@ -58,17 +60,21 @@ class RequestsClient:
                 for cookie in cookies:
                     if "expiry" in cookie:
                         del cookie["expiry"]
-                    self.cookies.update({cookie["name"]: cookie["value"]})
+                    c_name = cookie.get("name", "")
+                    c_value = cookie.get("value", "")
+                    if c_name and c_value:
+                        self.cookies.update({c_name: c_value})
             LOGGER.debug(f"self.cookies={self.cookies}")
 
-    def make_request(self, url, data=None, download_file: Optional[Path] = None, allow_redirects=True) -> Tuple[str, str, Dict[str, Any], Optional[int]]:
+    def make_request(self, url: str, data: Optional[Union[str, bytes, dict[str, Any]]] = None, download_file: Optional[Path] = None, allow_redirects: bool = True) -> tuple[str, str, dict[str, Any], Optional[int]]:
         LOGGER.debug(f"# make_request(url='{url}', allow_redirects={allow_redirects})")
 
-        if "Referer" in self.headers and self.headers["Referer"]:
-            LOGGER.debug(f"visiting referer page '{self.headers['Referer']}'")
+        referer = self.headers.get("Referer", "")
+        if referer:
+            LOGGER.debug("visiting referer page '%s'", referer)
             self.read_cookies_from_file()
             try:
-                referer_response = requests.get(self.headers['Referer'], headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, allow_redirects=allow_redirects)
+                referer_response = requests.get(referer, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, allow_redirects=allow_redirects)
             except requests.exceptions.ConnectionError as e:
                 LOGGER.warning(f"<!-- Warning: can't connect to '{url}' for temporary network error -->")
                 LOGGER.warning("<!-- %r -->", e)
@@ -124,23 +130,22 @@ class RequestsClient:
             response.encoding = 'utf-8'
 
         if not re.search(r'<meta\s+property="og:url"\s+content="[^"]+"\s*/?>', response.text):
-            result = re.sub(r'</head>', f'<meta property="og:url" content="{response.request.url}"/>\n</head>',
-                            response.text)
+            result = response.text.replace('</head>', f'<meta property="og:url" content="{response.request.url}"/>\n</head>')
             return result, "", dict(response.headers), response.status_code
         return response.text, "", dict(response.headers), response.status_code
 
 
 class Crawler:
     class ReadTimeoutException(Exception):
-        def __init__(self):
+        def __init__(self) -> None:
             super().__init__("Read timed out")
 
-    def __init__(self, dir_path: Path = Path.cwd(), render_js: bool = False, method: Method = Method.GET, headers: Optional[Dict[str, str]] = None, timeout: int = 60, num_retries: int = 1, encoding: str = "utf-8", verify_ssl: bool = True, copy_images_from_canvas: bool = False, simulate_scrolling: bool = False, disable_headless: bool = False, blob_to_dataurl: bool = False) -> None:
+    def __init__(self, *, dir_path: Path = Path.cwd(), render_js: bool = False, method: Method = Method.GET, headers: Optional[dict[str, str]] = None, timeout: int = 60, num_retries: int = 1, encoding: str = "utf-8", verify_ssl: bool = True, copy_images_from_canvas: bool = False, simulate_scrolling: bool = False, disable_headless: bool = False, blob_to_dataurl: bool = False) -> None:
         LOGGER.debug("# Crawler(dir_path=%s, render_js=%s, method=%s, headers=%r, timeout=%d, num_retries=%d, encoding=%s, verify_ssl=%s, copy_images_from_canvas=%s, simulate_scrolling=%s, disable_headless=%s, blob_to_dataurl=%s)", PathUtil.short_path(dir_path), render_js, method, headers, timeout, num_retries, encoding, verify_ssl, copy_images_from_canvas, simulate_scrolling, disable_headless, blob_to_dataurl)
         self.dir_path = dir_path
         self.render_js = render_js
         self.method = method
-        self.headers: Dict[str, str] = headers if headers is not None else {}
+        self.headers: dict[str, str] = headers if headers is not None else {}
         self.headers["User-Agent"] = self.headers.get("User-Agent", DEFAULT_USER_AGENT)
         self.timeout = timeout
         self.num_retries = num_retries
@@ -156,7 +161,7 @@ class Crawler:
         else:
             self.requests_client = RequestsClient(dir_path=self.dir_path, method=method, headers=self.headers, timeout=timeout, encoding=encoding, verify_ssl=verify_ssl)
 
-    def __del__(self):
+    def __del__(self) -> None:
         if self.headers:
             del self.headers
         if self.render_js:
@@ -165,7 +170,7 @@ class Crawler:
             del self.requests_client
 
     @staticmethod
-    def get_option_str(options: Dict[str, Any]) -> str:
+    def get_option_str(options: dict[str, Any]) -> str:
         LOGGER.debug("# get_option_str()")
 
         option_str: str = ""
@@ -210,10 +215,10 @@ class Crawler:
 
         return option_str
 
-    def run(self, url, data=None, download_file: Optional[Path] = None, allow_redirects: bool = True) -> Tuple[str, str, Optional[Dict[str, Any]]]:
-        LOGGER.debug(f"# run(url={url}, data={data}, download_file={download_file}, allow_redirects={allow_redirects})")
+    def run(self, url: str, data: Optional[Union[str, bytes, dict[str, Any]]] = None, download_file: Optional[Path] = None, allow_redirects: bool = True) -> tuple[str, str, Optional[dict[str, Any]]]:
+        LOGGER.debug(f"# run(url={url}, data={data!r}, download_file={download_file}, allow_redirects={allow_redirects})")
         error: str = ""
-        headers: Dict[str, Any] = {}
+        headers: dict[str, Any] = {}
         for i in range(self.num_retries):
             if self.render_js:
                 response = self.headless_browser.make_request(url, download_file=download_file)

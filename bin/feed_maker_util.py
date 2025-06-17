@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+
 import os
 import sys
 import re
@@ -9,12 +10,14 @@ import hashlib
 import json
 import base64
 import logging.config
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from shutil import which
 from urllib.parse import urlparse, urlunparse, quote, urljoin, urlsplit
-from typing import List, Any, Dict, Tuple, Optional, Union
+from typing import Any, Optional, Union, TypeVar, Sequence
+from collections.abc import Hashable
 import psutil
+from bs4.element import Tag
 
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -26,23 +29,27 @@ header_str = '''<meta http-equiv="Content-Type" content="text/html; charset=UTF-
 
 '''
 
+T = TypeVar('T', bound=Union[Hashable, dict[str, Any], list[Any]])
+K = TypeVar('K', bound=Hashable)
+V = TypeVar('V')
 
 class Data:
     @staticmethod
-    def _to_hashable(item: Any) -> Any:
+    def _to_hashable(item: Union[dict[str, Any], list[Any], Any]) -> Union[Hashable, tuple[tuple[str, Hashable], ...], tuple[Hashable, ...]]:
         if isinstance(item, dict):
-            return tuple((k, Data._to_hashable(v)) for k, v in sorted(item.items()))
+            return tuple((str(k), Data._to_hashable(v)) for k, v in sorted(item.items()))
         if isinstance(item, list):
             return tuple(Data._to_hashable(x) for x in item)
+        if not isinstance(item, Hashable):
+            raise TypeError(f"Item must be hashable, got {type(item)}")
         return item
 
     @staticmethod
-    def remove_duplicates(a_list: List[Any]) -> List[Any]:
-        seen: Dict[Any, bool] = {}
-        unique_result = []
+    def remove_duplicates(a_list: Sequence[T]) -> list[T]:
+        seen: dict[Hashable, bool] = {}
+        unique_result: list[T] = []
         for item in a_list:
             hashable_item = Data._to_hashable(item)
-
             if hashable_item in seen and seen[hashable_item]:
                 continue
             seen[hashable_item] = True
@@ -50,8 +57,8 @@ class Data:
         return unique_result
 
     @staticmethod
-    def _get_sorted_lines_from_rss_file(file: Path) -> List[str]:
-        line_list: List[str] = []
+    def _get_sorted_lines_from_rss_file(file: Path) -> list[str]:
+        line_list: list[str] = []
         with file.open("r", encoding="utf-8") as infile:
             lines = infile.readlines()
             for line in lines:
@@ -102,7 +109,7 @@ class Process:
         return result
 
     @staticmethod
-    def exec_cmd(cmd: str, dir_path: Path = Path.cwd(), input_data=None) -> Tuple[str, str]:
+    def exec_cmd(cmd: str, dir_path: Path = Path.cwd(), input_data: Optional[str] = None) -> tuple[str, str]:
         LOGGER.debug("# Process.exec_cmd(cmd=%s, dir_path=%s, input_data=%d bytes)", cmd, PathUtil.short_path(dir_path), len(input_data) if input_data else 0)
         new_cmd = Process._replace_script_path(cmd, dir_path)
         if not new_cmd:
@@ -111,8 +118,10 @@ class Process:
         try:
             with subprocess.Popen(new_cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as p:
                 if input_data:
-                    input_data = input_data.encode("utf-8")
-                result, error = p.communicate(input=input_data)
+                    input_bytes = input_data.encode("utf-8")
+                else:
+                    input_bytes = None
+                result, error = p.communicate(input=input_bytes)
                 if error and b"InsecureRequestWarning" not in error and b"_RegisterApplication(), FAILED TO establish the default connection to the WindowServer" not in error:
                     return "", error.decode("utf-8")
         except subprocess.CalledProcessError as e:
@@ -122,53 +131,42 @@ class Process:
         return result.decode(encoding="utf-8"), ""
 
     @staticmethod
-    def _find_process_group(parent_proc_expr: str) -> List[int]:
-        # find a parent process id by parent process name
-        parent_children_map: Dict[int, List[int]] = {}
-        ppid_list = []
+    def _find_process_list(proc_expr: str) -> list[int]:
+        matched_pid_list: list[int] = []
         for proc in psutil.process_iter():
             try:
-                pinfo = proc.as_dict(attrs=["pid", "ppid", "name", "cmdline"])
+                pinfo = proc.as_dict(attrs=["pid", "cmdline"])
             except psutil.NoSuchProcess:
-                pass
-            else:
-                # compose ppid to pid list map
-                pid = pinfo["pid"]
-                ppid = pinfo["ppid"]
-                pid_list = parent_children_map.get(ppid, [])
-                pid_list.append(pid)
-                parent_children_map[ppid] = pid_list
+                continue
 
-                if pinfo["cmdline"]:
-                    cmdline = " ".join(pinfo["cmdline"])
-                    if re.search(parent_proc_expr, cmdline):
-                        ppid_list.append(pid)
+            pid = pinfo.get("pid")
+            if not pid:
+                continue
 
-        # find a child process id by parent process and its child process
-        result_pid_list = []
-        for ppid in ppid_list:
-            result_pid_list.append(ppid)
-            if ppid in parent_children_map:
-                result_pid_list.extend(parent_children_map[ppid])
+            cmdline_list = pinfo.get("cmdline") or []
+            merged_cmdline = " ".join(cmdline_list)
 
-        return result_pid_list
+            if re.search(proc_expr, merged_cmdline):
+                matched_pid_list.append(pid)
+        return matched_pid_list
 
     @staticmethod
     def kill_process_group(proc_expr: str) -> int:
-        LOGGER.debug(f"kill_process_group(proc_expr='{proc_expr}')")
-        pid_list = Process._find_process_group(proc_expr)
+        pid_list = Process._find_process_list(proc_expr)
         count = 0
         for pid in pid_list:
-            p = psutil.Process(pid)
-            p.terminate()
-            count += 1
+            try:
+                psutil.Process(pid).terminate()
+                count += 1
+            except psutil.NoSuchProcess:
+                pass
         return count
 
 
 class Datetime:
     @staticmethod
     def get_current_time() -> datetime:
-        return datetime.now().astimezone()
+        return datetime.now(timezone.utc)
 
     @staticmethod
     def _get_time_str(dt: datetime) -> str:
@@ -184,7 +182,7 @@ class Datetime:
         return dt.strftime("%a, %d %b %Y %H:%M:%S %z")
 
     @staticmethod
-    def get_short_date_str(dt=None) -> str:
+    def get_short_date_str(dt: Optional[datetime] = None) -> str:
         if not dt:
             dt = Datetime.get_current_time()
         return dt.strftime("%Y%m%d")
@@ -195,21 +193,19 @@ class Datetime:
             return None
         if isinstance(d, str):
             return d
-        if isinstance(d, datetime):
-            return d.strftime("%Y-%m-%d %H:%M:%S")
-        return None
+        return d.strftime("%Y-%m-%d %H:%M:%S")
 
 
 class HTMLExtractor:
     @staticmethod
-    def get_first_token_from_path(path_str: Optional[str]) -> Tuple[
+    def get_first_token_from_path(path_str: Optional[str]) -> tuple[
         Optional[str], Optional[str], Optional[int], Optional[str], bool]:
         if not path_str:
             return None, None, None, None, False
         is_anywhere: bool = False
         if path_str[0:2] == "//":
             is_anywhere = True
-        tokens: List[str] = path_str.split("/")
+        tokens: list[str] = path_str.split("/")
         i: int = 0
         valid_token: str = ""
         for token in tokens:
@@ -242,10 +238,10 @@ class HTMLExtractor:
         return id_str, name, index, "/".join(tokens[i:]), is_anywhere
 
     @staticmethod
-    def get_node_with_path(node, path_str: Optional[str]) -> Optional[List[Any]]:
+    def get_node_with_path(node: Tag, path_str: Optional[str]) -> Optional[list[Tag]]:
         if not node:
             return None
-        node_list = []
+        node_list: list[Tag] = []
 
         (node_id, name, idx, next_path_str, is_anywhere) = HTMLExtractor.get_first_token_from_path(path_str)
 
@@ -269,7 +265,7 @@ class HTMLExtractor:
 
             i = 1
             for child in node.contents:
-                if hasattr(child, 'name'):
+                if isinstance(child, Tag):
                     # print "i=%d child='%s', idx=%s" % (i, child.name, idx)
                     # 이름이 일치하거나 //로 시작한 경우
                     if child.name == name:
@@ -303,53 +299,80 @@ class IO:
         return "".join(line_list)
 
     @staticmethod
-    def read_stdin_as_line_list() -> List[str]:
-        line_list = []
+    def read_stdin_as_line_list() -> list[str]:
+        line_list: list[str] = []
         for line in sys.stdin:
             line_list.append(line)
         return line_list
 
 
+    
+class NotFoundEnvError(Exception):
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+
+
+class Env:
+    @staticmethod
+    def get(var: str) -> str:
+        value = os.getenv(var, "")
+        if not value:
+            raise NotFoundEnvError(f"can't get environment variable '{var}'")
+        return value
+
+
+class NotFoundConfigFileError(Exception):
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+
+
+class InvalidConfigFileError(Exception):
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+
+
+class NotFoundConfigItemError(Exception):
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+
+
 class Config:
-    conf: Dict[str, Dict[str, Any]] = {}
+    conf: dict[str, dict[str, Any]] = {}
 
     def __init__(self, feed_dir_path: Path = Path.cwd()) -> None:
         LOGGER.debug("# Config(feed_dir_path=%s)", PathUtil.short_path(feed_dir_path))
-        error_msg: str = ""
-        if "FM_CONF_FILE" in os.environ and os.environ["FM_CONF_FILE"]:
-            config_file_path = Path(os.environ["FM_CONF_FILE"])
+        conf_file = os.getenv("FM_CONF_FILE", "")
+        if conf_file:
+            config_file_path = Path(conf_file)
         else:
             config_file_path = feed_dir_path / "conf.json"
         if config_file_path.is_file():
             with config_file_path.open('r', encoding="utf-8") as infile:
                 data = json.load(infile)
                 if "configuration" in data:
-                    self.conf = data["configuration"]
-                else:
-                    error_msg = "invalid configuration file format"
+                    self.conf = data.get("configuration", {})
+                    return
+                    
+                raise InvalidConfigFileError(f"can't get configuration from '{config_file_path} with invalid format")
         else:
-            error_msg = "no such file"
-
-        if error_msg:
-            LOGGER.error("Error: Can't get configuration from config file '%s', %s", PathUtil.short_path(config_file_path), error_msg)
-            sys.exit(-1)
+            raise NotFoundConfigFileError(f"can't find configuration file '{config_file_path}'")
 
     @staticmethod
-    def _get_bool_config_value(config_node: Dict[str, Any], key: str, default: bool = False) -> bool:
+    def _get_bool_config_value(config_node: dict[str, Any], key: str, default: bool = False) -> bool:
         value: bool = default
         if key in config_node:
             value = config_node[key]
         return value
 
     @staticmethod
-    def _get_str_config_value(config_node: Dict[str, Any], key: str, default: Optional[str] = None) -> Optional[str]:
+    def _get_str_config_value(config_node: dict[str, Any], key: str, default: Optional[str] = None) -> Optional[str]:
         value: Optional[str] = default
         if key in config_node:
             value = config_node[key]
         return value
 
     @staticmethod
-    def _get_int_config_value(config_node: Dict[str, Any], key: str, default: Optional[int] = None) -> Optional[int]:
+    def _get_int_config_value(config_node: dict[str, Any], key: str, default: Optional[int] = None) -> Optional[int]:
         value: Optional[int] = default
         if key in config_node:
             try:
@@ -359,7 +382,7 @@ class Config:
         return value
 
     @staticmethod
-    def _get_float_config_value(config_node: Dict[str, Any], key: str, default: Optional[float] = None) -> Optional[float]:
+    def _get_float_config_value(config_node: dict[str, Any], key: str, default: Optional[float] = None) -> Optional[float]:
         value: Optional[float] = default
         if key in config_node:
             try:
@@ -369,8 +392,8 @@ class Config:
         return value
 
     @staticmethod
-    def _get_list_config_value(config_node: Dict[str, Any], key: str, default: Optional[List[Any]] = None) -> Optional[List[Any]]:
-        value: Optional[List[Any]] = default if default else []
+    def _get_list_config_value(config_node: dict[str, Any], key: str, default: Optional[list[Any]] = None) -> Optional[list[Any]]:
+        value: Optional[list[Any]] = default if default else []
         if key in config_node:
             try:
                 value = config_node[key]
@@ -379,8 +402,8 @@ class Config:
         return value
 
     @staticmethod
-    def _get_dict_config_value(config_node: Dict[str, Any], key: str, default: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
-        value: Optional[Dict[str, Any]] = default if default else {}
+    def _get_dict_config_value(config_node: dict[str, Any], key: str, default: Optional[dict[str, Any]] = None) -> Optional[dict[str, Any]]:
+        value: Optional[dict[str, Any]] = default if default else {}
         if key in config_node:
             try:
                 value = config_node[key]
@@ -388,11 +411,10 @@ class Config:
                 value = None
         return value
 
-    def get_collection_configs(self) -> Dict[str, Any]:
+    def get_collection_configs(self) -> dict[str, Any]:
         LOGGER.debug("# get_collection_configs()")
-        conf: Dict[str, Any] = {}
         if "collection" in self.conf:
-            collection_conf = self.conf["collection"]
+            collection_conf = self.conf.get("collection", {})
             if collection_conf:
                 conf = {
                     "render_js": Config._get_bool_config_value(collection_conf, "render_js", False),
@@ -419,18 +441,18 @@ class Config:
                     "post_process_script_list": Config._get_list_config_value(collection_conf, "post_process_script_list", []),
                     "headers": Config._get_dict_config_value(collection_conf, "headers", {})
                 }
-        return conf
+                return conf
 
-    def get_extraction_configs(self) -> Dict[str, Any]:
+        raise NotFoundConfigItemError("can't get configuration item 'collection'")
+
+    def get_extraction_configs(self) -> dict[str, Any]:
         LOGGER.debug("# get_extraction_configs()")
-        conf: Dict[str, Any] = {}
         if "extraction" in self.conf:
-            extraction_conf = self.conf["extraction"]
+            extraction_conf = self.conf.get("extraction", {})
             if extraction_conf:
                 conf = {
                     "render_js": Config._get_bool_config_value(extraction_conf, "render_js", False),
                     "verify_ssl": Config._get_bool_config_value(extraction_conf, "verify_ssl", True),
-                    "threshold_to_remove_html_with_incomplete_image": Config._get_bool_config_value(extraction_conf, "threshold_to_remove_html_with_incomplete_image", False),
                     "bypass_element_extraction": Config._get_bool_config_value(extraction_conf, "bypass_element_extraction"),
                     "force_sleep_between_articles": Config._get_bool_config_value(extraction_conf, "force_sleep_between_articles"),
                     "copy_images_from_canvas": Config._get_bool_config_value(extraction_conf, "copy_images_from_canvas"),
@@ -442,6 +464,7 @@ class Config:
                     "encoding": Config._get_str_config_value(extraction_conf, "encoding", "utf-8"),
                     "referer": Config._get_str_config_value(extraction_conf, "referer"),
 
+                    "threshold_to_remove_html_with_incomplete_image": Config._get_int_config_value(extraction_conf, "threshold_to_remove_html_with_incomplete_image", 0),
                     "timeout": Config._get_int_config_value(extraction_conf, "timeout", 60),
                     "num_retries": Config._get_int_config_value(extraction_conf, "num_retries", 1),
 
@@ -451,24 +474,26 @@ class Config:
                     "post_process_script_list": Config._get_list_config_value(extraction_conf, "post_process_script_list", []),
                     "headers": Config._get_dict_config_value(extraction_conf, "headers", {}),
                 }
-        return conf
+                return conf
+            
+        raise NotFoundConfigItemError("can't get configuration item 'extraction'")
 
-    def get_rss_configs(self) -> Dict[str, Any]:
+    def get_rss_configs(self) -> dict[str, Any]:
         LOGGER.debug("# get_rss_configs()")
-        conf: Dict[str, Any] = {}
         if "rss" in self.conf:
-            rss_conf = self.conf["rss"]
+            rss_conf = self.conf.get("rss", {})
             if rss_conf:
                 conf = {
                     "rss_title": Config._get_str_config_value(rss_conf, "title"),
-                    "rss_description": Config._get_str_config_value(rss_conf, "description"),
                     "rss_generator": Config._get_str_config_value(rss_conf, "generator"),
                     "rss_copyright": Config._get_str_config_value(rss_conf, "copyright"),
                     "rss_link": Config._get_str_config_value(rss_conf, "link"),
                     "rss_language": Config._get_str_config_value(rss_conf, "language"),
                     "rss_url_prefix_for_guid": Config._get_str_config_value(rss_conf, "url_prefix_for_guid")
                 }
-        return conf
+                return conf
+
+        raise NotFoundConfigItemError("can't get configuration item 'rss'")
 
 
 class URL:
@@ -538,7 +563,7 @@ class URL:
         return hashlib.md5(content.encode()).hexdigest()[:7]
 
     @staticmethod
-    def encode(url: str) -> str:
+    def encode(url: str) -> Any:
         parsed = urlparse(url)
         quoted_path = quote(parsed.path)
         quoted_query = quote(parsed.query, safe='=')
@@ -557,12 +582,12 @@ class URL:
 class FileManager:
     DATA_IMAGE_PREFIX = "data:image"
     IMAGE_NOT_FOUND_IMAGE = "image-not-found.png"
-    IMAGE_NOT_FOUND_IMAGE_URL = "https://terzeron.com/" + IMAGE_NOT_FOUND_IMAGE
-    IMAGE_DIR_PATH = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "img"
+    IMAGE_NOT_FOUND_IMAGE_URL = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX") + "/" + IMAGE_NOT_FOUND_IMAGE
+    IMAGE_DIR_PATH = Path(Env.get("WEB_SERVICE_IMAGE_DIR_PREFIX"))
 
     @staticmethod
-    def _get_cache_info_common_postfix(img_url: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None) -> str:
-        LOGGER.debug("# get_cache_info_common(img_url='%s'', postfix='%s', index=%r)", img_url[:30], postfix, index)
+    def _get_cache_info_common_postfix(img_url_for_hashing: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None) -> str:
+        LOGGER.debug("# get_cache_info_common(img_url_for_hashing='%s'', postfix='%s', index=%r)", img_url_for_hashing[:30], postfix, index)
 
         # postfix: _pfxstr (valid string)
         postfix_str = ""
@@ -574,37 +599,39 @@ class FileManager:
         if index:
             index_str = "." + str(index)
 
-        if img_url.startswith(("http", "data:image")):
-            return URL.get_short_md5_name(img_url) + postfix_str + index_str
-        return URL.get_short_md5_name(img_url)
+        if img_url_for_hashing.startswith(("http", "data:image")):
+            return URL.get_short_md5_name(img_url_for_hashing) + postfix_str + index_str
+        return URL.get_short_md5_name(img_url_for_hashing)
 
     @staticmethod
-    def get_cache_url(url_prefix: str, img_url: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None, suffix: Optional[str] = None) -> str:
-        LOGGER.debug("# get_cache_url(url_prefix='%s', img_url='%s', postfix=%r, index=%r, suffix=%r)", url_prefix, img_url[:30], postfix, index, suffix)
-        url = url_prefix + "/" + FileManager._get_cache_info_common_postfix(img_url=img_url, postfix=postfix, index=index)
+    def get_cache_url(url_prefix: str, img_url_for_hashing: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None, suffix: Optional[str] = None) -> str:
+        LOGGER.debug("# get_cache_url(url_prefix='%s', img_url_for_hashing='%s', postfix=%r, index=%r, suffix=%r)", url_prefix, img_url_for_hashing[:30], postfix, index, suffix)
+        url = url_prefix + "/" + FileManager._get_cache_info_common_postfix(img_url_for_hashing=img_url_for_hashing, postfix=postfix, index=index)
         if suffix:
             url += suffix
         return url
 
     @staticmethod
-    def get_cache_file_path(path_prefix: Path, img_url: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None, suffix: Optional[str] = None) -> Path:
-        LOGGER.debug("# get_cache_file_path(path_prefix=%r, img_url='%s', postfix='%s', index=%r, suffix=%r)", PathUtil.short_path(path_prefix), img_url[:30], postfix, index, suffix)
-        file_path = path_prefix / FileManager._get_cache_info_common_postfix(img_url=img_url, postfix=postfix, index=index)
+    def get_cache_file_path(path_prefix: Path, img_url_for_hashing: str, postfix: Optional[Union[str, int]] = None, index: Optional[int] = None, suffix: Optional[str] = None) -> Path:
+        LOGGER.debug("# get_cache_file_path(path_prefix=%r, img_url_for_hashing='%s', postfix='%s', index=%r, suffix=%r)", PathUtil.short_path(path_prefix), img_url_for_hashing[:30], postfix, index, suffix)
+        file_path = path_prefix / FileManager._get_cache_info_common_postfix(img_url_for_hashing=img_url_for_hashing, postfix=postfix, index=index)
         if suffix:
             return file_path.with_suffix(file_path.suffix + suffix)
         return file_path
 
     @staticmethod
-    def get_incomplete_image_list(html_file_path) -> List[str]:
+    def get_incomplete_image_list(html_file_path: Path) -> list[str]:
         LOGGER.debug("# get_incomplete_image_list(html_file_path='%s')", PathUtil.short_path(html_file_path))
-        result = []
+        result: list[str] = []
         feed_name = html_file_path.parent.parent.name
         with html_file_path.open("r", encoding="utf-8") as f:
             try:
                 for line in f:
                     if FileManager.IMAGE_NOT_FOUND_IMAGE in line:
                         result.append(FileManager.IMAGE_NOT_FOUND_IMAGE)
-                    m = re.search(r'<img src=[\"\']https?://terzeron\.com/xml/img/[^/]+/(?P<img>\S+)[\"\']', line)
+                    escaped_image_url_prefix = re.sub(r'https', 'https?', Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"))
+                    escaped_image_url_prefix = re.sub(r'\.', '\\.', escaped_image_url_prefix)
+                    m = re.search(r'<img src=[\"\']%s/[^/]+/(?P<img>\S+)[\"\']' % escaped_image_url_prefix, line)
                     if m:
                         # 실제로 다운로드되어 있는지 확인
                         img_file_name = m.group("img")
@@ -633,9 +660,10 @@ class FileManager:
         if html_dir_path.is_dir():
             for html_file_path in html_dir_path.iterdir():
                 if html_file_path.is_file():
-                    if "threshold_to_remove_html_with_incomplete_image" in conf:
+                    threshold_to_remove_html_with_incomplete_image = conf.get("threshold_to_remove_html_with_incomplete_image", 0)
+                    if threshold_to_remove_html_with_incomplete_image >= 0:
                         incomplete_image_list = FileManager.get_incomplete_image_list(html_file_path)
-                        if conf["threshold_to_remove_html_with_incomplete_image"] < len(incomplete_image_list):
+                        if threshold_to_remove_html_with_incomplete_image < len(incomplete_image_list):
                             FileManager.remove_html_file_without_cached_image_files(html_file_path)
 
     @staticmethod
@@ -679,16 +707,16 @@ class FileManager:
         FileManager.remove_temporary_files(feed_dir_path)
 
 class PathUtil:
-    work_dir = Path(os.environ["FM_WORK_DIR"])
-    public_feed_dir = Path(os.environ["WEB_SERVICE_FEEDS_DIR"])
+    work_dir_path = Path(Env.get("FM_WORK_DIR"))
+    public_feed_dir_path = Path(Env.get("WEB_SERVICE_FEED_DIR_PREFIX"))
 
     @staticmethod
     def short_path(path: Optional[Path]) -> str:
         if not path:
             return ""
         ret = str(path)
-        if path.is_relative_to(PathUtil.work_dir):
-            ret = str(path.relative_to(PathUtil.work_dir))
-        elif path.is_relative_to(PathUtil.public_feed_dir):
-            ret = str(path.relative_to(PathUtil.public_feed_dir))
+        if path.is_relative_to(PathUtil.work_dir_path):
+            ret = str(path.relative_to(PathUtil.work_dir_path))
+        elif path.is_relative_to(PathUtil.public_feed_dir_path):
+            ret = str(path.relative_to(PathUtil.public_feed_dir_path))
         return ret

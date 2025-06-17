@@ -10,12 +10,15 @@ from bin.crawler import Method, Crawler, HeadlessBrowser, RequestsClient, print_
 
 
 class CrawlerTest(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         for cookie_file in (HeadlessBrowser.COOKIE_FILE, RequestsClient.COOKIE_FILE):
             if os.path.isfile(cookie_file):
                 os.remove(cookie_file)
 
-    def test_print_usage(self):
+    def tearDown(self) -> None:
+        self.setUp()
+
+    def test_print_usage(self) -> None:
         with patch('sys.stdout', new=StringIO()) as stdout:
             print_usage()
             actual = stdout.getvalue()
@@ -38,7 +41,7 @@ class CrawlerTest(unittest.TestCase):
             m = re.search(r'--retry=', actual)
             self.assertTrue(m)
 
-    def test_get_option_str(self):
+    def test_get_option_str(self) -> None:
         options = {
             "render_js": True,
             "referer": "https://abc.com",
@@ -53,7 +56,7 @@ class CrawlerTest(unittest.TestCase):
         expected = " --render-js=true --copy-images-from-canvas=false --simulate-scrolling=true --user-agent='Firefox' --referer='https://abc.com' --encoding='cp949' --header='Content-Type: application/json; Transfer-Encoding: chunked' --timeout=20"
         self.assertEqual(expected, actual)
 
-    def test_crawler(self):
+    def test_crawler(self) -> None:
         crawler = Crawler()
         self.assertTrue(crawler)
         actual, _, _ = crawler.run("https://m.naver.com")
@@ -69,35 +72,35 @@ class CrawlerTest(unittest.TestCase):
         self.assertEqual("200", actual)
         del crawler
 
-    def test_crawler_without_options(self):
+    def test_crawler_without_options(self) -> None:
         # default parameter
         crawler = Crawler()
         client = crawler.requests_client
         self.assertEqual(1, crawler.num_retries)
-        self.assertEqual(False, crawler.render_js)
+        self.assertFalse(crawler.render_js)
         self.assertEqual(Method.GET, client.method)
         self.assertEqual({"User-Agent": DEFAULT_USER_AGENT}, client.headers)
         self.assertEqual(60, client.timeout)
         self.assertEqual("utf-8", client.encoding)
-        self.assertEqual(True, client.verify_ssl)
+        self.assertTrue(client.verify_ssl)
         del client
         del crawler
 
-    def test_crawler_with_num_retries(self):
+    def test_crawler_with_num_retries(self) -> None:
         crawler = Crawler(num_retries=3)
         self.assertEqual(3, crawler.num_retries)
         del crawler
 
-    def test_crawler_with_render_js(self):
+    def test_crawler_with_render_js(self) -> None:
         crawler = Crawler(render_js=True)
-        self.assertEqual(True, crawler.render_js)
+        self.assertTrue(crawler.render_js)
         del crawler
 
         crawler = Crawler(render_js=False)
-        self.assertEqual(False, crawler.render_js)
+        self.assertFalse(crawler.render_js)
         del crawler
 
-    def test_crawler_with_method(self):
+    def test_crawler_with_method(self) -> None:
         crawler = Crawler(method=Method.GET)
         client = crawler.requests_client
         self.assertEqual(Method.GET, client.method)
@@ -116,7 +119,7 @@ class CrawlerTest(unittest.TestCase):
         del client
         del crawler
 
-    def test_crawler_with_headers(self):
+    def test_crawler_with_headers(self) -> None:
         crawler = Crawler(headers={})
         client = crawler.requests_client
         self.assertEqual({'User-Agent': DEFAULT_USER_AGENT}, client.headers)
@@ -129,14 +132,14 @@ class CrawlerTest(unittest.TestCase):
         del client
         del crawler
 
-    def test_crawler_with_timeout(self):
+    def test_crawler_with_timeout(self) -> None:
         crawler = Crawler(timeout=5)
         client = crawler.requests_client
         self.assertEqual(5, client.timeout)
         del client
         del crawler
 
-    def test_crawler_with_encoding(self):
+    def test_crawler_with_encoding(self) -> None:
         crawler = Crawler(encoding="cp949")
         client = crawler.requests_client
         self.assertEqual("cp949", client.encoding)
@@ -149,23 +152,18 @@ class CrawlerTest(unittest.TestCase):
         del client
         del crawler
 
-    def test_crawler_with_verify_ssl(self):
+    def test_crawler_with_verify_ssl(self) -> None:
         crawler = Crawler(verify_ssl=False)
         client = crawler.requests_client
-        self.assertEqual(False, client.verify_ssl)
+        self.assertFalse(client.verify_ssl)
         del client
         del crawler
 
         crawler = Crawler(verify_ssl=True)
         client = crawler.requests_client
-        self.assertEqual(True, client.verify_ssl)
+        self.assertTrue(client.verify_ssl)
         del client
         del crawler
-
-    def tearDown(self):
-        for cookie_file in (HeadlessBrowser.COOKIE_FILE, RequestsClient.COOKIE_FILE):
-            if os.path.isfile(cookie_file):
-                os.remove(cookie_file)
 
 
 if __name__ == "__main__":

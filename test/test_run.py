@@ -2,22 +2,22 @@
 # -*- coding: utf-8 -*-
 
 
-import os
 import shutil
 import logging.config
 import unittest
-from unittest.mock import patch, call
+from unittest.mock import patch, Mock
 from pathlib import Path
-from typing import Any
 from bin.run import FeedMakerRunner
+from bin.feed_maker_util import Env
+
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
-def assert_in_mock_logger(message: str, mock_logger, do_submatch: bool = False) -> bool:
-    for mock_call in mock_logger.call_args_list:
-        formatted_message = mock_call.args[0] % mock_call.args[1:]
+def assert_in_mock_logger(message: str, mock_logger: Mock, do_submatch: bool = False) -> bool:
+    for mock_call in mock_logger.call_args_list:  # type: ignore
+        formatted_message = mock_call.args[0] % mock_call.args[1:]  # type: ignore
         if do_submatch:
             if message in formatted_message:
                 return True
@@ -34,7 +34,7 @@ class TestFeedMakerRunner(unittest.TestCase):
 
         self.runner = FeedMakerRunner(html_archiving_period=30, list_archiving_period=7)
 
-        self.feed_dir_path = Path(os.environ["FM_WORK_DIR"]) / group_name / feed_name
+        self.feed_dir_path = Path(Env.get("FM_WORK_DIR")) / group_name / feed_name
         self.feed_dir_path.mkdir(exist_ok=True)
 
         self.list_dir_path = self.feed_dir_path / "newlist"
@@ -51,7 +51,7 @@ class TestFeedMakerRunner(unittest.TestCase):
         shutil.rmtree(self.feed_dir_path)
         del self.runner
 
-    def test_make_single_feed(self):
+    def test_make_single_feed(self) -> None:
         # with -c
         options = {"force_collection_opt": "-c"}
         with patch.object(LOGGER, "warning") as mock_warning:
@@ -74,7 +74,7 @@ class TestFeedMakerRunner(unittest.TestCase):
             self.assertTrue(assert_in_mock_logger("Generating rss feed file...", mock_info))
             # self.assertTrue(assert_in_mock_logger("upload success!", mock_info))
 
-    def test_make_all_feeds(self):
+    def test_make_all_feeds(self) -> None:
         with patch.object(LOGGER, "info") as mock_info:
             options = {"num_feeds": 1}
             actual = self.runner.make_all_feeds(options)

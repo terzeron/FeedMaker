@@ -12,7 +12,7 @@ LOGGER = logging.getLogger()
 
 
 class URLTest(unittest.TestCase):
-    def test_get_url_scheme(self):
+    def test_get_url_scheme(self) -> None:
         actual = URL.get_url_scheme("http://www.naver.com/movie/hello/test.nhn?query=test")
         expected = "http"
         self.assertEqual(expected, actual)
@@ -21,7 +21,7 @@ class URLTest(unittest.TestCase):
         expected = "https"
         self.assertEqual(expected, actual)
 
-    def test_get_url_domain(self):
+    def test_get_url_domain(self) -> None:
         actual = URL.get_url_domain("http://www.naver.com/movie/hello/test.nhn?query=test")
         expected = "www.naver.com"
         self.assertEqual(expected, actual)
@@ -38,7 +38,7 @@ class URLTest(unittest.TestCase):
         expected = "naver.com"
         self.assertEqual(expected, actual)
 
-    def test_get_url_path(self):
+    def test_get_url_path(self) -> None:
         actual = URL.get_url_path("http://www.naver.com/movie/hello/test.nhn?query=test")
         expected = "/movie/hello/test.nhn?query=test"
         self.assertEqual(expected, actual)
@@ -51,7 +51,7 @@ class URLTest(unittest.TestCase):
         expected = "/던전-리셋"
         self.assertEqual(expected, actual)
 
-    def test_get_url_prefix(self):
+    def test_get_url_prefix(self) -> None:
         actual = URL.get_url_prefix("http://www.naver.com/movie")
         expected = "http://www.naver.com/"
         self.assertEqual(expected, actual)
@@ -72,7 +72,7 @@ class URLTest(unittest.TestCase):
         expected = "https://tkor.ws/"
         self.assertEqual(expected, actual)
 
-    def test_get_url_except_query(self):
+    def test_get_url_except_query(self) -> None:
         actual = URL.get_url_except_query("http://www.naver.com/movie")
         expected = "http://www.naver.com/movie"
         self.assertEqual(expected, actual)
@@ -101,7 +101,7 @@ class URLTest(unittest.TestCase):
         expected = "https://tkor.ws/던전-리셋"
         self.assertEqual(expected, actual)
 
-    def test_concatenate_url(self):
+    def test_concatenate_url(self) -> None:
         actual = URL.concatenate_url("http://www.naver.com/movie", "/sports")
         expected = "http://www.naver.com/sports"
         self.assertEqual(expected, actual)
@@ -145,10 +145,10 @@ class URLTest(unittest.TestCase):
         expected = "http://www.naver.com/movie/list.nhn?page_no=4"
         self.assertEqual(expected, actual)
 
-    def test_get_short_md5_name(self):
+    def test_get_short_md5_name(self) -> None:
         self.assertEqual(URL.get_short_md5_name("https://terzeron.com"), "b8025d0")
 
-    def test_encode(self):
+    def test_encode(self) -> None:
         self.assertEqual(URL.encode('http://5rs-wc22.com/식극의-소마/post/134225?a=테스트b'), 'http://5rs-wc22.com/%EC%8B%9D%EA%B7%B9%EC%9D%98-%EC%86%8C%EB%A7%88/post/134225?a=%ED%85%8C%EC%8A%A4%ED%8A%B8b')
 
 

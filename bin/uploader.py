@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 
 
-import os
 import sys
 import shutil
 import logging.config
 from pathlib import Path
-from bin.feed_maker_util import Data, PathUtil
+from bin.feed_maker_util import Data, PathUtil, Env
+
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
@@ -17,7 +17,7 @@ class Uploader:
     @staticmethod
     def upload(rss_file_path: Path) -> int:
         LOGGER.debug("# upload(rss_file_path='%s'", PathUtil.short_path(rss_file_path))
-        dir_path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"])
+        public_feed_dir_path = Path(Env.get("WEB_SERVICE_FEED_DIR_PREFIX"))
         old_rss_file_path = rss_file_path.with_suffix(rss_file_path.suffix + ".old")
 
         if rss_file_path.is_file():
@@ -34,7 +34,7 @@ class Uploader:
             LOGGER.error("Error: Upload failed! No new RSS file")
             return -1
 
-        shutil.copy(rss_file_path, dir_path)
+        shutil.copy(rss_file_path, public_feed_dir_path)
         LOGGER.info("upload success!")
         shutil.copy(rss_file_path, old_rss_file_path)
         LOGGER.info("replace old rss file with new rss file")

@@ -41,9 +41,10 @@ export default {
         };
 
         (function(d, s, id){
-          var js, fjs = d.getElementsByTagName(s)[0];
+          const fjs = d.getElementsByTagName(s)[0];
           if (d.getElementById(id)) { return; }
-          js = d.createElement(s); js.id = id;
+          const js = d.createElement(s);
+          js.id = id;
           js.src = "https://connect.facebook.net/en_US/sdk.js";
           js.onload = resolve;
           js.onerror = reject;
@@ -56,7 +57,7 @@ export default {
         scope: 'public_profile, email', // 필요한 권한 지정
       };
       try {
-        const accessToken = await new Promise((resolve, reject) => {
+        return new Promise((resolve, reject) => {
           window.FB.login(function (response) {
             if (response.authResponse) {
               if (response.status === "connected") {
@@ -68,7 +69,6 @@ export default {
             }
           }, loginOptions);
         });
-        return accessToken;
       } catch (error) {
         console.error("Login failed: ", error);
         throw error;
@@ -78,7 +78,7 @@ export default {
       const logoutPromise = () => {
         return new Promise((resolve) => {
           window.FB.getLoginStatus(function (response) {
-            if (response && response.status == 'connected') {
+            if (response && response.status === 'connected') {
               window.FB.logout(function (response) {
                 resolve(response);
               });

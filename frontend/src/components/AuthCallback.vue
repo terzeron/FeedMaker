@@ -7,7 +7,7 @@
 <script>
 export default {
   name: 'AuthCallback',
-  mounted() {
+  mounted: function() {
     // OAuth 인증 후에 이 페이지가 호출됩니다.
     // 여기서 필요한 작업을 수행하고, 사용자의 인증 정보를 처리하세요.
 

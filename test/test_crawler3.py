@@ -8,12 +8,14 @@ from bin.crawler import Crawler, HeadlessBrowser, RequestsClient
 
 
 class CrawlerTest(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         for cookie_file in (HeadlessBrowser.COOKIE_FILE, RequestsClient.COOKIE_FILE):
             if os.path.isfile(cookie_file):
                 os.remove(cookie_file)
+    def tearDown(self) -> None:
+        self.setUp()
 
-    def test_runHeadlessBrowser(self):
+    def test_runHeadlessBrowser(self) -> None:
         url = "https://www.facebook.com/"
         crawler = Crawler(render_js=False)
         actual, _, _ = crawler.run(url)
@@ -26,11 +28,6 @@ class CrawlerTest(unittest.TestCase):
         m = re.search(r'새 계정 만들기', actual)
         self.assertTrue(m)
         del crawler
-
-    def tearDown(self):
-        for cookie_file in (HeadlessBrowser.COOKIE_FILE, RequestsClient.COOKIE_FILE):
-            if os.path.isfile(cookie_file):
-                os.remove(cookie_file)
 
 
 if __name__ == "__main__":

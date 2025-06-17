@@ -2,41 +2,33 @@
 
 
 import sys
-import os
 import re
 import json
 import logging.config
 from pathlib import Path
-from typing import Dict, Any, Optional, Tuple
+from typing import Any
 from bin.crawler import Crawler, Method
-from bin.feed_maker_util import URL
+from bin.feed_maker_util import URL, NotFoundConfigFileError, NotFoundConfigItemError
 
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
-def read_config(site_config_file: str) -> Optional[Dict[str, Any]]:
-    LOGGER.debug(f"# read_config(site_config_file={site_config_file})")
-    with open(site_config_file, "r", encoding="utf-8") as f:
-        config = json.load(f)
+def read_config(site_conf_file_path: Path) -> dict[str, Any]:
+    LOGGER.debug("# read_config(site_conf_file_path='%s')", site_conf_file_path)
+    with site_conf_file_path.open("r", encoding="utf-8") as f:
+        config: dict[str, Any] = json.load(f)
         if config:
             if "url" not in config:
                 print("no url in site config")
-                return None
+                raise NotFoundConfigItemError("can't get configuration item 'url'")
             if "keyword" not in config:
                 print("no keyword in site config")
-                return None
-            if "num_retries" not in config:
-                config["num_retries"] = 1
-            if "encoding" not in config:
-                config["encoding"] = "utf-8"
-            if "headers" not in config:
-                config["headers"] = {}
-            if "timeout" not in config:
-                config["timeout"] = 10
+                raise NotFoundConfigItemError("can't get configuration item 'keyword'")
             return config
-    return None
+
+    raise NotFoundConfigFileError(f"can't find configuration file '{site_conf_file_path}'")
 
 
 def clean_url(url: str, scheme: str = "https", path: str = "") -> str:
@@ -46,44 +38,42 @@ def clean_url(url: str, scheme: str = "https", path: str = "") -> str:
     return url
 
 
-def get_location_recursively(url: str, config: Dict[str, Any]) -> Tuple[str, str]:
+def get_location_recursively(url: str, config: dict[str, Any]) -> tuple[str, str]:
     LOGGER.debug(f"# get_location_recursively(url={url}, config={config})")
-    response = None
-    response_headers = None
-    crawler = Crawler(method=Method.GET, num_retries=config["num_retries"], render_js=config["render_js"], encoding=config["encoding"], headers=config["headers"], timeout=config["timeout"])
+    crawler = Crawler(method=Method.GET, num_retries=config.get("num_retries", 1), render_js=config.get("render_js", False), encoding=config.get("encoding", "utf-8"), headers=config.get("headers", None), timeout=config.get("timeout", 60))
     try:
         response, error, response_headers = crawler.run(url, allow_redirects=False)
         if not response:
             LOGGER.error(error)
+
+        response_size = len(response)
+        new_url = ""
+        LOGGER.debug("response_size=%d, new_url='%s'", response_size, new_url)
+        if response_headers:
+            LOGGER.debug("response_headers=%r", response_headers)
+            if "Location" in response_headers:
+                new_url = response_headers["Location"]
+            elif "location" in response_headers:
+                new_url = response_headers["location"]
+            if new_url:
+                print(f"new_url '{new_url}' from location header")
+
+        del crawler
+
+        if not new_url and response_size > 0:
+            return url, response
+
+        if new_url and response_size == 0:
+            new_url = clean_url(new_url, URL.get_url_scheme(url), URL.get_url_path(url))
+            new_url, response = get_location_recursively(new_url, config)
+
+        return new_url, response
     except Crawler.ReadTimeoutException as e:
         LOGGER.error(e)
         return "", ""
 
-    response_size = len(response)
-    new_url = ""
-    LOGGER.debug("response_size=%d, new_url='%s'", response_size, new_url)
-    if response_headers:
-        LOGGER.debug("response_headers=%r", response_headers)
-        if "Location" in response_headers:
-            new_url = response_headers["Location"]
-        elif "location" in response_headers:
-            new_url = response_headers["location"]
-        if new_url:
-            print(f"new_url '{new_url}' from location header")
 
-    del crawler
-
-    if not new_url and response_size > 0:
-        return url, response
-
-    if new_url and response_size == 0:
-        new_url = clean_url(new_url, URL.get_url_scheme(url), URL.get_url_path(url))
-        new_url, response = get_location_recursively(new_url, config)
-
-    return new_url, response
-
-
-def get(url: str, config: Dict[str, Any]) -> Tuple[bool, str, str]:
+def get(url: str, config: dict[str, Any]) -> tuple[bool, str, str]:
     LOGGER.debug(f"# get(url={url}, config={config})")
     print("getting start")
     new_url, response = get_location_recursively(url, config)
@@ -92,7 +82,8 @@ def get(url: str, config: Dict[str, Any]) -> Tuple[bool, str, str]:
         print("no response")
         return False, "", new_url
 
-    if config["keyword"] not in response:
+    keyword= config.get("keyword", "")
+    if keyword not in response:
         print("no keyword")
         return False, response, ""
 
@@ -101,15 +92,14 @@ def get(url: str, config: Dict[str, Any]) -> Tuple[bool, str, str]:
         return False, response, new_url
 
     print("getting end")
-    #del crawler
     return True, response, new_url
 
 
-def get_new_url(url: str, response: str, new_pattern: str, pre: str, num: int, domain_postfix: str, post: str) -> Tuple[str, int]:
+def get_new_url(*, url: str, response: str, new_pattern: str, pre: str, num: int, domain_postfix: str, post: str) -> tuple[str, int]:
     LOGGER.debug(f"# get_new_url(url='{url}', new_pattern='{new_pattern}', pre='{pre}', num={num}, domain_postfix='{domain_postfix}', post='{post}')")
-    new_url: str = ""
     # try to find similar url
-    url_count_map: Dict[str, int] = {}
+    url_count_map: dict[str, int] = {}
+    new_number = num
 
     matches = re.findall(new_pattern, str(response))
     for match in matches:
@@ -136,7 +126,7 @@ def get_new_url(url: str, response: str, new_pattern: str, pre: str, num: int, d
     return new_url, new_number
 
 
-def get_url_pattern(url: str) -> Tuple[str, str, int, str, str]:
+def get_url_pattern(url: str) -> tuple[str, str, int, str, str]:
     LOGGER.debug(f"# get_url_pattern(url={url})")
     new_pattern: str = ""
     pre: str = ""
@@ -165,17 +155,14 @@ def print_new_url(url: str, new_url: str, new_number: int) -> None:
 
 def main() -> int:
     LOGGER.debug("# main()")
-    new_url = ""
-    site_config_file = "site_config.json"
-    if not os.path.isfile(site_config_file):
+
+    site_conf_file_path = Path.cwd() / "site_config.json"
+    if not site_conf_file_path.is_file():
         print("can't find site config file")
         return -1
 
-    config = read_config(site_config_file)
-    if not config:
-        print(f"can't read configuration file '{site_config_file}'")
-        return -1
-    url = config["url"]
+    config = read_config(site_conf_file_path)
+    url = config.get("url", "")
     print(f"url: {url}")
 
     new_pattern, pre, num, domain_postfix, post = get_url_pattern(url)
@@ -189,7 +176,7 @@ def main() -> int:
             LOGGER.debug(f"num={num}")
             print_new_url(url, new_url, num)
         else:
-            new_url, new_number = get_new_url(url, response, new_pattern, pre, num, domain_postfix, post)
+            new_url, new_number = get_new_url(url=url, response=response, new_pattern=new_pattern, pre=pre, num=num, domain_postfix=domain_postfix, post=post)
             LOGGER.debug(f"new_url={new_url}, new_number={new_number}")
             if new_url:
                 print_new_url(url, new_url, new_number)

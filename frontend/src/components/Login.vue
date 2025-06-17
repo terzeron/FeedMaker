@@ -53,7 +53,7 @@ export default {
   },
   computed: {
     is_logged: function () {
-      return this.$session.get('access_token') != undefined;
+      return this.$session.get('access_token') !== undefined;
     },
     name: function () {
       return this.$session.get('name');
@@ -86,8 +86,8 @@ export default {
         if (this.profile && this.profile['name']) {
           this.$session.set('name', this.profile['name']);
         }
-        const loginAllowedEmailList = this.safeSplit(process.env.VUE_APP_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST, ",");
-        if (this.profile && loginAllowedEmailList.includes(this.profile['email'])) {
+        const loginAllowedEmaillist = this.safeSplit(process.env.VUE_APP_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST, ",");
+        if (this.profile && loginAllowedEmaillist.includes(this.profile['email'])) {
           this.$session.set('is_authorized', true);
           console.log("authorized as " + this.profile['name'] + ' (' + this.profile['email'] + ')');
         }
@@ -103,7 +103,7 @@ export default {
       this.$session.set('name', undefined);
       this.accessToken = null;
 
-      this.$refs.authRef.logout();
+      await this.$refs.authRef.logout();
 
       await this.$router.push('/result');
     },

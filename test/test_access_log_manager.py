@@ -2,87 +2,116 @@
 # -*- coding: utf-8 -*-
 
 
-import os
 import unittest
 import shutil
 import logging.config
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from bin.feed_manager import FeedManager
-from bin.access_log_manager import AccessLogManager
-from bin.db_manager import DBManager
 
+from test.test_common import TestCommon
+from bin.access_log_manager import AccessLogManager
+from bin.db import DB
+from bin.models import FeedInfo
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
 class TestAccessLogManager(unittest.TestCase):
-    def setUp(self) -> None:
-        self.db = DBManager(os.environ["FM_DB_HOST"], int(os.environ["FM_DB_PORT"]), os.environ["MYSQL_DATABASE"], os.environ["MYSQL_USER"], os.environ["MYSQL_PASSWORD"])
-        self.alm = AccessLogManager(self.db)
-        self.fm = FeedManager(self.db)
+    loki_container = None
+    mysql_container = None
 
-        self.test_feed_dir_path = self.alm.work_dir / "my_test_group" / "my_test_feed3"
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.loki_container = TestCommon.prepare_loki_container()
+        cls.mysql_container = TestCommon.prepare_mysql_container()
+        DB.init(TestCommon.get_db_config(cls.mysql_container))
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        TestCommon.dispose_mysql_container(cls.mysql_container)
+        TestCommon.dispose_loki_container(cls.loki_container)
+
+    def setUp(self) -> None:
+        self.loki_url = TestCommon.get_loki_url(self.__class__.loki_container)
+        self.db_config = TestCommon.get_db_config(self.__class__.mysql_container)
+        DB.create_all_tables(self.db_config)
+
+        self.alm = AccessLogManager(loki_url=self.loki_url)
+
+        self.test_feed_dir_path = AccessLogManager.work_dir_path / "my_test_group" / "my_test_feed3"
         self.test_feed_dir_path.mkdir(parents=True, exist_ok=True)
 
-        with self.alm.db.get_connection_and_cursor() as (connection, cursor):
-            self.alm.db.execute(cursor, "DELETE FROM feed_info WHERE feed_name LIKE 'my_test_feed%'")
-            self.alm.db.commit(connection)
-
     def tearDown(self) -> None:
-        with self.alm.db.get_connection_and_cursor() as (connection, cursor):
-            self.alm.db.execute(cursor, "DELETE FROM feed_info WHERE feed_name LIKE 'my_test_feed%'")
-            self.alm.db.commit(connection)
-
-        del self.alm
         shutil.rmtree(self.test_feed_dir_path.parent)
 
-    def test_loki_search(self):
-        access_log_manager = AccessLogManager()
-        start = (datetime.now() + timedelta(days=-1)).strftime("%Y-%m-%dT00:00:00+09:00")
-        end = datetime.now().strftime("%Y-%m-%dT23:59:59+09:00")
-        params = {"query": '{namespace="feedmaker"}', "start": start, "end": end, "limit": 5000, "direction": "forward"}
-        logs, stats = access_log_manager.loki_search(params)
-        self.assertTrue(logs)
-        self.assertTrue(stats)
+        del self.alm
 
-    def test_search(self):
-        access_log_manager = AccessLogManager()
-        date_str = datetime.now().strftime("%Y-%m-%d")
-        accessed_feed_list, viewed_feed_list = access_log_manager.search(date_str)
+        DB.drop_all_tables(self.db_config)
+        del self.db_config
+        del self.loki_url
+
+    def test_loki_search(self) -> None:
+        # from yesterday to today
+        start_dt = datetime.now(timezone.utc) - timedelta(days=1)
+        start_ns = int(
+            start_dt.replace(tzinfo=timezone.utc).timestamp()) * 1_000_000_000 + start_dt.microsecond * 1000
+        end_dt = datetime.now(timezone.utc)
+        end_ns = int(
+            end_dt.replace(tzinfo=timezone.utc).timestamp()) * 1_000_000_000 + end_dt.microsecond * 1000
+        params = {
+            "query": '{namespace="feedmaker"}',
+            "start": start_ns,
+            "end": end_ns,
+            "limit": 5000,
+            "direction": "forward"
+        }
+        logs, stats = self.alm.loki_search(params)
+        self.assertIsNotNone(logs)
+        self.assertGreater(len(logs), 0)
+        self.assertIsNotNone(stats)
+        self.assertGreater(len(stats), 0)
+
+    def test_search(self) -> None:
+        today = date.today()
+        accessed_feed_list, viewed_feed_list = self.alm.search_by_date(today)
         self.assertGreater(len(accessed_feed_list), 0)
         self.assertGreaterEqual(len(viewed_feed_list), 0)
 
-    def test_add_httpd_access_info(self):
-        self.alm.load_all_httpd_access_info(max_num_days=14)
-        feed_name = "navercast"
-
+    def test_add_httpd_access_info(self) -> None:
         # get date from recent log file
-        today = datetime.today()
-        recent_log_file_date_str = ""
+        today = date.today()
+        recent_date: datetime = datetime.now(timezone.utc) - timedelta(days=60)
         for i in range(7):
             specific_date = today - timedelta(days=i)
-            date_str = specific_date.strftime("%Y-%m-%d")
-            accessed_feed_list, viewed_feed_list = self.alm.search(date_str)
+            accessed_feed_list, viewed_feed_list = self.alm.search_by_date(specific_date)
             if accessed_feed_list or viewed_feed_list:
-                recent_log_file_date_str = sorted(accessed_feed_list + viewed_feed_list)[-1][0].strftime("%Y-%m-%d")
+                recent_date = sorted(accessed_feed_list + viewed_feed_list)[-1][0]
                 break
 
         self.alm.add_httpd_access_info()
-        rows = self.db.query("SELECT * FROM feed_info WHERE feed_name = %s", feed_name)
-        self.assertIsNotNone(rows)
-        self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0]["access_date"].strftime("%Y-%m-%d"), recent_log_file_date_str)
 
-    def test_load_all_httpd_access_info(self):
+        with DB.session_ctx() as s:
+            rows = s.query(FeedInfo).all()
+            assert rows is not None
+            self.assertGreaterEqual(len(rows), 1)
+            for row in rows:
+                assert row is not None
+                self.assertIsNotNone(row.feed_name)
+                self.assertTrue(row.http_request)
+                self.assertEqual(row.access_date.date() if row.access_date else None, recent_date.date() if recent_date else None)
+
+    def test_load_all_httpd_access_info(self) -> None:
         self.alm.load_all_httpd_access_info(max_num_days=14)
 
-        row = self.db.query("SELECT * FROM feed_info WHERE http_request = TRUE")
-        self.assertGreater(len(row[0]), 0)
-        if len(row) > 0:
-            self.assertIsNotNone(row[0]["feed_name"])
-            self.assertIsNotNone(row[0]["access_date"])
+        with DB.session_ctx() as s:
+            rows = s.query(FeedInfo).all()
+            assert rows is not None
+            self.assertGreaterEqual(len(rows), 1)
+            for row in rows:
+                assert row is not None
+                self.assertIsNotNone(row.feed_name)
+                self.assertIsNotNone(row.access_date)
 
 
 if __name__ == "__main__":

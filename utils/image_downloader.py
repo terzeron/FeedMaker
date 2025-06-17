@@ -7,10 +7,10 @@ import logging
 from pathlib import Path
 from base64 import b64decode
 from typing import Optional
-import cairosvg
-import pyheif
+import cairosvg # type: ignore[import]
+import pyheif # type: ignore[import]
 from PIL import Image, UnidentifiedImageError
-from bin.feed_maker_util import FileManager
+from bin.feed_maker_util import FileManager, PathUtil, Env
 from bin.crawler import Crawler
 
 
@@ -19,12 +19,12 @@ LOGGER = logging.getLogger(__name__)
 
 class ImageDownloader:
     @staticmethod
-    def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str) -> Optional[Path]:
+    def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str) -> tuple[Optional[Path], Optional[str]]:
         LOGGER.debug(f"Downloading image: {img_url[:30]}")
 
         cache_file_path = FileManager.get_cache_file_path(feed_img_dir_path, img_url)
         if cache_file_path.is_file() and cache_file_path.stat().st_size > 0:
-            return cache_file_path
+            return cache_file_path, FileManager.get_cache_url(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX") + "/" + feed_img_dir_path.name, img_url, suffix=cache_file_path.suffix)
 
         # 데이터 URI (base64) 처리
         m = re.search(r'^data:image/(?P<ext>png|jpeg|jpg);base64,(?P<data>.+)', img_url)
@@ -33,7 +33,7 @@ class ImageDownloader:
             img_file_path = cache_file_path.with_suffix(suffix)
             with open(img_file_path, "wb") as outfile:
                 outfile.write(b64decode(img_data))
-            return img_file_path
+            return img_file_path, FileManager.get_cache_url(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX") + "/" + feed_img_dir_path.name, img_url, suffix=suffix)
 
         # HTTP 다운로드 처리
         if img_url.startswith("http"):
@@ -42,12 +42,18 @@ class ImageDownloader:
                 time.sleep(5)
                 result, _, _ = crawler.run(img_url, download_file=cache_file_path)
                 if not result:
-                    return None
+                    return None, None
 
             # 파일 포맷 확인 및 변환
-            return ImageDownloader.convert_image_format(cache_file_path)
+            new_cache_file_path = ImageDownloader.convert_image_format(cache_file_path)
+            if new_cache_file_path and new_cache_file_path.is_file():
+                suffix = new_cache_file_path.suffix
+                cache_url = FileManager.get_cache_url(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX") + "/" + feed_img_dir_path.name, img_url, suffix=suffix)
+                url_img_short = img_url if not img_url.startswith("data:image") else img_url[:30]
+                LOGGER.debug("%s -> %s / %s", url_img_short, PathUtil.short_path(new_cache_file_path), cache_url)
+                return new_cache_file_path, cache_url
 
-        return None
+        return None, None
 
 
     @staticmethod

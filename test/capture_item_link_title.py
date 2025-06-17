@@ -8,7 +8,7 @@ from bin.feed_maker_util import IO
 
 
 def main() -> int:
-    url_prefix = "http://terms.naver.com/"
+    url_prefix = "https://terms.naver.com/"
     state = 0
 
     num_of_recent_feeds = 30
@@ -27,7 +27,7 @@ def main() -> int:
             m = re.search(r'<a href="/(?P<url>entry\.naver\?[^"]+)"[^>]*>(?P<title>[^<]+)</a>', line)
             if m:
                 url = m.group("url")
-                url = re.sub(r'&amp;', '&', url)
+                url = url.replace('&amp;', '&')
                 title = m.group("title")
                 link = url_prefix + url
                 result_list.append((link, title))

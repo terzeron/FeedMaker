@@ -2,47 +2,62 @@
 # -*- coding: utf-8 -*-
 
 
-import os
 import unittest
 import shutil
 import logging.config
 from pathlib import Path
-from bin.feed_maker_util import header_str
+
+from test.test_common import TestCommon
+from bin.feed_maker_util import header_str, Env
 from bin.feed_maker import FeedMaker
 from bin.html_file_manager import HtmlFileManager
-from bin.db_manager import DBManager
+from bin.db import DB
+from bin.models import HtmlFileInfo
+
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
 class TestHtmlFileManager(unittest.TestCase):
+    mysql_container = None
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.mysql_container = TestCommon.prepare_mysql_container()
+        DB.init(TestCommon.get_db_config(cls.mysql_container))
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        TestCommon.dispose_mysql_container(cls.mysql_container)
+
     def setUp(self) -> None:
-        db = DBManager(os.environ["FM_DB_HOST"], int(os.environ["FM_DB_PORT"]), os.environ["MYSQL_DATABASE"], os.environ["MYSQL_USER"], os.environ["MYSQL_PASSWORD"])
-        self.hfm = HtmlFileManager(db)
+        self.db_config = TestCommon.get_db_config(self.__class__.mysql_container)
+        DB.create_all_tables(self.db_config)
 
-        self.test_feed_dir_path = self.hfm.work_dir / "my_test_group" / "my_test_feed4"
+        self.hfm = HtmlFileManager()
+
+        self.test_feed_dir_path = self.hfm.work_dir_path / "my_test_group" / "my_test_feed4"
         self.test_feed_dir_path.mkdir(parents=True, exist_ok=True)
-
-        with self.hfm.db.get_connection_and_cursor() as (connection, cursor):
-            self.hfm.db.execute(cursor, "DELETE FROM html_file_info WHERE file_path LIKE 'my_test_group/my_test_feed%/%'")
-            self.hfm.db.commit(connection)
+        self.test_feed_name = self.test_feed_dir_path.name
+        self.test_rss_file_name = f"{self.test_feed_name}.xml"
+        self.img_tag_str_len = FeedMaker.get_size_of_template_with_image_tag(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"), self.test_rss_file_name)
 
     def tearDown(self) -> None:
-        with self.hfm.db.get_connection_and_cursor() as (connection, cursor):
-            self.hfm.db.execute(cursor, "DELETE FROM html_file_info WHERE file_path LIKE 'my_test_group/my_test_feed%/%'")
-            self.hfm.db.commit(connection)
-
-        del self.hfm
         shutil.rmtree(self.test_feed_dir_path.parent)
 
-    def test_get_html_file_name(self):
+        del self.hfm
+
+        DB.drop_all_tables(self.db_config)
+        del self.db_config
+
+    def test_get_html_file_name(self) -> None:
         expected = "my_test_feed4/html/31d4598.html"
         actual = self.hfm.get_html_file_name(self.test_feed_dir_path / "html" / "31d4598.html")
         self.assertEqual(expected, actual)
 
-    def test_get_html_file_size_map(self):
-        result = self.hfm.get_html_file_size_map()
+    def test_get_html_file_size_map(self) -> None:
+        result = self.hfm.get_html_file_size_map(self.test_feed_name)
         for _, html_file_info in result.items():
             self.assertIn("file_name", html_file_info)
             self.assertIn("file_path", html_file_info)
@@ -50,7 +65,7 @@ class TestHtmlFileManager(unittest.TestCase):
             self.assertIn("size", html_file_info)
             self.assertIn("update_date", html_file_info)
 
-    def test_get_html_file_with_many_image_tag_map(self):
+    def test_get_html_file_with_many_image_tag_map(self) -> None:
         result = self.hfm.get_html_file_with_many_image_tag_map()
         for _, html_file_info in result.items():
             self.assertIn("file_name", html_file_info)
@@ -58,7 +73,7 @@ class TestHtmlFileManager(unittest.TestCase):
             self.assertIn("feed_dir_path", html_file_info)
             self.assertIn("count", html_file_info)
 
-    def test_get_html_file_without_image_tag_map(self):
+    def test_get_html_file_without_image_tag_map(self) -> None:
         result = self.hfm.get_html_file_without_image_tag_map()
         for _, html_file_info in result.items():
             self.assertIn("file_name", html_file_info)
@@ -66,7 +81,7 @@ class TestHtmlFileManager(unittest.TestCase):
             self.assertIn("feed_dir_path", html_file_info)
             self.assertIn("count", html_file_info)
 
-    def test_get_html_file_image_not_found_map(self):
+    def test_get_html_file_image_not_found_map(self) -> None:
         result = self.hfm.get_html_file_image_not_found_map()
         for _, html_file_info in result.items():
             self.assertIn("file_name", html_file_info)
@@ -74,23 +89,17 @@ class TestHtmlFileManager(unittest.TestCase):
             self.assertIn("feed_dir_path", html_file_info)
             self.assertIn("count", html_file_info)
 
-    @staticmethod
-    def _prepare_fixture_for_html_files(html_dir_path: Path):
+    def _prepare_fixture_for_html_files(self, html_dir_path: Path) -> None:
         # small html file: fc68456.html
-        small_html_path = html_dir_path / "fc68456.html"
+        small_file = "fc68456.html"
+        small_html_path = html_dir_path / small_file
         with small_html_path.open("w", encoding="utf-8") as f:
             f.write("<div><p>hello</p></div>" * 2)
-            f.write(FeedMaker.get_image_tag_str("https://terzeron.com", "my_test_feed4.xml", "https://torrentsee154.com/topic/264735"))
-
-        # big html file: 5d55cb3.html
-        big_html_path = html_dir_path / "5d55cb3.html"
-        with big_html_path.open("w", encoding="utf-8") as f:
-            f.write(header_str)
-            f.write("<div><p>hello</p></div>" * 1000)
-            f.write(FeedMaker.get_image_tag_str("https://terzeron.com", "my_test_feed4.xml", "https://torrentsee154.com/topic/264741"))
+            f.write(FeedMaker.get_image_tag_str(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"), self.test_rss_file_name, "https://torrentsee154.com/topic/264735"))
 
         # html file with many image tags: 8a9aa6d.html
-        many_image_tag_html_path = html_dir_path / "8a9aa6d.html"
+        with_many_tags_file = "8a9aa6d.html"
+        many_image_tag_html_path = html_dir_path / with_many_tags_file
         with many_image_tag_html_path.open("w", encoding="utf-8") as f:
             f.write(header_str)
             f.write('''
@@ -99,12 +108,15 @@ class TestHtmlFileManager(unittest.TestCase):
 <a href='https://torrentmode28.com/ani/2338'><i></i><span>다음</span></a>
 <a href='https://torrentmode28.com/ani'><i></i><span>목록</span></a>
 </div>
-<img src='https://terzeron.com/img/1x1.jpg?feed=torrentmode.xml&item=8a9aa6d'/>
-<img src='https://terzeron.com/img/1x1.jpg?feed=torrentmode.xml&item=8a9aa6d'/>
             ''')
+            f.write(FeedMaker.get_image_tag_str(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"), self.test_rss_file_name, "https://torrentsee154.com/topic/264741") + "\n")
+            f.write(FeedMaker.get_image_tag_str(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"), self.test_rss_file_name, "https://torrentsee154.com/topic/264741") + "\n")
+            f.write(FeedMaker.get_image_tag_str(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"), self.test_rss_file_name, "https://torrentsee154.com/topic/264741") + "\n")
+
 
         # html file without image tag: dc938b8.html
-        no_image_tag_html_path = html_dir_path / "dc938b8.html"
+        without_tags_file = "dc938b8.html"
+        no_image_tag_html_path = html_dir_path / without_tags_file
         with no_image_tag_html_path.open("w", encoding="utf-8") as f:
             f.write(header_str)
             f.write('''
@@ -117,183 +129,157 @@ class TestHtmlFileManager(unittest.TestCase):
             ''')
 
         # html file with image-not-found.png: 7c9aa6d.html
-        image_not_found_html_path = html_dir_path / "7c9aa6d.html"
+        with_not_found_file = "7c9aa6d.html"
+        image_not_found_html_path = html_dir_path / with_not_found_file
+
         with image_not_found_html_path.open("w", encoding="utf-8") as f:
             f.write(header_str)
             f.write('''
-<img src='https://terzeron.com/image-not-found.png' alt='not exist or size 0'/>
-<img src='https://terzeron.com/image-not-found.png' alt='not exist or size 0'/>
-<img src='https://terzeron.com/image-not-found.png' alt='not exist or size 0'/>
-<img src='https://terzeron.com/img/1x1.jpg?feed=torrentmode.xml&item=7c9aa6d'/>
-            ''')
+<img src='%s/image-not-found.png' alt='not exist or size 0'/>
+<img src='%s/image-not-found.png' alt='not exist or size 0'/>
+<img src='%s/image-not-found.png' alt='not exist or size 0'/>
+            ''' % (Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"), Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"), Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")))
+            f.write(FeedMaker.get_image_tag_str(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"), self.test_rss_file_name, "https://torrentsee154.com/topic/264741"))
 
-    def test_add_and_remove_html_file_info_in_path_1(self):
+    def test_add_and_remove_html_file_info_in_path_with_small_size(self) -> None:
         html_dir_path = self.test_feed_dir_path / "html"
-        print(html_dir_path)
         html_dir_path.mkdir(parents=True, exist_ok=True)
 
-        TestHtmlFileManager._prepare_fixture_for_html_files(html_dir_path)
+        self._prepare_fixture_for_html_files(html_dir_path)
 
-        row11 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_with_many_image_tag > 0")
-        row21 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_without_image_tag > 0")
-        row31 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_with_image_not_found > 0")
-        row41 = self.hfm.db.query("SELECT * FROM html_file_info WHERE size > 124 AND size < 434")
+        with DB.session_ctx() as s:
+            rows1 = s.query(HtmlFileInfo).where(HtmlFileInfo.size < self.img_tag_str_len).all()
+            assert rows1 is not None
 
         self.hfm.add_html_file(self.test_feed_dir_path)
 
-        row12 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_with_many_image_tag > 0")
-        row22 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_without_image_tag > 0")
-        row32 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_with_image_not_found > 0")
-        row42 = self.hfm.db.query("SELECT * FROM html_file_info WHERE size > 124 AND size < 434")
-
-        self.assertEqual(len(row11) + 1, len(row12))
-        self.assertEqual(len(row21) + 1, len(row22))
-        self.assertEqual(len(row31) + 1, len(row32))
-        self.assertEqual(len(row41) + 1, len(row42))
+        with DB.session_ctx() as s:
+            rows2 = s.query(HtmlFileInfo).where(HtmlFileInfo.size < self.img_tag_str_len).all()
+            assert rows2 is not None
+            self.assertEqual(len(rows1) + 1, len(rows2))
 
         self.hfm.remove_html_file_in_path_from_info("feed_dir_path", self.test_feed_dir_path)
 
-        row13 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_with_many_image_tag > 0")
-        row23 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_without_image_tag > 0")
-        row33 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_with_image_not_found > 0")
-        row43 = self.hfm.db.query("SELECT * FROM html_file_info WHERE size > 124 AND size < 434")
+        with DB.session_ctx() as s:
+            rows3 = s.query(HtmlFileInfo).where(HtmlFileInfo.size < self.img_tag_str_len).all()
+            assert rows3 is not None
+            self.assertEqual(len(rows2) - 1, len(rows3))
 
-        # all the records have been deleted by remove_html_file_in_path_from_info("feed_dir_path")
-        self.assertEqual(len(row12) - 1, len(row13))
-        self.assertEqual(len(row22) - 1, len(row23))
-        self.assertEqual(len(row32) - 1, len(row33))
-        self.assertEqual(len(row42) - 1, len(row43))
-
-    def test_add_and_remove_html_file_info_in_path_2(self):
+    def test_add_and_remove_html_file_info_in_path_with_many_tags(self) -> None:
         html_dir_path = self.test_feed_dir_path / "html"
         html_dir_path.mkdir(parents=True, exist_ok=True)
 
-        TestHtmlFileManager._prepare_fixture_for_html_files(html_dir_path)
+        self._prepare_fixture_for_html_files(html_dir_path)
 
-        row11 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_with_many_image_tag > 0")
-        row21 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_without_image_tag > 0")
-        row31 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_with_image_not_found > 0")
-        row41 = self.hfm.db.query("SELECT * FROM html_file_info WHERE size > 124 AND size < 434")
+        with DB.session_ctx() as s:
+            rows1 = s.query(HtmlFileInfo).where(HtmlFileInfo.count_with_many_image_tag > 0).all()
+            assert rows1 is not None
 
         self.hfm.add_html_file(self.test_feed_dir_path)
 
-        row12 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_with_many_image_tag > 0")
-        row22 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_without_image_tag > 0")
-        row32 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_with_image_not_found > 0")
-        row42 = self.hfm.db.query("SELECT * FROM html_file_info WHERE size > 124 AND size < 434")
+        with DB.session_ctx() as s:
+            rows2 = s.query(HtmlFileInfo).where(HtmlFileInfo.count_with_many_image_tag > 0).all()
+            assert rows2 is not None
+            self.assertEqual(len(rows1) + 1, len(rows2))
 
-        self.assertEqual(len(row11) + 1, len(row12))
-        self.assertEqual(len(row21) + 1, len(row22))
-        self.assertEqual(len(row31) + 1, len(row32))
-        self.assertEqual(len(row41) + 1, len(row42))
+        self.hfm.remove_html_file_in_path_from_info("feed_dir_path", self.test_feed_dir_path)
 
-    def test_add_and_remove_html_file_info_in_path_3(self):
+        with DB.session_ctx() as s:
+            rows3 = s.query(HtmlFileInfo).where(HtmlFileInfo.count_with_many_image_tag > 0).all()
+            assert rows3 is not None
+            self.assertEqual(len(rows2) - 1, len(rows3))
+
+    def test_add_and_remove_html_file_info_in_path_without_tags(self) -> None:
         html_dir_path = self.test_feed_dir_path / "html"
         html_dir_path.mkdir(parents=True, exist_ok=True)
 
-        TestHtmlFileManager._prepare_fixture_for_html_files(html_dir_path)
+        self._prepare_fixture_for_html_files(html_dir_path)
 
-        row1 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_with_many_image_tag > 0")
-        self.assertEqual(0, len(row1))
+        with DB.session_ctx() as s:
+            rows1 = s.query(HtmlFileInfo).where(HtmlFileInfo.count_without_image_tag > 0).all()
+            assert rows1 is not None
 
         self.hfm.add_html_file(self.test_feed_dir_path)
-        row2 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_with_many_image_tag > 0")
-        self.assertEqual(1, len(row2))
 
-        self.hfm.remove_html_file_in_path_from_info("file_path", html_dir_path / "8a9aa6d.html")
-        row3 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_with_many_image_tag > 0")
-        self.assertEqual(0, len(row3))
+        with DB.session_ctx() as s:
+            rows2 = s.query(HtmlFileInfo).where(HtmlFileInfo.count_without_image_tag > 0).all()
+            assert rows2 is not None
+            self.assertEqual(len(rows1) + 1, len(rows2))
 
-    def test_add_and_remove_html_file_info_in_path_4(self):
+        self.hfm.remove_html_file_in_path_from_info("feed_dir_path", self.test_feed_dir_path)
+
+        with DB.session_ctx() as s:
+            rows3 = s.query(HtmlFileInfo).where(HtmlFileInfo.count_without_image_tag > 0).all()
+            assert rows3 is not None
+            self.assertEqual(len(rows2) - 1, len(rows3))
+
+    def test_add_and_remove_html_file_info_in_path_with_not_found(self) -> None:
         html_dir_path = self.test_feed_dir_path / "html"
         html_dir_path.mkdir(parents=True, exist_ok=True)
 
-        TestHtmlFileManager._prepare_fixture_for_html_files(html_dir_path)
+        self._prepare_fixture_for_html_files(html_dir_path)
 
-        row1 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_without_image_tag > 0")
-
-        self.hfm.add_html_file(self.test_feed_dir_path)
-        row2 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_without_image_tag > 0")
-        self.assertEqual(len(row1) + 1, len(row2))
-
-        self.hfm.remove_html_file_in_path_from_info("file_path", html_dir_path / "dc938b8.html")
-        row3 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_without_image_tag > 0")
-        self.assertEqual(len(row3), len(row1))
-
-        self.hfm.remove_html_file_in_path_from_info("file_path", html_dir_path / "7c9aa6d.html")
-        row4 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_without_image_tag > 0")
-        self.assertEqual(len(row4), len(row1))
-
-    def test_add_and_remove_html_file_info_in_path_5(self):
-        html_dir_path = self.test_feed_dir_path / "html"
-        html_dir_path.mkdir(parents=True, exist_ok=True)
-
-        TestHtmlFileManager._prepare_fixture_for_html_files(html_dir_path)
-
-        row1 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_with_image_not_found > 0")
+        with DB.session_ctx() as s:
+            rows1 = s.query(HtmlFileInfo).where(HtmlFileInfo.count_with_image_not_found > 0).all()
+            assert rows1 is not None
 
         self.hfm.add_html_file(self.test_feed_dir_path)
 
-        row2 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_with_image_not_found > 0")
-        self.assertEqual(len(row1) + 1, len(row2))
+        with DB.session_ctx() as s:
+            rows2 = s.query(HtmlFileInfo).where(HtmlFileInfo.count_with_image_not_found > 0).all()
+            assert rows2 is not None
+            self.assertEqual(len(rows1) + 1, len(rows2))
 
-        self.hfm.remove_html_file_in_path_from_info("file_path", html_dir_path / "7c9aa6d.html")
+        self.hfm.remove_html_file_in_path_from_info("feed_dir_path", self.test_feed_dir_path)
 
-        row3 = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_with_image_not_found > 0")
-        self.assertEqual(len(row2) - 1, len(row3))
+        with DB.session_ctx() as s:
+            rows3 = s.query(HtmlFileInfo).where(HtmlFileInfo.count_with_image_not_found > 0).all()
+            assert rows3 is not None
+            self.assertEqual(len(rows2) - 1, len(rows3))
 
-    def test_add_and_remove_html_file_info_in_path_6(self):
-        html_dir_path = self.test_feed_dir_path / "html"
-        html_dir_path.mkdir(parents=True, exist_ok=True)
-
-        TestHtmlFileManager._prepare_fixture_for_html_files(html_dir_path)
-
-        row46 = self.hfm.db.query("SELECT * FROM html_file_info WHERE size > 124 AND size < 434")
-        self.assertEqual(0, len(row46))
-
-        self.hfm.add_html_file(self.test_feed_dir_path)
-        row47 = self.hfm.db.query("SELECT * FROM html_file_info WHERE size > 124 AND size < 434")
-        self.assertEqual(1, len(row47))
-
-        self.hfm.remove_html_file_in_path_from_info("file_path", html_dir_path / "fc68456.html")
-        row48 = self.hfm.db.query("SELECT * FROM html_file_info WHERE size > 124 AND size < 434")
-        self.assertEqual(0, len(row48))
-
-    def test_load_all_html_files(self):
+    def test_load_all_html_files(self) -> None:
         self.hfm.load_all_html_files(max_num_feeds=20)
 
-        row = self.hfm.db.query("SELECT * FROM html_file_info WHERE size > 124 AND size < 434")
-        self.assertGreaterEqual(len(row), 0)
-        if len(row) > 0:
-            self.assertIsNotNone(row[0]["file_name"])
-            self.assertIsNotNone(row[0]["file_path"])
-            self.assertIsNotNone(row[0]["feed_dir_path"])
-            self.assertGreater(row[0]["size"], 0)
-            self.assertIsNotNone(row[0]["update_date"])
+        with DB.session_ctx() as s:
+            rows = s.query(HtmlFileInfo).where(HtmlFileInfo.size < self.img_tag_str_len).all()
+            assert rows is not None
+            self.assertGreaterEqual(len(rows), 0)
+            for row in rows:
+                assert row is not None
+                self.assertIsNotNone(row.file_name)
+                self.assertIsNotNone(row.file_path)
+                self.assertIsNotNone(row.feed_dir_path)
+                self.assertIsNotNone(row.update_date)
 
-        row = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_with_many_image_tag > 0")
-        self.assertGreaterEqual(len(row), 0)
-        if len(row) > 0:
-            self.assertIsNotNone(row[0]["file_name"])
-            self.assertIsNotNone(row[0]["file_path"])
-            self.assertIsNotNone(row[0]["feed_dir_path"])
-            self.assertGreater(row[0]["count_with_many_image_tag"], 0)
+            rows = s.query(HtmlFileInfo).where(HtmlFileInfo.count_with_many_image_tag > 0).all()
+            assert rows is not None
+            self.assertGreaterEqual(len(rows), 0)
+            for row in rows:
+                assert row is not None
+                self.assertIsNotNone(row.file_name)
+                self.assertIsNotNone(row.file_path)
+                self.assertIsNotNone(row.feed_dir_path)
+                self.assertGreater(row.count_with_many_image_tag, 0)
 
-        row = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_without_image_tag > 0")
-        self.assertGreaterEqual(len(row), 0)
-        if len(row) > 0:
-            self.assertIsNotNone(row[0]["file_name"])
-            self.assertIsNotNone(row[0]["file_path"])
-            self.assertIsNotNone(row[0]["feed_dir_path"])
-            self.assertGreaterEqual(row[0]["count_without_image_tag"], 0)
+            rows = s.query(HtmlFileInfo).where(HtmlFileInfo.count_without_image_tag > 0).all()
+            assert rows is not None
+            self.assertGreaterEqual(len(rows), 0)
+            for row in rows:
+                assert row is not None
+                self.assertIsNotNone(row.file_name)
+                self.assertIsNotNone(row.file_path)
+                self.assertIsNotNone(row.feed_dir_path)
+                self.assertGreaterEqual(row.count_without_image_tag, 0)
 
-        row = self.hfm.db.query("SELECT * FROM html_file_info WHERE count_with_image_not_found > 0")
-        self.assertGreaterEqual(len(row), 0)
-        if len(row) > 0:
-            self.assertIsNotNone(row[0]["file_name"])
-            self.assertIsNotNone(row[0]["file_path"])
-            self.assertIsNotNone(row[0]["feed_dir_path"])
-            self.assertGreaterEqual(row[0]["count_with_image_not_found"], 0)
+            rows = s.query(HtmlFileInfo).where(HtmlFileInfo.count_with_image_not_found > 0).all()
+            assert rows is not None
+            self.assertGreaterEqual(len(rows), 0)
+            for row in rows:
+                assert row is not None
+                self.assertIsNotNone(row.file_name)
+                self.assertIsNotNone(row.file_path)
+                self.assertIsNotNone(row.feed_dir_path)
+                self.assertGreaterEqual(row.count_with_image_not_found, 0)
 
 
 if __name__ == "__main__":

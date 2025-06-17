@@ -14,7 +14,7 @@ LOGGER = logging.getLogger()
 
 
 class ProcessTest(unittest.TestCase):
-    def test_replace_script_path(self):
+    def test_replace_script_path(self) -> None:
         cmd = "shuf"
         # OS마다 shuf가 설치된 경로가 다를 수 있음
         real_program_path = which("shuf")
@@ -121,39 +121,39 @@ class ProcessTest(unittest.TestCase):
         actual = Process._replace_script_path(cmd, Path("/no_such_a_dir/workspace/fma/naver/naverwebtoon"))
         self.assertIsNone(actual)
 
-    def test_exec_cmd(self):
+    def test_exec_cmd(self) -> None:
         valid_cmd = "ls test_feed_maker_util_datetime.py"
         actual, error = Process.exec_cmd(valid_cmd)
         self.assertTrue(actual)
         self.assertEqual(error, "")
-        self.assertTrue("test_feed_maker_util_datetime.py" in actual)
+        self.assertIn("test_feed_maker_util_datetime.py", actual)
 
         invalid_cmd = "ls non_existent_file"
         actual, error = Process.exec_cmd(invalid_cmd)
         self.assertFalse(actual)
-        self.assertTrue("No such file or directory" in error)
+        self.assertIn("No such file or directory", error)
 
         invalid_cmd = "lslslsls non_existent_file"
         actual, error = Process.exec_cmd(invalid_cmd)
         self.assertFalse(actual)
-        self.assertTrue("Error in getting path of executable" in error)
+        self.assertIn("Error in getting path of executable", error)
 
         bidirectional_cmd = "cat"
         input_str = "hello world"
         actual, error = Process.exec_cmd(bidirectional_cmd, input_data=input_str)
         self.assertTrue(actual)
         self.assertEqual(error, "")
-        self.assertTrue("hello world" in actual)
+        self.assertIn("hello world", actual)
 
-    def test_find_process_group_and_kill_process_group(self):
-        with subprocess.Popen(["sleep", "20"]):
-            actual = len(Process._find_process_group(r"sleep 20"))
+    def test_find_process_group_and_kill_process_group(self) -> None:
+        with subprocess.Popen(["sleep", "5"]):
+            actual = len(Process._find_process_list(r"sleep 5"))
             expected = 1
-            self.assertGreaterEqual(expected, actual)
+            self.assertEqual(expected, actual)
 
-            actual = Process.kill_process_group(r"sleep 20")
+            actual = Process.kill_process_group(r"sleep 5")
             expected = 1
-            self.assertGreaterEqual(expected, actual)
+            self.assertEqual(expected, actual)
 
 
 if __name__ == "__main__":

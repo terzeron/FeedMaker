@@ -45,7 +45,7 @@
           </b-thead>
           <b-tbody>
             <b-tr
-                v-for="item in searchResultList"
+                v-for="item in searchResultlist"
                 :key="item.url">
               <b-td>{{ item.title }}</b-td>
               <b-td>
@@ -81,7 +81,7 @@ export default {
     return {
       showSearchResult: false,
       searchKeyword: '',
-      searchResultList: [],
+      searchResultlist: [],
     };
   },
   computed: {},
@@ -113,7 +113,7 @@ export default {
                 if (res.data.status === 'failure') {
                   this.alert(res.data.message);
                 } else {
-                  this.searchResultList = res.data['search_result_list'].map(o => {
+                  this.searchResultlist = res.data['search_result_list'].map(o => {
                     o['title'] = o[0];
                     o['url'] = o[1];
                     return o;

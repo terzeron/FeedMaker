@@ -1,23 +1,22 @@
 #!/usr/bin/env python
 
 
-import os
 import shutil
 import logging.config
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import unittest
-from unittest.mock import patch, call
-from typing import Any
+from unittest.mock import patch, Mock
 from xml.dom.minidom import parse
 from bin.feed_maker import FeedMaker
-from bin.feed_maker_util import Config, Datetime, PathUtil, header_str
+from bin.feed_maker_util import Config, Datetime, PathUtil, Env, header_str
+
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
-def assert_in_mock_logger(message: str, mock_logger, do_submatch: bool = False) -> bool:
+def assert_in_mock_logger(message: str, mock_logger: Mock, do_submatch: bool = False) -> bool:
     for mock_call in mock_logger.call_args_list:
         formatted_message = mock_call.args[0] % mock_call.args[1:]
         if do_submatch:
@@ -33,7 +32,7 @@ class TestFeedMaker(unittest.TestCase):
     def setUp(self) -> None:
         group_name = "naver"
         feed_name = "certain_webtoon"
-        self.feed_dir_path = Path(os.environ["FM_WORK_DIR"]) / group_name / feed_name
+        self.feed_dir_path = Path(Env.get("FM_WORK_DIR")) / group_name / feed_name
         self.feed_dir_path.mkdir(exist_ok=True)
         self.rss_file_path = self.feed_dir_path / f"{feed_name}.xml"
         self.rss_file_path.touch()
@@ -43,7 +42,7 @@ class TestFeedMaker(unittest.TestCase):
         self.conf_file_path = self.feed_dir_path / "conf.json"
         shutil.copy(self.sample_conf_file_path, self.conf_file_path)
 
-        self.maker = FeedMaker(self.feed_dir_path, do_collect_by_force=False, do_collect_only=False, rss_file_path=self.rss_file_path)
+        self.maker = FeedMaker(feed_dir_path=self.feed_dir_path, do_collect_by_force=False, do_collect_only=False, rss_file_path=self.rss_file_path)
         self.config = Config(feed_dir_path=self.feed_dir_path)
         if not self.config:
             self.fail()
@@ -58,7 +57,7 @@ class TestFeedMaker(unittest.TestCase):
         self.list_dir_path.mkdir(exist_ok=True)
         date1_str = Datetime.get_short_date_str()
         self.list_file1_path = self.list_dir_path / f"{date1_str}.txt"
-        date2_str = Datetime.get_short_date_str(datetime.now() - timedelta(days=1))
+        date2_str = Datetime.get_short_date_str(datetime.now(timezone.utc) - timedelta(days=1))
         self.list_file2_path = self.list_dir_path / f"{date2_str}.txt"
         with self.list_file2_path.open("w", encoding="utf-8") as outfile:
             outfile.write("https://comic.naver.com/webtoon/detail?titleId=725586&no=136\t136화\n")
@@ -67,14 +66,17 @@ class TestFeedMaker(unittest.TestCase):
         self.html_dir_path.mkdir(exist_ok=True)
         md5_name = "3e1c485"
         self.html_file1_path = self.html_dir_path / f"{md5_name}.html"
+        img_url_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
         with self.html_file1_path.open("w", encoding="utf-8") as outfile:
-            outfile.write(f"<div>with image tag string</div>\n<img src='{os.environ['WEB_SERVICE_URL']}/img/1x1.jpg?feed=certain_webtoon.xml&item={md5_name}'/>\n")
+            outfile.write(header_str)
+            outfile.write(f"<div>with image tag string</div>\n<img src='{img_url_prefix}/1x1.jpg?feed=certain_webtoon.xml&item={md5_name}'/>\n")
         md5_name = "8da6dfb"
         self.html_file2_path = self.html_dir_path / f"{md5_name}.html"
         with self.html_file2_path.open("w", encoding="utf-8") as outfile:
+            outfile.write(header_str)
             outfile.write("<div>without image tag string</div>\n")
 
-        self.feed_img_dir_path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "img" / feed_name
+        self.feed_img_dir_path = Path(Env.get("WEB_SERVICE_IMAGE_DIR_PREFIX")) / feed_name
         self.feed_img_dir_path.mkdir(exist_ok=True)
 
     def tearDown(self) -> None:
@@ -93,28 +95,31 @@ class TestFeedMaker(unittest.TestCase):
         self.rss_file_path.unlink(missing_ok=True)
         shutil.rmtree(self.feed_dir_path)
 
-    def test_get_image_tag_str(self):
-        actual = FeedMaker.get_image_tag_str(os.environ["WEB_SERVICE_URL"], self.rss_file_path.name, self.item1_url)
-        expected = "<img src='%s/img/1x1.jpg?feed=certain_webtoon.xml&item=3e1c485'/>" % os.environ["WEB_SERVICE_URL"]
+    def test_get_image_tag_str(self) -> None:
+        img_url_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
+        actual = FeedMaker.get_image_tag_str(img_url_prefix, self.rss_file_path.name, self.item1_url)
+        expected = f"<img src='{img_url_prefix}/1x1.jpg?feed=certain_webtoon.xml&item=3e1c485'/>"
         self.assertEqual(expected, actual)
 
-    def test_get_size_of_template_with_image_tag(self):
-        expected = len(header_str) + len("\n") + len(FeedMaker.get_image_tag_str(os.environ["WEB_SERVICE_URL"], self.rss_file_path.name)) + len("\n")
+    def test_get_size_of_template_with_image_tag(self) -> None:
+        img_url_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
+        expected = len(header_str) + len("\n") + len(FeedMaker.get_image_tag_str(img_url_prefix, self.rss_file_path.name)) + len("\n")
 
-        actual1 = FeedMaker.get_size_of_template_with_image_tag(os.environ["WEB_SERVICE_URL"], self.rss_file_path.name)
+        actual1 = FeedMaker.get_size_of_template_with_image_tag(img_url_prefix, self.rss_file_path.name)
         self.assertEqual(expected, actual1)
 
-        actual2 = len(header_str + "\n" + FeedMaker.get_image_tag_str(os.environ["WEB_SERVICE_URL"], self.rss_file_path.name) + "\n")
+        actual2 = len(header_str + "\n" + FeedMaker.get_image_tag_str(img_url_prefix, self.rss_file_path.name) + "\n")
         self.assertEqual(expected, actual2)
 
-    def test_is_image_tag_in_html_file(self):
-        image_tag_str = FeedMaker.get_image_tag_str(os.environ["WEB_SERVICE_URL"], self.rss_file_path.name, self.item1_url)
+    def test_is_image_tag_in_html_file(self) -> None:
+        img_url_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
+        image_tag_str = FeedMaker.get_image_tag_str(img_url_prefix, self.rss_file_path.name, self.item1_url)
         actual = FeedMaker._is_image_tag_in_html_file(self.html_file1_path, image_tag_str)
-        expected = True
-        self.assertEqual(expected, actual)
+        self.assertTrue(actual)
 
-    def test_append_image_tag_to_html_file(self):
-        img_tag_str = FeedMaker.get_image_tag_str(os.environ["WEB_SERVICE_URL"], self.rss_file_path.name, self.item2_url)
+    def test_append_image_tag_to_html_file(self) -> None:
+        img_url_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
+        img_tag_str = FeedMaker.get_image_tag_str(img_url_prefix, self.rss_file_path.name, self.item2_url)
 
         # no image tag in the html file
         is_found = False
@@ -135,23 +140,23 @@ class TestFeedMaker(unittest.TestCase):
                     is_found = True
         self.assertTrue(is_found)
 
-    def test_get_size_of_template(self):
+    def test_get_size_of_template(self) -> None:
         actual = FeedMaker._get_size_of_template()
         expected = 359
         self.assertEqual(expected, actual)
 
-    def test_get_html_file_path(self):
+    def test_get_html_file_path(self) -> None:
         actual = FeedMaker._get_html_file_path(self.html_dir_path, self.item1_url)
         expected = self.html_file1_path
         self.assertEqual(expected, actual)
 
-    def test_get_list_file_path(self):
+    def test_get_list_file_path(self) -> None:
         date_str = Datetime.get_short_date_str()
         actual = FeedMaker._get_list_file_path(self.list_dir_path, date_str)
         expected = self.list_file1_path
         self.assertEqual(expected, actual)
 
-    def test_cmp_int_or_str(self):
+    def test_cmp_int_or_str(self) -> None:
         a = {"sf": "1"}
         b = {"sf": "2"}
         actual = FeedMaker._cmp_int_or_str(a, b)
@@ -176,22 +181,20 @@ class TestFeedMaker(unittest.TestCase):
         expected = -1
         self.assertEqual(expected, actual)
 
-    def test_cmp_to_key(self):
+    def test_cmp_to_key(self) -> None:
         data_list = [{"id": 1, "sf": "399"}, {"id": 2, "sf": "400"}, {"id": 3, "sf": "398"}]
         actual = sorted(data_list, key=FeedMaker._cmp_to_key(FeedMaker._cmp_int_or_str))
         expected = [{"id": 3, "sf": "398"}, {"id": 1, "sf": "399"}, {"id": 2, "sf": "400"}]
         self.assertEqual(expected, actual)
 
-    def test_make_html_file(self):
+    def test_make_html_file(self) -> None:
         with patch.object(LOGGER, "info") as mock_info:
             actual = self.maker._make_html_file(self.item1_url, "137화")
             self.assertTrue(actual)
 
-            self.assertTrue(assert_in_mock_logger(
-                "New: https://comic.naver.com/webtoon/detail?titleId=725586&no=137\t137화\tnaver/certain_webtoon/html/3e1c485.html",
-                mock_info, True))
+            self.assertTrue(assert_in_mock_logger("Old: https://comic.naver.com/webtoon/detail?titleId=725586&no=137\t137화\tnaver/certain_webtoon/html/3e1c485.html", mock_info, True))
 
-    def test_get_index_data(self):
+    def test_get_index_data(self) -> None:
         dt1 = Datetime.get_current_time()
         actual = self.maker._get_index_data()
         expected = (1, 6)
@@ -202,7 +205,7 @@ class TestFeedMaker(unittest.TestCase):
         if datetime_str:
             self.assertTrue(dt1 < datetime_str < dt2)
 
-    def test_write_index_data(self):
+    def test_write_index_data(self) -> None:
         dt = Datetime.get_current_time()
         ts = Datetime._get_time_str(dt)
         self.maker._write_index_data(0, dt, True)
@@ -219,7 +222,7 @@ class TestFeedMaker(unittest.TestCase):
             expected = f"0\t{ts}\n"
             self.assertEqual(expected, actual)
 
-    def test_1_read_old_feed_list_from_file(self):
+    def test_1_read_old_feed_list_from_file(self) -> None:
         self.maker.collection_conf["is_completed"] = True
         with patch.object(LOGGER, "info") as mock_info:
             actual = self.maker._read_old_feed_list_from_file()
@@ -236,7 +239,7 @@ class TestFeedMaker(unittest.TestCase):
             self.assertEqual(expected, actual)
             self.assertTrue(assert_in_mock_logger(PathUtil.short_path(self.list_file2_path), mock_info))
 
-    def test_2_fetch_old_feed_list_window(self):
+    def test_2_fetch_old_feed_list_window(self) -> None:
         self.maker.collection_conf["is_completed"] = True
         with patch.object(LOGGER, "info") as mock_info:
             old_feed_list = self.maker._read_old_feed_list_from_file()
@@ -255,7 +258,7 @@ class TestFeedMaker(unittest.TestCase):
             self.assertTrue(assert_in_mock_logger(PathUtil.short_path(self.list_file2_path), mock_info))
             self.assertTrue(assert_in_mock_logger("start index", mock_info, True))
 
-    def test_3_get_recent_feed_list(self):
+    def test_3_get_recent_feed_list(self) -> None:
         self.maker.collection_conf["is_completed"] = True
         actual = self.maker._get_recent_feed_list()
         self.assertIsNotNone(actual)
@@ -270,7 +273,7 @@ class TestFeedMaker(unittest.TestCase):
         self.assertEqual(1, len(actual))
         self.assertEqual(2, len(actual[0]))
 
-    def test_4_diff_feeds_and_make_htmls(self):
+    def test_4_diff_feeds_and_make_htmls(self) -> None:
         with patch.object(LOGGER, "info") as mock_info:
             old_feed_list = self.maker._read_old_feed_list_from_file()
             recent_feed_list = self.maker._get_recent_feed_list()
@@ -284,7 +287,7 @@ class TestFeedMaker(unittest.TestCase):
             self.assertTrue(assert_in_mock_logger("Appending 1 new items to the feed list", mock_info))
             self.assertTrue(assert_in_mock_logger("Appending 1 old items to the feed list", mock_info))
 
-    def test_5_generate_rss_feed(self):
+    def test_5_generate_rss_feed(self) -> None:
         with patch.object(LOGGER, "info") as mock_info:
             old_feed_list = self.maker._read_old_feed_list_from_file()
             recent_feed_list = self.maker._get_recent_feed_list()
@@ -308,7 +311,7 @@ class TestFeedMaker(unittest.TestCase):
                                 count += 1
                 self.assertEqual(2, count)
 
-    def test_6_make(self):
+    def test_6_make(self) -> None:
         with patch.object(LOGGER, "info") as mock_info:
             actual = self.maker.make()
             self.assertTrue(actual)
