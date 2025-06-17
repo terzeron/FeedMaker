@@ -8,9 +8,10 @@ import getopt
 import logging.config
 from pathlib import Path
 from typing import List, Tuple, Optional, Dict, Any
-from utils.download_image import download_image
+from utils.download_image import download_image, Env
 from bin.crawler import Crawler
 from bin.feed_maker_util import Config, FileManager, IO, Process, PathUtil, URL
+
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
@@ -18,36 +19,66 @@ LOGGER = logging.getLogger()
 
 def download_image_and_read_metadata(feed_dir_path: Path, crawler: Crawler, feed_img_dir_path: Path, page_url: str) -> Tuple[List[Path], List[str], List[str]]:
     LOGGER.debug("# download_image_and_read_metadata(feed_dir_path=%r, crawler=%r, feed_img_dir_path=%r, page_url='%s')", PathUtil.short_path(feed_dir_path), crawler, PathUtil.short_path(feed_img_dir_path), page_url)
-    #
-    # read input and collect image files into the list
-    # (file name, url and dimension)
-    #
     img_file_list: List[Path] = []
     img_url_list: List[str] = []
+    feed_name = feed_dir_path.name
 
-    #crawler = Crawler(dir_path=feed_dir_path, headers={"Referer": page_url}, num_retries=2)
+    image_url_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
+    feed_img_url_prefix = f"{image_url_prefix}/{feed_name}"
 
     normal_html_lines = []
     line_list: List[str] = IO.read_stdin_as_line_list()
     for line in line_list:
         line = line.rstrip()
-        m = re.search(r"<img src=[\"'](?P<img_url>[^\"']+)[\"']( width='\d+%?')?/?>", line)
+        m = re.search(r'''
+                       (?P<pre_text>.*)
+                       <img
+                       [^>]*
+                       src=
+                       [\"\']
+                       (?P<img_url>[^\"\']+)
+                       [\"\']
+                       (\s*width=[\"\']\d+%?[\"\'])?
+                       [^>]*
+                       /?>
+                       (?P<post_text>.*)
+                       ''', line, re.VERBOSE)
         if m:
+            pre_text = m.group("pre_text")
             img_url = m.group("img_url")
-            img_url_short = img_url if not img_url.startswith("data:image") else img_url[:30]
+            if not img_url.startswith("http"):
+                img_url = URL.concatenate_url(page_url, img_url)
+            img_url_short = img_url[:30] if img_url.startswith("data:image") else img_url
             LOGGER.debug(f"img_url={img_url_short}")
-            # download
+            post_text = m.group("post_text")
+
+            # pre_text
+            m = re.search(r'^\s*$', pre_text)
+            if not m:
+                print(pre_text)            
+
+            # download images and save their metadata
             cache_file_path = download_image(crawler, feed_img_dir_path, img_url)
-            if not cache_file_path:
+            
+            if cache_file_path and cache_file_path.is_file():
+                suffix = cache_file_path.suffix
+                cache_url = FileManager.get_cache_url(feed_img_url_prefix, img_url, "")
+                img_file_list.append(cache_file_path)
+                img_url_list.append(img_url)
+                LOGGER.debug("%s -> %s / %s%s", img_url_short, PathUtil.short_path(cache_file_path), cache_url, suffix)
+                
+            else:
                 if not img_url.startswith("data:image/svg+xml;base64"):
-                    LOGGER.error(f"<!-- can't download the image from '{img_url}' -->")
+                    LOGGER.error(f"<!-- can't download the image from '{img_url_short}' -->")
                     print(f"<img src='{FileManager.IMAGE_NOT_FOUND_IMAGE_URL}' alt='not exist or size 0'/>")
                 continue
-            img_file_list.append(cache_file_path)
-            img_url_list.append(img_url)
-            img_url_str = img_url if not img_url.startswith("data:image") else img_url[:30]
-            LOGGER.debug("%s -> %s", img_url_str, PathUtil.short_path(cache_file_path))
+
+            # post_text
+            m = re.search(r'^\s*$', post_text)
+            if not m:
+                print(post_text)            
         else:
+            # general html elements
             m = re.search(r'^</?br>$', line)
             if not m:
                 normal_html_lines.append(line.rstrip())
@@ -79,8 +110,8 @@ def merge_image_files(feed_dir_path: Path, img_file_list: List[Path], feed_img_d
     LOGGER.debug(cmd)
     result, error = Process.exec_cmd(cmd, dir_path=feed_dir_path)
     LOGGER.debug(result)
-    if not result:
-        LOGGER.error(f"<!-- can't merge the image files, cmd='{cmd}', {error} -->")
+    if not result or error:
+        LOGGER.error("<!-- can't merge the image files, cmd='%s', %r -->", cmd, error)
         sys.exit(-1)
     LOGGER.debug("merged_img_file_path=%r", merged_img_file_path)
     return merged_img_file_path
@@ -116,7 +147,7 @@ def remove_image_files(feed_dir_path: Path, img_file_list: List[str]) -> bool:
     LOGGER.debug(cmd)
     _, error = Process.exec_cmd(cmd, dir_path=feed_dir_path)
     if error:
-        LOGGER.error(f"<!-- can't remove files '{img_file_list}', {cmd}, {error} -->")
+        LOGGER.error("<!-- can't remove files '%r', cmd='%s', %r -->", img_file_list, cmd, error)
         return False
     return True
 
@@ -128,7 +159,7 @@ def split_image_file(feed_dir_path: Path, img_file_path: Path, bandwidth: int, d
     LOGGER.debug(cmd)
     _, error = Process.exec_cmd(cmd, dir_path=feed_dir_path)
     if error:
-        LOGGER.error(f"<!-- can't split the image file, {cmd}, {error} -->")
+        LOGGER.error("<!-- can't split the image file, cmd='%s', %r -->", cmd, error)
         return False
     return True
 
@@ -240,25 +271,19 @@ def main() -> int:
 
     page_url = args[0]
     feed_name = feed_dir_path.name
-    feed_img_dir_path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "img" / feed_name
+    feed_img_dir_path = Path(os.environ["WEB_SERVICE_IMAGE_DIR_PREFIX"]) / feed_name
     feed_img_dir_path.mkdir(exist_ok=True)
-    img_url_prefix = "https://terzeron.com/xml/img/" + feed_name
+    img_url_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX") + "/" + feed_name
     LOGGER.debug("feed_name=%s", feed_name)
     LOGGER.debug("feed_img_dir_path=%r", feed_img_dir_path)
 
     config = Config(feed_dir_path=feed_dir_path)
-    if not config:
-        LOGGER.error("can't get configuration")
-        return -1
     extraction_conf = config.get_extraction_configs()
-    if not extraction_conf:
-        LOGGER.error("can't get extraction configuration")
-        return -1
 
-    headers: Dict[str, Any] = {}
-    if "user_agent" in extraction_conf:
-        headers["User-Agent"] = extraction_conf["user_agent"]
-    headers["Referer"] = URL.encode_suffix(page_url)
+    headers: Dict[str, Any] = {
+        "User-Agent": extraction_conf.get("user_agent", ""),
+        "Referer": URL.encode_suffix(page_url)
+    }
 
     crawler = Crawler(dir_path=feed_dir_path, headers=headers, num_retries=2)
 
