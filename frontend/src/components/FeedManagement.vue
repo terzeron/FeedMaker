@@ -5,15 +5,15 @@
       <b-col cols="12" class="m-0 p-1">
         <span class="button_list">
         <my-button
-            ref="groupListButton"
+            ref="grouplistButton"
             label="그룹 목록"
             variant="success"
-            @click="groupListButtonClicked"/>
+            @click="grouplistButtonClicked"/>
         <my-button
-            ref="feedListButton"
+            ref="feedlistButton"
             :label="selectedGroupName + ' 그룹의 피드 목록'"
-            @click="feedListButtonClicked"
-            v-if="showFeedListButton"/>
+            @click="feedlistButtonClicked"
+            v-if="showFeedlistButton"/>
         </span>
 
         <b-input-group
@@ -55,7 +55,7 @@
 
     <!-- 그룹 목록 -->
     <b-row>
-      <b-col id="group_list" cols="12" class="m-0 p-1 button_list" v-if="showGroupList">
+      <b-col id="group_list" cols="12" class="m-0 p-1 button_list" v-if="showGrouplist">
         <my-button
             ref="groupNameButton"
             :label="group.name + ' (' + group['num_feeds'] + ')'"
@@ -76,7 +76,7 @@
           id="feed_list"
           cols="12"
           class="m-0 p-1 button_list"
-          v-if="showFeedList">
+          v-if="showFeedlist">
         <my-button
             ref="feedNameButton"
             :label="feed.title"
@@ -252,12 +252,12 @@
                 :show-initial-icon="true"
                 v-if="showRunButton"/>
             <my-button
-                ref="removeListButton"
+                ref="removelistButton"
                 label="리스트 삭제"
-                @click="removeList"
+                @click="removelist"
                 :initial-icon="['fas', 'eraser']"
                 :show-initial-icon="true"
-                v-if="showRemoveListButton"/>
+                v-if="showRemovelistButton"/>
             <my-button
                 ref="removeHtmlButton"
                 label="HTML 삭제"
@@ -363,9 +363,9 @@ export default {
     return {
       alertMessage: '',
 
-      showGroupList: true,
-      showFeedList: false,
-      showFeedListButton: false,
+      showGrouplist: true,
+      showFeedlist: false,
+      showFeedlistButton: false,
       showSearchResult: false,
 
       showEditor: false,
@@ -375,7 +375,7 @@ export default {
       showViewRssButton: false,
       showRegisterToInoreaderButton: false,
       showRegisterToFeedlyButton: false,
-      showRemoveListButton: false,
+      showRemovelistButton: false,
       showRemoveFeedButton: false,
       showRemoveGroupButton: false,
       showToggleFeedButton: false,
@@ -398,7 +398,7 @@ export default {
 
       numCollectionUrls: 0,
       collectDate: '-',
-      urlListCount: 0,
+      urllistCount: 0,
       numItemsInResult: 0,
       sizeOfResultFile: 0,
       lastUploadDate: '-',
@@ -498,12 +498,6 @@ export default {
       this.alertMessage = '';
       this.showAlert = false;
     },
-    getCleanFeedName: function (feedName) {
-      if (feedName[0] === '_') {
-        return feedName.substring(1);
-      }
-      return feedName;
-    },
     determineStatus: function (name) {
       return name[0] !== '_';
     },
@@ -527,7 +521,7 @@ export default {
       this.showViewRssButton = true;
       this.showRegisterToInoreaderButton = true;
       this.showRegisterToFeedlyButton = true;
-      this.showRemoveListButton = true;
+      this.showRemovelistButton = true;
       this.showRemoveHtmlButton = true;
       this.showToggleFeedButton = true;
       this.showRemoveFeedButton = true;
@@ -540,7 +534,7 @@ export default {
       this.showViewRssButton = false;
       this.showRegisterToInoreaderButton = false;
       this.showRegisterToFeedlyButton = false;
-      this.showRemoveListButton = false;
+      this.showRemovelistButton = false;
       this.showRemoveHtmlButton = false;
       this.showToggleFeedButton = false;
       this.showRemoveFeedButton = false;
@@ -569,9 +563,9 @@ export default {
     search: function () {
       console.log(`search()`);
       this.showSearchResult = true;
-      this.showGroupList = false;
-      this.showFeedList = false;
-      this.showFeedListButton = false;
+      this.showGrouplist = false;
+      this.showFeedlist = false;
+      this.showFeedlistButton = false;
       this.hideAllRelatedToGroup();
       this.hideAllRelatedToFeed();
 
@@ -590,11 +584,11 @@ export default {
             console.error(error);
           })
     },
-    groupListButtonClicked: function () {
-      console.log(`groupListButtonClicked()`);
-      this.showGroupList = true;
-      this.showFeedList = false;
-      this.showFeedListButton = false;
+    grouplistButtonClicked: function () {
+      console.log(`grouplistButtonClicked()`);
+      this.showGrouplist = true;
+      this.showFeedlist = false;
+      this.showFeedlistButton = false;
       this.showSearchResult = false;
       this.hideAllRelatedToGroup();
       this.hideAllRelatedToSiteConfig();
@@ -630,13 +624,13 @@ export default {
             console.error(error);
           });
     },
-    feedListButtonClicked: function () {
-      console.log(`feedListButtonClicked()`);
-      this.showGroupList = false;
-      this.showFeedList = true;
+    feedlistButtonClicked: function () {
+      console.log(`feedlistButtonClicked()`);
+      this.showGrouplist = false;
+      this.showFeedlist = true;
       this.hideAllRelatedToSiteConfig();
 
-      this.getFeedListByGroup(this.selectedGroupName);
+      this.getFeedlistByGroup(this.selectedGroupName);
     },
     groupNameButtonClicked: function (groupName, index) {
       console.log(`groupNameButtonClicked(${groupName}, ${index})`);
@@ -646,15 +640,15 @@ export default {
       this.selectedGroupName = groupName;
 
       // show and hide
-      this.showGroupList = false;
-      this.showFeedList = true;
-      this.showFeedListButton = true;
+      this.showGrouplist = false;
+      this.showFeedlist = true;
+      this.showFeedlistButton = true;
       this.hideAllRelatedToSiteConfig();
 
-      this.getFeedListByGroup(groupName);
+      this.getFeedlistByGroup(groupName);
     },
-    getFeedListByGroup: function (groupName) {
-      console.log(`getFeedListByGroup(${groupName})`);
+    getFeedlistByGroup: function (groupName) {
+      console.log(`getFeedlistByGroup(${groupName})`);
       if (this.checkRunningInterval) {
         clearInterval(this.checkRunningInterval);
       }
@@ -686,8 +680,8 @@ export default {
       this.selectedFeedName = feedName;
 
       // show and hide
-      this.showFeedList = false;
-      this.showFeedListButton = false;
+      this.showFeedlist = false;
+      this.showFeedlistButton = false;
 
       this.getFeedInfo(groupName, feedName);
     },
@@ -699,8 +693,8 @@ export default {
       this.selectedFeedName = feedName;
 
       // show and hide
-      this.showFeedList = false;
-      this.showFeedListButton = true;
+      this.showFeedlist = false;
+      this.showFeedlistButton = true;
 
       if (feedName === 'site_config.json') {
         this.getSiteConfig();
@@ -741,7 +735,7 @@ export default {
             if (res.data.status === 'failure') {
               this.alert(res.data.message);
             } else {
-              var feed_info = res.data["feed_info"];
+              const feed_info = res.data["feed_info"];
               this.jsonData = feed_info["config"];
 
               this.setCollectionInfo(feed_info["collection_info"], feed_info["config"]["collection"]["list_url_list"].length);
@@ -894,14 +888,14 @@ export default {
                     } else {
                       if (target === 'feed') {
                         this.newFeedName = res.data['new_name'];
-                        this.getFeedListByGroup(this.selectedGroupName);
-                        this.showFeedList = true;
+                        this.getFeedlistByGroup(this.selectedGroupName);
+                        this.showFeedlist = true;
                         this.hideAllRelatedToFeed();
                       } else {
                         this.selectedGroupName = res.data['new_name'];
                         this.getGroups();
-                        this.showGroupList = true;
-                        this.showFeedList = false
+                        this.showGrouplist = true;
+                        this.showFeedlist = false
                         this.hideAllRelatedToFeed();
                         this.hideAllRelatedToGroup();
                       }
@@ -926,13 +920,13 @@ export default {
             console.error(error);
           });
     },
-    removeList: function () {
-      console.log(`removeList()`);
+    removelist: function () {
+      console.log(`removelist()`);
       this.$bvModal
           .msgBoxConfirm('정말로 실행하시겠습니까?')
           .then((value) => {
             if (value) {
-              this.startButton('removeListButton');
+              this.startButton('removelistButton');
               const url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/list`;
               axios
                   .delete(url)
@@ -940,11 +934,11 @@ export default {
                     if (res.data.status === 'failure') {
                       this.alert(res.data.message);
                     }
-                    this.endButton('removeListButton');
+                    this.endButton('removelistButton');
                   })
                   .catch((error) => {
                     console.error(error);
-                    this.resetButton('removeListButton');
+                    this.resetButton('removelistButton');
                   });
             }
           })
@@ -997,7 +991,7 @@ export default {
                     if (res.data.status === 'failure') {
                       this.alert(res.data.message);
                     } else {
-                      this.getFeedListByGroup(this.selectedGroupName);
+                      this.getFeedlistByGroup(this.selectedGroupName);
                     }
                     this.showEditor = false;
                     this.endButton('removeFeedButton');

@@ -6,7 +6,7 @@ import re
 import sys
 import logging.config
 from pathlib import Path
-from typing import Dict, List, Tuple, Any
+from typing import Any
 from shutil import which
 from bin.feed_maker_util import Process, Data, PathUtil
 from bin.crawler import Crawler, Method
@@ -15,18 +15,18 @@ logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
-class NewListCollector:
-    def __init__(self, feed_dir_path: Path, collection_conf: Dict[str, Any], new_list_file_path: Path) -> None:
-        LOGGER.debug("# NewListCollector(feed_dir_path=%s, collection_conf=%r, new_list_file_path=%s", PathUtil.short_path(feed_dir_path), collection_conf, PathUtil.short_path(new_list_file_path))
+class NewlistCollector:
+    def __init__(self, feed_dir_path: Path, collection_conf: dict[str, Any], new_list_file_path: Path) -> None:
+        LOGGER.debug("# NewlistCollector(feed_dir_path=%s, collection_conf=%r, new_list_file_path=%s", PathUtil.short_path(feed_dir_path), collection_conf, PathUtil.short_path(new_list_file_path))
         self.feed_dir_path: Path = feed_dir_path
-        self.collection_conf: Dict[str, Any] = collection_conf
+        self.collection_conf: dict[str, Any] = collection_conf
         self.new_list_file_path: Path = new_list_file_path
 
-    def __del__(self):
+    def __del__(self) -> None:
         del self.collection_conf
 
     @staticmethod
-    def split_result_into_items(result) -> List[Tuple[str, str]]:
+    def split_result_into_items(result: str) -> list[tuple[str, str]]:
         LOGGER.debug("# extract_urls()")
 
         result_list = []
@@ -43,23 +43,23 @@ class NewListCollector:
             result_list.append((link, title))
         return result_list
 
-    def _compose_url_list(self) -> List[Tuple[str, str]]:
+    def _compose_url_list(self) -> list[tuple[str, str]]:
         LOGGER.debug("# compose_url_list()")
 
-        result_list: List[Tuple[str, str]] = []
+        result_list: list[tuple[str, str]] = []
         conf = self.collection_conf
-        headers: Dict[str, str] = conf["headers"]
+        headers: dict[str, str] = conf.get("headers", {})
         if "referer" in conf:
-            headers["Referer"] = conf["referer"]
-        crawler = Crawler(dir_path=self.feed_dir_path, render_js=conf["render_js"], method=Method.GET, headers=headers, timeout=conf["timeout"], num_retries=conf["num_retries"], encoding=conf["encoding"], verify_ssl=conf["verify_ssl"], copy_images_from_canvas=conf["copy_images_from_canvas"], simulate_scrolling=conf["simulate_scrolling"], disable_headless=conf["disable_headless"], blob_to_dataurl=conf["blob_to_dataurl"])
+            headers["Referer"] = conf.get("referer", "")
+        crawler = Crawler(dir_path=self.feed_dir_path, render_js=conf.get("render_js", False), method=Method.GET, headers=headers, timeout=conf.get("timeout", 60), num_retries=conf.get("num_retries", 1), encoding=conf.get("encoding", "utf-8"), verify_ssl=conf.get("verify_ssl", True), copy_images_from_canvas=conf.get("copy_images_from_canvas", False), simulate_scrolling=conf.get("simulate_scrolling", False), disable_headless=conf.get("disable_headless", False), blob_to_dataurl=conf.get("blob_to_dataurl", False))
         option_str = Crawler.get_option_str(self.collection_conf)
-        for url in conf["list_url_list"]:
+        for url in conf.get("list_url_list", []):
             crawler_cmd = f"crawler.py -f '{self.feed_dir_path}' {option_str} '{url}'"
             LOGGER.debug("cmd=%s", crawler_cmd)
             try:
                 result, error, _ = crawler.run(url)
                 if not result:
-                    LOGGER.error(error)
+                    LOGGER.error("Warning: can't get result from web page '%s', %s", url, error)
                     continue
             except UnicodeDecodeError as e:
                 LOGGER.error(e)
@@ -67,13 +67,12 @@ class NewListCollector:
 
             capture_cmd = f"{self.collection_conf['item_capture_script']} -f '{self.feed_dir_path}'"
             LOGGER.debug("cmd=%s", capture_cmd)
-            result, error_msg = Process.exec_cmd(capture_cmd, dir_path=self.feed_dir_path, input_data=result)
-            if not result or error_msg:
-                LOGGER.warning("Warning: can't get result from item capture script")
-                LOGGER.debug(error_msg)
+            result, error = Process.exec_cmd(capture_cmd, dir_path=self.feed_dir_path, input_data=result)
+            if not result or error:
+                LOGGER.warning("Warning: can't get result from item capture script, cmd='%s', %r", capture_cmd, error)
                 continue
 
-            for post_process_script in self.collection_conf["post_process_script_list"]:
+            for post_process_script in self.collection_conf.get("post_process_script_list", []):
                 program = post_process_script.split(" ")[0]
                 program_fullpath = which(program)
                 if program_fullpath and (program_fullpath.startswith("/usr") or program_fullpath.startswith("/bin") or program_fullpath.startswith("/sbin") or program_fullpath.startswith("/opt/homebrew/bin")):
@@ -81,21 +80,20 @@ class NewListCollector:
                 else:
                     post_process_cmd = f"{post_process_script} -f '{self.feed_dir_path}' '{url}'"
                 LOGGER.debug("cmd=%s", post_process_cmd)
-                result, error_msg = Process.exec_cmd(post_process_cmd, dir_path=self.feed_dir_path, input_data=result)
+                result, error = Process.exec_cmd(post_process_cmd, dir_path=self.feed_dir_path, input_data=result)
                 if not result or error:
-                    LOGGER.warning("Warning: can't get result from post process scripts")
-                    LOGGER.debug(error_msg)
+                    LOGGER.warning("Warning: can't get result from post process scripts, cmd='%s', %r", post_process_cmd, error)
 
             url_list = self.split_result_into_items(result)
             result_list.extend(url_list)
 
         if not result_list:
-            LOGGER.error("Error: Can't get new list from '%s'", conf["list_url_list"])
+            LOGGER.error("Error: Can't get new list from '%r'", conf.get("list_url_list", []))
             return []
         result_list = Data.remove_duplicates(result_list)
         return result_list
 
-    def _save_new_list_to_file(self, new_list: List[Tuple[str, str]]) -> None:
+    def _save_new_list_to_file(self, new_list: list[tuple[str, str]]) -> None:
         try:
             with open(self.new_list_file_path, 'w', encoding='utf-8') as out_file:
                 for link, title in new_list:
@@ -104,7 +102,7 @@ class NewListCollector:
             LOGGER.error("Error: %s", e)
             sys.exit(-1)
 
-    def collect(self) -> List[Tuple[str, str]]:
+    def collect(self) -> list[tuple[str, str]]:
         LOGGER.debug("# collect()")
 
         # collect items from specified url list

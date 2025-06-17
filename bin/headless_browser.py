@@ -4,9 +4,9 @@
 import json
 import logging.config
 from pathlib import Path
-from typing import Dict, Optional, no_type_check
-import urllib3
+from typing import Optional, TYPE_CHECKING
 from shutil import which
+import urllib3
 from selenium import webdriver
 from selenium.common.exceptions import InvalidCookieDomainException
 from selenium.webdriver.chrome.service import Service
@@ -15,10 +15,14 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.common.by import By
 import selenium
+
 from bin.feed_maker_util import PathUtil
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
+
+if TYPE_CHECKING:
+    from _typeshed import SupportsWrite
 
 
 class HeadlessBrowser:
@@ -116,10 +120,10 @@ class HeadlessBrowser:
         }());
         ''' % ID_OF_RENDERING_COMPLETION_IN_CONVERTING_BLOB
 
-    def __init__(self, dir_path: Path = Path.cwd(), headers: Optional[Dict[str, str]] = None, copy_images_from_canvas: bool = False, simulate_scrolling: bool = False, disable_headless: bool = False, blob_to_dataurl: bool = False, timeout: int = 60) -> None:
+    def __init__(self, *, dir_path: Path = Path.cwd(), headers: Optional[dict[str, str]] = None, copy_images_from_canvas: bool = False, simulate_scrolling: bool = False, disable_headless: bool = False, blob_to_dataurl: bool = False, timeout: int = 60) -> None:
         LOGGER.debug("# HeadlessBrowser(dir_path=%s, headers=%r, copy_images_from_canvas=%s, simulate_scrolling=%s, disable_headless=%s, blob_to_dataurl=%s, timeout=%d)", PathUtil.short_path(dir_path), headers, copy_images_from_canvas, simulate_scrolling, disable_headless, blob_to_dataurl, timeout)
         self.dir_path: Path = dir_path
-        self.headers: Dict[str, str] = headers if headers is not None else {}
+        self.headers: dict[str, str] = headers if headers is not None else {}
         if "User-Agent" not in self.headers:
             self.headers["User-Agent"] = HeadlessBrowser.DEFAULT_USER_AGENT
         self.copy_images_from_canvas: bool = copy_images_from_canvas
@@ -128,16 +132,16 @@ class HeadlessBrowser:
         self.blob_to_dataurl: bool = blob_to_dataurl
         self.timeout: int = timeout
 
-    def __del__(self):
+    def __del__(self) -> None:
         del self.headers
 
-    def _write_cookies_to_file(self, driver) -> None:
+    def _write_cookies_to_file(self, driver: webdriver.Chrome) -> None:
         cookies = driver.get_cookies()
         cookie_file = self.dir_path / HeadlessBrowser.COOKIE_FILE
-        with cookie_file.open("w", encoding='utf-8') as f:
+        with cookie_file.open("w", encoding='utf-8') as f:  # type: SupportsWrite[str]
             json.dump(cookies, f, indent=2, ensure_ascii=False)
 
-    def _read_cookies_from_file(self, driver) -> None:
+    def _read_cookies_from_file(self, driver: webdriver.Chrome) -> None:
         cookie_file = self.dir_path / HeadlessBrowser.COOKIE_FILE
         if cookie_file.is_file():
             try:
@@ -151,8 +155,7 @@ class HeadlessBrowser:
                 cookie_file.unlink(missing_ok=True)
                 self._read_cookies_from_file(driver)
 
-    @no_type_check
-    def make_request(self, url, download_file=None) -> str:
+    def make_request(self, url: str, download_file: Optional[Path] = None) -> str:
         LOGGER.debug(f"# make_request(url={url}, download_file={download_file})")
         options = Options()
         if not self.disable_headless:
@@ -171,10 +174,10 @@ class HeadlessBrowser:
         driver = webdriver.Chrome(service=service, options=options)
         driver.set_page_load_timeout(self.timeout)
 
-        if "Referer" in self.headers and self.headers["Referer"]:
-            url = self.headers["Referer"]
-            LOGGER.debug(f"visiting referer page '{url}'")
-            driver.get(url)
+        referer = self.headers.get("Referer", "")
+        if referer:
+            LOGGER.debug(f"visiting referer page '{referer}'")
+            driver.get(referer)
             # bypass cloudflare test
             try:
                 WebDriverWait(driver, self.timeout).until(

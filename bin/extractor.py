@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 import re
 import sys
 import signal
@@ -9,9 +8,9 @@ import html
 import getopt
 import logging.config
 from pathlib import Path
-from typing import Dict, Any, Optional
-from bs4 import BeautifulSoup
-from bs4.element import Comment
+from typing import Any, Optional, Callable
+from bs4 import BeautifulSoup, Comment
+from bs4.element import NavigableString, Tag
 from bin.feed_maker_util import Config, URL, HTMLExtractor, header_str
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -19,273 +18,233 @@ LOGGER = logging.getLogger()
 
 
 class Extractor:
-    def extract_content(self, extraction_conf: Dict[str, Any], item_url: str, input_data: str = "") -> Optional[str]:
-        LOGGER.debug(f"# extract_content(extraction_conf={extraction_conf}, item_url={item_url})")
-
-        # configuration
+    @staticmethod
+    def extract_content(extraction_conf: dict[str, Any], item_url: str, input_data: str = "") -> Optional[str]:
         if not extraction_conf:
             LOGGER.error("Error: Can't get extraction configuration")
             return None
 
-        # read html contents
-        if input_data:
-            html_content = input_data
-        else:
-            html_content = sys.stdin.read()
+        html_content = input_data or sys.stdin.read()
+        class_list = extraction_conf.get("element_class_list", [])
+        id_list = extraction_conf.get("element_id_list", [])
+        path_list = extraction_conf.get("element_path_list", [])
+        encoding = extraction_conf.get("encoding", "utf-8")
 
-        if extraction_conf:
-            class_list = extraction_conf["element_class_list"]
-            id_list = extraction_conf["element_id_list"]
-            path_list = extraction_conf["element_path_list"]
-            encoding = extraction_conf["encoding"]
-            LOGGER.debug("# element_id: %r", id_list)
-            LOGGER.debug("# element_class: %r", class_list)
-            LOGGER.debug("# element_path: %r", path_list)
-            LOGGER.debug("# encoding: %s", encoding)
-        else:
-            return html_content
+        html_content = Extractor._sanitize(html_content)
+        result = header_str + "\n" if html_content else ""
+        soup = None
 
-        # sanitize
-        html_content = re.sub(r'alt="(.*)<br>(.*)"', r'alt="\1 \2"', html_content)
-        html_content = re.sub(r'<br>', '<br/>', html_content)
-        html_content = re.sub(r'[\x01\x08]', '', html_content, re.LOCALE)
-        html_content = re.sub(r'<\?xml[^>]+>', r'', html_content)
-
-        result: str = ""
-        # header
-        if html_content:
-            result += header_str + "\n"
-
-        # main article sections
         for parser in ("html.parser", "html5lib", "lxml"):
             soup = BeautifulSoup(html_content, parser)
-
-            for class_str in class_list:
-                divs = soup.find_all(attrs={"class": class_str})
-                if divs:
-                    for div in divs:
-                        result += self._traverse_element(div, item_url, encoding)
-            for id_str in id_list:
-                divs = soup.find_all(attrs={"id": id_str})
-                if divs:
-                    for div in divs:
-                        result += self._traverse_element(div, item_url, encoding)
-            for path_str in path_list:
-                divs = HTMLExtractor.get_node_with_path(soup.body, path_str)
-                if divs:
-                    for div in divs:
-                        result += self._traverse_element(div, item_url, encoding)
-
-            # if any, exit this loop
-            if result:
+            result += Extractor._extract_by_selectors(soup, class_list=class_list, id_list=id_list, path_list=path_list, url=item_url, encoding=encoding)
+            if result.strip():
                 break
 
-        if class_list and id_list and path_list:
-            result += self._traverse_element(soup.body, item_url, encoding)
+        # if multiple selectors present, also traverse whole body
+        if soup and class_list and id_list and path_list:
+            result += Extractor._traverse_element(soup.body, item_url, encoding)
 
         return result
 
     @staticmethod
-    def _check_element_class(element, element_name, class_name) -> bool:
-        if element.name == element_name and element.has_attr("class") and class_name in element["class"]:
-            return True
-        return False
+    def _sanitize(html_content: str) -> str:
+        html_content = re.sub(r'alt="(.*)<br>(.*)"', r'alt="\1 \2"', html_content)
+        html_content = html_content.replace('<br>', '<br/>')
+        html_content = re.sub(r'[\x01\x08]', '', html_content)
+        html_content = re.sub(r'<\?xml[^>]+>', '', html_content)
+        return html_content
 
-    def _traverse_element(self, element, url: str, encoding: str) -> str:
-        result: str = ""
-
-        if isinstance(element, Comment):
-            # if comments, skip sub-elements
-            return result
-        if not hasattr(element, 'name') or not element.name:
-            # text or self-close element (<br/>)
-            if not re.compile(r'^(\s*|html)$').match(str(element)):
-                # neither blank text nor <!DOCTYPE html>
-                try:
-                    result += html.escape(str(element))
-                except UnicodeEncodeError:
-                    # try to print word-by-word
-                    for word in str(element).split(' '):
-                        try:
-                            result += " " + html.escape(word)
-                        except UnicodeEncodeError:
-                            return ""
-            return result
-
-        # element
-
-        # 원칙
-        # 모든 element는 그 안에 다른 element나 text를 포함한다.
-        # 그러므로 open tag를 써주고 그 다음에 recursive call로 처리하고
-        # close tag를 써주면 된다.
-        #
-        # 예외 처리
-        # 이미지는 src attribute를 써줘야 함, 뒤에 <br/>을 덧붙여야 함
-        # naver.net을 포함하고 /17.jpg로 끝나는 이미지 경로는 제거해야 함
-        # 테이블 관련 태그는 모두 무시?
-        # 자바스크립트?
-        # flash?
-
-        open_close_tag = False
-        attribute_str = ""
-        if element.has_attr("style"):
-            # 스타일 속성을 이용하여 요소를 보이지 않게 처리한 경우에는 하위 요소를 삭제함
-            m = re.search(r'(?P<style>display\s*:\s*none|visibility\s*:\s*hidden)', element["style"])
-            if m:
-                # skip sub-elements
-                return result
-
-        if element.name == "p":
-            result += f"<p{attribute_str}>\n"
-            for e in element.contents:
-                result += self._traverse_element(e, url, encoding)
-            # 하위 노드를 처리하고 return하지 않으면, 텍스트를 직접
-            # 감싸고 있는 <p>의 경우, 중복된 내용이 노출될 수 있음
-            result += "</p>\n"
-            return result
-
-        if element.name == "img":
-            src = ""
-            extra_attributes = ["data-lazy-src", "lazy-src", "lazysrc", "data-src", "data-original", "o_src"]
-            for extra_attribute in extra_attributes:
-                if element.has_attr(extra_attribute):
-                    extra_src = element[extra_attribute]
-                    if extra_src:
-                        if not re.search(r'((https?:)?//|data:image/png;)', extra_src):
-                            extra_src = URL.concatenate_url(url, extra_src)
-                        src = extra_src
-
-            # src 속성이 data-lazy-src보다 나중에 결정되어야 함
-            if not src and element.has_attr("src"):
-                src = element["src"]
-                if src and not re.search(r'((https?:)?//|data:image/png;)', src):
-                    src = URL.concatenate_url(url, src)
-
-            if src:
-                if re.search(r'^//', src):
-                    src = re.sub(r'^//', 'https://', src)
-                if element.has_attr("width"):
-                    width = element["width"]
-                    attribute_str += f" width='{width}'"
-                result += f"<img src='{src}'{attribute_str}/>\n"
-        elif element.name == "input":
-            if self._check_element_class(element, "input", "origin_src") and element.has_attr("value"):
-                value = element["value"]
-                if not re.search(r'(https?:)?//', value):
-                    value = URL.concatenate_url(url, value)
-                result += f"<img src='{value}'{attribute_str}/>\n"
-        elif element.name == "canvas":
-            src = ""
-            if element.has_attr("data-original"):
-                src = element["data-original"]
-            elif element.has_attr("data-src"):
-                src = element["data-src"]
-            if src:
-                if element.has_attr("width"):
-                    width = element["width"]
-                    attribute_str += f" width='{width}'"
-                result += f"<img src='{src}'{attribute_str}/>\n"
-        elif element.name == "a":
-            if element.has_attr("href"):
-                # complementing href value
-                href = element["href"]
-                if not re.search(r'(https?:)?//', href):
-                    href = URL.concatenate_url(url, href)
-                # A tag는 href와 target attribute를 출력해줘야 함
-                if element.has_attr("target"):
-                    target = element["target"]
-                    attribute_str += f" target='{target}'"
-                result += f"<a href='{href}'{attribute_str}>"
-                open_close_tag = True
-        elif element.name in ("iframe", "embed"):
-            if element.has_attr("src"):
-                src = element["src"]
-                if "video_player.nhn" in src or ".swf" in src or "getCommonPlayer.nhn" in src:
-                    # flash 파일은 [IFRAME with Flash]라고 표시
-                    result += f"<{element.name} src='{src}'></{element.name}><br/>\n"
-                    result += f"<a href='{src}'>{src}</a><br/>\n"
-                else:
-                    result += str(element)
-            elif element.name in ("param", "object"):
-                if element.has_attr("name") and element["name"] == "Src" and element.has_attr("value") and ".swf" in \
-                        element["value"]:
-                    src = element["value"]
-                    result += f"<video src='{src}'></video><br/>\n"
-                    result += f"<a href='{src}'>{src}</a><br/>\n"
-            elif element.name == "map":
-                # image map
-                # extract only link information from area element
-                for child in element.contents:
-                    if hasattr(child, "name") and child.name == "area":
-                        link_href = "#"
-                        link_title = "empty link title"
-                        if child.has_attr("href"):
-                            link_href = child["href"]
-                        if child.has_attr("alt"):
-                            link_title = child["alt"]
-                        result += f"<br/><br/><strong><a href='{link_href}'>{link_title}</a></strong><br/><br/>\n"
-                    elif element.name in ("o:p", "st1:time"):
-                        # skip unknown element
-                        return result
-        elif element.name in ("v:shapetype", "qksdmssnfl", "qksdmssnfl<span"):
-            # skip malformed element
-            return result
-        elif element.name in ("script", "style", "st1:personname"):
-            # skip sub-elements
-            return result
-        elif element.name == "pre":
-            # preserve all white spaces as they are
-            result += str(element) + "\n"
-            # skip sub-elementss
-            return result
-        else:
-            result += f"<{element.name}{attribute_str}>\n"
-            open_close_tag = True
-
-        if hasattr(element, 'contents'):
-            for e in element.contents:
-                if e != "\n":
-                    result += self._traverse_element(e, url, encoding)
-        elif isinstance(element, Comment):
-            return result
-        else:
-            result += element
-            return result
-
-        if open_close_tag:
-            result += f"</{element.name}>\n"
-
+    @staticmethod
+    def _extract_by_selectors(soup: BeautifulSoup, *, class_list: list[str], id_list: list[str], path_list: list[str], url: str, encoding: str) -> str:
+        result = ""
+        for cls in class_list:
+            for el in soup.find_all(attrs={"class": cls}):
+                result += Extractor._traverse_element(el, url, encoding)
+        for _id in id_list:
+            for el in soup.find_all(attrs={"id": _id}):
+                result += Extractor._traverse_element(el, url, encoding)
+        for path in path_list:
+            if soup.body is not None:
+                nodes = HTMLExtractor.get_node_with_path(soup.body, path)
+                for el in nodes or []:
+                    result += Extractor._traverse_element(el, url, encoding)
         return result
 
+    @staticmethod
+    def _check_element_class(element: Tag, name: str, class_name: str) -> bool:
+        classes = element.get("class", None)
+        if classes is None:
+            classes = []
+        elif isinstance(classes, str):
+            classes = [classes]
+        return element.name == name and class_name in classes
 
-def print_usage() -> None:
-    print(f"_usage:\t{sys.argv[0]}\t[ <option> ] <file or url>")
-    print()
+    @staticmethod
+    def _traverse_element(element: Any, url: str, encoding: str) -> str:
+        if isinstance(element, Comment):
+            return ""
+        if isinstance(element, NavigableString) or not getattr(element, 'name', None):
+            return Extractor._handle_text(element)
+
+        if Extractor._is_hidden(element):
+            return ""
+
+        handler = Extractor._get_handler(element.name)
+        return handler(element, url, encoding)
+
+    @staticmethod
+    def _handle_text(node: Any) -> str:
+        text = str(node)
+        if re.match(r'^(\s*|html)$', text):
+            return ''
+        try:
+            return html.escape(text)
+        except UnicodeEncodeError:
+            escaped = ''
+            for word in text.split(' '):
+                try:
+                    escaped += ' ' + html.escape(word)
+                except UnicodeEncodeError:
+                    return ''
+            return escaped
+
+    @staticmethod
+    def _is_hidden(element: Tag) -> bool:
+        style = str(element.get('style', ''))
+        return bool(re.search(r'display\s*:\s*none|visibility\s*:\s*hidden', style))
+
+    @staticmethod
+    def _get_handler(tag: str) -> Callable[[Tag, str, str], str]:
+        handlers: dict[str, Callable[[Tag, str, str], str]] = {
+            'p': Extractor._handle_paragraph,
+            'img': Extractor._handle_img,
+            'input': Extractor._handle_input,
+            'canvas': Extractor._handle_canvas,
+            'a': Extractor._handle_anchor,
+            'iframe': Extractor._handle_iframe_embed,
+            'embed': Extractor._handle_iframe_embed,
+            'param': Extractor._handle_param_object,
+            'object': Extractor._handle_param_object,
+            'map': Extractor._handle_map,
+            'script': lambda _tag, _url, _encoding: '',
+            'style': lambda _tag, _url, _encoding: '',
+            'pre': Extractor._handle_pre
+        }
+        return handlers.get(tag, Extractor._default_handler)
+
+    @staticmethod
+    def _handle_paragraph(el: Tag, url: str, encoding: str) -> str:
+        content = ''.join(Extractor._traverse_element(c, url, encoding) for c in el.contents)
+        return f"<p>\n{content}</p>\n"
+
+    @staticmethod
+    def _handle_img(el: Tag, url: str, encoding: str) -> str:
+        src = Extractor._extract_image_src(el, url, encoding)
+        if not src:
+            return ''
+        width = el.get('width')
+        attr = f" width='{width}'" if width else ''
+        return f"<img src='{src}'{attr}/>\n"
+
+    @staticmethod
+    def _extract_image_src(el: Tag, url: str, _encoding: str) -> Optional[str]:
+        for attr in ["data-lazy-src", "lazy-src", "lazysrc", "data-src", "data-original", "o_src"] + ['src']:
+            if el.has_attr(attr):
+                src = str(el[attr])
+                if not re.search(r'(https?:)?//|data:image/png;', src):
+                    src = URL.concatenate_url(url, src)
+                if src.startswith('//'):
+                    src = 'https:' + src
+                return src
+        return None
+
+    @staticmethod
+    def _handle_input(el: Tag, url: str, _encoding: str) -> str:
+        if Extractor._check_element_class(el, 'input', 'origin_src') and el.has_attr('value'):
+            val = str(el['value'])
+            if not re.search(r'(https?:)?//', val):
+                val = URL.concatenate_url(url, val)
+            return f"<img src='{val}'/>\n"
+        return ''
+
+    @staticmethod
+    def _handle_canvas(el: Tag, _url: str, _encoding: str) -> str:
+        src = str(el.get('data-original') or el.get('data-src', ''))
+        if not src:
+            return ''
+        width = el.get('width')
+        attr = f" width='{width}'" if width else ''
+        if src.startswith('//'):
+            src = 'https:' + src
+        return f"<img src='{src}'{attr}/>\n"
+
+    @staticmethod
+    def _handle_anchor(el: Tag, url: str, encoding: str) -> str:
+        href = str(el.get('href', ''))
+        if not re.search(r'(https?:)?//', href):
+            href = URL.concatenate_url(url, href)
+        target = el.get('target')
+        attr = f" target='{target}'" if target else ''
+        content = ''.join(Extractor._traverse_element(c, url, encoding) for c in el.contents)
+        return f"<a href='{href}'{attr}>{content}</a>\n"
+
+    @staticmethod
+    def _handle_iframe_embed(el: Tag, _url: str, _encoding: str) -> str:
+        src = str(el.get('src', ''))
+        if any(x in src for x in ('video_player.nhn', '.swf', 'getCommonPlayer.nhn')):
+            return (
+                f"<{el.name} src='{src}'></{el.name}><br/>\n"
+                f"<a href='{src}'>{src}</a><br/>\n"
+            )
+        return str(el)
+
+    @staticmethod
+    def _handle_param_object(el: Tag, _url: str, _encoding: str) -> str:
+        if el.get('name') == 'Src' and '.swf' in str(el.get('value', '')):
+            src = str(el['value'])
+            return (
+                f"<video src='{src}'></video><br/>\n"
+                f"<a href='{src}'>{src}</a><br/>\n"
+            )
+        return ''
+
+    @staticmethod
+    def _handle_map(el: Tag, _url: str, _encoding: str) -> str:
+        out = ''
+        for child in el.contents:
+            if isinstance(child, Tag) and child.name == 'area':
+                href = child.get('href', '#')
+                alt = child.get('alt', 'empty link title')
+                out += f"<br/><br/><strong><a href='{href}'>{alt}</a></strong><br/><br/>\n"
+        return out
+
+    @staticmethod
+    def _handle_pre(el: Tag, _url: str, _encoding: str) -> str:
+        return str(el) + "\n"
+
+    @staticmethod
+    def _default_handler(el: Tag, url: str, encoding: str) -> str:
+        open_tag = f"<{el.name}>\n"
+        inner = ''.join(Extractor._traverse_element(c, url, encoding) for c in el.contents if not (isinstance(c, NavigableString) and str(c) == '\n'))
+        close_tag = f"</{el.name}>\n"
+        return open_tag + inner + close_tag
 
 
 def main() -> int:
     LOGGER.debug("# main()")
-    feed_dir_path: Path = Path.cwd()
-
     optlist, args = getopt.getopt(sys.argv[1:], "f:")
+    feed_dir_path = Path.cwd()
     for o, a in optlist:
         if o == "-f":
             feed_dir_path = Path(a)
 
     if len(args) < 1:
-        print_usage()
+        print(f"_usage:\t{sys.argv[0]}\t[ <option> ] <file or url>")
         return -1
 
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)
     config = Config(feed_dir_path=feed_dir_path)
-    if not config:
-        LOGGER.error("Error: Can't get configuration")
-        return -1
-    extraction_conf = config.get_extraction_configs()
-
-    extractor = Extractor()
-    result = extractor.extract_content(extraction_conf, args[0])
-    del extractor
+    result = Extractor.extract_content(config.get_extraction_configs(), args[0])
     if result:
         print(result)
         return 0

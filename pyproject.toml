@@ -1,9 +1,9 @@
 [tool.black]
 line-length = 120
-target-version = ["py39"]
+target-version = ["py312"]
 
 [tool.isort]
-py_version = 39
+py_version = 312
 skip = ["__init__.py"]
 skip_glob = ["migrations/*"]
 multi_line_output = 3
@@ -21,12 +21,7 @@ disallow_untyped_calls = true
 disallow_any_generics = true
 #warn_return_any = true
 
-
-[tool.poetry.dev-dependencies]
-pylint = "2.16.2"
-mypy = "1.1.1"
-
 [tool.pylint."master"]
 ignore = [".github/*", "idea/*", ".mypy_cache/*", ".run/*", "frontend/*", "out/*"]
-disable = ["line-too-long", "missing-module-docstring", "missing-function-docstring", "missing-class-docstring", "too-many-arguments", "too-many-locals", "too-many-instance-attributes", "too-many-branches", "too-many-statements", "too-many-public-methods", "too-many-lines", "too-many-return-statements", "too-many-boolean-expressions", "too-many-nested-blocks", "too-many-ancestors", "too-many-arguments", "too-many-locals", "too-many-instance-attributes", "too-many-branches", "too-many-statements", "too-many-public-methods", "too-many-lines", "too-many-return-statements", "too-many-boolean-expressions", "too-many-nested-blocks", "too-many-ancestors", "too-many-arguments", "too-many-locals", "too-many-instance-attributes", "too-many-branches", "too-many-statements", "too-many-public-methods", "too-many-lines", "too-many-return-statements", "too-many-boolean-expressions", "too-many-nested-blocks", "too-many-ancestors", "too-many-arguments", "too-many-locals", "too-many-instance-attributes", "too-many-branches", "too-many-statements", "too-many-public-methods", "too-many-lines", "too-many-return-statements", "too-many-boolean-expressions", "too-many-nested-blocks", "too-many-ancestors", "too-many-arguments", "too-many-locals", "too-many-instance-attributes", "too-many-branches", "too-many-statements", "too-many-public-methods", "too-many-lines", "too-many-return-statements", "too-many-boolean-expressions", "too-many-nested-blocks", "too-many-ancestors", "too-many-arguments", "too-many-locals", "too-many-instance-attributes", "too-many-branches", "too-many-statements", "too-many-public-methods", "too-many-lines", "too-many-return-statements", "too-many-boolean-expressions", "too-many-nested-blocks", "too-many-ancestors", "too-many-arguments", "too-many-locals", "too-many-instance-attributes", "too-many-branches", "too-many-statements", "too-many-public-methods", "too-few-public-methods", "logging-fstring-interpolation", "invalid-name", "protected-access", "arguments-renamed", "import-error"]
+disable = ["line-too-long", "missing-module-docstring", "missing-function-docstring", "missing-class-docstring", "too-many-arguments", "too-many-locals", "too-many-instance-attributes", "too-many-branches", "too-many-statements", "too-many-public-methods", "too-many-lines", "too-many-return-statements", "too-many-boolean-expressions", "too-many-nested-blocks", "too-many-ancestors", "too-many-arguments", "too-many-locals", "too-many-instance-attributes", "too-many-branches", "too-many-statements", "too-many-public-methods", "too-many-lines", "too-many-return-statements", "too-many-boolean-expressions", "too-many-nested-blocks", "too-many-ancestors", "too-many-arguments", "too-many-locals", "too-many-instance-attributes", "too-many-branches", "too-many-statements", "too-many-public-methods", "too-many-lines", "too-many-return-statements", "too-many-boolean-expressions", "too-many-nested-blocks", "too-many-ancestors", "too-many-arguments", "too-many-locals", "too-many-instance-attributes", "too-many-branches", "too-many-statements", "too-many-public-methods", "too-many-lines", "too-many-return-statements", "too-many-boolean-expressions", "too-many-nested-blocks", "too-many-ancestors", "too-many-arguments", "too-many-locals", "too-many-instance-attributes", "too-many-branches", "too-many-statements", "too-many-public-methods", "too-many-lines", "too-many-return-statements", "too-many-boolean-expressions", "too-many-nested-blocks", "too-many-ancestors", "too-many-arguments", "too-many-locals", "too-many-instance-attributes", "too-many-branches", "too-many-statements", "too-many-public-methods", "too-many-lines", "too-many-return-statements", "too-many-boolean-expressions", "too-many-nested-blocks", "too-many-ancestors", "too-many-arguments", "too-many-locals", "too-many-instance-attributes", "too-many-branches", "too-many-statements", "too-many-public-methods", "too-few-public-methods", "logging-fstring-interpolation", "invalid-name", "protected-access", "arguments-renamed", "import-error", "trailing-whitespace", "consider-using-f-string", "duplicate-code"]
 extension-pkg-allow-list = ["pdftotext"]

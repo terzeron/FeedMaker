@@ -5,7 +5,7 @@
 import unittest
 import logging.config
 from pathlib import Path
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 from bin.feed_maker_util import HTMLExtractor
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -13,7 +13,7 @@ LOGGER = logging.getLogger()
 
 
 class HTMLExtractorTest(unittest.TestCase):
-    def test_get_first_token_from_path(self):
+    def test_get_first_token_from_path(self) -> None:
         # id, name, idx, remainder of path, isAnywhere
         actual = HTMLExtractor.get_first_token_from_path("")
         self.assertEqual((None, None, None, None, False), actual)
@@ -45,75 +45,85 @@ class HTMLExtractorTest(unittest.TestCase):
         actual = HTMLExtractor.get_first_token_from_path("//img[2]")
         self.assertEqual((None, "img", 2, "", True), actual)
 
-    def test_get_node_with_path(self):
+    def test_get_node_with_path(self) -> None:
         soup = BeautifulSoup('<html><body><div>hello</div><div id="ct"><span>text</span></div></body></html>', 'html.parser')
+        assert soup.body is not None
+        body: Tag = soup.body
 
-        target_node = HTMLExtractor.get_node_with_path(soup.body, '//span')
+        target_node = HTMLExtractor.get_node_with_path(body, '//span')
         if target_node:
             actual = target_node[0].name
             expected = "span"
             self.assertEqual(expected, actual)
 
-            actual = target_node[0].contents[0]
+            content: Tag = target_node[0].contents[0]  # type: ignore
+            actual = str(content.string)
             expected = "text"
             self.assertEqual(expected, actual)
         else:
             self.fail()
 
-        target_node = HTMLExtractor.get_node_with_path(soup.body, '//*[@id="ct"]')
+        target_node = HTMLExtractor.get_node_with_path(body, '//*[@id="ct"]')
         if target_node:
             actual = target_node[0].name
             expected = "div"
             self.assertEqual(expected, actual)
 
-            actual = target_node[0].contents[0].contents[0]
+            parent: Tag = target_node[0].contents[0]  # type: ignore
+            content: Tag = parent.contents[0]  # type: ignore
+            actual = str(content.string)
             expected = "text"
             self.assertEqual(expected, actual)
         else:
             self.fail()
 
-        target_node = HTMLExtractor.get_node_with_path(soup.body, '/html/body/div')
+        target_node = HTMLExtractor.get_node_with_path(body, '/html/body/div')
         if target_node:
             actual = target_node[0].name
             expected = "div"
             self.assertEqual(expected, actual)
 
-            actual = target_node[0].contents[0]
+            content: Tag = target_node[0].contents[0]  # type: ignore
+            actual = str(content.string)
             expected = "hello"
             self.assertEqual(expected, actual)
         else:
             self.fail()
 
-        target_node = HTMLExtractor.get_node_with_path(soup.body, '/div[2]')
+        target_node = HTMLExtractor.get_node_with_path(body, '/div[2]')
         if target_node:
             actual = target_node[0].name
             expected = "div"
             self.assertEqual(expected, actual)
 
-            actual = target_node[0].contents[0].contents[0]
+            parent: Tag = target_node[0].contents[0]  # type: ignore
+            content: Tag = parent.contents[0]  # type: ignore
+            actual = str(content.string)
             expected = "text"
             self.assertEqual(expected, actual)
         else:
             self.fail()
 
-        target_node = HTMLExtractor.get_node_with_path(soup.body, '//*[@id="ct"]/span')
+        target_node = HTMLExtractor.get_node_with_path(body, '//*[@id="ct"]/span')
         if target_node:
             actual = target_node[0].name
             expected = "span"
             self.assertEqual(expected, actual)
-            actual = target_node[0].contents[0]
+            content: Tag = target_node[0].contents[0]  # type: ignore
+            actual = str(content.string)
             expected = "text"
             self.assertEqual(expected, actual)
         else:
             self.fail()
 
-        target_node = HTMLExtractor.get_node_with_path(soup.body, '/div[2]/span')
+        target_node = HTMLExtractor.get_node_with_path(body, '/div[2]/span')
         if target_node:
             actual = target_node[0].name
             expected = "span"
             self.assertEqual(expected, actual)
 
-            actual = target_node[0].contents[0]
+            content: Tag = target_node[0].contents[0]  # type: ignore
+            actual = str(content.string)
             expected = "text"
             self.assertEqual(expected, actual)
         else:

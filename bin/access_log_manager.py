@@ -1,140 +1,177 @@
 #!/usr/bin/env python
 
-import os
+
 import re
 import logging.config
 from pathlib import Path
-from typing import List, Dict, Any, Tuple, Optional
-from datetime import datetime, timedelta
+from typing import Any, Optional
+from datetime import datetime, date, timedelta, timezone
 import requests
-from bin.feed_maker_util import Datetime
-from bin.db_manager import DBManager, Cursor, IntegrityError
+
+from bin.feed_maker_util import Env
+from bin.models import FeedInfo
+from bin.db import DB, func
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
 class AccessLogManager:
-    work_dir = Path(os.environ["FM_WORK_DIR"])
+    work_dir_path = Path(Env.get("FM_WORK_DIR"))
 
-    def __init__(self, db_manager: Optional[DBManager] = None) -> None:
-        if db_manager:
-            self.db = db_manager
-        else:
-            self.db = DBManager(os.environ["FM_DB_HOST"], int(os.environ["FM_DB_PORT"]), os.environ["MYSQL_DATABASE"], os.environ["MYSQL_USER"], os.environ["MYSQL_PASSWORD"])
+    def __init__(self, *, loki_url: Optional[str] = None) -> None:
+        self.loki_url = (loki_url if loki_url else Env.get("FM_LOKI_URL")) + "/query_range"
 
-        self.loki_url = os.environ["FM_LOKI_URL"] + "/query_range"
+    def __del__(self) -> None:
+        del self.loki_url
 
-    def loki_search(self, params) -> Tuple[List[str], Dict[str, Any]]:
-        logs: List[str] = []
-        stats: Dict[str, Any] = {}
+    def loki_search(self, params: dict[str, Any]) -> tuple[list[str], dict[str, Any]]:
+        logs: list[str] = []
+        stats: dict[str, Any] = {}
         response = requests.get(self.loki_url, params=params, timeout=60, verify=False)
+        response.raise_for_status()
         if response:
             json_data = response.json()
-            if "status" in json_data and json_data["status"] == "success":
-                if "data" in json_data and "result" in json_data["data"]:
-                    if "stats" in json_data["data"]:
-                        stats = json_data["data"]["stats"]
+            status = json_data.get("status", "")
+            if status == "success":
+                data = json_data.get("data", {})
+                if data:
+                    result = data.get("result", [])
+                    for result_item in result:
+                        values = result_item.get("values", [])
+                        for _, log_item in values:
+                            logs.append(log_item)
+                    stats = data.get("stats", {})
 
-                    for result in json_data["data"]["result"]:
-                        if "values" in result:
-                            for _, log_item in result["values"]:
-                                logs.append(log_item)
         return logs, stats
 
-    def search(self, date_str: str) -> Tuple[List[Tuple[datetime, str]], List[Tuple[datetime, str]]]:
-        duration_in_minutes = 60 * 24 * 1 # 1 days
-        step_in_minutes = 60 * 6 # by 6 hours
+    def search_by_date(self, the_day: date) -> tuple[list[tuple[datetime, str]], list[tuple[datetime, str]]]:
+        duration_in_minutes = 60 * 24  # 1 day
+        step_in_minutes = 60 * 6  # by 6 hours
 
-        # 특정일 0시 0분 0초
-        the_day = datetime.strptime(date_str, "%Y-%m-%d")
-
-        accessed_feed_list: List[Tuple[datetime, str]] = []
-        viewed_feed_list: List[Tuple[datetime, str]] = []
+        accessed_feed_list: list[tuple[datetime, str]] = []
+        viewed_feed_list: list[tuple[datetime, str]] = []
+        local_tz = datetime.now().astimezone().tzinfo
         for i in range(0, duration_in_minutes, step_in_minutes):
-            start = (the_day + timedelta(minutes=i)).astimezone().isoformat()
-            end = (the_day + timedelta(minutes=i + step_in_minutes)).astimezone().isoformat()
-            params = {"query": '{namespace="feedmaker"}', "start": start, "end": end, "limit": 5000, "direction": "forward"}
+            start_dt = (datetime(the_day.year, the_day.month, the_day.day, tzinfo=local_tz) + timedelta(minutes=i))
+            start_ns = int(
+                start_dt.replace(tzinfo=local_tz).timestamp()) * 1_000_000_000 + start_dt.microsecond * 1000
+            end_dt = (datetime(the_day.year, the_day.month, the_day.day, tzinfo=local_tz) + timedelta(
+                minutes=i + step_in_minutes))
+            end_ns = int(end_dt.replace(tzinfo=local_tz).timestamp()) * 1_000_000_000 + end_dt.microsecond * 1000
+            # print(f"{start_dt=} ~ {end_dt=}")
+            params = {
+                "query": '{namespace="feedmaker"}',
+                "start": start_ns,
+                "end": end_ns,
+                "limit": 5000,
+                "direction": "forward"
+            }
 
             result, _ = self.loki_search(params)
+            # print(result)
             for log in result:
-                m = re.search(r'\[(?P<time>[^\]]+)\] "GET (?P<uri>[^ ]+) HTTP[^"]+\" (?P<status>\d+)', log)
-                if m:
-                    if m.group("status") == "200" or m.group("status") == "304":
-                        time = m.group("time")
-                        dt = datetime.strptime(time, "%d/%b/%Y:%H:%M:%S %z")
-
-                        uri = m.group("uri")
-                        m = re.search(r'/xml/img/(?P<feed>[^/]+)/(?P<item>.+)', uri)
-                        if m:
-                            feed = m.group("feed")
-                            #item = m.group("item")
-                        m = re.search(r'/xml/(?P<feed>.+).xml', uri)
-                        if m:
-                            feed = m.group("feed")
-                            accessed_feed_list.append((dt, feed))
-                        m = re.search(r'/img/1x1\.jpg\?feed=(?P<feed>[^&]+)\.xml&item=(?P<item>.+)', uri)
-                        if m:
-                            feed = m.group("feed")
-                            #item = m.group("item")
-                            viewed_feed_list.append((dt, feed))
+                m = re.search(r'\[(?P<time>[^]]+)] "GET (?P<uri>[^ ]+) HTTP[^"]+\" (?P<status>\d+)', log)
+                if m and m.group("status") in ("200", "304"):
+                    dt = datetime.strptime(m.group("time"), "%d/%b/%Y:%H:%M:%S %z")
+                    uri = m.group("uri")
+                    m1 = re.search(r'/xml/(?P<feed>.+).xml', uri)
+                    if m1:
+                        accessed_feed_list.append((dt, m1.group("feed")))
+                    m2 = re.search(r'/img/1x1\.jpg\?feed=(?P<feed>[^&]+)\.xml&item=(?P<item>.+)', uri)
+                    if m2:
+                        viewed_feed_list.append((dt, m2.group("feed")))
 
         return accessed_feed_list, viewed_feed_list
 
-    def remove_httpd_access_info(self, feed_dir_path: Path) -> None:
+    @classmethod
+    def remove_httpd_access_info(cls, feed_dir_path: Path) -> None:
         feed_name = feed_dir_path.name
-        with self.db.get_connection_and_cursor() as (connection, cursor):
-            self.db.execute(cursor, "UPDATE feed_info SET http_request = NULL, access_date = NULL WHERE feed_name = %s", feed_name)
-            self.db.commit(connection)
+        with DB.session_ctx() as s:
+            s.query(FeedInfo).filter_by(feed_name=feed_name).update({
+                FeedInfo.http_request: None, 
+                FeedInfo.access_date: None
+            })
         LOGGER.info("* The removing of access info of feed '%s' is done.", feed_name)
 
-    def _add_httpd_access_info(self, cursor: Cursor, date_str: str = "") -> int:
-        num_items = 0
-        accessed_feed_list, viewed_feed_list = self.search(date_str)
+    def _add_httpd_access_info(self, specific_date: date) -> tuple[dict[str, datetime], dict[str, datetime]]:
+        accessed_feed_list, viewed_feed_list = self.search_by_date(specific_date)
+
+        latest_access: dict[str, datetime] = {}
         for access_date, feed_name in accessed_feed_list:
-            access_date_str = Datetime.convert_datetime_to_str(access_date)
-            try:
-                self.db.execute(cursor, "INSERT INTO feed_info (feed_name, http_request, access_date) VALUES (%s, %s, %s)", feed_name, True, access_date_str)
-            except IntegrityError:
-                self.db.execute(cursor, "UPDATE feed_info SET http_request = %s, access_date = %s WHERE feed_name = %s", True, access_date_str, feed_name)
-            num_items += 1
+            if not (prev := latest_access.get(feed_name)) or access_date > prev:
+                latest_access[feed_name] = access_date
 
+        latest_view: dict[str, datetime] = {}
         for view_date, feed_name in viewed_feed_list:
-            view_date_str = Datetime.convert_datetime_to_str(view_date)
-            try:
-                self.db.execute(cursor, "INSERT INTO feed_info (feed_name, http_request, view_date) VALUES (%s, %s, %s)", feed_name, True, view_date_str)
-            except IntegrityError:
-                self.db.execute(cursor, "UPDATE feed_info SET http_request = %s, view_date = %s WHERE feed_name = %s", True, view_date_str, feed_name)
-            num_items += 1
+            if not (prev := latest_access.get(feed_name)) or view_date > prev:
+                latest_access[feed_name] = view_date
 
-        return num_items
+        return latest_access, latest_view
 
     def add_httpd_access_info(self) -> None:
         LOGGER.debug("# add_httpd_access_info()")
-        with self.db.get_connection_and_cursor() as (connection, cursor):
-            rows = self.db.query("SELECT DATEDIFF(CURRENT_DATE, MAX(access_date)) AS days FROM feed_info")
-            if rows and len(rows) > 0 and rows[0]["days"] is not None:
-                days = rows[0]["days"] + 1
+        # get the number of days since the last access date
+        with DB.session_ctx() as s:
+            row = s.query(func.datediff(func.current_date, func.max(FeedInfo.access_date)).label("days")).first()
+            if row and row.days:
+                days = row.days + 1
             else:
-                days = 30
+                days = 1  # 30
 
             for i in range(days, -1, -1):
-                date_str = (datetime.today() - timedelta(days=i)).strftime("%Y-%m-%d")
-                self._add_httpd_access_info(cursor, date_str)
-            self.db.commit(connection)
+                specific_date = datetime.today() - timedelta(days=i)
+                latest_access, latest_view = self._add_httpd_access_info(specific_date)
+
+                for feed_name, access_date in latest_access.items():
+                    existing_feeds = s.query(FeedInfo).filter_by(feed_name=feed_name).all()
+                    if existing_feeds:
+                        for feed in existing_feeds:
+                            feed.http_request = True
+                            feed.access_date = access_date
+                    else:
+                        s.add(FeedInfo(feed_name=feed_name, http_request=True, access_date=access_date))
+
+                for feed_name, view_date in latest_view.items():
+                    existing_feeds = s.query(FeedInfo).filter_by(feed_name=feed_name).all()
+                    if existing_feeds:
+                        for feed in existing_feeds:
+                            feed.http_request = True
+                            feed.view_date = view_date
+                    else:
+                        s.add(FeedInfo(feed_name=feed_name, http_request=True, view_date=view_date))
+
         LOGGER.info("* The adding of access info is done.")
 
     def load_all_httpd_access_info(self, max_num_days: int = 30) -> None:
         LOGGER.debug("# load_all_httpd_access_info(max_num_days=%d)", max_num_days)
-        start_ts = datetime.now()
-        with self.db.get_connection_and_cursor() as (connection, cursor):
-            # read access.log for 1 month
-            today = datetime.today()
-            num_items = 0
-            for i in range(max_num_days, -1, -1):
-                date_str = (today - timedelta(days=i)).strftime("%Y-%m-%d")
-                num_items += self._add_httpd_access_info(cursor, date_str=date_str)
+        start_ts = datetime.now(timezone.utc)
+        latest_access: dict[str, datetime] = {}
+        latest_view: dict[str, datetime] = {}
 
-            self.db.commit(connection)
-        end_ts = datetime.now()
-        LOGGER.info("* The loading of all httpd access logs is done. %d items / %s sec", num_items, (end_ts - start_ts))
+        for i in range(max_num_days, -1, -1):
+            specific_date = datetime.today() - timedelta(days=i)
+            latest_access, latest_view = self._add_httpd_access_info(specific_date)
+            with DB.session_ctx() as s:
+                for feed_name, access_date in latest_access.items():
+                    existing_feeds = s.query(FeedInfo).filter_by(feed_name=feed_name).all()
+                    if existing_feeds:
+                        for feed in existing_feeds:
+                            feed.http_request = True
+                            feed.access_date = access_date
+                    else:
+                        s.add(FeedInfo(feed_name=feed_name, http_request=True, access_date=access_date))
+
+            with DB.session_ctx() as s:
+                for feed_name, view_date in latest_view.items():
+                    existing_feeds = s.query(FeedInfo).filter_by(feed_name=feed_name).all()
+                    if existing_feeds:
+                        for feed in existing_feeds:
+                            feed.http_request = True
+                            feed.view_date = view_date
+                    else:
+                        s.add(FeedInfo(feed_name=feed_name, http_request=True, view_date=view_date))
+
+        end_ts = datetime.now(timezone.utc)
+        total_num_items = len(latest_access) + len(latest_view)
+        LOGGER.info("* The loading of all httpd access logs is done. %d items / %s sec", total_num_items, (end_ts - start_ts))

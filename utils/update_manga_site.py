@@ -10,7 +10,7 @@ import logging.config
 from pprint import pprint
 from typing import Optional
 from pathlib import Path
-from bin.feed_maker_util import Process
+from bin.feed_maker_util import Process, NotFoundConfigFileError, InvalidConfigFileError, NotFoundConfigItemError
 
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -28,31 +28,33 @@ def update_domain(test_run: bool, new_number: int) -> bool:
 
     # update site config file
     print("- site_config.json")
-    site_config_file = "site_config.json"
-    if not os.path.isfile(site_config_file):
-        print("can't find site config file")
-        return False
+    site_conf_file_path = Path.cwd() / "site_config.json"
+    if not site_conf_file_path.is_file():
+        raise NotFoundConfigFileError(f"can't find configuration file '{site_conf_file_path}'")
 
     # read site config file
-    with open(site_config_file, "r", encoding="utf-8") as f:
+    with site_conf_file_path.open("r", encoding="utf-8") as f:
         site_config = json.load(f)
-        if site_config:
-            if "url" in site_config:
-                if test_run:
-                    m = re.search(r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+)(?P<post>[^/]*)', site_config["url"])
-                    if m:
-                        print(m.group("pre"))
-                        print(str(new_number))
-                        print(m.group("post"))
-                new_url = re.sub(r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+)(?P<post>[^/]*)', r'\g<pre>' + str(new_number) + r'\g<post>', site_config["url"])
-            else:
-                print("no url in site config")
-                return False
-            if "referer" in site_config:
-                new_referer = re.sub(r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+)(?P<post>[^/]*)', r'\g<pre>' + str(new_number) + r'\g<post>', site_config["referer"])
-        else:
-            print("empty site config")
-            return False
+        if not site_config:
+            raise InvalidConfigFileError(f"can't get configuration from '{site_conf_file_path}' with invalid format")
+
+        url = site_config.get("url", "")
+        if not url:
+            raise NotFoundConfigItemError("can't get configuration item 'url'")
+        referer = site_config.get("referer", "")
+        if not url:
+            raise NotFoundConfigItemError("can't get configuration item 'referer'")
+            
+        if test_run:
+            m = re.search(r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+)(?P<post>[^/]*)', url)
+            if m:
+                print(m.group("pre"))
+                print(str(new_number))
+                print(m.group("post"))
+        new_url = re.sub(r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+)(?P<post>[^/]*)', r'\g<pre>' + str(new_number) + r'\g<post>', url)
+
+        if referer:
+            new_referer = re.sub(r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+)(?P<post>[^/]*)', r'\g<pre>' + str(new_number) + r'\g<post>', referer)
 
     # write site config file
     if new_url:
@@ -64,34 +66,34 @@ def update_domain(test_run: bool, new_number: int) -> bool:
         print(new_referer)
         pprint(site_config)
     else:
-        temp_site_config_file = site_config_file + ".temp"
-        with open(temp_site_config_file, "w", encoding="utf-8") as outfile:
+        temp_site_conf_file_path = site_conf_file_path.with_suffix(site_conf_file_path.suffix + ".temp")
+        with temp_site_conf_file_path.open("w", encoding="utf-8") as outfile:
             json.dump(site_config, outfile, indent=2, ensure_ascii=False)
-            os.rename(temp_site_config_file, site_config_file)
+            temp_site_conf_file_path.rename(site_conf_file_path)
 
     # git add
     if not test_run:
         print("- git add")
-        git_cmd: str = f"git add {site_config_file}"
+        git_cmd: str = f"git add {site_conf_file_path}"
         _, error = Process.exec_cmd(git_cmd)
         if error:
-            LOGGER.error(f"can't execute a command '{git_cmd}', {error}")
+            LOGGER.error("can't execute a command '%s', %r", git_cmd, error)
 
     # update config files of all feeds which belongs to the site
-    for entry in os.listdir("."):
-        if not os.path.isdir(os.path.join(".", entry)) or entry.startswith("."):
+    for entry_path in Path.cwd().iterdir():
+        if not entry_path.is_dir() or entry_path.name.startswith("."):
             continue
-        print(f"- {entry}: ", end='')
-        conf_file = os.path.join(entry, "conf.json")
+        print(f"- {entry_path}: ", end='')
+        conf_file_path = entry_path / "conf.json"
         if not test_run:
             print(".", end='')
-        temp_conf_file = conf_file + ".temp"
-        with open(conf_file, "r", encoding="utf-8") as infile:
+        temp_conf_file_path = conf_file_path.with_suffix(conf_file_path.suffix + ".temp")
+        with conf_file_path.open("r", encoding="utf-8") as infile:
             data = json.load(infile)
             if "configuration" in data and "collection" in data["configuration"] and "list_url_list" in data["configuration"]["collection"]:
                 new_list_url_list = []
                 for list_url in data["configuration"]["collection"]["list_url_list"]:
-                    m = re.search(r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+)(?P<post>(\.|/).*)', list_url)
+                    m = re.search(r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+)(?P<post>[\./].*)', list_url)
                     if m:
                         new_list_url = m.group("pre") + str(new_number) + m.group("post")
                         new_list_url_list.append(new_list_url)
@@ -101,28 +103,28 @@ def update_domain(test_run: bool, new_number: int) -> bool:
             pprint(data)
             break
 
-        with open(temp_conf_file, "w", encoding="utf-8") as outfile:
+        with temp_conf_file_path.open("w", encoding="utf-8") as outfile:
             json.dump(data, outfile, indent=2, ensure_ascii=False)
-            os.rename(temp_conf_file, conf_file)
+            temp_conf_file_path.rename(conf_file_path)
 
         if not test_run:
             print(".", end='')
-            git_cmd = f"git add {conf_file}"
+            git_cmd = f"git add {conf_file_path}"
             _, error = Process.exec_cmd(git_cmd)
             if error:
-                LOGGER.error(f"can't execute a command '{git_cmd}', {error}")
+                LOGGER.error("can't execute a command '%s', %r", git_cmd, error)
 
         if not test_run:
             print(".", end='')
-            if os.path.isdir(os.path.join(".", entry, "newlist")):
-                for e in os.listdir(os.path.join(".", entry, "newlist")):
-                    os.remove(os.path.join(".", entry, "newlist", e))
-                os.rmdir(os.path.join(".", entry, "newlist"))
+            if os.path.isdir(os.path.join(".", entry_path, "newlist")):
+                for e in os.listdir(os.path.join(".", entry_path, "newlist")):
+                    os.remove(os.path.join(".", entry_path, "newlist", e))
+                os.rmdir(os.path.join(".", entry_path, "newlist"))
 
         if not test_run:
             print(".", end='')
             try:
-                xml_file_path = Path.cwd() / entry / f"{entry}.xml"
+                xml_file_path = (entry_path / f"{entry_path.name}").with_suffix(".xml")
                 old_xml_file_path = xml_file_path.with_suffix(xml_file_path.suffix + ".old")
                 xml_file_path.unlink(missing_ok=True)
                 old_xml_file_path.unlink(missing_ok=True)
@@ -135,7 +137,7 @@ def update_domain(test_run: bool, new_number: int) -> bool:
         git_cmd = f"git commit -m 'modify site url to {new_url}'"
         _, error = Process.exec_cmd(git_cmd)
         if error:
-            LOGGER.error(f"can't execute a command '{git_cmd}', {error}")
+            LOGGER.error("can't execute a command '%s', %r", git_cmd, error)
 
     return True
 
@@ -163,9 +165,8 @@ def main() -> int:
         return -1
 
     new_number = int(args[0])
-    if update_domain(test_run, new_number):
-        if not test_run:
-            check_site()
+    if update_domain(test_run, new_number) and not test_run:
+        check_site()
 
     return 0
 

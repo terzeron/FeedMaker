@@ -6,8 +6,8 @@ import os
 import getopt
 import logging.config
 from pathlib import Path
-from pdf2image import convert_from_path
-from bin.feed_maker_util import FileManager, header_str
+from pdf2image import convert_from_path # type: ignore[import]
+from bin.feed_maker_util import FileManager, Env, header_str
 from bin.crawler import Crawler
 
 
@@ -19,6 +19,7 @@ def main() -> int:
     sys.stdin.read()
     sys.stdin.flush()
     sys.stdin.close()
+    feed_dir_path = Path.cwd()
 
     optlist, args = getopt.getopt(sys.argv[1:], "f:")
     for o, a in optlist:
@@ -27,11 +28,11 @@ def main() -> int:
 
     if len(args) == 1:
         url_or_file = args[0]
-        if os.path.isfile(url_or_file):
+        if Path(url_or_file).is_file():
             pdf_file_path = Path(url_or_file)
         elif url_or_file.startswith("http"):
             pid = os.getpid()
-            pdf_dir_path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "pdf"
+            pdf_dir_path = Path(Env.get("WEB_SERVICE_PDF_DIR_PREFIX"))
             pdf_file_path = pdf_dir_path / f"{pid}.pdf"
             crawler = Crawler()
             result, error, _ = crawler.run(url=url_or_file, download_file=pdf_file_path)
@@ -43,9 +44,9 @@ def main() -> int:
         return -1
 
     feed_name = feed_dir_path.name
-    feed_img_dir_path = Path(os.environ["WEB_SERVICE_FEEDS_DIR"]) / "img" / feed_name
+    feed_img_dir_path = Path(Env.get("WEB_SERVICE_IMAGE_DIR_PREFIX")) / feed_name
     feed_img_dir_path.mkdir(exist_ok=True)
-    img_url_prefix = "https://terzeron.com/xml/img/" + feed_name
+    img_url_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX") + "/" + feed_name
     image_type = "JPEG"
     suffix = ".jpg"
 

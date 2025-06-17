@@ -4,23 +4,24 @@
 from fastapi.testclient import TestClient
 from backend.main import app
 
+
 client = TestClient(app)
 
 
-def test_get_exec_result():
+def test_get_exec_result() -> None:
     response = client.get("/exec_result")
     assert response.status_code == 200
     assert "status" in response.json() and "success" == response.json()["status"]
     assert "exec_result" in response.json()
 
 
-def test_get_problems_progress_info():
+def test_get_problems_progress_info() -> None:
     response = client.get("/problems/progress_info")
     assert response.status_code == 200
     assert "status" in response.json() and "success" == response.json()["status"]
     assert "result" in response.json()
     result = response.json()["result"]
-    for key, value in result.items():
+    for _, value in result.items():
         assert "feed_name" in value
         assert "feed_title" in value
         assert "group_name" in value
@@ -31,13 +32,13 @@ def test_get_problems_progress_info():
         assert "due_date" in value
 
 
-def test_get_problems_public_feed_info():
+def test_get_problems_public_feed_info() -> None:
     response = client.get("/problems/public_feed_info")
     assert response.status_code == 200
     assert "status" in response.json() and "success" == response.json()["status"]
     assert "result" in response.json()
     result = response.json()["result"]
-    for key, value in result.items():
+    for _, value in result.items():
         assert "feed_name" in value
         assert "feed_title" in value
         assert "group_name" in value
@@ -46,21 +47,21 @@ def test_get_problems_public_feed_info():
         assert "upload_date" in value
 
 
-def test_get_problems_html_info():
+def test_get_problems_html_info() -> None:
     response = client.get("/problems/html_info")
     assert response.status_code == 200
     assert "status" in response.json() and "success" == response.json()["status"]
     assert "result" in response.json()
     result = response.json()["result"]
     if result:
-        for key, value in result.items():
+        for _, value in result.items():
             if "html_file_size_map" in value:
-                for k, v in value["html_file_size_map"].items():
+                for _, v in value["html_file_size_map"].items():
                     assert "file_name" in v
                     assert "file_path" in v
 
             if "html_file_with_many_image_tag" in value:
-                for k, v in value["html_file_with_many_image_tag"].items():
+                for _, v in value["html_file_with_many_image_tag"].items():
                     assert "file_name" in v
                     assert "file_path" in v
                     assert "feed_dir_path" in v
@@ -68,7 +69,7 @@ def test_get_problems_html_info():
                     assert "update_date" in v
 
             if "html_file_without_image_tag" in value:
-                for k, v in value["html_file_without_image_tag"].items():
+                for _, v in value["html_file_without_image_tag"].items():
                     assert "file_name" in v
                     assert "file_path" in v
                     assert "feed_dir_path" in v
@@ -76,7 +77,7 @@ def test_get_problems_html_info():
                     assert "update_date" in v
 
             if "html_file_image_not_found" in value:
-                for k, v in value["html_file_image_not_found"].items():
+                for _, v in value["html_file_image_not_found"].items():
                     assert "file_name" in v
                     assert "file_path" in v
                     assert "feed_dir_path" in v
@@ -84,37 +85,37 @@ def test_get_problems_html_info():
                     assert "update_date" in v
 
 
-def test_get_problems_element_info():
+def test_get_problems_element_info() -> None:
     response = client.get("/problems/element_info")
     assert response.status_code == 200
     assert "status" in response.json() and "success" == response.json()["status"]
     assert "result" in response.json()
     result = response.json()["result"]
-    for key, value in result.items():
+    for _, value in result.items():
         assert "element_name" in value
         assert "count" in value
 
 
-def test_get_problems_list_url_info():
+def test_get_problems_list_url_info() -> None:
     response = client.get("/problems/list_url_info")
     assert response.status_code == 200
     assert "status" in response.json() and "success" == response.json()["status"]
     assert "result" in response.json()
     result = response.json()["result"]
-    for key, value in result.items():
+    for _, value in result.items():
         assert "feed_name" in value
         assert "feed_title" in value
         assert "group_name" in value
         assert "count" in value
 
 
-def test_get_problems_status_info():
+def test_get_problems_status_info() -> None:
     response = client.get("/problems/status_info")
     assert response.status_code == 200
     assert "status" in response.json() and "success" == response.json()["status"]
     assert "result" in response.json()
     result = response.json()["result"]
-    for key, value in result.items():
+    for _, value in result.items():
         assert "feed_name" in value
         assert "feed_title" in value
         assert "group_name" in value
@@ -128,7 +129,7 @@ def test_get_problems_status_info():
         assert "upload_date" in value
 
 
-def test_search():
+def test_search() -> None:
     response = client.get("/search/a")
     assert response.status_code == 200
     assert "status" in response.json() and "success" == response.json()["status"]
@@ -140,7 +141,7 @@ def test_search():
         assert "group_name" in feed
 
 
-def test_search_site():
+def test_search_site() -> None:
     response = client.get("/search_site/무림")
     assert response.status_code == 200
     assert "status" in response.json() and "success" == response.json()["status"]
@@ -151,7 +152,7 @@ def test_search_site():
         assert search_result[1].startswith("http")
 
 
-def test_get_site_config():
+def test_get_site_config() -> None:
     response = client.get("/groups/wfwf/site_config")
     assert response.status_code == 200
     assert "status" in response.json() and "success" == response.json()["status"]
@@ -161,7 +162,7 @@ def test_get_site_config():
     assert "keyword" in configuration
 
 
-def test_check_running():
+def test_check_running() -> None:
     response = client.get("/groups/naver/feeds/ai_doctor/check_running")
     assert response.status_code == 200
     assert "status" in response.json() and "success" == response.json()["status"]
@@ -169,7 +170,7 @@ def test_check_running():
     assert response.json()["running_status"] in ("error", True, False)
 
 
-def test_get_feed_info():
+def test_get_feed_info() -> None:
     response = client.get("/groups/naver/feeds/ai_doctor/info")
     assert response.status_code == 200
     assert "status" in response.json() and "success" == response.json()["status"]
@@ -195,7 +196,7 @@ def test_get_feed_info():
     assert "due_date" in feed_info["progress_info"]
 
 
-def test_get_feeds_by_group():
+def test_get_feeds_by_group() -> None:
     response = client.get("/groups/naver/feeds")
     assert response.status_code == 200
     assert "status" in response.json() and "success" == response.json()["status"]
@@ -206,7 +207,7 @@ def test_get_feeds_by_group():
         assert "title" in feed
 
 
-def test_get_groups():
+def test_get_groups() -> None:
     response = client.get("/groups")
     assert response.status_code == 200
     assert "status" in response.json() and "success" == response.json()["status"]

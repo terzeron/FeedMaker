@@ -12,23 +12,23 @@ LOGGER = logging.getLogger()
 
 
 class ConfigTest(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.config = Config(feed_dir_path=Path.cwd())
         if not self.config:
             LOGGER.error("can't get configuration")
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         del self.config
 
-    def test_init(self):
+    def test_init(self) -> None:
         actual = self.config is not None
         self.assertTrue(actual)
         actual = isinstance(self.config, Config)
         self.assertTrue(actual)
 
-    def test_get_bool_config_value(self):
-        collection_conf = self.config.conf["collection"]
-        extraction_conf = self.config.conf["extraction"]
+    def test_get_bool_config_value(self) -> None:
+        collection_conf = self.config.conf.get("collection", {})
+        extraction_conf = self.config.conf.get("extraction", {})
 
         # existent, without default
         actual = self.config._get_bool_config_value(collection_conf, "verify_ssl")
@@ -50,9 +50,9 @@ class ConfigTest(unittest.TestCase):
         expected = False
         self.assertEqual(expected, actual)
 
-    def test_get_str_config_value(self):
-        collection_conf = self.config.conf["collection"]
-        extraction_conf = self.config.conf["extraction"]
+    def test_get_str_config_value(self) -> None:
+        collection_conf = self.config.conf.get("collection", {})
+        extraction_conf = self.config.conf.get("extraction", {})
 
         # existent, without default
         actual = self.config._get_str_config_value(collection_conf, "encoding")
@@ -70,9 +70,9 @@ class ConfigTest(unittest.TestCase):
         actual = self.config._get_str_config_value(extraction_conf, "encoding")
         self.assertIsNone(actual)
 
-    def test_get_int_config_value(self):
-        collection_conf = self.config.conf["collection"]
-        extraction_conf = self.config.conf["extraction"]
+    def test_get_int_config_value(self) -> None:
+        collection_conf = self.config.conf.get("collection", {})
+        extraction_conf = self.config.conf.get("extraction", {})
 
         # existent, without default
         actual = self.config._get_int_config_value(extraction_conf, "timeout")
@@ -90,9 +90,9 @@ class ConfigTest(unittest.TestCase):
         actual = self.config._get_int_config_value(collection_conf, "timeout", 10)
         self.assertEqual(10, actual)
 
-    def test_get_float_config_value(self):
-        collection_conf = self.config.conf["collection"]
-        extraction_conf = self.config.conf["extraction"]
+    def test_get_float_config_value(self) -> None:
+        collection_conf = self.config.conf.get("collection", {})
+        extraction_conf = self.config.conf.get("extraction", {})
 
         # existent, without default
         actual = self.config._get_float_config_value(collection_conf, "unit_size_per_day")
@@ -111,8 +111,8 @@ class ConfigTest(unittest.TestCase):
         actual = self.config._get_float_config_value(extraction_conf, "unit_size_per_day", 5.8)
         self.assertEqual(5.8, actual)
 
-    def test_get_config_value_list(self):
-        collection_conf = self.config.conf["collection"]
+    def test_get_config_value_list(self) -> None:
+        collection_conf = self.config.conf.get("collection", {})
         actual = self.config._get_list_config_value(collection_conf, "list_url_list", [])
         expected = ["https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=1",
                     "https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=2"]
@@ -124,7 +124,7 @@ class ConfigTest(unittest.TestCase):
         actual2 = self.config._get_dict_config_value(collection_conf, "headers")
         self.assertEqual({}, actual2)
 
-    def test_get_collection_configs(self):
+    def test_get_collection_configs(self) -> None:
         configs = self.config.get_collection_configs()
         actual = isinstance(configs, dict)
         self.assertTrue(actual)
@@ -150,7 +150,7 @@ class ConfigTest(unittest.TestCase):
         expected = ['shuf']
         self.assertEqual(expected, actual)
 
-    def test_get_extraction_configs(self):
+    def test_get_extraction_configs(self) -> None:
         configs = self.config.get_extraction_configs()
         actual = isinstance(configs, dict)
         self.assertTrue(actual)
@@ -180,7 +180,7 @@ class ConfigTest(unittest.TestCase):
         actual2 = configs["headers"]
         self.assertEqual({}, actual2)
 
-    def test_get_rss_configs(self):
+    def test_get_rss_configs(self) -> None:
         configs = self.config.get_rss_configs()
         actual = isinstance(configs, dict)
         self.assertTrue(actual)

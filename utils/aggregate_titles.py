@@ -7,7 +7,6 @@ import getopt
 import subprocess
 import logging.config
 from pathlib import Path
-from typing import Set, Dict
 from bin.feed_maker_util import IO, Process
 
 
@@ -35,8 +34,8 @@ def main() -> int:
     intermediate_file = file_prefix + ".intermediate"
     temp_output_file = file_prefix + ".temp"
     output_file = file_prefix + ".output"
-    line_num_link_map: Dict[int, str] = {}
-    title_existence_set: Set[str] = set([])
+    line_num_link_map: dict[int, str] = {}
+    title_existence_set: set[str] = set([])
 
     # split link and title into two separate files
     # and make line number & link mapping table

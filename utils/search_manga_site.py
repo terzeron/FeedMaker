@@ -8,11 +8,11 @@ import getopt
 from threading import Thread
 import urllib.parse
 import logging.config
-from typing import Dict, Tuple, List, Union, Optional
+from typing import Optional, Union, Any
 from pathlib import Path
 from bs4 import BeautifulSoup, Comment
 from bin.crawler import Crawler, Method
-from bin.feed_maker_util import URL, HTMLExtractor
+from bin.feed_maker_util import URL, HTMLExtractor, NotFoundConfigFileError
 
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -26,27 +26,29 @@ class Site:
 
     url_prefix: str = ""
     url_postfix: str = ""
-    extraction_attrs: Dict[str, str] = {}
+    extraction_attrs: dict[str, str] = {}
 
     encoding: str = ""
     render_js: bool = False
     num_retries: int = 1
     method: Method = Method.GET
-    headers: Dict[str, str] = {}
-    payload: Dict[str, Union[str, bytes]] = {}
+    headers: dict[str, str] = {}
+    payload: dict[str, Union[str, bytes]] = {}
 
     def __init__(self, site_name: str) -> None:
         #LOGGER.debug("# Site(site_name='%s')", site_name)
         site_conf_file_path = work_dir_path / site_name / "site_config.json"
-        if site_conf_file_path.exists():
-            self.site_name = site_name
-            with site_conf_file_path.open("r", encoding="utf-8") as infile:
-                config = json.load(infile)
-                self.url_prefix = config["url"] if "url" in config else None
-                self.encoding = config["encoding"] if "encoding" in config else None
-                self.render_js = config["render_js"] if "render_js" in config else False
-                self.num_retries = config["num_retries"] if "num_retries" in config else 1
-                self.headers = {"Referer": config["referer"] if "referer" in config else ""}
+        if not site_conf_file_path.exists():
+            raise NotFoundConfigFileError(f"can't find configuration file '{site_conf_file_path}'")
+
+        self.site_name = site_name
+        with site_conf_file_path.open("r", encoding="utf-8") as infile:
+            config = json.load(infile)
+            self.url_prefix = config.get("url")
+            self.encoding = config.get("encoding")
+            self.render_js = config.get("render_js", False)
+            self.num_retries = config.get("num_retries", 1)
+            self.headers = {"Referer": config.get("referer", "")}
 
     def set_url_prefix(self, url_prefix: str) -> None:
         LOGGER.debug(f"# set_url_prefix(url_prefix={url_prefix})")
@@ -72,32 +74,34 @@ class Site:
             return response
         return None
 
-    def extract_sub_content(self, content: str, attrs: Dict[str, str]) -> List[Tuple[str, str]]:
+    def extract_sub_content(self, content: str, attrs: dict[str, str]) -> list[tuple[str, str]]:
         LOGGER.debug(f"# extract_sub_content(attrs={attrs})")
+        element_list: list[Any] = []
         soup = BeautifulSoup(content, "html.parser")
-        for element in soup.div(text=lambda text: isinstance(text, Comment)):
-            element.extract()
+        if soup.div:
+            for element in soup.div(text=lambda text: isinstance(text, Comment)):
+                element.extract()
 
-        result_list: List[Tuple[str, str]] = []
+        result_list: list[tuple[str, str]] = []
         for key in attrs.keys():
             if key in ("id", "class"):
                 element_list = soup.find_all(attrs={key: attrs[key]})
             elif key == "path":
-                element_list = HTMLExtractor.get_node_with_path(soup.body, attrs[key])
+                if soup.body is not None:
+                    path_list = HTMLExtractor.get_node_with_path(soup.body, attrs[key])
+                    if path_list:
+                        element_list = path_list
 
             title: str = ""
             link: str = ""
-            i: int = 0
             for element_obj in element_list:
                 LOGGER.debug(f"element_obj={element_obj}")
-                #print(f"###element_obj={str(element_obj)}\n")
                 if not element_obj:
                     continue
                 e = re.sub(r"\r?\n", "", str(element_obj))
                 e = re.sub(r"\s\s+", " ", e)
 
 
-                #print(f"i={i}, e={e}")
                 LOGGER.debug(f"e={e}")
                 # 링크 추출
                 m = re.search(r'<a[^>]*href="(?P<link>[^"]+)"[^>]*>', e)
@@ -106,7 +110,7 @@ class Site:
                         link = m.group("link")
                     else:
                         link = URL.concatenate_url(self.url_prefix, m.group("link"))
-                    link = re.sub(r'&amp;', '&', link)
+                    link = link.replace(r'&amp;', '&')
                     link = re.sub(r'&?cpa=\d+', '', link)
                     link = re.sub(r'&?stx=\d+', '', link)
                     LOGGER.debug(f"link={link}")
@@ -114,7 +118,6 @@ class Site:
                 # 주석 제거
                 e = re.sub(r'<!--[^>]*-->', '', str(e))
                 # 단순(텍스트만 포함한) p 태그 제거
-                #e = re.sub(r'<p[^>]*>[^<]*</p>', '', e)
                 prev_e = e
                 while True:
                     # 명시적인 타이틀 텍스트 추출
@@ -135,15 +138,15 @@ class Site:
                     e = re.sub(r'''
 <(?P<tag>\w+)[^>]*>\s*
     (
-        (애니|영화|게임|방송|음악|기타|유틸(리티)?|스포츠|기타)  (\s*&gt;\s*)?  (극장판|완결|액션|공포/호러|범죄/스릴러|코미디|ᆭᆩSF/판타지|아동(/가족)?|한국영화|다큐|미분류|드라마/멜로|드라마일드|드라마|시사/교양|예능/오락|국내앨범|외국앨범|축구|농구|야구|레슬링|레이싱|격투|유틸리티|미디어|그래픽|드라이버|문서/업무|유아/어린이|모바일|도서/만화|직캠/아이돌|여직캠|남직캠|코스프레)?|
+        (애니|영화|게임|방송|음악|기타|유틸(리티)?|스포츠)  (\s*&gt;\s*)?  (극장판|완결|액션|공포/호러|범죄/스릴러|코미디|ᆭᆩSF/판타지|아동(/가족)?|한국영화|다큐|미분류|드라마/멜로|드라마일드|드라마|시사/교양|예능/오락|국내앨범|외국앨범|축구|농구|야구|레슬링|레이싱|격투|유틸리티|미디어|그래픽|드라이버|문서/업무|유아/어린이|모바일|도서/만화|직캠/아이돌|여직캠|남직캠|코스프레)?|
         한글(자막)?|자체자막|자막없음|우리말더빙|일드|무자막|
-        한국영화|해외영화|영화|드라마|넷플릭스|영상·음악|애니·만화|게임·유틸| 
+        한국영화|해외영화|드라마|넷플릭스|영상·음악|애니·만화|게임·유틸| 
         만화제목|작가이름|(발행|초성|장르)검색|정렬|검색\s*결과|공지사항|북마크(업데이트)?|주간랭킹 TOP30|나의\s*댓?글\s*반응|
         주간|격주|격월|월간|단행본|단편|완결|연재|정기|비정기|월요일?|화요일?|수요일?|목요일?|금요일?|토요일?|일요일?|
-        /액|액션|판타지/무협|판타지|성인/무협|성인|무협/성인|무협/액션/판타지|무협/액션|무협/판타지|무협|무장|드라마|라노벨|개그/무협|개그|학원|스토리?|순정|로맨스|로매스|이세계|전생|일상|치유|애니|백합|미분류|시대극|투믹스|게임|카카오페|느와르|15금|18금|19금|가정부|GL|BL/무협|BL|일반|러브코미디|
+        /액|액션|판타지/무협|판타지|성인/무협|성인|무협/성인|무협/액션/판타지|무협/액션|무협/판타지|무협|무장|라노벨|개그/무협|개그|학원|스토리?|순정|로맨스|로매스|이세계|전생|일상|치유|백합|미분류|시대극|투믹스|카카오페|느와르|15금|18금|19금|가정부|GL|BL/무협|BL|일반|러브코미디|
         오늘|어제|그제|
         (하루|이틀|사흘|나흘)\s*전?|
-        (한|두|세|네|)\s*(주|달)\s*전?|
+        [한두세네]\s*[주달]\s*전?|
         (\d+|일|이|삼|사|오|육|칠|팔|구|십일|십이|십)\s*[일주월년]\s*전?|
         \d+[화권부편]
     )
@@ -152,11 +155,10 @@ class Site:
                     # 연속된 공백을 공백 1개로 교체
                     e = re.sub(r'\s+', ' ', e)
                     # #[] 제거
-                    e = re.sub(r'#\[]', '', e)
+                    e = e.replace(r'#\[]', '')
                     if prev_e == e:
                         break
                     prev_e = e
-                    #print(f"i={i}, e={e}")
 
                 # 일부 만화 사이트에서 권 단위 검색결과 노출되는 것을 제거
                 #if self.site_name not in ["jmana", "allall", "torrentjok"]:
@@ -184,14 +186,11 @@ class Site:
                     link = ""
                     title = ""
 
-                #print(f"i={i}, e={e}")
-                i += 1
-
         return result_list
 
-    def extract_sub_content_from_site_like_agit(self, content: str, keyword: str) -> List[Tuple[str, str]]:
+    def extract_sub_content_from_site_like_agit(self, content: str, keyword: str) -> list[tuple[str, str]]:
         LOGGER.debug(f"# extract_sub_content_from_site_like_agit(keyword={keyword})")
-        result_list: List[Tuple[str, str]] = []
+        result_list: list[tuple[str, str]] = []
 
         content = re.sub(r'^(<html><head>.*</head><body><pre[^>]*>)?var\s+\w+\s+=\s+', '', content)
         if re.search(r';(</pre></body></html>)?$', content):
@@ -206,7 +205,7 @@ class Site:
                 result_list.append((item["t"], link))
         return result_list
 
-    def search(self, keyword: str = "") -> List[Tuple[str, str]]:
+    def search(self, keyword: str = "") -> list[tuple[str, str]]:
         LOGGER.debug(f"# search(keyword={keyword})")
         self.set_url_postfix(keyword)
         self.set_payload(keyword)
@@ -216,7 +215,7 @@ class Site:
             return self.extract_sub_content(html, self.extraction_attrs)
         return []
 
-    def search_in_site_like_agit(self, keyword: str) -> List[Tuple[str, str]]:
+    def search_in_site_like_agit(self, keyword: str) -> list[tuple[str, str]]:
         LOGGER.debug(f"# search_in_site_like_agit(keyword={keyword})")
         url0 = ""
         url1 = ""
@@ -242,7 +241,7 @@ class Site:
         LOGGER.debug(f"url0={url0}")
         LOGGER.debug(f"url1={url1}")
 
-        result_list: List[Tuple[str, str]] = []
+        result_list: list[tuple[str, str]] = []
         for _ in range(self.num_retries):
             content0 = self.get_data_from_site(url0)
             if content0:
@@ -401,7 +400,7 @@ class BlacktoonSite(Site):
     def set_url_postfix(self, keyword: str = "") -> None:
         self.url_postfix = keyword
 
-    def search(self, keyword: str = "") -> List[Tuple[str, str]]:
+    def search(self, keyword: str = "") -> list[tuple[str, str]]:
         return self.search_in_site_like_agit(keyword)
 
 
@@ -447,7 +446,7 @@ class AgitSite(Site):
     def set_url_postfix(self, _: str = "") -> None:
         self.url_postfix = ""
 
-    def search(self, keyword: str = "") -> List[Tuple[str, str]]:
+    def search(self, keyword: str = "") -> list[tuple[str, str]]:
         return self.search_in_site_like_agit(keyword)
 
 
@@ -532,16 +531,16 @@ class TorrentmodeSite(Site):
 
 
 class SearchManager:
-    result_by_site: Dict[Site, List[Tuple[str, str]]] = {}
+    result_by_site: dict[Site, list[tuple[str, str]]] = {}
 
     def __init__(self) -> None:
         self.result_by_site = {}
 
-    def worker(self, site, keyword) -> None:
+    def worker(self, site: Site, keyword: str) -> None:
         #LOGGER.debug("# worker(site='%s', keyword='%s')", site, keyword)
         self.result_by_site[site] = site.search(keyword)
 
-    def search(self, site_name: str, keyword: str, do_include_torrent_sites: bool = False) -> List[Tuple[str, str]]:
+    def search(self, site_name: str, keyword: str, do_include_torrent_sites: bool = False) -> list[tuple[str, str]]:
         LOGGER.debug("# search(site_name='%s', keyword='%s', do_include_torrent_sites=%r)", site_name, keyword, do_include_torrent_sites)
 
         site_list = [
@@ -566,7 +565,7 @@ class SearchManager:
             TorrentTtSite("torrenttt"),
         ]
 
-        result_list: List[Tuple[str, str]] = []
+        result_list: list[tuple[str, str]] = []
         if not site_name:
             # multi-sites
             thread_list = []
