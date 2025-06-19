@@ -92,9 +92,9 @@ class Site:
                     if path_list:
                         element_list = path_list
 
-            title: str = ""
-            link: str = ""
             for element_obj in element_list:
+                title: str = ""
+                link: str = ""
                 LOGGER.debug(f"element_obj={element_obj}")
                 if not element_obj:
                     continue
@@ -102,7 +102,7 @@ class Site:
                 e = re.sub(r"\s\s+", " ", e)
 
 
-                LOGGER.debug(f"e={e}")
+                #LOGGER.debug(f"{e=}, {title=}, {link=}")
                 # 링크 추출
                 m = re.search(r'<a[^>]*href="(?P<link>[^"]+)"[^>]*>', e)
                 if m:
@@ -113,7 +113,7 @@ class Site:
                     link = link.replace(r'&amp;', '&')
                     link = re.sub(r'&?cpa=\d+', '', link)
                     link = re.sub(r'&?stx=\d+', '', link)
-                    LOGGER.debug(f"link={link}")
+                    #LOGGER.debug(f"{e=}, {title=}, {link=}")
 
                 # 주석 제거
                 e = re.sub(r'<!--[^>]*-->', '', str(e))
@@ -124,7 +124,9 @@ class Site:
                     m = re.search(r'<\w+[^>]*class="[^"]*([Tt]it(le)?|[Ss]ubject)"[^>]*>(?P<title>[^<>]+?)</\w+>', e)
                     if m:
                         title = m.group("title")
-                        LOGGER.debug(f"title={title}")
+                        if title == "/ 검색":
+                            title = ""
+                        #LOGGER.debug(f"{e=}, {title=}, {link=}")
 
                     if self.site_name in ["11toon"]:
                         # 이미지 url 추출하여 link로 변경
@@ -176,10 +178,10 @@ class Site:
                 e = re.sub(r'\s+$', '', e)
                 # 연속된 공백을 공백 1개로 교체
                 e = re.sub(r'\s+', ' ', e)
-                # LOGGER.debug(f"e={e}")
+                #LOGGER.debug(f"{e=}, {title=}, {link=}")
                 if not title and not re.search(r'^\s*$', e):
                     title = e
-                    LOGGER.debug(f"title={title}")
+                    #LOGGER.debug(f"{e=}, {title=}, {link=}")
 
                 if title and link and re.search(r"^\w.*$", title):
                     result_list.append((title, urllib.parse.unquote(link)))
@@ -331,6 +333,17 @@ class XtoonSite(Site):
     def set_url_postfix(self, keyword: str) -> None:
         encoded_keyword = urllib.parse.quote(keyword)
         self.url_postfix = "/index.php/search?key=" + encoded_keyword
+
+
+class JoatoonSite(Site):
+    def __init__(self, site_name: str) -> None:
+        super().__init__(site_name)
+        self.extraction_attrs = {"class": "p-1"}
+        print("joatoon")
+
+    def set_url_postfix(self, keyword: str) -> None:
+        encoded_keyword = urllib.parse.quote(keyword)
+        self.url_postfix = "/toon/search?k=" + encoded_keyword
 
 
 class MarumaruSite(Site):
@@ -545,24 +558,25 @@ class SearchManager:
 
         site_list = [
             EleventoonSite("11toon"),
-            AgitSite("agit"),
+            #AgitSite("agit"),
             #AllallSite("allall"),
-            BlacktoonSite("blacktoon"),
+            #BlacktoonSite("blacktoon"),
             FunbeSite("funbe"),
             #JmanaSite("jmana"),
-            ManatokiSite("manatoki"),
-            NewtokiSite("newtoki"),
+            #ManatokiSite("manatoki"),
+            #NewtokiSite("newtoki"),
             #SkytoonSite("skytoon"),
             ToonkorSite("toonkor"),
-            WfwfSite("wfwf"),
-            WtwtSite("wtwt"),
+            #WfwfSite("wfwf"),
+            #WtwtSite("wtwt"),
             XtoonSite("xtoon"),
-            TorrentJokSite("torrentjok"),
+            JoatoonSite("joatoon"),
+            #TorrentJokSite("torrentjok"),
             TorrentQqSite("torrentqq"),
             TorrentRjSite("torrentrj"),
             TorrentSeeSite("torrentsee"),
             TorrentTipSite("torrenttip"),
-            TorrentTtSite("torrenttt"),
+            #TorrentTtSite("torrenttt"),
         ]
 
         result_list: list[tuple[str, str]] = []
