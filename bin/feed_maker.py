@@ -146,7 +146,7 @@ class FeedMaker:
         LOGGER.debug("# _read_old_feed_list_from_file()")
 
         if not self.collection_conf:
-            LOGGER.error("ERROR: can't get collection configuration")
+            LOGGER.error("Error: can't get collection configuration")
             return []
 
         feed_list: list[tuple[str, str]] = []
@@ -500,7 +500,7 @@ class FeedMaker:
 
         # window_size (get value from configuration in case unspecified manually by run.py)
         if self.window_size == FeedMaker.DEFAULT_WINDOW_SIZE:
-            self.window_size = self.collection_conf.get("window_size", 0)
+            self.window_size = self.collection_conf.get("window_size", 5)
 
         # -c 또는 -l 옵션이 지정된 경우, 설정의 is_completed 값 무시
         if self.do_collect_by_force or self.do_collect_only:
@@ -518,7 +518,7 @@ class FeedMaker:
             # 완결된 피드는 적재된 리스트에서 일부 피드항목을 꺼내옴
             final_feed_list = self._fetch_old_feed_list_window(old_feed_list)
             if not final_feed_list:
-                LOGGER.error("Error: can't get collection configuration")
+                LOGGER.error("Error: can't fetch old feed list window")
                 return False
         else:
             # 피딩 중인 피드는 최신 피드항목을 받아옴
