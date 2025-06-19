@@ -339,7 +339,6 @@ class JoatoonSite(Site):
     def __init__(self, site_name: str) -> None:
         super().__init__(site_name)
         self.extraction_attrs = {"class": "p-1"}
-        print("joatoon")
 
     def set_url_postfix(self, keyword: str) -> None:
         encoded_keyword = urllib.parse.quote(keyword)
