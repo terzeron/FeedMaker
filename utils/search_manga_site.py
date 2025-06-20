@@ -18,11 +18,10 @@ from bin.feed_maker_util import URL, HTMLExtractor, NotFoundConfigFileError
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
-work_dir_path = Path(os.environ["FM_WORK_DIR"])
-
 
 class Site:
     site_name: str = ""
+    work_dir_path: Path = Path("")
 
     url_prefix: str = ""
     url_postfix: str = ""
@@ -35,8 +34,21 @@ class Site:
     headers: dict[str, str] = {}
     payload: dict[str, Union[str, bytes]] = {}
 
+    @classmethod
+    def set_work_dir(cls, work_dir: str) -> None:
+        """작업 디렉토리를 설정합니다."""
+        cls.work_dir_path = Path(work_dir)
+
+    @classmethod
+    def get_work_dir(cls) -> Path:
+        """작업 디렉토리를 반환합니다. 설정되지 않은 경우 환경변수에서 가져옵니다."""
+        if not cls.work_dir_path:
+            cls.work_dir_path = Path(os.environ["FM_WORK_DIR"])
+        return cls.work_dir_path
+
     def __init__(self, site_name: str) -> None:
         #LOGGER.debug("# Site(site_name='%s')", site_name)
+        work_dir_path = self.get_work_dir()
         site_conf_file_path = work_dir_path / site_name / "site_config.json"
         if not site_conf_file_path.exists():
             raise NotFoundConfigFileError(f"can't find configuration file '{site_conf_file_path}'")
@@ -58,12 +70,16 @@ class Site:
         LOGGER.debug(f"# set_url_postfix(url_postfix={url_postfix})")
         self.url_postfix = url_postfix
 
+    def set_url_postfix_with_keyword(self, keyword: str) -> None:
+        self.set_url_postfix(keyword)  # 기본 구현
+
     def set_payload(self, keyword: str = "") -> None:
         LOGGER.debug(f"# set_payload(keyword={keyword})")
 
     def get_data_from_site(self, url: str = "") -> Optional[str]:
         LOGGER.debug(f"# get_data_from_site(url={url})")
         if self.site_name:
+            work_dir_path = self.get_work_dir()
             site_dir_path = work_dir_path / self.site_name
             crawler: Crawler = Crawler(dir_path=site_dir_path, render_js=self.render_js, method=self.method, headers=self.headers, encoding=self.encoding, timeout=240)
             if not url:
@@ -142,7 +158,7 @@ class Site:
     (
         (애니|영화|게임|방송|음악|기타|유틸(리티)?|스포츠)  (\s*&gt;\s*)?  (극장판|완결|액션|공포/호러|범죄/스릴러|코미디|ᆭᆩSF/판타지|아동(/가족)?|한국영화|다큐|미분류|드라마/멜로|드라마일드|드라마|시사/교양|예능/오락|국내앨범|외국앨범|축구|농구|야구|레슬링|레이싱|격투|유틸리티|미디어|그래픽|드라이버|문서/업무|유아/어린이|모바일|도서/만화|직캠/아이돌|여직캠|남직캠|코스프레)?|
         한글(자막)?|자체자막|자막없음|우리말더빙|일드|무자막|
-        한국영화|해외영화|드라마|넷플릭스|영상·음악|애니·만화|게임·유틸| 
+        한국영화|해외영화|드라마|넷플릭스|영상·음악|애니·만화|게임·유틸|
         만화제목|작가이름|(발행|초성|장르)검색|정렬|검색\s*결과|공지사항|북마크(업데이트)?|주간랭킹 TOP30|나의\s*댓?글\s*반응|
         주간|격주|격월|월간|단행본|단편|완결|연재|정기|비정기|월요일?|화요일?|수요일?|목요일?|금요일?|토요일?|일요일?|
         /액|액션|판타지/무협|판타지|성인/무협|성인|무협/성인|무협/액션/판타지|무협/액션|무협/판타지|무협|무장|라노벨|개그/무협|개그|학원|스토리?|순정|로맨스|로매스|이세계|전생|일상|치유|백합|미분류|시대극|투믹스|카카오페|느와르|15금|18금|19금|가정부|GL|BL/무협|BL|일반|러브코미디|
@@ -209,7 +225,7 @@ class Site:
 
     def search(self, keyword: str = "") -> list[tuple[str, str]]:
         LOGGER.debug(f"# search(keyword={keyword})")
-        self.set_url_postfix(keyword)
+        self.set_url_postfix_with_keyword(keyword)
         self.set_payload(keyword)
         #LOGGER.debug(f"self.url_postfix={self.url_postfix}")
         html = self.get_data_from_site()
@@ -260,69 +276,69 @@ class Site:
         return result_list
 
 
-class JmanaSite(Site):
-    def __init__(self, site_name: str) -> None:
-        super().__init__(site_name)
-        self.extraction_attrs = {"class": "tit"}
+# class JmanaSite(Site):
+#     def __init__(self, site_name: str) -> None:
+#         super().__init__(site_name)
+#         self.extraction_attrs = {"class": "tit"}
 
-    def set_url_postfix(self, keyword: str) -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
-        self.url_postfix = "/comic_list?keyword=" + encoded_keyword
-
-
-class ManatokiSite(Site):
-    def __init__(self, site_name: str) -> None:
-        super().__init__(site_name)
-        self.extraction_attrs = {"class": "list-item"}
-
-    def set_url_postfix(self, keyword: str) -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
-        self.url_postfix = "/comic?stx=" + encoded_keyword
+#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
+#         encoded_keyword = urllib.parse.quote(keyword)
+#         self.url_postfix = "/comic_list?keyword=" + encoded_keyword
 
 
-class NewtokiSite(Site):
-    def __init__(self, site_name: str) -> None:
-        super().__init__(site_name)
-        self.extraction_attrs = {"class": "list-item"}
+# class ManatokiSite(Site):
+#     def __init__(self, site_name: str) -> None:
+#         super().__init__(site_name)
+#         self.extraction_attrs = {"class": "list-item"}
 
-    def set_url_postfix(self, keyword: str) -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
-        self.url_postfix = "/webtoon?stx=" + encoded_keyword
-
-
-class CopytoonSite(Site):
-    def __init__(self, site_name: str) -> None:
-        super().__init__(site_name)
-        self.extraction_attrs = {"class": "section-item-title"}
-
-    def set_url_postfix(self, keyword: str) -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
-        self.url_postfix = "/bbs/search_webtoon.php?stx=" + encoded_keyword
+#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
+#         encoded_keyword = urllib.parse.quote(keyword)
+#         self.url_postfix = "/comic?stx=" + encoded_keyword
 
 
-class WfwfSite(Site):
-    def __init__(self, site_name: str) -> None:
-        super().__init__(site_name)
-        self.extraction_attrs = {"class": "searchLink"}
+# class NewtokiSite(Site):
+#     def __init__(self, site_name: str) -> None:
+#         super().__init__(site_name)
+#         self.extraction_attrs = {"class": "list-item"}
 
-    def set_url_postfix(self, keyword: str) -> None:
-        encoded_cp949_keyword = urllib.parse.quote(keyword.encode("cp949"))
-        self.url_postfix = "/search.html?q=" + encoded_cp949_keyword
+#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
+#         encoded_keyword = urllib.parse.quote(keyword)
+#         self.url_postfix = "/webtoon?stx=" + encoded_keyword
 
 
-class WtwtSite(Site):
-    def __init__(self, site_name: str) -> None:
-        super().__init__(site_name)
-        self.extraction_attrs = {"class": "gallery"}
-        self.method = Method.POST
-        self.header = {"Content-Type": "application/x-www-form-urlencoded"}
+# class CopytoonSite(Site):
+#     def __init__(self, site_name: str) -> None:
+#         super().__init__(site_name)
+#         self.extraction_attrs = {"class": "section-item-title"}
 
-    def set_url_postfix(self, _: str) -> None:
-        self.url_postfix = "/sh"
+#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
+#         encoded_keyword = urllib.parse.quote(keyword)
+#         self.url_postfix = "/bbs/search_webtoon.php?stx=" + encoded_keyword
 
-    def set_payload(self, keyword: str = "") -> None:
-        cp949_keyword = keyword.encode("cp949")
-        self.payload = {"search_txt": cp949_keyword}
+
+# class WfwfSite(Site):
+#     def __init__(self, site_name: str) -> None:
+#         super().__init__(site_name)
+#         self.extraction_attrs = {"class": "searchLink"}
+
+#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
+#         encoded_cp949_keyword = urllib.parse.quote(keyword.encode("cp949"))
+#         self.url_postfix = "/search.html?q=" + encoded_cp949_keyword
+
+
+# class WtwtSite(Site):
+#     def __init__(self, site_name: str) -> None:
+#         super().__init__(site_name)
+#         self.extraction_attrs = {"class": "gallery"}
+#         self.method = Method.POST
+#         self.headers = {"Content-Type": "application/x-www-form-urlencoded"}
+
+#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
+#         self.url_postfix = "/sh"
+
+#     def set_payload(self, keyword: str = "") -> None:
+#         cp949_keyword = keyword.encode("cp949")
+#         self.payload = {"search_txt": cp949_keyword}
 
 
 class XtoonSite(Site):
@@ -330,7 +346,7 @@ class XtoonSite(Site):
         super().__init__(site_name)
         self.extraction_attrs = {"class": "katoon-box"}
 
-    def set_url_postfix(self, keyword: str) -> None:
+    def set_url_postfix_with_keyword(self, keyword: str) -> None:
         encoded_keyword = urllib.parse.quote(keyword)
         self.url_postfix = "/index.php/search?key=" + encoded_keyword
 
@@ -340,19 +356,19 @@ class JoatoonSite(Site):
         super().__init__(site_name)
         self.extraction_attrs = {"class": "p-1"}
 
-    def set_url_postfix(self, keyword: str) -> None:
+    def set_url_postfix_with_keyword(self, keyword: str) -> None:
         encoded_keyword = urllib.parse.quote(keyword)
         self.url_postfix = "/toon/search?k=" + encoded_keyword
 
 
-class MarumaruSite(Site):
-    def __init__(self, site_name: str) -> None:
-        super().__init__(site_name)
-        self.extraction_attrs = {"class": "media"}
+# class MarumaruSite(Site):
+#     def __init__(self, site_name: str) -> None:
+#         super().__init__(site_name)
+#         self.extraction_attrs = {"class": "media"}
 
-    def set_url_postfix(self, keyword: str) -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
-        self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
+#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
+#         encoded_keyword = urllib.parse.quote(keyword)
+#         self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
 
 
 class FunbeSite(Site):
@@ -360,7 +376,7 @@ class FunbeSite(Site):
         super().__init__(site_name)
         self.extraction_attrs = {"class": "section-item-title"}
 
-    def set_url_postfix(self, keyword: str) -> None:
+    def set_url_postfix_with_keyword(self, keyword: str) -> None:
         encoded_keyword = urllib.parse.quote(keyword)
         self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
 
@@ -370,7 +386,7 @@ class ToonkorSite(Site):
         super().__init__(site_name)
         self.extraction_attrs = {"class": "section-item-title"}
 
-    def set_url_postfix(self, keyword: str) -> None:
+    def set_url_postfix_with_keyword(self, keyword: str) -> None:
         encoded_keyword = urllib.parse.quote(keyword)
         self.url_postfix = "/bbs/search_webtoon.php?stx=" + encoded_keyword
 
@@ -380,96 +396,96 @@ class EleventoonSite(Site):
         super().__init__(site_name)
         self.extraction_attrs = {"class": "toons_item"}
 
-    def set_url_postfix(self, keyword: str) -> None:
+    def set_url_postfix_with_keyword(self, keyword: str) -> None:
         encoded_keyword = urllib.parse.quote(keyword)
         self.url_postfix = "/bbs/search_stx.php?stx=" + encoded_keyword
 
 
-class AllallSite(Site):
-    def __init__(self, site_name: str) -> None:
-        super().__init__(site_name)
-        self.extraction_attrs = {"class": "video_list"}
+# class AllallSite(Site):
+#     def __init__(self, site_name: str) -> None:
+#         super().__init__(site_name)
+#         self.extraction_attrs = {"class": "video_list"}
 
-    def set_url_postfix(self, keyword: str) -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
-        self.url_postfix = "/searchs?skeyword=" + encoded_keyword
-
-
-class SkytoonSite(Site):
-    def __init__(self, site_name: str) -> None:
-        super().__init__(site_name)
-        self.extraction_attrs = {"class": "list"}
-
-    def set_url_postfix(self, keyword: str) -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
-        self.url_postfix = "/search?skeyword=" + encoded_keyword
+#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
+#         encoded_keyword = urllib.parse.quote(keyword)
+#         self.url_postfix = "/searchs?skeyword=" + encoded_keyword
 
 
-class BlacktoonSite(Site):
-    def __init__(self, site_name: str = "") -> None:
-        super().__init__(site_name)
+# class SkytoonSite(Site):
+#     def __init__(self, site_name: str) -> None:
+#         super().__init__(site_name)
+#         self.extraction_attrs = {"class": "list"}
 
-    def set_url_postfix(self, keyword: str = "") -> None:
-        self.url_postfix = keyword
-
-    def search(self, keyword: str = "") -> list[tuple[str, str]]:
-        return self.search_in_site_like_agit(keyword)
-
-
-class OrnsonSite(Site):
-    def __init__(self, site_name: str) -> None:
-        super().__init__(site_name)
-        self.extraction_attrs = {"class": "tag_box"}
-
-    def set_url_postfix(self, keyword: str) -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
-        self.url_postfix = "/search?skeyword=" + encoded_keyword
+#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
+#         encoded_keyword = urllib.parse.quote(keyword)
+#         self.url_postfix = "/search?skeyword=" + encoded_keyword
 
 
-class FlixSite(Site):
-    def __init__(self, site_name: str) -> None:
-        super().__init__(site_name)
-        self.extraction_attrs = {"class": "post-list"}
-        self.method = Method.POST
-        self.header = {"Content-Type": "application/x-www-form-urlencoded"}
+# class BlacktoonSite(Site):
+#     def __init__(self, site_name: str = "") -> None:
+#         super().__init__(site_name)
 
-    def set_url_postfix(self, keyword: str) -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
-        self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
+#     def set_url_postfix_with_keyword(self, keyword: str = "") -> None:
+#         self.url_postfix = keyword
 
-    def set_payload(self, keyword: str = "") -> None:
-        self.payload = {"keyword": keyword}
+#     def search(self, keyword: str = "") -> list[tuple[str, str]]:
+#         return self.search_in_site_like_agit(keyword)
 
 
-class SektoonSite(Site):
-    def __init__(self, site_name: str) -> None:
-        super().__init__(site_name)
-        self.extraction_attrs = {"class": "entry-title"}
+# class OrnsonSite(Site):
+#     def __init__(self, site_name: str) -> None:
+#         super().__init__(site_name)
+#         self.extraction_attrs = {"class": "tag_box"}
 
-    def set_url_postfix(self, keyword: str) -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
-        self.url_postfix = "/?post_type=post&s=" + encoded_keyword
-
-
-class AgitSite(Site):
-    def __init__(self, site_name: str = "") -> None:
-        super().__init__(site_name)
-
-    def set_url_postfix(self, _: str = "") -> None:
-        self.url_postfix = ""
-
-    def search(self, keyword: str = "") -> list[tuple[str, str]]:
-        return self.search_in_site_like_agit(keyword)
+#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
+#         encoded_keyword = urllib.parse.quote(keyword)
+#         self.url_postfix = "/search?skeyword=" + encoded_keyword
 
 
-class TorrentJokSite(Site):
-    def __init__(self, site_name: str) -> None:
-        super().__init__(site_name)
-        self.extraction_attrs = {"class": "media-heading"}
+# class FlixSite(Site):
+#     def __init__(self, site_name: str) -> None:
+#         super().__init__(site_name)
+#         self.extraction_attrs = {"class": "post-list"}
+#         self.method = Method.POST
+#         self.headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
-    def set_url_postfix(self, keyword: str) -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
-        self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
+#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
+#         encoded_keyword = urllib.parse.quote(keyword)
+#         self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
+
+#     def set_payload(self, keyword: str = "") -> None:
+#         self.payload = {"keyword": keyword}
+
+
+# class SektoonSite(Site):
+#     def __init__(self, site_name: str) -> None:
+#         super().__init__(site_name)
+#         self.extraction_attrs = {"class": "entry-title"}
+
+#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
+#         encoded_keyword = urllib.parse.quote(keyword)
+#         self.url_postfix = "/?post_type=post&s=" + encoded_keyword
+
+
+# class AgitSite(Site):
+#     def __init__(self, site_name: str = "") -> None:
+#         super().__init__(site_name)
+
+#     def set_url_postfix_with_keyword(self, keyword: str = "") -> None:
+#         self.url_postfix = ""
+
+#     def search(self, keyword: str = "") -> list[tuple[str, str]]:
+#         return self.search_in_site_like_agit(keyword)
+
+
+# class TorrentJokSite(Site):
+#     def __init__(self, site_name: str) -> None:
+#         super().__init__(site_name)
+#         self.extraction_attrs = {"class": "media-heading"}
+
+#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
+#         encoded_keyword = urllib.parse.quote(keyword)
+#         self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
 
 
 class TorrentQqSite(Site):
@@ -477,7 +493,7 @@ class TorrentQqSite(Site):
         super().__init__(site_name)
         self.extraction_attrs = {"class": "wr-subject"}
 
-    def set_url_postfix(self, keyword: str) -> None:
+    def set_url_postfix_with_keyword(self, keyword: str) -> None:
         encoded_keyword = urllib.parse.quote(keyword)
         self.url_postfix = "/search?q=" + encoded_keyword
 
@@ -487,7 +503,7 @@ class TorrentRjSite(Site):
         super().__init__(site_name)
         self.extraction_attrs = {"class": "flex-grow truncate"}
 
-    def set_url_postfix(self, keyword: str) -> None:
+    def set_url_postfix_with_keyword(self, keyword: str) -> None:
         encoded_keyword = urllib.parse.quote(keyword)
         self.url_postfix = "/search/index?keywords=" + encoded_keyword
 
@@ -497,19 +513,19 @@ class TorrentSeeSite(Site):
         super().__init__(site_name)
         self.extraction_attrs = {"class": "tit"}
 
-    def set_url_postfix(self, keyword: str) -> None:
+    def set_url_postfix_with_keyword(self, keyword: str) -> None:
         encoded_keyword = urllib.parse.quote(keyword)
         self.url_postfix = "/search/index?category=0&keywords=" + encoded_keyword
 
 
-class TorrentdiaSite(Site):
-    def __init__(self, site_name: str) -> None:
-        super().__init__(site_name)
-        self.extraction_attrs = {"class": "list-subject"}
+# class TorrentdiaSite(Site):
+#     def __init__(self, site_name: str) -> None:
+#         super().__init__(site_name)
+#         self.extraction_attrs = {"class": "list-subject"}
 
-    def set_url_postfix(self, keyword: str) -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
-        self.url_postfix = "/bbs/search.php?search_flag=search&stx=" + encoded_keyword
+#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
+#         encoded_keyword = urllib.parse.quote(keyword)
+#         self.url_postfix = "/bbs/search.php?search_flag=search&stx=" + encoded_keyword
 
 
 class TorrentTipSite(Site):
@@ -517,29 +533,29 @@ class TorrentTipSite(Site):
         super().__init__(site_name)
         self.extraction_attrs = {"class": "page-list"}
 
-    def set_url_postfix(self, keyword: str) -> None:
+    def set_url_postfix_with_keyword(self, keyword: str) -> None:
         encoded_keyword = urllib.parse.quote(keyword)
         self.url_postfix = "/search?q=" + encoded_keyword
 
 
-class TorrentTtSite(Site):
-    def __init__(self, site_name: str) -> None:
-        super().__init__(site_name)
-        self.extraction_attrs = {"class": "page-list"}
+# class TorrentTtSite(Site):
+#     def __init__(self, site_name: str) -> None:
+#         super().__init__(site_name)
+#         self.extraction_attrs = {"class": "page-list"}
 
-    def set_url_postfix(self, keyword: str) -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
-        self.url_postfix = "/search?q=" + encoded_keyword
+#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
+#         encoded_keyword = urllib.parse.quote(keyword)
+#         self.url_postfix = "/search?q=" + encoded_keyword
 
 
-class TorrentmodeSite(Site):
-    def __init__(self, site_name: str) -> None:
-        super().__init__(site_name)
-        self.extraction_attrs = {"class": "list-subject web-subject"}
+# class TorrentmodeSite(Site):
+#     def __init__(self, site_name: str) -> None:
+#         super().__init__(site_name)
+#         self.extraction_attrs = {"class": "list-subject web-subject"}
 
-    def set_url_postfix(self, keyword: str) -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
-        self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
+#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
+#         encoded_keyword = urllib.parse.quote(keyword)
+#         self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
 
 
 class SearchManager:
@@ -555,33 +571,33 @@ class SearchManager:
     def search(self, site_name: str, keyword: str, do_include_torrent_sites: bool = False) -> list[tuple[str, str]]:
         LOGGER.debug("# search(site_name='%s', keyword='%s', do_include_torrent_sites=%r)", site_name, keyword, do_include_torrent_sites)
 
-        site_list = [
-            EleventoonSite("11toon"),
+        site_list: list[Site] = [
+            #EleventoonSite("11toon"),
+            #FunbeSite("funbe"),
+            #JoatoonSite("joatoon"),
+            #ToonkorSite("toonkor"),
+            #TorrentQqSite("torrentqq"),
+            #TorrentRjSite("torrentrj"),
+            #TorrentSeeSite("torrentsee"),
+            #TorrentTipSite("torrenttip"),
+            #XtoonSite("xtoon"),
             #AgitSite("agit"),
             #AllallSite("allall"),
             #BlacktoonSite("blacktoon"),
-            FunbeSite("funbe"),
             #JmanaSite("jmana"),
             #ManatokiSite("manatoki"),
             #NewtokiSite("newtoki"),
             #SkytoonSite("skytoon"),
-            ToonkorSite("toonkor"),
+            #TorrentJokSite("torrentjok"),
+            #TorrentTtSite("torrenttt"),
             #WfwfSite("wfwf"),
             #WtwtSite("wtwt"),
-            XtoonSite("xtoon"),
-            JoatoonSite("joatoon"),
-            #TorrentJokSite("torrentjok"),
-            TorrentQqSite("torrentqq"),
-            TorrentRjSite("torrentrj"),
-            TorrentSeeSite("torrentsee"),
-            TorrentTipSite("torrenttip"),
-            #TorrentTtSite("torrenttt"),
         ]
 
         result_list: list[tuple[str, str]] = []
         if not site_name:
             # multi-sites
-            thread_list = []
+            thread_list: list[Thread] = []
             for site in site_list:
                 if not do_include_torrent_sites:
                     if site.site_name.startswith("torrent"):
