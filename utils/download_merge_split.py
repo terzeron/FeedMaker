@@ -282,7 +282,7 @@ def main() -> int:
 
     headers: dict[str, Any] = {
         "User-Agent": extraction_conf.get("user_agent", ""),
-        "Referer": page_url
+        "Referer": URL.encode_suffix(page_url)
     }
 
     crawler = Crawler(dir_path=feed_dir_path, headers=headers, num_retries=2)
