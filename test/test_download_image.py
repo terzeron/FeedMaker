@@ -19,7 +19,11 @@ class TestDownloadImage(unittest.TestCase):
         test_input = "<img src='https://image-comic.pstatic.net/webtoon/725586/247/20240118173811_a4fcf1cbd0e4a0d0b38a6b773ba58282_IMAG01_1.jpg'>"
         expected_output = "<img src='%s/one_second/753d4f8.jpeg'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
 
-        with patch('sys.argv', self.fake_argv), patch('sys.stdin', new=io.StringIO(test_input)), patch('sys.stdout', new_callable=io.StringIO) as mock_stdout:
+        with (
+            patch("sys.argv", self.fake_argv),
+            patch("sys.stdin", new=io.StringIO(test_input)),
+            patch("sys.stdout", new_callable=io.StringIO) as mock_stdout,
+        ):
             utils.download_image.main()
             self.assertEqual(mock_stdout.getvalue(), expected_output)
 
@@ -27,7 +31,11 @@ class TestDownloadImage(unittest.TestCase):
         test_input = '<img src="https://image-comic.pstatic.net/webtoon/725586/247/20240118173811_a4fcf1cbd0e4a0d0b38a6b773ba58282_IMAG01_1.jpg">'
         expected_output = "<img src='%s/one_second/753d4f8.jpeg'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
 
-        with patch('sys.argv', self.fake_argv), patch('sys.stdin', new=io.StringIO(test_input)), patch('sys.stdout', new_callable=io.StringIO) as mock_stdout:
+        with (
+            patch("sys.argv", self.fake_argv),
+            patch("sys.stdin", new=io.StringIO(test_input)),
+            patch("sys.stdout", new_callable=io.StringIO) as mock_stdout,
+        ):
             utils.download_image.main()
             self.assertEqual(mock_stdout.getvalue(), expected_output)
 
@@ -35,7 +43,11 @@ class TestDownloadImage(unittest.TestCase):
         test_input = "<img src='https://image-comic.pstatic.net/webtoon/725586/247/20240118173811_a4fcf1cbd0e4a0d0b38a6b773ba58282_IMAG01_1.jpg' >"
         expected_output = "<img src='%s/one_second/753d4f8.jpeg'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
 
-        with patch('sys.argv', self.fake_argv), patch('sys.stdin', new=io.StringIO(test_input)), patch('sys.stdout', new_callable=io.StringIO) as mock_stdout:
+        with (
+            patch("sys.argv", self.fake_argv),
+            patch("sys.stdin", new=io.StringIO(test_input)),
+            patch("sys.stdout", new_callable=io.StringIO) as mock_stdout,
+        ):
             utils.download_image.main()
             self.assertEqual(mock_stdout.getvalue(), expected_output)
 
@@ -43,7 +55,11 @@ class TestDownloadImage(unittest.TestCase):
         test_input = "<img src='https://image-comic.pstatic.net/webtoon/725586/247/20240118173811_a4fcf1cbd0e4a0d0b38a6b773ba58282_IMAG01_1.jpg' />"
         expected_output = "<img src='%s/one_second/753d4f8.jpeg'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
 
-        with patch('sys.argv', self.fake_argv), patch('sys.stdin', new=io.StringIO(test_input)), patch('sys.stdout', new_callable=io.StringIO) as mock_stdout:
+        with (
+            patch("sys.argv", self.fake_argv),
+            patch("sys.stdin", new=io.StringIO(test_input)),
+            patch("sys.stdout", new_callable=io.StringIO) as mock_stdout,
+        ):
             utils.download_image.main()
             self.assertEqual(mock_stdout.getvalue(), expected_output)
 
@@ -51,7 +67,11 @@ class TestDownloadImage(unittest.TestCase):
         test_input = "<img src='https://image-comic.pstatic.net/webtoon/725586/247/20240118173811_a4fcf1cbd0e4a0d0b38a6b773ba58282_IMAG01_1.jpg' width='100%'/>"
         expected_output = "<img src='%s/one_second/753d4f8.jpeg'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
 
-        with patch('sys.argv', self.fake_argv), patch('sys.stdin', new=io.StringIO(test_input)), patch('sys.stdout', new_callable=io.StringIO) as mock_stdout:
+        with (
+            patch("sys.argv", self.fake_argv),
+            patch("sys.stdin", new=io.StringIO(test_input)),
+            patch("sys.stdout", new_callable=io.StringIO) as mock_stdout,
+        ):
             utils.download_image.main()
             self.assertEqual(mock_stdout.getvalue(), expected_output)
 
