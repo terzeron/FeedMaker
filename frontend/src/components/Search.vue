@@ -1,21 +1,21 @@
 <template>
-  <b-container fluid>
-    <!-- 검색 창 -->
-    <b-row>
-      <b-col
+  <BContainer fluid>
+    <!-- Search Window -->
+    <BRow>
+      <BCol
           cols="12"
           class="m-0 p-1">
-        <b-input-group
+        <BInputGroup
             class="m-0 p-1"
             style="width: 400px">
-          <b-form-input
+          <BFormInput
               v-model="searchKeyword"
               class="m-0"
               placeholder="키워드"
               @keyup.enter="search">
             {{ searchKeyword }}
-          </b-form-input>
-          <b-input-group-append>
+          </BFormInput>
+          <BInputGroupAppend>
             <my-button
                 ref="searchButton"
                 label="검색"
@@ -23,40 +23,41 @@
                 :initial-icon="['fas', 'search']"
                 :show-initial-icon="true"
                 variant="dark"/>
-          </b-input-group-append>
-        </b-input-group>
-      </b-col>
-    </b-row>
+          </BInputGroupAppend>
+        </BInputGroup>
+      </BCol>
+    </BRow>
 
-    <!-- 검색 결과 -->
-    <b-row>
-      <b-col
+    <!-- Search Results -->
+    <BRow>
+      <BCol
           id="search_result"
           cols="12"
           class="m-0 p-1"
           v-if="1">
-        <b-table-simple
+        <BTableSimple
+            v-if="Array.isArray(searchResultlist) && searchResultlist.length >= 0"
             class="m-0 p-1 text-break"
             small>
-          <b-thead head-variant="light" table-variant="light">
-            <b-tr>
-              <b-th colspan="2">검색 결과</b-th>
-            </b-tr>
-          </b-thead>
-          <b-tbody>
-            <b-tr
+          <BThead head-variant="light" table-variant="light">
+            <BTr>
+              <BTh colspan="2">검색 결과</BTh>
+            </BTr>
+          </BThead>
+          <BTbody>
+            <BTr
                 v-for="item in searchResultlist"
                 :key="item.url">
-              <b-td>{{ item.title }}</b-td>
-              <b-td>
+              <BTd>{{ item.title }}</BTd>
+              <BTd>
                 <a :href="item.url">{{ item.url }}</a>
-              </b-td>
-            </b-tr>
-          </b-tbody>
-        </b-table-simple>
-      </b-col>
-    </b-row>
-  </b-container>
+              </BTd>
+            </BTr>
+          </BTbody>
+        </BTableSimple>
+      </BCol>
+    </BRow>
+  </BContainer>
 </template>
 
 <style>
