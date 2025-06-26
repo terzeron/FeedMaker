@@ -61,6 +61,7 @@ import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useStorage } from "@vueuse/core";
 import axios from "axios";
+import { getApiUrlPath, handleApiError } from "@/utils/api";
 
 const router = useRouter();
 const source = ref("### No result");
@@ -71,9 +72,6 @@ const adminEmail = computed(() => {
 
 const isAuthorized = useStorage("is_authorized", false, sessionStorage);
 
-const getApiUrlPath = () => {
-  return process.env.VUE_APP_API_URL;
-};
 
 const getExecResult = () => {
   const path = getApiUrlPath() + "/exec_result";
@@ -83,7 +81,7 @@ const getExecResult = () => {
       source.value = res.data["exec_result"];
     })
     .catch((error) => {
-      console.error(error);
+      handleApiError(error, 'getting exec result');
     });
 };
 

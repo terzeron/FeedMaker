@@ -385,6 +385,9 @@ import {
   faEye,
 } from "@fortawesome/free-solid-svg-icons";
 import MyButton from "./MyButton";
+import { getApiUrlPath, handleApiError } from '@/utils/api';
+import { getShortDate } from '@/utils/date';
+import { useButtonState } from '@/composables/useButtonState';
 
 library.add(
   faTrashAlt,
@@ -404,7 +407,24 @@ export default {
   components: {
     MyButton,
   },
-  props: ["feed", "group"],
+  props: {
+    feed: {
+      type: Object,
+      default: () => ({})
+    },
+    group: {
+      type: Object,
+      default: () => ({})
+    }
+  },
+  setup() {
+    const { startButton, endButton, resetButton } = useButtonState();
+    return {
+      startButton,
+      endButton,
+      resetButton
+    };
+  },
   data: function () {
     return {
       alertMessage: "",
@@ -507,15 +527,6 @@ export default {
     },
   },
   methods: {
-    getApiUrlPath: function () {
-      return process.env.VUE_APP_API_URL;
-    },
-    getShortDateStr: function (dateStr) {
-      if (!dateStr) {
-        return "";
-      }
-      return dateStr.split("T")[0];
-    },
     determineNewFeedNameFromJsonRssLink: function () {
       if ("rss" in this.jsonData && "link" in this.jsonData["rss"]) {
         const re = /https:\/\/terzeron.com\/_?(.+)\.xml/;
@@ -991,7 +1002,7 @@ export default {
           }
         })
         .catch((error) => {
-          console.error(error);
+          handleApiError(error, this.alert);
         });
     },
     removelist: function () {
@@ -1019,7 +1030,7 @@ export default {
           }
         })
         .catch((error) => {
-          console.error(error);
+          handleApiError(error, this.alert);
         });
     },
     removeHtml: function () {
@@ -1047,7 +1058,7 @@ export default {
           }
         })
         .catch((error) => {
-          console.error(error);
+          handleApiError(error, this.alert);
         });
     },
     removeFeed: function () {
@@ -1082,7 +1093,7 @@ export default {
           }
         })
         .catch((error) => {
-          console.error(error);
+          handleApiError(error, this.alert);
         });
     },
     removeGroup: function () {
@@ -1116,7 +1127,7 @@ export default {
           }
         })
         .catch((error) => {
-          console.error(error);
+          handleApiError(error, this.alert);
         });
     },
     checkRunning: function () {

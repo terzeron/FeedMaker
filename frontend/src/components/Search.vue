@@ -2,27 +2,25 @@
   <BContainer fluid>
     <!-- Search Window -->
     <BRow>
-      <BCol
-          cols="12"
-          class="m-0 p-1">
-        <BInputGroup
-            class="m-0 p-1"
-            style="width: 400px">
+      <BCol cols="12" class="m-0 p-1">
+        <BInputGroup class="m-0 p-1" style="width: 400px">
           <BFormInput
-              v-model="searchKeyword"
-              class="m-0"
-              placeholder="키워드"
-              @keyup.enter="search">
+            v-model="searchKeyword"
+            class="m-0"
+            placeholder="키워드"
+            @keyup.enter="search"
+          >
             {{ searchKeyword }}
           </BFormInput>
           <BInputGroupAppend>
             <my-button
-                ref="searchButton"
-                label="검색"
-                @click="search"
-                :initial-icon="['fas', 'search']"
-                :show-initial-icon="true"
-                variant="dark"/>
+              ref="searchButton"
+              label="검색"
+              @click="search"
+              :initial-icon="['fas', 'search']"
+              :show-initial-icon="true"
+              variant="dark"
+            />
           </BInputGroupAppend>
         </BInputGroup>
       </BCol>
@@ -30,24 +28,15 @@
 
     <!-- Search Results -->
     <BRow>
-      <BCol
-          id="search_result"
-          cols="12"
-          class="m-0 p-1"
-          v-if="1">
-        <BTableSimple
-            v-if="Array.isArray(searchResultlist) && searchResultlist.length >= 0"
-            class="m-0 p-1 text-break"
-            small>
+      <BCol id="search_result" cols="12" class="m-0 p-1" v-if="hasSearchResults">
+        <BTableSimple class="m-0 p-1 text-break" small>
           <BThead head-variant="light" table-variant="light">
             <BTr>
               <BTh colspan="2">검색 결과</BTh>
             </BTr>
           </BThead>
           <BTbody>
-            <BTr
-                v-for="item in searchResultlist"
-                :key="item.url">
+            <BTr v-for="item in searchResultlist" :key="item.url">
               <BTd>{{ item.title }}</BTd>
               <BTd>
                 <a :href="item.url">{{ item.url }}</a>
@@ -63,76 +52,70 @@
 <style>
 </style>
 
-<script>
+<script setup>
+import { ref, computed, onMounted, getCurrentInstance } from 'vue';
+import { useRouter } from 'vue-router';
 import axios from 'axios';
 
-import {library} from '@fortawesome/fontawesome-svg-core';
-import {faSearch} from '@fortawesome/free-solid-svg-icons';
-import MyButton from './MyButton';
+import { library } from '@fortawesome/fontawesome-svg-core';
+import { faSearch } from '@fortawesome/free-solid-svg-icons';
+import MyButton from './MyButton.vue';
+
+import { getApiUrlPath, handleApiError } from '@/utils/api';
+import { useButtonState } from '@/composables/useButtonState';
 
 library.add(faSearch);
 
-export default {
-  name: 'FeedManagement',
-  components: {
-    MyButton
-  },
-  props: [],
-  data: function () {
-    return {
-      showSearchResult: false,
-      searchKeyword: '',
-      searchResultlist: [],
-    };
-  },
-  computed: {},
-  watch: {},
-  methods: {
-    getApiUrlPath: function () {
-      return process.env.VUE_APP_API_URL;
-    },
-    startButton: function (ref) {
-      this.$refs[ref].doShowInitialIcon = false;
-      this.$refs[ref].doShowSpinner = true;
-    },
-    endButton: function (ref) {
-      this.$refs[ref].doShowInitialIcon = true;
-      this.$refs[ref].doShowSpinner = false;
-    },
-    resetButton: function (ref) {
-      this.$refs[ref].doShowInitialIcon = true;
-      this.$refs[ref].doShowSpinner = false;
-    },
-    search: function () {
-      console.log(`search()`);
-      this.startButton('searchButton');
+defineOptions({
+  name: 'Search'
+});
 
-      const url = this.getApiUrlPath() + `/search_site/${this.searchKeyword}`;
-      axios
-          .get(url)
-          .then((res) => {
-                if (res.data.status === 'failure') {
-                  this.alert(res.data.message);
-                } else {
-                  this.searchResultlist = res.data['search_result_list'].map(o => {
-                    o['title'] = o[0];
-                    o['url'] = o[1];
-                    return o;
-                  });
-                }
-                this.endButton('searchButton');
-              }
-          )
-          .catch((error) => {
-            console.error(error);
-            this.resetButton('searchButton');
-          })
-    },
-  },
-  mounted: function () {
-    if (!this.$session.get('is_authorized')) {
-      this.$router.push('/login');
+const router = useRouter();
+const instance = getCurrentInstance();
+
+// Reactive state
+const searchKeyword = ref('');
+const searchResultlist = ref([]);
+const showSearchResult = ref(false);
+
+// Button state management
+const { startButton, endButton, resetButton } = useButtonState();
+
+// Computed properties
+const hasSearchResults = computed(() => {
+  return Array.isArray(searchResultlist.value) && searchResultlist.value.length > 0;
+});
+
+// Methods
+const search = async () => {
+  console.log('search()');
+  startButton('searchButton', instance.refs);
+
+  try {
+    const url = getApiUrlPath() + `/search_site/${searchKeyword.value}`;
+    const res = await axios.get(url);
+    
+    if (res.data.status === 'failure') {
+      alert(res.data.message);
+    } else {
+      searchResultlist.value = res.data['search_result_list'].map(item => ({
+        title: item[0],
+        url: item[1]
+      }));
+      showSearchResult.value = true;
     }
+    endButton('searchButton', instance.refs);
+  } catch (error) {
+    handleApiError(error, 'searching sites');
+    resetButton('searchButton', instance.refs);
   }
 };
+
+// Lifecycle
+onMounted(() => {
+  const session = instance.appContext.config.globalProperties.$session;
+  if (!session.get('is_authorized')) {
+    router.push('/login');
+  }
+});
 </script>
