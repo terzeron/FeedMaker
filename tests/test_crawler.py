@@ -34,13 +34,34 @@ class TestCrawler(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        # Clean up cookie files once at the beginning
+        # patcher 등록
+        cls.patcher_remove = patch('os.remove')
+        cls.patcher_isfile = patch('os.path.isfile', return_value=True)
+        cls.mock_remove = cls.patcher_remove.start()
+        cls.mock_isfile = cls.patcher_isfile.start()
+        # Clean up cookie files once at the beginning (실제 파일 접근 없음)
         for cookie_file in (HeadlessBrowser.COOKIE_FILE, RequestsClient.COOKIE_FILE):
             try:
                 if os.path.isfile(cookie_file):
                     os.remove(cookie_file)
             except (OSError, ImportError):
                 pass
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.patcher_remove.stop()
+        cls.patcher_isfile.stop()
+
+    def setUp(self) -> None:
+        # 각 테스트마다 requests, time.sleep 등 patch
+        self.patcher_sleep = patch('time.sleep')
+        self.patcher_requests = patch('requests.get')
+        self.mock_sleep = self.patcher_sleep.start()
+        self.mock_requests = self.patcher_requests.start()
+
+    def tearDown(self) -> None:
+        self.patcher_sleep.stop()
+        self.patcher_requests.stop()
 
     def test_print_usage(self) -> None:
         with patch('sys.stdout', new=io.StringIO()) as stdout:
@@ -167,7 +188,8 @@ class TestCrawler(unittest.TestCase):
         self.assertIsNotNone(actual)
 
     @patch('bin.crawler.RequestsClient.make_request')
-    def test_crawler_network_retry(self, mock_make_request: MagicMock) -> None:
+    @patch('time.sleep')  # Mock time.sleep to avoid 5-second delay
+    def test_crawler_network_retry(self, mock_sleep: MagicMock, mock_make_request: MagicMock) -> None:
         # Mock with side effect for retry logic
         mock_make_request.side_effect = [
             ('', 'Network error', {}, 500),  # First call fails

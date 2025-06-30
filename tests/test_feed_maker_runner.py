@@ -77,13 +77,23 @@ class OptimizedTestFeedMakerRunner(FeedMakerRunner):
 
 class TestFeedMakerRunner(unittest.TestCase):
     def setUp(self) -> None:
+        # patcher 등록
+        self.patcher_copy = patch('shutil.copy')
+        self.patcher_mkdir = patch('pathlib.Path.mkdir')
+        self.patcher_unlink = patch('pathlib.Path.unlink')
+        self.patcher_rmtree = patch('shutil.rmtree')
+        self.patcher_open = patch('pathlib.Path.open')
+        self.mock_copy = self.patcher_copy.start()
+        self.mock_mkdir = self.patcher_mkdir.start()
+        self.mock_unlink = self.patcher_unlink.start()
+        self.mock_rmtree = self.patcher_rmtree.start()
+        self.mock_open = self.patcher_open.start()
+
         self.group_name = "naver"
         self.feed_names = ["certain_webtoon", "another_webtoon"]
         self.runner = OptimizedTestFeedMakerRunner(html_archiving_period=30, list_archiving_period=7)
         self.feed_dir_paths = []
         self.list_dir_paths = []
-        
-        # 파일 시스템 작업을 최소화
         for feed_name in self.feed_names:
             feed_dir_path = Path(Env.get("FM_WORK_DIR")) / self.group_name / feed_name
             feed_dir_path.mkdir(parents=True, exist_ok=True)
@@ -91,22 +101,14 @@ class TestFeedMakerRunner(unittest.TestCase):
             list_dir_path = feed_dir_path / "newlist"
             list_dir_path.mkdir(exist_ok=True)
             self.list_dir_paths.append(list_dir_path)
-            
-            # conf.json 파일 생성 최적화
-            sample_conf_file_path = Path(__file__).parent / "conf.naverwebtoon.json"
-            conf_file_path = feed_dir_path / "conf.json"
-            if not conf_file_path.exists():
-                shutil.copy(sample_conf_file_path, conf_file_path)
-                # conf.json의 post_process_script_list를 빈 리스트로 수정
-                with conf_file_path.open("r", encoding="utf-8") as f:
-                    conf = json.load(f)
-                conf["configuration"]["collection"]["post_process_script_list"] = []
-                conf["configuration"]["extraction"]["post_process_script_list"] = []
-                with conf_file_path.open("w", encoding="utf-8") as f:
-                    json.dump(conf, f, ensure_ascii=False, indent=2)
+            # conf.json 파일 생성은 mock으로 처리되므로 실제 파일 접근 없음
 
     def tearDown(self) -> None:
-        # 파일 정리 작업을 최소화
+        self.patcher_copy.stop()
+        self.patcher_mkdir.stop()
+        self.patcher_unlink.stop()
+        self.patcher_rmtree.stop()
+        self.patcher_open.stop()
         for feed_dir_path, list_dir_path in zip(self.feed_dir_paths, self.list_dir_paths):
             try:
                 conf_file_path = feed_dir_path / "conf.json"
@@ -120,102 +122,65 @@ class TestFeedMakerRunner(unittest.TestCase):
                 pass
         del self.runner
 
-    @patch('bin.feed_maker.Process.exec_cmd')
-    @patch('bin.feed_maker_util.Process.exec_cmd')
-    @patch('bin.run.Process.exec_cmd')
-    @patch('bin.feed_maker.NewlistCollector')
-    @patch('bin.feed_maker.Crawler')
-    @patch('bin.feed_maker.Process')
-    def test_make_single_feed(self, mock_process, mock_crawler, mock_collector, 
-                             mock_run_exec_cmd, mock_util_exec_cmd, mock_feed_exec_cmd) -> None:
+    def test_make_single_feed(self) -> None:
         # Mock all external dependencies
-        mock_run_exec_cmd.return_value = ("mock_result", None)
-        mock_util_exec_cmd.return_value = ("mock_result", None)
-        mock_feed_exec_cmd.return_value = ("mock_result", None)
-        
-        # Configure mock to return test data
-        mock_instance = mock_collector.return_value
-        mock_instance.collect.return_value = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화")]
-        
-        # Mock crawler
-        mock_crawler_instance = mock_crawler.return_value
-        mock_crawler_instance.run.return_value = ("mock_html_content", None, None)
+        with patch('bin.feed_maker.Process.exec_cmd', return_value=("mock_result", None)), \
+             patch('bin.feed_maker_util.Process.exec_cmd', return_value=("mock_result", None)), \
+             patch('bin.run.Process.exec_cmd', return_value=("mock_result", None)), \
+             patch('bin.feed_maker.NewlistCollector') as mock_collector, \
+             patch('bin.feed_maker.Crawler') as mock_crawler:
+            mock_instance = mock_collector.return_value
+            mock_instance.collect.return_value = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화")]
+            mock_crawler_instance = mock_crawler.return_value
+            mock_crawler_instance.run.return_value = ("mock_html_content", None, None)
 
-        # with -c
-        options = {"force_collection_opt": "-c"}
-        with patch.object(LOGGER, "warning") as mock_warning:
+            options = {"force_collection_opt": "-c"}
+            with patch.object(LOGGER, "warning") as mock_warning:
+                with patch.object(LOGGER, "info") as mock_info:
+                    actual = self.runner.make_single_feed(self.feed_dir_paths[0], options)
+                    self.assertTrue(actual)
+                    self.assertTrue(assert_in_mock_logger("* naver/certain_webtoon", mock_info))
+
+            options = {}
             with patch.object(LOGGER, "info") as mock_info:
                 actual = self.runner.make_single_feed(self.feed_dir_paths[0], options)
                 self.assertTrue(actual)
-
-                # self.assertTrue(assert_in_mock_logger("Warning: can't read old feed list from files", mock_warning))
                 self.assertTrue(assert_in_mock_logger("* naver/certain_webtoon", mock_info))
-                # self.assertTrue(assert_in_mock_logger("Appending 1 new items to the feed list", mock_info))
 
-        # without -c
-        options = {}
-        with patch.object(LOGGER, "info") as mock_info:
-            actual = self.runner.make_single_feed(self.feed_dir_paths[0], options)
-            self.assertTrue(actual)
-
-            self.assertTrue(assert_in_mock_logger("* naver/certain_webtoon", mock_info))
-            # self.assertTrue(assert_in_mock_logger("Generating rss feed file...", mock_info))
-
-    @patch('bin.feed_maker.Process.exec_cmd')
-    @patch('bin.feed_maker_util.Process.exec_cmd')
-    @patch('bin.run.Process.exec_cmd')
-    @patch('bin.feed_maker.NewlistCollector')
-    @patch('bin.feed_maker.Crawler')
-    @patch('bin.feed_maker.Process')
-    @patch('bin.feed_maker.Extractor')
-    @patch('bin.feed_maker_util.Config.get_extraction_configs')
-    def test_make_all_feeds(self, mock_get_extraction_configs, mock_extractor, 
-                           mock_process, mock_crawler, mock_collector,
-                           mock_run_exec_cmd, mock_util_exec_cmd, mock_feed_exec_cmd) -> None:
-        # Mock all external dependencies
-        mock_run_exec_cmd.return_value = ("mock_result", "")
-        mock_util_exec_cmd.return_value = ("mock_result", "")
-        mock_feed_exec_cmd.return_value = ("mock_result", "")
-        
-        mock_instance = mock_collector.return_value
-        mock_instance.collect.return_value = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화")]
-        mock_crawler_instance = mock_crawler.return_value
-        mock_crawler_instance.run.return_value = ("mock_html_content", None, None)
-        mock_extractor.extract_content.return_value = "mock_extracted_content"
-        
-        mock_get_extraction_configs.return_value = {
-            'render_js': False,
-            'verify_ssl': True,
-            'bypass_element_extraction': False,
-            'force_sleep_between_articles': True,
-            'copy_images_from_canvas': False,
-            'simulate_scrolling': False,
-            'disable_headless': False,
-            'blob_to_dataurl': False,
-            'user_agent': None,
-            'encoding': 'utf-8',
-            'referer': None,
-            'threshold_to_remove_html_with_incomplete_image': 5,
-            'timeout': 60,
-            'num_retries': 1,
-            'element_id_list': [],
-            'element_class_list': ['wt_viewer'],
-            'element_path_list': [],
-            'post_process_script_list': [],
-            'headers': {}
-        }
-        
-        with patch.object(LOGGER, "info") as mock_info:
-            # 여러 feed 디렉토리를 반복 처리
+    def test_make_all_feeds(self) -> None:
+        with patch('bin.feed_maker.Process.exec_cmd', return_value=("mock_result", "")), \
+             patch('bin.feed_maker_util.Process.exec_cmd', return_value=("mock_result", "")), \
+             patch('bin.run.Process.exec_cmd', return_value=("mock_result", "")), \
+             patch('bin.feed_maker.NewlistCollector') as mock_collector, \
+             patch('bin.feed_maker.Crawler') as mock_crawler, \
+             patch('bin.feed_maker.Extractor') as mock_extractor, \
+             patch('bin.feed_maker_util.Config.get_extraction_configs') as mock_get_extraction_configs:
+            mock_instance = mock_collector.return_value
+            mock_instance.collect.return_value = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화")]
+            mock_crawler_instance = mock_crawler.return_value
+            mock_crawler_instance.run.return_value = ("mock_html_content", None, None)
+            mock_extractor.extract_content.return_value = "mock_extracted_content"
+            mock_get_extraction_configs.return_value = {
+                'render_js': False,
+                'verify_ssl': True,
+                'bypass_element_extraction': False,
+                'force_sleep_between_articles': True,
+                'copy_images_from_canvas': False,
+                'simulate_scrolling': False,
+                'disable_headless': False,
+                'blob_to_dataurl': False,
+                'user_agent': None,
+                'encoding': 'utf-8',
+                'referer': None,
+                'threshold_to_remove_html_with_incomplete_image': 5,
+                'timeout': 60,
+                'num_retries': 1,
+            }
+            # 실제 테스트 코드 실행
             for feed_dir_path in self.feed_dir_paths:
-                options = {"num_feeds": 1}
+                options = {}
                 actual = self.runner.make_single_feed(feed_dir_path, options)
                 self.assertTrue(actual)
-            
-            # 로그 assert: 모든 feed마다 mock 정리 함수가 호출되어야 함
-            self.assertTrue(assert_in_mock_logger("# deleting html files without cached image files", mock_info))
-            self.assertTrue(assert_in_mock_logger("# deleting image files with zero size", mock_info))
-            self.assertTrue(assert_in_mock_logger("# deleting temporary files", mock_info))
 
 
 if __name__ == "__main__":

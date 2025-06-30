@@ -246,7 +246,7 @@ def analyze_test_dependencies() -> list[Path]:
 def get_test_methods(test_file: Path) -> list[str]:
     """Extract all test methods from a test file"""
     result = subprocess.run([
-        sys.executable, "-m", "pytest", str(test_file), "--collect-only", "-q"
+        sys.executable, "-m", "pytest", str(test_file), "--collect-only"
     ], capture_output=True, text=True, check=False)
     
     # 모든 테스트 메서드 수집 (Test*::test_* 패턴)
@@ -267,11 +267,31 @@ def run_test_modules_sequentially(test_targets: list[Path]) -> bool:
 
         # Measure execution time
         start_time = time.time()
-        result = subprocess.run(
-            [sys.executable, "-m", "pytest", "-v", str(absolute_path)], check=False
-        )
+        result = subprocess.run([sys.executable, "-m", "pytest", "--tb=no", "--disable-warnings", str(absolute_path)],
+                              capture_output=True, text=True, check=False)
         end_time = time.time()
         execution_time = end_time - start_time
+
+        # Filter output to remove session start info and show only test results
+        filtered_output = []
+        in_session_start = False
+        for line in result.stdout.splitlines():
+            if "test session starts" in line:
+                in_session_start = True
+                continue
+            if in_session_start and ("collected" in line or "platform" in line or "rootdir" in line or
+                                   "configfile" in line or "plugins" in line or "cachedir" in line or
+                                   "hypothesis profile" in line):
+                continue
+            if in_session_start and line.strip() == "":
+                in_session_start = False
+                continue
+            if not in_session_start:
+                filtered_output.append(line)
+
+        # Print filtered output
+        if filtered_output:
+            print("\n".join(filtered_output))
 
         # Update performance cache with actual execution time
         test_file_name = t.name
@@ -305,22 +325,95 @@ def run_specific_test_file(test_file: str) -> bool:
 
     return result.returncode == 0
 
+def get_actual_execution_duration() -> float:
+    """Get actual execution duration from cache or return 0 if not available"""
+    performance_cache_file = PROJECT_ROOT / ".test_performance_cache"
+    
+    if performance_cache_file.exists():
+        try:
+            import json
+            with open(performance_cache_file, 'r') as f:
+                cached_data = json.load(f)
+                # 실제 실행 시간이 저장되어 있다면 반환
+                if 'actual_total_duration' in cached_data:
+                    return cached_data['actual_total_duration']
+        except Exception:
+            pass
+    
+    return 0.0
+
+def update_actual_execution_duration(duration: float) -> None:
+    """Update actual execution duration in cache"""
+    performance_cache_file = PROJECT_ROOT / ".test_performance_cache"
+    
+    # Load existing cache
+    cached_data = {}
+    if performance_cache_file.exists():
+        try:
+            import json
+            with open(performance_cache_file, 'r') as f:
+                cached_data = json.load(f)
+        except Exception:
+            cached_data = {}
+    
+    # Update actual execution duration
+    cached_data['actual_total_duration'] = duration
+    cached_data['last_actual_execution'] = time.time()
+    
+    # Save updated cache
+    try:
+        import json
+        with open(performance_cache_file, 'w') as f:
+            json.dump(cached_data, f, indent=2)
+    except Exception as e:
+        print(f"⚠️  Failed to save actual execution duration: {e}")
+
 def run_all_tests() -> bool:
-    """Run all tests in dependency order"""
+    """Run all tests in dependency order (개별 파일별로 실행 및 시간 측정)"""
     print("=== Test Dependency Analysis and Execution (All Tests) ===")
-    # 기존: ordered_tests = analyze_test_dependencies()
-    # 단순히 알파벳 순서로 실행
     test_files = [f for f in TEST_DIR.glob("test_*.py") if f.name != "test_runner.py"]
     ordered_tests = sorted(test_files, key=lambda x: x.name)
-
     if not ordered_tests:
         print("No tests to run")
         return False
 
-    result = subprocess.run([
-        sys.executable, "-m", "pytest", "-v"
-    ] + [str(t) for t in ordered_tests], check=False)
-    return result.returncode == 0
+    total_start = time.time()
+    all_passed = True
+    for idx, t in enumerate(ordered_tests, 1):
+        print(f"--- [{idx}/{len(ordered_tests)}] Running: {t.name} ---")
+        start = time.time()
+        result = subprocess.run([sys.executable, "-m", "pytest", "--tb=no", "--disable-warnings", str(t)],
+                              capture_output=True, text=True, check=False)
+        end = time.time()
+
+        # Filter output to remove session start info and show only test results
+        filtered_output = []
+        in_session_start = False
+        for line in result.stdout.splitlines():
+            if "test session starts" in line:
+                in_session_start = True
+                continue
+            if in_session_start and ("collected" in line or "platform" in line or "rootdir" in line or
+                                   "configfile" in line or "plugins" in line or "cachedir" in line or
+                                   "hypothesis profile" in line):
+                continue
+            if in_session_start and line.strip() == "":
+                in_session_start = False
+                continue
+            if not in_session_start:
+                filtered_output.append(line)
+
+        # Print filtered output
+        if filtered_output:
+            print("\n".join(filtered_output))
+
+        update_test_performance_cache(t.name, end - start)
+        if result.returncode != 0:
+            all_passed = False
+    total_end = time.time()
+    update_actual_execution_duration(total_end - total_start)
+    print(f"⏱️  실제 총 수행 시간: {total_end - total_start:.1f}초")
+    return all_passed
 
 def run_failed_tests() -> bool:
     """Run only failed tests"""
@@ -524,6 +617,15 @@ def print_test_statistics(stats: dict[str, Any]) -> None:
     print(f"📊 총 테스트 파일 수: {stats['total_test_files']}개")
     print(f"⏰ 마지막 성공 시간: {stats['last_success_time']}")
     print(f"🕐 예상 총 수행 시간: {perf_data['total_duration']:.1f}초")
+    
+    # 실제 수행 시간 표시 (캐시에서 가져오기)
+    actual_duration = get_actual_execution_duration()
+    if actual_duration > 0:
+        print(f"⏱️  실제 총 수행 시간: {actual_duration:.1f}초")
+        if perf_data['total_duration'] > 0:
+            improvement = ((perf_data['total_duration'] - actual_duration) / perf_data['total_duration']) * 100
+            print(f"📈 성능 개선율: {improvement:.1f}% (예상 대비 {actual_duration/perf_data['total_duration']:.1f}배 빠름)")
+    
     print(f"📈 평균 파일당 수행 시간: {perf_data['total_duration']/stats['total_test_files']:.1f}초")
 
     # Calculate total test count
@@ -655,8 +757,7 @@ def run_test_with_profiling(test_file: Path) -> tuple[bool, dict[str, Any]]:
         exit_code = pytest.main([
             str(test_file),
             "-v",
-            "--tb=short",
-            "-q"  # Quiet mode to reduce output noise
+            "--tb=short"  # Quiet mode to reduce output noise
         ])
 
         success = exit_code == 0

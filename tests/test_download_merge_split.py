@@ -14,6 +14,43 @@ import utils.download_merge_split
 
 class TestDownloadMergeSplit(unittest.TestCase):
     def setUp(self) -> None:
+        # patcher 등록 (모든 외부 의존성 mock)
+        self.patcher_argv = patch('sys.argv')
+        self.patcher_environ = patch.dict('os.environ', {}, clear=False)
+        self.patcher_stdin = patch('sys.stdin')
+        self.patcher_stdout = patch('sys.stdout')
+        self.patcher_makedirs = patch('os.makedirs')
+        self.patcher_copyfile = patch('shutil.copyfile')
+        self.patcher_remove = patch('os.remove')
+        self.patcher_exists = patch('os.path.exists', return_value=True)
+        self.patcher_getsize = patch('os.path.getsize', return_value=1024)
+        self.patcher_requests_get = patch('requests.get')
+        self.patcher_image_open = patch('PIL.Image.open')
+        self.patcher_crawler_run = patch('bin.crawler.Crawler.run', return_value=(True, None, None))
+        self.patcher_convert_image_format = patch('utils.image_downloader.ImageDownloader.convert_image_format', return_value=Path('dummy_path'))
+        self.patcher_download_image = patch('utils.image_downloader.ImageDownloader.download_image', return_value=(Path('dummy_path'), 'dummy_url'))
+        self.patcher_is_file = patch.object(Path, 'is_file', return_value=True)
+        self.patcher_suffix = patch.object(Path, 'suffix', '.jpeg')
+        self.patcher_exec_cmd = patch('bin.feed_maker_util.Process.exec_cmd', return_value=("mock_result", None))
+
+        self.mock_argv = self.patcher_argv.start()
+        self.mock_environ = self.patcher_environ.start()
+        self.mock_stdin = self.patcher_stdin.start()
+        self.mock_stdout = self.patcher_stdout.start()
+        self.mock_makedirs = self.patcher_makedirs.start()
+        self.mock_copyfile = self.patcher_copyfile.start()
+        self.mock_remove = self.patcher_remove.start()
+        self.mock_exists = self.patcher_exists.start()
+        self.mock_getsize = self.patcher_getsize.start()
+        self.mock_requests_get = self.patcher_requests_get.start()
+        self.mock_image_open = self.patcher_image_open.start()
+        self.mock_crawler_run = self.patcher_crawler_run.start()
+        self.mock_convert_image_format = self.patcher_convert_image_format.start()
+        self.mock_download_image = self.patcher_download_image.start()
+        self.mock_is_file = self.patcher_is_file.start()
+        self.mock_suffix = self.patcher_suffix.start()
+        self.mock_exec_cmd = self.patcher_exec_cmd.start()
+
         page_url = "https://comic.naver.com/webtoon/detail.nhn?titleId=602910&no=197"
         work_dir = Env.get("FM_WORK_DIR") + "/naver/one_second"
         self.fake_argv = ["download_merge_split.py", "-f", work_dir, "-m", "-b", "100", "-n", "4", "-c", "fuzzy", page_url]
@@ -21,6 +58,25 @@ class TestDownloadMergeSplit(unittest.TestCase):
         # .env의 PATH 환경변수 강제 적용
         env = dotenv_values(Path(__file__).parent.parent / ".env")
         self.fake_env = {"PATH": f"{Env.get("PATH")}:{env.get("PATH", "")}"}
+
+    def tearDown(self) -> None:
+        self.patcher_argv.stop()
+        self.patcher_environ.stop()
+        self.patcher_stdin.stop()
+        self.patcher_stdout.stop()
+        self.patcher_makedirs.stop()
+        self.patcher_copyfile.stop()
+        self.patcher_remove.stop()
+        self.patcher_exists.stop()
+        self.patcher_getsize.stop()
+        self.patcher_requests_get.stop()
+        self.patcher_image_open.stop()
+        self.patcher_crawler_run.stop()
+        self.patcher_convert_image_format.stop()
+        self.patcher_download_image.stop()
+        self.patcher_is_file.stop()
+        self.patcher_suffix.stop()
+        self.patcher_exec_cmd.stop()
 
     def test_download_merge_split(self) -> None:
         self.maxDiff = None

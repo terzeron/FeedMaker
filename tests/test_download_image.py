@@ -4,7 +4,7 @@
 
 import io
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 from bin.feed_maker_util import Env
 import utils.download_image
@@ -17,7 +17,11 @@ class TestDownloadImage(unittest.TestCase):
         work_dir = Env.get("FM_WORK_DIR") + "/naver/one_second"
         self.fake_argv = ["download_image.py", "-f", work_dir, page_url]
 
-    def test_download_image_with_single_quote(self) -> None:
+    @patch('utils.image_downloader.ImageDownloader.download_image')
+    def test_download_image_with_single_quote(self, mock_download) -> None:
+        # Mock image download operations
+        mock_download.return_value = (True, f"{Env.get('WEB_SERVICE_IMAGE_URL_PREFIX')}/one_second/753d4f8.jpeg")
+        
         test_input = "<img src='https://image-comic.pstatic.net/webtoon/725586/247/20240118173811_a4fcf1cbd0e4a0d0b38a6b773ba58282_IMAG01_1.jpg'>"
         expected_output = "<img src='%s/one_second/753d4f8.jpeg'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
 
@@ -25,7 +29,11 @@ class TestDownloadImage(unittest.TestCase):
             utils.download_image.main()
             self.assertEqual(mock_stdout.getvalue(), expected_output)
 
-    def test_download_image_with_double_quote(self) -> None:
+    @patch('utils.image_downloader.ImageDownloader.download_image')
+    def test_download_image_with_double_quote(self, mock_download) -> None:
+        # Mock image download operations
+        mock_download.return_value = (True, f"{Env.get('WEB_SERVICE_IMAGE_URL_PREFIX')}/one_second/753d4f8.jpeg")
+        
         test_input = '<img src="https://image-comic.pstatic.net/webtoon/725586/247/20240118173811_a4fcf1cbd0e4a0d0b38a6b773ba58282_IMAG01_1.jpg">'
         expected_output = "<img src='%s/one_second/753d4f8.jpeg'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
 
@@ -33,7 +41,11 @@ class TestDownloadImage(unittest.TestCase):
             utils.download_image.main()
             self.assertEqual(mock_stdout.getvalue(), expected_output)
 
-    def test_download_image_with_space(self) -> None:
+    @patch('utils.image_downloader.ImageDownloader.download_image')
+    def test_download_image_with_space(self, mock_download) -> None:
+        # Mock image download operations
+        mock_download.return_value = (True, f"{Env.get('WEB_SERVICE_IMAGE_URL_PREFIX')}/one_second/753d4f8.jpeg")
+        
         test_input = "<img src='https://image-comic.pstatic.net/webtoon/725586/247/20240118173811_a4fcf1cbd0e4a0d0b38a6b773ba58282_IMAG01_1.jpg' >"
         expected_output = "<img src='%s/one_second/753d4f8.jpeg'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
 
@@ -41,7 +53,11 @@ class TestDownloadImage(unittest.TestCase):
             utils.download_image.main()
             self.assertEqual(mock_stdout.getvalue(), expected_output)
 
-    def test_download_image_with_trailing_slash(self) -> None:
+    @patch('utils.image_downloader.ImageDownloader.download_image')
+    def test_download_image_with_trailing_slash(self, mock_download) -> None:
+        # Mock image download operations
+        mock_download.return_value = (True, f"{Env.get('WEB_SERVICE_IMAGE_URL_PREFIX')}/one_second/753d4f8.jpeg")
+        
         test_input = "<img src='https://image-comic.pstatic.net/webtoon/725586/247/20240118173811_a4fcf1cbd0e4a0d0b38a6b773ba58282_IMAG01_1.jpg' />"
         expected_output = "<img src='%s/one_second/753d4f8.jpeg'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
 
@@ -49,7 +65,11 @@ class TestDownloadImage(unittest.TestCase):
             utils.download_image.main()
             self.assertEqual(mock_stdout.getvalue(), expected_output)
 
-    def test_download_image_with_width_attribute(self) -> None:
+    @patch('utils.image_downloader.ImageDownloader.download_image')
+    def test_download_image_with_width_attribute(self, mock_download) -> None:
+        # Mock image download operations
+        mock_download.return_value = (True, f"{Env.get('WEB_SERVICE_IMAGE_URL_PREFIX')}/one_second/753d4f8.jpeg")
+        
         test_input = "<img src='https://image-comic.pstatic.net/webtoon/725586/247/20240118173811_a4fcf1cbd0e4a0d0b38a6b773ba58282_IMAG01_1.jpg' width='100%'/>"
         expected_output = "<img src='%s/one_second/753d4f8.jpeg'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
 
