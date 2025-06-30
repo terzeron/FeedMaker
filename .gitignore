@@ -13,6 +13,19 @@ log/
 .hypothesis/
 CartoonSplit/
 mysql_data_dir/
+work/
+tests/work/
+tests/tmp/
+
+# AI/IDE 관련 캐시
+.claude/
+.dependency_cache/
+
+# 테스트 관련 임시 파일들
+.last_test_sucess
+.test_performance_cache
+.test_mondata*
+.test_mondata-shm
 
 *.pyc
 *.db
@@ -37,7 +50,7 @@ cookies.*.json
 *.lock
 .*.lock
 .env
-.env.test.notification
+.env.tests.notification
 nohup.out
 nohup.out.old
 backend/index.wsgi

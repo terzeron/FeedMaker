@@ -18,7 +18,7 @@ LOGGER = logging.getLogger()
 
 class FeedManager:
     work_dir_path = Path(Env.get("FM_WORK_DIR"))
-    public_feed_dir_path = Path(Env.get("WEB_SERVICE_FEED_DIR_PREFIX"))
+    public_feed_dir_path = Path(Env.get("WEB_SERVICE_ROOT_DIR"))
     
     @classmethod
     def get_feed_name_list_url_count_map(cls) -> dict[str, dict[str, Any]]:
@@ -404,6 +404,18 @@ class FeedManager:
         progress_ratio: float = 0.0
         due_date: Optional[datetime] = None
         collect_date: Optional[datetime] = None
+
+        # 설정 파일에서 is_completed 값을 읽어옴
+        conf_file_path = feed_dir_path / "conf.json"
+        if conf_file_path.is_file():
+            try:
+                import json
+                with conf_file_path.open('r', encoding='utf-8') as f:
+                    conf_data = json.load(f)
+                if "configuration" in conf_data and "collection" in conf_data["configuration"]:
+                    is_completed = conf_data["configuration"]["collection"].get("is_completed", False)
+            except Exception as e:
+                LOGGER.warning("Failed to read is_completed from config file: %s", e)
 
         if group_name in (".mypy_cache", ".git", "test") or feed_name in (".mypy_cache", ".git", "test"):
             return 0

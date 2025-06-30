@@ -1,0 +1,31 @@
+{
+  "configuration": {
+    "collection": {
+      "verify_ssl": true,
+      "encoding": "utf-8",
+      "unit_size_per_day": 1.5,
+      "list_url_list": [
+        "https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=1",
+        "https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=2"
+      ],
+      "item_capture_script": "./capture_item_link_title.py",
+      "ignore_old_list": false,
+      "sort_field_pattern": null,
+      "post_process_script_list": ["shuf"],
+      "headers": {}
+    },
+    "extraction": {
+      "timeout": 30,
+      "render_js": false,
+      "user_agent": true,
+      "element_id_list": ["ct", "content"],
+      "element_class_list": ["se_doc_viewer", "content_view"],
+      "element_path_list": [],
+      "post_process_script_list": ["post_process_script_for_navercast.py"],
+      "headers": {}
+    },
+    "rss": {
+      "title": "네이버캐스트 모바일"
+    }
+  }
+} 

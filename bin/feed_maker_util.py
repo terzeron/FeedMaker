@@ -93,14 +93,24 @@ class Process:
             program_full_path_str = program
         elif program.startswith("./") or program.startswith("../"):
             # relative path
-            program_full_path_str = str((dir_path / program).resolve())
+            program_full_path = (dir_path / program).resolve()
+            if not program_full_path.exists():
+                return None
+            program_full_path_str = str(program_full_path)
         else:
             # non-absolute path
             program_full_path_str = which(program)
             if not program_full_path_str:
                 return None
 
-        if not which(program_full_path_str):
+        # For absolute and relative paths, check if file exists, is file or symlink, and is executable
+        if program.startswith("/") or program.startswith("./") or program.startswith("../"):
+            p = Path(program_full_path_str)
+            resolved = p.resolve()
+            if not (resolved.exists() and resolved.is_file() and os.access(str(resolved), os.X_OK)):
+                return None
+        # For non-absolute paths, which() already checked existence
+        elif not which(program_full_path_str):
             return None
 
         result = program_full_path_str
@@ -708,7 +718,7 @@ class FileManager:
 
 class PathUtil:
     work_dir_path = Path(Env.get("FM_WORK_DIR"))
-    public_feed_dir_path = Path(Env.get("WEB_SERVICE_FEED_DIR_PREFIX"))
+    public_feed_dir_path = Path(Env.get("WEB_SERVICE_ROOT_DIR"))
 
     @staticmethod
     def short_path(path: Optional[Path]) -> str:
@@ -720,3 +730,5 @@ class PathUtil:
         elif path.is_relative_to(PathUtil.public_feed_dir_path):
             ret = str(path.relative_to(PathUtil.public_feed_dir_path))
         return ret
+# Modified
+# Another modification

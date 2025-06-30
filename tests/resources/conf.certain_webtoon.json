@@ -1,0 +1,57 @@
+{
+  "configuration": {
+    "collection": {
+      "is_completed": false,
+      "item_capture_script": "tests/capture_item_naverwebtoon.py -n 1",
+      "list_url_list": [
+        "https://comic.naver.com/api/article/list?titleId=725586&sort=DESC"
+      ],
+      "sort_field_pattern": "no=(\\d+)\\t",
+      "unit_size_per_day": 2,
+      "render_js": false,
+      "verify_ssl": true,
+      "encoding": "utf-8",
+      "ignore_old_list": false,
+      "copy_images_from_canvas": false,
+      "simulate_scrolling": false,
+      "disable_headless": false,
+      "blob_to_dataurl": false,
+      "user_agent": null,
+      "referer": null,
+      "timeout": 60,
+      "num_retries": 1,
+      "window_size": 5,
+      "post_process_script_list": [],
+      "headers": {}
+    },
+    "extraction": {
+      "render_js": false,
+      "verify_ssl": true,
+      "bypass_element_extraction": false,
+      "force_sleep_between_articles": true,
+      "copy_images_from_canvas": false,
+      "simulate_scrolling": false,
+      "disable_headless": false,
+      "blob_to_dataurl": false,
+      "user_agent": null,
+      "encoding": "utf-8",
+      "referer": null,
+      "threshold_to_remove_html_with_incomplete_image": 0,
+      "timeout": 60,
+      "num_retries": 1,
+      "element_id_list": [],
+      "element_class_list": ["wt_viewer"],
+      "element_path_list": [],
+      "post_process_script_list": ["download_image.py"],
+      "headers": {}
+    },
+    "rss": {
+      "rss_title": "네이버웹툰_연재중_테스트피드::네이버",
+      "rss_generator": "Terzeron's Feed Generator",
+      "rss_copyright": "Copyright (c) NAVER Corp. All rights reserved.",
+      "rss_link": "https://terzeron.com/running_webtoon.xml",
+      "rss_language": "ko",
+      "rss_url_prefix_for_guid": null
+    }
+  }
+} 

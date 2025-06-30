@@ -12,7 +12,7 @@ from typing import Optional, Union, Any
 from pathlib import Path
 from bs4 import BeautifulSoup, Comment
 from bin.crawler import Crawler, Method
-from bin.feed_maker_util import URL, HTMLExtractor, NotFoundConfigFileError
+from bin.feed_maker_util import URL, HTMLExtractor, NotFoundConfigFileError, Env
 
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -43,7 +43,7 @@ class Site:
     def get_work_dir(cls) -> Path:
         """작업 디렉토리를 반환합니다. 설정되지 않은 경우 환경변수에서 가져옵니다."""
         if not cls.work_dir_path:
-            cls.work_dir_path = Path(os.environ["FM_WORK_DIR"])
+            cls.work_dir_path = Path(Env.get("FM_WORK_DIR"))
         return cls.work_dir_path
 
     def __init__(self, site_name: str) -> None:

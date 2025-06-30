@@ -1,0 +1,1142 @@
+		<div id="SEDOC-1521793090769--1164245641" class="se_doc_viewer se_body_wrap se_theme_default " data-docversion="">
+
+<div class="se_doc_header_start" id="SEDOC-1521793090769--1164245641_se_doc_header_start"></div>
+
+<!-- SE_DOC_HEADER_START -->
+
+<div id="SEDOC-1521793090769--1164245641_viewer_head" class="se_viewer_head"></div>
+
+<div class="se_component_wrap">
+
+<div class="se_component se_documentTitle default is-bg is-fill">
+
+	    <div class="se_background" style="background-image: url(https://post-phinf.pstatic.net/MjAxODAzMjNfMjI1/MDAxNTIxNzg4OTgyNDY0.PwJDqvOhPFmxX_uHzBQoGZCw5s8kwzyEwROmS_AGZoEg.5ICl-o1KveWHofnre690TVSQKYfepsush3TB8V3u59Ag.JPEG/GettyImages-480400245.jpg?type=w1200); background-position:50% 46.488%">
+
+			<div class="se_background_exception">
+
+				<img alt="" class="se_background_img"  src="https://ssl.pstatic.net/static.post/image/m/im/bg_white.png" data-src="https://post-phinf.pstatic.net/MjAxODAzMjNfMjI1/MDAxNTIxNzg4OTgyNDY0.PwJDqvOhPFmxX_uHzBQoGZCw5s8kwzyEwROmS_AGZoEg.5ICl-o1KveWHofnre690TVSQKYfepsush3TB8V3u59Ag.JPEG/GettyImages-480400245.jpg?type=w1200" />
+
+			</div>
+
+	    	<div class="se_background_dim"></div>
+
+	    </div>
+
+    <div class="se_sectionArea is-fill se_align-left">
+
+        <!-- $SE3-TITLE_TOP Post Service placeholder --><a href="/my/series/detail.nhn?seriesNo=350574&memberNo=35786474&prevVolumeNo=14122118" onclick="mug.CommonTestUtil.nclick(this, 'tit.series');"><div class="se_series"><i class="se_ico_series" style="display:none">스타에디터3</i><i class="se_ico_series" style="">시리즈</i><i class="se_ico_groupseries" style="display:none">콜라보</i>이슈앤트렌드</div></a><!-- $SE3-TITLE_TOP Post Service placeholder -->
+
+        <!-- SE_DOC_HEADER_TITLE_TOP-->
+
+     	<div id="SEDOC-1521793090769--1164245641_se_doc_title_top" class="se_doc_title_top"></div>
+
+        <div class="se_editArea">
+
+        	<div class="se_viewArea se_ff_nanumgothic se_fs_D2">
+
+	            <div class="se_editView se_title">
+
+	                <div class="se_textView">
+
+                        <h3 class="se_textarea">
+
+                            
+
+                            동전과 지폐 사라지는 사회, 정말 올까? | 인터비즈
+
+                        </h3>
+
+                        
+
+                        
+
+	                </div>
+
+	            </div>
+
+	        </div>
+
+        </div><!-- SE_DOC_HEADER_TITLE_MIDDLE-->
+
+        <div id="SEDOC-1521793090769--1164245641_se_doc_title_middle" class="se_doc_title_middle"></div>
+
+        <!-- SE_DOC_HEADER_CONTENTS_START -->
+
+        <!-- $SE3-TITLE_CONTENTS Post Service placeholder --><div class="se_container"><a href="/my.nhn?memberNo=35786474" onclick="mug.CommonTestUtil.nclick(this, 'tit.profile');" class="se_thumbnail"><img  src="https://ssl.pstatic.net/static.post/image/m/im/bg_white.png" data-src="https://post-phinf.pstatic.net/MjAxNzExMzBfNjUg/MDAxNTEyMDAyNzE3MTA0.CDB9MMy7eHTQJqZid8-rdZQLbroVwj_5SYqtOYM_XL8g.nrZPMO7daD6zCLdCDib6G3KJ5VNDQ3GtcJKLyjmoMgog.PNG/post_2060968545232126757.png?type=f120_120" onerror="this.onerror=null;this.src='https://ssl.pstatic.net/static.post/image/im/img_default.gif'" alt="InterBiz 인터비즈님의 프로필 사진"></a><div class="se_group"><div class="se_author_area"><p><a href="/my.nhn?memberNo=35786474" onclick="mug.CommonTestUtil.nclick(this, 'tit.name');"><span class="se_author">InterBiz 인터비즈</span></a></p><p style="display:none"><span class="ico_official"><i class="blind">공식</i></span></p><p><i class="se_divide_dot" style=""></i><span class="se_follower" style="">1만 팔로워</span></p></div><p class="se_detail"><span class="se_publishDate">2018.03.22. 22:38</span><i class="se_divide_line"></i><span class="se_view" style="">15,319 읽음 </span><span class="se_secret" style="display:none">비밀글</span></p></div><div class="flw_area"><a href="#" class="btn_stats __se3_stat_btn" style="display:none" onclick="mug.CommonTestUtil.nclick(this, 'tit.stat');" target="_blank"><span>통계</span></a>
+
+</div></div><!-- $SE3-TITLE_CONTENTS Post Service placeholder -->
+
+        <!-- SE_DOC_HEADER_CONTENTS_END -->
+
+        <!-- SE_DOC_HEADER_TITLE_BOTTOM-->
+
+        <div id="SEDOC-1521793090769--1164245641_se_doc_title_bottom" class="se_doc_title_bottom"></div>
+
+    </div>
+
+</div>
+
+
+
+</div>
+
+<!-- {{{$SE3-CONTENTS_HEADER}}} -->
+
+<!-- SE_DOC_HEADER_END -->
+
+<div class="se_doc_header_end" id="SEDOC-1521793090769--1164245641_se_doc_header_end"></div>
+
+<div class="se_doc_contents_start" id="SEDOC-1521793090769--1164245641_se_doc_contents_start"></div>
+
+<!-- SE_DOC_CONTENTS_START -->
+
+<div class="se_component_wrap sect_dsc __se_component_area">
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_paragraph default">
+
+    <div class="se_sectionArea">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_ff_nanumgothic se_fs_T3 se_align-justify" >
+
+                <div class="se_editView">
+
+                    <div class="se_textView">
+
+                        <p class="se_textarea"><!-- SE3-TEXT { --><a class="se_link" href="https://blog.naver.com/businessinsight" target="_blank">[인터비즈]</a>&nbsp;신용카드를 비롯해 스마트폰 등의 모바일 기기로도 간편하게 결제할 수 있는 기술이 상용화되면서 현금으로 물건을 구매하는 빈도가 점점 줄어들고 있습니다. 거래의 기본 절차였던 '지폐를 내밀고 거스름돈을 돌려받는 행위'조차도 카드 한 장으로 간편하게 대체되었죠. 세계는 점차 현금 없는 사회로 나아가고 있습니다. 지폐와 동전 없이도 모든 물건을 살 수 있는 세상, 가능할까요?<br><!-- } SE3-TEXT --></p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_quotation quotation_underline">
+
+    <div class="se_sectionArea">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_fs_T2">
+
+                <div class="se_editView" >
+
+                    <div class="se_textView">
+
+                        <blockquote class="se_textarea"><!-- SE3-TEXT { -->현금&nbsp;없는&nbsp;사회의&nbsp;선두주자,&nbsp;북유럽<!-- } SE3-TEXT --></blockquote>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+		<div class="se_component se_image default">
+
+			<div class="se_sectionArea se_align-justify">
+
+				<div class="se_editArea">
+
+					<div class="se_viewArea" >
+
+						<a href="#" onclick="return false;" class="se_mediaArea __se_image_link __se_link" data-linktype="img" data-linkdata='{"imgId" : "SEDOC-1521793090769--1164245641_image_1_img", "src" : "https://post-phinf.pstatic.net/MjAxODAzMjNfMTgg/MDAxNTIxNzg5MzQ4NjUx.7Ft6tEyMeBxC_Dsw9ODEsVippo2qNYwwx_WJLyuqjkYg.DpVnfw3iQnmqEQmeyYq_xFLIWeOsXCCA780mYrTh-Ygg.JPEG/ddddddd.JPG", "linkUse" : "false", "link" : ""}'>
+
+							<img id="SEDOC-1521793090769--1164245641_image_1_img" class="se_mediaImage __se_img_el"  src="https://ssl.pstatic.net/static.post/image/m/im/bg_white.png" data-src="https://post-phinf.pstatic.net/MjAxODAzMjNfMTgg/MDAxNTIxNzg5MzQ4NjUx.7Ft6tEyMeBxC_Dsw9ODEsVippo2qNYwwx_WJLyuqjkYg.DpVnfw3iQnmqEQmeyYq_xFLIWeOsXCCA780mYrTh-Ygg.JPEG/ddddddd.JPG?type=w1200" width="762" height="477" data-attachment-id="IRQx1a-5TX7jiCmbUPpUnJCCKx4s" alt="">
+
+						</a>
+
+							<div class="se_editView">
+
+								<div class="se_textView se_mediaCaption">
+
+									    <span class="se_textarea">덴마크 코펜하겐의 노점상에서 한 시민이 모바일 카드 결제 어플을 사용해 결제하는 모습 / 출처 iZettle 홈페이지</span>
+
+								</div>
+
+							</div>
+
+					</div>
+
+				</div>
+
+			</div>
+
+		</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_paragraph default">
+
+    <div class="se_sectionArea">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_ff_nanumgothic se_fs_T3 se_align-justify" >
+
+                <div class="se_editView">
+
+                    <div class="se_textView">
+
+                        <p class="se_textarea"><!-- SE3-TEXT { --><span>북유럽에 위치한 선진국들은 세계에서 가장 발빠르게 현금 없는 사회로 나아가는 중입니다. 덴마크의 경우, 노숙자들마저도 모바일로 기부를 받을 정도로 전자 화폐의 사용이 활발하죠. 직접 생산하던 동전과 지폐는 2017년부터 다른 나라에 생산을 맡겼습니다. 장기적으로는 전자화폐 'e크로네'를 도입하여 운용하겠다는 방침입니다.&nbsp; <br></span><span><br>유럽에서 가장 먼저 지폐를 발행했던 스웨덴도 이제 세계에서 가장 현금을 안 쓰는 나라로 불리고 있습니다. 2013년 스톡홀름에서는 은행 강도가 돈을 한푼도 훔치지 못하고 빈손으로 나오는 황당한 사건까지 일어날 정도였죠. 현금 창고가 있을 거라 생각한 강도의 생각과는 달리 은행은 현금을 한푼도 보유하고 있지 않았기 때문입니다. 대다수의 소매점과 노점상은 지불 수단을 아예 카드로 한정하기도 했습니다. 손님들이 현금을 내밀어도 거절할 수 있는 법까지 생겨났죠. 스웨덴 정부는 2030년까지 현금 사용이 완전히 사라질 것이라 예측했습니다. <br></span><!-- } SE3-TEXT --></p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_quotation quotation_underline">
+
+    <div class="se_sectionArea">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_fs_T2">
+
+                <div class="se_editView" >
+
+                    <div class="se_textView">
+
+                        <blockquote class="se_textarea"><!-- SE3-TEXT { -->중국과 일본도 전자 화폐 시대로?<!-- } SE3-TEXT --></blockquote>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+		<div class="se_component se_image default">
+
+			<div class="se_sectionArea se_align-center">
+
+				<div class="se_editArea">
+
+					<div class="se_viewArea" style="max-width:700px">
+
+						<a href="#" onclick="return false;" class="se_mediaArea __se_image_link __se_link" data-linktype="img" data-linkdata='{"imgId" : "SEDOC-1521793090769--1164245641_image_2_img", "src" : "https://post-phinf.pstatic.net/MjAxODAzMjNfMTkx/MDAxNTIxNzgzMTQyODE3.LX6O5d5MHq8xwviEhOpTJtOijaGLeLNRdGs6q502Fpwg.9dqrXM3ku741G5iXZCmtxzrcA0ySZFgOviUXcq_npQsg.JPEG/950956_20170508135427_377_0002.jpg", "linkUse" : "false", "link" : ""}'>
+
+							<img id="SEDOC-1521793090769--1164245641_image_2_img" class="se_mediaImage __se_img_el"  src="https://ssl.pstatic.net/static.post/image/m/im/bg_white.png" data-src="https://post-phinf.pstatic.net/MjAxODAzMjNfMTkx/MDAxNTIxNzgzMTQyODE3.LX6O5d5MHq8xwviEhOpTJtOijaGLeLNRdGs6q502Fpwg.9dqrXM3ku741G5iXZCmtxzrcA0ySZFgOviUXcq_npQsg.JPEG/950956_20170508135427_377_0002.jpg?type=w1200" width="700" height="406" data-attachment-id="I-AfG99IKdeu9VBdiIiTMJ1VyvUo" alt="">
+
+						</a>
+
+							<div class="se_editView">
+
+								<div class="se_textView se_mediaCaption">
+
+									    <span class="se_textarea">출처 알리페이 홈페이지</span>
+
+								</div>
+
+							</div>
+
+					</div>
+
+				</div>
+
+			</div>
+
+		</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_paragraph default">
+
+    <div class="se_sectionArea">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_ff_nanumgothic se_fs_T3 se_align-justify" >
+
+                <div class="se_editView">
+
+                    <div class="se_textView">
+
+                        <p class="se_textarea"><!-- SE3-TEXT { --><span>이웃나라 중국도 현금 없는 사회로 가기 위해 박차를 가하고 있습니다. 카드 결제가 쉽지 않았던 재래시장까지도 '알리페이'나 '위챗페이'가 주축이 되어 현금 줄이기에 나서고 있죠. 스마트폰이 빠르게 보급되면서 카드 단계를 건너 뛰고 모바일 결제가 대중화되는 추세입니다. 카드결제 단말기가 없어도 스마트폰으로 QR 코드를 보여주면 상품 바코드를 인식하는 포스(POS)기를 이용해 간편하게 결제가 가능합니다. 위조지폐로 사기를 당할 일도 없고, 불편하게 거스름돈을 거슬러 줄 필요도 없어 상인들 사이에서도 호의적인 반응을 보인다고 하네요.</span><span><br></span><!-- } SE3-TEXT --></p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_paragraph paragraph_wrapping  se_inner-right">
+
+    <div class="se_sectionArea se_align-justify">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_fs_T3" >
+
+                <div class="se_editView">
+
+                    <div class="se_textView">
+
+                        <div class="se_textarea">
+
+							<div class="se_wrapping_slot">
+
+                                        
+
+								<div class="se_subComponent se_subComponent_image">
+
+                                    <a href="#" onclick="return false;" class="se_mediaArea __se_image_link __se_link" data-linktype="img" data-linkdata='{"imgId" : "SEDOC-1521793090769--1164245641_image_3_img", "src" : "https://post-phinf.pstatic.net/MjAxODAzMjNfNzYg/MDAxNTIxNzg4MjE5MjQx.tQqs6VGXN2mgKBcG3T_NmpmgdHd_lCyauhDkfzrch5wg.SpHsLao-3VB2U2esVqtlG_XGxWdNljhKHS_uS9WcVJwg.JPEG/20180125002933_0.jpg", "linkUse" : "false","link" : ""}'>
+
+                                        <img  src="https://ssl.pstatic.net/static.post/image/m/im/bg_white.png" data-src="https://post-phinf.pstatic.net/MjAxODAzMjNfNzYg/MDAxNTIxNzg4MjE5MjQx.tQqs6VGXN2mgKBcG3T_NmpmgdHd_lCyauhDkfzrch5wg.SpHsLao-3VB2U2esVqtlG_XGxWdNljhKHS_uS9WcVJwg.JPEG/20180125002933_0.jpg?type=w1200" data-attachment-id="IWYwTWlLD3wR3X-WfJIVzoO_Yoqo" alt="" class="se_mediaImage __se_img_el" id="SEDOC-1521793090769--1164245641_image_3_img">
+
+                                    </a>
+
+                                        <span class="se_textView se_mediaCaption">
+
+                                                <span class="se_textarea">출처 NHK 방송 캡쳐</span>
+
+                                        </span>
+
+								</div>
+
+                            </div>
+
+                                <span class="se_ff_nanumgothic"><!-- SE3-TEXT { --><span>일본은 은행마다 인감을 지참해 현금을 인출하는 고객을 흔히 볼 수 있을 정도로 현금 결제를 선호했던 나라입니다. 신용카드 결제가 불가한 매장도 적지 않을 정도로 현금 사용이 보편화 되어있죠. 그러나 최근에는 비트코인과 같은 가상화폐 상용화에 속도를 내고 있습니다. 결제뿐만이 아니라 송금 및 보안적 측면에서도 가상화폐의 강점이 두드러져 정부측에서 지원을 강화하는 중이죠. 중국과 마찬가지로, 일본이 주목하는 기술 또다른 기술은 QR 코드입니다. 미리 신용카드를 등록하면 통신사에 관계없이 대금을 지불할 수 있고, 자동으로 정산이 가능해 점점 많은 사람들이 찾는 거래수단이 되었습니다.<br></span><span></span><span></span><!-- } SE3-TEXT --></span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_quotation quotation_underline">
+
+    <div class="se_sectionArea">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_fs_T2">
+
+                <div class="se_editView" >
+
+                    <div class="se_textView">
+
+                        <blockquote class="se_textarea"><!-- SE3-TEXT { -->현금&nbsp;없는&nbsp;사회가 가져올 미래<!-- } SE3-TEXT --></blockquote>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_paragraph paragraph_wrapping  se_inner-left">
+
+    <div class="se_sectionArea se_align-justify">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_fs_T3" >
+
+                <div class="se_editView">
+
+                    <div class="se_textView">
+
+                        <div class="se_textarea">
+
+							<div class="se_wrapping_slot">
+
+                                        
+
+								<div class="se_subComponent se_subComponent_image">
+
+                                    <a href="#" onclick="return false;" class="se_mediaArea __se_image_link __se_link" data-linktype="img" data-linkdata='{"imgId" : "SEDOC-1521793090769--1164245641_image_4_img", "src" : "https://post-phinf.pstatic.net/MjAxODAzMjNfMTc1/MDAxNTIxNzgzNjIyMTY4.hEBacIpG1WaV2uu84FJuLB-D3DhVnUGKZBHtrMNeN6Eg.UvD6cjzCWf1EuMRdNg6mDdAoeN6AHqUxS-DRFv2Y5zAg.JPEG/GettyImages-658487948.jpg", "linkUse" : "false","link" : ""}'>
+
+                                        <img  src="https://ssl.pstatic.net/static.post/image/m/im/bg_white.png" data-src="https://post-phinf.pstatic.net/MjAxODAzMjNfMTc1/MDAxNTIxNzgzNjIyMTY4.hEBacIpG1WaV2uu84FJuLB-D3DhVnUGKZBHtrMNeN6Eg.UvD6cjzCWf1EuMRdNg6mDdAoeN6AHqUxS-DRFv2Y5zAg.JPEG/GettyImages-658487948.jpg?type=w1200" data-attachment-id="IsnIFlnsKILt_MRTtgFu01gupAxY" alt="" class="se_mediaImage __se_img_el" id="SEDOC-1521793090769--1164245641_image_4_img">
+
+                                    </a>
+
+                                        <span class="se_textView se_mediaCaption">
+
+                                                <span class="se_textarea">출처 게티이미지뱅크</span>
+
+                                        </span>
+
+								</div>
+
+                            </div>
+
+                                <span class="se_ff_nanumgothic"><!-- SE3-TEXT { -->현금 사용을 지양하는 분위기가 전세계적으로 이어지고 있습니다. 현금이 사라지면 자금 유통의 투명성이 확보되고, 화폐 제조 비용을 절감할 수 있는 등 다양한 이점이 많기 때문입니다. 특히 지하경제에서 악용되고 있는 검은돈의 규모를 줄이는데도 큰 효과가 있습니다. 실제로 덴마크 국세청은 지난 2012~2014년 사이의 덴마크 지하경제가 3분의 1정도 줄었다고 발표했습니다. 이와 더불어 탈세나 테러, 마약 등의 범죄 활동 역시 줄어들 것으로 기대했죠. 모든 금융 거래 내역이 상세하게 기록되기 때문에 범죄를 일일이 감시하고 단속하는 비용까지도 아낄 수 있을 것입니다.&nbsp;&nbsp;&nbsp;&nbsp; <br><!-- } SE3-TEXT --></span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_quotation quotation_underline">
+
+    <div class="se_sectionArea">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_fs_T2">
+
+                <div class="se_editView" >
+
+                    <div class="se_textView">
+
+                        <blockquote class="se_textarea"><!-- SE3-TEXT { -->우리나라도 동전과 지폐가 사라질까?<!-- } SE3-TEXT --></blockquote>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_paragraph paragraph_wrapping  se_inner-right">
+
+    <div class="se_sectionArea se_align-justify">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_fs_T3" >
+
+                <div class="se_editView">
+
+                    <div class="se_textView">
+
+                        <div class="se_textarea">
+
+							<div class="se_wrapping_slot">
+
+                                        
+
+								<div class="se_subComponent se_subComponent_image">
+
+                                    <a href="#" onclick="return false;" class="se_mediaArea __se_image_link __se_link" data-linktype="img" data-linkdata='{"imgId" : "SEDOC-1521793090769--1164245641_image_5_img", "src" : "https://post-phinf.pstatic.net/MjAxODAzMjNfMjQy/MDAxNTIxNzg3ODAzMjUw.QWtZu6HwmZlmVeDaPRAFPxJ8evJFqiytzJxFA9JkA6cg.jW6mai2dyvDlDnWs4hmnkWoGw8dzGqZR1Xa-puwn6Ucg.JPEG/GettyImages-858562216.jpg", "linkUse" : "false","link" : ""}'>
+
+                                        <img  src="https://ssl.pstatic.net/static.post/image/m/im/bg_white.png" data-src="https://post-phinf.pstatic.net/MjAxODAzMjNfMjQy/MDAxNTIxNzg3ODAzMjUw.QWtZu6HwmZlmVeDaPRAFPxJ8evJFqiytzJxFA9JkA6cg.jW6mai2dyvDlDnWs4hmnkWoGw8dzGqZR1Xa-puwn6Ucg.JPEG/GettyImages-858562216.jpg?type=w1200" data-attachment-id="IG7iKBnzOJnjeyZqVF1qv2SyyCYY" alt="" class="se_mediaImage __se_img_el" id="SEDOC-1521793090769--1164245641_image_5_img">
+
+                                    </a>
+
+                                        <span class="se_textView se_mediaCaption">
+
+                                                <span class="se_textarea">출처 게티이미지뱅크</span>
+
+                                        </span>
+
+								</div>
+
+                            </div>
+
+                                <span class="se_ff_nanumgothic"><!-- SE3-TEXT { --><span>IT 강국으로 꼽히는 우리나라도 현금 없는 사회로 가는 대열에 동참하고 있습니다. 한국은행은 2020년까지 '동전 없는 사회'를 구현하겠다는 계획을 발표했고, 스타벅스코리아는 4월 23일부터 판교, 삼성역 등에 '현금 없는 매장'을 운영하겠다고 말했죠. 신용카드를 넘어서 네이버페이 등의 모바일 결제를 이용하는 사람들도 늘어났습니다. 매해 현금으로 계산을 하는 고객의 비율이 감소하고 있는 만큼 우리나라도 현금 없는 사회로 발전할 가능성이 있다고 해석할 수 있겠습니다.&nbsp; <br></span><span><br></span><span>그렇다면 정말로 지갑에서 현금이 사라지는 날이 올까요? 일각에서는 수천 년 동안 사용하며 익숙해진 지폐와 동전이 실제로 퇴출된다는 것에 대해 의문을 제기합니다. 사회적 흐름은 기술의 발전과 함께 나아가고 있지만, 여전히 현금을 선호하는 노년층과 다양한 집단의 이해관계가 얽혀 있어 현금이 100% 사라지는 사회가 도래하려면 오랜 시간이 걸린다는 것입니다. <br></span><span><br></span>이미 현금 없는 국가로의 여정을 먼저 떠난 덴마크 등의 사례가 많기 때문에 우리나라는 앞서가는 나라의 사례를 참고할 필요가 있습니다. 전 세계적으로 부는 핀테크 열풍처럼 금융 분야에서 또다른 신규 비즈니스가 등장할 가능성도 있습니다. 현금 없는 사회에 대한 여러분의 생각은 어떠신가요? <!-- } SE3-TEXT --></span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="se_component se_quotation quotation_line">
+
+    <div class="se_sectionArea">
+
+        <div class="se_editArea">
+
+            <div class="se_viewArea se_fs_T3">
+
+                <div class="se_editView" >
+
+                    <div class="se_textView">
+
+                        <blockquote class="se_textarea"><!-- SE3-TEXT { -->인터비즈 박근하<br>inter-biz@naver.com<!-- } SE3-TEXT --></blockquote>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+		<div class="se_component se_image default">
+
+			<div class="se_sectionArea se_align-left">
+
+				<div class="se_editArea">
+
+					<div class="se_viewArea" style="max-width:560px">
+
+						<a href="#" onclick="return false;" class="se_mediaArea __se_image_link __se_link" data-linktype="img" data-linkdata='{"imgId" : "SEDOC-1521793090769--1164245641_image_6_img", "src" : "http://post.phinf.naver.net/MjAxODAzMDhfMjA3/MDAxNTIwNDY5MDc4NjEy.m56YEFjDfHB3UhIeuAEitzKiWOBvMsEkDXNbv208fzUg.vFEgK1ekpdPVCA0v4JziB7Ivx1y0B4gbYnP8yv0cZekg.PNG/%EF%BF%BD%EB%B8%AF%EF%BF%BD%EB%96%92%E8%AB%9B%EA%B3%95%EA%BC%AB2%280109_%E7%90%86%EC%92%96%EB%96%8A%29.png?type=w1200", "linkUse" : "true", "link" : "http://m.naver.com/naverapp/?version=1&amp;cmd=addMenu&amp;menuCode=BUSINESS"}'>
+
+							<img id="SEDOC-1521793090769--1164245641_image_6_img" class="se_mediaImage __se_img_el"  src="https://ssl.pstatic.net/static.post/image/m/im/bg_white.png" data-src="https://post-phinf.pstatic.net/MjAxODAzMDhfMjA3/MDAxNTIwNDY5MDc4NjEy.m56YEFjDfHB3UhIeuAEitzKiWOBvMsEkDXNbv208fzUg.vFEgK1ekpdPVCA0v4JziB7Ivx1y0B4gbYnP8yv0cZekg.PNG/%EF%BF%BD%EB%B8%AF%EF%BF%BD%EB%96%92%E8%AB%9B%EA%B3%95%EA%BC%AB2%280109_%E7%90%86%EC%92%96%EB%96%8A%29.png?type=w1200" width="560" height="290" data-attachment-id="" alt="">
+
+						</a>
+
+					</div>
+
+				</div>
+
+			</div>
+
+		</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</div>
+
+<!-- SE_DOC_CONTENTS_END -->
+
+<div class="__se_doc_title_end" id="se_doc_contents_end"></div>
+
+<div id="SEDOC-1521793090769--1164245641_se_doc_footer" class="se_doc_footer"></div>
+
+</div>
+

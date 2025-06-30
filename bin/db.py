@@ -11,7 +11,6 @@ from collections.abc import Hashable
 from sqlalchemy import create_engine, event, func as _func, and_ as _and_, or_ as _or_, not_ as _not_
 from sqlalchemy.engine import Engine, URL, Connection
 from sqlalchemy.orm import Session as _Session, sessionmaker as _sessionmaker
-from sqlalchemy.orm.session import Session as _Session
 
 from bin.feed_maker_util import Env
 from bin.models import Base
@@ -49,8 +48,19 @@ class _DataSource:
         # 커넥션마다 UTC 고정
         @event.listens_for(self._engine, "connect")
         def _set_utc(conn: Any, _: Any) -> None:  # type: ignore
-            with conn.cursor() as cur:
-                cur.execute("SET time_zone = '+00:00'")
+            try:
+                # MySQL의 경우 context manager 지원
+                with conn.cursor() as cur:
+                    cur.execute("SET time_zone = '+00:00'")
+            except (TypeError, AttributeError):
+                # SQLite의 경우 context manager 미지원
+                try:
+                    cur = conn.cursor()
+                    cur.execute("PRAGMA timezone = '+00:00'")
+                    cur.close()
+                except Exception:
+                    # SQLite에서 timezone 설정이 실패해도 무시
+                    pass
 
         self._Session: Any = _sessionmaker(
             bind=self._engine,
