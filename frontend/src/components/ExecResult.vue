@@ -1,21 +1,21 @@
 <template>
-  <b-container fluid>
-    <b-row>
-      <b-col cols="12">
-        <vue-simple-markdown :source="source"></vue-simple-markdown>
-      </b-col>
-    </b-row>
+  <BContainer fluid>
+    <BRow>
+      <BCol cols="12">
+        <VMarkdownView :source="source"></VMarkdownView>
+      </BCol>
+    </BRow>
 
-    <b-row>
-      <b-col cols="12" class="mx-auto text-center mt-5 mb-3">
+    <BRow>
+      <BCol cols="12" class="mx-auto text-center mt-5 mb-3">
         Feed Manager by {{ adminEmail }}
-      </b-col>
-    </b-row>
-  </b-container>
+      </BCol>
+    </BRow>
+  </BContainer>
 </template>
 
 <style>
-div.vue-simple-markdown {
+div.vue3-markdown {
   white-space: normal !important;
 }
 
@@ -44,11 +44,11 @@ div.markdown-body > h3 {
 }
 
 div.markdown-body > h4 {
-  font-size: 1.0em;
+  font-size: 1em;
 }
 
 div.markdown-body > h5 {
-  font-size: 1.0em;
+  font-size: 1em;
 }
 
 div.markdown-body li {
@@ -56,44 +56,42 @@ div.markdown-body li {
 }
 </style>
 
-<script>
-import axios from 'axios';
+<script setup>
+import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { useStorage } from "@vueuse/core";
+import axios from "axios";
 
-export default {
-  name: 'ExecResult',
-  components: {},
-  data: function () {
-    return {
-      source: '### No result',
-      isLogged: false,
-    }
-  },
-  computed: {
-    adminEmail: function () {
-      return process.env.VUE_APP_FACEBOOK_ADMIN_EMAIL;
-    },
-  },
-  methods: {
-    getApiUrlPath: function () {
-      return process.env.VUE_APP_API_URL;
-    },
-    getExecResult: function () {
-      const path = this.getApiUrlPath() + '/exec_result';
-      axios.get(path)
-          .then((res) => {
-            this.source = res.data['exec_result'];
-          })
-          .catch((error) => {
-            console.error(error);
-          });
-    },
-  },
-  mounted: function () {
-    if (this.$session.get('is_authorized')) {
-      this.getExecResult();
-    } else {
-      this.$router.push('/login');
-    }
-  },
+const router = useRouter();
+const source = ref("### No result");
+
+const adminEmail = computed(() => {
+  return process.env.VUE_APP_FACEBOOK_ADMIN_EMAIL;
+});
+
+const isAuthorized = useStorage("is_authorized", false, sessionStorage);
+
+const getApiUrlPath = () => {
+  return process.env.VUE_APP_API_URL;
 };
+
+const getExecResult = () => {
+  const path = getApiUrlPath() + "/exec_result";
+  axios
+    .get(path)
+    .then((res) => {
+      source.value = res.data["exec_result"];
+    })
+    .catch((error) => {
+      console.error(error);
+    });
+};
+
+onMounted(() => {
+  if (isAuthorized.value) {
+    getExecResult();
+  } else {
+    router.push("/login");
+  }
+});
 </script>

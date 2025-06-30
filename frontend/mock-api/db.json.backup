@@ -1,0 +1,685 @@
+{
+  "groups": {
+    "groups": [
+      {
+        "name": "webtoon",
+        "num_feeds": 3,
+        "status": true,
+        "description": "웹툰 피드 그룹"
+      },
+      {
+        "name": "news",
+        "num_feeds": 2,
+        "status": true,
+        "description": "뉴스 피드 그룹"
+      },
+      {
+        "name": "blog",
+        "num_feeds": 1,
+        "status": false,
+        "description": "블로그 피드 그룹"
+      },
+      {
+        "name": "tech",
+        "num_feeds": 2,
+        "status": true,
+        "description": "기술 관련 피드 그룹"
+      },
+      {
+        "name": "sports",
+        "num_feeds": 1,
+        "status": true,
+        "description": "스포츠 피드 그룹"
+      },
+      {
+        "name": "entertainment",
+        "num_feeds": 2,
+        "status": true,
+        "description": "엔터테인먼트 피드 그룹"
+      },
+      {
+        "name": "_disabled_group",
+        "num_feeds": 0,
+        "status": false,
+        "description": "비활성화된 그룹"
+      }
+    ]
+  },
+  "feeds": {
+    "webtoon": [
+      {
+        "name": "naver_webtoon",
+        "title": "네이버 웹툰",
+        "status": true,
+        "description": "네이버 웹툰 피드"
+      },
+      {
+        "name": "kakao_webtoon",
+        "title": "카카오 웹툰",
+        "status": true,
+        "description": "카카오 웹툰 피드"
+      },
+      {
+        "name": "lezhin_webtoon",
+        "title": "레진 웹툰",
+        "status": true,
+        "description": "레진 웹툰 피드"
+      },
+      {
+        "name": "_disabled_webtoon",
+        "title": "비활성화 웹툰",
+        "status": false,
+        "description": "비활성화된 웹툰 피드"
+      }
+    ],
+    "news": [
+      {
+        "name": "tech_news",
+        "title": "기술 뉴스",
+        "status": true,
+        "description": "기술 뉴스 피드"
+      },
+      {
+        "name": "sports_news",
+        "title": "스포츠 뉴스",
+        "status": true,
+        "description": "스포츠 뉴스 피드"
+      },
+      {
+        "name": "politics_news",
+        "title": "정치 뉴스",
+        "status": true,
+        "description": "정치 뉴스 피드"
+      }
+    ],
+    "blog": [
+      {
+        "name": "personal_blog",
+        "title": "개인 블로그",
+        "status": false,
+        "description": "개인 블로그 피드"
+      }
+    ],
+    "tech": [
+      {
+        "name": "github_trending",
+        "title": "GitHub Trending",
+        "status": true,
+        "description": "GitHub 트렌딩 저장소"
+      },
+      {
+        "name": "stackoverflow",
+        "title": "Stack Overflow",
+        "status": true,
+        "description": "Stack Overflow 질문"
+      },
+      {
+        "name": "dev_to",
+        "title": "Dev.to",
+        "status": true,
+        "description": "Dev.to 개발자 블로그"
+      }
+    ],
+    "sports": [
+      {
+        "name": "soccer_news",
+        "title": "축구 뉴스",
+        "status": true,
+        "description": "축구 관련 뉴스"
+      }
+    ],
+    "entertainment": [
+      {
+        "name": "movie_reviews",
+        "title": "영화 리뷰",
+        "status": true,
+        "description": "최신 영화 리뷰"
+      },
+      {
+        "name": "music_news",
+        "title": "음악 뉴스",
+        "status": true,
+        "description": "음악 관련 뉴스"
+      }
+    ]
+  },
+  "problems": {
+    "problems": [
+      {
+        "id": "4f2732d9-220c-4325-87ac-2b5b5bdc9307",
+        "type": "connection_error",
+        "severity": "high",
+        "message": "네이버 웹툰 서버 연결 실패",
+        "feed_name": "naver_webtoon",
+        "group_name": "webtoon",
+        "timestamp": "2025-06-25T07:54:10.233459",
+        "status": "open"
+      },
+      {
+        "id": "5ae4d619-18c2-4c83-a874-52bb48b89b9c",
+        "type": "parsing_error",
+        "severity": "medium",
+        "message": "카카오 웹툰 HTML 파싱 오류",
+        "feed_name": "kakao_webtoon",
+        "group_name": "webtoon",
+        "timestamp": "2025-06-25T04:54:10.233477",
+        "status": "resolved"
+      },
+      {
+        "id": "b76bfca0-e93f-4cf5-b46e-a775f88594e9",
+        "type": "timeout_error",
+        "severity": "low",
+        "message": "GitHub API 응답 시간 초과",
+        "feed_name": "github_trending",
+        "group_name": "tech",
+        "timestamp": "2025-06-25T08:54:10.233483",
+        "status": "open"
+      },
+      {
+        "id": "b904e7bd-5d79-456e-95bb-e8016ce9d8c7",
+        "type": "data_validation_error",
+        "severity": "medium",
+        "message": "스포츠 뉴스 데이터 형식 오류",
+        "feed_name": "sports_news",
+        "group_name": "news",
+        "timestamp": "2025-06-25T06:54:10.233488",
+        "status": "open"
+      }
+    ]
+  },
+  "exec_result": {
+    "exec_result": [
+      {
+        "feed_name": "naver_webtoon",
+        "group_name": "webtoon",
+        "status": "success",
+        "start_time": "2025-06-25T09:24:10.233490",
+        "end_time": "2025-06-25T09:29:10.233492",
+        "items_processed": 15,
+        "items_success": 15,
+        "items_failed": 0,
+        "log": "Feed processing completed successfully"
+      },
+      {
+        "feed_name": "kakao_webtoon",
+        "group_name": "webtoon",
+        "status": "partial_success",
+        "start_time": "2025-06-25T09:34:10.233494",
+        "end_time": "2025-06-25T09:39:10.233495",
+        "items_processed": 8,
+        "items_success": 7,
+        "items_failed": 1,
+        "log": "Feed processing completed with 1 error"
+      },
+      {
+        "feed_name": "github_trending",
+        "group_name": "tech",
+        "status": "failed",
+        "start_time": "2025-06-25T09:44:10.233496",
+        "end_time": "2025-06-25T09:46:10.233497",
+        "items_processed": 0,
+        "items_success": 0,
+        "items_failed": 0,
+        "log": "API rate limit exceeded"
+      }
+    ]
+  },
+  "feed_info": {
+    "webtoon/naver_webtoon": {
+      "config": {
+        "collection": {
+          "list_url_list": [
+            "https://example.com/naver_webtoon"
+          ],
+          "feed_dir_path": "/feeds/webtoon/naver_webtoon",
+          "feed_name": "naver_webtoon"
+        },
+        "rss": {
+          "title": "네이버 웹툰",
+          "description": "네이버 웹툰 최신 업데이트",
+          "link": "https://terzeron.com/naver_webtoon.xml"
+        },
+        "extraction": {
+          "list_url": "https://example.com/naver_webtoon",
+          "list_url_parser": "naver_webtoon"
+        }
+      },
+      "collection_info": {
+        "num_collection_urls": 9,
+        "collect_date": "2025-06-24T21:54:10.233505",
+        "urllist_count": 8,
+        "total_item_count": 11
+      },
+      "public_feed_info": {
+        "num_items_in_result": 19,
+        "size_of_result_file": 1120,
+        "last_upload_date": "2025-06-25T09:50:10.233511"
+      },
+      "progress_info": {
+        "current_index": 8,
+        "total_item_count": 15,
+        "unit_size_per_day": 5,
+        "progress_ratio": 59.91494788837929,
+        "feed_completion_due_date": "2025-07-02T09:54:10.233515"
+      }
+    },
+    "webtoon/kakao_webtoon": {
+      "config": {
+        "collection": {
+          "list_url_list": [
+            "https://example.com/kakao_webtoon"
+          ],
+          "feed_dir_path": "/feeds/webtoon/kakao_webtoon",
+          "feed_name": "kakao_webtoon"
+        },
+        "rss": {
+          "title": "카카오 웹툰",
+          "description": "카카오 웹툰 최신 업데이트",
+          "link": "https://terzeron.com/kakao_webtoon.xml"
+        },
+        "extraction": {
+          "list_url": "https://example.com/kakao_webtoon",
+          "list_url_parser": "kakao_webtoon"
+        }
+      },
+      "collection_info": {
+        "num_collection_urls": 12,
+        "collect_date": "2025-06-24T22:54:10.233520",
+        "urllist_count": 19,
+        "total_item_count": 11
+      },
+      "public_feed_info": {
+        "num_items_in_result": 14,
+        "size_of_result_file": 2916,
+        "last_upload_date": "2025-06-25T09:22:10.233524"
+      },
+      "progress_info": {
+        "current_index": 10,
+        "total_item_count": 12,
+        "unit_size_per_day": 1,
+        "progress_ratio": 66.47353449400616,
+        "feed_completion_due_date": "2025-06-27T09:54:10.233527"
+      }
+    },
+    "webtoon/lezhin_webtoon": {
+      "config": {
+        "collection": {
+          "list_url_list": [
+            "https://example.com/lezhin_webtoon"
+          ],
+          "feed_dir_path": "/feeds/webtoon/lezhin_webtoon",
+          "feed_name": "lezhin_webtoon"
+        },
+        "rss": {
+          "title": "레진 웹툰",
+          "description": "레진 웹툰 최신 업데이트",
+          "link": "https://terzeron.com/lezhin_webtoon.xml"
+        },
+        "extraction": {
+          "list_url": "https://example.com/lezhin_webtoon",
+          "list_url_parser": "lezhin_webtoon"
+        }
+      },
+      "collection_info": {
+        "num_collection_urls": 11,
+        "collect_date": "2025-06-24T22:54:10.233530",
+        "urllist_count": 11,
+        "total_item_count": 10
+      },
+      "public_feed_info": {
+        "num_items_in_result": 8,
+        "size_of_result_file": 2755,
+        "last_upload_date": "2025-06-25T09:12:10.233534"
+      },
+      "progress_info": {
+        "current_index": 1,
+        "total_item_count": 12,
+        "unit_size_per_day": 4,
+        "progress_ratio": 97.19040713070774,
+        "feed_completion_due_date": "2025-06-29T09:54:10.233536"
+      }
+    },
+    "news/tech_news": {
+      "config": {
+        "collection": {
+          "list_url_list": [
+            "https://example.com/tech_news"
+          ],
+          "feed_dir_path": "/feeds/news/tech_news",
+          "feed_name": "tech_news"
+        },
+        "rss": {
+          "title": "기술 뉴스",
+          "description": "기술 뉴스 최신 업데이트",
+          "link": "https://terzeron.com/tech_news.xml"
+        },
+        "extraction": {
+          "list_url": "https://example.com/tech_news",
+          "list_url_parser": "tech_news"
+        }
+      },
+      "collection_info": {
+        "num_collection_urls": 15,
+        "collect_date": "2025-06-24T21:54:10.233539",
+        "urllist_count": 20,
+        "total_item_count": 12
+      },
+      "public_feed_info": {
+        "num_items_in_result": 10,
+        "size_of_result_file": 3056,
+        "last_upload_date": "2025-06-25T08:55:10.233542"
+      },
+      "progress_info": {
+        "current_index": 6,
+        "total_item_count": 11,
+        "unit_size_per_day": 4,
+        "progress_ratio": 21.32217208813919,
+        "feed_completion_due_date": "2025-07-01T09:54:10.233545"
+      }
+    },
+    "news/sports_news": {
+      "config": {
+        "collection": {
+          "list_url_list": [
+            "https://example.com/sports_news"
+          ],
+          "feed_dir_path": "/feeds/news/sports_news",
+          "feed_name": "sports_news"
+        },
+        "rss": {
+          "title": "스포츠 뉴스",
+          "description": "스포츠 뉴스 최신 업데이트",
+          "link": "https://terzeron.com/sports_news.xml"
+        },
+        "extraction": {
+          "list_url": "https://example.com/sports_news",
+          "list_url_parser": "sports_news"
+        }
+      },
+      "collection_info": {
+        "num_collection_urls": 11,
+        "collect_date": "2025-06-25T00:54:10.233547",
+        "urllist_count": 14,
+        "total_item_count": 15
+      },
+      "public_feed_info": {
+        "num_items_in_result": 12,
+        "size_of_result_file": 3402,
+        "last_upload_date": "2025-06-25T09:53:10.233550"
+      },
+      "progress_info": {
+        "current_index": 5,
+        "total_item_count": 10,
+        "unit_size_per_day": 1,
+        "progress_ratio": 90.7015314041807,
+        "feed_completion_due_date": "2025-06-30T09:54:10.233552"
+      }
+    },
+    "news/politics_news": {
+      "config": {
+        "collection": {
+          "list_url_list": [
+            "https://example.com/politics_news"
+          ],
+          "feed_dir_path": "/feeds/news/politics_news",
+          "feed_name": "politics_news"
+        },
+        "rss": {
+          "title": "정치 뉴스",
+          "description": "정치 뉴스 최신 업데이트",
+          "link": "https://terzeron.com/politics_news.xml"
+        },
+        "extraction": {
+          "list_url": "https://example.com/politics_news",
+          "list_url_parser": "politics_news"
+        }
+      },
+      "collection_info": {
+        "num_collection_urls": 10,
+        "collect_date": "2025-06-24T21:54:10.233555",
+        "urllist_count": 11,
+        "total_item_count": 14
+      },
+      "public_feed_info": {
+        "num_items_in_result": 11,
+        "size_of_result_file": 3099,
+        "last_upload_date": "2025-06-25T09:06:10.233558"
+      },
+      "progress_info": {
+        "current_index": 3,
+        "total_item_count": 19,
+        "unit_size_per_day": 5,
+        "progress_ratio": 75.01528522769001,
+        "feed_completion_due_date": "2025-06-30T09:54:10.233560"
+      }
+    },
+    "tech/github_trending": {
+      "config": {
+        "collection": {
+          "list_url_list": [
+            "https://example.com/github_trending"
+          ],
+          "feed_dir_path": "/feeds/tech/github_trending",
+          "feed_name": "github_trending"
+        },
+        "rss": {
+          "title": "GitHub Trending",
+          "description": "GitHub Trending 최신 업데이트",
+          "link": "https://terzeron.com/github_trending.xml"
+        },
+        "extraction": {
+          "list_url": "https://example.com/github_trending",
+          "list_url_parser": "github_trending"
+        }
+      },
+      "collection_info": {
+        "num_collection_urls": 15,
+        "collect_date": "2025-06-25T04:54:10.233563",
+        "urllist_count": 15,
+        "total_item_count": 18
+      },
+      "public_feed_info": {
+        "num_items_in_result": 8,
+        "size_of_result_file": 2950,
+        "last_upload_date": "2025-06-25T09:06:10.233566"
+      },
+      "progress_info": {
+        "current_index": 6,
+        "total_item_count": 14,
+        "unit_size_per_day": 2,
+        "progress_ratio": 68.86282706994646,
+        "feed_completion_due_date": "2025-06-27T09:54:10.233568"
+      }
+    },
+    "tech/stackoverflow": {
+      "config": {
+        "collection": {
+          "list_url_list": [
+            "https://example.com/stackoverflow"
+          ],
+          "feed_dir_path": "/feeds/tech/stackoverflow",
+          "feed_name": "stackoverflow"
+        },
+        "rss": {
+          "title": "Stack Overflow",
+          "description": "Stack Overflow 최신 업데이트",
+          "link": "https://terzeron.com/stackoverflow.xml"
+        },
+        "extraction": {
+          "list_url": "https://example.com/stackoverflow",
+          "list_url_parser": "stackoverflow"
+        }
+      },
+      "collection_info": {
+        "num_collection_urls": 18,
+        "collect_date": "2025-06-24T11:54:10.233571",
+        "urllist_count": 7,
+        "total_item_count": 15
+      },
+      "public_feed_info": {
+        "num_items_in_result": 7,
+        "size_of_result_file": 1655,
+        "last_upload_date": "2025-06-25T09:28:10.233573"
+      },
+      "progress_info": {
+        "current_index": 8,
+        "total_item_count": 11,
+        "unit_size_per_day": 1,
+        "progress_ratio": 13.806295038075756,
+        "feed_completion_due_date": "2025-06-28T09:54:10.233575"
+      }
+    },
+    "tech/dev_to": {
+      "config": {
+        "collection": {
+          "list_url_list": [
+            "https://example.com/dev_to"
+          ],
+          "feed_dir_path": "/feeds/tech/dev_to",
+          "feed_name": "dev_to"
+        },
+        "rss": {
+          "title": "Dev.to",
+          "description": "Dev.to 최신 업데이트",
+          "link": "https://terzeron.com/dev_to.xml"
+        },
+        "extraction": {
+          "list_url": "https://example.com/dev_to",
+          "list_url_parser": "dev_to"
+        }
+      },
+      "collection_info": {
+        "num_collection_urls": 16,
+        "collect_date": "2025-06-24T13:54:10.233577",
+        "urllist_count": 11,
+        "total_item_count": 13
+      },
+      "public_feed_info": {
+        "num_items_in_result": 20,
+        "size_of_result_file": 3544,
+        "last_upload_date": "2025-06-25T09:52:10.233580"
+      },
+      "progress_info": {
+        "current_index": 3,
+        "total_item_count": 20,
+        "unit_size_per_day": 1,
+        "progress_ratio": 67.39327159998783,
+        "feed_completion_due_date": "2025-06-26T09:54:10.233582"
+      }
+    },
+    "sports/soccer_news": {
+      "config": {
+        "collection": {
+          "list_url_list": [
+            "https://example.com/soccer_news"
+          ],
+          "feed_dir_path": "/feeds/sports/soccer_news",
+          "feed_name": "soccer_news"
+        },
+        "rss": {
+          "title": "축구 뉴스",
+          "description": "축구 뉴스 최신 업데이트",
+          "link": "https://terzeron.com/soccer_news.xml"
+        },
+        "extraction": {
+          "list_url": "https://example.com/soccer_news",
+          "list_url_parser": "soccer_news"
+        }
+      },
+      "collection_info": {
+        "num_collection_urls": 9,
+        "collect_date": "2025-06-25T02:54:10.233585",
+        "urllist_count": 19,
+        "total_item_count": 17
+      },
+      "public_feed_info": {
+        "num_items_in_result": 7,
+        "size_of_result_file": 2088,
+        "last_upload_date": "2025-06-25T09:04:10.233587"
+      },
+      "progress_info": {
+        "current_index": 3,
+        "total_item_count": 16,
+        "unit_size_per_day": 2,
+        "progress_ratio": 19.107256826719166,
+        "feed_completion_due_date": "2025-06-26T09:54:10.233590"
+      }
+    },
+    "entertainment/movie_reviews": {
+      "config": {
+        "collection": {
+          "list_url_list": [
+            "https://example.com/movie_reviews"
+          ],
+          "feed_dir_path": "/feeds/entertainment/movie_reviews",
+          "feed_name": "movie_reviews"
+        },
+        "rss": {
+          "title": "영화 리뷰",
+          "description": "영화 리뷰 최신 업데이트",
+          "link": "https://terzeron.com/movie_reviews.xml"
+        },
+        "extraction": {
+          "list_url": "https://example.com/movie_reviews",
+          "list_url_parser": "movie_reviews"
+        }
+      },
+      "collection_info": {
+        "num_collection_urls": 12,
+        "collect_date": "2025-06-24T14:54:10.233592",
+        "urllist_count": 12,
+        "total_item_count": 14
+      },
+      "public_feed_info": {
+        "num_items_in_result": 5,
+        "size_of_result_file": 3685,
+        "last_upload_date": "2025-06-25T09:18:10.233595"
+      },
+      "progress_info": {
+        "current_index": 1,
+        "total_item_count": 19,
+        "unit_size_per_day": 2,
+        "progress_ratio": 56.15965957879352,
+        "feed_completion_due_date": "2025-06-28T09:54:10.233598"
+      }
+    },
+    "entertainment/music_news": {
+      "config": {
+        "collection": {
+          "list_url_list": [
+            "https://example.com/music_news"
+          ],
+          "feed_dir_path": "/feeds/entertainment/music_news",
+          "feed_name": "music_news"
+        },
+        "rss": {
+          "title": "음악 뉴스",
+          "description": "음악 뉴스 최신 업데이트",
+          "link": "https://terzeron.com/music_news.xml"
+        },
+        "extraction": {
+          "list_url": "https://example.com/music_news",
+          "list_url_parser": "music_news"
+        }
+      },
+      "collection_info": {
+        "num_collection_urls": 15,
+        "collect_date": "2025-06-24T09:54:10.233600",
+        "urllist_count": 12,
+        "total_item_count": 20
+      },
+      "public_feed_info": {
+        "num_items_in_result": 15,
+        "size_of_result_file": 2860,
+        "last_upload_date": "2025-06-25T09:35:10.233603"
+      },
+      "progress_info": {
+        "current_index": 1,
+        "total_item_count": 11,
+        "unit_size_per_day": 5,
+        "progress_ratio": 31.964633905185313,
+        "feed_completion_due_date": "2025-06-29T09:54:10.233605"
+      }
+    }
+  }
+}

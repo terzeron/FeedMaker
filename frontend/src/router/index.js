@@ -1,63 +1,56 @@
-import Vue from 'vue';
-import Router from 'vue-router';
-import ExecResult from '../components/ExecResult';
-import Problems from '../components/Problems';
-import FeedManagement from '../components/FeedManagement';
-import Search from '../components/Search';
-import Login from '../components/Login';
+import { createRouter, createWebHistory } from 'vue-router';
+import ExecResult from '@/components/ExecResult.vue';
+import Problems from '@/components/Problems.vue';
+import FeedManagement from '@/components/FeedManagement.vue';
+import Search from '@/components/Search.vue';
+import Login from '@/components/Login.vue';
 import AuthCallback from '../components/AuthCallback';
 
-Vue.use(Router);
+const routes = [
+    {
+        path: '/',
+        redirect: '/result'
+    },
+    {
+        path: '/result',
+        name: 'ExecResult',
+        component: ExecResult
+    },
+    {
+        path: '/problems',
+        name: 'Problems',
+        component: Problems
+    },
+    {
+        path: '/management',
+        name: 'FeedManagement',
+        component: FeedManagement
+    },
+    {
+        path: '/search',
+        name: 'Search',
+        component: Search
+    },
+    {
+        path: '/login',
+        name: 'Login',
+        component: Login
+    },
+    {
+        path: '/logout',
+        name: 'Logout',
+        component: Login
+    },
+    {
+        path: '/auth-callback',
+        name: 'AuthCallback',
+        component: AuthCallback
+    },
+];
 
-export default new Router({
-    mode: 'history',
-    base: process.env.BASE_URL,
-    routes: [
-        {
-            path: '/',
-            name: 'Home',
-            component: ExecResult
-        },
-        {
-            path: '/result',
-            name: 'ExecResult',
-            component: ExecResult
-        },
-        {
-            path: '/problems',
-            name: 'Problems',
-            component: Problems
-        },
-        {
-            path: '/management',
-            name: 'FeedManagement',
-            component: FeedManagement,
-            children: [
-                {
-                    path: ':group/:feed',
-                    component: FeedManagement
-                }
-            ]
-        },
-        {
-            path: '/search',
-            name: 'Search',
-            component: Search
-        },
-        {
-            path: '/login',
-            name: 'Login',
-            component: Login
-        },
-        {
-            path: '/logout',
-            name: 'Logout',
-            component: Login
-        },
-        {
-            path: '/auth-callback',
-            name: 'AuthCallback',
-            component: AuthCallback
-        },
-    ]
-})
+const router = createRouter({
+    history: createWebHistory(process.env.BASE_URL),
+    routes
+});
+
+export default router;
