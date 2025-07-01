@@ -17,10 +17,6 @@ module.exports = {
                 chunks: 'all',
                 maxSize: 244 * 1024, // 244 KiB
             },
-        },
-        define: {
-            __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'false',
-            __VUE_PROD_DEVTOOLS__: 'false'
         }
     }
 }
