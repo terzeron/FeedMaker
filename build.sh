@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Enable Docker BuildKit for better performance and features
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
+export USER_ID=$(id -u)
+export USER_NAME=$(whoami)
+
 # Clean up unnecessary files before build
 rm -rf -- */{nohup.out*,run.log*,.mypy_cache,__pycache__,.idea,.git}
 

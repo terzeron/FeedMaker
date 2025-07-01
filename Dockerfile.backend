@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM debian:bookworm-slim
 
 # 시스템 패키지 설치 (root 사용자로)
