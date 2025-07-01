@@ -8,11 +8,13 @@ import getopt
 from threading import Thread
 import urllib.parse
 import logging.config
-from typing import Optional, Union, Any
+from typing import Optional, Union, Any, Tuple, List
 from pathlib import Path
 from bs4 import BeautifulSoup, Comment
 from bin.crawler import Crawler, Method
 from bin.feed_maker_util import URL, HTMLExtractor, NotFoundConfigFileError, Env
+import requests
+from urllib.parse import urlparse
 
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -21,7 +23,7 @@ LOGGER = logging.getLogger()
 
 class Site:
     site_name: str = ""
-    work_dir_path: Path = Path("")
+    work_dir_path: Optional[Path] = None
 
     url_prefix: str = ""
     url_postfix: str = ""
@@ -57,7 +59,7 @@ class Site:
         with site_conf_file_path.open("r", encoding="utf-8") as infile:
             config = json.load(infile)
             self.url_prefix = config.get("url")
-            self.encoding = config.get("encoding")
+            self.encoding = config.get("encoding", "utf-8")
             self.render_js = config.get("render_js", False)
             self.num_retries = config.get("num_retries", 1)
             self.headers = {"Referer": config.get("referer", "")}
@@ -227,7 +229,6 @@ class Site:
         LOGGER.debug(f"# search(keyword={keyword})")
         self.set_url_postfix_with_keyword(keyword)
         self.set_payload(keyword)
-        #LOGGER.debug(f"self.url_postfix={self.url_postfix}")
         html = self.get_data_from_site()
         if html:
             return self.extract_sub_content(html, self.extraction_attrs)
@@ -316,29 +317,29 @@ class Site:
 #         self.url_postfix = "/bbs/search_webtoon.php?stx=" + encoded_keyword
 
 
-# class WfwfSite(Site):
-#     def __init__(self, site_name: str) -> None:
-#         super().__init__(site_name)
-#         self.extraction_attrs = {"class": "searchLink"}
+class WfwfSite(Site):
+    def __init__(self, site_name: str) -> None:
+        super().__init__(site_name)
+        self.extraction_attrs = {"class": "searchLink"}
 
-#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_cp949_keyword = urllib.parse.quote(keyword.encode("cp949"))
-#         self.url_postfix = "/search.html?q=" + encoded_cp949_keyword
+    def set_url_postfix_with_keyword(self, keyword: str) -> None:
+        encoded_cp949_keyword = urllib.parse.quote(keyword.encode("cp949"))
+        self.url_postfix = "/search.html?q=" + encoded_cp949_keyword
 
 
-# class WtwtSite(Site):
-#     def __init__(self, site_name: str) -> None:
-#         super().__init__(site_name)
-#         self.extraction_attrs = {"class": "gallery"}
-#         self.method = Method.POST
-#         self.headers = {"Content-Type": "application/x-www-form-urlencoded"}
+class WtwtSite(Site):
+    def __init__(self, site_name: str) -> None:
+        super().__init__(site_name)
+        self.extraction_attrs = {"class": "gallery"}
+        self.method = Method.POST
+        self.headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
-#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         self.url_postfix = "/sh"
+    def set_url_postfix_with_keyword(self, keyword: str) -> None:
+        self.url_postfix = "/sh"
 
-#     def set_payload(self, keyword: str = "") -> None:
-#         cp949_keyword = keyword.encode("cp949")
-#         self.payload = {"search_txt": cp949_keyword}
+    def set_payload(self, keyword: str = "") -> None:
+        cp949_keyword = keyword.encode("cp949")
+        self.payload = {"search_txt": cp949_keyword}
 
 
 class XtoonSite(Site):
@@ -421,15 +422,15 @@ class EleventoonSite(Site):
 #         self.url_postfix = "/search?skeyword=" + encoded_keyword
 
 
-# class BlacktoonSite(Site):
-#     def __init__(self, site_name: str = "") -> None:
-#         super().__init__(site_name)
+class BlacktoonSite(Site):
+    def __init__(self, site_name: str = "") -> None:
+        super().__init__(site_name)
 
-#     def set_url_postfix_with_keyword(self, keyword: str = "") -> None:
-#         self.url_postfix = keyword
+    def set_url_postfix_with_keyword(self, keyword: str = "") -> None:
+        self.url_postfix = keyword
 
-#     def search(self, keyword: str = "") -> list[tuple[str, str]]:
-#         return self.search_in_site_like_agit(keyword)
+    def search(self, keyword: str = "") -> list[tuple[str, str]]:
+        return self.search_in_site_like_agit(keyword)
 
 
 # class OrnsonSite(Site):
@@ -558,6 +559,39 @@ class TorrentTipSite(Site):
 #         self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
 
 
+class MzgtoonSite(Site):
+    def __init__(self, site_name: str = "") -> None:
+        super().__init__(site_name)
+        # url_prefix에서 scheme+netloc만 추출
+        parsed = urlparse(self.url_prefix)
+        prefix = f"{parsed.scheme}://{parsed.netloc}"
+        self.set_url_prefix(prefix)
+        # extraction_attrs는 더 이상 사용하지 않음
+
+    def set_url_postfix_with_keyword(self, keyword: str = "") -> None:
+        encoded_keyword = urllib.parse.quote(keyword)
+        # 실제 API 엔드포인트 사용
+        self.url_postfix = f"/api/search?q={encoded_keyword}"
+
+    def search(self, keyword: str = "") -> list[tuple[str, str]]:
+        self.set_url_postfix_with_keyword(keyword)
+        url = self.url_prefix.rstrip("/") + self.url_postfix
+        try:
+            response = requests.get(url, headers=self.headers, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            result: List[Tuple[str, str]] = []
+            for item in data.get('toonData', []):
+                title = item.get('toon_title')
+                toon_id = item.get('toon_id')
+                link = f"{self.url_prefix}/webtoon/{toon_id}" if toon_id else None
+                if title and link:
+                    result.append((str(title), str(link)))
+            return result
+        except Exception:
+            return []
+
+
 class SearchManager:
     result_by_site: dict[Site, list[tuple[str, str]]] = {}
 
@@ -572,26 +606,27 @@ class SearchManager:
         LOGGER.debug("# search(site_name='%s', keyword='%s', do_include_torrent_sites=%r)", site_name, keyword, do_include_torrent_sites)
 
         site_list: list[Site] = [
-            #EleventoonSite("11toon"),
+            EleventoonSite("11toon"),
             #FunbeSite("funbe"),
-            #JoatoonSite("joatoon"),
-            #ToonkorSite("toonkor"),
-            #TorrentQqSite("torrentqq"),
-            #TorrentRjSite("torrentrj"),
-            #TorrentSeeSite("torrentsee"),
-            #TorrentTipSite("torrenttip"),
-            #XtoonSite("xtoon"),
+            JoatoonSite("joatoon"),
+            ToonkorSite("toonkor"),
+            TorrentQqSite("torrentqq"),
+            TorrentRjSite("torrentrj"),
+            TorrentSeeSite("torrentsee"),
+            TorrentTipSite("torrenttip"),
+            XtoonSite("xtoon"),
             #AgitSite("agit"),
             #AllallSite("allall"),
-            #BlacktoonSite("blacktoon"),
+            BlacktoonSite("blacktoon"),
             #JmanaSite("jmana"),
             #ManatokiSite("manatoki"),
             #NewtokiSite("newtoki"),
             #SkytoonSite("skytoon"),
             #TorrentJokSite("torrentjok"),
             #TorrentTtSite("torrenttt"),
-            #WfwfSite("wfwf"),
-            #WtwtSite("wtwt"),
+            WfwfSite("wfwf"),
+            WtwtSite("wtwt"),
+            MzgtoonSite("mzgtoon"),
         ]
 
         result_list: list[tuple[str, str]] = []
