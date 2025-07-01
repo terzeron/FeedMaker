@@ -20,8 +20,8 @@ work/
 logs/
 tests/
 
-# Frontend (not needed for backend)
-frontend/
+# Frontend (needed for frontend build)
+# frontend/
 
 # Logs
 *.log
