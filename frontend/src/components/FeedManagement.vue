@@ -622,6 +622,7 @@ div.jsoneditor-value {
 
 <script>
 import axios from "axios";
+import { getApiUrlPath } from "../utils/api";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faTrashAlt, faSave } from "@fortawesome/free-regular-svg-icons";
 import {
@@ -777,9 +778,6 @@ export default {
     },
   },
   methods: {
-    getApiUrlPath: function () {
-      return process.env.VUE_APP_API_URL || "http://localhost:8010";
-    },
     getShortDateStr: function (dateStr) {
       if (!dateStr) {
         return "";
@@ -899,7 +897,7 @@ export default {
       this.hideAllRelatedToGroup();
       this.hideAllRelatedToFeed();
 
-      const url = this.getApiUrlPath() + `/search/${this.searchKeyword}`;
+      const url = getApiUrlPath() + `/search/${this.searchKeyword}`;
       axios
         .get(url)
         .then((res) => {
@@ -929,7 +927,7 @@ export default {
       if (this.checkRunningInterval) {
         clearInterval(this.checkRunningInterval);
       }
-      const url = this.getApiUrlPath() + "/groups";
+      const url = getApiUrlPath() + "/groups";
       axios
         .get(url)
         .then((res) => {
@@ -981,7 +979,7 @@ export default {
       if (this.checkRunningInterval) {
         clearInterval(this.checkRunningInterval);
       }
-      const url = this.getApiUrlPath() + `/groups/${groupName}/feeds`;
+      const url = getApiUrlPath() + `/groups/${groupName}/feeds`;
       axios
         .get(url)
         .then((res) => {
@@ -1061,7 +1059,7 @@ export default {
     getFeedInfo: function (groupName, feedName) {
       console.log(`getFeedInfo(${groupName}, ${feedName})`);
       const url =
-        this.getApiUrlPath() + `/groups/${groupName}/feeds/${feedName}`;
+        getApiUrlPath() + `/groups/${groupName}/feeds/${feedName}`;
       if (this.checkRunningInterval) {
         clearInterval(this.checkRunningInterval);
       }
@@ -1104,7 +1102,7 @@ export default {
     getSiteConfig: function () {
       console.log(`getSiteConfig()`);
       const url =
-        this.getApiUrlPath() + `/groups/${this.selectedGroupName}/site_config`;
+        getApiUrlPath() + `/groups/${this.selectedGroupName}/site_config`;
       axios
         .get(url)
         .then((res) => {
@@ -1132,7 +1130,7 @@ export default {
           if (value) {
             const postData = this.jsonData;
             const url =
-              this.getApiUrlPath() +
+              getApiUrlPath() +
               `/groups/${this.selectedGroupName}/site_config`;
             axios
               .put(url, postData)
@@ -1157,7 +1155,7 @@ export default {
       this.startButton("saveButton");
       const postData = { configuration: this.jsonData };
       const url =
-        this.getApiUrlPath() +
+        getApiUrlPath() +
         `/groups/${this.selectedGroupName}/feeds/${this.newFeedName}`;
       axios
         .post(url, postData)
@@ -1180,7 +1178,7 @@ export default {
       console.log(`run()`);
       this.startButton("runButton");
       const url =
-        this.getApiUrlPath() +
+        getApiUrlPath() +
         `/groups/${this.selectedGroupName}/feeds/${this.newFeedName}/run`;
       const postData = {};
       axios
@@ -1219,10 +1217,10 @@ export default {
       let url = "";
       if (target === "feed") {
         url =
-          this.getApiUrlPath() +
+          getApiUrlPath() +
           `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/toggle`;
       } else {
-        url = this.getApiUrlPath() + `/groups/${this.selectedGroupName}/toggle`;
+        url = getApiUrlPath() + `/groups/${this.selectedGroupName}/toggle`;
       }
 
       this.$bvModal
@@ -1282,7 +1280,7 @@ export default {
           if (value) {
             this.startButton("removelistButton");
             const url =
-              this.getApiUrlPath() +
+              getApiUrlPath() +
               `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/list`;
             axios
               .delete(url)
@@ -1310,7 +1308,7 @@ export default {
           if (value) {
             this.startButton("removeHtmlButton");
             const url =
-              this.getApiUrlPath() +
+              getApiUrlPath() +
               `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/htmls`;
             axios
               .delete(url)
@@ -1342,7 +1340,7 @@ export default {
           if (value) {
             this.startButton("removeFeedButton");
             const url =
-              this.getApiUrlPath() +
+              getApiUrlPath() +
               `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}`;
             axios
               .delete(url)
@@ -1377,7 +1375,7 @@ export default {
           if (value) {
             this.startButton("removeGroupButton");
             const url =
-              this.getApiUrlPath() + `/groups/${this.selectedGroupName}`;
+              getApiUrlPath() + `/groups/${this.selectedGroupName}`;
             axios
               .delete(url)
               .then((res) => {
@@ -1402,7 +1400,7 @@ export default {
     checkRunning: function () {
       //console.log(`checkRunning()`);
       const url =
-        this.getApiUrlPath() +
+        getApiUrlPath() +
         `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/check_running`;
       console.log(url);
       axios

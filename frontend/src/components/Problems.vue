@@ -938,6 +938,7 @@
 
 <script>
 import axios from "axios";
+import { getApiUrlPath } from "../utils/api";
 import _ from "lodash";
 import moment from "moment";
 
@@ -1125,11 +1126,8 @@ export default {
     showStatusInfoDeleteButton: function (data) {
       return data.item["feed_title"] === "" && data.item["public_html"] === "O";
     },
-    getApiUrlPath: function () {
-      return process.env.VUE_APP_API_URL || "http://localhost:8010";
-    },
     removePublicFeed(feedName) {
-      const path = this.getApiUrlPath() + `/public_feeds/${feedName}`;
+      const path = getApiUrlPath() + `/public_feeds/${feedName}`;
       axios
         .delete(path)
         .then((res) => {
@@ -1184,7 +1182,7 @@ export default {
       const feedName = parts[1];
       const htmlFileName = parts[3];
       const path =
-        this.getApiUrlPath() +
+        getApiUrlPath() +
         `/groups/${groupName}/feeds/${feedName}/htmls/${htmlFileName}`;
       axios
         .delete(path)
@@ -1292,7 +1290,7 @@ export default {
       this.publicFeedInfolist = [];
 
       // Feed status info
-      const pathStatusInfo = this.getApiUrlPath() + "/problems/status_info";
+      const pathStatusInfo = getApiUrlPath() + "/problems/status_info";
       axios
         .get(pathStatusInfo)
         .then((resStatusInfo) => {
@@ -1336,7 +1334,7 @@ export default {
         });
 
       // Progressive feed progress info
-      const pathProgressInfo = this.getApiUrlPath() + "/problems/progress_info";
+      const pathProgressInfo = getApiUrlPath() + "/problems/progress_info";
       axios
         .get(pathProgressInfo)
         .then((resProgressInfo) => {
@@ -1373,7 +1371,7 @@ export default {
 
       // Public feed info
       const pathPublicFeedInfo =
-        this.getApiUrlPath() + "/problems/public_feed_info";
+        getApiUrlPath() + "/problems/public_feed_info";
       axios
         .get(pathPublicFeedInfo)
         .then((resPublicFeedInfo) => {
@@ -1435,7 +1433,7 @@ export default {
         });
 
       // HTML info
-      const pathHtmlInfo = this.getApiUrlPath() + "/problems/html_info";
+      const pathHtmlInfo = getApiUrlPath() + "/problems/html_info";
       axios
         .get(pathHtmlInfo)
         .then((resHtmlInfo) => {
@@ -1548,7 +1546,7 @@ export default {
         });
 
       // Element info
-      const pathElementInfo = this.getApiUrlPath() + "/problems/element_info";
+      const pathElementInfo = getApiUrlPath() + "/problems/element_info";
       axios
         .get(pathElementInfo)
         .then((resElementInfo) => {
@@ -1578,7 +1576,7 @@ export default {
         });
 
       // List URL count info
-      const listUrlInfo = this.getApiUrlPath() + "/problems/list_url_info";
+      const listUrlInfo = getApiUrlPath() + "/problems/list_url_info";
       axios
         .get(listUrlInfo)
         .then((reslistUrlInfo) => {

@@ -63,6 +63,7 @@
 
 <script>
 import axios from "axios";
+import { getApiUrlPath } from "../utils/api";
 
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
@@ -87,9 +88,6 @@ export default {
   computed: {},
   watch: {},
   methods: {
-    getApiUrlPath: function () {
-      return process.env.VUE_APP_API_URL || "http://localhost:8010";
-    },
     startButton: function (ref) {
       this.$refs[ref].doShowInitialIcon = false;
       this.$refs[ref].doShowSpinner = true;
@@ -107,7 +105,7 @@ export default {
       this.showSearchResult = true;
       this.searchError = "";
 
-      const url = this.getApiUrlPath() + `/search_site/${this.searchKeyword}`;
+      const url = getApiUrlPath() + `/search_site/${this.searchKeyword}`;
       axios
         .get(url)
         .then((res) => {

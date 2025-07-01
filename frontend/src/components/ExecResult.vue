@@ -34,10 +34,6 @@ const md = new MarkdownIt({
   typographer: true
 });
 
-const getApiUrlPath = () => {
-  return process.env.VUE_APP_API_URL || "http://localhost:8010";
-};
-
 const getExecResult = async () => {
   loading.value = true;
   error.value = "";
