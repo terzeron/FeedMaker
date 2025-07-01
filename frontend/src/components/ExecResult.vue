@@ -16,9 +16,30 @@
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useStorage } from "@vueuse/core";
-import MarkdownIt from 'markdown-it';
 import axios from "axios";
 import { getApiUrlPath, handleApiError } from "@/utils/api";
+
+// markdown-it을 동적으로 import하여 안전하게 처리
+let MarkdownIt = null;
+let md = null;
+
+const initMarkdownIt = async () => {
+  try {
+    if (!MarkdownIt) {
+      const markdownItModule = await import('markdown-it');
+      MarkdownIt = markdownItModule.default;
+    }
+    if (!md && MarkdownIt) {
+      md = new MarkdownIt({
+        html: true,
+        linkify: true,
+        typographer: true
+      });
+    }
+  } catch (err) {
+    console.error("Failed to initialize markdown-it:", err);
+  }
+};
 
 const router = useRouter();
 const source = ref("### No result");
@@ -26,13 +47,6 @@ const loading = ref(false);
 const error = ref("");
 
 const isAuthorized = useStorage("is_authorized", false, sessionStorage);
-
-// markdown-it 인스턴스 생성
-const md = new MarkdownIt({
-  html: true,
-  linkify: true,
-  typographer: true
-});
 
 const getExecResult = async () => {
   loading.value = true;
@@ -55,10 +69,22 @@ const getExecResult = async () => {
 
 // 마크다운을 HTML로 변환
 const renderedMarkdown = computed(() => {
-  return md.render(source.value);
+  try {
+    if (!source.value) {
+      return "";
+    }
+    if (!md) {
+      return source.value;
+    }
+    return md.render(source.value);
+  } catch (err) {
+    console.error("Markdown rendering error:", err);
+    return source.value || "";
+  }
 });
 
-onMounted(() => {
+onMounted(async () => {
+  await initMarkdownIt();
   if (isAuthorized.value) {
     getExecResult();
   } else {
