@@ -24,10 +24,10 @@ LOGGER = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]: # pylint: disable-redefined-outer-name
+async def lifespan(fastapi_app: FastAPI) -> AsyncGenerator[None, None]:
     try:
         DB.create_all_tables()
-        app.state.feed_maker_manager = FeedMakerManager()
+        fastapi_app.state.feed_maker_manager = FeedMakerManager()
     except Exception as e:
         DB.drop_all_tables()
         raise e
@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]: # pylint: disabl
     try:
         yield
     finally:
-        await app.state.feed_maker_manager.aclose()
+        await fastapi_app.state.feed_maker_manager.aclose()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -43,7 +43,9 @@ frontend_url = Env.get("FM_FRONTEND_URL")
 origins = [
     frontend_url,
     "https://127.0.0.1:8081",
-    "https://localhost:8081"
+    "https://localhost:8081",
+    "https://127.0.0.1:8082",
+    "https://localhost:8082"
 ]
 
 app.add_middleware(

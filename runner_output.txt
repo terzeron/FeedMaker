@@ -1,0 +1,35 @@
+/Users/terzeron/.pyenv/versions/fm/lib/python3.12/site-packages/modulegraph/modulegraph.py:21: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+=== Running Specific Test File: test_feed_manager.py ===
+
+=== Starting Test Execution ===
+
+--- [1/1] Running: test_feed_manager.py ---
+5.84s setup    tests/test_feed_manager.py::TestFeedManager::test_add_and_remove_config_info
+0.15s call     tests/test_feed_manager.py::TestFeedManager::test_load_all_progress_info_from_files
+0.15s call     tests/test_feed_manager.py::TestFeedManager::test_add_and_remove_config_info
+0.14s teardown tests/test_feed_manager.py::TestFeedManager::test_load_all_rss_files
+0.12s call     tests/test_feed_manager.py::TestFeedManager::test_load_all_config_files
+0.11s call     tests/test_feed_manager.py::TestFeedManager::test_add_and_remove_progress_from_info
+0.11s call     tests/test_feed_manager.py::TestFeedManager::test_add_and_remove_rss_info
+0.10s call     tests/test_feed_manager.py::TestFeedManager::test_add_and_remove_public_feed_file
+0.09s call     tests/test_feed_manager.py::TestFeedManager::test_get_feed_name_list_url_count_map
+0.09s call     tests/test_feed_manager.py::TestFeedManager::test_get_feed_name_public_feed_info_map
+0.09s call     tests/test_feed_manager.py::TestFeedManager::test_load_all_public_feed_files
+0.09s call     tests/test_feed_manager.py::TestFeedManager::test_load_all_rss_files
+0.09s call     tests/test_feed_manager.py::TestFeedManager::test_get_element_name_count_map
+0.08s call     tests/test_feed_manager.py::TestFeedManager::test_get_feed_name_progress_info_map
+
+(22 durations < 0.005s hidden.  Use -vv to show these durations.)
+=========================== short test summary info ============================
+FAILED test_feed_manager.py::TestFeedManager::test_load_all_progress_info_from_files
+========================= 1 failed, 11 passed in 7.50s =========================
+
+❌ test_feed_manager.py: FAILED
+
+🚫 Test execution stopped due to failure in test_feed_manager.py
+
+=== Test Execution Complete ===
+Passed: 0 / 1
+Failed: 1 / 1
+⚠️  Execution stopped early due to test failure

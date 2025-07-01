@@ -1,0 +1,53 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+.pytest_cache
+.mypy_cache
+.hypothesis/
+
+# Work directories
+work/
+logs/
+tests/
+
+# Frontend (not needed for backend)
+frontend/
+
+# Logs
+*.log
+*.sqlite3
+*.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile*
+docker-compose*
+
+# Documentation
+README.md
+LICENSE
+*.md
+
+# Temporary files
+tmp/
+temp/
+*.tmp 

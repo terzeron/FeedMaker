@@ -6,7 +6,13 @@
     @click="handleClick"
     :class="buttonClass"
   >
-    <BSpinner small v-if="doShowSpinner"></BSpinner>
+    <div
+      v-if="doShowSpinner"
+      class="spinner-border spinner-border-sm me-1"
+      role="status"
+    >
+      <span class="visually-hidden">Loading...</span>
+    </div>
     <font-awesome-icon
       v-if="showInitialIcon"
       :icon="initialIcon"

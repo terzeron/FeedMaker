@@ -1,89 +1,66 @@
 <template>
-  <BContainer fluid>
-    <BRow>
-      <BCol cols="12">
-        <VMarkdownView :source="source"></VMarkdownView>
-      </BCol>
-    </BRow>
-
-    <BRow>
-      <BCol cols="12" class="mx-auto text-center mt-5 mb-3">
-        Feed Manager by {{ adminEmail }}
-      </BCol>
-    </BRow>
-  </BContainer>
+  <div class="exec-result-markdown">
+    <div v-if="loading" class="text-center">
+      Loading...
+    </div>
+    <div v-else-if="error" class="alert alert-danger">
+      {{ error }}
+    </div>
+    <div v-else>
+      <div class="markdown-content" v-html="renderedMarkdown"></div>
+    </div>
+  </div>
 </template>
-
-<style>
-div.vue3-markdown {
-  white-space: normal !important;
-}
-
-div.markdown-body > * {
-  margin-top: 5px !important;
-  margin-bottom: 5px !important;
-  line-height: 1.1;
-}
-
-div.markdown-body > h1 {
-  font-size: 1.3em;
-  padding-bottom: 0.1em;
-  margin-block-start: 0.3em;
-  margin-block-end: 0.3em;
-}
-
-div.markdown-body > h2 {
-  font-size: 1.2em;
-  padding-bottom: 0.1em;
-  margin-block-start: 0.3em;
-  margin-block-end: 0.3em;
-}
-
-div.markdown-body > h3 {
-  font-size: 1.1em;
-}
-
-div.markdown-body > h4 {
-  font-size: 1em;
-}
-
-div.markdown-body > h5 {
-  font-size: 1em;
-}
-
-div.markdown-body li {
-  font-size: 0.9em;
-}
-</style>
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useStorage } from "@vueuse/core";
+import MarkdownIt from 'markdown-it';
 import axios from "axios";
 import { getApiUrlPath, handleApiError } from "@/utils/api";
 
 const router = useRouter();
 const source = ref("### No result");
-
-const adminEmail = computed(() => {
-  return process.env.VUE_APP_FACEBOOK_ADMIN_EMAIL;
-});
+const loading = ref(false);
+const error = ref("");
 
 const isAuthorized = useStorage("is_authorized", false, sessionStorage);
 
+// markdown-it 인스턴스 생성
+const md = new MarkdownIt({
+  html: true,
+  linkify: true,
+  typographer: true
+});
 
-const getExecResult = () => {
-  const path = getApiUrlPath() + "/exec_result";
-  axios
-    .get(path)
-    .then((res) => {
-      source.value = res.data["exec_result"];
-    })
-    .catch((error) => {
-      handleApiError(error, 'getting exec result');
-    });
+const getApiUrlPath = () => {
+  return process.env.VUE_APP_API_URL || "http://localhost:8010";
 };
+
+const getExecResult = async () => {
+  loading.value = true;
+  error.value = "";
+  try {
+    const path = getApiUrlPath() + "/exec_result";
+    const res = await axios.get(path);
+    if (res.data && res.data.exec_result) {
+      source.value = res.data.exec_result;
+    } else {
+      source.value = "### No execution result available";
+    }
+  } catch (err) {
+    error.value = `Error loading execution result: ${err.message}`;
+    source.value = "### Error loading execution result";
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 마크다운을 HTML로 변환
+const renderedMarkdown = computed(() => {
+  return md.render(source.value);
+});
 
 onMounted(() => {
   if (isAuthorized.value) {
@@ -93,3 +70,75 @@ onMounted(() => {
   }
 });
 </script>
+
+<style>
+.exec-result-markdown {
+  max-width: 900px;
+  margin: 5px 0;
+  padding: 14px 1rem;
+  min-height: 60vh;
+  text-align: left !important;
+}
+
+.markdown-content {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  word-break: break-all;
+  text-align: left !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.markdown-content * {
+  text-align: left !important;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  font-weight: bold;
+  text-align: left !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.markdown-content h1 { font-size: 1.5em; }
+.markdown-content h2 { font-size: 1.3em; }
+.markdown-content h3 { font-size: 1.1em; }
+.markdown-content h4 { font-size: 1em; }
+.markdown-content h5 { font-size: 0.9em; }
+.markdown-content h6 { font-size: 0.8em; }
+
+.markdown-content ul,
+.markdown-content ol {
+  padding-left: 2em;
+  margin: 0.5em 0;
+  text-align: left !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.markdown-content li {
+  margin: 0;
+  text-align: left !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.markdown-content p {
+  margin: 0.5em 0;
+  text-align: left !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+@media (max-width: 600px) {
+  .exec-result-markdown {
+    padding: 1rem 0.2rem;
+    font-size: 0.8rem;
+  }
+  .markdown-content {
+    font-size: 0.8rem;
+  }
+}
+</style>

@@ -1,0 +1,21 @@
+{
+  "database": {
+    "host": "localhost",
+    "port": "33718",
+    "user": "feedmaker",
+    "password": "micro170433",
+    "database": "feedmaker"
+  },
+  "paths": {
+    "home_dir": "/app",
+    "work_dir": "/app/work",
+    "log_dir": "/tmp/logs",
+    "feed_dir": "/app/xml",
+    "image_dir": "/app/xml/img",
+    "pdf_dir": "/app/xml/pdf"
+  },
+  "urls": {
+    "image_url_prefix": "http://localhost:8000/images",
+    "frontend_url": "http://localhost:8081"
+  }
+}

@@ -1,17 +1,17 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-
-import os
-import sys
-import re
 import getopt
 import logging.config
+import os
+import re
+import sys
 from pathlib import Path
 from typing import Optional, Any
-from utils.image_downloader import ImageDownloader
-from bin.crawler import Crawler
-from bin.feed_maker_util import Config, FileManager, IO, Process, PathUtil, URL, Env
 
+from bin.crawler import Crawler
+from bin.feed_maker_util import Config, Env, PathUtil, Process, URL, IO, FileManager
+from utils.image_downloader import ImageDownloader
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
@@ -271,7 +271,7 @@ def main() -> int:
 
     page_url = args[0]
     feed_name = feed_dir_path.name
-    feed_img_dir_path = Path(os.environ["WEB_SERVICE_IMAGE_DIR_PREFIX"]) / feed_name
+    feed_img_dir_path = Path(Env.get("WEB_SERVICE_IMAGE_DIR_PREFIX")) / feed_name
     feed_img_dir_path.mkdir(exist_ok=True)
     img_url_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX") + "/" + feed_name
     LOGGER.debug("feed_name=%s", feed_name)

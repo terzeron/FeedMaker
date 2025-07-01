@@ -1,0 +1,17 @@
+{
+  "configuration": {
+    "collection": {
+      "url": "http://tests.com"
+    },
+    "extraction": {
+      "type": "test"
+    },
+    "rss": {
+      "title": "테스트 피드",
+      "generator": "Feed Generator",
+      "copyright": "Copyright",
+      "link": "https://example.com/feed.xml",
+      "language": "ko"
+    }
+  }
+} 

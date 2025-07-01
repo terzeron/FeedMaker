@@ -40,7 +40,7 @@ def clean_url(url: str, scheme: str = "https", path: str = "") -> str:
 
 def get_location_recursively(url: str, config: dict[str, Any]) -> tuple[str, str]:
     LOGGER.debug(f"# get_location_recursively(url={url}, config={config})")
-    crawler = Crawler(method=Method.GET, num_retries=config.get("num_retries", 1), render_js=config.get("render_js", False), encoding=config.get("encoding", "utf-8"), headers=config.get("headers", None), timeout=config.get("timeout", 60))
+    crawler = Crawler(method=Method.GET, num_retries=config.get("num_retries", 1), render_js=config.get("render_js", False), encoding=config.get("encoding", "utf-8"), headers=config.get("headers", None), timeout=config.get("timeout", 60), simulate_scrolling=config.get("simulate_scrolling", False))
     try:
         response, error, response_headers = crawler.run(url, allow_redirects=False)
         if not response:
@@ -82,7 +82,7 @@ def get(url: str, config: dict[str, Any]) -> tuple[bool, str, str]:
         print("no response")
         return False, "", new_url
 
-    keyword= config.get("keyword", "")
+    keyword = config.get("keyword", "")
     if keyword not in response:
         print("no keyword")
         return False, response, ""
@@ -103,6 +103,9 @@ def get_new_url(*, url: str, response: str, new_pattern: str, pre: str, num: int
 
     matches = re.findall(new_pattern, str(response))
     for match in matches:
+        # Skip empty matches
+        if not match:
+            continue
         if int(match) > num:
             new_url = pre + match + domain_postfix + post
             LOGGER.debug(f"new_url={new_url}")

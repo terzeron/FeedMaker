@@ -1,0 +1,30 @@
+[loggers]
+keys=root
+
+[handlers]
+keys=consoleHandler, timedRotatingFileHandler
+
+[formatters]
+keys=fileFormatter, consoleFormatter
+
+[logger_root]
+level=DEBUG
+handlers=timedRotatingFileHandler, consoleHandler
+
+[handler_consoleHandler]
+level=INFO
+class=StreamHandler
+formatter=consoleFormatter
+args=(sys.stdout,)
+
+[handler_timedRotatingFileHandler]
+level=DEBUG
+class=handlers.TimedRotatingFileHandler
+formatter=fileFormatter
+args=('/tmp/run.log', 'midnight', 1, 1, 'utf-8', False, False)
+
+[formatter_fileFormatter]
+format=[%(asctime)s][%(filename)s:%(lineno)d][%(levelname)s] %(message)s
+
+[formatter_consoleFormatter]
+format=%(message)s

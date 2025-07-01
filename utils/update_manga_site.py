@@ -88,6 +88,9 @@ def git_add_file(file_path: Path) -> None:
 
 def update_feed_config(conf_file_path: Path, new_number: int, test_run: bool) -> None:
     """Update feed configuration file."""
+    if not conf_file_path.is_file():
+        return  # Skip if conf.json doesn't exist
+        
     temp_conf_file_path = conf_file_path.with_suffix(conf_file_path.suffix + ".temp")
 
     with conf_file_path.open("r", encoding="utf-8") as infile:
@@ -140,7 +143,8 @@ def process_feed_directory(entry_path: Path, new_number: int, test_run: bool) ->
 
     if not test_run:
         print(".", end='')
-        git_add_file(conf_file_path)
+        if conf_file_path.is_file():
+            git_add_file(conf_file_path)
 
         print(".", end='')
         cleanup_feed_directory(entry_path)

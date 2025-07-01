@@ -12,7 +12,7 @@
           >
             {{ searchKeyword }}
           </BFormInput>
-          <BInputGroupAppend>
+          <BInputGroupText>
             <my-button
               ref="searchButton"
               label="검색"
@@ -21,15 +21,19 @@
               :show-initial-icon="true"
               variant="dark"
             />
-          </BInputGroupAppend>
+          </BInputGroupText>
         </BInputGroup>
       </BCol>
     </BRow>
 
     <!-- Search Results -->
     <BRow>
-      <BCol id="search_result" cols="12" class="m-0 p-1" v-if="hasSearchResults">
-        <BTableSimple class="m-0 p-1 text-break" small>
+      <BCol id="search_result" cols="12" class="m-0 p-1" v-if="showSearchResult">
+        <BTableSimple
+          v-if="Array.isArray(searchResultlist) && searchResultlist.length > 0"
+          class="m-0 p-1 text-break"
+          small
+        >
           <BThead head-variant="light" table-variant="light">
             <BTr>
               <BTh colspan="2">검색 결과</BTh>
@@ -44,78 +48,104 @@
             </BTr>
           </BTbody>
         </BTableSimple>
+        <div v-else-if="searchError" class="alert alert-danger">
+          {{ searchError }}
+        </div>
+        <div v-else class="alert alert-info">
+          검색 결과가 없습니다.
+        </div>
       </BCol>
     </BRow>
   </BContainer>
 </template>
 
-<style>
-</style>
+<style></style>
 
-<script setup>
-import { ref, computed, onMounted, getCurrentInstance } from 'vue';
-import { useRouter } from 'vue-router';
-import axios from 'axios';
+<script>
+import axios from "axios";
 
-import { library } from '@fortawesome/fontawesome-svg-core';
-import { faSearch } from '@fortawesome/free-solid-svg-icons';
-import MyButton from './MyButton.vue';
-
-import { getApiUrlPath, handleApiError } from '@/utils/api';
-import { useButtonState } from '@/composables/useButtonState';
+import { library } from "@fortawesome/fontawesome-svg-core";
+import { faSearch } from "@fortawesome/free-solid-svg-icons";
+import MyButton from "./MyButton";
 
 library.add(faSearch);
 
-defineOptions({
-  name: 'Search'
-});
+export default {
+  name: "FeedManagement",
+  components: {
+    MyButton,
+  },
+  props: [],
+  data: function () {
+    return {
+      showSearchResult: false,
+      searchKeyword: "",
+      searchResultlist: [],
+      searchError: "",
+    };
+  },
+  computed: {},
+  watch: {},
+  methods: {
+    getApiUrlPath: function () {
+      return process.env.VUE_APP_API_URL || "http://localhost:8010";
+    },
+    startButton: function (ref) {
+      this.$refs[ref].doShowInitialIcon = false;
+      this.$refs[ref].doShowSpinner = true;
+    },
+    endButton: function (ref) {
+      this.$refs[ref].doShowInitialIcon = true;
+      this.$refs[ref].doShowSpinner = false;
+    },
+    resetButton: function (ref) {
+      this.$refs[ref].doShowInitialIcon = true;
+      this.$refs[ref].doShowSpinner = false;
+    },
+    search: function () {
+      this.startButton("searchButton");
+      this.showSearchResult = true;
+      this.searchError = "";
 
-const router = useRouter();
-const instance = getCurrentInstance();
-
-// Reactive state
-const searchKeyword = ref('');
-const searchResultlist = ref([]);
-const showSearchResult = ref(false);
-
-// Button state management
-const { startButton, endButton, resetButton } = useButtonState();
-
-// Computed properties
-const hasSearchResults = computed(() => {
-  return Array.isArray(searchResultlist.value) && searchResultlist.value.length > 0;
-});
-
-// Methods
-const search = async () => {
-  console.log('search()');
-  startButton('searchButton', instance.refs);
-
-  try {
-    const url = getApiUrlPath() + `/search_site/${searchKeyword.value}`;
-    const res = await axios.get(url);
-    
-    if (res.data.status === 'failure') {
-      alert(res.data.message);
-    } else {
-      searchResultlist.value = res.data['search_result_list'].map(item => ({
-        title: item[0],
-        url: item[1]
-      }));
-      showSearchResult.value = true;
+      const url = this.getApiUrlPath() + `/search_site/${this.searchKeyword}`;
+      axios
+        .get(url)
+        .then((res) => {
+          if (res.data.status === "failure") {
+            this.searchError = res.data.message || "검색 중 오류가 발생했습니다.";
+            this.searchResultlist = [];
+          } else {
+            const list = res.data.search_result_list;
+            if (Array.isArray(list)) {
+              this.searchResultlist = list.map((o) => {
+                if (Array.isArray(o) && o.length >= 2) {
+                  return { title: o[0], url: o[1] };
+                }
+                if (typeof o === "object" && o !== null) {
+                  return {
+                    title: o.title || o[0] || "",
+                    url: o.url || o[1] || "",
+                  };
+                }
+                return { title: String(o), url: "" };
+              });
+            } else {
+              this.searchResultlist = [];
+            }
+          }
+          this.endButton("searchButton");
+        })
+        .catch((error) => {
+          this.searchError = "검색 중 오류가 발생했습니다.";
+          this.searchResultlist = [];
+          this.resetButton("searchButton");
+        });
+    },
+  },
+  mounted: function () {
+    if (!this.$session.get("is_authorized")) {
+      this.$router.push("/login");
     }
-    endButton('searchButton', instance.refs);
-  } catch (error) {
-    handleApiError(error, 'searching sites');
-    resetButton('searchButton', instance.refs);
-  }
+  },
 };
-
-// Lifecycle
-onMounted(() => {
-  const session = instance.appContext.config.globalProperties.$session;
-  if (!session.get('is_authorized')) {
-    router.push('/login');
-  }
-});
 </script>

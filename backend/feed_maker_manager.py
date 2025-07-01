@@ -43,7 +43,7 @@ class FeedMakerManager:
 
     async def aclose(self) -> None:
         LOGGER.debug("# FeedMakerManager.aclose()")
-        self.__del__()
+        del self
         return None
 
     def _git_add(self, feed_dir_path: Path) -> tuple[str, Optional[str]]:
