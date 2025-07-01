@@ -43,7 +43,9 @@ frontend_url = Env.get("FM_FRONTEND_URL")
 origins = [
     frontend_url,
     "https://127.0.0.1:8081",
-    "https://localhost:8081"
+    "https://localhost:8081",
+    "https://127.0.0.1:8082",
+    "https://localhost:8082"
 ]
 
 app.add_middleware(

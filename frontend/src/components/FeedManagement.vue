@@ -27,7 +27,7 @@
           >
             {{ searchKeyword }}
           </BFormInput>
-          <BInputGroupAppend>
+          <BInputGroupText>
             <my-button
               ref="searchButton"
               label="검색"
@@ -36,7 +36,7 @@
               :show-initial-icon="true"
               variant="dark"
             />
-          </BInputGroupAppend>
+          </BInputGroupText>
         </BInputGroup>
       </BCol>
     </BRow>
@@ -141,60 +141,67 @@
 
         <!-- Metadata Area -->
         <BRow id="metadata" class="m-0 p-0" v-if="showFeedInfo">
-          <BCol cols="12" class="m-0 p-1">
-            <BTableSimple class="m-0 p-1 text-break" small>
-              <BThead head-variant="light" table-variant="light">
-                <BTr>
-                  <BTh colspan="4">메타데이터</BTh>
-                </BTr>
-              </BThead>
-              <BTbody>
-                <BTr v-if="numCollectionUrls && totalItemCount">
-                  <BTd>수집</BTd>
-                  <BTd>{{ numCollectionUrls }} 페이지</BTd>
-                  <BTd>{{ totalItemCount }} 피드</BTd>
-                  <BTd>{{ collectDate }}</BTd>
-                </BTr>
-                <BTr v-if="numItemsInResult && sizeOfResultFileWithUnit">
-                  <BTd>피드</BTd>
-                  <BTd>{{ numItemsInResult }} 피드</BTd>
-                  <BTd>{{ sizeOfResultFileWithUnit }}</BTd>
-                  <BTd>{{ lastUploadDate }}</BTd>
-                </BTr>
-                <BTr
-                  v-if="
-                    totalItemCount >= 0 &&
-                    currentIndex >= 0 &&
-                    unitSizePerDay >= 0
-                  "
-                >
-                  <BTd>진행 상태</BTd>
-                  <BTd colspan="2">
-                    <BProgress
-                      :max="totalItemCount"
-                      show-progress
-                      height="1.5rem"
-                    >
-                      <BProgressBar :value="currentIndex" variant="warning">
-                        <div
-                          style="
-                            position: absolute;
-                            width: 100%;
-                            color: black;
-                            text-align: left;
-                            overflow: visible;
-                          "
-                        >
-                          {{ currentIndex }} / {{ totalItemCount }} =
-                          {{ progressRatio }} %, {{ unitSizePerDay }}/일
-                        </div>
-                      </BProgressBar>
-                    </BProgress>
-                  </BTd>
-                  <BTd>{{ feedCompletionDueDate }}</BTd>
-                </BTr>
-              </BTbody>
-            </BTableSimple>
+          <BCol cols="12" class="m-0 p-0">
+            <div class="table-responsive">
+              <BTableSimple
+                class="m-0 text-break table-hover"
+                small
+                striped
+                style="margin: 0 !important; padding: 0 !important; width: 100% !important;"
+              >
+                <BThead head-variant="secondary" table-variant="light">
+                  <BTr>
+                    <BTh colspan="4" class="text-center">메타데이터</BTh>
+                  </BTr>
+                </BThead>
+                <BTbody>
+                  <BTr v-if="numCollectionUrls && totalItemCount">
+                    <BTd class="fw-bold">수집</BTd>
+                    <BTd>{{ numCollectionUrls }} 페이지</BTd>
+                    <BTd>{{ totalItemCount }} 피드</BTd>
+                    <BTd>{{ collectDate }}</BTd>
+                  </BTr>
+                  <BTr v-if="numItemsInResult && sizeOfResultFileWithUnit">
+                    <BTd class="fw-bold">피드</BTd>
+                    <BTd>{{ numItemsInResult }} 피드</BTd>
+                    <BTd>{{ sizeOfResultFileWithUnit }}</BTd>
+                    <BTd>{{ lastUploadDate }}</BTd>
+                  </BTr>
+                  <BTr
+                    v-if="
+                      totalItemCount >= 0 &&
+                      currentIndex >= 0 &&
+                      unitSizePerDay >= 0
+                    "
+                  >
+                    <BTd class="fw-bold">진행 상태</BTd>
+                    <BTd colspan="2">
+                      <BProgress
+                        :max="totalItemCount"
+                        show-progress
+                        height="1.5rem"
+                      >
+                        <BProgressBar :value="currentIndex" variant="warning">
+                          <div
+                            style="
+                              position: absolute;
+                              width: 100%;
+                              color: black;
+                              text-align: left;
+                              overflow: visible;
+                            "
+                          >
+                            {{ currentIndex }} / {{ totalItemCount }} =
+                            {{ progressRatio }} %, {{ unitSizePerDay }}/일
+                          </div>
+                        </BProgressBar>
+                      </BProgress>
+                    </BTd>
+                    <BTd>{{ feedCompletionDueDate }}</BTd>
+                  </BTr>
+                </BTbody>
+              </BTableSimple>
+            </div>
           </BCol>
         </BRow>
 
@@ -207,23 +214,20 @@
           </BCol>
 
           <BCol cols="12" class="m-0 p-1">
-            <BInputGroup
-              prepend="피드"
-              class="m-0"
-              v-if="showNewFeedNameInput"
-            >
+            <BInputGroup prepend="피드" class="m-0" v-if="showNewFeedNameInput">
               <BFormInput class="m-0" v-model="newFeedName">
                 {{ newFeedName }}
               </BFormInput>
-              <BInputGroupAppend>
+              <BInputGroupText class="p-0">
                 <my-button
                   ref="saveButton"
                   label="저장"
                   @click="save"
                   :initial-icon="['far', 'save']"
                   :show-initial-icon="true"
+                  class="w-100 h-100"
                 />
-              </BInputGroupAppend>
+              </BInputGroupText>
             </BInputGroup>
           </BCol>
 
@@ -317,7 +321,7 @@
             />
             <my-button
               ref="registerButton"
-              label="이노리더"
+              label="Inoreader"
               @click="registerToInoreader"
               :initial-icon="['fas', 'rss']"
               :show-initial-icon="true"
@@ -325,7 +329,7 @@
             />
             <my-button
               ref="registerButton"
-              label="피들리"
+              label="Feedly"
               @click="registerToFeedly"
               :initial-icon="['fas', 'rss']"
               :show-initial-icon="true"
@@ -353,7 +357,7 @@
 #actions {
   border: 1px lightgray solid;
   border-collapse: collapse;
-  padding: 2px !important;
+  padding: 0 !important;
 }
 
 .button_list button {
@@ -367,6 +371,252 @@ div.jsoneditor-field {
 div.jsoneditor-value {
   padding: 5px;
   border: 1px lightgray dotted;
+}
+
+/* 테이블 스타일링 개선 */
+.table-responsive {
+  border-radius: 0 !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* 테이블 기본 스타일 */
+.table {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  border-collapse: collapse !important;
+  table-layout: auto !important;
+}
+
+/* 테이블 모서리 효과 완전 제거 */
+.table,
+.table thead,
+.table tbody,
+.table tr,
+.table th,
+.table td {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  background-image: none !important;
+  border: none !important;
+  border-bottom: 1px solid #dee2e6 !important;
+  word-wrap: break-word !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+}
+
+.table thead th {
+  background-color: #6c757d !important;
+  color: white !important;
+  border-bottom: 2px solid #495057 !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  font-size: 0.875rem !important;
+  letter-spacing: 0.5px !important;
+  margin: 0 !important;
+  padding: 0.75rem !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  transform: none !important;
+  position: static !important;
+  z-index: auto !important;
+  elevation: none !important;
+  background-image: none !important;
+  background-clip: border-box !important;
+  background-origin: border-box !important;
+  background-size: auto !important;
+  background-repeat: repeat !important;
+  background-attachment: scroll !important;
+  background-position: 0% 0% !important;
+}
+
+/* 테이블 첫 번째와 마지막 셀의 모서리 효과 제거 */
+.table thead th:first-child,
+.table thead th:last-child,
+.table tbody tr td:first-child,
+.table tbody tr td:last-child {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  background-image: none !important;
+}
+
+/* Bootstrap 테이블 헤더의 모든 3D 효과 제거 */
+.table thead th,
+.table thead th:first-child,
+.table thead th:last-child {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  background-image: none !important;
+  background: #6c757d !important;
+  border: none !important;
+  border-bottom: 2px solid #495057 !important;
+}
+
+/* Vue Bootstrap 테이블 헤더 스타일 덮어쓰기 */
+.b-table thead th,
+.b-table-sticky-header thead th {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  background-image: none !important;
+  background: #6c757d !important;
+  border: none !important;
+  border-bottom: 2px solid #495057 !important;
+}
+
+.table tbody tr:nth-child(even) {
+  background-color: #f8f9fa !important;
+}
+
+.table tbody tr:hover {
+  background-color: #e9ecef !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.table td {
+  vertical-align: middle !important;
+  border-color: #dee2e6 !important;
+  margin: 0 !important;
+  padding: 0.75rem !important;
+}
+
+.table td.fw-bold {
+  font-weight: 600 !important;
+  color: #495057 !important;
+  background-color: #f8f9fa !important;
+}
+
+/* Bootstrap 테이블 기본 스타일 덮어쓰기 */
+.table-responsive > .table {
+  margin-bottom: 0 !important;
+}
+
+.table-responsive > .table > thead > tr > th,
+.table-responsive > .table > tbody > tr > td {
+  white-space: nowrap !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Vue Bootstrap 테이블 컴포넌트 스타일 덮어쓰기 */
+.b-table {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.b-table > .table {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* 모바일 반응형 스타일 */
+@media (max-width: 768px) {
+  .table-responsive {
+    font-size: 0.875rem;
+  }
+
+  .table thead th {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.25rem;
+  }
+
+  .table td {
+    padding: 0.5rem 0.25rem;
+    word-break: break-word;
+  }
+
+  .table td.fw-bold {
+    min-width: 80px;
+  }
+
+  /* 작은 화면에서 테이블 셀 내용 줄바꿈 */
+  .table td {
+    white-space: normal;
+  }
+
+  /* 버튼 그룹 모바일 최적화 */
+  .button_list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .button_list button {
+    margin: 0.125rem !important;
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+  }
+
+  /* 입력 그룹 모바일 최적화 */
+  .input-group {
+    flex-direction: column;
+  }
+
+  .input-group > * {
+    margin-bottom: 0.25rem;
+  }
+
+  .input-group .input-group-text {
+    border-radius: 0.375rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .table-responsive {
+    font-size: 0.8rem;
+  }
+
+  .table thead th {
+    font-size: 0.7rem;
+    padding: 0.375rem 0.125rem;
+  }
+
+  .table td {
+    padding: 0.375rem 0.125rem;
+  }
+
+  /* 매우 작은 화면에서 테이블 스크롤 */
+  .table-responsive {
+    overflow-x: auto;
+  }
+
+  .table {
+    min-width: 400px;
+  }
+}
+
+/* 다크 테마 지원 */
+@media (prefers-color-scheme: dark) {
+  .table thead th {
+    background-color: #495057 !important;
+    color: #f8f9fa !important;
+  }
+
+  .table tbody tr:nth-child(even) {
+    background-color: #343a40;
+  }
+
+  .table tbody tr:hover {
+    background-color: #495057;
+  }
+
+  .table td.fw-bold {
+    background-color: #495057;
+    color: #f8f9fa;
+  }
 }
 </style>
 
@@ -385,6 +635,8 @@ import {
   faEye,
 } from "@fortawesome/free-solid-svg-icons";
 import MyButton from "./MyButton";
+import JSONEditor from "jsoneditor";
+import "jsoneditor/dist/jsoneditor.css";
 
 library.add(
   faTrashAlt,
@@ -455,6 +707,7 @@ export default {
       feedCompletionDueDate: "-",
 
       checkRunningInterval: null,
+      jsonEditor: null,
     };
   },
   computed: {
@@ -465,13 +718,13 @@ export default {
       return this.selectedGroupName[0] !== "_";
     },
     feedStatusLabel: function () {
-      return "Feed " + (this.feedStatus ? "Deactivate" : "Activate");
+      return "피드 " + (this.feedStatus ? "비활성화" : "활성화");
     },
     feedStatusIcon: function () {
       return "toggle-" + (this.feedStatus ? "off" : "on");
     },
     groupStatusLabel: function () {
-      return "Group " + (this.groupStatus ? "Deactivate" : "Activate");
+      return "그룹 " + (this.groupStatus ? "비활성화" : "활성화");
     },
     groupStatusIcon: function () {
       return "toggle-" + (this.feedStatus ? "off" : "on");
@@ -508,7 +761,7 @@ export default {
   },
   methods: {
     getApiUrlPath: function () {
-      return process.env.VUE_APP_API_URL;
+      return process.env.VUE_APP_API_URL || "http://localhost:8010";
     },
     getShortDateStr: function (dateStr) {
       if (!dateStr) {
@@ -576,6 +829,7 @@ export default {
       this.showToggleFeedButton = true;
       this.showRemoveFeedButton = true;
       this.showFeedInfo = true;
+      this.initJsonEditor();
     },
     hideAllRelatedToFeed: function () {
       this.showEditor = false;
@@ -590,6 +844,10 @@ export default {
       this.showRemoveFeedButton = false;
       this.showFeedInfo = false;
       this.clearAlert();
+      if (this.jsonEditor) {
+        this.jsonEditor.destroy();
+        this.jsonEditor = null;
+      }
     },
     showAllRelatedToGroup: function () {
       if (this.selectedGroupName) {
@@ -604,10 +862,15 @@ export default {
     showAllRelatedToSiteConfig: function () {
       this.showEditor = true;
       this.showSiteConfig = true;
+      this.initJsonEditor();
     },
     hideAllRelatedToSiteConfig: function () {
       this.showEditor = false;
       this.showSiteConfig = false;
+      if (this.jsonEditor) {
+        this.jsonEditor.destroy();
+        this.jsonEditor = null;
+      }
     },
 
     search: function () {
@@ -1147,12 +1410,44 @@ export default {
           this.resetButton("runButton");
         });
     },
+    initJsonEditor: function () {
+      if (this.jsonEditor) {
+        this.jsonEditor.destroy();
+        this.jsonEditor = null;
+      }
+      
+      this.$nextTick(() => {
+        if (this.$refs.jsonEditorContainer) {
+          this.jsonEditor = new JSONEditor(this.$refs.jsonEditorContainer, {
+            mode: 'tree',
+            modes: ['tree', 'code', 'text'],
+            onChange: () => {
+              try {
+                this.jsonData = this.jsonEditor.get();
+              } catch (e) {
+                console.error('JSON 에디터 데이터 가져오기 실패:', e);
+              }
+            }
+          });
+          
+          if (this.jsonData && Object.keys(this.jsonData).length > 0) {
+            this.jsonEditor.set(this.jsonData);
+            this.jsonEditor.expandAll();
+          }
+        }
+      });
+    },
+    updateJsonEditor: function () {
+      if (this.jsonEditor && this.jsonData) {
+        this.jsonEditor.set(this.jsonData);
+      }
+    },
   },
   mounted: function () {
     // 안전한 초기화
     this.groups = this.groups || [];
     this.feeds = this.feeds || [];
-    
+
     if (this.$session.get("is_authorized")) {
       if (this.$route.params["group"] && this.$route.params["feed"]) {
         this.selectedGroupName = this.$route.params["group"];
@@ -1171,6 +1466,10 @@ export default {
   beforeUnmount: function () {
     if (this.checkRunningInterval) {
       clearInterval(this.checkRunningInterval);
+    }
+    if (this.jsonEditor) {
+      this.jsonEditor.destroy();
+      this.jsonEditor = null;
     }
   },
 };

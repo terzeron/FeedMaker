@@ -2,52 +2,45 @@
   <BContainer fluid>
     <!-- Search Window -->
     <BRow>
-      <BCol
-          cols="12"
-          class="m-0 p-1">
-        <BInputGroup
-            class="m-0 p-1"
-            style="width: 400px">
+      <BCol cols="12" class="m-0 p-1">
+        <BInputGroup class="m-0 p-1" style="width: 400px">
           <BFormInput
-              v-model="searchKeyword"
-              class="m-0"
-              placeholder="키워드"
-              @keyup.enter="search">
+            v-model="searchKeyword"
+            class="m-0"
+            placeholder="키워드"
+            @keyup.enter="search"
+          >
             {{ searchKeyword }}
           </BFormInput>
-          <BInputGroupAppend>
+          <BInputGroupText>
             <my-button
-                ref="searchButton"
-                label="검색"
-                @click="search"
-                :initial-icon="['fas', 'search']"
-                :show-initial-icon="true"
-                variant="dark"/>
-          </BInputGroupAppend>
+              ref="searchButton"
+              label="검색"
+              @click="search"
+              :initial-icon="['fas', 'search']"
+              :show-initial-icon="true"
+              variant="dark"
+            />
+          </BInputGroupText>
         </BInputGroup>
       </BCol>
     </BRow>
 
     <!-- Search Results -->
     <BRow>
-      <BCol
-          id="search_result"
-          cols="12"
-          class="m-0 p-1"
-          v-if="1">
+      <BCol id="search_result" cols="12" class="m-0 p-1" v-if="showSearchResult">
         <BTableSimple
-            v-if="Array.isArray(searchResultlist) && searchResultlist.length >= 0"
-            class="m-0 p-1 text-break"
-            small>
+          v-if="Array.isArray(searchResultlist) && searchResultlist.length > 0"
+          class="m-0 p-1 text-break"
+          small
+        >
           <BThead head-variant="light" table-variant="light">
             <BTr>
               <BTh colspan="2">검색 결과</BTh>
             </BTr>
           </BThead>
           <BTbody>
-            <BTr
-                v-for="item in searchResultlist"
-                :key="item.url">
+            <BTr v-for="item in searchResultlist" :key="item.url">
               <BTd>{{ item.title }}</BTd>
               <BTd>
                 <a :href="item.url">{{ item.url }}</a>
@@ -55,41 +48,47 @@
             </BTr>
           </BTbody>
         </BTableSimple>
+        <div v-else-if="searchError" class="alert alert-danger">
+          {{ searchError }}
+        </div>
+        <div v-else class="alert alert-info">
+          검색 결과가 없습니다.
+        </div>
       </BCol>
     </BRow>
   </BContainer>
 </template>
 
-<style>
-</style>
+<style></style>
 
 <script>
-import axios from 'axios';
+import axios from "axios";
 
-import {library} from '@fortawesome/fontawesome-svg-core';
-import {faSearch} from '@fortawesome/free-solid-svg-icons';
-import MyButton from './MyButton';
+import { library } from "@fortawesome/fontawesome-svg-core";
+import { faSearch } from "@fortawesome/free-solid-svg-icons";
+import MyButton from "./MyButton";
 
 library.add(faSearch);
 
 export default {
-  name: 'FeedManagement',
+  name: "FeedManagement",
   components: {
-    MyButton
+    MyButton,
   },
   props: [],
   data: function () {
     return {
       showSearchResult: false,
-      searchKeyword: '',
+      searchKeyword: "",
       searchResultlist: [],
+      searchError: "",
     };
   },
   computed: {},
   watch: {},
   methods: {
     getApiUrlPath: function () {
-      return process.env.VUE_APP_API_URL;
+      return process.env.VUE_APP_API_URL || "http://localhost:8010";
     },
     startButton: function (ref) {
       this.$refs[ref].doShowInitialIcon = false;
@@ -104,35 +103,49 @@ export default {
       this.$refs[ref].doShowSpinner = false;
     },
     search: function () {
-      console.log(`search()`);
-      this.startButton('searchButton');
+      this.startButton("searchButton");
+      this.showSearchResult = true;
+      this.searchError = "";
 
       const url = this.getApiUrlPath() + `/search_site/${this.searchKeyword}`;
       axios
-          .get(url)
-          .then((res) => {
-                if (res.data.status === 'failure') {
-                  this.alert(res.data.message);
-                } else {
-                  this.searchResultlist = res.data['search_result_list'].map(o => {
-                    o['title'] = o[0];
-                    o['url'] = o[1];
-                    return o;
-                  });
+        .get(url)
+        .then((res) => {
+          if (res.data.status === "failure") {
+            this.searchError = res.data.message || "검색 중 오류가 발생했습니다.";
+            this.searchResultlist = [];
+          } else {
+            const list = res.data.search_result_list;
+            if (Array.isArray(list)) {
+              this.searchResultlist = list.map((o) => {
+                if (Array.isArray(o) && o.length >= 2) {
+                  return { title: o[0], url: o[1] };
                 }
-                this.endButton('searchButton');
-              }
-          )
-          .catch((error) => {
-            console.error(error);
-            this.resetButton('searchButton');
-          })
+                if (typeof o === "object" && o !== null) {
+                  return {
+                    title: o.title || o[0] || "",
+                    url: o.url || o[1] || "",
+                  };
+                }
+                return { title: String(o), url: "" };
+              });
+            } else {
+              this.searchResultlist = [];
+            }
+          }
+          this.endButton("searchButton");
+        })
+        .catch((error) => {
+          this.searchError = "검색 중 오류가 발생했습니다.";
+          this.searchResultlist = [];
+          this.resetButton("searchButton");
+        });
     },
   },
   mounted: function () {
-    if (!this.$session.get('is_authorized')) {
-      this.$router.push('/login');
+    if (!this.$session.get("is_authorized")) {
+      this.$router.push("/login");
     }
-  }
+  },
 };
 </script>

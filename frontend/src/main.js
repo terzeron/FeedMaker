@@ -36,9 +36,10 @@ import {
   BTd,
   BProgressBar,
   BInputGroup,
-  BInputGroupAppend,
+  BInputGroupText,
   BCardHeader,
-  BCardBody
+  BCardBody,
+  BSpinner
 } from 'bootstrap-vue-next';
 
 import { VMarkdownView } from 'vue3-markdown';
@@ -76,9 +77,10 @@ app.component('BTh', BTh);
 app.component('BTd', BTd);
 app.component('BProgressBar', BProgressBar);
 app.component('BInputGroup', BInputGroup);
-app.component('BInputGroupAppend', BInputGroupAppend);
+app.component('BInputGroupText', BInputGroupText);
 app.component('BCardHeader', BCardHeader);
 app.component('BCardBody', BCardBody);
+app.component('BSpinner', BSpinner);
 
 app.component('VMarkdownView', VMarkdownView);
 app.use(router);

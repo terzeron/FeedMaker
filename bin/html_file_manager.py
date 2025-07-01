@@ -12,6 +12,7 @@ from bin.models import HtmlFileInfo
 from bin.feed_maker import FeedMaker
 from bin.feed_maker_util import PathUtil, Env
 from bin.db import DB, Session
+from bin.feed_manager import FeedManager
 
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -26,6 +27,26 @@ class HtmlFileManager:
         return path.parent.parent.name + "/html/" + path.name
 
     @staticmethod
+    def _get_feed_title_from_path(feed_dir_path: str) -> str:
+        """Extract feed title from feed directory path"""
+        try:
+            # feed_dir_path format: "group_name/feed_name"
+            parts = feed_dir_path.split("/")
+            if len(parts) >= 2:
+                group_name = parts[0]
+                feed_name = parts[1]
+                # Get feed info from FeedManager
+                feed_info = FeedManager.get_feed_info(group_name, feed_name)
+                LOGGER.debug("Feed info for %s/%s: %s", group_name, feed_name, feed_info)
+                if feed_info and "feed_title" in feed_info:
+                    return feed_info["feed_title"]
+                return feed_name
+            return ""
+        except Exception as e:
+            LOGGER.warning("Failed to get feed title for %s: %s", feed_dir_path, e)
+            return ""
+
+    @staticmethod
     def get_html_file_size_map(feed_name: str = "") -> dict[str, dict[str, Any]]:
         LOGGER.debug("# get_html_file_size_map()")
         html_file_size_map = {}
@@ -38,7 +59,15 @@ class HtmlFileManager:
                 feed_dir_path = row.feed_dir_path
                 size = row.size
                 update_date = row.update_date
-                html_file_size_map[file_name] = {"file_name": file_name, "file_path": file_path, "feed_dir_path": feed_dir_path, "size": size, "update_date": update_date}
+                feed_title = HtmlFileManager._get_feed_title_from_path(feed_dir_path)
+                html_file_size_map[file_name] = {
+                    "file_name": file_name, 
+                    "file_path": file_path, 
+                    "feed_dir_path": feed_dir_path, 
+                    "size": size, 
+                    "update_date": update_date,
+                    "feed_title": feed_title
+                }
 
         return html_file_size_map
 
@@ -55,12 +84,14 @@ class HtmlFileManager:
                 feed_dir_path = row.feed_dir_path
                 count = row.count_with_many_image_tag
                 update_date = row.update_date
+                feed_title = HtmlFileManager._get_feed_title_from_path(feed_dir_path)
                 html_file_with_many_image_tag_map[file_name] = {
                     "file_name": file_name,
                     "file_path": file_path,
                     "feed_dir_path": feed_dir_path,
                     "count": count,
-                    "update_date": update_date
+                    "update_date": update_date,
+                    "feed_title": feed_title
                 }
 
         return html_file_with_many_image_tag_map
@@ -71,19 +102,21 @@ class HtmlFileManager:
         html_file_without_image_tag_map = {}
 
         with DB.session_ctx() as s:
-            rows = s.query(HtmlFileInfo).where(HtmlFileInfo.count_without_image_tag > 1).order_by(HtmlFileInfo.update_date).all()
+            rows = s.query(HtmlFileInfo).where(HtmlFileInfo.count_without_image_tag > 0).order_by(HtmlFileInfo.update_date).all()
             for row in rows:
                 file_name = row.file_name
                 file_path = row.file_path
                 feed_dir_path = row.feed_dir_path
                 count = row.count_without_image_tag
                 update_date = row.update_date
+                feed_title = HtmlFileManager._get_feed_title_from_path(feed_dir_path)
                 html_file_without_image_tag_map[file_name] = {
                     "file_name": file_name,
                     "file_path": file_path,
                     "feed_dir_path": feed_dir_path,
                     "count": count,
-                    "update_date": update_date
+                    "update_date": update_date,
+                    "feed_title": feed_title
                 }
 
         return html_file_without_image_tag_map
@@ -101,12 +134,14 @@ class HtmlFileManager:
                 feed_dir_path = row.feed_dir_path
                 count = row.count_with_image_not_found
                 update_date = row.update_date
+                feed_title = HtmlFileManager._get_feed_title_from_path(feed_dir_path)
                 html_file_image_not_found_map[file_name] = {
                     "file_name": file_name,
                     "file_path": file_path,
                     "feed_dir_path": feed_dir_path,
                     "count": count,
-                    "update_date": update_date
+                    "update_date": update_date,
+                    "feed_title": feed_title
                 }
 
         return html_file_image_not_found_map

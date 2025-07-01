@@ -27,6 +27,12 @@ const routes = [
         component: FeedManagement
     },
     {
+        path: '/management/:group/:feed',
+        name: 'FeedManagementWithParams',
+        component: FeedManagement,
+        props: true
+    },
+    {
         path: '/search',
         name: 'Search',
         component: Search
