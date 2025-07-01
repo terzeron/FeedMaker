@@ -18,6 +18,7 @@ import { useRouter } from "vue-router";
 import { useStorage } from "@vueuse/core";
 import MarkdownIt from 'markdown-it';
 import axios from "axios";
+import { getApiUrlPath } from "../utils/api";
 
 const router = useRouter();
 const source = ref("### No result");
@@ -32,10 +33,6 @@ const md = new MarkdownIt({
   linkify: true,
   typographer: true
 });
-
-const getApiUrlPath = () => {
-  return process.env.VUE_APP_API_URL || "http://localhost:8010";
-};
 
 const getExecResult = async () => {
   loading.value = true;
