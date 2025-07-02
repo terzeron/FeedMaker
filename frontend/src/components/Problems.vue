@@ -56,6 +56,7 @@
                         v-if="showStatusInfoDeleteButton({ item: item })"
                       />
                     </span>
+                    <span v-else-if="['update_date','upload_date','access_date','view_date'].includes(field.key)" class="date-cell">{{ item[field.key] }}</span>
                     <span v-else>{{ item[field.key] }}</span>
                   </td>
                 </tr>
@@ -119,6 +120,7 @@
                     <span v-else-if="field.key === 'progress_ratio'"
                       >{{ item[field.key] }}%</span
                     >
+                    <span v-else-if="field.key === 'due_date'" class="date-cell">{{ item[field.key] }}</span>
                     <span v-else>{{ item[field.key] }}</span>
                   </td>
                 </tr>
@@ -145,7 +147,7 @@
             class="table-responsive"
           >
             <table
-              class="table table-striped table-hover table-sm table-bordered m-0 p-0"
+              class="table table-striped table-hover table-sm table-bordered m-0 p-0 no-action-col"
             >
               <thead>
                 <tr>
@@ -387,6 +389,9 @@
                         "
                       />
                     </span>
+                    <span v-else-if="field.key === 'count'">
+                      {{ item[field.key] || 'N/A' }}
+                    </span>
                     <span v-else>{{ item[field.key] }}</span>
                   </td>
                 </tr>
@@ -483,7 +488,7 @@
             class="table-responsive"
           >
             <table
-              class="table table-striped table-hover table-sm table-bordered m-0 p-0"
+              class="table table-striped table-hover table-sm table-bordered m-0 p-0 no-action-col"
             >
               <thead>
                 <tr>
@@ -581,8 +586,9 @@
                         'text-danger': item.sizeIsDanger,
                         'text-warning': item.sizeIsWarning,
                       }"
-                      v-html="item[field.key]"
-                    ></span>
+                    >
+                      {{ item.size_formatted }}
+                    </span>
                     <span
                       v-else-if="field.key === 'num_items'"
                       :class="{
@@ -593,10 +599,8 @@
                     ></span>
                     <span
                       v-else-if="field.key === 'upload_date'"
-                      :class="{
-                        'text-danger': item.uploadDateIsDanger,
-                        'text-warning': item.uploadDateIsWarning,
-                      }"
+                      class="date-cell"
+                      :class="{'text-danger': item.uploadDateIsDanger, 'text-warning': item.uploadDateIsWarning}"
                       v-html="item[field.key]"
                     ></span>
                     <span v-else-if="field.key === 'action'">
@@ -660,21 +664,48 @@
   color: #000 !important;
   border-bottom: 2px solid #495057 !important;
   font-weight: 700 !important;
-  text-transform: uppercase;
-  font-size: 0.875rem;
-  letter-spacing: 0.5px;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  padding: 0.0625rem 0.125rem !important;
+  text-transform: uppercase !important;
+  font-size: 0.95rem !important;
+  letter-spacing: 0.5px !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  padding: 0.375rem 0.125rem !important;
   margin: 0 !important;
   border-top: none !important;
   border-left: none !important;
   border-right: none !important;
+  line-height: 1.3 !important;
+  height: auto !important;
+  min-height: 0 !important;
 }
 
-.table tbody tr:nth-child(even) {
-  background-color: #f8f9fa;
+/* col-lg-4와 col-lg-8 테이블 헤딩 높이 조정 */
+.col-lg-4 .table thead th,
+.col-lg-4 .table > thead > tr > th,
+.col-lg-8 .table thead th,
+.col-lg-8 .table > thead > tr > th {
+  padding: 0.375rem 0.125rem !important;
+  line-height: 1.3 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* 모든 테이블 헤딩 일관성 유지 */
+.table thead th,
+.table > thead > tr > th {
+  padding: 0.375rem 0.125rem !important;
+  line-height: 1.3 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  font-size: 0.875rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
 }
 
 .table tbody tr:hover {
@@ -707,7 +738,7 @@
 .table > thead > tr > th.sortable::after {
   content: "↕";
   position: absolute;
-  right: 4px;
+  right: 6px;
   top: 50%;
   transform: translateY(-50%);
   opacity: 0.5;
@@ -716,170 +747,28 @@
   z-index: 1;
 }
 
-/* 정렬 중인 헤더 스타일 */
+/* 정렬 아이콘 숨김 - CSS ::after만 사용 */
+.sort-icon {
+  display: none !important;
+}
+
+.sort-icon span {
+  display: none !important;
+}
+
+/* 정렬 중인 헤더 스타일 통일 */
 .table th.sortable.sort-asc::after,
 .table > thead > tr > th.sortable.sort-asc::after {
   content: "↑";
   opacity: 1;
+  color: #000;
 }
 
 .table th.sortable.sort-desc::after,
 .table > thead > tr > th.sortable.sort-desc::after {
   content: "↓";
   opacity: 1;
-}
-
-/* 모바일 반응형 스타일 */
-@media (max-width: 768px) {
-  .table-responsive {
-    font-size: 0.875rem;
-  }
-
-  /* Bootstrap 기본 테이블 스타일 완전 덮어쓰기 - 더 강력한 선택자 */
-  .table td,
-  .table th,
-  .table > tbody > tr > td,
-  .table > tbody > tr > th,
-  .table > thead > tr > td,
-  .table > thead > tr > th,
-  .table > tfoot > tr > td,
-  .table > tfoot > tr > th {
-    padding: 0.03125rem 0.0625rem !important;
-    margin: 0 !important;
-  }
-
-  .table thead th {
-    font-size: 0.75rem;
-    padding: 0.03125rem 0.0625rem !important;
-    background-color: white !important;
-    color: #000 !important;
-    font-weight: 700 !important;
-  }
-
-  /* 모바일에서 정렬 방향키 유지 */
-  .table th.sortable::after,
-  .table > thead > tr > th.sortable::after {
-    content: "↕";
-    position: absolute;
-    right: 2px;
-    top: 50%;
-    transform: translateY(-50%);
-    opacity: 0.5;
-    font-size: 0.6rem;
-    color: #000;
-    z-index: 1;
-  }
-
-  .table td {
-    padding: 0.03125rem 0.0625rem !important;
-    word-break: break-word;
-  }
-
-  /* 작은 화면에서 테이블 셀 내용 줄바꿈 */
-  .table td {
-    white-space: normal;
-  }
-
-  /* 카드 헤더 모바일 최적화 */
-  .card-header {
-    font-size: 0.875rem;
-    padding: 0.5rem;
-    background-color: #495057 !important;
-    color: white !important;
-  }
-
-  /* 버튼 그룹 모바일 최적화 */
-  .button_list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem;
-  }
-
-  .button_list button {
-    margin: 0.125rem !important;
-    font-size: 0.875rem;
-    padding: 0.375rem 0.75rem;
-  }
-}
-
-@media (max-width: 576px) {
-  .table-responsive {
-    font-size: 0.8rem;
-  }
-
-  /* Bootstrap 기본 테이블 스타일 완전 덮어쓰기 - 더 강력한 선택자 */
-  .table td,
-  .table th,
-  .table > tbody > tr > td,
-  .table > tbody > tr > th,
-  .table > thead > tr > td,
-  .table > thead > tr > th,
-  .table > tfoot > tr > td,
-  .table > tfoot > tr > th {
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-
-  .table thead th {
-    font-size: 0.7rem;
-    padding: 0 !important;
-    background-color: white !important;
-    color: #000 !important;
-    font-weight: 700 !important;
-  }
-
-  /* 작은 모바일에서 정렬 방향키 유지 */
-  .table th.sortable::after,
-  .table > thead > tr > th.sortable::after {
-    content: "↕";
-    position: absolute;
-    right: 1px;
-    top: 50%;
-    transform: translateY(-50%);
-    opacity: 0.5;
-    font-size: 0.5rem;
-    color: #000;
-    z-index: 1;
-  }
-
-  .table td {
-    padding: 0 !important;
-  }
-
-  /* 매우 작은 화면에서 테이블 스크롤 */
-  .table-responsive {
-    overflow-x: auto;
-  }
-
-  .table {
-    min-width: 400px;
-  }
-
-  /* 카드 레이아웃 모바일 최적화 */
-  .col-lg-4 {
-    margin-bottom: 1rem;
-  }
-}
-
-/* 다크 테마 지원 */
-@media (prefers-color-scheme: dark) {
-  .table thead th {
-    background-color: #495057 !important;
-    color: #f8f9fa !important;
-  }
-
-  .table tbody tr:nth-child(even) {
-    background-color: #343a40;
-  }
-
-  .table tbody tr:hover {
-    background-color: #495057;
-  }
-
-  .card-header {
-    background-color: #495057 !important;
-    color: #f8f9fa !important;
-  }
+  color: #000;
 }
 
 /* 아이콘 스타일링 */
@@ -906,7 +795,7 @@
   color: #6c757d !important;
 }
 
-/* 카드 헤더 스타일 변경 */
+/* 카드 헤더 스타일 복구 */
 .card-header {
   background-color: #495057 !important;
   color: white !important;
@@ -914,16 +803,69 @@
   border-bottom: 1px solid #343a40;
 }
 
-/* 정렬 아이콘 스타일 */
-.sort-icon {
-  margin-left: 4px;
-  font-size: 0.75rem;
-  opacity: 0.7;
-  color: #000;
+/* 테이블 헤딩 스타일 복구 */
+.table thead th,
+.table > thead > tr > th,
+.table-responsive .table thead th,
+.table-responsive .table > thead > tr > th {
+  background-color: white !important;
+  color: #000 !important;
+  border-bottom: 2px solid #495057 !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  font-size: 0.95rem !important;
+  letter-spacing: 0.5px !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  padding: 0.375rem 0.125rem !important;
+  margin: 0 !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  line-height: 1.3 !important;
+  height: auto !important;
+  min-height: 0 !important;
 }
 
-.sort-icon span {
-  display: inline-block;
+/* col-lg-4와 col-lg-8 테이블 헤딩 높이 조정 */
+.col-lg-4 .table thead th,
+.col-lg-4 .table > thead > tr > th,
+.col-lg-8 .table thead th,
+.col-lg-8 .table > thead > tr > th {
+  padding: 0.375rem 0.125rem !important;
+  line-height: 1.3 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* 모든 테이블 헤딩 일관성 유지 */
+.table thead th,
+.table > thead > tr > th {
+  padding: 0.375rem 0.125rem !important;
+  line-height: 1.3 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  font-size: 0.875rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+.table tbody tr:hover {
+  background-color: #e9ecef;
+  transition: background-color 0.2s ease;
+}
+
+.table td {
+  vertical-align: middle;
+  border-color: #dee2e6;
+  padding: 0.0625rem 0.125rem !important;
+  margin: 0 !important;
 }
 
 /* 정렬 가능한 헤더 스타일 */
@@ -933,6 +875,159 @@
   position: relative;
   background-color: white !important;
   color: #000 !important;
+}
+
+.table th.sortable:hover,
+.table > thead > tr > th.sortable:hover {
+  background-color: #f8f9fa !important;
+}
+
+.table th.sortable::after,
+.table > thead > tr > th.sortable::after {
+  content: "↕";
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.5;
+  font-size: 0.75rem;
+  color: #000;
+  z-index: 1;
+}
+
+/* 정렬 아이콘 숨김 - CSS ::after만 사용 */
+.sort-icon {
+  display: none !important;
+}
+
+.sort-icon span {
+  display: none !important;
+}
+
+/* 정렬 중인 헤더 스타일 통일 */
+.table th.sortable.sort-asc::after,
+.table > thead > tr > th.sortable.sort-asc::after {
+  content: "↑";
+  opacity: 1;
+  color: #000;
+}
+
+.table th.sortable.sort-desc::after,
+.table > thead > tr > th.sortable.sort-desc::after {
+  content: "↓";
+  opacity: 1;
+  color: #000;
+}
+
+/* 피드 제목 ellipsis 스타일 */
+.feed-title-ellipsis {
+  display: inline-block;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feed-title-ellipsis a {
+  color: #007bff;
+  text-decoration: underline;
+}
+
+.feed-title-ellipsis a:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+/* 모든 테이블의 첫 번째 필드 말줄임 처리 */
+.table td:first-child {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table th:first-child {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.col-12:first-child .table td:first-child {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.col-12:first-child .table th:first-child {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.col-12:first-child .table td:first-child span,
+.col-12:first-child .table td:first-child a {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 테이블 너비 제한 및 스크롤 방지 */
+.table {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  table-layout: fixed;
+}
+
+.table td,
+.table th {
+  word-wrap: break-word;
+  overflow: visible;
+}
+
+/* 테이블 컨테이너 너비 제한 */
+.table-responsive {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* 피드 상태 테이블은 제외 (첫 번째 col-12) */
+.col-12:first-child .table td:first-child {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.col-12:first-child .table th:first-child {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.col-12:first-child .table td:first-child span,
+.col-12:first-child .table td:first-child a {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* col-lg-4 테이블 컨테이너 최대 폭 제한 */
+.col-lg-4 .table-responsive {
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+/* 날짜 셀만 폰트 작게 */
+.date-cell {
+  font-size: 0.75em;
+  color: #666;
 }
 </style>
 
@@ -1057,7 +1152,7 @@ export default {
       elementInfolist: [],
       htmlFileSizeFields: [
         { key: "feed_title", label: "제목", sortable: true },
-        { key: "file_path", label: "파일 경로", sortable: true },
+        { key: "file_name", label: "파일 이름", sortable: true },
         { key: "size", label: "크기", sortable: true },
         { key: "action", label: "작업", sortable: false },
       ],
@@ -1066,7 +1161,7 @@ export default {
       htmlFileSizelist: [],
       htmlFileWithoutImageTagFields: [
         { key: "feed_title", label: "제목", sortable: true },
-        { key: "file_path", label: "파일 경로", sortable: true },
+        { key: "file_name", label: "파일 이름", sortable: true },
         { key: "action", label: "작업", sortable: false },
       ],
       htmlFileWithoutImageTagSortBy: "feed_title",
@@ -1074,16 +1169,16 @@ export default {
       htmlFileWithoutImageTaglist: [],
       htmlFileWithManyImageTagFields: [
         { key: "feed_title", label: "제목", sortable: true },
-        { key: "file_path", label: "파일 경로", sortable: true },
-        { key: "num_img_tags", label: "이미지 태그 수", sortable: true },
+        { key: "file_name", label: "파일 이름", sortable: true },
+        { key: "count", label: "개수", sortable: true },
         { key: "action", label: "작업", sortable: false },
       ],
-      htmlFileWithManyImageTagSortBy: "num_img_tags",
+      htmlFileWithManyImageTagSortBy: "count",
       htmlFileWithManyImageTagSortDesc: true,
       htmlFileWithManyImageTaglist: [],
       htmlFileWithImageNotFoundFields: [
         { key: "feed_title", label: "제목", sortable: true },
-        { key: "file_path", label: "파일 경로", sortable: true },
+        { key: "file_name", label: "파일 이름", sortable: true },
         { key: "action", label: "작업", sortable: false },
       ],
       htmlFileWithImageNotFoundSortBy: "feed_title",
@@ -1092,7 +1187,7 @@ export default {
       publicFeedInfoFields: [
         { key: "feed_title", label: "제목", sortable: true },
         { key: "size", label: "크기", sortable: true },
-        { key: "num_items", label: "아이템 수", sortable: true },
+        { key: "num_items", label: "개수", sortable: true },
         { key: "upload_date", label: "업로드일", sortable: true },
         { key: "action", label: "작업", sortable: false },
       ],
@@ -1277,6 +1372,13 @@ export default {
       }
       return d.format("YY-MM-DD");
     },
+    formatFileSize(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    },
     getProblems() {
       // Initialize all table data as empty arrays for safety
       this.statusInfolist = [];
@@ -1399,7 +1501,7 @@ export default {
             this.publicFeedInfolist = _.filter(result, (o) => {
               return (
                 o["upload_date"] < day2MonthAgo ||
-                o["size"] < 4 * 1024 ||
+                o["file_size"] < 4 * 1024 ||
                 o["num_items"] < 5 ||
                 o["num_items"] > 20
               );
@@ -1408,6 +1510,10 @@ export default {
               if (!o["feed_title"]) {
                 o["feed_title"] = o["feed_name"];
               }
+              // Map file_size to size field for display
+              o["size"] = o["file_size"];
+              // Add formatted size for display while keeping original for sorting
+              o["size_formatted"] = this.formatFileSize(o["file_size"]);
               if (o["file_size"] < 1024) {
                 o["sizeIsDanger"] = true;
               } else if (o["file_size"] < 4 * 1024) {
@@ -1463,6 +1569,8 @@ export default {
                 : Array.isArray(result["html_file_with_many_image_tag_map"])
                 ? result["html_file_with_many_image_tag_map"]
                 : [];
+
+
             const htmlFileWithoutImageTagMap =
               result &&
               result["html_file_without_image_tag_map"] &&
@@ -1491,6 +1599,11 @@ export default {
                   o["feed_title"] = feedDirParts[1]; // Use feed_name as fallback
                 }
               }
+              // Extract file name from file_path
+              if (o["file_path"]) {
+                const pathParts = o["file_path"].split("/");
+                o["file_name"] = pathParts[pathParts.length - 1];
+              }
               return o;
             });
             this.htmlFileWithManyImageTaglist = _.map(
@@ -1504,6 +1617,12 @@ export default {
                     o["feed_title"] = feedDirParts[1]; // Use feed_name as fallback
                   }
                 }
+                // Extract file name from file_path
+                if (o["file_path"]) {
+                  const pathParts = o["file_path"].split("/");
+                  o["file_name"] = pathParts[pathParts.length - 1];
+                }
+
                 return o;
               }
             );
@@ -1518,6 +1637,11 @@ export default {
                     o["feed_title"] = feedDirParts[1]; // Use feed_name as fallback
                   }
                 }
+                // Extract file name from file_path
+                if (o["file_path"]) {
+                  const pathParts = o["file_path"].split("/");
+                  o["file_name"] = pathParts[pathParts.length - 1];
+                }
                 return o;
               }
             );
@@ -1531,6 +1655,11 @@ export default {
                   if (feedDirParts.length >= 2) {
                     o["feed_title"] = feedDirParts[1]; // Use feed_name as fallback
                   }
+                }
+                // Extract file name from file_path
+                if (o["file_path"]) {
+                  const pathParts = o["file_path"].split("/");
+                  o["file_name"] = pathParts[pathParts.length - 1];
                 }
                 return o;
               }
@@ -1633,128 +1762,6 @@ export default {
 </script>
 
 <style>
-/* 모바일 responsive 테이블 개선 */
-@media (max-width: 768px) {
-  .table-responsive {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  
-  .table {
-    min-width: 600px; /* 테이블 최소 너비 설정 */
-    font-size: 0.9rem;
-  }
-  
-  .table th,
-  .table td {
-    white-space: nowrap;
-    padding: 0.5rem 0.25rem;
-  }
-  
-  /* 긴 텍스트는 말줄임표로 처리 */
-  .table td {
-    max-width: 120px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  
-  /* 특정 컬럼은 더 넓게 */
-  .table td:first-child {
-    max-width: 150px;
-  }
-}
-
-/* 피드 상태 테이블만 responsive - 카드 형태로 변환 */
-@media (max-width: 576px) {
-  /* 피드 상태 테이블만 responsive 적용 (첫 번째 col-12) */
-  .col-12:first-child .table-responsive {
-    overflow-x: visible;
-  }
-  
-  .col-12:first-child .table {
-    min-width: auto;
-    width: 100%;
-  }
-  
-  .col-12:first-child .table thead {
-    display: none; /* 헤더 숨김 */
-  }
-  
-  .col-12:first-child .table tbody {
-    display: block;
-  }
-  
-  .col-12:first-child .table tr {
-    display: block;
-    margin-bottom: 1rem;
-    border: 1px solid #dee2e6;
-    border-radius: 0.375rem;
-    background-color: #fff;
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-  }
-  
-  .col-12:first-child .table td {
-    display: block;
-    text-align: left;
-    padding: 0.75rem;
-    border: none;
-    border-bottom: 1px solid #f8f9fa;
-    white-space: normal;
-    max-width: none;
-    overflow: visible;
-    text-overflow: unset;
-    font-size: 1rem;
-    line-height: 1.5;
-  }
-  
-  .col-12:first-child .table td:last-child {
-    border-bottom: none;
-  }
-  
-  /* 모든 라벨 완전히 숨김 */
-  .col-12:first-child .table td::before {
-    display: none !important;
-    content: none !important;
-  }
-  
-  /* 액션 버튼은 중앙 정렬 */
-  .col-12:first-child .table td:has(.font-awesome-icon) {
-    text-align: center;
-  }
-  
-  .col-12:first-child .table td:has(.font-awesome-icon)::before {
-    display: none;
-  }
-  
-  /* 나머지 테이블들은 가로 스크롤만 적용 */
-  .col-lg-4 .table-responsive,
-  .col-lg-8 .table-responsive {
-    overflow-x: auto;
-  }
-  
-  .col-lg-4 .table,
-  .col-lg-8 .table {
-    min-width: 400px;
-    font-size: 0.85rem;
-  }
-}
-
-/* 정렬 아이콘 스타일 */
-.sortable {
-  cursor: pointer;
-  user-select: none;
-}
-
-.sort-icon {
-  margin-left: 0.25rem;
-  font-size: 0.8em;
-}
-
-.sort-asc,
-.sort-desc {
-  background-color: #e9ecef;
-}
-
 /* 피드 제목 ellipsis 스타일 */
 .feed-title-ellipsis {
   display: inline-block;
@@ -1773,4 +1780,37 @@ export default {
   color: #0056b3;
   text-decoration: underline;
 }
+
+/* 테이블 너비 제한 및 스크롤 방지 */
+.table {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  table-layout: fixed;
+}
+
+.table td,
+.table th {
+  word-wrap: break-word;
+  overflow: visible;
+}
+
+/* 테이블 컨테이너 너비 제한 */
+.table-responsive {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* col-lg-4 테이블 컨테이너 최대 폭 제한 */
+.col-lg-4 .table-responsive {
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+/* 날짜 셀만 폰트 작게 */
+.date-cell {
+  font-size: 0.75em;
+  color: #666;
+}
+
 </style>
