@@ -54,4 +54,5 @@ cookies.*.json
 nohup.out
 nohup.out.old
 backend/index.wsgi
+backend/uvicorn.log*
 
