@@ -354,7 +354,7 @@ class FeedManager:
         feed_name_progress_info_map: dict[str, dict[str, Any]] = {}
 
         with DB.session_ctx() as s:
-            rows = s.query(FeedInfo).where(FeedInfo.is_completed).all()
+            rows = s.query(FeedInfo).where(FeedInfo.is_completed, FeedInfo.is_active).all()
             for row in rows:
                 feed_name = row.feed_name
                 unit_size_per_day: float = row.unit_size_per_day or 0.0
