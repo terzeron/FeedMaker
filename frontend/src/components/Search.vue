@@ -56,6 +56,13 @@
         </div>
       </BCol>
     </BRow>
+    
+    <BRow>
+      <BCol cols="12" class="mx-auto text-center mt-5 mb-3">
+        Feed Manager by {{ adminEmail }}
+        <div class="text-muted small mt-1">v{{ appVersion }}</div>
+      </BCol>
+    </BRow>
   </BContainer>
 </template>
 
@@ -85,7 +92,14 @@ export default {
       searchError: "",
     };
   },
-  computed: {},
+  computed: {
+    adminEmail: function () {
+      return process.env.VUE_APP_FACEBOOK_ADMIN_EMAIL;
+    },
+    appVersion: function () {
+      return process.env.VUE_APP_VERSION || 'dev';
+    },
+  },
   watch: {},
   methods: {
     startButton: function (ref) {

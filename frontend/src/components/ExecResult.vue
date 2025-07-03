@@ -1,13 +1,20 @@
 <template>
-  <div class="exec-result-markdown">
-    <div v-if="loading" class="text-center">
-      Loading...
+  <div class="exec-result-container">
+    <div class="exec-result-markdown">
+      <div v-if="loading" class="text-center">
+        Loading...
+      </div>
+      <div v-else-if="error" class="alert alert-danger">
+        {{ error }}
+      </div>
+      <div v-else>
+        <div class="markdown-content" v-html="renderedMarkdown"></div>
+      </div>
     </div>
-    <div v-else-if="error" class="alert alert-danger">
-      {{ error }}
-    </div>
-    <div v-else>
-      <div class="markdown-content" v-html="renderedMarkdown"></div>
+    
+    <div class="footer mt-5 mb-3 text-center">
+      <div class="text-muted">Feed Manager by {{ adminEmail }}</div>
+      <div class="text-muted small mt-1">v{{ appVersion }}</div>
     </div>
   </div>
 </template>
@@ -47,6 +54,10 @@ const loading = ref(false);
 const error = ref("");
 
 const isAuthorized = useStorage("is_authorized", false, sessionStorage);
+
+// Computed properties for footer
+const adminEmail = computed(() => process.env.VUE_APP_FACEBOOK_ADMIN_EMAIL || 'admin');
+const appVersion = computed(() => process.env.VUE_APP_VERSION || 'dev');
 
 const getExecResult = async () => {
   loading.value = true;

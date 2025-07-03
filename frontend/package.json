@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build",
+    "build": "node generate-version.js && vue-cli-service build",
     "lint": "vue-cli-service lint",
     "mock:api": "node mock-api/server.js",
     "dev:mock": "concurrently \"npm run mock:api\" \"npm run serve\""
