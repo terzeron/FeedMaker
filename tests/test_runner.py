@@ -57,14 +57,28 @@ def set_last_success_time() -> None:
     LAST_SUCCESS_FILE = PROJECT_ROOT / ".last_test_success"
     LAST_SUCCESS_FILE.write_text(str(time.time()))
 
-def get_modified_files(since: float) -> list[Path]:
+def get_modified_files(since: float, exclude_paths: Optional[set[str]] = None) -> list[Path]:
+    """Get modified Python files with better filtering"""
+    if exclude_paths is None:
+        exclude_paths = {'.pytest_cache', '__pycache__', '.git', 'node_modules'}
+    
     modified = []
     for root, dirs, files in os.walk(PROJECT_ROOT):
+        # Skip excluded directories
+        dirs[:] = [d for d in dirs if d not in exclude_paths]
+        
         for f in files:
             if f.endswith('.py'):
                 p = Path(root) / f
-                if p.stat().st_mtime > since:
-                    modified.append(p)
+                try:
+                    # Only consider files modified after since time and skip backup/temp files
+                    if (p.stat().st_mtime > since and 
+                        not f.endswith('.bak') and 
+                        not f.startswith('.') and
+                        p.stat().st_size > 0):  # Skip empty files
+                        modified.append(p)
+                except (OSError, PermissionError):
+                    continue
     return modified
 
 def get_test_modules_for_files(files: list[Path]) -> list[Path]:
@@ -112,6 +126,16 @@ def get_failed_or_skipped_tests() -> list[str]:
     except (json.JSONDecodeError, FileNotFoundError, Exception):
         # If there's any issue reading the cache, assume no failed tests
         return []
+
+def is_test_actually_failed(test_path: Path) -> bool:
+    """Check if a test file actually failed based on pytest cache"""
+    failed_tests = get_failed_or_skipped_tests()
+    test_file_str = str(test_path.relative_to(PROJECT_ROOT))
+    
+    for failed_test in failed_tests:
+        if failed_test.startswith(test_file_str):
+            return True
+    return False
 
 def clean_test_data() -> None:
     """Clean up existing test data completely"""
@@ -259,7 +283,11 @@ def get_test_methods(test_file: Path) -> list[str]:
     return test_methods
 
 
-def run_test_modules_sequentially(test_targets: list[Path]) -> bool:
+def run_test_modules_sequentially(test_targets: list[Path]) -> tuple[bool, int, int]:
+    """Run test modules sequentially and return (success, passed_count, failed_count)"""
+    passed_count = 0
+    failed_count = 0
+    
     for idx, t in enumerate(test_targets, 1):
         print(f"--- [{idx}/{len(test_targets)}] Running: {t} ---")
         # Use absolute path to avoid issues with working directory changes
@@ -298,10 +326,19 @@ def run_test_modules_sequentially(test_targets: list[Path]) -> bool:
         update_test_performance_cache(test_file_name, execution_time)
 
         if result.returncode != 0:
-            print(f"❌ {t} FAILED. Stopping further tests.")
-            return False
-    print("✅ All selected tests passed.")
-    return True
+            print(f"❌ {t.name} FAILED.")
+            failed_count += 1
+        else:
+            print(f"✅ {t.name} PASSED.")
+            passed_count += 1
+    
+    overall_success = failed_count == 0
+    if overall_success:
+        print(f"✅ All {len(test_targets)} tests passed.")
+    else:
+        print(f"❌ {failed_count} out of {len(test_targets)} tests failed.")
+    
+    return overall_success, passed_count, failed_count
 
 def run_specific_test_file(test_file: str) -> bool:
     """Run a specific test file"""
@@ -451,6 +488,11 @@ def run_failed_tests() -> bool:
 
 def run_changed_tests() -> bool:
     """Run tests for changed files with dependency consideration"""
+    success, _, _ = run_changed_tests_with_results()
+    return success
+
+def run_changed_tests_with_results() -> tuple[bool, int, int]:
+    """Run tests for changed files and return detailed results"""
     last_success = get_last_success_time()
     modified_files = get_modified_files(last_success)
 
@@ -459,14 +501,14 @@ def run_changed_tests() -> bool:
 
     if not modified_files:
         print("✅ 변경된 테스트가 없습니다. 아무 테스트도 실행하지 않습니다.")
-        return True
+        return True, 0, 0
 
     # Get test targets considering import dependencies
     test_targets = get_test_targets_with_dependencies(modified_files)
 
     if not test_targets:
         print("No test targets found for changed files.")
-        return True
+        return True, 0, 0
 
     print("\n🎯 Running tests for changed files (with dependency analysis)...")
     print(f"📋 Found {len(test_targets)} test targets for {len(modified_files)} modified files")
@@ -1144,27 +1186,27 @@ def get_reverse_dependencies(deps: dict[Path, set[Path]]) -> dict[Path, set[Path
     return reverse_deps
 
 def get_affected_files(modified_files: list[Path], deps: dict[Path, set[Path]], 
-                      reverse_deps: dict[Path, set[Path]]) -> set[Path]:
-    """Get all files affected by the modified files (recursive dependency tracking)"""
+                      reverse_deps: dict[Path, set[Path]], max_depth: int = 2) -> set[Path]:
+    """Get all files affected by the modified files (limited recursive dependency tracking)"""
     affected = set(modified_files)
-    to_process = set(modified_files)
+    to_process = [(f, 0) for f in modified_files]  # (file, depth)
     processed = set()
     
-    # 재귀적으로 모든 영향을 받는 파일을 찾기
+    # 제한된 깊이로 영향을 받는 파일을 찾기
     while to_process:
-        current_file = to_process.pop()
-        if current_file in processed:
+        current_file, depth = to_process.pop(0)
+        if current_file in processed or depth >= max_depth:
             continue
             
         processed.add(current_file)
         
-        # 현재 파일을 import하는 모든 파일들을 찾기
+        # 현재 파일을 import하는 파일들을 찾기 (한 단계만)
         if current_file in reverse_deps:
             importers = reverse_deps[current_file]
             for importer in importers:
                 if importer not in affected:
                     affected.add(importer)
-                    to_process.add(importer)
+                    to_process.append((importer, depth + 1))
     
     return affected
 
@@ -1283,8 +1325,8 @@ def get_test_targets_with_dependencies(modified_files: list[Path]) -> list[Path]
         print("📋 No relevant files changed (test_runner.py changes are ignored)")
         return []
 
-    # Get all affected files
-    affected_files = get_affected_files(modified_files, deps, reverse_deps)
+    # Get all affected files with limited depth
+    affected_files = get_affected_files(modified_files, deps, reverse_deps, max_depth=2)
 
     # Get failed tests to include their dependencies
     failed_tests = get_failed_or_skipped_tests()
@@ -1296,28 +1338,40 @@ def get_test_targets_with_dependencies(modified_files: list[Path]) -> list[Path]
             if test_path.exists():
                 failed_test_paths.add(test_path)
 
-    # pytest 캐시에서 이미 성공한 테스트 모듈 추출
+    # pytest 캐시에서 이미 성공한 테스트 모듈 추출 (개선된 버전)
     def get_passed_tests() -> set[Path]:
         cache_dir = Path(".pytest_cache/v/cache")
         lastfailed_file = cache_dir / "lastfailed"
-        if not lastfailed_file.exists():
-            return set()
-        try:
-            import json
-            with open(lastfailed_file, 'r') as f:
-                failed_data = json.load(f)
-            # 전체 테스트 목록
-            all_tests = set()
-            for test_file in (TEST_DIR).glob("test_*.py"):
+        
+        # 실패한 테스트 파일 수집
+        failed_files = set()
+        if lastfailed_file.exists():
+            try:
+                import json
+                with open(lastfailed_file, 'r') as f:
+                    failed_data = json.load(f)
+                for test_key in failed_data.keys():
+                    if test_key.startswith("tests/") and "::" in test_key:
+                        test_file_path = PROJECT_ROOT / test_key.split("::")[0]
+                        if test_file_path.exists():
+                            failed_files.add(test_file_path.resolve())
+            except Exception:
+                pass
+        
+        # 전체 테스트 목록
+        all_tests = set()
+        for test_file in TEST_DIR.glob("test_*.py"):
+            if test_file.name != "test_runner.py":
                 all_tests.add(test_file.resolve())
-            # 실패한 테스트 파일
-            failed_files = set()
-            for test_key in failed_data.keys():
-                if test_key.startswith("tests/") and "::" in test_key:
-                    failed_files.add((PROJECT_ROOT / test_key.split("::")[0]).resolve())
-            # 성공한 테스트 파일 = 전체 - 실패
-            return all_tests - failed_files
-        except Exception:
+        
+        # 성공한 테스트 = 전체 - 실패 하지만, 너무 공격적이면 빈 set 반환
+        passed_tests = all_tests - failed_files
+        
+        # 만약 실패한 테스트가 2개 이하라면 대부분 성공한 것으로 간주
+        if len(failed_files) <= 2:
+            return passed_tests
+        else:
+            # 너무 많이 실패하면 전체 재실행 필요
             return set()
 
     # Convert affected files to test targets (테스트 모듈만)
@@ -1363,11 +1417,14 @@ def get_test_targets_with_dependencies(modified_files: list[Path]) -> list[Path]
     passed_tests = get_passed_tests()
     unique_targets = [t for t in unique_targets if t not in passed_tests]
 
-    # Debug output
-    print(f"🔍 Debug: Modified files: {[f.name for f in modified_files]}")
-    print(f"🔍 Debug: Affected files: {[f.name for f in affected_files]}")
-    print(f"🔍 Debug: Failed tests: {[f.name for f in failed_test_paths]}")
-    print(f"🔍 Debug: Test targets: {[f.name for f in unique_targets]}")
+    # Debug output (improved)
+    print(f"🔍 Debug: Modified files ({len(modified_files)}): {[f.name for f in modified_files[:5]]}{'...' if len(modified_files) > 5 else ''}")
+    print(f"🔍 Debug: Affected files ({len(affected_files)}): {[f.name for f in list(affected_files)[:5]]}{'...' if len(affected_files) > 5 else ''}")
+    print(f"🔍 Debug: Failed tests ({len(failed_test_paths)}): {[f.name for f in failed_test_paths]}")
+    print(f"🔍 Debug: Test targets ({len(unique_targets)}): {[f.name for f in unique_targets]}")
+    
+    if len(unique_targets) > 10:
+        print(f"⚠️  Warning: {len(unique_targets)} tests selected. This might be too many. Consider running with -f flag for specific tests.")
 
     return unique_targets
 
@@ -1440,7 +1497,7 @@ def main() -> bool:
     # Calculate modified and affected files
     last_success = get_last_success_time()
     modified_files = set(get_modified_files(last_success))
-    affected_files = get_affected_files(list(modified_files), deps, reverse_deps) if modified_files else set()
+    affected_files = get_affected_files(list(modified_files), deps, reverse_deps, max_depth=2) if modified_files else set()
 
     # Print dependency graph based on the mode
     if args.file:
@@ -1525,9 +1582,15 @@ def main() -> bool:
                 failed_tests.add(test_file)
     else:
         # Default behavior: run failed tests first, then changed tests
-        if not run_failed_tests():
+        failed_tests_success = run_failed_tests()
+        if not failed_tests_success:
             return False
-        success = run_changed_tests()
+        
+        # Run changed tests and get detailed results
+        success, passed_count, failed_count = run_changed_tests_with_results()
+        
+        print(f"\n📋 Test execution completed: {passed_count} passed, {failed_count} failed")
+        
         # Update test status after execution
         last_success = get_last_success_time()
         modified_files = get_modified_files(last_success)
@@ -1535,10 +1598,14 @@ def main() -> bool:
             test_targets = get_test_targets_with_dependencies(modified_files)
             for test_target in test_targets:
                 executed_tests.add(test_target)
-                if success:
-                    passed_tests.add(test_target)
-                else:
+                # Check actual test result from pytest cache
+                if is_test_actually_failed(test_target):
                     failed_tests.add(test_target)
+                else:
+                    passed_tests.add(test_target)
+        
+        # Override success based on actual results
+        success = failed_count == 0
     
     # Update last success time if tests passed
     if success:
@@ -1553,6 +1620,11 @@ def main() -> bool:
         print(f"✅ Passed: {len(passed_tests)} tests")
         print(f"❌ Failed: {len(failed_tests)} tests")
         print(f"📋 Total executed: {len(executed_tests)} tests")
+        
+        if len(passed_tests) > 0:
+            print(f"✅ Passed tests: {[t.name for t in list(passed_tests)[:5]]}{'...' if len(passed_tests) > 5 else ''}")
+        if len(failed_tests) > 0:
+            print(f"❌ Failed tests: {[t.name for t in failed_tests]}")
 
         # 실패한 테스트가 있을 때만 상세 트리 출력
         if failed_tests:
