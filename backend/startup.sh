@@ -5,7 +5,7 @@ absolute_path="$(dirname "$SCRIPT_PATH")"
 cd "$absolute_path"
 pwd
 
-export $(grep -v '^#' .env.development | xargs)
+source .env.development
 env | grep -E "^(FM_|WEB_|MYSQL_)" | sort
 
 db_name="fm_db"
@@ -63,5 +63,5 @@ echo "###### run backend ######"
 #echo "$!" > "$pidfile"
 #sleep 2
 #tail nohup.out
-uvicorn backend.main:app --reload --port="$FM_BACKEND_PORT"
+PYTHONPATH="$(dirname "$absolute_path"):$PYTHONPATH" uvicorn backend.main:app --reload --port="$FM_BACKEND_PORT"
 
