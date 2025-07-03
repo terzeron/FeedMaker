@@ -18,7 +18,7 @@ LOGGER = logging.getLogger()
 
 class FeedManager:
     work_dir_path = Path(Env.get("FM_WORK_DIR"))
-    public_feed_dir_path = Path(Env.get("WEB_SERVICE_ROOT_DIR"))
+    public_feed_dir_path = Path(Env.get("WEB_SERVICE_FEED_DIR_PREFIX"))
     
     @classmethod
     def get_feed_name_list_url_count_map(cls) -> dict[str, dict[str, Any]]:
