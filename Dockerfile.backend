@@ -1,10 +1,8 @@
-# syntax=docker/dockerfile:1
-FROM debian:bookworm-slim
+FROM python:3.11-slim
 
 # 시스템 패키지 설치 (root 사용자로)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    python3 python3-dev python3-pip python3-venv python-is-python3 \
     libpoppler-dev libpoppler-cpp-dev libheif-dev libcairo2-dev \
     build-essential git curl && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
@@ -20,11 +18,10 @@ RUN useradd -u $USER_ID $USER_NAME && \
 USER $USER_NAME
 WORKDIR /app
 
-# requirements.txt 먼저 복사 및 설치 (캐시 활용)
+# requirements.txt 먼저 복사 및 전역 설치 (캐시 활용)
 COPY requirements.txt /app
-RUN python3 -m venv /app/venv && \
-    /app/venv/bin/pip install --upgrade pip setuptools wheel && \
-    /app/venv/bin/pip install --no-cache-dir --use-pep517 -r requirements.txt
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir --use-pep517 -r requirements.txt
 
 # 설정 및 소스 복사
 COPY logging.conf /app
@@ -41,11 +38,11 @@ VOLUME /xml
 VOLUME /logs
 
 ENV CARTOON_SPLIT_HOME_DIR="/app/CartoonSplit"
-ENV PATH="$PATH:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/home/$USER_NAME/.local/bin:/app/bin:/app/utils:/app/CartoonSplit:/app/CartoonSplit/bin:/app/venv/bin"
+ENV PATH="$PATH:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/home/$USER_NAME/.local/bin:/app/bin:/app/utils:/app/CartoonSplit:/app/CartoonSplit/bin"
 ENV PYTHONPATH="/app"
 ARG FM_BACKEND_DEFAULT_PORT=8010
 ENV FM_BACKEND_PORT=$FM_BACKEND_DEFAULT_PORT
 
 EXPOSE 8000
 
-CMD /app/venv/bin/uvicorn backend.main:app --workers 1 --host 0.0.0.0 --port $FM_BACKEND_PORT --log-level debug --access-log --log-config /app/logging.conf
+CMD ["uvicorn", "backend.main:app", "--workers", "1", "--host", "0.0.0.0", "--port", "8010", "--log-level", "debug", "--access-log", "--log-config", "/app/logging.conf"]
