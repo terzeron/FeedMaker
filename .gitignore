@@ -19,7 +19,7 @@ tests/tmp/
 
 # AI/IDE 관련 캐시
 .claude/
-.dependency_cache/
+.dependency_cache
 
 # 테스트 관련 임시 파일들
 .last_test_sucess
