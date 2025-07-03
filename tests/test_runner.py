@@ -1413,9 +1413,36 @@ def get_test_targets_with_dependencies(modified_files: list[Path]) -> list[Path]
             unique_targets.append(target)
             seen.add(target)
 
-    # 이미 성공한 테스트 모듈은 제외
+    # 수정된 파일에 대한 테스트는 항상 실행 (성공 여부와 관계없이)
+    # 이미 성공한 테스트 모듈 중에서 수정된 파일과 관련 없는 것만 제외
     passed_tests = get_passed_tests()
-    unique_targets = [t for t in unique_targets if t not in passed_tests]
+    
+    # 수정된 파일과 관련된 테스트는 항상 포함
+    modified_test_files = set()
+    for modified_file in modified_files:
+        if is_test_module(modified_file):
+            modified_test_files.add(modified_file)
+        else:
+            # 수정된 일반 파일에 대한 테스트 찾기
+            possible_test_names = [
+                f"test_{modified_file.stem}.py",
+                f"test_{modified_file.name}",
+                f"test_{modified_file.stem.replace('feed_maker_util_', 'feed_maker_util_')}.py"
+            ]
+            for test_name in possible_test_names:
+                test_path = TEST_DIR / test_name
+                if is_test_module(test_path) and test_path.exists():
+                    modified_test_files.add(test_path)
+                    break
+    
+    # affected_files에 포함된 테스트 모듈들도 항상 포함
+    affected_test_files = set()
+    for affected_file in affected_files:
+        if is_test_module(affected_file):
+            affected_test_files.add(affected_file)
+    
+    # 수정된 파일과 관련된 테스트 또는 affected_files에 포함된 테스트는 제외하지 않음
+    unique_targets = [t for t in unique_targets if t not in passed_tests or t in modified_test_files or t in affected_test_files]
 
     # Debug output (improved)
     print(f"🔍 Debug: Modified files ({len(modified_files)}): {[f.name for f in modified_files[:5]]}{'...' if len(modified_files) > 5 else ''}")
@@ -1572,14 +1599,18 @@ def main() -> bool:
             failed_tests.add(Path(args.file))
     elif args.all:
         success = run_all_tests()
-        # Update test status after execution
+        # Update test status after execution based on actual pytest cache results
         test_files = [f for f in TEST_DIR.glob("test_*.py") if f.name != "test_runner.py"]
         for test_file in test_files:
             executed_tests.add(test_file)
-            if success:
-                passed_tests.add(test_file)
-            else:
+            # Check actual test result from pytest cache
+            if is_test_actually_failed(test_file):
                 failed_tests.add(test_file)
+            else:
+                passed_tests.add(test_file)
+        
+        # Override success based on actual results
+        success = len(failed_tests) == 0
     else:
         # Default behavior: run failed tests first, then changed tests
         failed_tests_success = run_failed_tests()
