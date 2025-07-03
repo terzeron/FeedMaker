@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
-    "build": "node generate-version.js && vue-cli-service build",
+    "build": "node build-with-version.js",
+    "build:safe": "vue-cli-service build",
     "lint": "vue-cli-service lint",
     "mock:api": "node mock-api/server.js",
     "dev:mock": "concurrently \"npm run mock:api\" \"npm run serve\""
@@ -38,6 +39,7 @@
     "@babel/eslint-parser": "^7.27.5",
     "@vue/cli-plugin-babel": "^5.0.8",
     "@vue/cli-service": "^5.0.8",
+    "cross-env": "^7.0.3",
     "eslint": "^9.29.0",
     "eslint-plugin-vue": "^10.2.0",
     "vue-style-loader": "^4.1.3"
