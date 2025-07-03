@@ -8,7 +8,6 @@ sys.path.append(str(Path(__file__).parent))
 
 from utils.image_downloader import ImageDownloader
 from bin.crawler import Crawler
-from bin.feed_maker_util import Env, Config
 
 
 def create_test_image(width: int, height: int, format: str = "PNG") -> Path:
