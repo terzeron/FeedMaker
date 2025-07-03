@@ -16,11 +16,14 @@ LOGGER = logging.getLogger()
 
 def main() -> int:
     feed_dir_path = Path.cwd()
+    quality = 75  # default quality
 
-    optlist, args = getopt.getopt(sys.argv[1:], "f:")
+    optlist, args = getopt.getopt(sys.argv[1:], "f:q:")
     for o, a in optlist:
         if o == "-f":
             feed_dir_path = Path(a)
+        elif o == "-q":
+            quality = int(a)
 
     if not feed_dir_path.is_dir():
         LOGGER.error("can't find such a directory '%s'", PathUtil.short_path(feed_dir_path))
@@ -44,7 +47,7 @@ def main() -> int:
         m = re.search(r'<img[^>]*src=[\"\'](?P<img_url>[^\"\']+)[\"\']', line)
         if m:
             img_url = m.group("img_url")
-            _, new_img_url = ImageDownloader.download_image(crawler, feed_img_dir_path, img_url)
+            _, new_img_url = ImageDownloader.download_image(crawler, feed_img_dir_path, img_url, quality=quality)
             if new_img_url:
                 print(f"<img src='{new_img_url}'/>")
             else:
@@ -57,3 +60,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+# Test comment

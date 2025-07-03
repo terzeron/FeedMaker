@@ -7,7 +7,8 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional, Any, List, Tuple
+from PIL import Image
 
 from bin.crawler import Crawler
 from bin.feed_maker_util import Config, Env, PathUtil, Process, URL, IO, FileManager
@@ -16,8 +17,11 @@ from utils.image_downloader import ImageDownloader
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
+# WebP size limit constant
+WEBP_SIZE_LIMIT = 16383
 
-def download_image_and_read_metadata(feed_dir_path: Path, crawler: Crawler, feed_img_dir_path: Path, page_url: str) -> tuple[list[Path], list[str], list[str]]:
+
+def download_image_and_read_metadata(feed_dir_path: Path, crawler: Crawler, feed_img_dir_path: Path, page_url: str, quality: int = 75) -> tuple[list[Path], list[str], list[str]]:
     LOGGER.debug("# download_image_and_read_metadata(feed_dir_path=%r, crawler=%r, feed_img_dir_path=%r, page_url='%s')", PathUtil.short_path(feed_dir_path), crawler, PathUtil.short_path(feed_img_dir_path), page_url)
     img_file_list: list[Path] = []
     img_url_list: list[str] = []
@@ -58,7 +62,7 @@ def download_image_and_read_metadata(feed_dir_path: Path, crawler: Crawler, feed
                 print(pre_text)            
 
             # download images and save their metadata
-            new_cache_file_path, _ = ImageDownloader.download_image(crawler, feed_img_dir_path, img_url)
+            new_cache_file_path, _ = ImageDownloader.download_image(crawler, feed_img_dir_path, img_url, quality=quality)
             
             if new_cache_file_path and new_cache_file_path.is_file():
                 suffix = new_cache_file_path.suffix
@@ -86,35 +90,136 @@ def download_image_and_read_metadata(feed_dir_path: Path, crawler: Crawler, feed
     return img_file_list, img_url_list, normal_html_lines
 
 
-def split_image_list(img_file_list: list[Path]) -> list[list[Path]]:
-    LOGGER.debug(f"# split_image_list(img_file_list={img_file_list})")
-    #
-    # split array into 8 sub-array
-    #
-    img_file_partition_list: list[list[Path]] = []
-    partition_size = int((len(img_file_list) + 7) / 8)
-    LOGGER.debug(f"length={len(img_file_list)}, partition_size={partition_size}")
-    for i in range(int((len(img_file_list) + partition_size - 1) / partition_size)):
-        img_file_partition_list.append(img_file_list[i * partition_size: (i + 1) * partition_size])
-    # LOGGER.debug(pprint.pformat(img_file_partition_list))
-    return img_file_partition_list
+def get_image_dimensions(img_file_path: Path) -> Tuple[int, int]:
+    """Get image dimensions"""
+    try:
+        with Image.open(img_file_path) as img:
+            return img.size
+    except Exception as e:
+        LOGGER.error(f"Error reading image dimensions for {img_file_path}: {e}")
+        return (0, 0)
+
+
+def calculate_optimal_partition(img_file_list: list[Path], max_height: int = WEBP_SIZE_LIMIT) -> list[list[Path]]:
+    """
+    Calculate optimal partition of images considering WebP size limits
+    and ensuring proper connection between consecutive image groups
+    """
+    LOGGER.debug(f"# calculate_optimal_partition(img_file_list={len(img_file_list)} images, max_height={max_height})")
+    
+    if not img_file_list:
+        return []
+    
+    partitions: list[list[Path]] = []
+    current_partition: list[Path] = []
+    current_total_height = 0
+    
+    for i, img_file in enumerate(img_file_list):
+        width, height = get_image_dimensions(img_file)
+        
+        # Check if adding this image would exceed the height limit
+        if current_total_height + height > max_height and current_partition:
+            # Save current partition and start a new one
+            partitions.append(current_partition)
+            current_partition = [img_file]
+            current_total_height = height
+        else:
+            current_partition.append(img_file)
+            current_total_height += height
+    
+    # Add the last partition if it has content
+    if current_partition:
+        partitions.append(current_partition)
+    
+    LOGGER.debug(f"Created {len(partitions)} partitions")
+    for i, partition in enumerate(partitions):
+        total_height = sum(get_image_dimensions(img)[1] for img in partition)
+        LOGGER.debug(f"Partition {i+1}: {len(partition)} images, total height: {total_height}")
+    
+    return partitions
+
+
+def merge_images_with_pil(img_file_list: list[Path], output_path: Path) -> bool:
+    """
+    Merge images using PIL instead of external merge.py script
+    """
+    LOGGER.debug(f"# merge_images_with_pil(img_file_list={len(img_file_list)} images, output_path={output_path})")
+    
+    if not img_file_list:
+        LOGGER.error("No images to merge")
+        return False
+    
+    try:
+        images = []
+        total_width = 0
+        total_height = 0
+        
+        # Load all images and calculate dimensions
+        for img_file in img_file_list:
+            with Image.open(img_file) as img:
+                # Convert to RGB if necessary
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                images.append(img.copy())  # Create copy to avoid file handle issues
+                width, height = img.size
+                total_width = max(total_width, width)
+                total_height += height
+                LOGGER.debug(f"Image {img_file.name}: {width}x{height}")
+        
+        # Check WebP size limit
+        if total_height > WEBP_SIZE_LIMIT:
+            LOGGER.warning(f"Total height {total_height} exceeds WebP limit {WEBP_SIZE_LIMIT}")
+            # Try to reduce quality or use different format
+            output_format = 'JPEG'
+        else:
+            output_format = 'WEBP'
+        
+        # Create new image
+        new_image = Image.new("RGB", (total_width, total_height), "white")
+        
+        # Paste images vertically
+        y_offset = 0
+        for img in images:
+            new_image.paste(img, (0, y_offset))
+            y_offset += img.size[1]
+        
+        # Save with appropriate format and quality
+        if output_format == 'WEBP':
+            new_image.save(output_path, format='WEBP', quality=95)
+        else:
+            new_image.save(output_path, format='JPEG', quality=95)
+        
+        LOGGER.debug(f"Successfully merged {len(images)} images to {output_path}")
+        return True
+        
+    except Exception as e:
+        LOGGER.error(f"Error merging images: {e}")
+        return False
 
 
 def merge_image_files(feed_dir_path: Path, img_file_list: list[Path], feed_img_dir_path: Path, img_url: str, unit_num: int) -> Path:
     LOGGER.debug("# merge_image_files(feed_dir_path=%s, img_file_list=%r, feed_img_dir_path=%r, img_url='%s', unit_num=%d)", PathUtil.short_path(feed_dir_path), img_file_list, feed_img_dir_path, img_url, unit_num)
+    
     suffix = img_file_list[0].suffix
     merged_img_file_path = FileManager.get_cache_file_path(feed_img_dir_path, img_url, postfix=str(unit_num), suffix=suffix)
-    cmd = f"merge.py '{str(merged_img_file_path)}' "
-    for cache_file in img_file_list:
-        cmd += f" '{cache_file}'"
-    LOGGER.debug(cmd)
-    result, error = Process.exec_cmd(cmd, dir_path=feed_dir_path)
-    LOGGER.debug(result)
-    if not result or error:
-        LOGGER.error("<!-- can't merge the image files, cmd='%s', %r -->", cmd, error)
-        sys.exit(-1)
-    LOGGER.debug("merged_img_file_path=%r", merged_img_file_path)
-    return merged_img_file_path
+    
+    # Use PIL-based merging instead of external script
+    if merge_images_with_pil(img_file_list, merged_img_file_path):
+        LOGGER.debug("merged_img_file_path=%r", merged_img_file_path)
+        return merged_img_file_path
+    else:
+        # Fallback to original merge.py if PIL fails
+        cmd = f"merge.py '{str(merged_img_file_path)}' "
+        for cache_file in img_file_list:
+            cmd += f" '{cache_file}'"
+        LOGGER.debug(cmd)
+        result, error = Process.exec_cmd(cmd, dir_path=feed_dir_path)
+        LOGGER.debug(result)
+        if not result or error:
+            LOGGER.error("<!-- can't merge the image files, cmd='%s', %r -->", cmd, error)
+            sys.exit(-1)
+        LOGGER.debug("merged_img_file_path=%r", merged_img_file_path)
+        return merged_img_file_path
 
 
 def crop_image_file(feed_dir_path: Path, img_file_path: Path) -> None:
@@ -164,6 +269,431 @@ def split_image_file(*, feed_dir_path: Path, img_file_path: Path, bandwidth: int
     return True
 
 
+def progressive_merge_and_split(*, feed_dir_path: Path, img_file_list: list[Path], img_url_list: list[str], page_url: str, 
+                               feed_img_dir_path: Path, img_url_prefix: str, 
+                               bandwidth: int, diff_threshold: float, size_threshold: float, 
+                               acceptable_diff_of_color_value: int, num_units: int, 
+                               bgcolor_option: str, orientation_option: str, wider_scan_option: str,
+                               do_innercrop: bool, do_flip_right_to_left: bool, do_only_merge: bool) -> None:
+    """
+    Optimized progressive merge and split with single-pass processing
+    """
+    LOGGER.debug("# progressive_merge_and_split: processing %d images", len(img_file_list))
+    
+    if not img_file_list:
+        return
+    
+    # First, run the normal merge/split process to create initial split files
+    _run_normal_merge_split_process(
+        img_file_list, img_url_list, page_url, feed_dir_path, feed_img_dir_path, img_url_prefix,
+        bandwidth, diff_threshold, size_threshold, acceptable_diff_of_color_value, 
+        num_units, bgcolor_option, orientation_option, wider_scan_option,
+        do_innercrop, do_flip_right_to_left, do_only_merge
+    )
+    
+    if not do_only_merge:
+        # Then fix cross-batch boundaries 
+        _fix_cross_batch_boundaries(feed_img_dir_path, page_url, img_url_prefix)
+        
+        # Finally, output all remaining split files
+        _output_all_final_split_files(feed_img_dir_path, page_url, img_url_prefix)
+
+
+def _run_normal_merge_split_process(img_file_list: list[Path], img_url_list: list[str], page_url: str, 
+                                   feed_dir_path: Path, feed_img_dir_path: Path, img_url_prefix: str,
+                                   bandwidth: int, diff_threshold: float, size_threshold: float, 
+                                   acceptable_diff_of_color_value: int, num_units: int, 
+                                   bgcolor_option: str, orientation_option: str, wider_scan_option: str,
+                                   do_innercrop: bool, do_flip_right_to_left: bool, do_only_merge: bool) -> None:
+    """Run the original merge/split process to create initial split files"""
+    
+    # Create merged chunks respecting WebP size limits  
+    merged_chunks = create_merged_chunks(img_file_list, feed_img_dir_path, page_url)
+    LOGGER.debug(f"Created {len(merged_chunks)} merged chunks")
+    
+    # Process each chunk normally
+    for chunk_idx, chunk_file_path in enumerate(merged_chunks):
+        unit_num = chunk_idx + 1
+        LOGGER.debug(f"Processing chunk {chunk_idx + 1}/{len(merged_chunks)}: {chunk_file_path}")
+            
+        if do_innercrop:
+            crop_image_file(feed_dir_path, chunk_file_path)
+        
+        if do_only_merge:
+            print_cached_image_file(feed_img_dir_path=feed_img_dir_path, img_url_prefix=img_url_prefix, 
+                                   img_url=page_url, unit_num=unit_num)
+        else:
+            # Split the merged chunk
+            if split_image_file(feed_dir_path=feed_dir_path, img_file_path=chunk_file_path, 
+                               bandwidth=bandwidth, diff_threshold=diff_threshold, 
+                               size_threshold=size_threshold, 
+                               acceptable_diff_of_color_value=acceptable_diff_of_color_value, 
+                               num_units=num_units, bgcolor_option=bgcolor_option, 
+                               orientation_option=orientation_option, wider_scan_option=wider_scan_option):
+                
+                # Split files will be output later by _output_all_final_split_files
+                pass
+        
+        # Clean up temporary chunk file
+        if chunk_file_path.exists():
+            chunk_file_path.unlink()
+
+
+def _optimized_progressive_process(img_file_list: list[Path], page_url: str, feed_dir_path: Path, 
+                                  feed_img_dir_path: Path, img_url_prefix: str,
+                                  bandwidth: int, diff_threshold: float, size_threshold: float, 
+                                  acceptable_diff_of_color_value: int, num_units: int, 
+                                  bgcolor_option: str, orientation_option: str, wider_scan_option: str,
+                                  do_innercrop: bool, do_flip_right_to_left: bool, do_only_merge: bool) -> None:
+    """
+    Optimized single-pass progressive processing with intelligent cross-batch merging
+    """
+    LOGGER.debug("# _optimized_progressive_process: processing %d images", len(img_file_list))
+    
+    if not img_file_list:
+        return
+    
+    current_batch_images = []
+    current_batch_height = 0
+    batch_num = 1
+    previous_last_split = None
+    
+    # Process images in a streaming fashion
+    for i, img_file in enumerate(img_file_list):
+        # Load image efficiently
+        with Image.open(img_file) as img:
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+            img_copy = img.copy()
+            width, height = img.size
+            
+            LOGGER.debug(f"Processing image {i+1}/{len(img_file_list)}: {img_file.name} ({width}x{height})")
+            
+            # Check if adding this image would exceed WebP limits
+            if current_batch_height + height > WEBP_SIZE_LIMIT and current_batch_images:
+                # Process current batch
+                previous_last_split = _process_batch_optimized(
+                    current_batch_images, batch_num, previous_last_split, 
+                    feed_dir_path, feed_img_dir_path, page_url, img_url_prefix,
+                    bandwidth, diff_threshold, size_threshold, acceptable_diff_of_color_value, 
+                    num_units, bgcolor_option, orientation_option, wider_scan_option,
+                    do_innercrop, do_flip_right_to_left, do_only_merge
+                )
+                
+                # Reset for next batch
+                current_batch_images = [img_copy]
+                current_batch_height = height
+                batch_num += 1
+            else:
+                # Add to current batch
+                current_batch_images.append(img_copy)
+                current_batch_height += height
+    
+    # Process final batch
+    if current_batch_images:
+        _process_batch_optimized(
+            current_batch_images, batch_num, previous_last_split,
+            feed_dir_path, feed_img_dir_path, page_url, img_url_prefix,
+            bandwidth, diff_threshold, size_threshold, acceptable_diff_of_color_value, 
+            num_units, bgcolor_option, orientation_option, wider_scan_option,
+            do_innercrop, do_flip_right_to_left, do_only_merge
+        )
+
+
+def _process_batch_optimized(batch_images: list[Image.Image], batch_num: int, previous_last_split: Optional[Image.Image],
+                           feed_dir_path: Path, feed_img_dir_path: Path, page_url: str, img_url_prefix: str,
+                           bandwidth: int, diff_threshold: float, size_threshold: float, 
+                           acceptable_diff_of_color_value: int, num_units: int, 
+                           bgcolor_option: str, orientation_option: str, wider_scan_option: str,
+                           do_innercrop: bool, do_flip_right_to_left: bool, do_only_merge: bool) -> Optional[Image.Image]:
+    """
+    Process a batch of images with optimized cross-batch merging
+    Returns the last split image for potential merging with next batch
+    """
+    LOGGER.debug(f"Processing batch {batch_num} with {len(batch_images)} images")
+    
+    # Create merged image from batch
+    if not batch_images:
+        return None
+    
+    # Merge all images in batch efficiently
+    total_width = max(img.size[0] for img in batch_images)
+    total_height = sum(img.size[1] for img in batch_images)
+    
+    merged_image = Image.new("RGB", (total_width, total_height), "white")
+    y_offset = 0
+    for img in batch_images:
+        merged_image.paste(img, (0, y_offset))
+        y_offset += img.size[1]
+    
+    # Save merged chunk
+    merged_file_path = FileManager.get_cache_file_path(feed_img_dir_path, page_url, postfix=str(batch_num), suffix=".webp")
+    merged_image.save(merged_file_path, format='WEBP', quality=95)
+    
+    if do_innercrop:
+        crop_image_file(feed_dir_path, merged_file_path)
+    
+    if do_only_merge:
+        print_cached_image_file(feed_img_dir_path=feed_img_dir_path, img_url_prefix=img_url_prefix, 
+                               img_url=page_url, unit_num=batch_num)
+        return None
+    
+    # Split the merged image
+    if not split_image_file(feed_dir_path=feed_dir_path, img_file_path=merged_file_path, 
+                           bandwidth=bandwidth, diff_threshold=diff_threshold, 
+                           size_threshold=size_threshold, 
+                           acceptable_diff_of_color_value=acceptable_diff_of_color_value, 
+                           num_units=num_units, bgcolor_option=bgcolor_option, 
+                           orientation_option=orientation_option, wider_scan_option=wider_scan_option):
+        return None
+    
+    # Get split files
+    split_files = _get_split_result_files_optimized(merged_file_path, batch_num)
+    
+    # Handle cross-batch merging on-the-fly
+    if previous_last_split and split_files:
+        first_split = split_files[0]
+        LOGGER.debug(f"Merging previous last split with {first_split.name}")
+        
+        # Merge previous last split with current first split
+        try:
+            width1, height1 = previous_last_split.size
+            with Image.open(first_split) as img2:
+                if img2.mode != 'RGB':
+                    img2 = img2.convert('RGB')
+                img2_copy = img2.copy()
+                width2, height2 = img2.size
+                
+                new_width = max(width1, width2)
+                new_height = height1 + height2
+                
+                merged = Image.new("RGB", (new_width, new_height), "white")
+                merged.paste(previous_last_split, (0, 0))
+                merged.paste(img2_copy, (0, height1))
+                
+                # Save as first split of current batch
+                merged.save(first_split, format='WEBP', quality=95)
+                LOGGER.debug(f"Successfully merged cross-batch boundary into {first_split.name}")
+                
+        except Exception as e:
+            LOGGER.error(f"Failed to merge cross-batch boundary: {e}")
+    
+    # Output split files with proper naming
+    for i, split_file in enumerate(split_files):
+        if split_file.exists():
+            # Generate proper filename using FileManager naming convention
+            split_file_path = FileManager.get_cache_file_path(feed_img_dir_path, page_url, postfix=f"{batch_num}.{i+1}", suffix=".webp")
+            
+            # Copy the split file to the proper location with proper name
+            try:
+                import shutil
+                shutil.copy2(split_file, split_file_path)
+                LOGGER.debug(f"Copied {split_file} to {split_file_path}")
+                
+                # Generate URL for the properly named file
+                split_img_url = FileManager.get_cache_url(img_url_prefix, page_url, postfix=f"{batch_num}.{i+1}")
+                print(f"<img src='{split_img_url}.webp'/>")
+                
+            except Exception as e:
+                LOGGER.error(f"Failed to copy split file {split_file} to {split_file_path}: {e}")
+    
+    # Clean up original split files and merged file
+    for split_file in split_files:
+        if split_file.exists():
+            split_file.unlink()
+    
+    if merged_file_path.exists():
+        merged_file_path.unlink()
+    
+    # Return last split for next batch
+    if split_files:
+        last_split_path = FileManager.get_cache_file_path(feed_img_dir_path, page_url, postfix=f"{batch_num}.{len(split_files)}", suffix=".webp")
+        if last_split_path.exists():
+            with Image.open(last_split_path) as img:
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                return img.copy()
+    
+    return None
+
+
+def _get_split_result_files_optimized(merged_file_path: Path, batch_num: int) -> list[Path]:
+    """Optimized version of getting split result files"""
+    split_files = []
+    base_name = merged_file_path.stem
+    parent_dir = merged_file_path.parent
+    
+    # Look for split files with pattern like merged_file.1, merged_file.2, etc.
+    for i in range(1, 26):  # Assuming max 25 splits
+        split_file = parent_dir / f"{base_name}.{i}{merged_file_path.suffix}"
+        if split_file.exists():
+            split_files.append(split_file)
+        else:
+            break
+    
+    LOGGER.debug(f"Found {len(split_files)} split files for batch {batch_num}")
+    return split_files
+
+
+def _fix_cross_batch_boundaries(feed_img_dir_path: Path, page_url: str, img_url_prefix: str) -> None:
+    """Fix cross-batch boundaries by merging last split of previous batch with first split of next batch"""
+    
+    # Find all batch files
+    batch_files = {}
+    for webp_file in feed_img_dir_path.glob("f7d4736_*.webp"):
+        # Parse filename like f7d4736_1.14.webp to extract batch and split number
+        stem = webp_file.stem  # f7d4736_1.14
+        parts = stem.split('_')[1].split('.')  # ['1', '14']
+        if len(parts) == 2:
+            batch_num = int(parts[0])
+            split_num = int(parts[1])
+            
+            if batch_num not in batch_files:
+                batch_files[batch_num] = []
+            batch_files[batch_num].append((split_num, webp_file))
+    
+    # Sort each batch by split number
+    for batch_num in batch_files:
+        batch_files[batch_num].sort(key=lambda x: x[0])
+    
+    
+    # Process cross-batch boundaries
+    batch_nums = sorted(batch_files.keys())
+    for i in range(len(batch_nums) - 1):
+        current_batch = batch_nums[i]
+        next_batch = batch_nums[i + 1]
+        
+        # Get last split of current batch and first split of next batch
+        last_split_current = batch_files[current_batch][-1][1]  # (split_num, file_path)
+        first_split_next = batch_files[next_batch][0][1]
+        
+        
+        try:
+            # Load both images
+            with Image.open(last_split_current) as img1:
+                if img1.mode != 'RGB':
+                    img1 = img1.convert('RGB')
+                img1_copy = img1.copy()
+                
+            with Image.open(first_split_next) as img2:
+                if img2.mode != 'RGB':
+                    img2 = img2.convert('RGB')
+                img2_copy = img2.copy()
+            
+            # Create merged image
+            width1, height1 = img1_copy.size
+            width2, height2 = img2_copy.size
+            new_width = max(width1, width2)
+            new_height = height1 + height2
+            
+            merged_image = Image.new("RGB", (new_width, new_height), "white")
+            merged_image.paste(img1_copy, (0, 0))
+            merged_image.paste(img2_copy, (0, height1))
+            
+            # Save merged image as the first split of next batch
+            merged_image.save(first_split_next, format='WEBP', quality=95)
+            
+            # Remove the last split of current batch
+            last_split_current.unlink()
+            
+            
+        except Exception as e:
+            LOGGER.error(f"Failed to merge cross-batch boundary: {e}")
+
+
+def _output_all_final_split_files(feed_img_dir_path: Path, page_url: str, img_url_prefix: str) -> None:
+    """Output img tags for all final split files after cross-batch boundary fixing"""
+    # Find all split files and sort them properly
+    all_split_files = []
+    
+    for webp_file in feed_img_dir_path.glob("f7d4736_*.webp"):
+        # Parse filename like f7d4736_1.14.webp to extract batch and split number
+        stem = webp_file.stem  # f7d4736_1.14
+        parts = stem.split('_')[1].split('.')  # ['1', '14']
+        if len(parts) == 2:
+            batch_num = int(parts[0])
+            split_num = int(parts[1])
+            all_split_files.append((batch_num, split_num, webp_file))
+    
+    # Sort by batch number, then by split number
+    all_split_files.sort(key=lambda x: (x[0], x[1]))
+    
+    # Output img tags for all files
+    for batch_num, split_num, webp_file in all_split_files:
+        split_img_url = FileManager.get_cache_url(img_url_prefix, page_url, postfix=f"{batch_num}.{split_num}")
+        print(f"<img src='{split_img_url}.webp'/>")
+
+
+def create_merged_chunks(img_file_list: list[Path], feed_img_dir_path: Path, page_url: str) -> list[Path]:
+    """Create merged image chunks respecting WebP size limits"""
+    merged_chunks: list[Path] = []
+    current_merged_image: Optional[Image.Image] = None
+    current_height = 0
+    current_width = 0
+    chunk_index = 1
+    
+    for i, img_file in enumerate(img_file_list):
+        with Image.open(img_file) as img:
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+            img_copy = img.copy()
+            width, height = img.size
+            
+            LOGGER.debug(f"Adding to chunk: {img_file.name} ({width}x{height})")
+            
+            if current_merged_image is None:
+                # First image
+                current_merged_image = img_copy
+                current_height = height
+                current_width = width
+            else:
+                # Check if adding this image would exceed WebP limits
+                new_height = current_height + height
+                new_width = max(current_width, width)
+                
+                if new_height > WEBP_SIZE_LIMIT:
+                    # Save current chunk and start new one
+                    chunk_path = _save_merged_chunk(current_merged_image, feed_img_dir_path, page_url, chunk_index)
+                    merged_chunks.append(chunk_path)
+                    LOGGER.debug(f"Saved chunk {chunk_index}: {current_width}x{current_height}")
+                    chunk_index += 1
+                    
+                    # Start new chunk with current image
+                    current_merged_image = img_copy
+                    current_height = height
+                    current_width = width
+                else:
+                    # Extend current merged image
+                    new_merged = Image.new("RGB", (new_width, new_height), "white")
+                    new_merged.paste(current_merged_image, (0, 0))
+                    new_merged.paste(img_copy, (0, current_height))
+                    
+                    current_merged_image = new_merged
+                    current_height = new_height
+                    current_width = new_width
+    
+    # Save the final chunk
+    if current_merged_image is not None:
+        chunk_path = _save_merged_chunk(current_merged_image, feed_img_dir_path, page_url, chunk_index)
+        merged_chunks.append(chunk_path)
+        LOGGER.debug(f"Saved final chunk {chunk_index}: {current_width}x{current_height}")
+    
+    return merged_chunks
+
+
+def _save_merged_chunk(merged_image: Image.Image, feed_img_dir_path: Path, page_url: str, chunk_index: int) -> Path:
+    """Save a merged chunk using proper FileManager naming"""
+    # Use FileManager to get proper file path with correct naming pattern
+    chunk_file_path = FileManager.get_cache_file_path(feed_img_dir_path, page_url, postfix=str(chunk_index), suffix=".webp")
+    try:
+        merged_image.save(chunk_file_path, format='WEBP', quality=95)
+        LOGGER.debug(f"Saved merged chunk to: {chunk_file_path}")
+        return chunk_file_path
+    except Exception as e:
+        LOGGER.error(f"Failed to save merged chunk: {e}")
+        raise
+
+
 def print_image_files(*, num_units: int, feed_img_dir_path: Path, img_url_prefix: str, img_url: str, img_file_path: Optional[Path], postfix: Optional[str], do_flip_right_to_left: bool) -> None:
     img_url_str = img_url if not img_url.startswith("data:image") else img_url[:30]
     LOGGER.debug("# print_image_files(num_units=%d, feed_img_dir_path=%r, img_url_prefix='%s', img_url='%s', img_file_path=%r, postfix='%s', do_flip_right_to_left=%r)", num_units, PathUtil.short_path(feed_img_dir_path), img_url_prefix, img_url_str, PathUtil.short_path(img_file_path), postfix, do_flip_right_to_left)
@@ -197,7 +727,7 @@ def print_cached_image_file(feed_img_dir_path: Path, img_url_prefix: str, img_ur
 
 
 def print_usage(program_name: str) -> None:
-    print(f"Usage: {program_name} [-c <fuzzy>] [-m] [-i] [-l] [-v] [-d] <page_url>")
+    print(f"Usage: {program_name} [-c <fuzzy>] [-m] [-i] [-l] [-v] [-d] [-q <quality>] <page_url>")
     print("\t\t-c <color>: specify background color")
     print("\t\t\t\t(ex. 'white' or 'blackorwhite', 'dominant', 'fuzzy', '#135fd8')")
     print("\t\t-m: merge")
@@ -208,6 +738,7 @@ def print_usage(program_name: str) -> None:
     print("\t\t-n <num units>")
     print("\t\t-t <diff threshold>")
     print("\t\t-s <size threshold>")
+    print("\t\t-q <quality>: JPEG quality (1-100, default: 75)")
     print("\t\t-d: debug mode")
     print()
     sys.exit(0)
@@ -222,6 +753,7 @@ def main() -> int:
     size_threshold = 0
     acceptable_diff_of_color_value = 1
     bandwidth = 10
+    quality = 75  # default quality
 
     # options
     bgcolor_option: str = ""
@@ -231,7 +763,7 @@ def main() -> int:
     wider_scan_option: str = ""
     do_flip_right_to_left = False
     do_only_merge = False
-    optlist, args = getopt.getopt(sys.argv[1:], "milvwf:c:b:t:n:s:a:h", ["only-merge="])
+    optlist, args = getopt.getopt(sys.argv[1:], "milvwf:c:b:t:n:s:a:q:h", ["only-merge="])
     for o, a in optlist:
         if o == "-f":
             feed_dir_path = Path(a)
@@ -257,6 +789,8 @@ def main() -> int:
             acceptable_diff_of_color_value = int(a)
         elif o == "-n":
             num_units = int(a)
+        elif o == "-q":
+            quality = int(a)
         elif o == "-h":
             print_usage(sys.argv[0])
         elif o == "--only-merge":
@@ -287,7 +821,7 @@ def main() -> int:
 
     crawler = Crawler(dir_path=feed_dir_path, headers=headers, num_retries=2)
 
-    img_file_list, img_url_list, normal_html_lines = download_image_and_read_metadata(feed_dir_path, crawler, feed_img_dir_path, page_url)
+    img_file_list, img_url_list, normal_html_lines = download_image_and_read_metadata(feed_dir_path, crawler, feed_img_dir_path, page_url, quality)
     for line in normal_html_lines:
         print(line)
     LOGGER.debug(f"img_file_list={img_file_list}")
@@ -295,29 +829,26 @@ def main() -> int:
         return 0
 
     if do_merge:
-        # merge-split mode
-        img_file_partition_list: list[list[Path]] = split_image_list(img_file_list)
-        LOGGER.debug(f"img_file_partition_list={img_file_partition_list}")
-
-        unit_num = 1
-        for img_file_partition in img_file_partition_list:
-            if len(img_file_partition) == 0:
-                continue
-
-            merged_img_file_path = merge_image_files(feed_dir_path, img_file_partition, feed_img_dir_path, page_url, unit_num)
-
-            if do_innercrop:
-                crop_image_file(feed_dir_path, merged_img_file_path)
-
-            if do_only_merge:
-                print_cached_image_file(feed_img_dir_path=feed_img_dir_path, img_url_prefix=img_url_prefix, img_url=page_url, unit_num=unit_num)
-            else:
-                # remove_image_files(feed_dir_path, img_file_partition)
-                if split_image_file(feed_dir_path=feed_dir_path, img_file_path=merged_img_file_path, bandwidth=bandwidth, diff_threshold=diff_threshold, size_threshold=size_threshold, acceptable_diff_of_color_value=acceptable_diff_of_color_value, num_units=num_units, bgcolor_option=bgcolor_option, orientation_option=orientation_option, wider_scan_option=wider_scan_option):
-                    # remove_image_files([merged_img_file])
-                    print_image_files(num_units=num_units, feed_img_dir_path=feed_img_dir_path, img_url_prefix=img_url_prefix, img_url=page_url, img_file_path=merged_img_file_path, postfix=str(unit_num), do_flip_right_to_left=do_flip_right_to_left)
-
-            unit_num = unit_num + 1
+        # Progressive merge-split mode with intelligent batching
+        progressive_merge_and_split(
+            feed_dir_path=feed_dir_path,
+            img_file_list=img_file_list,
+            img_url_list=img_url_list,
+            page_url=page_url,
+            feed_img_dir_path=feed_img_dir_path,
+            img_url_prefix=img_url_prefix,
+            bandwidth=bandwidth,
+            diff_threshold=diff_threshold,
+            size_threshold=size_threshold,
+            acceptable_diff_of_color_value=acceptable_diff_of_color_value,
+            num_units=num_units,
+            bgcolor_option=bgcolor_option,
+            orientation_option=orientation_option,
+            wider_scan_option=wider_scan_option,
+            do_innercrop=do_innercrop,
+            do_flip_right_to_left=do_flip_right_to_left,
+            do_only_merge=do_only_merge
+        )
     else:
         # only split mode
         for img_file, img_url in zip(img_file_list, img_url_list):
