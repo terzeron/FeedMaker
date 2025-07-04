@@ -62,7 +62,7 @@
           "
           :class="{
             active: activeFeedIndex === index,
-            'bg-secondary': !determineStatus(feed['feed_name']),
+            'bg-secondary': !determineStatus(feed),
           }"
           v-for="(feed, index) in feeds"
           :key="feed['group_name'] + '/' + feed['feed_name']"
@@ -85,7 +85,7 @@
           @click="groupNameButtonClicked(group.name, index)"
           :class="{
             active: activeGroupIndex === index,
-            'bg-secondary': !determineStatus(group.name),
+            'bg-secondary': !determineStatus(group),
           }"
           v-for="(group, index) in groups"
           :key="group.name"
@@ -108,7 +108,7 @@
           @click="feedNameButtonClicked(selectedGroupName, feed.name, index)"
           :class="{
             active: activeFeedIndex === index,
-            'bg-secondary': !determineStatus(feed.name),
+            'bg-secondary': !determineStatus(feed),
           }"
           v-for="(feed, index) in feeds"
           :key="feed.name"
@@ -363,7 +363,59 @@
 
 .button_list button {
   margin: 2px 3px 3px 2px !important;
+  transition: all 0.2s ease-in-out;
 }
+
+/* Active 상태 버튼 스타일 (선택된 항목) */
+.button_list button.active {
+  background-color: #007bff !important;
+  border-color: #0056b3 !important;
+  color: white !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3) !important;
+  transform: translateY(-1px) !important;
+}
+
+.button_list button.active:hover {
+  background-color: #0056b3 !important;
+  border-color: #004085 !important;
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.4) !important;
+}
+
+/* 비활성 상태 버튼 스타일 (비활성화된 피드/그룹) */
+.button_list button.bg-secondary {
+  background-color: #6c757d !important;
+  border-color: #545b62 !important;
+  color: #f8f9fa !important;
+  opacity: 0.8 !important;
+}
+
+.button_list button.bg-secondary:hover {
+  background-color: #545b62 !important;
+  border-color: #4e555b !important;
+  opacity: 1 !important;
+}
+
+/* 활성 상태 버튼 스타일 (활성화된 피드/그룹) */
+.button_list button:not(.active):not(.bg-secondary) {
+  background-color: #198754 !important;
+  border-color: #146c43 !important;
+  color: white !important;
+  font-weight: 500 !important;
+}
+
+.button_list button:not(.active):not(.bg-secondary):hover {
+  background-color: #146c43 !important;
+  border-color: #0f5132 !important;
+}
+
+/* 활성 버튼 호버 효과 */
+.button_list button:not(.active):not(.bg-secondary):hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 4px rgba(25, 135, 84, 0.3) !important;
+}
+
+
 
 div.jsoneditor-field {
   padding: 5px;
@@ -618,6 +670,47 @@ div.jsoneditor-value {
     background-color: #495057;
     color: #f8f9fa;
   }
+
+  /* 다크 테마에서 버튼 스타일 */
+  .button_list button.active {
+    background-color: #0d6efd !important;
+    border-color: #0a58ca !important;
+    color: white !important;
+    box-shadow: 0 2px 4px rgba(13, 110, 253, 0.4) !important;
+  }
+
+  .button_list button.active:hover {
+    background-color: #0a58ca !important;
+    border-color: #084298 !important;
+    box-shadow: 0 4px 8px rgba(13, 110, 253, 0.5) !important;
+  }
+
+  .button_list button.bg-secondary {
+    background-color: #495057 !important;
+    border-color: #343a40 !important;
+    color: #adb5bd !important;
+    opacity: 0.9 !important;
+  }
+
+  .button_list button.bg-secondary:hover {
+    background-color: #343a40 !important;
+    border-color: #212529 !important;
+    color: #ced4da !important;
+    opacity: 1 !important;
+  }
+
+  .button_list button:not(.active):not(.bg-secondary) {
+    background-color: #198754 !important;
+    border-color: #146c43 !important;
+    color: white !important;
+  }
+
+  .button_list button:not(.active):not(.bg-secondary):hover {
+    background-color: #146c43 !important;
+    border-color: #0f5132 !important;
+  }
+
+
 }
 </style>
 
@@ -714,10 +807,14 @@ export default {
   },
   computed: {
     feedStatus: function () {
-      return this.selectedFeedName[0] !== "_";
+      // 선택된 피드의 active 상태 확인
+      const selectedFeed = this.feeds.find(feed => feed.name === this.selectedFeedName);
+      return selectedFeed ? this.determineStatus(selectedFeed) : true;
     },
     groupStatus: function () {
-      return this.selectedGroupName[0] !== "_";
+      // 선택된 그룹의 active 상태 확인
+      const selectedGroup = this.groups.find(group => group.name === this.selectedGroupName);
+      return selectedGroup ? this.determineStatus(selectedGroup) : true;
     },
     feedStatusLabel: function () {
       return "피드 " + (this.feedStatus ? "비활성화" : "활성화");
@@ -803,9 +900,18 @@ export default {
       this.alertMessage = "";
       this.showAlert = false;
     },
-    determineStatus: function (name) {
-      return name[0] !== "_";
+    determineStatus: function (item) {
+      // item이 객체인 경우 (피드나 그룹 객체)
+      if (typeof item === 'object' && item !== null) {
+        return item.is_active !== false; // is_active가 명시적으로 false가 아니면 true
+      }
+      // item이 문자열인 경우 (이름만 전달된 경우, 하위 호환성)
+      if (typeof item === 'string') {
+        return item[0] !== "_";
+      }
+      return true; // 기본값
     },
+
 
     startButton: function (ref) {
       this.$refs[ref].doShowInitialIcon = false;

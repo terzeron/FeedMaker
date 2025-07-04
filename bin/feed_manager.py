@@ -520,7 +520,7 @@ class FeedManager:
                                                 FeedInfo.feed_title.like(pat, escape='\\') |
                                                 FeedInfo.group_name.like(pat, escape='\\')) &
                                                FeedInfo.feedmaker).order_by(FeedInfo.group_name, FeedInfo.feed_name).all()
-                results.extend([{"feed_name": row.feed_name, "feed_title": row.feed_title, "group_name": row.group_name} for row in rows])
+                results.extend([{"feed_name": row.feed_name, "feed_title": row.feed_title, "group_name": row.group_name, "is_active": row.is_active} for row in rows])
         return results
 
     @classmethod
@@ -534,7 +534,10 @@ class FeedManager:
             for group_name in sorted(group_names):
                 # 각 그룹별 피드 수 계산
                 count = s.query(FeedInfo).filter_by(group_name=group_name).count()
-                result.append({"name": group_name, "num_feeds": count})
+                # 그룹의 active 상태 확인 (그룹 내 모든 피드가 active인지 확인)
+                active_count = s.query(FeedInfo).filter_by(group_name=group_name, is_active=True).count()
+                is_active = active_count > 0  # 그룹에 active 피드가 하나라도 있으면 active
+                result.append({"name": group_name, "num_feeds": count, "is_active": is_active})
             return result
 
     @classmethod
@@ -543,7 +546,7 @@ class FeedManager:
 
         with DB.session_ctx() as s:
             rows = s.query(FeedInfo).where(FeedInfo.group_name == group_name).order_by(FeedInfo.feed_name).all()
-            return [{"name": row.feed_name, "title": row.feed_title if row.feed_title else row.feed_name, "group_name": row.group_name} for row in rows]
+            return [{"name": row.feed_name, "title": row.feed_title if row.feed_title else row.feed_name, "group_name": row.group_name, "is_active": row.is_active} for row in rows]
 
     @classmethod
     def get_feed_info(cls, group_name: str, feed_name: str) -> dict[str, Any]:
