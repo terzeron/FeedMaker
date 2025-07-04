@@ -1,7 +1,7 @@
-// Simple session management utility for Vue 3
+// Simple session management utility for Vue 3 - Using localStorage for longer session persistence
 class SessionManager {
   constructor() {
-    this.storage = sessionStorage;
+    this.storage = localStorage;
   }
 
   set(key, value) {

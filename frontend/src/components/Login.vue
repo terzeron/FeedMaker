@@ -61,12 +61,19 @@ const accessToken = ref(null);
 const status = ref(null);
 const profile = ref(null);
 
-// Session storage
-const sessionAccessToken = useStorage("access_token", null, sessionStorage);
-const sessionName = useStorage("name", null, sessionStorage);
-const sessionIsAuthorized = useStorage("is_authorized", false, sessionStorage);
+// Session storage - Changed to localStorage for longer session persistence
+const sessionAccessToken = useStorage("access_token", null, localStorage);
+const sessionName = useStorage("name", null, localStorage);
+const sessionIsAuthorized = useStorage("is_authorized", false, localStorage);
+const sessionExpiry = useStorage("session_expiry", null, localStorage);
 
 const is_logged = computed(() => {
+  // Check if session is expired
+  if (sessionExpiry.value && new Date().getTime() > sessionExpiry.value) {
+    console.log("Session expired, clearing data");
+    clearSessionData();
+    return false;
+  }
   return sessionAccessToken.value !== null;
 });
 
@@ -146,12 +153,15 @@ const login = async () => {
       loginAllowedEmaillist.includes(profile.value["email"])
     ) {
       sessionIsAuthorized.value = true;
+      // Set session expiry - default 30 days, can be configured via environment variable
+      const sessionDays = process.env.VUE_APP_SESSION_EXPIRY_DAYS || 30;
+      sessionExpiry.value = new Date().getTime() + (sessionDays * 24 * 60 * 60 * 1000);
       console.log(
         "authorized as " +
           profile.value["name"] +
           " (" +
           profile.value["email"] +
-          ")"
+          ") - Session expires in " + sessionDays + " days"
       );
     } else {
       console.log("User not authorized:", profile.value?.["email"]);
@@ -170,10 +180,7 @@ const logout = async () => {
   console.log("Logout button clicked");
   
   try {
-    sessionAccessToken.value = null;
-    sessionIsAuthorized.value = false;
-    sessionName.value = null;
-    accessToken.value = null;
+    clearSessionData();
 
     if (authRef.value) {
       await authRef.value.logout();
@@ -191,10 +198,62 @@ onMounted(() => {
   console.log("Environment variables:");
   console.log("VUE_APP_FACEBOOK_APP_ID:", process.env.VUE_APP_FACEBOOK_APP_ID);
   console.log("VUE_APP_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST:", process.env.VUE_APP_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST);
+
+  // Migrate existing sessionStorage data to localStorage for backward compatibility
+  migrateSessionData();
+
   console.log("Session data:", {
     accessToken: sessionAccessToken.value,
     name: sessionName.value,
     isAuthorized: sessionIsAuthorized.value,
   });
 });
+
+// Migrate sessionStorage data to localStorage for longer session persistence
+const migrateSessionData = () => {
+  try {
+    const sessionAccessTokenOld = sessionStorage.getItem("access_token");
+    const sessionNameOld = sessionStorage.getItem("name");
+    const sessionIsAuthorizedOld = sessionStorage.getItem("is_authorized");
+
+    if (sessionAccessTokenOld && !sessionAccessToken.value) {
+      sessionAccessToken.value = JSON.parse(sessionAccessTokenOld);
+      console.log("Migrated access_token from sessionStorage to localStorage");
+    }
+
+    if (sessionNameOld && !sessionName.value) {
+      sessionName.value = JSON.parse(sessionNameOld);
+      console.log("Migrated name from sessionStorage to localStorage");
+    }
+
+    if (sessionIsAuthorizedOld && !sessionIsAuthorized.value) {
+      sessionIsAuthorized.value = JSON.parse(sessionIsAuthorizedOld);
+      // Set expiry for migrated sessions - default 30 days, can be configured via environment variable
+      if (sessionIsAuthorized.value && !sessionExpiry.value) {
+        const sessionDays = process.env.VUE_APP_SESSION_EXPIRY_DAYS || 30;
+        sessionExpiry.value = new Date().getTime() + (sessionDays * 24 * 60 * 60 * 1000);
+        console.log("Set expiry for migrated session - " + sessionDays + " days");
+      }
+      console.log("Migrated is_authorized from sessionStorage to localStorage");
+    }
+
+    // Clear old sessionStorage data after migration
+    if (sessionAccessTokenOld || sessionNameOld || sessionIsAuthorizedOld) {
+      sessionStorage.removeItem("access_token");
+      sessionStorage.removeItem("name");
+      sessionStorage.removeItem("is_authorized");
+      console.log("Cleared old sessionStorage data");
+    }
+  } catch (error) {
+    console.error("Error during session data migration:", error);
+  }
+};
+
+// Clear session data
+const clearSessionData = () => {
+  sessionAccessToken.value = null;
+  sessionName.value = null;
+  sessionIsAuthorized.value = false;
+  sessionExpiry.value = null;
+};
 </script>

@@ -155,6 +155,15 @@ export default {
     },
   },
   mounted: function () {
+    // Check session expiry before authorization check
+    const sessionExpiry = localStorage.getItem("session_expiry");
+    if (sessionExpiry && new Date().getTime() > parseInt(sessionExpiry)) {
+      console.log("Session expired, redirecting to login");
+      this.$session.clear();
+      this.$router.push("/login");
+      return;
+    }
+
     if (!this.$session.get("is_authorized")) {
       this.$router.push("/login");
     }

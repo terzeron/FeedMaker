@@ -53,7 +53,7 @@ const source = ref("### No result");
 const loading = ref(false);
 const error = ref("");
 
-const isAuthorized = useStorage("is_authorized", false, sessionStorage);
+const isAuthorized = useStorage("is_authorized", false, localStorage);
 
 // Computed properties for footer
 const adminEmail = computed(() => process.env.VUE_APP_FACEBOOK_ADMIN_EMAIL || 'admin');
