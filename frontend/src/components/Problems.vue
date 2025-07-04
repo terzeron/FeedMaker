@@ -1231,49 +1231,30 @@ export default {
         .delete(path)
         .then((res) => {
           if (res.data.status === "failure") {
-            this.$bvModal.msgBoxOk(
-              "피드 삭제 중에 오류가 발생하였습니다. " + res.data.message
-            );
+            alert("피드 삭제 중에 오류가 발생하였습니다. " + res.data.message);
           }
         })
         .catch((error) => {
-          this.$bvModal.msgBoxOk(
-            "피드 삭제 요청 중에 오류가 발생하였습니다. " + error
-          );
+          alert("피드 삭제 요청 중에 오류가 발생하였습니다. " + error);
         });
     },
     statusInfoDeleteClicked(data) {
-      this.$bvModal
-        .msgBoxConfirm("정말로 실행하시겠습니까?")
-        .then((value) => {
-          if (value) {
-            const feedName = data.item["feed_name"];
-
-            this.removePublicFeed(feedName);
-            this.statusInfolist = this.statusInfolist.filter(
-              (item) => item !== data.item
-            );
-          }
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+      if (confirm("정말로 실행하시겠습니까?")) {
+        const feedName = data.item["feed_name"];
+        this.removePublicFeed(feedName);
+        this.statusInfolist = this.statusInfolist.filter(
+          (item) => item !== data.item
+        );
+      }
     },
     publicFeedInfoDeleteClicked(data) {
-      this.$bvModal
-        .msgBoxConfirm("정말로 실행하시겠습니까?")
-        .then((value) => {
-          if (value) {
-            const feedName = data.item["feed_name"];
-            this.removePublicFeed(feedName);
-            this.publicFeedInfolist = this.publicFeedInfolist.filter(
-              (item) => item !== data.item
-            );
-          }
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+      if (confirm("정말로 실행하시겠습니까?")) {
+        const feedName = data.item["feed_name"];
+        this.removePublicFeed(feedName);
+        this.publicFeedInfolist = this.publicFeedInfolist.filter(
+          (item) => item !== data.item
+        );
+      }
     },
     removeHtmlFile(filePath) {
       const parts = filePath.split("/");
@@ -1287,82 +1268,50 @@ export default {
         .delete(path)
         .then((res) => {
           if (res.data.status === "failure") {
-            this.$bvModal.msgBoxOk(
-              "실행 중에 오류가 발생하였습니다. " + res.data.message
-            );
+            alert("실행 중에 오류가 발생하였습니다. " + res.data.message);
           } else {
             //
           }
         })
         .catch((error) => {
-          this.$bvModal.msgBoxOk(
-            "실행 요청 중에 오류가 발생하였습니다. " + error
-          );
+          alert("실행 요청 중에 오류가 발생하였습니다. " + error);
         });
       return true;
     },
     imageWithoutImageTagDeleteClicked(data) {
-      this.$bvModal
-        .msgBoxConfirm("정말로 실행하시겠습니까?")
-        .then((value) => {
-          if (value) {
-            this.removeHtmlFile(data.item["file_path"]);
-            this.htmlFileWithoutImageTaglist =
-              this.htmlFileWithoutImageTaglist.filter(
-                (item) => item !== data.item
-              );
-          }
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+      if (confirm("정말로 실행하시겠습니까?")) {
+        this.removeHtmlFile(data.item["file_path"]);
+        this.htmlFileWithoutImageTaglist =
+          this.htmlFileWithoutImageTaglist.filter(
+            (item) => item !== data.item
+          );
+      }
     },
     imageWithManyImageTagDeleteClicked(data) {
-      this.$bvModal
-        .msgBoxConfirm("정말로 실행하시겠습니까?")
-        .then((value) => {
-          if (value) {
-            this.removeHtmlFile(data.item["file_path"]);
-            this.htmlFileWithManyImageTaglist =
-              this.htmlFileWithManyImageTaglist.filter(
-                (item) => item !== data.item
-              );
-          }
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+      if (confirm("정말로 실행하시겠습니까?")) {
+        this.removeHtmlFile(data.item["file_path"]);
+        this.htmlFileWithManyImageTaglist =
+          this.htmlFileWithManyImageTaglist.filter(
+            (item) => item !== data.item
+          );
+      }
     },
     imageNotFoundDeleteClicked(data) {
-      this.$bvModal
-        .msgBoxConfirm("정말로 실행하시겠습니까?")
-        .then((value) => {
-          if (value) {
-            this.removeHtmlFile(data.item["file_path"]);
-            this.htmlFileWithImageNotFoundlist =
-              this.htmlFileWithImageNotFoundlist.filter(
-                (item) => item !== data.item
-              );
-          }
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+      if (confirm("정말로 실행하시겠습니까?")) {
+        this.removeHtmlFile(data.item["file_path"]);
+        this.htmlFileWithImageNotFoundlist =
+          this.htmlFileWithImageNotFoundlist.filter(
+            (item) => item !== data.item
+          );
+      }
     },
     htmlFileSizeDeleteClicked(data) {
-      this.$bvModal
-        .msgBoxConfirm("정말로 실행하시겠습니까?")
-        .then((value) => {
-          if (value) {
-            this.removeHtmlFile(data.item["file_path"]);
-            this.htmlFileSizelist = this.htmlFileSizelist.filter(
-              (item) => item !== data.item
-            );
-          }
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+      if (confirm("정말로 실행하시겠습니까?")) {
+        this.removeHtmlFile(data.item["file_path"]);
+        this.htmlFileSizelist = this.htmlFileSizelist.filter(
+          (item) => item !== data.item
+        );
+      }
     },
     getManagementLink(feedTitle, groupName, feedName) {
       return feedTitle
