@@ -233,9 +233,9 @@ async def remove_html(group_name: str, feed_name: str,
 
 
 @app.post("/groups/{group_name}/feeds/{feed_name}/run")
-def run(group_name: str, feed_name: str, _request: Request,
+def run_feed(group_name: str, feed_name: str, _request: Request,
         feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
-    LOGGER.info("POST /groups/%s/feeds/%s/run -> run(%s, %s)", group_name, feed_name, group_name, feed_name)
+    LOGGER.info("POST /groups/%s/feeds/%s/run -> run_feed(%s, %s)", group_name, feed_name, group_name, feed_name)
     response_object: dict[str, Any] = {}
     result, error = feed_maker_manager.run(group_name, feed_name)
     if result or not error:
