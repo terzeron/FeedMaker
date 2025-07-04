@@ -74,8 +74,9 @@ def download_image_and_read_metadata(feed_dir_path: Path, crawler: Crawler, feed
             else:
                 if not img_url.startswith("data:image/svg+xml;base64"):
                     LOGGER.error(f"<!-- can't download the image from '{img_url_short}' -->")
-                    print(f"<img src='{FileManager.IMAGE_NOT_FOUND_IMAGE_URL}' alt='not exist or size 0'/>")
-                continue
+                    print(f"<img src='{img_url}' alt='original image'/>")
+                else:
+                    print(f"<img src='{img_url}' alt='svg image'/>")
 
             # post_text
             m = re.search(r'^\s*$', post_text)
@@ -540,7 +541,12 @@ def _fix_cross_batch_boundaries(feed_img_dir_path: Path, page_url: str, img_url_
     
     # Find all batch files
     batch_files = {}
-    for webp_file in feed_img_dir_path.glob("f7d4736_*.webp"):
+    
+    # Generate the hash prefix for this page URL
+    from bin.feed_maker_util import URL
+    hash_prefix = URL.get_short_md5_name(page_url)
+    
+    for webp_file in feed_img_dir_path.glob(f"{hash_prefix}_*.webp"):
         # Parse filename like f7d4736_1.14.webp to extract batch and split number
         stem = webp_file.stem  # f7d4736_1.14
         parts = stem.split('_')[1].split('.')  # ['1', '14']
@@ -606,7 +612,11 @@ def _output_all_final_split_files(feed_img_dir_path: Path, page_url: str, img_ur
     # Find all split files and sort them properly
     all_split_files = []
     
-    for webp_file in feed_img_dir_path.glob("f7d4736_*.webp"):
+    # Generate the hash prefix for this page URL
+    from bin.feed_maker_util import URL
+    hash_prefix = URL.get_short_md5_name(page_url)
+    
+    for webp_file in feed_img_dir_path.glob(f"{hash_prefix}_*.webp"):
         # Parse filename like f7d4736_1.14.webp to extract batch and split number
         stem = webp_file.stem  # f7d4736_1.14
         parts = stem.split('_')[1].split('.')  # ['1', '14']
