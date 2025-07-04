@@ -282,8 +282,8 @@ async def check_running(group_name: str, feed_name: str,
     # LOGGER.info("/groups/%s/feeds/%s/check_running -> check_running(%s, %s)", group_name, feed_name, group_name, feed_name)
     response_object: dict[str, Any] = {}
     result = await feed_maker_manager.check_running(group_name, feed_name)
-    if result:
-        response_object["running_status"] = result
+    if result is not None:
+        response_object["running_status"] = bool(result)  # type: ignore
         response_object["status"] = "success"
     else:
         response_object["running_status"] = "error"

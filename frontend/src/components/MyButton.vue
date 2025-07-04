@@ -14,7 +14,7 @@
       <span class="visually-hidden">Loading...</span>
     </div>
     <font-awesome-icon
-      v-if="showInitialIcon"
+      v-if="doShowInitialIcon"
       :icon="initialIcon"
       class="me-1"
     />
@@ -23,7 +23,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, defineExpose } from "vue";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 
 const props = defineProps({
@@ -56,6 +56,7 @@ const props = defineProps({
 const emit = defineEmits(["click"]);
 
 const doShowSpinner = ref(false);
+const doShowInitialIcon = ref(props.showInitialIcon || false);
 
 const buttonClass = computed(() => {
   return {
@@ -66,14 +67,26 @@ const buttonClass = computed(() => {
 const handleClick = async (event) => {
   if (props.disabled) return;
 
-  doShowSpinner.value = true;
+  // 클릭 시 자동으로 스피너를 보여주지 않음 (외부에서 제어)
   emit("click", event);
-
-  // 스피너를 잠시 보여줌
-  setTimeout(() => {
-    doShowSpinner.value = false;
-  }, 500);
 };
+
+// 외부에서 접근할 수 있도록 ref들을 노출
+defineExpose({
+  doShowSpinner,
+  doShowInitialIcon
+});
+
+// 디버깅을 위한 watch 추가
+import { watch } from 'vue';
+
+watch(doShowSpinner, (newVal) => {
+  console.log('MyButton doShowSpinner changed to:', newVal);
+});
+
+watch(doShowInitialIcon, (newVal) => {
+  console.log('MyButton doShowInitialIcon changed to:', newVal);
+});
 </script>
 
 <style scoped>

@@ -746,6 +746,7 @@ import JSONEditor from "jsoneditor";
 import "jsoneditor/dist/jsoneditor.css";
 
 
+
 library.add(
   faTrashAlt,
   faSave,
@@ -774,14 +775,7 @@ export default {
       default: () => ({})
     }
   },
-  setup() {
-    const { startButton, endButton, resetButton } = useButtonState();
-    return {
-      startButton,
-      endButton,
-      resetButton
-    };
-  },
+
   data: function () {
     return {
       alertMessage: "",
@@ -965,16 +959,34 @@ export default {
 
 
     startButton: function (ref) {
-      this.$refs[ref].doShowInitialIcon = false;
-      this.$refs[ref].doShowSpinner = true;
+      console.log("startButton called for:", ref);
+      if (this.$refs[ref]) {
+        console.log("Setting doShowInitialIcon to false, doShowSpinner to true");
+        this.$refs[ref].doShowInitialIcon = false;
+        this.$refs[ref].doShowSpinner = true;
+      } else {
+        console.error("Button ref not found:", ref);
+      }
     },
     endButton: function (ref) {
-      this.$refs[ref].doShowInitialIcon = true;
-      this.$refs[ref].doShowSpinner = false;
+      console.log("endButton called for:", ref);
+      if (this.$refs[ref]) {
+        console.log("Setting doShowInitialIcon to true, doShowSpinner to false");
+        this.$refs[ref].doShowInitialIcon = true;
+        this.$refs[ref].doShowSpinner = false;
+      } else {
+        console.error("Button ref not found:", ref);
+      }
     },
     resetButton: function (ref) {
-      this.$refs[ref].doShowInitialIcon = true;
-      this.$refs[ref].doShowSpinner = false;
+      console.log("resetButton called for:", ref);
+      if (this.$refs[ref]) {
+        console.log("Setting doShowInitialIcon to true, doShowSpinner to false");
+        this.$refs[ref].doShowInitialIcon = true;
+        this.$refs[ref].doShowSpinner = false;
+      } else {
+        console.error("Button ref not found:", ref);
+      }
     },
     showAllRelatedToFeed: function () {
       this.showEditor = true;
@@ -1231,12 +1243,9 @@ export default {
             this.hideAllRelatedToGroup();
 
             this.checkRunning();
-            this.checkRunningInterval = () => {
+            this.checkRunningInterval = setInterval(() => {
               this.checkRunning();
-              setInterval(() => {
-                this.checkRunning();
-              }, 3000);
-            };
+            }, 3000);
           }
         })
         .catch((error) => {
@@ -1505,10 +1514,11 @@ export default {
       const url =
         getApiUrlPath() +
         `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/check_running`;
-      console.log(url);
+      console.log("checkRunning URL:", url);
       axios
         .get(url)
         .then((res) => {
+          console.log("checkRunning response:", res.data);
           if (res.data.status === "failure") {
             this.alert(res.data.message);
             this.resetButton("runButton");
@@ -1516,15 +1526,18 @@ export default {
               clearInterval(this.checkRunningInterval);
             }
           } else {
-            if (res.data.running_status) {
+            console.log("running_status:", res.data.running_status, "type:", typeof res.data.running_status);
+            if (res.data.running_status === true) {
+              console.log("Starting run button spinner");
               this.startButton("runButton");
             } else {
+              console.log("Stopping run button spinner");
               this.endButton("runButton");
             }
           }
         })
         .catch((error) => {
-          console.error(error);
+          console.error("checkRunning error:", error);
           this.resetButton("runButton");
         });
     },
