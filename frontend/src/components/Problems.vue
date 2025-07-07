@@ -629,6 +629,18 @@
       </BCol>
     </BRow>
   </BContainer>
+
+  <!-- Confirmation Modal -->
+  <BModal
+    v-model="showConfirmModal"
+    title="확인"
+    ok-title="확인"
+    cancel-title="취소"
+    @ok="handleConfirmOk"
+    @cancel="handleConfirmCancel"
+  >
+    <p>{{ confirmMessage }}</p>
+  </BModal>
 </template>
 
 <style>
@@ -1198,6 +1210,11 @@ export default {
       publicFeedInfoSortBy: "size",
       publicFeedInfoSortDesc: true,
       publicFeedInfolist: [],
+
+      // Modal related data
+      showConfirmModal: false,
+      confirmMessage: "",
+      pendingAction: null,
     };
   },
   methods: {
@@ -1225,6 +1242,22 @@ export default {
     showStatusInfoDeleteButton: function (data) {
       return data.item["feed_title"] === "" && data.item["public_html"] === "O";
     },
+    openConfirmModal: function (message, action) {
+      this.confirmMessage = message;
+      this.pendingAction = action;
+      this.showConfirmModal = true;
+    },
+    handleConfirmOk: function () {
+      if (this.pendingAction) {
+        this.pendingAction();
+      }
+      this.showConfirmModal = false;
+      this.pendingAction = null;
+    },
+    handleConfirmCancel: function () {
+      this.showConfirmModal = false;
+      this.pendingAction = null;
+    },
     removePublicFeed(feedName) {
       const path = getApiUrlPath() + `/public_feeds/${feedName}`;
       axios
@@ -1239,22 +1272,22 @@ export default {
         });
     },
     statusInfoDeleteClicked(data) {
-      if (confirm("정말로 실행하시겠습니까?")) {
+      this.openConfirmModal("정말로 실행하시겠습니까?", () => {
         const feedName = data.item["feed_name"];
         this.removePublicFeed(feedName);
         this.statusInfolist = this.statusInfolist.filter(
           (item) => item !== data.item
         );
-      }
+      });
     },
     publicFeedInfoDeleteClicked(data) {
-      if (confirm("정말로 실행하시겠습니까?")) {
+      this.openConfirmModal("정말로 실행하시겠습니까?", () => {
         const feedName = data.item["feed_name"];
         this.removePublicFeed(feedName);
         this.publicFeedInfolist = this.publicFeedInfolist.filter(
           (item) => item !== data.item
         );
-      }
+      });
     },
     removeHtmlFile(filePath) {
       const parts = filePath.split("/");
@@ -1279,39 +1312,39 @@ export default {
       return true;
     },
     imageWithoutImageTagDeleteClicked(data) {
-      if (confirm("정말로 실행하시겠습니까?")) {
+      this.openConfirmModal("정말로 실행하시겠습니까?", () => {
         this.removeHtmlFile(data.item["file_path"]);
         this.htmlFileWithoutImageTaglist =
           this.htmlFileWithoutImageTaglist.filter(
             (item) => item !== data.item
           );
-      }
+      });
     },
     imageWithManyImageTagDeleteClicked(data) {
-      if (confirm("정말로 실행하시겠습니까?")) {
+      this.openConfirmModal("정말로 실행하시겠습니까?", () => {
         this.removeHtmlFile(data.item["file_path"]);
         this.htmlFileWithManyImageTaglist =
           this.htmlFileWithManyImageTaglist.filter(
             (item) => item !== data.item
           );
-      }
+      });
     },
     imageNotFoundDeleteClicked(data) {
-      if (confirm("정말로 실행하시겠습니까?")) {
+      this.openConfirmModal("정말로 실행하시겠습니까?", () => {
         this.removeHtmlFile(data.item["file_path"]);
         this.htmlFileWithImageNotFoundlist =
           this.htmlFileWithImageNotFoundlist.filter(
             (item) => item !== data.item
           );
-      }
+      });
     },
     htmlFileSizeDeleteClicked(data) {
-      if (confirm("정말로 실행하시겠습니까?")) {
+      this.openConfirmModal("정말로 실행하시겠습니까?", () => {
         this.removeHtmlFile(data.item["file_path"]);
         this.htmlFileSizelist = this.htmlFileSizelist.filter(
           (item) => item !== data.item
         );
-      }
+      });
     },
     getManagementLink(feedTitle, groupName, feedName) {
       return feedTitle
