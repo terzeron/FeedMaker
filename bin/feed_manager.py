@@ -155,8 +155,11 @@ class FeedManager:
         start_ts = datetime.now(timezone.utc)
         
         with DB.session_ctx() as s:
+            # 기존 엘리먼트 카운트 데이터를 모두 삭제하여 누적 방지
+            s.query(ElementNameCount).delete()
+            s.flush()
+
             num_items = 0
-            element_name_count_map: dict[str, int] = {}
             total_element_name_count_map: dict[str, int] = {}
             for group_dir_path in islice(self.work_dir_path.iterdir(), max_num_feeds):
                 if not group_dir_path.is_dir():
@@ -165,12 +168,14 @@ class FeedManager:
                 for feed_dir_path in group_dir_path.iterdir():
                     if not feed_dir_path.is_dir():
                         continue
+                    # 각 피드마다 element_name_count_map을 초기화하여 누적 방지
+                    element_name_count_map: dict[str, int] = {}
                     FeedManager._add_config_info(s, feed_dir_path, element_name_count_map)
                     FeedManager._add_element_info(element_name_count_map, total_element_name_count_map)
                     num_items += 1
 
             for element_name, count in total_element_name_count_map.items():
-                s.merge(ElementNameCount(element_name=element_name, count=count))
+                s.add(ElementNameCount(element_name=element_name, count=count))
                 
         end_ts = datetime.now(timezone.utc)
         LOGGER.info("* The loading of all config files is done. %d items / %s sec", num_items, (end_ts - start_ts))
