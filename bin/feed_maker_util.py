@@ -494,6 +494,7 @@ class Config:
             rss_conf = self.conf.get("rss", {})
             if rss_conf:
                 conf = {
+                    "ignore_broken_link": Config._get_bool_config_value(rss_conf, "ignore_broken_link", False),
                     "rss_title": Config._get_str_config_value(rss_conf, "title"),
                     "rss_generator": Config._get_str_config_value(rss_conf, "generator"),
                     "rss_copyright": Config._get_str_config_value(rss_conf, "copyright"),

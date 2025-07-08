@@ -421,6 +421,9 @@ class FeedMaker:
             pub_date_str = Datetime.get_rss_date_str()
 
             content = ""
+            if self.rss_conf.get("ignore_broken_link", False) and not html_file_path.is_file():
+                continue
+
             with html_file_path.open("r", encoding="utf-8") as in_file:
                 for line in in_file:
                     content += line
