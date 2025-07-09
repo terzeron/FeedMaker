@@ -44,14 +44,27 @@ def main() -> int:
 
     line_list = IO.read_stdin_as_line_list()
     for line in line_list:
-        m = re.search(r'<img[^>]*src=[\"\'](?P<img_url>[^\"\']+)[\"\']', line)
-        if m:
-            img_url = m.group("img_url")
-            _, new_img_url = ImageDownloader.download_image(crawler, feed_img_dir_path, img_url, quality=quality)
-            if new_img_url:
-                print(f"<img src='{new_img_url}'/>")
-            else:
-                print("<img src='not_found.png' alt='not exist or size 0'/>")
+        # 한 라인에 여러 개의 이미지가 있을 수 있으므로 finditer 사용
+        img_matches = list(re.finditer(r'<img[^>]*src=[\"\'](?P<img_url>[^\"\']+)[\"\'][^>]*/?>', line))
+        
+        if img_matches:
+            # 각 이미지를 처리하여 새로운 URL로 출력
+            for match in img_matches:
+                img_url = match.group("img_url")
+                try:
+                    _, new_img_url = ImageDownloader.download_image(crawler, feed_img_dir_path, img_url, quality=quality)
+                    if new_img_url:
+                        print(f"<img src='{new_img_url}'/>")
+                    else:
+                        print("<img src='not_found.png' alt='not exist or size 0'/>")
+                except Exception as e:
+                    LOGGER.error(f"이미지 다운로드 중 오류 발생: {e}")
+                    print("<img src='not_found.png' alt='error occurred'/>")
+            
+            # 이미지 태그를 제거한 나머지 텍스트 출력
+            text_without_images = re.sub(r'<img[^>]*src=[\"\'][^\"\']+[\"\'][^>]*/?>', '', line)
+            if text_without_images.strip():
+                print(text_without_images, end="")
         else:
             print(line, end="")
 
