@@ -28,7 +28,7 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncGenerator[None, None]:
     try:
         DB.create_all_tables()
         fastapi_app.state.feed_maker_manager = FeedMakerManager()
-    except Exception as e:
+    except (OSError, ImportError, TypeError, ValueError, AttributeError, ConnectionError, RuntimeError) as e:
         DB.drop_all_tables()
         raise e
 
@@ -135,11 +135,13 @@ async def search(keyword: str, feed_maker_manager: FeedMakerManager = Depends(ge
     result, error = await feed_maker_manager.search(keyword)
     if result or not error:
         # is_active 필드가 없는 경우 추가
-        for feed in result:
-            if "is_active" not in feed:
-                # 피드 이름이 _로 시작하면 비활성
-                feed["is_active"] = not feed["feed_name"].startswith("_")
-        response_object["feeds"] = result
+        response_object["feeds"] = [
+            {
+                **feed,
+                "is_active": feed.get("is_active") if "is_active" in feed else not feed["feed_name"].startswith("_")
+            }
+            for feed in result
+        ]
         response_object["status"] = "success"
         LOGGER.debug(result)
     else:
@@ -345,11 +347,13 @@ async def get_feeds_by_group(group_name: str, feed_maker_manager: FeedMakerManag
     if result or not error:
         # success in case of group without any feed
         # is_active 필드가 없는 경우 추가
-        for feed in result:
-            if "is_active" not in feed:
-                # 피드 이름이 _로 시작하면 비활성
-                feed["is_active"] = not feed["name"].startswith("_")
-        response_object["feeds"] = result
+        response_object["feeds"] = [
+            {
+                **feed,
+                "is_active": feed.get("is_active") if "is_active" in feed else not feed["name"].startswith("_")
+            }
+            for feed in result
+        ]
         response_object["status"] = "success"
         LOGGER.debug(result)
     else:
@@ -380,11 +384,13 @@ async def get_groups(feed_maker_manager: FeedMakerManager = Depends(get_feed_mak
     result, error = await feed_maker_manager.get_groups()
     if result or not error:
         # is_active 필드가 없는 경우 추가
-        for group in result:
-            if "is_active" not in group:
-                # 그룹 이름이 _로 시작하면 비활성
-                group["is_active"] = not group["name"].startswith("_")
-        response_object["groups"] = result
+        response_object["groups"] = [
+            {
+                **group,
+                "is_active": group.get("is_active") if "is_active" in group else not group["name"].startswith("_")
+            }
+            for group in result
+        ]
         response_object["status"] = "success"
         LOGGER.debug(result)
     else:

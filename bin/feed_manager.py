@@ -419,7 +419,7 @@ class FeedManager:
                     conf_data = json.load(f)
                 if "configuration" in conf_data and "collection" in conf_data["configuration"]:
                     is_completed = conf_data["configuration"]["collection"].get("is_completed", False)
-            except Exception as e:
+            except (OSError, IOError, json.JSONDecodeError, KeyError, TypeError, ValueError, RuntimeError) as e:
                 LOGGER.warning("Failed to read is_completed from config file: %s", e)
 
         if group_name in (".mypy_cache", ".git", "test") or feed_name in (".mypy_cache", ".git", "test"):

@@ -49,7 +49,7 @@ def _get_file_timestamps() -> dict[str, float]:
     for file_path in collect_python_files():
         try:
             timestamps[str(file_path)] = file_path.stat().st_mtime
-        except Exception:
+        except RuntimeError:
             pass
     return timestamps
 
@@ -123,7 +123,7 @@ def get_failed_or_skipped_tests() -> list[str]:
         
         return test_paths
         
-    except (json.JSONDecodeError, FileNotFoundError, Exception):
+    except (json.JSONDecodeError, FileNotFoundError, OSError, KeyError, TypeError, ValueError):
         # If there's any issue reading the cache, assume no failed tests
         return []
 
@@ -190,7 +190,7 @@ def load_modules_to_graph(mg: ModuleGraph, files: list[Path]) -> None:
             mg.import_hook(module_name, None, None)
         except RuntimeError as e:
             print(f"Warning: Could not load {py_file}: {e}")
-        except Exception as e:
+        except RuntimeError as e:
             print(f"Warning: Could not load {py_file}: {e}")
 
 def is_test_file(file_path: Path) -> bool:
@@ -374,7 +374,7 @@ def get_actual_execution_duration() -> float:
                 # 실제 실행 시간이 저장되어 있다면 반환
                 if 'actual_total_duration' in cached_data:
                     return cached_data['actual_total_duration']
-        except Exception:
+        except RuntimeError:
             pass
     
     return 0.0
@@ -390,7 +390,7 @@ def update_actual_execution_duration(duration: float) -> None:
             import json
             with open(performance_cache_file, 'r') as f:
                 cached_data = json.load(f)
-        except Exception:
+        except RuntimeError:
             cached_data = {}
     
     # Update actual execution duration
@@ -402,7 +402,7 @@ def update_actual_execution_duration(duration: float) -> None:
         import json
         with open(performance_cache_file, 'w') as f:
             json.dump(cached_data, f, indent=2)
-    except Exception as e:
+    except RuntimeError as e:
         print(f"⚠️  Failed to save actual execution duration: {e}")
 
 def run_all_tests() -> bool:
@@ -570,7 +570,7 @@ def get_pytest_performance_data() -> dict[str, Any]:
                 cached_data = json.load(f)
                 file_durations = cached_data.get('file_durations', {})
                 print(f"📊 Loaded cached performance data for {len(file_durations)} test files")
-        except Exception as e:
+        except RuntimeError as e:
             print(f"⚠️  Failed to load performance cache: {e}")
 
     # Fill in missing durations with estimates
@@ -595,7 +595,7 @@ def get_pytest_performance_data() -> dict[str, Any]:
                 file_avg_times[file_name] = avg_time
             else:
                 file_avg_times[file_name] = file_durations[file_name]  # No tests found
-        except Exception as e:
+        except RuntimeError as e:
             print(f"⚠️  Failed to get test count for {file_name}: {e}")
             file_test_counts[file_name] = 1  # Default to 1
             file_avg_times[file_name] = file_durations[file_name]
@@ -622,7 +622,7 @@ def update_test_performance_cache(test_file: str, execution_time: float) -> None
             import json
             with open(performance_cache_file, 'r') as f:
                 cached_data = json.load(f)
-        except Exception:
+        except RuntimeError:
             cached_data = {}
 
     # Update with new execution time (use exponential moving average)
@@ -645,7 +645,7 @@ def update_test_performance_cache(test_file: str, execution_time: float) -> None
         with open(performance_cache_file, 'w') as f:
             json.dump(cached_data, f, indent=2)
         print(f"📊 Updated performance cache: {test_file} = {new_time:.2f}s")
-    except Exception as e:
+    except RuntimeError as e:
         print(f"⚠️  Failed to save performance cache: {e}")
 
 def print_test_statistics(stats: dict[str, Any]) -> None:
@@ -804,7 +804,7 @@ def run_test_with_profiling(test_file: Path) -> tuple[bool, dict[str, Any]]:
 
         success = exit_code == 0
 
-    except Exception as e:
+    except RuntimeError as e:
         print(f"Error running test: {e}")
         success = False
     finally:
@@ -1082,7 +1082,7 @@ def extract_imports_from_file(file_path: Path) -> set[str]:
             elif isinstance(node, ast.ImportFrom):
                 if node.module:
                     imports.add(node.module)
-    except Exception as e:
+    except RuntimeError as e:
         print(f"Warning: Could not parse imports from {file_path}: {e}")
 
     return imports
@@ -1144,7 +1144,7 @@ def analyze_all_dependencies() -> tuple[dict[Path, set[Path]], dict[Path, set[Pa
                 print("📦 Using cached dependency analysis (performance optimized)")
                 return cache_data.get('deps', {}), cache_data.get('reverse_deps', {})
 
-        except Exception:
+        except RuntimeError:
             pass
 
     print("🔍 Performing fresh dependency analysis...")
@@ -1168,7 +1168,7 @@ def analyze_all_dependencies() -> tuple[dict[Path, set[Path]], dict[Path, set[Pa
         }
         with open(cache_file, 'wb') as f:
             pickle.dump(cache_data, f)
-    except Exception as e:
+    except RuntimeError as e:
         print(f"⚠️  Failed to cache dependencies: {e}")
 
     return deps, reverse_deps
@@ -1355,7 +1355,7 @@ def get_test_targets_with_dependencies(modified_files: list[Path]) -> list[Path]
                         test_file_path = PROJECT_ROOT / test_key.split("::")[0]
                         if test_file_path.exists():
                             failed_files.add(test_file_path.resolve())
-            except Exception:
+            except RuntimeError:
                 pass
         
         # 전체 테스트 목록
@@ -1444,12 +1444,6 @@ def get_test_targets_with_dependencies(modified_files: list[Path]) -> list[Path]
     # 수정된 파일과 관련된 테스트 또는 affected_files에 포함된 테스트는 제외하지 않음
     unique_targets = [t for t in unique_targets if t not in passed_tests or t in modified_test_files or t in affected_test_files]
 
-    # Debug output (improved)
-    print(f"🔍 Debug: Modified files ({len(modified_files)}): {[f.name for f in modified_files[:5]]}{'...' if len(modified_files) > 5 else ''}")
-    print(f"🔍 Debug: Affected files ({len(affected_files)}): {[f.name for f in list(affected_files)[:5]]}{'...' if len(affected_files) > 5 else ''}")
-    print(f"🔍 Debug: Failed tests ({len(failed_test_paths)}): {[f.name for f in failed_test_paths]}")
-    print(f"🔍 Debug: Test targets ({len(unique_targets)}): {[f.name for f in unique_targets]}")
-    
     if len(unique_targets) > 10:
         print(f"⚠️  Warning: {len(unique_targets)} tests selected. This might be too many. Consider running with -f flag for specific tests.")
 
@@ -1521,6 +1515,10 @@ def main() -> bool:
     failed_tests = set()
     passed_tests = set()
 
+    # Initialize counters for actual execution results
+    actual_passed_count = 0
+    actual_failed_count = 0
+
     # Calculate modified and affected files
     last_success = get_last_success_time()
     modified_files = set(get_modified_files(last_success))
@@ -1591,12 +1589,15 @@ def main() -> bool:
     elif args.file:
         success = run_specific_test_file(args.file)
         # Update test status after execution
+        executed_tests.add(Path(args.file))
         if success:
-            executed_tests.add(Path(args.file))
             passed_tests.add(Path(args.file))
+            actual_passed_count = 1
+            actual_failed_count = 0
         else:
-            executed_tests.add(Path(args.file))
             failed_tests.add(Path(args.file))
+            actual_passed_count = 0
+            actual_failed_count = 1
     elif args.all:
         success = run_all_tests()
         # Update test status after execution based on actual pytest cache results
@@ -1606,11 +1607,13 @@ def main() -> bool:
             # Check actual test result from pytest cache
             if is_test_actually_failed(test_file):
                 failed_tests.add(test_file)
+                actual_failed_count += 1
             else:
                 passed_tests.add(test_file)
+                actual_passed_count += 1
         
         # Override success based on actual results
-        success = len(failed_tests) == 0
+        success = actual_failed_count == 0
     else:
         # Default behavior: run failed tests first, then changed tests
         failed_tests_success = run_failed_tests()
@@ -1618,9 +1621,9 @@ def main() -> bool:
             return False
         
         # Run changed tests and get detailed results
-        success, passed_count, failed_count = run_changed_tests_with_results()
+        success, actual_passed_count, actual_failed_count = run_changed_tests_with_results()
         
-        print(f"\n📋 Test execution completed: {passed_count} passed, {failed_count} failed")
+        print(f"\n📋 Test execution completed: {actual_passed_count} passed, {actual_failed_count} failed")
         
         # Update test status after execution
         last_success = get_last_success_time()
@@ -1636,7 +1639,7 @@ def main() -> bool:
                     passed_tests.add(test_target)
         
         # Override success based on actual results
-        success = failed_count == 0
+        success = actual_failed_count == 0
     
     # Update last success time if tests passed
     if success:
@@ -1648,8 +1651,8 @@ def main() -> bool:
         print("\n" + "="*80)
         print("🎯 TEST RESULTS SUMMARY")
         print("="*80)
-        print(f"✅ Passed: {len(passed_tests)} tests")
-        print(f"❌ Failed: {len(failed_tests)} tests")
+        print(f"✅ Passed: {actual_passed_count} tests")
+        print(f"❌ Failed: {actual_failed_count} tests")
         print(f"📋 Total executed: {len(executed_tests)} tests")
         
         if len(passed_tests) > 0:
@@ -1667,10 +1670,6 @@ def main() -> bool:
     
     return success
 
-
-if __name__ == "__main__":
-    test_success = main()
-    sys.exit(0 if test_success else 1)
 
 def _is_dependency_cache_valid(cache_data: dict[str, Any]) -> bool:
     """Check if cached dependency data is still valid"""
@@ -1690,3 +1689,8 @@ def _is_dependency_cache_valid(cache_data: dict[str, Any]) -> bool:
             return False
 
     return True
+
+
+if __name__ == "__main__":
+    test_success = main()
+    sys.exit(0 if test_success else 1)

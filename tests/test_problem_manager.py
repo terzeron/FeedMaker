@@ -537,7 +537,7 @@ class TestProblemManager(unittest.TestCase):
                     self.pm.load_all(max_num_feeds=20, max_num_public_feeds=40, max_num_days=1)
                     # 성공적으로 실행되면 테스트 통과
                     self.assertTrue(True)
-                except Exception as e:
+                except RuntimeError as e:
                     self.fail(f"load_all failed with exception: {e}")
 
 

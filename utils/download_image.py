@@ -66,7 +66,7 @@ def main() -> int:
                             return f"<img src='{new_img_url}'/>"
                     else:
                         return "<img src='not_found.png' alt='not exist or size 0'/>"
-                except Exception as e:
+                except (OSError, IOError, TypeError, ValueError, RuntimeError) as e:
                     LOGGER.error(f"이미지 다운로드 중 오류 발생: {e}")
                     return "<img src='not_found.png' alt='error occurred'/>"
             

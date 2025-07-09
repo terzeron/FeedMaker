@@ -284,7 +284,7 @@ class FeedMaker:
                     LOGGER.warning("Warning: excluded %s\t%s\t%s (%d bytes <= %d bytes of template)", item_url, title, PathUtil.short_path(html_file_path), size, self._get_size_of_template())
                     ret = False
 
-            except Exception as e:
+            except (OSError, IOError, ImportError, TypeError, ValueError, AttributeError, ConnectionError, RuntimeError) as e:
                 self._add_failed_url(item_url, f"Unexpected error: {str(e)}")
                 return False
 

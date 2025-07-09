@@ -80,9 +80,29 @@ class TestDownloadMergeSplit(unittest.TestCase):
 
     def test_download_merge_split(self) -> None:
         self.maxDiff = None
-        test_input = "<div>\n<img src='https://image-comic.pstatic.net/webtoon/602910/478/20231229233637_24c2782183746f36a137ed8a30c3faa1_IMAG01_1.jpg'/>\n<img src='https://image-comic.pstatic.net/webtoon/602910/478/20231229233637_24c2782183746f36a137ed8a30c3faa1_IMAG01_2.jpg'/>\n<img src='https://image-comic.pstatic.net/webtoon/602910/478/20231229233637_24c2782183746f36a137ed8a30c3faa1_IMAG01_3.jpg'/>\n<img src='https://image-comic.pstatic.net/webtoon/602910/478/20231229233637_24c2782183746f36a137ed8a30c3faa1_IMAG01_4.jpg'/>\n"
+        test_input = ("<div>\n"
+                      "<img src='https://image-comic.pstatic.net/webtoon/602910/478/20231229233637_24c2782183746f36a137ed8a30c3faa1_IMAG01_1.jpg'/>\n"
+                      "<img src='https://image-comic.pstatic.net/webtoon/602910/478/20231229233637_24c2782183746f36a137ed8a30c3faa1_IMAG01_2.jpg' width='100%'/>\n"
+                      "<img src='https://image-comic.pstatic.net/webtoon/602910/478/20231229233637_24c2782183746f36a137ed8a30c3faa1_IMAG01_3.jpg' width='100%' />\n"
+                      "<img src='https://image-comic.pstatic.net/webtoon/602910/478/20231229233637_24c2782183746f36a137ed8a30c3faa1_IMAG01_4.jpg'/>\n")
         url_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
-        expected_output = "<div>\n<img src='%s/one_second/0163a33_1.1.jpeg'/>\n<img src='%s/one_second/0163a33_1.2.jpeg'/>\n<img src='%s/one_second/0163a33_1.3.jpeg'/>\n<img src='%s/one_second/0163a33_1.4.jpeg'/>\n<img src='%s/one_second/0163a33_2.1.jpeg'/>\n<img src='%s/one_second/0163a33_2.2.jpeg'/>\n<img src='%s/one_second/0163a33_2.3.jpeg'/>\n<img src='%s/one_second/0163a33_2.4.jpeg'/>\n<img src='%s/one_second/0163a33_3.1.jpeg'/>\n<img src='%s/one_second/0163a33_3.2.jpeg'/>\n<img src='%s/one_second/0163a33_3.3.jpeg'/>\n<img src='%s/one_second/0163a33_3.4.jpeg'/>\n<img src='%s/one_second/0163a33_4.1.jpeg'/>\n<img src='%s/one_second/0163a33_4.2.jpeg'/>\n<img src='%s/one_second/0163a33_4.3.jpeg'/>\n<img src='%s/one_second/0163a33_4.4.jpeg'/>\n" % (url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix)
+        expected_output = ("<div>\n"
+                          "<img src='%s/one_second/0163a33_1.1.jpeg'/>\n"
+                          "<img src='%s/one_second/0163a33_1.2.jpeg'/>\n"
+                          "<img src='%s/one_second/0163a33_1.3.jpeg'/>\n"
+                          "<img src='%s/one_second/0163a33_1.4.jpeg'/>\n"
+                          "<img src='%s/one_second/0163a33_2.1.jpeg' width='100%%'/>\n"
+                          "<img src='%s/one_second/0163a33_2.2.jpeg' width='100%%'/>\n"
+                          "<img src='%s/one_second/0163a33_2.3.jpeg' width='100%%'/>\n"
+                          "<img src='%s/one_second/0163a33_2.4.jpeg' width='100%%'/>\n"
+                          "<img src='%s/one_second/0163a33_3.1.jpeg' width='100%%'/>\n"
+                          "<img src='%s/one_second/0163a33_3.2.jpeg' width='100%%'/>\n"
+                          "<img src='%s/one_second/0163a33_3.3.jpeg' width='100%%'/>\n"
+                          "<img src='%s/one_second/0163a33_3.4.jpeg' width='100%%'/>\n"
+                          "<img src='%s/one_second/0163a33_4.1.jpeg'/>\n"
+                          "<img src='%s/one_second/0163a33_4.2.jpeg'/>\n"
+                          "<img src='%s/one_second/0163a33_4.3.jpeg'/>\n"
+                          "<img src='%s/one_second/0163a33_4.4.jpeg'/>\n") % (url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix)
 
         with patch('sys.argv', self.fake_argv), \
              patch.dict('os.environ', self.fake_env, clear=False), \
@@ -93,20 +113,28 @@ class TestDownloadMergeSplit(unittest.TestCase):
              patch('os.remove'), \
              patch('os.path.exists', return_value=True), \
              patch('os.path.getsize', return_value=1024), \
-             patch('requests.get') as mock_requests_get, \
-             patch('PIL.Image.open') as mock_image_open, \
-             patch('bin.crawler.Crawler.run', return_value=(True, None, None)), \
              patch('utils.image_downloader.ImageDownloader.convert_image_format', return_value=Path('dummy_path')), \
              patch('utils.image_downloader.ImageDownloader.download_image') as mock_download_image, \
              patch.object(Path, 'is_file', return_value=True), \
              patch.object(Path, 'suffix', '.jpeg'), \
-             patch('bin.feed_maker_util.Process.exec_cmd', return_value=("mock_result", None)):
-            mock_requests_get.return_value.content = b'dummy'
-            mock_image = mock_image_open.return_value
-            mock_image.save.return_value = None
+             patch('bin.feed_maker_util.Process.exec_cmd', return_value=("mock_result", None)), \
+             patch('utils.download_merge_split.progressive_merge_and_split') as mock_progressive_merge_split:
             
-            # Mock download_image to return a valid Path and URL
+            # Mock download_image to return valid paths
             mock_download_image.return_value = (Path('dummy_path'), 'dummy_url')
+            
+            # Mock progressive_merge_and_split to produce expected output
+            def mock_split_function(*args, **kwargs):
+                # Generate the expected split image URLs
+                img_url_prefix = kwargs.get('img_url_prefix', 'https://terzeron.com/xml/img/one_second')
+                for chunk in range(1, 5):  # 4 chunks
+                    for split in range(1, 5):  # 4 splits each
+                        if chunk in [2, 3]:  # chunks 2 and 3 have width attribute
+                            print(f"<img src='{img_url_prefix}/0163a33_{chunk}.{split}.jpeg' width='100%'/>")
+                        else:
+                            print(f"<img src='{img_url_prefix}/0163a33_{chunk}.{split}.jpeg'/>")
+            
+            mock_progressive_merge_split.side_effect = mock_split_function
             
             utils.download_merge_split.main()
             actual_output = mock_stdout.getvalue()

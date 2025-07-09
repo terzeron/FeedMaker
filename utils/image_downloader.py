@@ -105,7 +105,7 @@ class ImageDownloader:
                     if cache_file_path != new_cache_file_path:
                         cache_file_path.unlink(missing_ok=True)
                     return new_cache_file_path
-                except Exception as e:
+                except (OSError, IOError, TypeError, ValueError, RuntimeError) as e:
                     LOGGER.warning(f"WebP 저장 실패, JPEG로 폴백: {e}")
                     # WebP 실패 시 JPEG로 폴백
                     fallback_path = cache_file_path.with_suffix(".jpg")

@@ -588,7 +588,7 @@ class MzgtoonSite(Site):
                 if title and link:
                     result.append((str(title), str(link)))
             return result
-        except Exception:
+        except (OSError, IOError, TypeError, ValueError, RuntimeError):
             return []
 
 
@@ -605,29 +605,43 @@ class SearchManager:
     def search(self, site_name: str, keyword: str, do_include_torrent_sites: bool = False) -> list[tuple[str, str]]:
         LOGGER.debug("# search(site_name='%s', keyword='%s', do_include_torrent_sites=%r)", site_name, keyword, do_include_torrent_sites)
 
-        site_list: list[Site] = [
-            EleventoonSite("11toon"),
-            #FunbeSite("funbe"),
-            JoatoonSite("joatoon"),
-            ToonkorSite("toonkor"),
-            TorrentQqSite("torrentqq"),
-            TorrentRjSite("torrentrj"),
-            TorrentSeeSite("torrentsee"),
-            TorrentTipSite("torrenttip"),
-            XtoonSite("xtoon"),
-            #AgitSite("agit"),
-            #AllallSite("allall"),
-            BlacktoonSite("blacktoon"),
-            #JmanaSite("jmana"),
-            #ManatokiSite("manatoki"),
-            #NewtokiSite("newtoki"),
-            #SkytoonSite("skytoon"),
-            #TorrentJokSite("torrentjok"),
-            #TorrentTtSite("torrenttt"),
-            WfwfSite("wfwf"),
-            WtwtSite("wtwt"),
-            MzgtoonSite("mzgtoon"),
+        # Create site list with exception handling for missing config files
+        site_classes = [
+            (EleventoonSite, "11toon"),
+            #(FunbeSite, "funbe"),
+            (JoatoonSite, "joatoon"),
+            (ToonkorSite, "toonkor"),
+            (TorrentQqSite, "torrentqq"),
+            (TorrentRjSite, "torrentrj"),
+            (TorrentSeeSite, "torrentsee"),
+            (TorrentTipSite, "torrenttip"),
+            (XtoonSite, "xtoon"),
+            #(AgitSite, "agit"),
+            #(AllallSite, "allall"),
+            (BlacktoonSite, "blacktoon"),
+            #(JmanaSite, "jmana"),
+            #(ManatokiSite, "manatoki"),
+            #(NewtokiSite, "newtoki"),
+            #(SkytoonSite, "skytoon"),
+            #(TorrentJokSite, "torrentjok"),
+            #(TorrentTtSite, "torrenttt"),
+            (WfwfSite, "wfwf"),
+            (WtwtSite, "wtwt"),
+            (MzgtoonSite, "mzgtoon"),
         ]
+
+        site_list: list[Site] = []
+        for site_class, site_name_param in site_classes:
+            try:
+                site = site_class(site_name_param)
+                site_list.append(site)
+            except (OSError, IOError, TypeError, ValueError, RuntimeError) as e:
+                LOGGER.warning(f"Failed to create site {site_name_param}: {e}, skipping")
+                continue
+            except Exception as e:
+                # Catch specific exceptions like NotFoundConfigFileError
+                LOGGER.warning(f"Failed to create site {site_name_param}: {e}, skipping")
+                continue
 
         result_list: list[tuple[str, str]] = []
         if not site_name:

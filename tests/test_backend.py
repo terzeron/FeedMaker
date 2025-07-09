@@ -5,6 +5,9 @@ import unittest
 from unittest.mock import patch, MagicMock
 from datetime import datetime
 
+# Import main.py to establish dependency relationship for test_runner.py
+import backend.main  # noqa: F401
+
 class TestBackendAPI(unittest.TestCase):
     """백엔드 API 테스트 (mock 기반)"""
 

@@ -58,7 +58,7 @@ class _DataSource:
                     cur = conn.cursor()
                     cur.execute("PRAGMA timezone = '+00:00'")
                     cur.close()
-                except Exception:
+                except RuntimeError:
                     # SQLite에서 timezone 설정이 실패해도 무시
                     pass
 
@@ -80,7 +80,7 @@ class _DataSource:
         try:
             yield sess
             sess.commit()
-        except Exception:
+        except RuntimeError:
             sess.rollback()
             raise
         finally:

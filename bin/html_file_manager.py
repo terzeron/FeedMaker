@@ -42,7 +42,7 @@ class HtmlFileManager:
                     return feed_info["feed_title"]
                 return feed_name
             return ""
-        except Exception as e:
+        except (OSError, IOError, KeyError, TypeError, ValueError, AttributeError, RuntimeError) as e:
             LOGGER.warning("Failed to get feed title for %s: %s", feed_dir_path, e)
             return ""
 

@@ -188,7 +188,7 @@ class HeadlessBrowser:
         try:
             cls._driver_cache.current_url  # Test if driver is responsive
             return cls._driver_cache
-        except Exception:
+        except RuntimeError:
             cls._cleanup_cached_driver()
             return None
 
@@ -204,7 +204,7 @@ class HeadlessBrowser:
         if cls._driver_cache:
             try:
                 cls._driver_cache.quit()
-            except Exception:
+            except RuntimeError:
                 pass
             cls._driver_cache = None
             cls._driver_options_hash = None
@@ -356,7 +356,7 @@ class HeadlessBrowser:
 
             return response
 
-        except RuntimeError as e:
+        except (OSError, TypeError, ValueError, AttributeError, ImportError, ConnectionError, RuntimeError) as e:
             LOGGER.error(f"Unexpected error in make_request: {e}")
             return ""
         finally:
@@ -366,19 +366,19 @@ class HeadlessBrowser:
                     LOGGER.debug("Closing newly created driver")
                     driver.close()
                     driver.quit()
-                except RuntimeError as e:
+                except (OSError, AttributeError, TypeError, RuntimeError) as e:
                     LOGGER.warning(f"Error closing driver: {e}")
             elif driver and driver == self._driver_cache:
                 # For cached driver, just clear any alerts and reset state
                 try:
                     # Clear any alerts
                     driver.switch_to.alert.dismiss()
-                except Exception:
+                except RuntimeError:
                     pass  # No alert present
                 
                 # Clear local storage and cookies for clean state
                 try:
                     driver.execute_script("window.localStorage.clear();")
                     driver.execute_script("window.sessionStorage.clear();")
-                except Exception:
+                except RuntimeError:
                     pass  # Might fail if no page loaded
