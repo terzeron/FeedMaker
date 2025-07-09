@@ -86,7 +86,7 @@ class TestDownloadImage(unittest.TestCase):
         mock_download.return_value = (True, f"{Env.get('WEB_SERVICE_IMAGE_URL_PREFIX')}/one_second/753d4f8.jpeg")
         
         test_input = "<img src='https://image-comic.pstatic.net/webtoon/725586/247/20240118173811_a4fcf1cbd0e4a0d0b38a6b773ba58282_IMAG01_1.jpg' width='100%'/>"
-        expected_output = "<img src='%s/one_second/753d4f8.jpeg'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
+        expected_output = "<img src='%s/one_second/753d4f8.jpeg' width='100%%'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
 
         with (
             patch("sys.argv", self.fake_argv),
@@ -115,13 +115,13 @@ class TestDownloadImage(unittest.TestCase):
                      "<img src='https://example.com/image3.jpg' alt='test'/> "
                      "<div>마지막 텍스트입니다.</div>")
         
-        expected_output = ("<img src='%s/one_second/image1.jpeg'/>\n"
-                          "<img src='%s/one_second/image2.webp'/>\n"
+        expected_output = ("<div align='center'>처음 텍스트입니다.</div>\n"
+                          "<img src='%s/one_second/image1.jpeg'/>\n"
+                          "<p>중간 텍스트입니다.</p>\n"
+                          "<img src='%s/one_second/image2.webp' width='100%%'/>\n"
+                          "<span>더 많은 중간 텍스트</span>\n"
                           "<img src='%s/one_second/image3.png'/>\n"
-                          "<div align='center'>처음 텍스트입니다.</div>  "
-                          "<p>중간 텍스트입니다.</p>  "
-                          "<span>더 많은 중간 텍스트</span>  "
-                          "<div>마지막 텍스트입니다.</div>") % (
+                          "<div>마지막 텍스트입니다.</div>\n") % (
                               Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"),
                               Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"),
                               Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"))
@@ -160,23 +160,18 @@ class TestDownloadImage(unittest.TestCase):
                      "<center><img src='https://example.com/image5.jpg'/></center> "
                      "<p>완성된 모습입니다.</p>")
         
-        expected_output = ("<img src='%s/one_second/img1.webp'/>\n"
-                          "<img src='%s/one_second/img2.webp'/>\n"
-                          "<img src='%s/one_second/img3.webp'/>\n"
-                          "<img src='%s/one_second/img4.webp'/>\n"
-                          "<img src='%s/one_second/img5.webp'/>\n"
-                          "<div align='left'>프라모델 작업 과정입니다.</div> "
-                          "<center>첫 번째 이미지</center> "
-                          "<center></center> "
-                          "<p>작업 설명 텍스트</p> "
-                          "<center></center> "
-                          "<p>더 많은 설명</p> "
-                          "<center></center> "
-                          "<p>추가 설명</p> "
-                          "<center></center> "
-                          "<p>마지막 단계</p> "
-                          "<center></center> "
-                          "<p>완성된 모습입니다.</p>") % (
+        expected_output = ("<div align='left'>프라모델 작업 과정입니다.</div>\n"
+                          "<center>첫 번째 이미지</center>\n"
+                          "<center><img src='%s/one_second/img1.webp'/></center>\n"
+                          "<p>작업 설명 텍스트</p>\n"
+                          "<center><img src='%s/one_second/img2.webp'/></center>\n"
+                          "<p>더 많은 설명</p>\n"
+                          "<center><img src='%s/one_second/img3.webp'/></center>\n"
+                          "<p>추가 설명</p>\n"
+                          "<center><img src='%s/one_second/img4.webp'/></center>\n"
+                          "<p>마지막 단계</p>\n"
+                          "<center><img src='%s/one_second/img5.webp'/></center>\n"
+                          "<p>완성된 모습입니다.</p>\n") % (
                               Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"),
                               Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"),
                               Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"),
@@ -209,13 +204,13 @@ class TestDownloadImage(unittest.TestCase):
                      "<img src='https://example.com/fail2.jpg'/>"
                      "<p>끝 텍스트</p>")
         
-        expected_output = ("<img src='not_found.png' alt='not exist or size 0'/>\n"
-                          "<img src='%s/one_second/success.webp'/>\n"
+        expected_output = ("<p>시작 텍스트</p>\n"
                           "<img src='not_found.png' alt='not exist or size 0'/>\n"
-                          "<p>시작 텍스트</p>"
-                          "<p>중간 텍스트</p>"
-                          "<p>더 많은 텍스트</p>"
-                          "<p>끝 텍스트</p>") % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
+                          "<p>중간 텍스트</p>\n"
+                          "<img src='%s/one_second/success.webp'/>\n"
+                          "<p>더 많은 텍스트</p>\n"
+                          "<img src='not_found.png' alt='not exist or size 0'/>\n"
+                          "<p>끝 텍스트</p>\n") % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
 
         with (
             patch("sys.argv", self.fake_argv),
