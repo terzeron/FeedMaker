@@ -56,6 +56,11 @@ class FeedMaker:
         self.html_dir.mkdir(exist_ok=True)
         self.img_dir_path.mkdir(exist_ok=True)
 
+        # 실패 URL 캐시 파일 추가
+        self.failed_urls_cache_file = self.feed_dir_path / ".failed_urls_cache"
+        # 만료된 실패 URL 캐시 정리
+        self._cleanup_expired_failed_urls()
+
     def __del__(self) -> None:
         del self.collection_conf
         del self.extraction_conf
@@ -192,6 +197,11 @@ class FeedMaker:
             return False
         conf = self.extraction_conf
 
+        # 실패 캐시 확인
+        if self._is_url_recently_failed(item_url):
+            LOGGER.info("Skipping recently failed URL: %s", item_url)
+            return False
+
         html_file_path = FeedMaker._get_html_file_path(self.html_dir, item_url)
         if html_file_path.is_file():
             size = html_file_path.stat().st_size
@@ -218,57 +228,65 @@ class FeedMaker:
             option_str = Crawler.get_option_str(conf)
             crawler_cmd = f"crawler.py -f '{self.feed_dir_path}' {option_str} '{item_url}'"
             LOGGER.debug(f"cmd={crawler_cmd}")
-            result, error, _ = crawler.run(item_url)
-            if not result or error:
-                LOGGER.error("Error: %s", error)
-                return False
-
-            content: Optional[str] = result
-            if not conf.get("bypass_element_extraction", False):
-                extraction_cmd = f"extractor.py -f '{self.feed_dir_path}' '{item_url}'"
-                LOGGER.debug(f"cmd={extraction_cmd}")
-                content = Extractor.extract_content(conf, item_url, input_data=result)
-                if not content:
+            try:
+                result, error, _ = crawler.run(item_url)
+                if not result or error:
+                    LOGGER.error("Error: %s", error)
+                    self._add_failed_url(item_url, f"Crawler error: {error}")
                     return False
 
-            for post_process_script in conf.get("post_process_script_list", []):
-                program = post_process_script.split(" ")[0]
-                program_fullpath = which(program)
-                if program_fullpath and program_fullpath.startswith(("/usr", "/bin", "/sbin")):
-                    post_process_cmd = f"{post_process_script}"
+                content: Optional[str] = result
+                if not conf.get("bypass_element_extraction", False):
+                    extraction_cmd = f"extractor.py -f '{self.feed_dir_path}' '{item_url}'"
+                    LOGGER.debug(f"cmd={extraction_cmd}")
+                    content = Extractor.extract_content(conf, item_url, input_data=result)
+                    if not content:
+                        self._add_failed_url(item_url, "Extractor failed")
+                        return False
+
+                for post_process_script in conf.get("post_process_script_list", []):
+                    program = post_process_script.split(" ")[0]
+                    program_fullpath = which(program)
+                    if program_fullpath and program_fullpath.startswith(("/usr", "/bin", "/sbin")):
+                        post_process_cmd = f"{post_process_script}"
+                    else:
+                        post_process_cmd = f"{post_process_script} -f '{self.feed_dir_path}' '{item_url}'"
+                    LOGGER.debug(f"cmd={post_process_cmd}")
+                    result, error_msg = Process.exec_cmd(post_process_cmd, dir_path=self.feed_dir_path, input_data=content)
+                    LOGGER.debug(f"cmd={post_process_cmd}")
+                    if not result or error_msg:
+                        LOGGER.error("Error: No result in executing command '%s', %r", post_process_cmd, error_msg)
+                        self._add_failed_url(item_url, f"Post-process failed: {error_msg}")
+                        return False
+                    content = result
+
+                LOGGER.debug("writing to '%s'", PathUtil.short_path(html_file_path))
+                with html_file_path.open("w", encoding="utf-8") as outfile:
+                    outfile.write(str(content))
+
+                if conf.get("force_sleep_between_articles", False):
+                    time.sleep(2)
+
+                if html_file_path.is_file():
+                    size = html_file_path.stat().st_size
                 else:
-                    post_process_cmd = f"{post_process_script} -f '{self.feed_dir_path}' '{item_url}'"
-                LOGGER.debug(f"cmd={post_process_cmd}")
-                result, error_msg = Process.exec_cmd(post_process_cmd, dir_path=self.feed_dir_path, input_data=content)
-                LOGGER.debug(f"cmd={post_process_cmd}")
-                if not result or error_msg:
-                    LOGGER.error("Error: No result in executing command '%s', %r", post_process_cmd, error_msg)
-                    return False
-                content = result
+                    size = 0
 
-            LOGGER.debug("writing to '%s'", PathUtil.short_path(html_file_path))
-            with html_file_path.open("w", encoding="utf-8") as outfile:
-                outfile.write(str(content))
+                if size > self._get_size_of_template():
+                    if not FeedMaker._is_image_tag_in_html_file(html_file_path, image_tag_str):
+                        FeedMaker._append_image_tag_to_html_file(html_file_path, image_tag_str)
 
-            if conf.get("force_sleep_between_articles", False):
-                time.sleep(2)
+                    # 피드 리스트에 추가
+                    LOGGER.info("New: %s\t%s\t%s (%d bytes > %d bytes of template)", item_url, title, PathUtil.short_path(html_file_path), size, self._get_size_of_template())
+                    ret = True
+                else:
+                    # 피드 리스트에서 제외
+                    LOGGER.warning("Warning: excluded %s\t%s\t%s (%d bytes <= %d bytes of template)", item_url, title, PathUtil.short_path(html_file_path), size, self._get_size_of_template())
+                    ret = False
 
-            if html_file_path.is_file():
-                size = html_file_path.stat().st_size
-            else:
-                size = 0
-
-            if size > self._get_size_of_template():
-                if not FeedMaker._is_image_tag_in_html_file(html_file_path, image_tag_str):
-                    FeedMaker._append_image_tag_to_html_file(html_file_path, image_tag_str)
-
-                # 피드 리스트에 추가
-                LOGGER.info("New: %s\t%s\t%s (%d bytes > %d bytes of template)", item_url, title, PathUtil.short_path(html_file_path), size, self._get_size_of_template())
-                ret = True
-            else:
-                # 피드 리스트에서 제외
-                LOGGER.warning("Warning: excluded %s\t%s\t%s (%d bytes <= %d bytes of template)", item_url, title, PathUtil.short_path(html_file_path), size, self._get_size_of_template())
-                ret = False
+            except Exception as e:
+                self._add_failed_url(item_url, f"Unexpected error: {str(e)}")
+                return False
 
         threshold_to_remove_html_with_incomplete_image = conf.get("threshold_to_remove_html_with_incomplete_image", 0)
         if threshold_to_remove_html_with_incomplete_image > 0:
@@ -547,3 +565,57 @@ class FeedMaker:
             Uploader.upload(self.rss_file_path)
 
         return True
+
+    def _is_url_recently_failed(self, url: str) -> bool:
+        """URL이 최근 24시간 내에 실패했는지 확인"""
+        if not self.failed_urls_cache_file.exists():
+            return False
+        
+        try:
+            current_time = Datetime.get_current_time()
+            with self.failed_urls_cache_file.open('r', encoding='utf-8') as f:
+                for line in f:
+                    parts = line.strip().split('\t')
+                    if len(parts) >= 2 and parts[0] == url:
+                        import dateutil.parser
+                        failure_time = dateutil.parser.parse(parts[1])
+                        if (current_time - failure_time).total_seconds() < 24 * 3600:  # 24시간
+                            return True
+        except (IOError, ValueError):
+            pass
+        return False
+    
+    def _add_failed_url(self, url: str, error_msg: str = "") -> None:
+        """실패한 URL을 캐시에 추가"""
+        try:
+            with self.failed_urls_cache_file.open('a', encoding='utf-8') as f:
+                current_time_str = Datetime.get_current_time_str()
+                f.write(f"{url}\t{current_time_str}\t{error_msg}\n")
+        except IOError:
+            pass  # 캐시 파일 쓰기 실패해도 무시
+    
+    def _cleanup_expired_failed_urls(self) -> None:
+        """24시간 지난 실패 URL 정리"""
+        if not self.failed_urls_cache_file.exists():
+            return
+        
+        try:
+            current_time = Datetime.get_current_time()
+            valid_lines = []
+            
+            with self.failed_urls_cache_file.open('r', encoding='utf-8') as f:
+                for line in f:
+                    parts = line.strip().split('\t')
+                    if len(parts) >= 2:
+                        try:
+                            import dateutil.parser
+                            failure_time = dateutil.parser.parse(parts[1])
+                            if (current_time - failure_time).total_seconds() < 24 * 3600:  # 24시간
+                                valid_lines.append(line)
+                        except ValueError:
+                            continue
+            
+            with self.failed_urls_cache_file.open('w', encoding='utf-8') as f:
+                f.writelines(valid_lines)
+        except IOError:
+            pass  # 정리 실패해도 무시

@@ -97,6 +97,10 @@ class TestFeedMaker(unittest.TestCase):
         self.list_file1_path.unlink(missing_ok=True)
         shutil.rmtree(self.list_dir_path)
 
+        # 실패 URL 캐시 파일 정리
+        if hasattr(self.maker, 'failed_urls_cache_file') and self.maker.failed_urls_cache_file.exists():
+            self.maker.failed_urls_cache_file.unlink(missing_ok=True)
+
         del self.maker
 
         self.conf_file_path.unlink(missing_ok=True)
@@ -373,6 +377,31 @@ class TestFeedMaker(unittest.TestCase):
                 self.assertTrue(actual)
 
                 self.assertTrue(assert_in_mock_logger("upload success!", mock_info))
+
+    def test_failed_url_cache(self) -> None:
+        """실패 URL 캐싱 기능 테스트"""
+        test_url = "https://example.com/failed_url"
+        test_error = "connection timeout"
+        
+        # 초기에는 실패한 URL이 없어야 함
+        if hasattr(self.maker, '_is_url_recently_failed'):
+            self.assertFalse(self.maker._is_url_recently_failed(test_url))
+        
+        # 실패 URL을 캐시에 추가
+        if hasattr(self.maker, '_add_failed_url'):
+            self.maker._add_failed_url(test_url, test_error)
+        
+        # 캐시 파일이 생성되었는지 확인
+        if hasattr(self.maker, 'failed_urls_cache_file'):
+            self.assertTrue(self.maker.failed_urls_cache_file.exists())
+        
+        # 실패한 URL이 캐시에서 조회되는지 확인
+        if hasattr(self.maker, '_is_url_recently_failed'):
+            self.assertTrue(self.maker._is_url_recently_failed(test_url))
+        
+        # 다른 URL은 캐시에 없어야 함
+        if hasattr(self.maker, '_is_url_recently_failed'):
+            self.assertFalse(self.maker._is_url_recently_failed("https://example.com/other_url"))
 
 
 if __name__ == "__main__":
