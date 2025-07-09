@@ -26,6 +26,11 @@ check_untyped_defs = true
 disallow_untyped_calls = true
 disallow_any_generics = true
 #warn_return_any = true
+# 심각도 높은 오류만 표시
+show_error_codes = true
+error_summary = true
+# 낮은 심각도 오류 비활성화
+disable_error_code = ["misc", "no-redef", "override", "assignment", "type-arg"]
 
 [tool.pylint."master"]
 ignore = [
@@ -36,6 +41,11 @@ ignore = [
     "frontend/*",
     "out/*",
 ]
+
+[tool.pylint."messages control"]
+# 심각도 높은 오류만 표시 (Error만 활성화)
+enable = ["E"]
+# Warning, Convention, Refactor 비활성화
 disable = [
     "line-too-long",
     "missing-module-docstring",
@@ -91,3 +101,10 @@ disable = [
     "duplicate-code",
 ]
 extension-pkg-allow-list = ["pdftotext"]
+
+# 단축 스크립트 명령어들
+[tool.scripts]
+# 사용법: python -m tool.scripts.lint_errors
+lint-errors = "pylint --errors-only"
+type-errors = "mypy --show-error-codes"
+check-critical = "mypy --show-error-codes && pylint --errors-only"
