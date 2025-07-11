@@ -10,7 +10,8 @@ from shutil import which
 from datetime import datetime, timedelta
 from contextlib import suppress
 import dateutil.parser
-import PyRSS2Gen  
+from dateutil.parser import isoparser
+import PyRSS2Gen
 from ordered_set import OrderedSet
 from bin.crawler import Crawler, Method
 from bin.extractor import Extractor
@@ -24,10 +25,12 @@ SECONDS_PER_DAY = 60 * 60 * 24
 
 T = TypeVar('T')
 
+
 class Comparable(Protocol):
     def __lt__(self, other: Any) -> bool: ...
     def __gt__(self, other: Any) -> bool: ...
     def __eq__(self, other: Any) -> bool: ...
+
 
 class FeedMaker:
     MAX_CONTENT_LENGTH = 64 * 1024
@@ -58,6 +61,7 @@ class FeedMaker:
 
         # 실패 URL 캐시 파일 추가
         self.failed_urls_cache_file = self.feed_dir_path / ".failed_urls_cache"
+        self.isoparser = isoparser()
         # 만료된 실패 URL 캐시 정리
         self._cleanup_expired_failed_urls()
 
@@ -567,55 +571,94 @@ class FeedMaker:
         return True
 
     def _is_url_recently_failed(self, url: str) -> bool:
-        """URL이 최근 24시간 내에 실패했는지 확인"""
         if not self.failed_urls_cache_file.exists():
             return False
-        
-        try:
-            current_time = Datetime.get_current_time()
-            with self.failed_urls_cache_file.open('r', encoding='utf-8') as f:
-                for line in f:
-                    parts = line.strip().split('\t')
-                    if len(parts) >= 2 and parts[0] == url:
-                        import dateutil.parser
-                        failure_time = dateutil.parser.parse(parts[1])
-                        if (current_time - failure_time).total_seconds() < 24 * 3600:  # 24시간
+
+        now = Datetime.get_current_time()
+        with self.failed_urls_cache_file.open('r', encoding='utf-8') as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                cached_url, expiry_str = line.strip().split('\t')
+                if cached_url == url:
+                    try:
+                        expiry_dt = self.isoparser.isoparse(expiry_str)
+                        if now < expiry_dt:
                             return True
-        except (IOError, ValueError):
-            pass
+                    except ValueError:
+                        LOGGER.warning(
+                            "Invalid timestamp in .failed_urls_cache: %s", expiry_str)
         return False
-    
+
     def _add_failed_url(self, url: str, error_msg: str = "") -> None:
-        """실패한 URL을 캐시에 추가"""
-        try:
-            with self.failed_urls_cache_file.open('a', encoding='utf-8') as f:
-                current_time_str = Datetime.get_current_time_str()
-                f.write(f"{url}\t{current_time_str}\t{error_msg}\n")
-        except IOError:
-            pass  # 캐시 파일 쓰기 실패해도 무시
-    
+        expiration_dt = self._get_expiration_from_config()
+        if not expiration_dt:
+            return
+
+        LOGGER.info("Adding failed URL %s to cache, expires at %s. Reason: %s",
+                    url, expiration_dt.isoformat(), error_msg)
+        with self.failed_urls_cache_file.open('a', encoding='utf-8') as f:
+            f.write(f"{url}\t{expiration_dt.isoformat()}\n")
+
     def _cleanup_expired_failed_urls(self) -> None:
-        """24시간 지난 실패 URL 정리"""
         if not self.failed_urls_cache_file.exists():
             return
-        
-        try:
-            current_time = Datetime.get_current_time()
-            valid_lines = []
-            
-            with self.failed_urls_cache_file.open('r', encoding='utf-8') as f:
-                for line in f:
-                    parts = line.strip().split('\t')
-                    if len(parts) >= 2:
-                        try:
-                            import dateutil.parser
-                            failure_time = dateutil.parser.parse(parts[1])
-                            if (current_time - failure_time).total_seconds() < 24 * 3600:  # 24시간
-                                valid_lines.append(line)
-                        except ValueError:
-                            continue
-            
-            with self.failed_urls_cache_file.open('w', encoding='utf-8') as f:
-                f.writelines(valid_lines)
-        except IOError:
-            pass  # 정리 실패해도 무시
+
+        now = Datetime.get_current_time()
+        valid_entries = []
+        with self.failed_urls_cache_file.open('r', encoding='utf-8') as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                try:
+                    url, expiry_str = line.strip().split('\t')
+                    expiry_dt = self.isoparser.isoparse(expiry_str)
+                    if now < expiry_dt:
+                        valid_entries.append(line)
+                except ValueError:
+                    LOGGER.warning(
+                        "Skipping invalid line in .failed_urls_cache: %s", line.strip())
+
+        with self.failed_urls_cache_file.open('w', encoding='utf-8') as f:
+            for entry in valid_entries:
+                f.write(entry)
+
+    def _get_expiration_from_config(self) -> Optional[datetime]:
+        """
+        ignore_broken_link 값에 따라 만료 시각을 계산한다.
+        - "always": 영구적으로 무시 (datetime.max)
+        - "<n> month(s)": n달 동안 무시
+        - "<n> week(s)": n주 동안 무시
+        - "<n> day(s)": n일 동안 무시
+        - "<n> hour(s)": n시간 동안 무시
+        - "false" 또는 그 외: 무시 안함 (None)
+        """
+        ignore_option = self.rss_conf.get("ignore_broken_link", "false")
+        if not ignore_option or ignore_option.lower() == "false":
+            return None
+
+        now = Datetime.get_current_time()
+        if ignore_option.lower() == "always":
+            return datetime.max.replace(tzinfo=now.tzinfo)
+
+        match = re.match(r"(\d+)\s+(month|week|day|hour|second)s?", ignore_option, re.IGNORECASE)
+        if not match:
+            return None
+
+        value = int(match.group(1))
+        unit = match.group(2).lower()
+
+        if unit == "month":
+            # months are tricky, dateutil.relativedelta is better but trying to avoid new dependency.
+            # A month is approximately 30.44 days
+            return now + timedelta(days=value * 30.44)
+        elif unit == "week":
+            return now + timedelta(weeks=value)
+        elif unit == "day":
+            return now + timedelta(days=value)
+        elif unit == "hour":
+            return now + timedelta(hours=value)
+        elif unit == "second":
+            return now + timedelta(seconds=value)
+
+        return None

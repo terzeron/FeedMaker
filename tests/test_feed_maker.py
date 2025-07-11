@@ -379,29 +379,89 @@ class TestFeedMaker(unittest.TestCase):
                 self.assertTrue(assert_in_mock_logger("upload success!", mock_info))
 
     def test_failed_url_cache(self) -> None:
-        """실패 URL 캐싱 기능 테스트"""
-        test_url = "https://example.com/failed_url"
-        test_error = "connection timeout"
+        failed_url = "http://example.com/failed"
+
+        # 시나리오 1: ignore_broken_link = "1 hour"
+        self.maker.rss_conf["ignore_broken_link"] = "1 hour"
+        self.maker._add_failed_url(failed_url, "test failure")
+
+        self.assertTrue(self.maker.failed_urls_cache_file.exists())
+        self.assertTrue(self.maker._is_url_recently_failed(failed_url))
+
+        # 만료되지 않았으므로 정리되지 않아야 함
+        self.maker._cleanup_expired_failed_urls()
+        self.assertTrue(self.maker._is_url_recently_failed(failed_url))
+
+        # 시나리오 2: ignore_broken_link = "" (기본값)
+        self.maker.failed_urls_cache_file.unlink()
+        self.maker.rss_conf["ignore_broken_link"] = ""
+        self.maker._add_failed_url("http://another.com/failed", "another failure")
+        self.assertFalse(self.maker.failed_urls_cache_file.exists())
+
+        # 시나리오 3: 만료 테스트
+        self.maker.rss_conf["ignore_broken_link"] = "1 second"
+        expired_url = "http://example.com/expired"
         
-        # 초기에는 실패한 URL이 없어야 함
-        if hasattr(self.maker, '_is_url_recently_failed'):
-            self.assertFalse(self.maker._is_url_recently_failed(test_url))
+        # 시간을 과거로 조작하여 캐시 생성
+        past_time = Datetime.get_current_time() - timedelta(seconds=5)
+        with patch('bin.feed_maker_util.Datetime.get_current_time', return_value=past_time):
+            self.maker._add_failed_url(expired_url, "expired failure")
         
-        # 실패 URL을 캐시에 추가
-        if hasattr(self.maker, '_add_failed_url'):
-            self.maker._add_failed_url(test_url, test_error)
+        self.assertTrue(self.maker.failed_urls_cache_file.exists())
         
-        # 캐시 파일이 생성되었는지 확인
-        if hasattr(self.maker, 'failed_urls_cache_file'):
-            self.assertTrue(self.maker.failed_urls_cache_file.exists())
+        # 현재 시간에는 만료되었어야 함
+        self.assertFalse(self.maker._is_url_recently_failed(expired_url))
         
-        # 실패한 URL이 캐시에서 조회되는지 확인
-        if hasattr(self.maker, '_is_url_recently_failed'):
-            self.assertTrue(self.maker._is_url_recently_failed(test_url))
-        
-        # 다른 URL은 캐시에 없어야 함
-        if hasattr(self.maker, '_is_url_recently_failed'):
-            self.assertFalse(self.maker._is_url_recently_failed("https://example.com/other_url"))
+        # 정리 작업 후에는 파일에서 삭제되어야 함
+        self.maker._cleanup_expired_failed_urls()
+        with self.maker.failed_urls_cache_file.open("r", encoding="utf-8") as f:
+            content = f.read()
+            self.assertNotIn(expired_url, content)
+
+    def test_failed_url_cache_formats(self) -> None:
+        """다양한 시간 포맷에 대한 실패 URL 캐싱 기능 테스트"""
+        test_cases = [
+            "always", "1 month", "1 months", "2 month", "2 months",
+            "3 week", "4 weeks", "5 day", "6 days", "7 hour", "8 hours"
+        ]
+
+        for i, case in enumerate(test_cases):
+            with self.subTest(case=case):
+                # Clean up cache file before each subtest
+                if self.maker.failed_urls_cache_file.exists():
+                    self.maker.failed_urls_cache_file.unlink()
+
+                url = f"http://example.com/testcase-{i}"
+                self.maker.rss_conf["ignore_broken_link"] = case
+                self.maker._add_failed_url(url, f"Testing {case}")
+
+                self.assertTrue(self.maker.failed_urls_cache_file.exists(), f"Cache file should exist for case: {case}")
+
+                # Check that the URL is now considered failed
+                self.assertTrue(self.maker._is_url_recently_failed(url), f"URL should be recently failed for case: {case}")
+
+                # Check that the expiry date is valid
+                with self.maker.failed_urls_cache_file.open("r", encoding="utf-8") as f:
+                    content = f.read()
+                    self.assertIn(url, content)
+
+                    lines = content.strip().split('\n')
+                    found_line = ""
+                    for line in lines:
+                        if url in line:
+                            found_line = line
+                            break
+
+                    self.assertTrue(found_line, f"URL not found in cache for case: {case}")
+
+                    _, expiry_str = found_line.strip().split('\t')
+                    expiry_dt = self.maker.isoparser.isoparse(expiry_str)
+
+                    if case == "always":
+                        self.assertIn("9999-", expiry_str)
+                    else:
+                        now = Datetime.get_current_time()
+                        self.assertGreater(expiry_dt, now, f"Expiry date should be in the future for case: {case}")
 
 
 if __name__ == "__main__":

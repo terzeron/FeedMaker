@@ -33,6 +33,7 @@ T = TypeVar('T', bound=Union[Hashable, dict[str, Any], list[Any]])
 K = TypeVar('K', bound=Hashable)
 V = TypeVar('V')
 
+
 class Data:
     @staticmethod
     def _to_hashable(item: Union[dict[str, Any], list[Any], Any]) -> Union[Hashable, tuple[tuple[str, Hashable], ...], tuple[Hashable, ...]]:
@@ -316,7 +317,6 @@ class IO:
         return line_list
 
 
-    
 class NotFoundEnvError(Exception):
     def __init__(self, message: str) -> None:
         super().__init__(message)
@@ -494,7 +494,7 @@ class Config:
             rss_conf = self.conf.get("rss", {})
             if rss_conf:
                 conf = {
-                    "ignore_broken_link": Config._get_bool_config_value(rss_conf, "ignore_broken_link", False),
+                    "ignore_broken_link": Config._get_str_config_value(rss_conf, "ignore_broken_link", ""),
                     "rss_title": Config._get_str_config_value(rss_conf, "title"),
                     "rss_generator": Config._get_str_config_value(rss_conf, "generator"),
                     "rss_copyright": Config._get_str_config_value(rss_conf, "copyright"),
@@ -716,6 +716,7 @@ class FileManager:
             file_path.unlink(missing_ok=True)
 
         FileManager.remove_temporary_files(feed_dir_path)
+
 
 class PathUtil:
     work_dir_path = Path(Env.get("FM_WORK_DIR"))

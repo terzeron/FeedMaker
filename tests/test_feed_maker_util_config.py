@@ -217,13 +217,25 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual({}, actual2)
 
     def test_get_rss_configs(self) -> None:
+        # 1. ignore_broken_link가 설정에 없을 때
         configs = self.config.get_rss_configs()
-        actual = isinstance(configs, dict)
-        self.assertTrue(actual)
+        self.assertIsInstance(configs, dict)
+        self.assertEqual(configs["rss_title"], "네이버캐스트 모바일")
+        self.assertEqual(configs["ignore_broken_link"], "")
 
-        actual = configs["rss_title"]
-        expected = "네이버캐스트 모바일"
-        self.assertEqual(expected, actual)
+        # 2. ignore_broken_link가 설정에 있을 때
+        conf_path = Path(__file__).parent / "conf.json"
+        with open(conf_path, "r", encoding="utf-8") as f:
+            conf_dict = json.load(f)
+        
+        conf_dict["configuration"]["rss"]["ignore_broken_link"] = "always"
+        
+        with open(conf_path, "w", encoding="utf-8") as f:
+            json.dump(conf_dict, f, ensure_ascii=False, indent=2)
+            
+        config_with_ignore = Config(feed_dir_path=Path(__file__).parent)
+        configs = config_with_ignore.get_rss_configs()
+        self.assertEqual(configs["ignore_broken_link"], "always")
 
 
 if __name__ == "__main__":
