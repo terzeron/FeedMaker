@@ -220,6 +220,33 @@ class TestDownloadImage(unittest.TestCase):
             utils.download_image.main()
             self.assertEqual(mock_stdout.getvalue(), expected_output)
 
+    @patch('utils.download_image.Crawler')
+    def test_skip_download_for_blocked_domain(self, mock_crawler_class: MagicMock) -> None:
+        """차단된 도메인의 이미지는 다운로드를 건너뛰는지 테스트"""
+        # Given: We patch the Crawler class to control its instances.
+        # The instance's `run` method (the actual download call) should not be called.
+        mock_crawler_instance = MagicMock()
+        mock_crawler_class.return_value = mock_crawler_instance
+
+        test_input = "<div><img src='http://image.egloos.com/image.jpg'/></div>"
+        # The logic inside ImageDownloader.download_image should see the blocked domain,
+        # return (None, None), and cause replace_img_tag to produce a "not_found" image.
+        expected_output = "<div><img src='not_found.png' alt='not exist or size 0'/></div>\n"
+
+        # When
+        with (
+            patch("sys.argv", self.fake_argv),
+            patch("sys.stdin", new=io.StringIO(test_input)),
+            patch("sys.stdout", new_callable=io.StringIO) as mock_stdout,
+        ):
+            utils.download_image.main()
+
+            # Then
+            # The output should be the placeholder, because the domain is blocked.
+            self.assertEqual(mock_stdout.getvalue(), expected_output)
+            # And the crawler's download method should NOT have been called.
+            mock_crawler_instance.run.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

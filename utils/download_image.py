@@ -4,6 +4,7 @@ import sys
 import re
 import getopt
 import logging.config
+import functools
 from pathlib import Path
 from utils.image_downloader import ImageDownloader
 from bin.feed_maker_util import Config, IO, PathUtil, Env
@@ -14,6 +15,27 @@ logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
+def replace_img_tag(match: re.Match[str], *, crawler: Crawler, feed_img_dir_path: Path, quality: int) -> str:
+    img_url = match.group("img_url")
+    original_tag = match.group(0)
+                
+    try:
+        _, new_img_url = ImageDownloader.download_image(crawler, feed_img_dir_path, img_url, quality=quality)
+        if new_img_url:
+            # width 속성만 보존하고 나머지는 제거
+            width_match = re.search(r"width=['\"][^'\"]*['\"]", original_tag)
+            if width_match:
+                width_attr = width_match.group(0)
+                return f"<img src='{new_img_url}' {width_attr}/>"
+            else:
+                return f"<img src='{new_img_url}'/>"
+        else:
+            return "<img src='not_found.png' alt='not exist or size 0'/>"
+    except (OSError, IOError, TypeError, ValueError, RuntimeError) as e:
+        LOGGER.error(f"이미지 다운로드 중 오류 발생: {e}")
+        return "<img src='not_found.png' alt='error occurred'/>"
+
+    
 def main() -> int:
     feed_dir_path = Path.cwd()
     quality = 75  # default quality
@@ -42,6 +64,13 @@ def main() -> int:
     }
     crawler = Crawler(dir_path=feed_dir_path, headers=headers, num_retries=2)
 
+    replacer = functools.partial(
+        replace_img_tag,
+        crawler=crawler,
+        feed_img_dir_path=feed_img_dir_path,
+        quality=quality
+    )
+
     line_list = IO.read_stdin_as_line_list()
     for line in line_list:
         # 이미지 태그 패턴
@@ -49,29 +78,8 @@ def main() -> int:
         
         # 이미지가 있는지 확인
         if re.search(img_pattern, line):
-            # 이미지 태그를 순차적으로 교체
-            def replace_img_tag(match: re.Match[str]) -> str:
-                img_url = match.group("img_url")
-                original_tag = match.group(0)
-                
-                try:
-                    _, new_img_url = ImageDownloader.download_image(crawler, feed_img_dir_path, img_url, quality=quality)
-                    if new_img_url:
-                        # width 속성만 보존하고 나머지는 제거
-                        width_match = re.search(r"width=['\"][^'\"]*['\"]", original_tag)
-                        if width_match:
-                            width_attr = width_match.group(0)
-                            return f"<img src='{new_img_url}' {width_attr}/>"
-                        else:
-                            return f"<img src='{new_img_url}'/>"
-                    else:
-                        return "<img src='not_found.png' alt='not exist or size 0'/>"
-                except (OSError, IOError, TypeError, ValueError, RuntimeError) as e:
-                    LOGGER.error(f"이미지 다운로드 중 오류 발생: {e}")
-                    return "<img src='not_found.png' alt='error occurred'/>"
-            
             # 모든 이미지 태그를 교체
-            new_line = re.sub(img_pattern, replace_img_tag, line)
+            new_line = re.sub(img_pattern, replacer, line)
             
             # 더 정확한 HTML 요소 분리
             # 중첩된 태그를 포함하여 완전한 HTML 요소를 찾는 패턴
@@ -102,4 +110,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-# Test comment

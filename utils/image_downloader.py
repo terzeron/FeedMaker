@@ -18,9 +18,16 @@ LOGGER = logging.getLogger(__name__)
 
 
 class ImageDownloader:
+    BLOCKED_DOMAINS = ["egloos.com", "hanafos.com"]
+    
     @staticmethod
     def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str, quality: int = 75) -> tuple[Optional[Path], Optional[str]]:
         LOGGER.debug(f"Downloading image: {img_url[:30]}")
+
+        # Check for blocked domains
+        if any(domain in img_url for domain in ImageDownloader.BLOCKED_DOMAINS):
+            LOGGER.warning(f"Skipping download from blocked domain: {img_url}")
+            return None, None
 
         cache_file_path = FileManager.get_cache_file_path(feed_img_dir_path, img_url)
         if cache_file_path.is_file() and cache_file_path.stat().st_size > 0:
@@ -74,12 +81,12 @@ class ImageDownloader:
             header = infile.read(1024)
 
         if header.startswith(b"<svg"):
-            new_cache_file_path = cache_file_path.with_suffix(".webp")
+            new_cache_file_path = cache_file_path.with_suffix(".jpeg")
             cairosvg.svg2png(url=str(cache_file_path), write_to=str(new_cache_file_path.with_suffix(".png")))
-            # PNG를 WebP로 최적화
+            # PNG를 JPEG로 최적화
             with Image.open(new_cache_file_path.with_suffix(".png")) as img:
                 optimized_img = ImageDownloader.optimize_for_webtoon(img)
-                optimized_img.save(new_cache_file_path, "WEBP", quality=quality, optimize=True)
+                optimized_img.convert("RGB").save(new_cache_file_path, "JPEG", quality=quality, optimize=True)
             cache_file_path.unlink(missing_ok=True)
             new_cache_file_path.with_suffix(".png").unlink(missing_ok=True)
             return new_cache_file_path
@@ -88,31 +95,26 @@ class ImageDownloader:
             heif_file = pyheif.read(str(cache_file_path))
             img = Image.frombytes(heif_file.mode, heif_file.size, heif_file.data)
             optimized_img = ImageDownloader.optimize_for_webtoon(img)
-            new_cache_file_path = cache_file_path.with_suffix(".webp")
-            optimized_img.save(new_cache_file_path, "WEBP", quality=quality, optimize=True)
+            new_cache_file_path = cache_file_path.with_suffix(".jpeg")
+            optimized_img.convert("RGB").save(new_cache_file_path, "JPEG", quality=quality, optimize=True)
             return new_cache_file_path
 
         try:
             with Image.open(cache_file_path) as img:
                 optimized_img = ImageDownloader.optimize_for_webtoon(img)
                 
-                # 모든 포맷을 WebP로 변환 (iOS 14+ 최적화)
-                new_cache_file_path = cache_file_path.with_suffix(".webp")
+                # 모든 포맷을 JPEG로 변환 (호환성 최적화)
+                new_cache_file_path = cache_file_path.with_suffix(".jpeg")
                 
-                # WebP 저장 시도
+                # JPEG 저장
                 try:
-                    optimized_img.save(new_cache_file_path, "WEBP", quality=quality, optimize=True)
+                    optimized_img.convert("RGB").save(new_cache_file_path, "JPEG", quality=quality, optimize=True)
                     if cache_file_path != new_cache_file_path:
                         cache_file_path.unlink(missing_ok=True)
                     return new_cache_file_path
                 except (OSError, IOError, TypeError, ValueError, RuntimeError) as e:
-                    LOGGER.warning(f"WebP 저장 실패, JPEG로 폴백: {e}")
-                    # WebP 실패 시 JPEG로 폴백
-                    fallback_path = cache_file_path.with_suffix(".jpg")
-                    optimized_img.convert("RGB").save(fallback_path, "JPEG", quality=quality, optimize=True)
-                    if cache_file_path != fallback_path:
-                        cache_file_path.unlink(missing_ok=True)
-                    return fallback_path
+                    LOGGER.warning(f"JPEG 저장 실패: {e}")
+                    return None
         except UnidentifiedImageError:
             LOGGER.warning(f"Cannot identify image format: {cache_file_path}")
 
