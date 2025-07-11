@@ -21,8 +21,8 @@ LOGGER = logging.getLogger()
 
 
 def assert_in_mock_logger(message: str, mock_logger: Mock, do_submatch: bool = False) -> bool:
-    for mock_call in mock_logger.call_args_list:  # type: ignore
-        formatted_message = mock_call.args[0] % mock_call.args[1:]  # type: ignore
+    for mock_call in mock_logger.call_args_list:  
+        formatted_message = mock_call.args[0] % mock_call.args[1:]  
         if do_submatch:
             if message in formatted_message:
                 return True

@@ -10,7 +10,7 @@ from shutil import which
 from datetime import datetime, timedelta
 from contextlib import suppress
 import dateutil.parser
-import PyRSS2Gen  # type: ignore
+import PyRSS2Gen  
 from ordered_set import OrderedSet
 from bin.crawler import Crawler, Method
 from bin.extractor import Extractor

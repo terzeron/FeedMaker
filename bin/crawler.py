@@ -10,7 +10,7 @@ import json
 import logging.config
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 import requests
 from requests.cookies import RequestsCookieJar
@@ -46,7 +46,7 @@ class RequestsClient:
 
     def write_cookies_to_file(self, cookies: RequestsCookieJar) -> None:
         cookie_data: list[dict[str, Any]] = []
-        for k, v in cookies.items():  # type: ignore
+        for k, v in cookies.items():
             cookie_data.append({"name": k, "value": v})
         cookie_file = self.dir_path / RequestsClient.COOKIE_FILE
         with cookie_file.open("w", encoding='utf-8') as f:
@@ -66,7 +66,7 @@ class RequestsClient:
                         self.cookies.update({c_name: c_value})
             LOGGER.debug(f"self.cookies={self.cookies}")
 
-    def make_request(self, url: str, data: Optional[Union[str, bytes, dict[str, Any]]] = None, download_file: Optional[Path] = None, allow_redirects: bool = True) -> tuple[str, str, dict[str, Any], Optional[int]]:
+    def make_request(self, url: str, data: Any = None, download_file: Optional[Path] = None, allow_redirects: bool = True) -> tuple[str, str, dict[str, Any], Optional[int]]:
         LOGGER.debug(f"# make_request(url='{url}', allow_redirects={allow_redirects})")
 
         referer = self.headers.get("Referer", "")
@@ -215,7 +215,7 @@ class Crawler:
 
         return option_str
 
-    def run(self, url: str, data: Optional[Union[str, bytes, dict[str, Any]]] = None, download_file: Optional[Path] = None, allow_redirects: bool = True) -> tuple[str, str, Optional[dict[str, Any]]]:
+    def run(self, url: str, data: Any = None, download_file: Optional[Path] = None, allow_redirects: bool = True) -> tuple[str, str, Optional[dict[str, Any]]]:
         LOGGER.debug(f"# run(url={url}, data={data!r}, download_file={download_file}, allow_redirects={allow_redirects})")
         error: str = ""
         headers: dict[str, Any] = {}

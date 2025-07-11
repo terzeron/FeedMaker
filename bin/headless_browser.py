@@ -4,18 +4,15 @@
 import json
 import logging.config
 from pathlib import Path
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, cast, Any
 from shutil import which
 import urllib3
 
 from selenium import webdriver
-from selenium.common.exceptions import InvalidCookieDomainException
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import InvalidCookieDomainException, TimeoutException, WebDriverException, NoAlertPresentException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.common.by import By
-import selenium
 
 from bin.feed_maker_util import PathUtil
 
@@ -165,7 +162,7 @@ class HeadlessBrowser:
         del self.headers
 
     @classmethod
-    def _get_options_hash(cls, options: Options) -> str:
+    def _get_options_hash(cls, options: "webdriver.ChromeOptions") -> str:
         """Generate a hash for driver options to check if driver can be reused"""
         import hashlib
         # Create a string representation of the key options
@@ -173,7 +170,7 @@ class HeadlessBrowser:
         return hashlib.md5(options_str.encode()).hexdigest()
 
     @classmethod
-    def _get_cached_driver(cls, options: Options) -> Optional[webdriver.Chrome]:
+    def _get_cached_driver(cls, options: "webdriver.ChromeOptions") -> Optional[webdriver.Chrome]:
         """Get cached driver if available and compatible"""
         if cls._driver_cache is None:
             return None
@@ -186,14 +183,14 @@ class HeadlessBrowser:
         
         # Check if driver is still alive
         try:
-            cls._driver_cache.current_url  # Test if driver is responsive
+            _ = cls._driver_cache.current_url  # Test if driver is responsive
             return cls._driver_cache
-        except RuntimeError:
+        except (WebDriverException, AttributeError):
             cls._cleanup_cached_driver()
             return None
 
     @classmethod
-    def _set_cached_driver(cls, driver: webdriver.Chrome, options: Options) -> None:
+    def _set_cached_driver(cls, driver: webdriver.Chrome, options: "webdriver.ChromeOptions") -> None:
         """Cache the driver for reuse"""
         cls._driver_cache = driver
         cls._driver_options_hash = cls._get_options_hash(options)
@@ -204,7 +201,7 @@ class HeadlessBrowser:
         if cls._driver_cache:
             try:
                 cls._driver_cache.quit()
-            except RuntimeError:
+            except (WebDriverException, OSError):
                 pass
             cls._driver_cache = None
             cls._driver_options_hash = None
@@ -217,7 +214,7 @@ class HeadlessBrowser:
     def _write_cookies_to_file(self, driver: webdriver.Chrome) -> None:
         cookies = driver.get_cookies()
         cookie_file = self.dir_path / HeadlessBrowser.COOKIE_FILE
-        with cookie_file.open("w", encoding='utf-8') as f:  # type: SupportsWrite[str]
+        with cookie_file.open("w", encoding='utf-8') as f:
             json.dump(cookies, f, indent=2, ensure_ascii=False)
 
     def _read_cookies_from_file(self, driver: webdriver.Chrome) -> None:
@@ -240,7 +237,7 @@ class HeadlessBrowser:
         driver_created = False
         
         try:
-            options = Options()
+            options = webdriver.ChromeOptions()
             if not self.disable_headless:
                 options.add_argument("--headless")
             options.add_argument("--window-size=1920,1080")
@@ -262,8 +259,7 @@ class HeadlessBrowser:
                 chrome_driver_path = which("chromedriver")
                 if not chrome_driver_path:
                     raise FileNotFoundError("chromedriver not found in PATH")
-                service = Service(executable_path=chrome_driver_path)
-                driver = webdriver.Chrome(service=service, options=options)
+                driver = webdriver.Chrome(options=options) 
                 driver.set_page_load_timeout(self.timeout)
                 self._set_cached_driver(driver, options)
                 driver_created = True
@@ -279,27 +275,23 @@ class HeadlessBrowser:
                 # bypass cloudflare test
                 try:
                     WebDriverWait(driver, self.timeout).until(
-                        expected_conditions.invisibility_of_element((By.ID, "cf-content")))
-                except selenium.common.exceptions.TimeoutException:
+                        expected_conditions.invisibility_of_element_located((By.ID, "cf-content")))
+                except TimeoutException:
                     pass
                 self._write_cookies_to_file(driver)
 
             LOGGER.debug(f"getting the page '{url}'")
             try:
                 driver.get(url)
-            except urllib3.exceptions.ProtocolError as e:
-                LOGGER.warning(f"<!-- Warning: can't connect to '{url}' for temporary network error -->")
-                LOGGER.warning("<!-- %r -->", e)
-                return ""
-            except urllib3.exceptions.NewConnectionError as e:
-                LOGGER.warning(f"<!-- Warning: can't connect to '{url}' for temporary network error -->")
-                LOGGER.warning("<!-- %r -->", e)
-                return ""
-            except selenium.common.exceptions.TimeoutException as e:
+            except TimeoutException as e:
                 LOGGER.warning(f"<!-- Warning: can't can't read data from '{url}' for timeout -->")
                 LOGGER.warning("<!-- %r -->", e)
                 return ""
-            except selenium.common.exceptions.WebDriverException as e:
+            except WebDriverException as e:
+                LOGGER.warning(f"<!-- Warning: can't connect to '{url}' for temporary network error -->")
+                LOGGER.warning("<!-- %r -->", e)
+                return ""
+            except Exception as e:  # type: ignore
                 LOGGER.warning(f"<!-- Warning: can't connect to '{url}' for temporary network error -->")
                 LOGGER.warning("<!-- %r -->", e)
                 return ""
@@ -307,8 +299,8 @@ class HeadlessBrowser:
             # bypass cloudflare test
             try:
                 WebDriverWait(driver, self.timeout).until(
-                    expected_conditions.invisibility_of_element((By.ID, "cf-content")))
-            except selenium.common.exceptions.TimeoutException:
+                    expected_conditions.invisibility_of_element_located((By.ID, "cf-content")))
+            except TimeoutException:
                 pass
 
             driver.set_script_timeout(self.timeout)
@@ -330,7 +322,7 @@ class HeadlessBrowser:
                 LOGGER.debug("simulating scrolling")
                 try:
                     driver.execute_script(HeadlessBrowser.SIMULATING_SCROLLING_SCRIPT)
-                except selenium.common.exceptions.TimeoutException:
+                except TimeoutException:
                     LOGGER.warning("Scrolling script timed out, continuing...")
 
             if self.blob_to_dataurl:
@@ -344,13 +336,13 @@ class HeadlessBrowser:
                         WebDriverWait(driver, self.timeout).until(
                             expected_conditions.presence_of_element_located((By.ID, waiting_div_id)))
                         LOGGER.debug(f"Found completion marker: {waiting_div_id}")
-                    except selenium.common.exceptions.TimeoutException:
+                    except TimeoutException:
                         LOGGER.warning(f"Timeout waiting for completion marker: {waiting_div_id}")
 
             LOGGER.debug("getting inner html")
             try:
                 response = driver.page_source
-            except selenium.common.exceptions.WebDriverException as e:
+            except WebDriverException as e:
                 LOGGER.error("Error: %s", str(e))
                 response = ""
 
@@ -373,12 +365,14 @@ class HeadlessBrowser:
                 try:
                     # Clear any alerts
                     driver.switch_to.alert.dismiss()
-                except RuntimeError:
+                except (WebDriverException, NoAlertPresentException):
                     pass  # No alert present
                 
                 # Clear local storage and cookies for clean state
                 try:
                     driver.execute_script("window.localStorage.clear();")
                     driver.execute_script("window.sessionStorage.clear();")
-                except RuntimeError:
+                except WebDriverException:
                     pass  # Might fail if no page loaded
+        
+        return ""  # Fallback return (should never be reached)

@@ -6,7 +6,7 @@ import os
 import getopt
 import logging.config
 from pathlib import Path
-from pdf2image import convert_from_path # type: ignore[import]
+from pdf2image import convert_from_path
 from bin.feed_maker_util import FileManager, Env, header_str
 from bin.crawler import Crawler
 

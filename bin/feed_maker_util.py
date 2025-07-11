@@ -17,7 +17,7 @@ from urllib.parse import urlparse, urlunparse, quote, urljoin, urlsplit
 from typing import Any, Optional, Union, TypeVar, Sequence
 from collections.abc import Hashable
 import psutil
-from bs4.element import Tag
+from bs4 import Tag
 
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -126,19 +126,19 @@ class Process:
             return "", f"Error in getting path of executable '{cmd}'"
         LOGGER.debug(new_cmd)
         try:
-            with subprocess.Popen(new_cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as p:
-                if input_data:
-                    input_bytes = input_data.encode("utf-8")
-                else:
-                    input_bytes = None
-                result, error = p.communicate(input=input_bytes)
-                if error and b"InsecureRequestWarning" not in error and b"_RegisterApplication(), FAILED TO establish the default connection to the WindowServer" not in error:
-                    return "", error.decode("utf-8")
+            with subprocess.Popen(new_cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8") as p:
+                result, error = p.communicate(input=input_data)
+                if error and "InsecureRequestWarning" not in error and "_RegisterApplication(), FAILED TO establish the default connection to the WindowServer" not in error:
+                    if "error" in error.lower():
+                        return "", error
+                    else:
+                        LOGGER.warning(error)
+
         except subprocess.CalledProcessError as e:
             return "", f"Error with non-zero exit status, {e}"
         except subprocess.SubprocessError as e:
             return "", f"Error in execution of command, {e}"
-        return result.decode(encoding="utf-8"), ""
+        return result or "", ""
 
     @staticmethod
     def _find_process_list(proc_expr: str) -> list[int]:

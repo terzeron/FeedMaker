@@ -9,8 +9,7 @@ import getopt
 import logging.config
 from pathlib import Path
 from typing import Any, Optional, Callable
-from bs4 import BeautifulSoup, Comment
-from bs4.element import NavigableString, Tag
+from bs4 import BeautifulSoup, Comment, NavigableString, Tag
 from bin.feed_maker_util import Config, URL, HTMLExtractor, header_str
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -64,8 +63,8 @@ class Extractor:
             for el in soup.find_all(attrs={"id": _id}):
                 result += Extractor._traverse_element(el, url, encoding)
         for path in path_list:
-            if soup.body is not None:
-                nodes = HTMLExtractor.get_node_with_path(soup.body, path)
+            if soup.body is not None and isinstance(soup.body, Tag):
+                nodes: Optional[list[Tag]] = HTMLExtractor.get_node_with_path(soup.body, path)  
                 for el in nodes or []:
                     result += Extractor._traverse_element(el, url, encoding)
         return result

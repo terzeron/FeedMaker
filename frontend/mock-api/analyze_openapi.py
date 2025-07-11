@@ -228,7 +228,7 @@ def analyze_openapi_spec(openapi_file: str = "../../openapi.json") -> Tuple[Opti
         
         return endpoints, spec
         
-    except RuntimeError as e:
+    except (FileNotFoundError, json.JSONDecodeError, KeyError, ValueError) as e:
         print(f"❌ OpenAPI 스펙 분석 실패: {e}")
         return None, None
 

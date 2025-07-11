@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Callable, TypedDict
 from datetime import datetime, timezone
 import requests
-import mail1 # type: ignore[import]
+import mail1
 from bin.feed_maker_util import Env, NotFoundEnvError
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")

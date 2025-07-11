@@ -49,7 +49,7 @@ origins = [
 ]
 
 app.add_middleware(
-    CORSMiddleware,  # type: ignore
+    CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
@@ -285,7 +285,7 @@ async def check_running(group_name: str, feed_name: str,
     response_object: dict[str, Any] = {}
     result = await feed_maker_manager.check_running(group_name, feed_name)
     if result is not None:
-        response_object["running_status"] = bool(result)  # type: ignore
+        response_object["running_status"] = bool(result)
         response_object["status"] = "success"
     else:
         response_object["running_status"] = "error"

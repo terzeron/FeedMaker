@@ -47,7 +47,7 @@ class _DataSource:
 
         # 커넥션마다 UTC 고정
         @event.listens_for(self._engine, "connect")
-        def _set_utc(conn: Any, _: Any) -> None:  # type: ignore
+        def _set_utc(conn: Any, _: Any) -> None:  
             try:
                 # MySQL의 경우 context manager 지원
                 with conn.cursor() as cur:
@@ -58,7 +58,7 @@ class _DataSource:
                     cur = conn.cursor()
                     cur.execute("PRAGMA timezone = '+00:00'")
                     cur.close()
-                except RuntimeError:
+                except (OSError, AttributeError, ValueError):
                     # SQLite에서 timezone 설정이 실패해도 무시
                     pass
 
@@ -80,7 +80,7 @@ class _DataSource:
         try:
             yield sess
             sess.commit()
-        except RuntimeError:
+        except Exception:
             sess.rollback()
             raise
         finally:

@@ -64,14 +64,46 @@ class ProcessTest(unittest.TestCase):
         self.assertEqual(error, "")
 
     def test_find_process_group_and_kill_process_group(self) -> None:
-        with subprocess.Popen(["sleep", "5"]):
-            actual = len(Process._find_process_list(r"sleep 5"))
-            expected = 1
+        import time
+        
+        # Use a unique sleep duration to avoid conflicts with other sleep processes
+        unique_sleep_duration = "987654321"
+        
+        # Count existing processes before starting our test process
+        initial_count = len(Process._find_process_list(f"sleep {unique_sleep_duration}"))
+        
+        # Start a long-running process with unique duration
+        proc = subprocess.Popen(["sleep", unique_sleep_duration])
+        try:
+            # Give it a moment to start
+            time.sleep(0.2)
+            
+            # Find the process - should be initial_count + 1
+            actual = len(Process._find_process_list(f"sleep {unique_sleep_duration}"))
+            expected = initial_count + 1
             self.assertEqual(expected, actual)
 
-            actual = Process.kill_process_group(r"sleep 5")
+            actual = Process.kill_process_group(f"sleep {unique_sleep_duration}")
             expected = 1
             self.assertEqual(expected, actual)
+            
+                        
+            # Give it a moment to be killed
+            time.sleep(0.2)
+            
+            # Verify process is gone - should be back to initial count
+            actual = len(Process._find_process_list(f"sleep {unique_sleep_duration}"))
+            expected = initial_count
+            self.assertEqual(expected, actual)
+        finally:
+            # Clean up: make sure process is terminated
+            if proc.poll() is None:  # Process is still running
+                proc.terminate()
+                try:
+                    proc.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    proc.wait(timeout=2)
 
 
 if __name__ == "__main__":

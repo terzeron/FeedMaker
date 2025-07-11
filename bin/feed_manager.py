@@ -451,7 +451,6 @@ class FeedManager:
             # determine total_item_count & collect_date
             url_list: list[str] = []
             list_dir_path = feed_dir_path / "newlist"
-            collect_date = None
             if list_dir_path.is_dir():
                 for list_file_path in list_dir_path.iterdir():
                     if list_file_path.suffix == ".txt":

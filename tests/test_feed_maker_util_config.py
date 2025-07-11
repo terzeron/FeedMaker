@@ -227,7 +227,4 @@ class ConfigTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # 이미 성공한 테스트 모듈은 제외
-    passed_tests = ... # pytest 캐시 등에서 추출
-    unique_targets = [t for t in unique_targets if t not in passed_tests]
     unittest.main()

@@ -49,7 +49,7 @@ def _get_file_timestamps() -> dict[str, float]:
     for file_path in collect_python_files():
         try:
             timestamps[str(file_path)] = file_path.stat().st_mtime
-        except RuntimeError:
+        except (OSError, PermissionError):
             pass
     return timestamps
 
@@ -188,9 +188,7 @@ def load_modules_to_graph(mg: ModuleGraph, files: list[Path]) -> None:
 
             # import_hook을 사용하여 모듈을 그래프에 추가
             mg.import_hook(module_name, None, None)
-        except RuntimeError as e:
-            print(f"Warning: Could not load {py_file}: {e}")
-        except RuntimeError as e:
+        except (ImportError, SyntaxError, ModuleNotFoundError, RuntimeError) as e:
             print(f"Warning: Could not load {py_file}: {e}")
 
 def is_test_file(file_path: Path) -> bool:
@@ -374,7 +372,7 @@ def get_actual_execution_duration() -> float:
                 # 실제 실행 시간이 저장되어 있다면 반환
                 if 'actual_total_duration' in cached_data:
                     return cached_data['actual_total_duration']
-        except RuntimeError:
+        except (json.JSONDecodeError, OSError, PermissionError, KeyError):
             pass
     
     return 0.0
@@ -390,7 +388,7 @@ def update_actual_execution_duration(duration: float) -> None:
             import json
             with open(performance_cache_file, 'r') as f:
                 cached_data = json.load(f)
-        except RuntimeError:
+        except (json.JSONDecodeError, OSError, PermissionError):
             cached_data = {}
     
     # Update actual execution duration
@@ -402,7 +400,7 @@ def update_actual_execution_duration(duration: float) -> None:
         import json
         with open(performance_cache_file, 'w') as f:
             json.dump(cached_data, f, indent=2)
-    except RuntimeError as e:
+    except (OSError, PermissionError, TypeError) as e:
         print(f"⚠️  Failed to save actual execution duration: {e}")
 
 def run_all_tests() -> bool:
@@ -570,7 +568,7 @@ def get_pytest_performance_data() -> dict[str, Any]:
                 cached_data = json.load(f)
                 file_durations = cached_data.get('file_durations', {})
                 print(f"📊 Loaded cached performance data for {len(file_durations)} test files")
-        except RuntimeError as e:
+        except (json.JSONDecodeError, OSError, PermissionError) as e:
             print(f"⚠️  Failed to load performance cache: {e}")
 
     # Fill in missing durations with estimates
@@ -595,7 +593,7 @@ def get_pytest_performance_data() -> dict[str, Any]:
                 file_avg_times[file_name] = avg_time
             else:
                 file_avg_times[file_name] = file_durations[file_name]  # No tests found
-        except RuntimeError as e:
+        except (subprocess.CalledProcessError, OSError, PermissionError) as e:
             print(f"⚠️  Failed to get test count for {file_name}: {e}")
             file_test_counts[file_name] = 1  # Default to 1
             file_avg_times[file_name] = file_durations[file_name]
@@ -622,7 +620,7 @@ def update_test_performance_cache(test_file: str, execution_time: float) -> None
             import json
             with open(performance_cache_file, 'r') as f:
                 cached_data = json.load(f)
-        except RuntimeError:
+        except (json.JSONDecodeError, OSError, PermissionError):
             cached_data = {}
 
     # Update with new execution time (use exponential moving average)
@@ -645,7 +643,7 @@ def update_test_performance_cache(test_file: str, execution_time: float) -> None
         with open(performance_cache_file, 'w') as f:
             json.dump(cached_data, f, indent=2)
         print(f"📊 Updated performance cache: {test_file} = {new_time:.2f}s")
-    except RuntimeError as e:
+    except (OSError, PermissionError, TypeError) as e:
         print(f"⚠️  Failed to save performance cache: {e}")
 
 def print_test_statistics(stats: dict[str, Any]) -> None:
@@ -804,7 +802,7 @@ def run_test_with_profiling(test_file: Path) -> tuple[bool, dict[str, Any]]:
 
         success = exit_code == 0
 
-    except RuntimeError as e:
+    except (ImportError, ModuleNotFoundError, SystemExit) as e:
         print(f"Error running test: {e}")
         success = False
     finally:
@@ -832,12 +830,15 @@ def analyze_cprofile_results(profiler: cProfile.Profile, execution_time: float, 
 
     # Get total calls and primitive calls from stats
     total_calls = 0
-    for func_data in ps.stats.values():
+    # Use getattr for safer access to stats data
+    stats_dict = getattr(ps, 'stats', {})
+    
+    for func_data in stats_dict.values():
         total_calls += func_data[0]  # primitive calls
 
     # Extract function statistics
     function_stats = []
-    for func, (cc, nc, tt, ct, callers) in ps.stats.items():
+    for func, (cc, nc, tt, ct, callers) in stats_dict.items():
         filename, line_number, function_name = func
 
         # Only include relevant files (skip standard library)
@@ -869,11 +870,10 @@ def analyze_cprofile_results(profiler: cProfile.Profile, execution_time: float, 
         key=lambda x: x['time_per_call'],
         reverse=True
     )[:10]
-
     # File-level aggregation with type annotation
     file_stats: dict[str, dict[str, float | int]] = defaultdict(lambda: {
-        'total_time': 0,
-        'cumulative_time': 0,
+        'total_time': 0.0,
+        'cumulative_time': 0.0,
         'calls': 0,
         'functions': 0
     })
@@ -1082,7 +1082,7 @@ def extract_imports_from_file(file_path: Path) -> set[str]:
             elif isinstance(node, ast.ImportFrom):
                 if node.module:
                     imports.add(node.module)
-    except RuntimeError as e:
+    except (SyntaxError, OSError, PermissionError) as e:
         print(f"Warning: Could not parse imports from {file_path}: {e}")
 
     return imports
@@ -1105,6 +1105,8 @@ def build_dependency_graph() -> dict[Path, set[Path]]:
         imports = extract_imports_from_file(file_path)
 
         for import_name in imports:
+            if not isinstance(import_name, str):
+                continue
             # Handle relative imports
             if import_name.startswith('.'):
                 # Convert relative import to absolute
@@ -1144,7 +1146,7 @@ def analyze_all_dependencies() -> tuple[dict[Path, set[Path]], dict[Path, set[Pa
                 print("📦 Using cached dependency analysis (performance optimized)")
                 return cache_data.get('deps', {}), cache_data.get('reverse_deps', {})
 
-        except RuntimeError:
+        except (OSError, PermissionError, pickle.PickleError):
             pass
 
     print("🔍 Performing fresh dependency analysis...")
@@ -1168,7 +1170,7 @@ def analyze_all_dependencies() -> tuple[dict[Path, set[Path]], dict[Path, set[Pa
         }
         with open(cache_file, 'wb') as f:
             pickle.dump(cache_data, f)
-    except RuntimeError as e:
+    except (OSError, PermissionError, pickle.PickleError) as e:
         print(f"⚠️  Failed to cache dependencies: {e}")
 
     return deps, reverse_deps
@@ -1355,7 +1357,7 @@ def get_test_targets_with_dependencies(modified_files: list[Path]) -> list[Path]
                         test_file_path = PROJECT_ROOT / test_key.split("::")[0]
                         if test_file_path.exists():
                             failed_files.add(test_file_path.resolve())
-            except RuntimeError:
+            except (json.JSONDecodeError, OSError, PermissionError):
                 pass
         
         # 전체 테스트 목록
@@ -1627,9 +1629,9 @@ def main() -> bool:
         
         # Update test status after execution
         last_success = get_last_success_time()
-        modified_files = get_modified_files(last_success)
+        modified_files = set(get_modified_files(last_success))
         if modified_files:
-            test_targets = get_test_targets_with_dependencies(modified_files)
+            test_targets = get_test_targets_with_dependencies(list(modified_files))
             for test_target in test_targets:
                 executed_tests.add(test_target)
                 # Check actual test result from pytest cache

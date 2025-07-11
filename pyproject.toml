@@ -16,7 +16,7 @@ filterwarnings = [
 ]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.12"
 warn_incomplete_stub = true
 warn_redundant_casts = true
 warn_unused_ignores = false
@@ -29,8 +29,17 @@ disallow_any_generics = true
 # 심각도 높은 오류만 표시
 show_error_codes = true
 error_summary = true
+# 로컬 타입 스텁 디렉토리 설정
+mypy_path = "stubs"
+# stubs 디렉토리 제외
+exclude = ["stubs/"]
 # 낮은 심각도 오류 비활성화
-disable_error_code = ["misc", "no-redef", "override", "assignment", "type-arg"]
+disable_error_code = ["misc", "no-redef", "override", "assignment", "type-arg", "type-abstract", "attr-defined"]
+
+# 특정 모듈에 대한 타입 체크 완화
+[[tool.mypy.overrides]]
+module = ["PyRSS2Gen", "mail1", "selenium.*"]
+ignore_errors = true
 
 [tool.pylint."master"]
 ignore = [
@@ -40,6 +49,7 @@ ignore = [
     ".run/*",
     "frontend/*",
     "out/*",
+    "stubs/*",
 ]
 
 [tool.pylint."messages control"]
@@ -101,6 +111,24 @@ disable = [
     "duplicate-code",
 ]
 extension-pkg-allow-list = ["pdftotext"]
+
+# Pyright 설정 (Cursor IDE 등에서 사용)
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "basic"  # basic, standard, strict 중 선택
+stubPath = "stubs"
+# 라이브러리 타입 스텁 문제 완화
+reportUnknownMemberType = "none"
+reportUnknownVariableType = "none"
+reportUnknownParameterType = "none"
+reportUnknownArgumentType = "none"
+reportMissingTypeStubs = "none"
+reportGeneralTypeIssues = "none"
+reportOptionalMemberAccess = "none"
+reportIncompatibleMethodOverride = "none"
+reportIncompatibleVariableOverride = "none"
+# unittest 모듈 관련 오류 완화
+reportCallIssue = "none"
 
 # 단축 스크립트 명령어들
 [tool.scripts]

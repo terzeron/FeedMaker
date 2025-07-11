@@ -5,7 +5,9 @@
 import unittest
 import logging.config
 from pathlib import Path
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup
+from bs4.element import Tag, PageElement, NavigableString
+from typing import Any
 
 from bin.feed_maker_util import HTMLExtractor
 
@@ -49,7 +51,7 @@ class HTMLExtractorTest(unittest.TestCase):
     def test_get_node_with_path(self) -> None:
         soup = BeautifulSoup('<html><body><div>hello</div><div id="ct"><span>text</span></div></body></html>', 'html.parser')
         assert soup.body is not None
-        body: Tag = soup.body
+        body = soup.body
 
         target_node = HTMLExtractor.get_node_with_path(body, '//span')
         if target_node:
@@ -57,7 +59,7 @@ class HTMLExtractorTest(unittest.TestCase):
             expected = "span"
             self.assertEqual(expected, actual)
 
-            content: Tag = target_node[0].contents[0]  # type: ignore
+            content: Any = target_node[0].contents[0]
             actual = str(content.string)
             expected = "text"
             self.assertEqual(expected, actual)
@@ -70,9 +72,9 @@ class HTMLExtractorTest(unittest.TestCase):
             expected = "div"
             self.assertEqual(expected, actual)
 
-            parent: Tag = target_node[0].contents[0]  # type: ignore
-            content: Tag = parent.contents[0]  # type: ignore
-            actual = str(content.string)
+            parent: Any = target_node[0].contents[0]  
+            content2: Any = parent.contents[0]  
+            actual = str(content2.string)
             expected = "text"
             self.assertEqual(expected, actual)
         else:
@@ -84,8 +86,8 @@ class HTMLExtractorTest(unittest.TestCase):
             expected = "div"
             self.assertEqual(expected, actual)
 
-            content: Tag = target_node[0].contents[0]  # type: ignore
-            actual = str(content.string)
+            content3: Any = target_node[0].contents[0]  
+            actual = str(content3.string)
             expected = "hello"
             self.assertEqual(expected, actual)
         else:
@@ -97,9 +99,9 @@ class HTMLExtractorTest(unittest.TestCase):
             expected = "div"
             self.assertEqual(expected, actual)
 
-            parent: Tag = target_node[0].contents[0]  # type: ignore
-            content: Tag = parent.contents[0]  # type: ignore
-            actual = str(content.string)
+            parent2: Any = target_node[0].contents[0]  
+            content4: Any = parent2.contents[0]  
+            actual = str(content4.string)
             expected = "text"
             self.assertEqual(expected, actual)
         else:
@@ -110,8 +112,8 @@ class HTMLExtractorTest(unittest.TestCase):
             actual = target_node[0].name
             expected = "span"
             self.assertEqual(expected, actual)
-            content: Tag = target_node[0].contents[0]  # type: ignore
-            actual = str(content.string)
+            content5: Any = target_node[0].contents[0]  
+            actual = str(content5.string)
             expected = "text"
             self.assertEqual(expected, actual)
         else:
@@ -123,8 +125,8 @@ class HTMLExtractorTest(unittest.TestCase):
             expected = "span"
             self.assertEqual(expected, actual)
 
-            content: Tag = target_node[0].contents[0]  # type: ignore
-            actual = str(content.string)
+            content6: Any = target_node[0].contents[0]  
+            actual = str(content6.string)
             expected = "text"
             self.assertEqual(expected, actual)
         else:
@@ -132,4 +134,4 @@ class HTMLExtractorTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main()  

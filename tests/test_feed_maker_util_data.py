@@ -22,13 +22,13 @@ class DataTest(unittest.TestCase):
     def test_remove_duplicates_with_list_of_list(self) -> None:
         input_data = [[1, 2, 3], [4, 5, 6], [1, 2, 3]]
         expected = [[1, 2, 3], [4, 5, 6]]
-        actual = Data.remove_duplicates(input_data)  # type: ignore
+        actual = Data.remove_duplicates(input_data)  
         self.assertEqual(expected, actual)
 
     def test_remove_duplicates_with_list_of_dict(self) -> None:
         input_data = [{"a":[1,2,3]}, {"a":[3,4,5]}, {"a":[4,5,6]}, {"a":[1,2,3]}]
         expected = [{"a":[1,2,3]}, {"a":[3,4,5]}, {"a":[4,5,6]}]
-        actual = Data.remove_duplicates(input_data)  # type: ignore
+        actual = Data.remove_duplicates(input_data)  
         self.assertEqual(expected, actual)
 
     def test_get_sorted_lines_from_rss_file(self) -> None:

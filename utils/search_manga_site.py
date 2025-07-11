@@ -1,20 +1,20 @@
 #!/usr/bin/env python
 
-import os
 import sys
 import json
 import re
 import getopt
 from threading import Thread
-import urllib.parse
 import logging.config
 from typing import Optional, Union, Any, Tuple, List
 from pathlib import Path
+from urllib.parse import urlparse, unquote, quote
+
+import requests
+
 from bs4 import BeautifulSoup, Comment
 from bin.crawler import Crawler, Method
 from bin.feed_maker_util import URL, HTMLExtractor, NotFoundConfigFileError, Env
-import requests
-from urllib.parse import urlparse
 
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -202,7 +202,7 @@ class Site:
                     #LOGGER.debug(f"{e=}, {title=}, {link=}")
 
                 if title and link and re.search(r"^\w.*$", title):
-                    result_list.append((title, urllib.parse.unquote(link)))
+                    result_list.append((title, unquote(link)))
                     link = ""
                     title = ""
 
@@ -283,7 +283,7 @@ class Site:
 #         self.extraction_attrs = {"class": "tit"}
 
 #     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = urllib.parse.quote(keyword)
+#         encoded_keyword = quote(keyword)
 #         self.url_postfix = "/comic_list?keyword=" + encoded_keyword
 
 
@@ -293,7 +293,7 @@ class Site:
 #         self.extraction_attrs = {"class": "list-item"}
 
 #     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = urllib.parse.quote(keyword)
+#         encoded_keyword = quote(keyword)
 #         self.url_postfix = "/comic?stx=" + encoded_keyword
 
 
@@ -303,7 +303,7 @@ class Site:
 #         self.extraction_attrs = {"class": "list-item"}
 
 #     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = urllib.parse.quote(keyword)
+#         encoded_keyword = quote(keyword)
 #         self.url_postfix = "/webtoon?stx=" + encoded_keyword
 
 
@@ -313,7 +313,7 @@ class Site:
 #         self.extraction_attrs = {"class": "section-item-title"}
 
 #     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = urllib.parse.quote(keyword)
+#         encoded_keyword = quote(keyword)
 #         self.url_postfix = "/bbs/search_webtoon.php?stx=" + encoded_keyword
 
 
@@ -323,7 +323,7 @@ class WfwfSite(Site):
         self.extraction_attrs = {"class": "searchLink"}
 
     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-        encoded_cp949_keyword = urllib.parse.quote(keyword.encode("cp949"))
+        encoded_cp949_keyword: str = quote(keyword.encode("cp949"))
         self.url_postfix = "/search.html?q=" + encoded_cp949_keyword
 
 
@@ -348,7 +348,7 @@ class XtoonSite(Site):
         self.extraction_attrs = {"class": "katoon-box"}
 
     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
+        encoded_keyword = quote(keyword)
         self.url_postfix = "/index.php/search?key=" + encoded_keyword
 
 
@@ -358,7 +358,7 @@ class JoatoonSite(Site):
         self.extraction_attrs = {"class": "p-1"}
 
     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
+        encoded_keyword = quote(keyword)
         self.url_postfix = "/toon/search?k=" + encoded_keyword
 
 
@@ -368,7 +368,7 @@ class JoatoonSite(Site):
 #         self.extraction_attrs = {"class": "media"}
 
 #     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = urllib.parse.quote(keyword)
+#         encoded_keyword = quote(keyword)
 #         self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
 
 
@@ -378,7 +378,7 @@ class FunbeSite(Site):
         self.extraction_attrs = {"class": "section-item-title"}
 
     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
+        encoded_keyword = quote(keyword)
         self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
 
 
@@ -388,7 +388,7 @@ class ToonkorSite(Site):
         self.extraction_attrs = {"class": "section-item-title"}
 
     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
+        encoded_keyword = quote(keyword)
         self.url_postfix = "/bbs/search_webtoon.php?stx=" + encoded_keyword
 
 
@@ -398,7 +398,7 @@ class EleventoonSite(Site):
         self.extraction_attrs = {"class": "toons_item"}
 
     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
+        encoded_keyword = quote(keyword)
         self.url_postfix = "/bbs/search_stx.php?stx=" + encoded_keyword
 
 
@@ -408,7 +408,7 @@ class EleventoonSite(Site):
 #         self.extraction_attrs = {"class": "video_list"}
 
 #     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = urllib.parse.quote(keyword)
+#         encoded_keyword = quote(keyword)
 #         self.url_postfix = "/searchs?skeyword=" + encoded_keyword
 
 
@@ -418,7 +418,7 @@ class EleventoonSite(Site):
 #         self.extraction_attrs = {"class": "list"}
 
 #     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = urllib.parse.quote(keyword)
+#         encoded_keyword = quote(keyword)
 #         self.url_postfix = "/search?skeyword=" + encoded_keyword
 
 
@@ -439,7 +439,7 @@ class BlacktoonSite(Site):
 #         self.extraction_attrs = {"class": "tag_box"}
 
 #     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = urllib.parse.quote(keyword)
+#         encoded_keyword = quote(keyword)
 #         self.url_postfix = "/search?skeyword=" + encoded_keyword
 
 
@@ -451,7 +451,7 @@ class BlacktoonSite(Site):
 #         self.headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
 #     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = urllib.parse.quote(keyword)
+#         encoded_keyword = quote(keyword)
 #         self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
 
 #     def set_payload(self, keyword: str = "") -> None:
@@ -464,7 +464,7 @@ class BlacktoonSite(Site):
 #         self.extraction_attrs = {"class": "entry-title"}
 
 #     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = urllib.parse.quote(keyword)
+#         encoded_keyword = quote(keyword)
 #         self.url_postfix = "/?post_type=post&s=" + encoded_keyword
 
 
@@ -485,7 +485,7 @@ class BlacktoonSite(Site):
 #         self.extraction_attrs = {"class": "media-heading"}
 
 #     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = urllib.parse.quote(keyword)
+#         encoded_keyword = quote(keyword)
 #         self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
 
 
@@ -495,7 +495,7 @@ class TorrentQqSite(Site):
         self.extraction_attrs = {"class": "wr-subject"}
 
     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
+        encoded_keyword = quote(keyword)
         self.url_postfix = "/search?q=" + encoded_keyword
 
 
@@ -505,7 +505,7 @@ class TorrentRjSite(Site):
         self.extraction_attrs = {"class": "flex-grow truncate"}
 
     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
+        encoded_keyword = quote(keyword)
         self.url_postfix = "/search/index?keywords=" + encoded_keyword
 
 
@@ -515,7 +515,7 @@ class TorrentSeeSite(Site):
         self.extraction_attrs = {"class": "tit"}
 
     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
+        encoded_keyword = quote(keyword)
         self.url_postfix = "/search/index?category=0&keywords=" + encoded_keyword
 
 
@@ -525,7 +525,7 @@ class TorrentSeeSite(Site):
 #         self.extraction_attrs = {"class": "list-subject"}
 
 #     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = urllib.parse.quote(keyword)
+#         encoded_keyword = quote(keyword)
 #         self.url_postfix = "/bbs/search.php?search_flag=search&stx=" + encoded_keyword
 
 
@@ -535,7 +535,7 @@ class TorrentTipSite(Site):
         self.extraction_attrs = {"class": "page-list"}
 
     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
+        encoded_keyword = quote(keyword)
         self.url_postfix = "/search?q=" + encoded_keyword
 
 
@@ -545,7 +545,7 @@ class TorrentTipSite(Site):
 #         self.extraction_attrs = {"class": "page-list"}
 
 #     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = urllib.parse.quote(keyword)
+#         encoded_keyword = quote(keyword)
 #         self.url_postfix = "/search?q=" + encoded_keyword
 
 
@@ -555,7 +555,7 @@ class TorrentTipSite(Site):
 #         self.extraction_attrs = {"class": "list-subject web-subject"}
 
 #     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = urllib.parse.quote(keyword)
+#         encoded_keyword = quote(keyword)
 #         self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
 
 
@@ -569,7 +569,7 @@ class MzgtoonSite(Site):
         # extraction_attrs는 더 이상 사용하지 않음
 
     def set_url_postfix_with_keyword(self, keyword: str = "") -> None:
-        encoded_keyword = urllib.parse.quote(keyword)
+        encoded_keyword = quote(keyword)
         # 실제 API 엔드포인트 사용
         self.url_postfix = f"/api/search?q={encoded_keyword}"
 
@@ -638,7 +638,7 @@ class SearchManager:
             except (OSError, IOError, TypeError, ValueError, RuntimeError) as e:
                 LOGGER.warning(f"Failed to create site {site_name_param}: {e}, skipping")
                 continue
-            except Exception as e:
+            except NotFoundConfigFileError as e:
                 # Catch specific exceptions like NotFoundConfigFileError
                 LOGGER.warning(f"Failed to create site {site_name_param}: {e}, skipping")
                 continue

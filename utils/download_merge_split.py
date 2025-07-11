@@ -119,7 +119,7 @@ def calculate_optimal_partition(img_file_list: list[Path], max_height: int = WEB
     current_total_height = 0
     
     for i, img_file in enumerate(img_file_list):
-        width, height = get_image_dimensions(img_file)
+        _, height = get_image_dimensions(img_file)
         
         # Check if adding this image would exceed the height limit
         if current_total_height + height > max_height and current_partition:
@@ -211,19 +211,19 @@ def merge_image_files(feed_dir_path: Path, img_file_list: list[Path], feed_img_d
     if merge_images_with_pil(img_file_list, merged_img_file_path):
         LOGGER.debug("merged_img_file_path=%r", merged_img_file_path)
         return merged_img_file_path
-    else:
-        # Fallback to original merge.py if PIL fails
-        cmd = f"merge.py '{str(merged_img_file_path)}' "
-        for cache_file in img_file_list:
-            cmd += f" '{cache_file}'"
-        LOGGER.debug(cmd)
-        result, error = Process.exec_cmd(cmd, dir_path=feed_dir_path)
-        LOGGER.debug(result)
-        if not result or error:
-            LOGGER.error("<!-- can't merge the image files, cmd='%s', %r -->", cmd, error)
-            sys.exit(-1)
-        LOGGER.debug("merged_img_file_path=%r", merged_img_file_path)
-        return merged_img_file_path
+
+    # Fallback to original merge.py if PIL fails
+    cmd = f"merge.py '{str(merged_img_file_path)}' "
+    for cache_file in img_file_list:
+        cmd += f" '{cache_file}'"
+    LOGGER.debug(cmd)
+    result, error = Process.exec_cmd(cmd, dir_path=feed_dir_path)
+    LOGGER.debug(result)
+    if not result or error:
+        LOGGER.error("<!-- can't merge the image files, cmd='%s', %r -->", cmd, error)
+        sys.exit(-1)
+    LOGGER.debug("merged_img_file_path=%r", merged_img_file_path)
+    return merged_img_file_path
 
 
 def crop_image_file(feed_dir_path: Path, img_file_path: Path) -> None:
@@ -273,13 +273,13 @@ def split_image_file(*, feed_dir_path: Path, img_file_path: Path, bandwidth: int
     return True
 
 
-def progressive_merge_and_split(*, feed_dir_path: Path, img_file_list: list[Path], img_url_list: list[str], page_url: str, 
+def progressive_merge_and_split(*, feed_dir_path: Path, img_file_list: list[Path], page_url: str, 
                                feed_img_dir_path: Path, img_url_prefix: str, 
                                bandwidth: int, diff_threshold: float, size_threshold: float, 
                                acceptable_diff_of_color_value: int, num_units: int, 
                                bgcolor_option: str, orientation_option: str, wider_scan_option: str,
-                               do_innercrop: bool, do_flip_right_to_left: bool, do_only_merge: bool, 
-                               img_width_list: list[str] = None) -> None:
+                               do_innercrop: bool, do_only_merge: bool, 
+                               img_width_list: Optional[list[str]] = None) -> None:
     """
     Optimized progressive merge and split with single-pass processing
     """
@@ -290,10 +290,10 @@ def progressive_merge_and_split(*, feed_dir_path: Path, img_file_list: list[Path
     
     # First, run the normal merge/split process to create initial split files
     _run_normal_merge_split_process(
-        img_file_list, img_url_list, page_url, feed_dir_path, feed_img_dir_path, img_url_prefix,
+        img_file_list, page_url, feed_dir_path, feed_img_dir_path, img_url_prefix,
         bandwidth, diff_threshold, size_threshold, acceptable_diff_of_color_value, 
         num_units, bgcolor_option, orientation_option, wider_scan_option,
-        do_innercrop, do_flip_right_to_left, do_only_merge, img_width_list
+        do_innercrop, do_only_merge, img_width_list
     )
     
     if not do_only_merge:
@@ -304,13 +304,13 @@ def progressive_merge_and_split(*, feed_dir_path: Path, img_file_list: list[Path
         _output_all_final_split_files(feed_img_dir_path, page_url, img_url_prefix)
 
 
-def _run_normal_merge_split_process(img_file_list: list[Path], img_url_list: list[str], page_url: str, 
+def _run_normal_merge_split_process(img_file_list: list[Path], page_url: str, 
                                    feed_dir_path: Path, feed_img_dir_path: Path, img_url_prefix: str,
                                    bandwidth: int, diff_threshold: float, size_threshold: float, 
                                    acceptable_diff_of_color_value: int, num_units: int, 
                                    bgcolor_option: str, orientation_option: str, wider_scan_option: str,
-                                   do_innercrop: bool, do_flip_right_to_left: bool, do_only_merge: bool, 
-                                   img_width_list: list[str] = None) -> None:
+                                   do_innercrop: bool, do_only_merge: bool, 
+                                   img_width_list: Optional[list[str]] = None) -> None:
     """Run the original merge/split process to create initial split files"""
     
     # Create merged chunks respecting WebP size limits  
@@ -486,7 +486,7 @@ def _process_batch_optimized(batch_images: list[Image.Image], batch_num: int, pr
                 merged.save(first_split, format='WEBP', quality=95)
                 LOGGER.debug(f"Successfully merged cross-batch boundary into {first_split.name}")
                 
-        except RuntimeError as e:
+        except (OSError, IOError, ValueError, TypeError) as e:
             LOGGER.error(f"Failed to merge cross-batch boundary: {e}")
     
     # Output split files with proper naming
@@ -612,7 +612,7 @@ def _fix_cross_batch_boundaries(feed_img_dir_path: Path, page_url: str, img_url_
             # Remove the last split of current batch
             last_split_current.unlink()
             
-        except RuntimeError as e:
+        except (OSError, IOError, ValueError, TypeError) as e:
             LOGGER.error(f"Failed to merge cross-batch boundary: {e}")
 
 
@@ -643,7 +643,7 @@ def _output_all_final_split_files(feed_img_dir_path: Path, page_url: str, img_ur
         print(f"<img src='{split_img_url}.webp'/>")
 
 
-def create_merged_chunks(img_file_list: list[Path], feed_img_dir_path: Path, page_url: str, img_width_list: list[str] = None) -> list[tuple[Path, str]]:
+def create_merged_chunks(img_file_list: list[Path], feed_img_dir_path: Path, page_url: str, img_width_list: Optional[list[str]] = None) -> list[tuple[Path, str]]:
     """Create merged image chunks respecting WebP size limits"""
     if img_width_list is None:
         img_width_list = [""] * len(img_file_list)
@@ -885,7 +885,6 @@ def main() -> int:
         progressive_merge_and_split(
             feed_dir_path=feed_dir_path,
             img_file_list=img_file_list,
-            img_url_list=img_url_list,
             page_url=page_url,
             feed_img_dir_path=feed_img_dir_path,
             img_url_prefix=img_url_prefix,
@@ -898,7 +897,6 @@ def main() -> int:
             orientation_option=orientation_option,
             wider_scan_option=wider_scan_option,
             do_innercrop=do_innercrop,
-            do_flip_right_to_left=do_flip_right_to_left,
             do_only_merge=do_only_merge,
             img_width_list=img_width_list
         )

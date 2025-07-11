@@ -16,7 +16,7 @@ from utils.update_manga_site import update_domain, check_site, print_usage, main
 
 
 class TestUpdateMangaSite(unittest.TestCase):
-    def setUp(self):  # type: ignore
+    def setUp(self):  
         """Set up test fixtures before each test method."""
         self.temp_dir = tempfile.mkdtemp()
         self.original_cwd = os.getcwd()
@@ -40,7 +40,7 @@ class TestUpdateMangaSite(unittest.TestCase):
         self.mock_process = self.process_patcher.start()
         self.mock_process.return_value = ("", "")
 
-    def tearDown(self):  # type: ignore
+    def tearDown(self):  
         """Clean up after each test method."""
         self.process_patcher.stop()
         os.chdir(self.original_cwd)

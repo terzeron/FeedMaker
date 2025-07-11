@@ -7,8 +7,8 @@ import logging
 from pathlib import Path
 from base64 import b64decode
 from typing import Optional
-import cairosvg # type: ignore[import]
-import pyheif # type: ignore[import]
+import cairosvg
+import pyheif
 from PIL import Image, UnidentifiedImageError
 from bin.feed_maker_util import FileManager, PathUtil, Env
 from bin.crawler import Crawler
@@ -64,7 +64,7 @@ class ImageDownloader:
         if img.width > max_width:
             ratio = max_width / img.width
             new_height = int(img.height * ratio)
-            img = img.resize((max_width, new_height), Image.LANCZOS)
+            img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
         
         return img
 

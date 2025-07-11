@@ -7,7 +7,7 @@ import re
 import getopt
 import logging.config
 from pathlib import Path
-import pdftotext # type: ignore[import]
+import pdftotext
 from bin.crawler import Crawler
 from bin.feed_maker_util import Env
 
