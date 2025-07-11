@@ -329,6 +329,7 @@ def run_test_modules_sequentially(test_targets: list[Path]) -> tuple[bool, int, 
         else:
             print(f"✅ {t.name} PASSED.")
             passed_count += 1
+        print("")
     
     overall_success = failed_count == 0
     if overall_success:
