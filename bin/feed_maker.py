@@ -403,7 +403,7 @@ class FeedMaker:
         return collector.collect()
 
     def _diff_feeds_and_make_htmls(self, recent_feed_list: list[tuple[str, str]], old_feed_list: list[tuple[str, str]]) -> list[tuple[str, str]]:
-        LOGGER.debug(f"# _diff_feeds_and_make_htmls(recent_feed_list={recent_feed_list}, old_feed_list={old_feed_list})")
+        LOGGER.debug(f"# _diff_feeds_and_make_htmls(recent_feed_list={recent_feed_list[:10]}, old_feed_list={old_feed_list[:10]})")
 
         recent_set = OrderedSet(recent_feed_list)
         old_set = OrderedSet(old_feed_list)
