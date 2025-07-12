@@ -64,7 +64,7 @@ class RequestsClient:
                     c_value = cookie.get("value", "")
                     if c_name and c_value:
                         self.cookies.update({c_name: c_value})
-            LOGGER.debug(f"self.cookies={self.cookies}")
+            #LOGGER.debug(f"self.cookies={self.cookies}")
 
     def make_request(self, url: str, data: Any = None, download_file: Optional[Path] = None, allow_redirects: bool = True) -> tuple[str, str, dict[str, Any], Optional[int]]:
         LOGGER.debug(f"# make_request(url='{url}', allow_redirects={allow_redirects})")
@@ -92,7 +92,7 @@ class RequestsClient:
             if self.method == Method.GET:
                 cookie_str = '; '.join([f'{name}={value}' for name, value in self.cookies.items()])
                 self.headers["Cookie"] = cookie_str
-                LOGGER.debug(f"self.headers={self.headers}")
+                #LOGGER.debug(f"self.headers={self.headers}")
                 response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, allow_redirects=allow_redirects)
             elif self.method == Method.POST:
                 response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, data=data)
