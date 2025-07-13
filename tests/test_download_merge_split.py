@@ -57,7 +57,7 @@ class TestDownloadMergeSplit(unittest.TestCase):
 
         # .env의 PATH 환경변수 강제 적용
         env = dotenv_values(Path(__file__).parent.parent / ".env")
-        self.fake_env = {"PATH": f"{Env.get("PATH")}:{env.get("PATH", "")}", "ENABLE_STATS": "false"}
+        self.fake_env = {"PATH": f"{Env.get("PATH")}:{env.get("PATH", "")}"}
 
     def tearDown(self) -> None:
         self.patcher_argv.stop()
@@ -151,7 +151,6 @@ class TestDownloadMergeSplit(unittest.TestCase):
         
         # Enable stats for this test
         test_env = self.fake_env.copy()
-        test_env["ENABLE_STATS"] = "true"
         
         with patch('sys.argv', self.fake_argv), \
              patch.dict('os.environ', test_env, clear=False), \

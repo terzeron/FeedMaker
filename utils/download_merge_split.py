@@ -769,7 +769,7 @@ def print_cached_image_file(feed_img_dir_path: Path, img_url_prefix: str, img_ur
         print(f"<img src='{img_url}'/>")
 
 
-def print_statistics(original_images: list[Path], output_images: list[Path], page_url: str, feed_img_dir_path: Path, enable_stats: bool = True) -> None:
+def print_statistics(original_images: list[Path], output_images: list[Path], page_url: str, feed_img_dir_path: Path) -> None:
     """Print statistics about original vs processed images as HTML comments"""
     # Calculate original image statistics
     original_total_area = 0
@@ -810,19 +810,18 @@ def print_statistics(original_images: list[Path], output_images: list[Path], pag
     processed_avg_width = sum(processed_widths) / len(processed_widths) if processed_widths else 0
     
     # Output statistics as HTML comments only if enabled
-    if enable_stats:
-        print(f"<!-- Image Processing Statistics -->")
-        print(f"<!-- Original Images: {len(original_images)} files -->")
-        print(f"<!-- Original Total Area: {original_total_area:,}px², Total Height: {original_total_height}px -->")
-        print(f"<!-- Original Max Width: {original_max_width}px, Avg Width: {original_avg_width:.0f}px -->")
-        print(f"<!-- Processed Images: {processed_count} files -->")
-        print(f"<!-- Processed Total Area: {processed_total_area:,}px², Total Height: {processed_total_height}px -->")
-        print(f"<!-- Processed Max Width: {processed_max_width}px, Avg Width: {processed_avg_width:.0f}px -->")
-        if original_total_area > 0:
-            area_change = ((processed_total_area - original_total_area) / original_total_area) * 100
-            height_change = ((processed_total_height - original_total_height) / original_total_height) * 100
-            print(f"<!-- Area Change: {area_change:+.1f}%, Height Change: {height_change:+.1f}% -->")
-        print(f"<!-- Note: Height/Area increase is expected due to cross-batch boundary merging for seamless transitions -->")
+    print(f"<!-- Image Processing Statistics -->")
+    print(f"<!-- Original Images: {len(original_images)} files -->")
+    print(f"<!-- Original Total Area: {original_total_area:,}px², Total Height: {original_total_height}px -->")
+    print(f"<!-- Original Max Width: {original_max_width}px, Avg Width: {original_avg_width:.0f}px -->")
+    print(f"<!-- Processed Images: {processed_count} files -->")
+    print(f"<!-- Processed Total Area: {processed_total_area:,}px², Total Height: {processed_total_height}px -->")
+    print(f"<!-- Processed Max Width: {processed_max_width}px, Avg Width: {processed_avg_width:.0f}px -->")
+    if original_total_area > 0:
+        area_change = ((processed_total_area - original_total_area) / original_total_area) * 100
+        height_change = ((processed_total_height - original_total_height) / original_total_height) * 100
+        print(f"<!-- Area Change: {area_change:+.1f}%, Height Change: {height_change:+.1f}% -->")
+    print(f"<!-- Note: Height/Area increase is expected due to cross-batch boundary merging for seamless transitions -->")
 
 
 def print_usage(program_name: str) -> None:
@@ -962,9 +961,7 @@ def main() -> int:
                 print_cached_image_file(feed_img_dir_path=feed_img_dir_path, img_url_prefix=img_url_prefix, img_url=img_url)
 
     # Print statistics after all processing is complete (enabled by default)
-    enable_stats_env = Env.get("ENABLE_STATS")
-    enable_stats = enable_stats_env.lower() == "true" if enable_stats_env else True
-    print_statistics(img_file_list, [], page_url, feed_img_dir_path, enable_stats)
+    print_statistics(img_file_list, [], page_url, feed_img_dir_path)
 
     return 0
 
