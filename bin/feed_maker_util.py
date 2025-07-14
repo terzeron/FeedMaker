@@ -324,9 +324,9 @@ class NotFoundEnvError(Exception):
 
 class Env:
     @staticmethod
-    def get(var: str) -> str:
-        value = os.getenv(var, "")
-        if not value:
+    def get(var: str, default_value: str = "") -> str:
+        value = os.getenv(var, default_value)
+        if value is None:
             raise NotFoundEnvError(f"can't get environment variable '{var}'")
         return value
 

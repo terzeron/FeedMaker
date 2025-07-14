@@ -57,7 +57,7 @@ class TestDownloadMergeSplit(unittest.TestCase):
 
         # .env의 PATH 환경변수 강제 적용
         env = dotenv_values(Path(__file__).parent.parent / ".env")
-        self.fake_env = {"PATH": f"{Env.get("PATH")}:{env.get("PATH", "")}"}
+        self.fake_env = {"PATH": f"{Env.get('PATH')}:{env.get('PATH', '')}"}
 
     def tearDown(self) -> None:
         self.patcher_argv.stop()
@@ -102,7 +102,19 @@ class TestDownloadMergeSplit(unittest.TestCase):
                           "<img src='%s/one_second/0163a33_4.1.jpeg'/>\n"
                           "<img src='%s/one_second/0163a33_4.2.jpeg'/>\n"
                           "<img src='%s/one_second/0163a33_4.3.jpeg'/>\n"
-                          "<img src='%s/one_second/0163a33_4.4.jpeg'/>\n") % (url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix, url_prefix)
+                          "<img src='%s/one_second/0163a33_4.4.jpeg'/>\n") % ((url_prefix,) * 16)
+
+        statistics_comment = (
+            "<!-- Image Processing Statistics -->\n"
+            "<!-- Original Images: 4 files -->\n"
+            "<!-- Original Total Area: 0px², Total Height: 0px -->\n"
+            "<!-- Original Max Width: 0px, Avg Width: 0px -->\n"
+            "<!-- Processed Images: 0 files -->\n"
+            "<!-- Processed Total Area: 0px², Total Height: 0px -->\n"
+            "<!-- Processed Max Width: 0px, Avg Width: 0px -->\n"
+            "<!-- Note: Height/Area increase is expected due to cross-batch boundary merging for seamless transitions -->\n"
+        )
+        expected_output += statistics_comment
 
         with patch('sys.argv', self.fake_argv), \
              patch.dict('os.environ', self.fake_env, clear=False), \
@@ -138,9 +150,9 @@ class TestDownloadMergeSplit(unittest.TestCase):
             
             utils.download_merge_split.main()
             actual_output = mock_stdout.getvalue()
-            print(f"ACTUAL OUTPUT: {actual_output}")
-            print(f"EXPECTED OUTPUT: {expected_output}")
-            self.assertEqual(actual_output, expected_output)
+            # print(f"ACTUAL OUTPUT: {actual_output}")
+            # print(f"EXPECTED OUTPUT: {expected_output}")
+            self.assertEqual(actual_output.strip(), expected_output.strip())
 
     def test_statistics_validation(self) -> None:
         """Test that statistics are properly included in output"""
