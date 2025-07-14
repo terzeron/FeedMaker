@@ -1348,7 +1348,7 @@ export default {
     registerToInoreader: function () {
       console.log(`registerToInoreader()`);
       const feederLink =
-        "https://www.inoreader.com/feed/" + encodeURIComponent(this.rssUrl);
+        "https://www.inoreader.com/search/feed/" + encodeURIComponent(this.rssUrl);
       window.open(feederLink);
     },
     registerToFeedly: function () {
