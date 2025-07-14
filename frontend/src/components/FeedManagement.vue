@@ -207,12 +207,6 @@
 
         <!-- Action Area -->
         <BRow id="actions" class="m-0 p-0">
-          <BCol cols="12" class="m-0 p-1" v-if="showAlert">
-            <BAlert class="mb-0" variant="danger" dismissible v-if="showAlert">
-              {{ alertMessage }}
-            </BAlert>
-          </BCol>
-
           <BCol cols="12" class="m-0 p-1">
             <BInputGroup prepend="피드" class="m-0" v-if="showNewFeedNameInput">
               <BFormInput class="m-0" v-model="newFeedName">
@@ -335,8 +329,56 @@
               :show-initial-icon="true"
               v-if="showRegisterToFeedlyButton"
             />
+            <my-button
+              ref="viewItemsOfRssButton"
+              label="RSS 항목 보기"
+              @click="getItemsOfRss"
+              :initial-icon="['fas', 'rss']"
+              :show-initial-icon="true"
+              v-if="showViewRssButton"
+              />
           </BCol>
         </BRow>
+
+        <BRow id="titles_of_rss" class="m-0 p-0" v-if="showViewItemsOfRssList">
+          <BCol cols="12" class="m-0 p-0">
+            <div class="table-responsive">
+              <BTableSimple
+                class="m-0 text-break table-hover"
+                small
+                striped
+                style="margin: 0 !important; padding: 0 !important; width: 100% !important;"
+              >
+                <BThead head-variant="secondary" table-variant="light">
+                  <BTr>
+                    <BTh colspan="4" class="text-center">RSS 아이템 제목</BTh>
+                  </BTr>
+                </BThead>
+                <BTbody>
+                  <!-- list of titles of rss -->
+                  <BTr v-for="(title, index) in itemsOfRss" :key="index">
+                    <BTd>{{ title }}</BTd>
+                  </BTr>
+                </BTbody>
+              </BTableSimple>
+            </div>
+          </BCol>
+        </BRow>
+
+        <!-- Alert component -->
+        <BRow v-if="showAlert">
+          <BCol>
+            <BAlert
+              :variant="alertVariant"
+              show
+              dismissible
+              @dismissed="clearAlert"
+            >
+              {{ alertMessage }}
+            </BAlert>
+          </BCol>
+        </BRow>
+
       </BCol>
     </BRow>
 
@@ -721,8 +763,13 @@ div.jsoneditor-value {
     background-color: #146c43 !important;
     border-color: #0f5132 !important;
   }
+}
 
-
+.alert {
+  position: relative;
+  z-index: 1050; /* Ensure alert is on top of other elements */
+  white-space: pre-wrap; /* Allow line breaks and wrapping */
+  word-wrap: break-word; /* Break long words */
 }
 </style>
 
@@ -778,8 +825,6 @@ export default {
 
   data: function () {
     return {
-      alertMessage: "",
-
       showGrouplist: true,
       showFeedlist: false,
       showFeedlistButton: false,
@@ -788,8 +833,11 @@ export default {
       showEditor: false,
 
       showAlert: false,
+      alertMessage: "",
+      alertVariant: "danger",
       showRunButton: false,
       showViewRssButton: false,
+      showViewItemsOfRssList: false,
       showRegisterToInoreaderButton: false,
       showRegisterToFeedlyButton: false,
       showRemovelistButton: false,
@@ -801,6 +849,7 @@ export default {
       showNewFeedNameInput: false,
       showSiteConfig: false,
       showFeedInfo: false,
+      itemsOfRss: [],
 
       activeGroupIndex: undefined,
       activeFeedIndex: undefined,
@@ -921,13 +970,15 @@ export default {
     setActiveFeed: function (index) {
       this.activeFeedIndex = index;
     },
-    alert: function (message) {
+    alert: function (message, variant = "danger") {
       this.alertMessage = message;
+      this.alertVariant = variant;
       this.showAlert = true;
     },
     clearAlert: function () {
-      this.alertMessage = "";
       this.showAlert = false;
+      this.alertMessage = "";
+      this.alertVariant = "danger";
     },
     openConfirmModal: function (message, action) {
       this.confirmMessage = message;
@@ -1509,6 +1560,48 @@ export default {
           });
       });
     },
+    getItemsOfRss: function () {
+      console.log(`getItemsOfRss()`);
+      const url =
+        getApiUrlPath() + `/public_feeds/${this.selectedFeedName}/item_titles`;
+      axios.get(url).then((res) => {
+        console.log("getItemsOfRss response:", res.data);
+        if (res.data.status === "success") {
+          // 성공 시, 데이터가 있는지 확인하고 렌더링
+          if (res.data.item_titles && res.data.item_titles.length > 0) {
+            this.itemsOfRss = res.data.item_titles;
+            this.showViewItemsOfRssList = true;
+          } else {
+            // 성공했지만 아이템이 없는 경우
+            this.alert("피드 파일에 아이템이 없습니다.");
+            this.itemsOfRss = [];
+            this.showViewItemsOfRssList = false;
+          }
+        } else {
+          // 'failure' status
+          if (res.data.error_code) {
+            if (res.data.error_code === 'FILE_NOT_FOUND') {
+              this.alert("피드 파일이 존재하지 않습니다.");
+            } else if (res.data.error_code === 'NO_ITEMS') {
+              this.alert("피드 파일에 아이템이 없습니다.");
+            } else {
+              // Other specific errors like PARSE_ERROR
+              this.alert(res.data.message || "알 수 없는 에러가 발생했습니다.");
+            }
+          } else {
+            // Generic failure message
+            this.alert(res.data.message || "데이터를 가져오는데 실패했습니다.");
+          }
+          this.itemsOfRss = [];
+          this.showViewItemsOfRssList = false;
+        }
+      }).catch(error => {
+        console.error("Error fetching RSS items:", error);
+        this.alert("요청 처리 중 에러가 발생했습니다: " + (error.response ? error.response.status : error.message));
+        this.itemsOfRss = [];
+        this.showViewItemsOfRssList = false;
+      });
+    },
     checkRunning: function () {
       //console.log(`checkRunning()`);
       const url =
@@ -1546,7 +1639,7 @@ export default {
         this.jsonEditor.destroy();
         this.jsonEditor = null;
       }
-      
+
       this.$nextTick(() => {
         if (this.$refs.jsonEditorContainer) {
           this.jsonEditor = new JSONEditor(this.$refs.jsonEditorContainer, {
@@ -1560,7 +1653,7 @@ export default {
               }
             }
           });
-          
+
           if (this.jsonData && Object.keys(this.jsonData).length > 0) {
             this.jsonEditor.set(this.jsonData);
             this.jsonEditor.expandAll();

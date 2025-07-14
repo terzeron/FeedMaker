@@ -174,6 +174,24 @@ async def remove_public_feed(feed_name: str, feed_maker_manager: FeedMakerManage
     return response_object
 
 
+@app.get("/public_feeds/{feed_name}/item_titles")
+async def extract_titles_from_public_feed(feed_name: str, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+    LOGGER.info("GET /public_feeds/%s/item_titles -> extract_titles_from_public_feed(%s)", feed_name, feed_name)
+    response_object: dict[str, Any] = {}
+    result, error = await feed_maker_manager.extract_titles_from_public_feed(feed_name)
+    
+    if isinstance(result, list):
+        response_object["status"] = "success"
+        response_object["item_titles"] = result
+    else:
+        # result is an error code string like "FILE_NOT_FOUND"
+        response_object["status"] = "failure"
+        response_object["message"] = error
+        response_object["error_code"] = result
+        
+    return response_object
+
+
 @app.get("/groups/{group_name}/site_config")
 async def get_site_config(group_name: str, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("/groups/%s/site_config -> get_site_config(%s)", group_name, group_name)

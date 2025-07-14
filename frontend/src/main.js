@@ -39,7 +39,7 @@ import {
   BInputGroupText,
   BCardHeader,
   BCardBody,
-  BSpinner
+  BSpinner,
 } from 'bootstrap-vue-next';
 
 import { VMarkdownView } from 'vue3-markdown';
@@ -49,6 +49,9 @@ import 'vue3-markdown/dist/vue3-markdown.css';
 import session from './utils/session';
 
 const app = createApp(App);
+
+// BootstrapVueNext 플러그인 등록
+// app.use(ToastPlugin);
 
 // BootstrapVueNext 컴포넌트들을 개별적으로 등록
 app.component('BButton', BButton);

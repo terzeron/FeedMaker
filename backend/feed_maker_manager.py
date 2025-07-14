@@ -8,6 +8,7 @@ import json
 import logging.config
 from shutil import rmtree
 from typing import Any, Optional
+import xml.etree.ElementTree as ET
 from bin.run import FeedMakerRunner
 from bin.feed_maker_util import Process, PathUtil, Env
 from bin.feed_manager import FeedManager
@@ -216,6 +217,29 @@ class FeedMakerManager:
         except IOError as e:
             return False, str(e)
         return True, ""
+
+    async def extract_titles_from_public_feed(self, feed_name: str) -> tuple[list[str] | str, str]:
+        LOGGER.debug("# extract_titles_from_public_feed(feed_name='%s')", feed_name)
+        public_feed_file_path = FeedManager.public_feed_dir_path / f"{feed_name}.xml"
+        if not public_feed_file_path.exists():
+            return "FILE_NOT_FOUND", f"피드 파일이 존재하지 않습니다: {public_feed_file_path}"
+
+        try:
+            tree = ET.parse(public_feed_file_path)
+            root = tree.getroot()
+            titles: list[str] = []
+            for item in root.findall('.//item'):
+                title = item.findtext('title')
+                if title:
+                    titles.append(title)
+
+            if not titles:
+                return "NO_ITEMS", "피드 파일에 아이템이 없습니다."
+
+            return titles, ""
+        except ET.ParseError as e:
+            LOGGER.error("Failed to parse RSS file: %s", e)
+            return "PARSE_ERROR", f"RSS 파일 파싱에 실패했습니다: {e}"
 
     @staticmethod
     async def get_feeds_by_group(group_name: str) -> tuple[list[dict[str, str]], str]:
