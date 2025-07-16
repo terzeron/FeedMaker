@@ -644,403 +644,59 @@
 </template>
 
 <style>
-/* 테이블 스타일링 개선 */
-.table-responsive {
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
+/* 테이블 공통 스타일 */
 .table {
-  margin-bottom: 0;
+  table-layout: fixed;
+  word-wrap: break-word;
 }
 
-/* Bootstrap 기본 테이블 스타일 완전 덮어쓰기 - 더 강력한 선택자 */
 .table td,
-.table th,
-.table > tbody > tr > td,
-.table > tbody > tr > th,
-.table > thead > tr > td,
-.table > thead > tr > th,
-.table > tfoot > tr > td,
-.table > tfoot > tr > th {
-  padding: 0.0625rem 0.125rem !important;
-  margin: 0 !important;
-}
-
-/* 테이블 헤딩 스타일 완전 덮어쓰기 */
-.table thead th,
-.table > thead > tr > th,
-.table-responsive .table thead th,
-.table-responsive .table > thead > tr > th {
-  background-color: white !important;
-  color: #000 !important;
-  border-bottom: 2px solid #495057 !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  font-size: 0.95rem !important;
-  letter-spacing: 0.5px !important;
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 10 !important;
-  padding: 0.375rem 0.125rem !important;
-  margin: 0 !important;
-  border-top: none !important;
-  border-left: none !important;
-  border-right: none !important;
-  line-height: 1.3 !important;
-  height: auto !important;
-  min-height: 0 !important;
-}
-
-/* col-lg-4와 col-lg-8 테이블 헤딩 높이 조정 */
-.col-lg-4 .table thead th,
-.col-lg-4 .table > thead > tr > th,
-.col-lg-8 .table thead th,
-.col-lg-8 .table > thead > tr > th {
-  padding: 0.375rem 0.125rem !important;
-  line-height: 1.3 !important;
-  height: auto !important;
-  min-height: 0 !important;
-  font-size: 0.95rem !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.5px !important;
-}
-
-/* 모든 테이블 헤딩 일관성 유지 */
-.table thead th,
-.table > thead > tr > th {
-  padding: 0.375rem 0.125rem !important;
-  line-height: 1.3 !important;
-  height: auto !important;
-  min-height: 0 !important;
-  font-size: 0.875rem !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.5px !important;
-}
-
-.table tbody tr:hover {
-  background-color: #e9ecef;
-  transition: background-color 0.2s ease;
-}
-
-.table td {
+.table th {
   vertical-align: middle;
-  border-color: #dee2e6;
-  padding: 0.0625rem 0.125rem !important;
-  margin: 0 !important;
 }
 
-/* 정렬 가능한 헤더 스타일 */
-.table th.sortable,
-.table > thead > tr > th.sortable {
+/* 정렬 가능한 테이블 헤더 */
+.table th.sortable {
   cursor: pointer;
-  position: relative;
-  background-color: white !important;
-  color: #000 !important;
 }
 
-.table th.sortable:hover,
-.table > thead > tr > th.sortable:hover {
-  background-color: #f8f9fa !important;
+.table th .sort-icon {
+  display: inline-block;
+  margin-left: 5px;
+  color: #aaa;
 }
 
-.table th.sortable::after,
-.table > thead > tr > th.sortable::after {
-  content: "↕";
-  position: absolute;
-  right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
-  opacity: 0.5;
-  font-size: 0.75rem;
-  color: #000;
-  z-index: 1;
+/* 정렬 활성화 시 아이콘 색상 변경 */
+.table th.sort-asc .sort-icon,
+.table th.sort-desc .sort-icon {
+  color: #333;
 }
 
-/* 정렬 아이콘 숨김 - CSS ::after만 사용 */
-.sort-icon {
-  display: none !important;
+/* 날짜 셀 스타일 */
+.date-cell {
+  white-space: nowrap;
+  font-size: 0.9em;
+  color: #666;
 }
 
-.sort-icon span {
-  display: none !important;
-}
-
-/* 정렬 중인 헤더 스타일 통일 */
-.table th.sortable.sort-asc::after,
-.table > thead > tr > th.sortable.sort-asc::after {
-  content: "↑";
-  opacity: 1;
-  color: #000;
-}
-
-.table th.sortable.sort-desc::after,
-.table > thead > tr > th.sortable.sort-desc::after {
-  content: "↓";
-  opacity: 1;
-  color: #000;
-}
-
-/* 아이콘 스타일링 */
-.font-awesome-icon {
-  cursor: pointer;
-  color: #dc3545;
-  transition: color 0.2s ease;
-}
-
-.font-awesome-icon:hover {
-  color: #c82333;
-}
-
-/* 텍스트 색상 클래스 */
-.text-danger {
-  color: #dc3545 !important;
-}
-
-.text-warning {
-  color: #ffc107 !important;
-}
-
-.text-muted {
-  color: #6c757d !important;
-}
-
-/* 카드 헤더 스타일 복구 */
-.card-header {
-  background-color: #495057 !important;
-  color: white !important;
-  font-weight: 600;
-  border-bottom: 1px solid #343a40;
-}
-
-/* 테이블 헤딩 스타일 복구 */
-.table thead th,
-.table > thead > tr > th,
-.table-responsive .table thead th,
-.table-responsive .table > thead > tr > th {
-  background-color: white !important;
-  color: #000 !important;
-  border-bottom: 2px solid #495057 !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  font-size: 0.95rem !important;
-  letter-spacing: 0.5px !important;
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 10 !important;
-  padding: 0.375rem 0.125rem !important;
-  margin: 0 !important;
-  border-top: none !important;
-  border-left: none !important;
-  border-right: none !important;
-  line-height: 1.3 !important;
-  height: auto !important;
-  min-height: 0 !important;
-}
-
-/* col-lg-4와 col-lg-8 테이블 헤딩 높이 조정 */
-.col-lg-4 .table thead th,
-.col-lg-4 .table > thead > tr > th,
-.col-lg-8 .table thead th,
-.col-lg-8 .table > thead > tr > th {
-  padding: 0.375rem 0.125rem !important;
-  line-height: 1.3 !important;
-  height: auto !important;
-  min-height: 0 !important;
-  font-size: 0.95rem !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.5px !important;
-}
-
-/* 모든 테이블 헤딩 일관성 유지 */
-.table thead th,
-.table > thead > tr > th {
-  padding: 0.375rem 0.125rem !important;
-  line-height: 1.3 !important;
-  height: auto !important;
-  min-height: 0 !important;
-  font-size: 0.875rem !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.5px !important;
-}
-
-.table tbody tr:hover {
-  background-color: #e9ecef;
-  transition: background-color 0.2s ease;
-}
-
-.table td {
-  vertical-align: middle;
-  border-color: #dee2e6;
-  padding: 0.0625rem 0.125rem !important;
-  margin: 0 !important;
-}
-
-/* 정렬 가능한 헤더 스타일 */
-.table th.sortable,
-.table > thead > tr > th.sortable {
-  cursor: pointer;
-  position: relative;
-  background-color: white !important;
-  color: #000 !important;
-}
-
-.table th.sortable:hover,
-.table > thead > tr > th.sortable:hover {
-  background-color: #f8f9fa !important;
-}
-
-.table th.sortable::after,
-.table > thead > tr > th.sortable::after {
-  content: "↕";
-  position: absolute;
-  right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
-  opacity: 0.5;
-  font-size: 0.75rem;
-  color: #000;
-  z-index: 1;
-}
-
-/* 정렬 아이콘 숨김 - CSS ::after만 사용 */
-.sort-icon {
-  display: none !important;
-}
-
-.sort-icon span {
-  display: none !important;
-}
-
-/* 정렬 중인 헤더 스타일 통일 */
-.table th.sortable.sort-asc::after,
-.table > thead > tr > th.sortable.sort-asc::after {
-  content: "↑";
-  opacity: 1;
-  color: #000;
-}
-
-.table th.sortable.sort-desc::after,
-.table > thead > tr > th.sortable.sort-desc::after {
-  content: "↓";
-  opacity: 1;
-  color: #000;
-}
-
-/* 피드 제목 ellipsis 스타일 */
+/* 긴 피드 제목 말줄임 처리 */
 .feed-title-ellipsis {
   display: inline-block;
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  vertical-align: middle;
 }
 
-.feed-title-ellipsis a {
+/* 테이블 내 링크 스타일 */
+.table a {
   color: #007bff;
   text-decoration: underline;
 }
 
-.feed-title-ellipsis a:hover {
+.table a:hover {
   color: #0056b3;
-  text-decoration: underline;
-}
-
-/* 모든 테이블의 첫 번째 필드 말줄임 처리 */
-.table td:first-child {
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.table th:first-child {
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.col-12:first-child .table td:first-child {
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.col-12:first-child .table th:first-child {
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.col-12:first-child .table td:first-child span,
-.col-12:first-child .table td:first-child a {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* 테이블 너비 제한 및 스크롤 방지 */
-.table {
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  table-layout: fixed;
-}
-
-.table td,
-.table th {
-  word-wrap: break-word;
-  overflow: visible;
-}
-
-/* 테이블 컨테이너 너비 제한 */
-.table-responsive {
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-/* 피드 상태 테이블은 제외 (첫 번째 col-12) */
-.col-12:first-child .table td:first-child {
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.col-12:first-child .table th:first-child {
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.col-12:first-child .table td:first-child span,
-.col-12:first-child .table td:first-child a {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* col-lg-4 테이블 컨테이너 최대 폭 제한 */
-.col-lg-4 .table-responsive {
-  max-width: 100% !important;
-  overflow-x: hidden !important;
-}
-
-/* 날짜 셀만 폰트 작게 */
-.date-cell {
-  font-size: 0.75em;
-  color: #666;
 }
 </style>
 
@@ -1755,57 +1411,3 @@ export default {
   },
 };
 </script>
-
-<style>
-/* 피드 제목 ellipsis 스타일 */
-.feed-title-ellipsis {
-  display: inline-block;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.feed-title-ellipsis a {
-  color: #007bff;
-  text-decoration: underline;
-}
-
-.feed-title-ellipsis a:hover {
-  color: #0056b3;
-  text-decoration: underline;
-}
-
-/* 테이블 너비 제한 및 스크롤 방지 */
-.table {
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  table-layout: fixed;
-}
-
-.table td,
-.table th {
-  word-wrap: break-word;
-  overflow: visible;
-}
-
-/* 테이블 컨테이너 너비 제한 */
-.table-responsive {
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-/* col-lg-4 테이블 컨테이너 최대 폭 제한 */
-.col-lg-4 .table-responsive {
-  max-width: 100% !important;
-  overflow-x: hidden !important;
-}
-
-/* 날짜 셀만 폰트 작게 */
-.date-cell {
-  font-size: 0.75em;
-  color: #666;
-}
-
-</style>

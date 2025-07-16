@@ -2,8 +2,8 @@
   <BContainer fluid>
     <!-- Search Window -->
     <BRow>
-      <BCol cols="12" class="m-0 p-1">
-        <BInputGroup class="m-0 p-1" style="width: 400px">
+      <BCol md="12" lg="ᆺ6">
+        <div class="d-flex p-1">
           <BFormInput
             v-model="searchKeyword"
             class="m-0"
@@ -12,17 +12,16 @@
           >
             {{ searchKeyword }}
           </BFormInput>
-          <BInputGroupText>
-            <my-button
-              ref="searchButton"
-              label="검색"
-              @click="search"
-              :initial-icon="['fas', 'search']"
-              :show-initial-icon="true"
-              variant="dark"
-            />
-          </BInputGroupText>
-        </BInputGroup>
+          <my-button
+            ref="searchButton"
+            label="검색"
+            @click="search"
+            :initial-icon="['fas', 'search']"
+            :show-initial-icon="true"
+            variant="dark"
+            class="ms-2 text-nowrap"
+          />
+        </div>
       </BCol>
     </BRow>
 
@@ -65,8 +64,6 @@
     </BRow>
   </BContainer>
 </template>
-
-<style></style>
 
 <script>
 import axios from "axios";

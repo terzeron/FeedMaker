@@ -1,9 +1,9 @@
 <template>
   <BContainer fluid>
     <!-- Group and Feed List Control Buttons -->
-    <BRow>
-      <BCol cols="12" class="m-0 p-1">
-        <span class="button_list">
+    <BRow class="align-items-center">
+      <BCol md="12" lg="6">
+        <div class="button_list">
           <my-button
             ref="grouplistButton"
             label="그룹 목록"
@@ -16,30 +16,31 @@
             @click="feedlistButtonClicked"
             v-if="showFeedlistButton"
           />
-        </span>
-
-        <BInputGroup class="float-right m-0 p-1" style="width: 300px">
-          <BFormInput
-            v-model="searchKeyword"
-            class="m-0"
-            placeholder="키워드"
-            @keyup.enter="search"
-          >
-            {{ searchKeyword }}
-          </BFormInput>
-          <BInputGroupText>
-            <my-button
-              ref="searchButton"
-              label="검색"
-              @click="search"
-              :initial-icon="['fas', 'search']"
-              :show-initial-icon="true"
-              variant="dark"
-            />
-          </BInputGroupText>
-        </BInputGroup>
+        </div>
       </BCol>
     </BRow>
+
+    <BCol md="12" lg="6">
+      <div class="d-flex p-1">
+        <BFormInput
+          v-model="searchKeyword"
+          class="m-0"
+          placeholder="키워드"
+          @keyup.enter="search"
+        >
+          {{ searchKeyword }}
+        </BFormInput>
+        <my-button
+          ref="searchButton"
+          label="검색"
+          @click="search"
+          :initial-icon="['fas', 'search']"
+          :show-initial-icon="true"
+          variant="dark"
+          class="ms-2 text-nowrap"
+        />
+      </div>
+    </BCol>
 
     <!-- Search Results -->
     <BRow>
@@ -482,151 +483,42 @@ div.jsoneditor-value {
 
 /* 테이블 스타일링 개선 */
 .table-responsive {
-  border-radius: 0 !important;
-  overflow-x: auto !important;
-  overflow-y: hidden !important;
-  box-shadow: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  width: 100% !important;
-  max-width: 100% !important;
+  border-radius: 0;
+  overflow-x: auto;
 }
 
-/* 테이블 기본 스타일 */
 .table {
-  margin: 0 !important;
-  padding: 0 !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  border-collapse: collapse !important;
-  table-layout: auto !important;
+  width: 100%;
+  border-collapse: collapse;
 }
 
-/* 테이블 모서리 효과 완전 제거 */
-.table,
-.table thead,
-.table tbody,
-.table tr,
 .table th,
 .table td {
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  transform: none !important;
-  background-image: none !important;
-  border: none !important;
-  border-bottom: 1px solid #dee2e6 !important;
-  word-wrap: break-word !important;
-  word-break: break-word !important;
-  overflow-wrap: break-word !important;
+  padding: 0.75rem;
+  vertical-align: middle;
+  border-top: 1px solid #dee2e6;
+  word-wrap: break-word;
 }
 
 .table thead th {
-  background-color: #6c757d !important;
-  color: white !important;
-  border-bottom: 2px solid #495057 !important;
-  font-weight: 600 !important;
-  text-transform: uppercase !important;
-  font-size: 0.875rem !important;
-  letter-spacing: 0.5px !important;
-  margin: 0 !important;
-  padding: 0.75rem !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  border-top: none !important;
-  border-left: none !important;
-  border-right: none !important;
-  transform: none !important;
-  position: static !important;
-  z-index: auto !important;
-  elevation: none !important;
-  background-image: none !important;
-  background-clip: border-box !important;
-  background-origin: border-box !important;
-  background-size: auto !important;
-  background-repeat: repeat !important;
-  background-attachment: scroll !important;
-  background-position: 0% 0% !important;
+  background-color: #e9ecef;
+  border-bottom-width: 2px;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+  letter-spacing: 0.5px;
 }
 
-/* 테이블 첫 번째와 마지막 셀의 모서리 효과 제거 */
-.table thead th:first-child,
-.table thead th:last-child,
-.table tbody tr td:first-child,
-.table tbody tr td:last-child {
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  transform: none !important;
-  background-image: none !important;
+.table-hover tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.075);
 }
 
-/* Bootstrap 테이블 헤더의 모든 3D 효과 제거 */
-.table thead th,
-.table thead th:first-child,
-.table thead th:last-child {
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  transform: none !important;
-  background-image: none !important;
-  background: #6c757d !important;
-  border: none !important;
-  border-bottom: 2px solid #495057 !important;
-}
-
-/* Vue Bootstrap 테이블 헤더 스타일 덮어쓰기 */
-.b-table thead th,
-.b-table-sticky-header thead th {
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  transform: none !important;
-  background-image: none !important;
-  background: #6c757d !important;
-  border: none !important;
-  border-bottom: 2px solid #495057 !important;
-}
-
-.table tbody tr:nth-child(even) {
-  background-color: #f8f9fa !important;
-}
-
-.table tbody tr:hover {
-  background-color: #e9ecef !important;
-  transition: background-color 0.2s ease !important;
-}
-
-.table td {
-  vertical-align: middle !important;
-  border-color: #dee2e6 !important;
-  margin: 0 !important;
-  padding: 0.75rem !important;
+.table-striped tbody tr:nth-of-type(odd) {
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .table td.fw-bold {
-  font-weight: 600 !important;
-  color: #495057 !important;
-  background-color: #f8f9fa !important;
-}
-
-/* Bootstrap 테이블 기본 스타일 덮어쓰기 */
-.table-responsive > .table {
-  margin-bottom: 0 !important;
-}
-
-.table-responsive > .table > thead > tr > th,
-.table-responsive > .table > tbody > tr > td {
-  white-space: nowrap !important;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-/* Vue Bootstrap 테이블 컴포넌트 스타일 덮어쓰기 */
-.b-table {
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-.b-table > .table {
-  margin: 0 !important;
-  padding: 0 !important;
+  font-weight: 600;
 }
 
 /* 모바일 반응형 스타일 */

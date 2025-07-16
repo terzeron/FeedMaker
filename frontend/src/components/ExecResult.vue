@@ -105,24 +105,24 @@ onMounted(async () => {
 </script>
 
 <style>
-.exec-result-markdown {
+.exec-result-container {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  text-align: left;
   max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.exec-result-markdown {
   margin: 5px 0;
-  padding: 14px 1rem;
+  padding: 14px 0;
   min-height: 60vh;
-  text-align: left !important;
 }
 
 .markdown-content {
   font-size: 0.85rem;
   line-height: 1.5;
   word-break: break-all;
-  text-align: left !important;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-}
-
-.markdown-content * {
-  text-align: left !important;
 }
 
 .markdown-content h1,
@@ -134,8 +134,6 @@ onMounted(async () => {
   margin-top: 1em;
   margin-bottom: 0.5em;
   font-weight: bold;
-  text-align: left !important;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 .markdown-content h1 { font-size: 1.5em; }
@@ -149,25 +147,15 @@ onMounted(async () => {
 .markdown-content ol {
   padding-left: 2em;
   margin: 0.5em 0;
-  text-align: left !important;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-}
-
-.markdown-content li {
-  margin: 0;
-  text-align: left !important;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 .markdown-content p {
   margin: 0.5em 0;
-  text-align: left !important;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 @media (max-width: 600px) {
   .exec-result-markdown {
-    padding: 1rem 0.2rem;
+    padding: 1rem 0;
     font-size: 0.8rem;
   }
   .markdown-content {
