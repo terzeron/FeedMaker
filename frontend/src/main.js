@@ -4,6 +4,7 @@ import router from './router';
 
 // Bootstrap CSS 로드
 import 'bootstrap/dist/css/bootstrap.css';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
 // BootstrapVueNext CSS import
 import 'bootstrap-vue-next/dist/bootstrap-vue-next.css';
