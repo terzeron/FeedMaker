@@ -9,6 +9,9 @@ import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 // BootstrapVueNext CSS import
 import 'bootstrap-vue-next/dist/bootstrap-vue-next.css';
 
+// Custom common styles
+import './assets/styles/common.css';
+
 // BootstrapVueNext 개별 컴포넌트 import
 import {
   BButton,

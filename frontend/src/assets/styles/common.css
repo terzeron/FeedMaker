@@ -1,0 +1,129 @@
+/* Card Styles */
+.card-header {
+  background-color: #495057 !important;
+  color: white !important;
+  font-weight: 600;
+  border-bottom: 1px solid #343a40;
+}
+
+/* Table Styles */
+.table-responsive {
+  border-radius: 0 !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  box-shadow: none !important;
+  max-width: 100% !important;
+  margin: 1px !important;
+  padding: 1px !important;
+}
+
+.table {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  table-layout: auto;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-collapse: collapse !important;
+}
+
+.table td,
+.table th {
+  padding: 0.0625rem 0.125rem !important;
+  margin: 0 !important;
+  vertical-align: middle;
+  border-color: #dee2e6;
+  word-wrap: break-word;
+  overflow: visible;
+}
+
+.table thead th {
+  border-bottom: 2px solid #495057 !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  font-size: 0.875rem !important;
+  letter-spacing: 0.5px !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  padding: 0.375rem 0.125rem !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  line-height: 1.3 !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+.col-lg-4 .table thead th,
+.col-lg-8 .table thead th {
+  font-size: 0.95rem !important;
+}
+
+.table tbody tr:hover {
+  background-color: #e9ecef;
+  transition: background-color 0.2s ease;
+}
+
+/* Sortable Table Headers */
+.table th.sortable {
+  cursor: pointer;
+  position: relative;
+}
+
+.table th.sortable:hover {
+  background-color: #f8f9fa !important;
+}
+
+.table th.sortable::after {
+  content: "↕";
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.5;
+  font-size: 0.75rem;
+  color: #000;
+  z-index: 1;
+}
+
+.table th.sortable.sort-asc::after {
+  content: "↑";
+  opacity: 1;
+}
+
+.table th.sortable.sort-desc::after {
+  content: "↓";
+  opacity: 1;
+}
+
+/* Icon Styles */
+.font-awesome-icon {
+  cursor: pointer;
+  color: #dc3545;
+  transition: color 0.2s ease;
+}
+
+.font-awesome-icon:hover {
+  color: #c82333;
+}
+
+/* Utility Text Classes */
+.text-danger {
+  color: #dc3545 !important;
+}
+
+.text-warning {
+  color: #ffc107 !important;
+}
+
+.text-muted {
+  color: #6c757d !important;
+}
+
+.alert {
+  position: relative;
+  z-index: 1050; /* Ensure alert is on top of other elements */
+  white-space: pre-wrap; /* Allow line breaks and wrapping */
+  word-wrap: break-word; /* Break long words */
+}
