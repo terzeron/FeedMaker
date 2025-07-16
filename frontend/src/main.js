@@ -4,9 +4,14 @@ import router from './router';
 
 // Bootstrap CSS 로드
 import 'bootstrap/dist/css/bootstrap.css';
+import "bootstrap/dist/js/bootstrap.bundle.min.js";
 
 // BootstrapVueNext CSS import
 import 'bootstrap-vue-next/dist/bootstrap-vue-next.css';
+
+// vue-toastification
+import Toast from "vue-toastification";
+import "vue-toastification/dist/index.css";
 
 // BootstrapVueNext 개별 컴포넌트 import
 import {
@@ -90,5 +95,11 @@ app.use(router);
 
 // Add session as global property
 app.config.globalProperties.$session = session;
+
+app.use(Toast, {
+  transition: "Vue-Toastification__bounce",
+  maxToasts: 20,
+  newestOnTop: true
+});
 
 app.mount('#app');
