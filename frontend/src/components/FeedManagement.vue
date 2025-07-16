@@ -471,7 +471,6 @@
 }
 
 
-
 div.jsoneditor-field {
   padding: 5px;
 }
@@ -479,189 +478,6 @@ div.jsoneditor-field {
 div.jsoneditor-value {
   padding: 5px;
   border: 1px lightgray dotted;
-}
-
-/* 테이블 스타일링 개선 */
-.table-responsive {
-  border-radius: 0;
-  overflow-x: auto;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.table th,
-.table td {
-  padding: 0.75rem;
-  vertical-align: middle;
-  border-top: 1px solid #dee2e6;
-  word-wrap: break-word;
-}
-
-.table thead th {
-  background-color: #e9ecef;
-  border-bottom-width: 2px;
-  font-weight: 600;
-  text-transform: uppercase;
-  font-size: 0.875rem;
-  letter-spacing: 0.5px;
-}
-
-.table-hover tbody tr:hover {
-  background-color: rgba(0, 0, 0, 0.075);
-}
-
-.table-striped tbody tr:nth-of-type(odd) {
-  background-color: rgba(0, 0, 0, 0.05);
-}
-
-.table td.fw-bold {
-  font-weight: 600;
-}
-
-/* 모바일 반응형 스타일 */
-@media (max-width: 768px) {
-  .table-responsive {
-    font-size: 0.875rem;
-  }
-
-  .table thead th {
-    font-size: 0.75rem;
-    padding: 0.5rem 0.25rem;
-  }
-
-  .table td {
-    padding: 0.5rem 0.25rem;
-    word-break: break-word;
-  }
-
-  .table td.fw-bold {
-    min-width: 80px;
-  }
-
-  /* 작은 화면에서 테이블 셀 내용 줄바꿈 */
-  .table td {
-    white-space: normal;
-  }
-
-  /* 버튼 그룹 모바일 최적화 */
-  .button_list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem;
-  }
-
-  .button_list button {
-    margin: 0.125rem !important;
-    font-size: 0.875rem;
-    padding: 0.375rem 0.75rem;
-  }
-
-  /* 입력 그룹 모바일 최적화 */
-  .input-group {
-    flex-direction: column;
-  }
-
-  .input-group > * {
-    margin-bottom: 0.25rem;
-  }
-
-  .input-group .input-group-text {
-    border-radius: 0.375rem;
-  }
-}
-
-@media (max-width: 576px) {
-  .table-responsive {
-    font-size: 0.8rem;
-  }
-
-  .table thead th {
-    font-size: 0.7rem;
-    padding: 0.375rem 0.125rem;
-  }
-
-  .table td {
-    padding: 0.375rem 0.125rem;
-  }
-
-  /* 매우 작은 화면에서 테이블 스크롤 */
-  .table-responsive {
-    overflow-x: auto;
-  }
-
-  .table {
-    min-width: 400px;
-  }
-}
-
-/* 다크 테마 지원 */
-@media (prefers-color-scheme: dark) {
-  .table thead th {
-    background-color: #495057 !important;
-    color: #f8f9fa !important;
-  }
-
-  .table tbody tr:nth-child(even) {
-    background-color: #343a40;
-  }
-
-  .table tbody tr:hover {
-    background-color: #495057;
-  }
-
-  .table td.fw-bold {
-    background-color: #495057;
-    color: #f8f9fa;
-  }
-
-  /* 다크 테마에서 버튼 스타일 */
-  .button_list button.active {
-    background-color: #0d6efd !important;
-    border-color: #0a58ca !important;
-    color: white !important;
-    box-shadow: 0 2px 4px rgba(13, 110, 253, 0.4) !important;
-  }
-
-  .button_list button.active:hover {
-    background-color: #0a58ca !important;
-    border-color: #084298 !important;
-    box-shadow: 0 4px 8px rgba(13, 110, 253, 0.5) !important;
-  }
-
-  .button_list button.bg-secondary {
-    background-color: #495057 !important;
-    border-color: #343a40 !important;
-    color: #adb5bd !important;
-    opacity: 0.9 !important;
-  }
-
-  .button_list button.bg-secondary:hover {
-    background-color: #343a40 !important;
-    border-color: #212529 !important;
-    color: #ced4da !important;
-    opacity: 1 !important;
-  }
-
-  .button_list button:not(.active):not(.bg-secondary) {
-    background-color: #198754 !important;
-    border-color: #146c43 !important;
-    color: white !important;
-  }
-
-  .button_list button:not(.active):not(.bg-secondary):hover {
-    background-color: #146c43 !important;
-    border-color: #0f5132 !important;
-  }
-}
-
-.alert {
-  position: relative;
-  z-index: 1050; /* Ensure alert is on top of other elements */
-  white-space: pre-wrap; /* Allow line breaks and wrapping */
-  word-wrap: break-word; /* Break long words */
 }
 </style>
 
@@ -683,7 +499,6 @@ import {
 import MyButton from "./MyButton";
 import JSONEditor from "jsoneditor";
 import "jsoneditor/dist/jsoneditor.css";
-
 
 
 library.add(
