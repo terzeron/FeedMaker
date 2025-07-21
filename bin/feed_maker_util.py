@@ -719,18 +719,29 @@ class FileManager:
 
 
 class PathUtil:
-    work_dir_path = Path(Env.get("FM_WORK_DIR"))
-    public_feed_dir_path = Path(Env.get("WEB_SERVICE_FEED_DIR_PREFIX"))
+    work_dir_path = Path(Env.get("FM_WORK_DIR")).resolve()
+    public_feed_dir_path = Path(Env.get("WEB_SERVICE_FEED_DIR_PREFIX")).resolve()
+
+    _work_dir_path_str = str(work_dir_path)
+    _public_feed_dir_path_str = str(public_feed_dir_path)
 
     @staticmethod
     def short_path(path: Optional[Path]) -> str:
         if not path:
             return ""
-        ret = str(path)
-        if path.is_relative_to(PathUtil.work_dir_path):
-            ret = str(path.relative_to(PathUtil.work_dir_path))
-        elif path.is_relative_to(PathUtil.public_feed_dir_path):
-            ret = str(path.relative_to(PathUtil.public_feed_dir_path))
-        return ret
+
+        path_str = str(path)
+
+        # os.path.abspath를 사용하여 심볼릭 링크를 해석하지 않고 절대 경로를 얻습니다.
+        # 이렇게 하면 테스트 환경에서 의도한 경로 구조를 유지할 수 있습니다.
+        abs_path_str = os.path.abspath(path_str)
+
+        if abs_path_str.startswith(PathUtil._work_dir_path_str):
+            return os.path.relpath(abs_path_str, PathUtil._work_dir_path_str)
+
+        if abs_path_str.startswith(PathUtil._public_feed_dir_path_str):
+            return os.path.relpath(abs_path_str, PathUtil._public_feed_dir_path_str)
+
+        return path_str
 # Modified
 # Another modification
