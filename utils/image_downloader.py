@@ -9,7 +9,7 @@ from base64 import b64decode
 from typing import Optional
 import cairosvg
 import pyheif
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageOps, UnidentifiedImageError
 from bin.feed_maker_util import FileManager, PathUtil, Env
 from bin.crawler import Crawler
 
@@ -65,7 +65,10 @@ class ImageDownloader:
 
     @staticmethod
     def optimize_for_webtoon(img: Image.Image, max_width: int = 1600) -> Image.Image:
-        """웹툰용 이미지 최적화"""
+        oriented_img = ImageOps.exif_transpose(img)
+        if oriented_img:
+            img = oriented_img
+
         # 너비 제한 (iPad Pro 12.9" 세로 모드 최적화 - 2048px 너비)
         # 실제로는 1600px 정도면 충분히 선명하면서도 용량 절약
         if img.width > max_width:
