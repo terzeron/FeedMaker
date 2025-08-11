@@ -152,8 +152,6 @@ class TestDownloadMergeSplit(unittest.TestCase):
             
             utils.download_merge_split.main()
             actual_output = mock_stdout.getvalue()
-            # print(f"ACTUAL OUTPUT: {actual_output}")
-            # print(f"EXPECTED OUTPUT: {expected_output}")
             self.assertEqual(actual_output.strip(), expected_output.strip())
 
     def test_statistics_validation(self) -> None:
@@ -570,8 +568,97 @@ class TestDownloadMergeSplit(unittest.TestCase):
             # Assert that print_image_files was called with the flip option enabled
             mock_print_files.assert_called_once()
             # Check the keyword arguments of the call
-            called_args, called_kwargs = mock_print_files.call_args
+            _, called_kwargs = mock_print_files.call_args
             self.assertTrue(called_kwargs.get('do_flip_right_to_left'))
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestDownloadMergeSplitWebPOutputs(unittest.TestCase):
+    def test_convert_jpeg_to_webp_basic(self) -> None:
+        from utils.download_merge_split import _convert_jpeg_to_webp
+        from PIL import Image
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as td:
+            tmp_dir = Path(td)
+            src = tmp_dir / "sample.jpeg"
+            # create a small valid JPEG
+            img = Image.new("RGB", (10, 10), "white")
+            img.save(src, format="JPEG")
+
+            out_path = _convert_jpeg_to_webp(src, quality=75)
+            self.assertIsNotNone(out_path)
+            self.assertTrue(out_path.exists())
+            self.assertEqual(out_path.suffix.lower(), ".webp")
+            self.assertFalse(src.exists())
+
+    def test_output_all_final_split_files_converts_and_prints_webp(self) -> None:
+        from utils.download_merge_split import _output_all_final_split_files
+        from bin.feed_maker_util import URL
+        from PIL import Image
+        import io
+        import tempfile
+
+        page_url = "http://example.com/page"
+        img_url_prefix = "https://img.example.com/test"
+        prefix = URL.get_short_md5_name(page_url)
+
+        with tempfile.TemporaryDirectory() as td:
+            feed_img_dir = Path(td)
+            # Prepare two JPEG split files that should be converted and printed as WEBP
+            f1 = feed_img_dir / f"{prefix}_1.1.jpeg"
+            f2 = feed_img_dir / f"{prefix}_1.2.jpeg"
+
+            img1 = Image.new("RGB", (8, 8), "white")
+            img2 = Image.new("RGB", (8, 8), "white")
+            img1.save(f1, format="JPEG")
+            img2.save(f2, format="JPEG")
+
+            with patch('sys.stdout', new_callable=io.StringIO) as mock_stdout:
+                _output_all_final_split_files(feed_img_dir, page_url, img_url_prefix)
+                output = mock_stdout.getvalue()
+
+            # Expect WEBP outputs only
+            self.assertIn(f"<img src='{img_url_prefix}/{prefix}_1.1.webp'/>", output)
+            self.assertIn(f"<img src='{img_url_prefix}/{prefix}_1.2.webp'/>", output)
+
+            # Original JPEGs should be removed; WEBP files should exist
+            self.assertFalse(f1.exists())
+            self.assertFalse(f2.exists())
+            self.assertTrue(feed_img_dir.joinpath(f"{prefix}_1.1.webp").exists())
+            self.assertTrue(feed_img_dir.joinpath(f"{prefix}_1.2.webp").exists())
+
+    def test_print_statistics_prefers_webp_over_jpeg(self) -> None:
+        from utils.download_merge_split import print_statistics
+        from bin.feed_maker_util import URL
+        from PIL import Image
+        import io
+        import tempfile
+
+        page_url = "http://example.com/page2"
+        prefix = URL.get_short_md5_name(page_url)
+
+        with tempfile.TemporaryDirectory() as td:
+            feed_img_dir = Path(td)
+            # Same stem: both JPEG and WEBP exist
+            jpeg_path = feed_img_dir / f"{prefix}_1.1.jpeg"
+            webp_path = feed_img_dir / f"{prefix}_1.1.webp"
+
+            img = Image.new("RGB", (12, 12), "white")
+            img.save(jpeg_path, format="JPEG")
+            img.save(webp_path, format="WEBP")
+
+            # Also add another only-WEBP file
+            webp_only = feed_img_dir / f"{prefix}_1.2.webp"
+            img.save(webp_only, format="WEBP")
+
+            with patch('sys.stdout', new_callable=io.StringIO) as mock_stdout:
+                # original_images can be empty for this check
+                print_statistics([], [], page_url, feed_img_dir)
+                output = mock_stdout.getvalue()
+
+            # Processed Images should count stems uniquely, preferring WEBP over JPEG
+            # Here we expect two processed images: 1.1 (webp chosen over jpeg) and 1.2 (webp)
+            self.assertIn("<!-- Processed Images: 2 files -->", output)

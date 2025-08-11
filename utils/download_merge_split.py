@@ -538,6 +538,29 @@ def _get_split_result_files_optimized(merged_file_path: Path, batch_num: int) ->
     return split_files
 
 
+def _convert_jpeg_to_webp(src_path: Path, quality: int = 75) -> Optional[Path]:
+    """Convert a JPEG file to WEBP format and remove the original JPEG.
+
+    Returns the path to the WEBP file if successful, otherwise None.
+    """
+    try:
+        if not src_path.exists() or src_path.suffix.lower() not in [".jpg", ".jpeg"]:
+            return None
+        target_path = src_path.with_suffix(".webp")
+        with Image.open(src_path) as img:
+            if img.mode != "RGB":
+                img = img.convert("RGB")
+            img.save(target_path, format="WEBP", quality=quality)
+        try:
+            src_path.unlink()
+        except Exception:
+            pass
+        return target_path
+    except Exception as e:
+        LOGGER.error(f"Failed to convert to WEBP: {src_path}, {e}")
+        return None
+
+
 def _fix_cross_batch_boundaries(feed_img_dir_path: Path, page_url: str, img_url_prefix: str) -> None:
     """Fix cross-batch boundaries by merging last split of previous batch with first split of next batch"""
     
@@ -629,10 +652,11 @@ def _output_all_final_split_files(feed_img_dir_path: Path, page_url: str, img_ur
     # Sort by batch number, then by split number
     all_split_files.sort(key=lambda x: (x[0], x[1]))
     
-    # Output img tags for all files
+    # Convert JPEG to WEBP and output img tags for all files
     for batch_num, split_num, jpeg_file in all_split_files:
+        _convert_jpeg_to_webp(jpeg_file, quality=75)
         split_img_url = FileManager.get_cache_url(img_url_prefix, page_url, postfix=f"{batch_num}.{split_num}")
-        print(f"<img src='{split_img_url}.jpeg'/>")
+        print(f"<img src='{split_img_url}.webp'/>")
 
 
 def create_merged_chunks(img_file_list: list[Path], feed_img_dir_path: Path, page_url: str, img_width_list: Optional[list[str]] = None) -> list[tuple[Path, str]]:
@@ -792,13 +816,26 @@ def print_statistics(original_images: list[Path], output_images: list[Path], pag
     processed_count = 0
     processed_widths = []
     
-    # Find all split files for this page
+    # Find all split files for this page (prefer WEBP over JPEG for the same stem)
     from bin.feed_maker_util import URL
     hash_prefix = URL.get_short_md5_name(page_url)
-    
-    for jpeg_file in feed_img_dir_path.glob(f"{hash_prefix}_*.jpeg"):
-        if jpeg_file.exists():
-            width, height = get_image_dimensions(jpeg_file)
+
+    candidate_webp = list(feed_img_dir_path.glob(f"{hash_prefix}_*.webp"))
+    candidate_jpeg = list(feed_img_dir_path.glob(f"{hash_prefix}_*.jpeg"))
+
+    stems_to_paths: dict[str, list[Path]] = {}
+    for p in candidate_webp + candidate_jpeg:
+        stems_to_paths.setdefault(p.stem, []).append(p)
+
+    # Choose WEBP if present for a stem; otherwise choose any path for that stem
+    chosen_files: list[Path] = []
+    for stem, paths in stems_to_paths.items():
+        webp_path = next((pp for pp in paths if pp.suffix.lower() == ".webp"), None)
+        chosen_files.append(webp_path or paths[0])
+
+    for f in chosen_files:
+        if f.exists():
+            width, height = get_image_dimensions(f)
             processed_total_area += width * height
             processed_total_height += height
             processed_max_width = max(processed_max_width, width)
