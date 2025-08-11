@@ -34,13 +34,24 @@ class ImageDownloader:
             return cache_file_path, FileManager.get_cache_url(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX") + "/" + feed_img_dir_path.name, img_url, suffix=cache_file_path.suffix)
 
         # 데이터 URI (base64) 처리
-        m = re.search(r'^data:image/(?P<ext>png|jpeg|jpg);base64,(?P<data>.+)', img_url)
+        m = re.search(r'^data:image/(?P<ext>png|jpeg|jpg|webp);base64,(?P<data>.+)', img_url)
         if m:
-            img_data, suffix = m.group("data"), f".{m.group('ext')}"
-            img_file_path = cache_file_path.with_suffix(suffix)
-            with open(img_file_path, "wb") as outfile:
+            img_data = m.group("data")
+            ext = m.group('ext')
+            suffix = f".{ext}"
+            temp_img_file_path = cache_file_path.with_suffix(suffix)
+            with open(temp_img_file_path, "wb") as outfile:
                 outfile.write(b64decode(img_data))
-            return img_file_path, FileManager.get_cache_url(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX") + "/" + feed_img_dir_path.name, img_url, suffix=suffix)
+
+            # If already WebP, don't re-encode; just use as-is
+            if ext.lower() == 'webp':
+                return temp_img_file_path, FileManager.get_cache_url(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX") + "/" + feed_img_dir_path.name, img_url, suffix=temp_img_file_path.suffix)
+
+            # Otherwise, convert to WebP for consistency
+            new_cache_file_path = ImageDownloader.convert_image_format(temp_img_file_path, quality=quality)
+            if new_cache_file_path and new_cache_file_path.is_file():
+                return new_cache_file_path, FileManager.get_cache_url(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX") + "/" + feed_img_dir_path.name, img_url, suffix=new_cache_file_path.suffix)
+            return None, None
 
         # HTTP 다운로드 처리
         if img_url.startswith("http"):
@@ -84,12 +95,12 @@ class ImageDownloader:
             header = infile.read(1024)
 
         if header.startswith(b"<svg"):
-            new_cache_file_path = cache_file_path.with_suffix(".jpeg")
+            new_cache_file_path = cache_file_path.with_suffix(".webp")
             cairosvg.svg2png(url=str(cache_file_path), write_to=str(new_cache_file_path.with_suffix(".png")))
-            # PNG를 JPEG로 최적화
+            # PNG를 WebP로 최적화
             with Image.open(new_cache_file_path.with_suffix(".png")) as img:
                 optimized_img = ImageDownloader.optimize_for_webtoon(img)
-                optimized_img.convert("RGB").save(new_cache_file_path, "JPEG", quality=quality, optimize=True)
+                optimized_img.convert("RGB").save(new_cache_file_path, "WEBP", quality=quality)
             cache_file_path.unlink(missing_ok=True)
             new_cache_file_path.with_suffix(".png").unlink(missing_ok=True)
             return new_cache_file_path
@@ -98,25 +109,49 @@ class ImageDownloader:
             heif_file = pyheif.read(str(cache_file_path))
             img = Image.frombytes(heif_file.mode, heif_file.size, heif_file.data)
             optimized_img = ImageDownloader.optimize_for_webtoon(img)
-            new_cache_file_path = cache_file_path.with_suffix(".jpeg")
-            optimized_img.convert("RGB").save(new_cache_file_path, "JPEG", quality=quality, optimize=True)
+            new_cache_file_path = cache_file_path.with_suffix(".webp")
+            optimized_img.convert("RGB").save(new_cache_file_path, "WEBP", quality=quality)
             return new_cache_file_path
 
         try:
             with Image.open(cache_file_path) as img:
+                # If already WEBP, avoid recompressing unless resizing is needed or naming needs suffix
+                if getattr(img, 'format', '').upper() == 'WEBP':
+                    optimized_img = ImageDownloader.optimize_for_webtoon(img)
+                    target_path = cache_file_path.with_suffix('.webp')
+                    try:
+                        # If no resize needed and suffix already .webp, reuse file
+                        if optimized_img.size == img.size and cache_file_path.suffix == '.webp':
+                            return cache_file_path
+                        # If no resize needed but suffix missing, just rename
+                        if optimized_img.size == img.size and cache_file_path.suffix != '.webp':
+                            if not target_path.exists():
+                                cache_file_path.rename(target_path)
+                            else:
+                                # fallback to save if target exists
+                                optimized_img.convert('RGB').save(target_path, 'WEBP', quality=quality)
+                                if cache_file_path != target_path:
+                                    cache_file_path.unlink(missing_ok=True)
+                            return target_path
+                        # Resize or orientation fix needed → save as WEBP
+                        optimized_img.convert('RGB').save(target_path, 'WEBP', quality=quality)
+                        if cache_file_path != target_path:
+                            cache_file_path.unlink(missing_ok=True)
+                        return target_path
+                    except (OSError, IOError, TypeError, ValueError, RuntimeError) as e:
+                        LOGGER.warning(f"WEBP 처리 실패: {e}")
+                        return None
+
+                # Non-WEBP → convert to WEBP
                 optimized_img = ImageDownloader.optimize_for_webtoon(img)
-                
-                # 모든 포맷을 JPEG로 변환 (호환성 최적화)
-                new_cache_file_path = cache_file_path.with_suffix(".jpeg")
-                
-                # JPEG 저장
+                new_cache_file_path = cache_file_path.with_suffix('.webp')
                 try:
-                    optimized_img.convert("RGB").save(new_cache_file_path, "JPEG", quality=quality, optimize=True)
+                    optimized_img.convert('RGB').save(new_cache_file_path, 'WEBP', quality=quality)
                     if cache_file_path != new_cache_file_path:
                         cache_file_path.unlink(missing_ok=True)
                     return new_cache_file_path
                 except (OSError, IOError, TypeError, ValueError, RuntimeError) as e:
-                    LOGGER.warning(f"JPEG 저장 실패: {e}")
+                    LOGGER.warning(f"WEBP 저장 실패: {e}")
                     return None
         except UnidentifiedImageError:
             LOGGER.warning(f"Cannot identify image format: {cache_file_path}")

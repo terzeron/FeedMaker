@@ -19,10 +19,10 @@ class TestDownloadImage(unittest.TestCase):
     @patch('utils.image_downloader.ImageDownloader.download_image')
     def test_download_image_with_single_quote(self, mock_download: MagicMock) -> None:
         # Mock image download operations
-        mock_download.return_value = (True, f"{Env.get('WEB_SERVICE_IMAGE_URL_PREFIX')}/one_second/753d4f8.jpeg")
+        mock_download.return_value = (True, f"{Env.get('WEB_SERVICE_IMAGE_URL_PREFIX')}/one_second/753d4f8.webp")
         
         test_input = "<img src='https://image-comic.pstatic.net/webtoon/725586/247/20240118173811_a4fcf1cbd0e4a0d0b38a6b773ba58282_IMAG01_1.jpg'>"
-        expected_output = "<img src='%s/one_second/753d4f8.jpeg'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
+        expected_output = "<img src='%s/one_second/753d4f8.webp'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
 
         with (
             patch("sys.argv", self.fake_argv),
@@ -35,10 +35,10 @@ class TestDownloadImage(unittest.TestCase):
     @patch('utils.image_downloader.ImageDownloader.download_image')
     def test_download_image_with_double_quote(self, mock_download: MagicMock) -> None:
         # Mock image download operations
-        mock_download.return_value = (True, f"{Env.get('WEB_SERVICE_IMAGE_URL_PREFIX')}/one_second/753d4f8.jpeg")
+        mock_download.return_value = (True, f"{Env.get('WEB_SERVICE_IMAGE_URL_PREFIX')}/one_second/753d4f8.webp")
         
         test_input = '<img src="https://image-comic.pstatic.net/webtoon/725586/247/20240118173811_a4fcf1cbd0e4a0d0b38a6b773ba58282_IMAG01_1.jpg">'
-        expected_output = "<img src='%s/one_second/753d4f8.jpeg'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
+        expected_output = "<img src='%s/one_second/753d4f8.webp'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
 
         with (
             patch("sys.argv", self.fake_argv),
@@ -51,10 +51,10 @@ class TestDownloadImage(unittest.TestCase):
     @patch('utils.image_downloader.ImageDownloader.download_image')
     def test_download_image_with_space(self, mock_download: MagicMock) -> None:
         # Mock image download operations
-        mock_download.return_value = (True, f"{Env.get('WEB_SERVICE_IMAGE_URL_PREFIX')}/one_second/753d4f8.jpeg")
+        mock_download.return_value = (True, f"{Env.get('WEB_SERVICE_IMAGE_URL_PREFIX')}/one_second/753d4f8.webp")
         
         test_input = "<img src='https://image-comic.pstatic.net/webtoon/725586/247/20240118173811_a4fcf1cbd0e4a0d0b38a6b773ba58282_IMAG01_1.jpg' >"
-        expected_output = "<img src='%s/one_second/753d4f8.jpeg'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
+        expected_output = "<img src='%s/one_second/753d4f8.webp'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
 
         with (
             patch("sys.argv", self.fake_argv),
@@ -67,10 +67,10 @@ class TestDownloadImage(unittest.TestCase):
     @patch('utils.image_downloader.ImageDownloader.download_image')
     def test_download_image_with_trailing_slash(self, mock_download: MagicMock) -> None:
         # Mock image download operations
-        mock_download.return_value = (True, f"{Env.get('WEB_SERVICE_IMAGE_URL_PREFIX')}/one_second/753d4f8.jpeg")
+        mock_download.return_value = (True, f"{Env.get('WEB_SERVICE_IMAGE_URL_PREFIX')}/one_second/753d4f8.webp")
         
         test_input = "<img src='https://image-comic.pstatic.net/webtoon/725586/247/20240118173811_a4fcf1cbd0e4a0d0b38a6b773ba58282_IMAG01_1.jpg' />"
-        expected_output = "<img src='%s/one_second/753d4f8.jpeg'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
+        expected_output = "<img src='%s/one_second/753d4f8.webp'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
 
         with (
             patch("sys.argv", self.fake_argv),
@@ -83,10 +83,10 @@ class TestDownloadImage(unittest.TestCase):
     @patch('utils.image_downloader.ImageDownloader.download_image')
     def test_download_image_with_width_attribute(self, mock_download: MagicMock) -> None:
         # Mock image download operations
-        mock_download.return_value = (True, f"{Env.get('WEB_SERVICE_IMAGE_URL_PREFIX')}/one_second/753d4f8.jpeg")
+        mock_download.return_value = (True, f"{Env.get('WEB_SERVICE_IMAGE_URL_PREFIX')}/one_second/753d4f8.webp")
         
         test_input = "<img src='https://image-comic.pstatic.net/webtoon/725586/247/20240118173811_a4fcf1cbd0e4a0d0b38a6b773ba58282_IMAG01_1.jpg' width='100%'/>"
-        expected_output = "<img src='%s/one_second/753d4f8.jpeg' width='100%%'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
+        expected_output = "<img src='%s/one_second/753d4f8.webp' width='100%%'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
 
         with (
             patch("sys.argv", self.fake_argv),
@@ -101,7 +101,7 @@ class TestDownloadImage(unittest.TestCase):
         """복합적인 텍스트와 이미지가 섞여있는 케이스 테스트 (텍스트1-이미지1-텍스트2-이미지2-텍스트3)"""
         # Mock image download operations returning different URLs for each image
         mock_download.side_effect = [
-            (True, f"{Env.get('WEB_SERVICE_IMAGE_URL_PREFIX')}/one_second/image1.jpeg"),
+            (True, f"{Env.get('WEB_SERVICE_IMAGE_URL_PREFIX')}/one_second/image1.webp"),
             (True, f"{Env.get('WEB_SERVICE_IMAGE_URL_PREFIX')}/one_second/image2.webp"),
             (True, f"{Env.get('WEB_SERVICE_IMAGE_URL_PREFIX')}/one_second/image3.png")
         ]
@@ -116,7 +116,7 @@ class TestDownloadImage(unittest.TestCase):
                      "<div>마지막 텍스트입니다.</div>")
         
         expected_output = ("<div align='center'>처음 텍스트입니다.</div>\n"
-                          "<img src='%s/one_second/image1.jpeg'/>\n"
+                           "<img src='%s/one_second/image1.webp'/>\n"
                           "<p>중간 텍스트입니다.</p>\n"
                           "<img src='%s/one_second/image2.webp' width='100%%'/>\n"
                           "<span>더 많은 중간 텍스트</span>\n"
