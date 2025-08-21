@@ -156,7 +156,7 @@ async def search_site(keyword: str) -> dict[str, Any]:
     response_object: dict[str, Any] = {}
     result, error = await FeedMakerManager.search_site(keyword)
     if result or not error:
-        response_object["search_result_list"] = result
+        response_object["search_result"] = result
         response_object["status"] = "success"
         LOGGER.debug(result)
     else:

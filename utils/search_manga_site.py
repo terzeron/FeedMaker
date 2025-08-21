@@ -77,6 +77,13 @@ class Site:
 
     def set_payload(self, keyword: str = "") -> None:
         LOGGER.debug(f"# set_payload(keyword={keyword})")
+        
+    def preprocess_search_result(self, search_result: str) -> str:
+        return search_result
+
+    def get_base_url(self) -> str:
+        """사이트의 기본 URL을 생성합니다."""
+        return URL.get_url_scheme(self.url_prefix) + "://" + URL.get_url_domain(self.url_prefix)
 
     def get_data_from_site(self, url: str = "") -> Optional[str]:
         LOGGER.debug(f"# get_data_from_site(url={url})")
@@ -85,14 +92,14 @@ class Site:
             site_dir_path = work_dir_path / self.site_name
             crawler: Crawler = Crawler(dir_path=site_dir_path, render_js=self.render_js, method=self.method, headers=self.headers, encoding=self.encoding, timeout=240)
             if not url:
-                url = URL.get_url_scheme(self.url_prefix) + "://" + URL.get_url_domain(self.url_prefix) + self.url_postfix
+                url = self.get_base_url() + self.url_postfix
                 LOGGER.debug(f"url={url}")
-            response, _, _ = crawler.run(url=url, data=self.payload)
+            response, error, _ = crawler.run(url=url, data=self.payload)
             del crawler
             return response
         return None
 
-    def extract_sub_content(self, content: str, attrs: dict[str, str]) -> list[tuple[str, str]]:
+    def extract_sub_content(self, content: str, attrs: dict[str, str]) -> str:
         LOGGER.debug(f"# extract_sub_content(attrs={attrs})")
         element_list: list[Any] = []
         soup = BeautifulSoup(content, "html.parser")
@@ -100,7 +107,8 @@ class Site:
             for element in soup.div(text=lambda text: isinstance(text, Comment)):
                 element.extract()
 
-        result_list: list[tuple[str, str]] = []
+        result_list: list[str] = []
+            
         for key in attrs.keys():
             if key in ("id", "class"):
                 element_list = soup.find_all(attrs={key: attrs[key]})
@@ -109,138 +117,158 @@ class Site:
                     path_list = HTMLExtractor.get_node_with_path(soup.body, attrs[key])
                     if path_list:
                         element_list = path_list
+            else:
+                element_list = [content]
 
             for element_obj in element_list:
-                title: str = ""
-                link: str = ""
-                LOGGER.debug(f"element_obj={element_obj}")
-                if not element_obj:
-                    continue
-                e = re.sub(r"\r?\n", "", str(element_obj))
-                e = re.sub(r"\s\s+", " ", e)
-
-
-                #LOGGER.debug(f"{e=}, {title=}, {link=}")
-                # 링크 추출
-                m = re.search(r'<a[^>]*href="(?P<link>[^"]+)"[^>]*>', e)
-                if m:
-                    if m.group("link").startswith("http"):
-                        link = m.group("link")
-                    else:
-                        link = URL.concatenate_url(self.url_prefix, m.group("link"))
-                    link = link.replace(r'&amp;', '&')
-                    link = re.sub(r'&?cpa=\d+', '', link)
-                    link = re.sub(r'&?stx=\d+', '', link)
-                    #LOGGER.debug(f"{e=}, {title=}, {link=}")
-
+                # HTML 조각 추출
+                html_fragment = str(element_obj)
+                
                 # 주석 제거
-                e = re.sub(r'<!--[^>]*-->', '', str(e))
-                # 단순(텍스트만 포함한) p 태그 제거
-                prev_e = e
-                while True:
-                    # 명시적인 타이틀 텍스트 추출
-                    m = re.search(r'<\w+[^>]*class="[^"]*([Tt]it(le)?|[Ss]ubject)"[^>]*>(?P<title>[^<>]+?)</\w+>', e)
-                    if m:
-                        title = m.group("title")
-                        if title == "/ 검색":
-                            title = ""
-                        #LOGGER.debug(f"{e=}, {title=}, {link=}")
-
-                    if self.site_name in ["11toon"]:
-                        # 이미지 url 추출하여 link로 변경
-                        m = re.search(r'url\(\x27(https?)?//[^/]+(?P<link>/.+)\x27\)', e)
-                        if m:
-                            link = m.group("link")
-                            id_str = re.sub(r'/data/toon_category/(?P<id>\d+)', r'\g<id>', link)
-                            link = URL.concatenate_url(self.url_prefix, "/bbs/board.php?bo_table=toons&is=" + id_str)
-
-                    # 만화사이트에서 자주 보이는 불필요한 텍스트 제거 ex. <span class="title">만화제목</span>
-                    e = re.sub(r'''
-<(?P<tag>\w+)[^>]*>\s*
-    (
-        (애니|영화|게임|방송|음악|기타|유틸(리티)?|스포츠)  (\s*&gt;\s*)?  (극장판|완결|액션|공포/호러|범죄/스릴러|코미디|ᆭᆩSF/판타지|아동(/가족)?|한국영화|다큐|미분류|드라마/멜로|드라마일드|드라마|시사/교양|예능/오락|국내앨범|외국앨범|축구|농구|야구|레슬링|레이싱|격투|유틸리티|미디어|그래픽|드라이버|문서/업무|유아/어린이|모바일|도서/만화|직캠/아이돌|여직캠|남직캠|코스프레)?|
-        한글(자막)?|자체자막|자막없음|우리말더빙|일드|무자막|
-        한국영화|해외영화|드라마|넷플릭스|영상·음악|애니·만화|게임·유틸|
-        만화제목|작가이름|(발행|초성|장르)검색|정렬|검색\s*결과|공지사항|북마크(업데이트)?|주간랭킹 TOP30|나의\s*댓?글\s*반응|
-        주간|격주|격월|월간|단행본|단편|완결|연재|정기|비정기|월요일?|화요일?|수요일?|목요일?|금요일?|토요일?|일요일?|
-        /액|액션|판타지/무협|판타지|성인/무협|성인|무협/성인|무협/액션/판타지|무협/액션|무협/판타지|무협|무장|라노벨|개그/무협|개그|학원|스토리?|순정|로맨스|로매스|이세계|전생|일상|치유|백합|미분류|시대극|투믹스|카카오페|느와르|15금|18금|19금|가정부|GL|BL/무협|BL|일반|러브코미디|
-        오늘|어제|그제|
-        (하루|이틀|사흘|나흘)\s*전?|
-        [한두세네]\s*[주달]\s*전?|
-        (\d+|일|이|삼|사|오|육|칠|팔|구|십일|십이|십)\s*[일주월년]\s*전?|
-        \d+[화권부편]
-    )
-\s*</(?P=tag)>
-                    ''', '', e, flags=re.VERBOSE | re.IGNORECASE)
-                    # 연속된 공백을 공백 1개로 교체
-                    e = re.sub(r'\s+', ' ', e)
-                    # #[] 제거
-                    e = e.replace(r'#\[]', '')
-                    if prev_e == e:
-                        break
-                    prev_e = e
-
-                # 일부 만화 사이트에서 권 단위 검색결과 노출되는 것을 제거
-                #if self.site_name not in ["jmana", "allall", "torrentjok"]:
-                #    e = re.sub(r'.*\b\d+[화권부편].*', '', e)
-
-                # 설명 텍스트 제거
-                e = re.sub(r'<\w+ class="">.+?</\w+>', '', e)
-                # 모든 html 태그 제거
-                e = re.sub(r'</?\w+(\s*[\w\-]+="[^"]*")*/?>', ' ', e)
-                # #태그 제거
-                e = re.sub(r'\s*#\S+', '', e)
-                # 행 처음에 연속하는 공백 제거
-                e = re.sub(r'^\s+', '', e)
-                # 행 마지막에 연속하는 공백 제거
-                e = re.sub(r'\s+$', '', e)
+                html_fragment = re.sub(r'<!--[^>]*-->', '', html_fragment)
+                
+                # href 속성의 상대 경로를 절대 경로로 변환
+                def replace_href(match):
+                    href_value = match.group(1)
+                    LOGGER.debug(f"Processing href: '{href_value}', url_prefix: '{self.url_prefix}'")
+                    
+                    # javascript:;인 경우 빈 문자열로 변경
+                    if href_value == "javascript:;":
+                        LOGGER.debug("javascript:; found, returning empty href")
+                        return 'href=""'
+                    elif href_value == "":
+                        # 빈 href인 경우 사이트 기본 URL로 교체
+                        base_url = self.get_base_url()
+                        LOGGER.debug(f"Empty href found, replacing with base_url: {base_url}")
+                        result = f'href="{base_url}"'
+                        LOGGER.debug(f"Result: {result}")
+                        return result
+                    elif href_value.startswith('http'):
+                        return f'href="{href_value}"'
+                    else:
+                        # 빈 문자열이 아닌 경우에만 concatenate_url 사용
+                        if href_value:
+                            absolute_url = URL.concatenate_url(self.url_prefix, href_value)
+                            return f'href="{absolute_url}"'
+                        else:
+                            return f'href="{self.get_base_url()}"'
+                
+                # href 처리 전후 로그
+                LOGGER.debug(f"Before href processing: {html_fragment[:200]}...")
+                
+                # href="" 패턴을 먼저 직접 처리
+                if 'href=""' in html_fragment:
+                    LOGGER.debug("Found href=\"\" pattern, replacing directly")
+                    html_fragment = html_fragment.replace('href=""', f'href="{self.get_base_url()}"')
+                
+                # 일반적인 href 처리
+                html_fragment = re.sub(r'href="([^"]*)"', replace_href, html_fragment)
+                LOGGER.debug(f"After href processing: {html_fragment[:200]}...")
+                
+                # href가 있는 a 태그에만 target="_blank" 속성 추가
+                html_fragment = re.sub(r'<a\b([^>]*href=[^>]*)>', r'<a\1 target="_blank">', html_fragment)
+                
+                # img 태그 완전 제거
+                html_fragment = re.sub(r'<img[^>]*/?>', '', html_fragment)
+                
+                # SVG 태그와 하위 요소들 완전 제거
+                try:
+                    soup_fragment = BeautifulSoup(html_fragment, "html.parser")
+                    for svg_element in soup_fragment.find_all("svg"):
+                        svg_element.decompose()
+                    html_fragment = str(soup_fragment)
+                except Exception:
+                    # SVG 제거 실패 시 정규표현식으로 대체 처리
+                    html_fragment = re.sub(r'<svg[^>]*>.*?</svg>', '', html_fragment, flags=re.DOTALL)
+                
+                # BeautifulSoup을 사용하여 안전하게 속성 제거
+                try:
+                    soup_fragment = BeautifulSoup(html_fragment, "html.parser")
+                    for tag in soup_fragment.find_all():
+                        # 제거할 속성들 (href는 유지)
+                        attrs_to_remove = ['class', 'id', 'alt', 'style']
+                        for attr in attrs_to_remove:
+                            if attr in tag.attrs:
+                                del tag.attrs[attr]
+                        
+                        # onclick 등 on으로 시작하는 속성들 제거
+                        attrs_to_remove_on = [attr for attr in tag.attrs.keys() if attr.startswith('on')]
+                        for attr in attrs_to_remove_on:
+                            del tag.attrs[attr]
+                        
+                        # data-로 시작하는 속성들 제거
+                        attrs_to_remove_data = [attr for attr in tag.attrs.keys() if attr.startswith('data-')]
+                        for attr in attrs_to_remove_data:
+                            del tag.attrs[attr]
+                    
+                    html_fragment = str(soup_fragment)
+                    
+                    # BeautifulSoup 처리 후 href="" 다시 확인
+                    if 'href=""' in html_fragment:
+                        LOGGER.debug("Found href=\"\" after BeautifulSoup processing, replacing again")
+                        html_fragment = html_fragment.replace('href=""', f'href="{self.get_base_url()}"')
+                except Exception:
+                    # BeautifulSoup 처리 실패 시 기존 정규표현식 방식 사용
+                    html_fragment = re.sub(r'\s+(class|id|alt|on\w+)=["\'][^"\']*["\']', '', html_fragment)
+                    html_fragment = re.sub(r'\s+style=["\'][^"\']*["\']', '', html_fragment)
+                    html_fragment = re.sub(r'\s+data-[a-zA-Z0-9_-]*=["\'][^"\']*["\']', '', html_fragment)
+                
+                # article과 div 태그에 border 스타일 강제 추가
+                html_fragment = re.sub(r'<(article|div)([^>]*)>', r'<\1\2 style="border: 1px solid #ccc;">', html_fragment)
+                
+                # 빈 태그 정리 (속성이 모두 제거된 경우)
+                html_fragment = re.sub(r'<(\w+)\s+>', r'<\1>', html_fragment)
+                
                 # 연속된 공백을 공백 1개로 교체
-                e = re.sub(r'\s+', ' ', e)
-                #LOGGER.debug(f"{e=}, {title=}, {link=}")
-                if not title and not re.search(r'^\s*$', e):
-                    title = e
-                    #LOGGER.debug(f"{e=}, {title=}, {link=}")
+                html_fragment = re.sub(r'\s+', ' ', html_fragment)
+                
+                # HTML beautify 적용
+                try:
+                    soup_fragment = BeautifulSoup(html_fragment, "html.parser")
+                    html_fragment = soup_fragment.prettify()
+                except Exception:
+                    # beautify 실패 시 원본 유지
+                    pass
+                
+                result_list.append(html_fragment)
 
-                if title and link and re.search(r"^\w.*$", title):
-                    result_list.append((title, unquote(link)))
-                    link = ""
-                    title = ""
+        return "".join(result_list)
 
-        return result_list
-
-    def extract_sub_content_from_site_like_agit(self, content: str, keyword: str) -> list[tuple[str, str]]:
+    def extract_sub_content_from_site_like_agit(self, content: str, keyword: str) -> str:
         LOGGER.debug(f"# extract_sub_content_from_site_like_agit(keyword={keyword})")
-        result_list: list[tuple[str, str]] = []
+        result_list: list[str] = []
 
         content = re.sub(r'^(<html><head>.*</head><body><pre[^>]*>)?var\s+\w+\s+=\s+', '', content)
         if re.search(r';(</pre></body></html>)?$', content):
             content = re.sub(r';(</pre></body></html>)?$', '', content)
         else:
-            return []
+            return ""
 
         data = json.loads(content)
         for item in data:
             if keyword in item["t"]:
                 link = URL.concatenate_url(self.url_prefix, item["x"] + ".html")
-                result_list.append((item["t"], link))
-        return result_list
+                result_str = f"<div>\n<span>{item['t']}</span>\t<span>{link}</span>\n</div>\n"
+                result_list.append(result_str)
+        return "".join(result_list)
 
-    def search(self, keyword: str = "") -> list[tuple[str, str]]:
+    def search(self, keyword: str = "") -> str:
         LOGGER.debug(f"# search(keyword={keyword})")
         self.set_url_postfix_with_keyword(keyword)
         self.set_payload(keyword)
         html = self.get_data_from_site()
         if html:
+            html = self.preprocess_search_result(html)
             return self.extract_sub_content(html, self.extraction_attrs)
-        return []
+        return ""
 
-    def search_in_site_like_agit(self, keyword: str) -> list[tuple[str, str]]:
+    def search_in_site_like_agit(self, keyword: str) -> str:
         LOGGER.debug(f"# search_in_site_like_agit(keyword={keyword})")
         url0 = ""
         url1 = ""
         html = self.get_data_from_site()
         if not html:
-            return []
+            return ""
         m = re.search(r'src=[\'"](?P<url0>.*/data/webtoon/(\w+_)?webtoon_0(_\d+)?.js\?([v_]=[^\'"]+)?)[\'"]', html)
         if m:
             url0 = m.group("url0")
@@ -260,31 +288,21 @@ class Site:
         LOGGER.debug(f"url0={url0}")
         LOGGER.debug(f"url1={url1}")
 
-        result_list: list[tuple[str, str]] = []
+        result_list: list[str] = []
         for _ in range(self.num_retries):
             content0 = self.get_data_from_site(url0)
             if content0:
                 result0 = self.extract_sub_content_from_site_like_agit(content0, keyword)
-                result_list.extend(result0)
+                result_list.append(result0)
                 if result0:
                     break
             content1 = self.get_data_from_site(url1)
             if content1:
                 result1 = self.extract_sub_content_from_site_like_agit(content1, keyword)
-                result_list.extend(result1)
+                result_list.append(result1)
                 if result1:
                     break
-        return result_list
-
-
-# class JmanaSite(Site):
-#     def __init__(self, site_name: str) -> None:
-#         super().__init__(site_name)
-#         self.extraction_attrs = {"class": "tit"}
-
-#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = quote(keyword)
-#         self.url_postfix = "/comic_list?keyword=" + encoded_keyword
+        return "".join(result_list)
 
 
 # class ManatokiSite(Site):
@@ -307,20 +325,10 @@ class Site:
 #         self.url_postfix = "/webtoon?stx=" + encoded_keyword
 
 
-# class CopytoonSite(Site):
-#     def __init__(self, site_name: str) -> None:
-#         super().__init__(site_name)
-#         self.extraction_attrs = {"class": "section-item-title"}
-
-#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = quote(keyword)
-#         self.url_postfix = "/bbs/search_webtoon.php?stx=" + encoded_keyword
-
-
 class WfwfSite(Site):
     def __init__(self, site_name: str) -> None:
         super().__init__(site_name)
-        self.extraction_attrs = {"class": "searchLink"}
+        self.extraction_attrs = {"bypass": "true"}
 
     def set_url_postfix_with_keyword(self, keyword: str) -> None:
         encoded_cp949_keyword: str = quote(keyword.encode("cp949"))
@@ -355,27 +363,17 @@ class XtoonSite(Site):
 class JoatoonSite(Site):
     def __init__(self, site_name: str) -> None:
         super().__init__(site_name)
-        self.extraction_attrs = {"class": "p-1"}
+        self.extraction_attrs = {"class": "grid"}
 
     def set_url_postfix_with_keyword(self, keyword: str) -> None:
         encoded_keyword = quote(keyword)
         self.url_postfix = "/toon/search?k=" + encoded_keyword
 
 
-# class MarumaruSite(Site):
-#     def __init__(self, site_name: str) -> None:
-#         super().__init__(site_name)
-#         self.extraction_attrs = {"class": "media"}
-
-#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = quote(keyword)
-#         self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
-
-
 class FunbeSite(Site):
     def __init__(self, site_name: str) -> None:
         super().__init__(site_name)
-        self.extraction_attrs = {"class": "section-item-title"}
+        self.extraction_attrs = {"class": "list-container"}
 
     def set_url_postfix_with_keyword(self, keyword: str) -> None:
         encoded_keyword = quote(keyword)
@@ -395,98 +393,30 @@ class ToonkorSite(Site):
 class EleventoonSite(Site):
     def __init__(self, site_name: str) -> None:
         super().__init__(site_name)
-        self.extraction_attrs = {"class": "toons_item"}
+        self.extraction_attrs = {"id": "library-recents-list"}
 
     def set_url_postfix_with_keyword(self, keyword: str) -> None:
         encoded_keyword = quote(keyword)
         self.url_postfix = "/bbs/search_stx.php?stx=" + encoded_keyword
 
 
-# class AllallSite(Site):
-#     def __init__(self, site_name: str) -> None:
-#         super().__init__(site_name)
-#         self.extraction_attrs = {"class": "video_list"}
-
-#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = quote(keyword)
-#         self.url_postfix = "/searchs?skeyword=" + encoded_keyword
-
-
-# class SkytoonSite(Site):
-#     def __init__(self, site_name: str) -> None:
-#         super().__init__(site_name)
-#         self.extraction_attrs = {"class": "list"}
-
-#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = quote(keyword)
-#         self.url_postfix = "/search?skeyword=" + encoded_keyword
-
-
 class BlacktoonSite(Site):
     def __init__(self, site_name: str = "") -> None:
         super().__init__(site_name)
+        self.extraction_attrs = {"id": "toonbook_list"}
 
     def set_url_postfix_with_keyword(self, keyword: str = "") -> None:
-        self.url_postfix = keyword
-
-    def search(self, keyword: str = "") -> list[tuple[str, str]]:
-        return self.search_in_site_like_agit(keyword)
+        self.url_postfix = "/index.html#search?" + keyword
 
 
-# class OrnsonSite(Site):
-#     def __init__(self, site_name: str) -> None:
-#         super().__init__(site_name)
-#         self.extraction_attrs = {"class": "tag_box"}
+class TorrentJokSite(Site):
+    def __init__(self, site_name: str) -> None:
+        super().__init__(site_name)
+        self.extraction_attrs = {"class": "media-heading"}
 
-#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = quote(keyword)
-#         self.url_postfix = "/search?skeyword=" + encoded_keyword
-
-
-# class FlixSite(Site):
-#     def __init__(self, site_name: str) -> None:
-#         super().__init__(site_name)
-#         self.extraction_attrs = {"class": "post-list"}
-#         self.method = Method.POST
-#         self.headers = {"Content-Type": "application/x-www-form-urlencoded"}
-
-#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = quote(keyword)
-#         self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
-
-#     def set_payload(self, keyword: str = "") -> None:
-#         self.payload = {"keyword": keyword}
-
-
-# class SektoonSite(Site):
-#     def __init__(self, site_name: str) -> None:
-#         super().__init__(site_name)
-#         self.extraction_attrs = {"class": "entry-title"}
-
-#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = quote(keyword)
-#         self.url_postfix = "/?post_type=post&s=" + encoded_keyword
-
-
-# class AgitSite(Site):
-#     def __init__(self, site_name: str = "") -> None:
-#         super().__init__(site_name)
-
-#     def set_url_postfix_with_keyword(self, keyword: str = "") -> None:
-#         self.url_postfix = ""
-
-#     def search(self, keyword: str = "") -> list[tuple[str, str]]:
-#         return self.search_in_site_like_agit(keyword)
-
-
-# class TorrentJokSite(Site):
-#     def __init__(self, site_name: str) -> None:
-#         super().__init__(site_name)
-#         self.extraction_attrs = {"class": "media-heading"}
-
-#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = quote(keyword)
-#         self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
+    def set_url_postfix_with_keyword(self, keyword: str) -> None:
+        encoded_keyword = quote(keyword)
+        self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
 
 
 class TorrentQqSite(Site):
@@ -519,16 +449,6 @@ class TorrentSeeSite(Site):
         self.url_postfix = "/search/index?category=0&keywords=" + encoded_keyword
 
 
-# class TorrentdiaSite(Site):
-#     def __init__(self, site_name: str) -> None:
-#         super().__init__(site_name)
-#         self.extraction_attrs = {"class": "list-subject"}
-
-#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = quote(keyword)
-#         self.url_postfix = "/bbs/search.php?search_flag=search&stx=" + encoded_keyword
-
-
 class TorrentTipSite(Site):
     def __init__(self, site_name: str) -> None:
         super().__init__(site_name)
@@ -539,26 +459,6 @@ class TorrentTipSite(Site):
         self.url_postfix = "/search?q=" + encoded_keyword
 
 
-# class TorrentTtSite(Site):
-#     def __init__(self, site_name: str) -> None:
-#         super().__init__(site_name)
-#         self.extraction_attrs = {"class": "page-list"}
-
-#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = quote(keyword)
-#         self.url_postfix = "/search?q=" + encoded_keyword
-
-
-# class TorrentmodeSite(Site):
-#     def __init__(self, site_name: str) -> None:
-#         super().__init__(site_name)
-#         self.extraction_attrs = {"class": "list-subject web-subject"}
-
-#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = quote(keyword)
-#         self.url_postfix = "/bbs/search.php?stx=" + encoded_keyword
-
-
 class MzgtoonSite(Site):
     def __init__(self, site_name: str = "") -> None:
         super().__init__(site_name)
@@ -566,49 +466,54 @@ class MzgtoonSite(Site):
         parsed = urlparse(self.url_prefix)
         prefix = f"{parsed.scheme}://{parsed.netloc}"
         self.set_url_prefix(prefix)
-        # extraction_attrs는 더 이상 사용하지 않음
+        self.extraction_attrs = {"bypass": "true"}
 
     def set_url_postfix_with_keyword(self, keyword: str = "") -> None:
         encoded_keyword = quote(keyword)
         # 실제 API 엔드포인트 사용
         self.url_postfix = f"/api/search?q={encoded_keyword}"
-
-    def search(self, keyword: str = "") -> list[tuple[str, str]]:
-        self.set_url_postfix_with_keyword(keyword)
-        url = self.url_prefix.rstrip("/") + self.url_postfix
-        try:
-            response = requests.get(url, headers=self.headers, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-            result: List[Tuple[str, str]] = []
-            for item in data.get('toonData', []):
-                title = item.get('toon_title')
-                toon_id = item.get('toon_id')
-                link = f"{self.url_prefix}/webtoon/{toon_id}" if toon_id else None
-                if title and link:
-                    result.append((str(title), str(link)))
-            return result
-        except (OSError, IOError, TypeError, ValueError, RuntimeError):
-            return []
+        
+    def preprocess_search_result(self, search_result: str) -> str:
+        # extract from pre tag and convert it into json
+        soup = BeautifulSoup(search_result, "html.parser")
+        pre_tag = soup.find("pre")
+        if pre_tag:
+            json_str = pre_tag.text
+            data = json.loads(json_str)
+        
+            # convert json to html
+            result_list: list[str] = []
+            if "toonData" in data:
+                toon_data = data["toonData"]
+                for item in toon_data:
+                    title = item["toon_title"]
+                    link = f"/webtoon/{item['toon_id']}"
+                    result_str = f"<div>\n<span>{title}</span>\t<span><a href=\"{link}\">{link}</a></span>\n</div>\n"
+                    result_list.append(result_str)
+                    
+            return "".join(result_list)
+        
+        return ""
 
 
 class SearchManager:
-    result_by_site: dict[Site, list[tuple[str, str]]] = {}
+    result_by_site: dict[Site, str] = {}
 
     def __init__(self) -> None:
         self.result_by_site = {}
 
     def worker(self, site: Site, keyword: str) -> None:
         #LOGGER.debug("# worker(site='%s', keyword='%s')", site, keyword)
-        self.result_by_site[site] = site.search(keyword)
+        search_result = site.search(keyword)
+        self.result_by_site[site] = search_result
 
-    def search(self, site_name: str, keyword: str, do_include_torrent_sites: bool = False) -> list[tuple[str, str]]:
+    def search_sites(self, site_name: str, keyword: str, do_include_torrent_sites: bool = False) -> str:
         LOGGER.debug("# search(site_name='%s', keyword='%s', do_include_torrent_sites=%r)", site_name, keyword, do_include_torrent_sites)
 
         # Create site list with exception handling for missing config files
         site_classes = [
             (EleventoonSite, "11toon"),
-            #(FunbeSite, "funbe"),
+            (FunbeSite, "funbe"),
             (JoatoonSite, "joatoon"),
             (ToonkorSite, "toonkor"),
             (TorrentQqSite, "torrentqq"),
@@ -616,15 +521,10 @@ class SearchManager:
             (TorrentSeeSite, "torrentsee"),
             (TorrentTipSite, "torrenttip"),
             (XtoonSite, "xtoon"),
-            #(AgitSite, "agit"),
-            #(AllallSite, "allall"),
             (BlacktoonSite, "blacktoon"),
-            #(JmanaSite, "jmana"),
             #(ManatokiSite, "manatoki"),
             #(NewtokiSite, "newtoki"),
-            #(SkytoonSite, "skytoon"),
-            #(TorrentJokSite, "torrentjok"),
-            #(TorrentTtSite, "torrenttt"),
+            (TorrentJokSite, "torrentjok"),
             (WfwfSite, "wfwf"),
             (WtwtSite, "wtwt"),
             (MzgtoonSite, "mzgtoon"),
@@ -643,7 +543,7 @@ class SearchManager:
                 LOGGER.warning(f"Failed to create site {site_name_param}: {e}, skipping")
                 continue
 
-        result_list: list[tuple[str, str]] = []
+        result_list: list[str] = []
         if not site_name:
             # multi-sites
             thread_list: list[Thread] = []
@@ -659,14 +559,14 @@ class SearchManager:
                 t.join()
 
             for _, result in self.result_by_site.items():
-                result_list.extend(result)
+                result_list.append(result)
         else:
             # single site
             for site in site_list:
                 if site_name == site.site_name:
-                    result_list = site.search(keyword)
+                    result_list.append(site.search(keyword))
 
-        return result_list
+        return "".join(result_list)
 
 
 def main() -> int:
@@ -682,10 +582,8 @@ def main() -> int:
     keyword = args[0]
 
     search_manager = SearchManager()
-    result_list = search_manager.search(site_name, keyword, do_include_torrent_sites)
-
-    for title, url in result_list:
-        print(f"{title}\t\t{url}")
+    result = search_manager.search_sites(site_name, keyword, do_include_torrent_sites)
+    print(result)
 
     return 0
 

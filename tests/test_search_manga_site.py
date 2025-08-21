@@ -144,16 +144,19 @@ def test_search_manga_site() -> None:
             # 추출 테스트
             result = site.extract_sub_content(test_html, {"class": "tit"})
 
-            expected = [
-                ("테스트 만화 1", "https://tests.com/test1"),
-                ("테스트 만화 2", "https://tests.com/test2")
-            ]
-
-            assert len(result) == len(expected), f"Expected {len(expected)} results, got {len(result)}"
-
-            for i, (title, url) in enumerate(result):
-                assert title == expected[i][0], f"Expected title {expected[i][0]}, got {title}"
-                assert url == expected[i][1], f"Expected URL {expected[i][1]}, got {url}"
+            # 결과가 문자열인지 확인
+            assert isinstance(result, str), f"Expected string, got {type(result)}"
+            
+            # HTML 조각이 제대로 추출되었는지 확인
+            assert "테스트 만화 1" in result, "Expected '테스트 만화 1' in result"
+            assert "테스트 만화 2" in result, "Expected '테스트 만화 2' in result"
+            assert "/test1" in result, "Expected '/test1' in result"
+            assert "/test2" in result, "Expected '/test2' in result"
+            
+            # style, class, id 속성이 제거되었는지 확인
+            assert 'style=' not in result, "Expected style attributes to be removed"
+            assert 'class=' not in result, "Expected class attributes to be removed"
+            assert 'id=' not in result, "Expected id attributes to be removed"
 
             LOGGER.info("✓ HTML extraction test successful")
 
@@ -176,7 +179,7 @@ def test_search_manga_site() -> None:
             # 빈 검색 결과 테스트 (실제 사이트 설정 파일이 없어도 동작해야 함)
             try:
                 result = search_manager.search("", "존재하지않는키워드", False)
-                assert isinstance(result, list)
+                assert isinstance(result, str)
                 LOGGER.info("✓ SearchManager empty search result test successful")
             except (OSError, KeyError, AttributeError) as e:
                 # 실제 사이트 설정 파일이 없어서 실패하는 것은 정상
