@@ -155,13 +155,13 @@ class FeedMakerManager:
         return [], f"can't search feed or group matching '{keywords}'"
 
     @staticmethod
-    async def search_site(keyword: str) -> tuple[list[tuple[str, str]], str]:
+    async def search_site(keyword: str) -> tuple[str, str]:
         LOGGER.debug("# search_site(keyword='%s')", keyword)
         search_manager = SearchManager()
         result = search_manager.search("", keyword)
         if result:
             return result, ""
-        return [], f"can't search site matching '{keyword}'"
+        return "", f"can't search site matching '{keyword}'"
 
     @staticmethod
     def _compare_names(x: dict[str, Any], y: dict[str, Any]) -> int:
