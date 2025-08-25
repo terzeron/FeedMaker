@@ -1112,7 +1112,7 @@ export default {
     registerToFeedly: function () {
       console.log(`registerToFeedly()`);
       const feederLink =
-        "https://feedly.com/i/discover/sources/search/feed/" +
+        "https://feedly.com/i/discover/sources?query=feed/" +
         encodeURIComponent(this.rssUrl);
       window.open(feederLink);
     },

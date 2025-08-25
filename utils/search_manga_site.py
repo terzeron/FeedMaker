@@ -161,8 +161,11 @@ class Site:
                     LOGGER.debug("Found href=\"\" pattern, replacing directly")
                     html_fragment = html_fragment.replace('href=""', f'href="{self.get_base_url()}"')
                 
-                # 일반적인 href 처리
+                # 다양한 href 패턴 처리 (큰따옴표, 작은따옴표, 따옴표 없음)
                 html_fragment = re.sub(r'href="([^"]*)"', replace_href, html_fragment)
+                html_fragment = re.sub(r"href='([^']*)'", replace_href, html_fragment)
+                html_fragment = re.sub(r'href=([^"\s>]+)', replace_href, html_fragment)
+                
                 LOGGER.debug(f"After href processing: {html_fragment[:200]}...")
                 
                 # href가 있는 a 태그에만 target="_blank" 속성 추가
@@ -203,10 +206,15 @@ class Site:
                     
                     html_fragment = str(soup_fragment)
                     
-                    # BeautifulSoup 처리 후 href="" 다시 확인
+                    # BeautifulSoup 처리 후 href 다시 확인 및 처리
                     if 'href=""' in html_fragment:
                         LOGGER.debug("Found href=\"\" after BeautifulSoup processing, replacing again")
                         html_fragment = html_fragment.replace('href=""', f'href="{self.get_base_url()}"')
+                    
+                    # BeautifulSoup 처리 후 상대 경로 href도 다시 처리
+                    html_fragment = re.sub(r'href="([^"]*)"', replace_href, html_fragment)
+                    html_fragment = re.sub(r"href='([^']*)'", replace_href, html_fragment)
+                    html_fragment = re.sub(r'href=([^"\s>]+)', replace_href, html_fragment)
                 except Exception:
                     # BeautifulSoup 처리 실패 시 기존 정규표현식 방식 사용
                     html_fragment = re.sub(r'\s+(class|id|alt|on\w+)=["\'][^"\']*["\']', '', html_fragment)
@@ -439,6 +447,26 @@ class TorrentRjSite(Site):
         self.url_postfix = "/search/index?keywords=" + encoded_keyword
 
 
+class TorrentZotaSite(Site):
+    def __init__(self, site_name: str) -> None:
+        super().__init__(site_name)
+        self.extraction_attrs = {"class": "flex-grow"}
+
+    def set_url_postfix_with_keyword(self, keyword: str) -> None:
+        encoded_keyword = quote(keyword)
+        self.url_postfix = "/search/index?keywords=" + encoded_keyword
+
+
+class TorrentTopSite(Site):
+    def __init__(self, site_name: str) -> None:
+        super().__init__(site_name)
+        self.extraction_attrs = {"class": "flex-grow"}
+
+    def set_url_postfix_with_keyword(self, keyword: str) -> None:
+        encoded_keyword = quote(keyword)
+        self.url_postfix = "/search/index?keywords=" + encoded_keyword
+
+
 class TorrentSeeSite(Site):
     def __init__(self, site_name: str) -> None:
         super().__init__(site_name)
@@ -518,6 +546,8 @@ class SearchManager:
             (ToonkorSite, "toonkor"),
             (TorrentQqSite, "torrentqq"),
             (TorrentRjSite, "torrentrj"),
+            (TorrentZotaSite, "torrentzota"),
+            (TorrentTopSite, "torrenttop"),
             (TorrentSeeSite, "torrentsee"),
             (TorrentTipSite, "torrenttip"),
             (XtoonSite, "xtoon"),
