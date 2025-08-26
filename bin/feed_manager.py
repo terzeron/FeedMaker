@@ -564,11 +564,16 @@ class FeedManager:
         if not feed:
             return {}
 
+        if feed.config:
+            config_data = json.loads(str(feed.config))
+        else:
+            config_data = {}
+
         return {
             "feed_name": feed.feed_name,
             "feed_title": feed.feed_title,
             "group_name": feed.group_name,
-            "config": json.loads(str(feed.config)),
+            "config": config_data,
             "config_modify_date": feed.config_modify_date,
             "collection_info": {
                 "collect_date": feed.collect_date,
