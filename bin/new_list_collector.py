@@ -36,7 +36,7 @@ class NewlistCollector:
                 continue
             items = line.split("\t")
             link = items[0]
-            title = " ".join(items[1:])
+            title = " ".join(items[1])
             if not link or not title:
                 LOGGER.error("Error: Can't split a line into link and title, line='%s'", line)
                 return []
