@@ -39,7 +39,6 @@ class Translation:
         for batch in batches:
             payload = {
                 "text": batch,            # 리스트 그대로
-                "source_lang": "EN",
                 "target_lang": "KO",
                 "preserve_formatting": 1,       # 공백/줄바꿈 보존
                 "split_sentences": "nonewlines" # 줄바꿈 기준 유지
@@ -65,7 +64,7 @@ class Translation:
         return result_map
 
     @staticmethod
-    def translate(result_list: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
+    def translate(result_list: List[Tuple[str, str]], do_save=True, do_show_translated_only=False) -> List[Tuple[str, str]]:
         translation_map_file_path = Path("translation_map.json")
     
         if translation_map_file_path.is_file():
@@ -73,11 +72,12 @@ class Translation:
                 translation_map = json.load(infile)
         else:
             translation_map = {}
-    
+            
         new_result_list: List[Tuple[str, str]] = []
         translation_req_list: List[str] = []
         untranslated_title_link_map: Dict[str, str] = {}
         for (link, en) in result_list:
+            print(f"{link=}, {en=}")
             if en in translation_map:
                 # 기존 번역 매핑 활용
                 ko = translation_map[en]
@@ -96,11 +96,15 @@ class Translation:
             if en in en_ko_map:
                 ko = en_ko_map[en]
                 # 결과에 추가
-                new_result_list.append((link, f"{ko}({en})"))
+                if do_show_translated_only:
+                    new_result_list.append((link, f"{ko}"))
+                else:
+                    new_result_list.append((link, f"{ko}({en})"))
                 # 기존 번역 매핑 업데이트
                 translation_map[en] = ko
-    
-        with translation_map_file_path.open("w", encoding="utf-8") as outfile:
-            json.dump(translation_map, outfile, ensure_ascii=False, indent=4)
+
+        if do_save:
+            with translation_map_file_path.open("w", encoding="utf-8") as outfile:
+                json.dump(translation_map, outfile, ensure_ascii=False, indent=4)
     
         return new_result_list
