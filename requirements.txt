@@ -19,7 +19,7 @@ colorama==0.4.6
 coverage==7.9.1
 cryptography==45.0.3
 cssselect2==0.7.0
-deepdiff==8.5.0
+deepdiff==8.6.1
 defusedxml==0.7.1
 dill==0.4.0
 dnspython==2.6.1
