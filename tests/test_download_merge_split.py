@@ -133,10 +133,10 @@ class TestDownloadMergeSplit(unittest.TestCase):
              patch.object(Path, 'suffix', '.jpeg'), \
              patch('bin.feed_maker_util.Process.exec_cmd', return_value=("mock_result", None)), \
              patch('utils.download_merge_split.progressive_merge_and_split') as mock_progressive_merge_split:
-            
+
             # Mock download_image to return valid paths
             mock_download_image.return_value = (Path('dummy_path'), 'dummy_url')
-            
+
             # Mock progressive_merge_and_split to produce expected output
             def mock_split_function(*args, **kwargs):
                 # Generate the expected split image URLs
@@ -147,9 +147,9 @@ class TestDownloadMergeSplit(unittest.TestCase):
                             print(f"<img src='{img_url_prefix}/0163a33_{chunk}.{split}.jpeg' width='100%'/>")
                         else:
                             print(f"<img src='{img_url_prefix}/0163a33_{chunk}.{split}.jpeg'/>")
-            
+
             mock_progressive_merge_split.side_effect = mock_split_function
-            
+
             utils.download_merge_split.main()
             actual_output = mock_stdout.getvalue()
             self.assertEqual(actual_output.strip(), expected_output.strip())
@@ -160,10 +160,10 @@ class TestDownloadMergeSplit(unittest.TestCase):
         test_input = ("<div>\n"
                       "<img src='https://image-comic.pstatic.net/webtoon/602910/478/20231229233637_24c2782183746f36a137ed8a30c3faa1_IMAG01_1.jpg'/>\n"
                       "<img src='https://image-comic.pstatic.net/webtoon/602910/478/20231229233637_24c2782183746f36a137ed8a30c3faa1_IMAG01_2.jpg'/>\n")
-        
+
         # Enable stats for this test
         test_env = self.fake_env.copy()
-        
+
         with patch('sys.argv', self.fake_argv), \
              patch.dict('os.environ', test_env, clear=False), \
              patch('sys.stdin', new=io.StringIO(test_input)), \
@@ -181,10 +181,10 @@ class TestDownloadMergeSplit(unittest.TestCase):
              patch.object(Path, 'suffix', '.jpeg'), \
              patch('bin.feed_maker_util.Process.exec_cmd', return_value=("mock_result", None)), \
              patch('utils.download_merge_split.progressive_merge_and_split') as mock_progressive_merge_split:
-            
+
             # Mock download_image to return valid paths
             mock_download_image.return_value = (Path('dummy_path'), 'dummy_url')
-            
+
             # Mock progressive_merge_and_split to produce expected output
             def mock_split_function(*args, **kwargs):
                 # Generate some test split image URLs
@@ -192,12 +192,12 @@ class TestDownloadMergeSplit(unittest.TestCase):
                 print("<img src='https://test.com/img/test_1.2.jpeg'/>")
                 print("<img src='https://test.com/img/test_2.1.jpeg'/>")
                 print("<img src='https://test.com/img/test_2.2.jpeg'/>")
-            
+
             mock_progressive_merge_split.side_effect = mock_split_function
-            
+
             utils.download_merge_split.main()
             actual_output = mock_stdout.getvalue()
-            
+
             # Check for statistics in output - basic validation
             self.assertIn("<!-- Image Processing Statistics -->", actual_output)
             self.assertIn("<!-- Original Images:", actual_output)
@@ -207,7 +207,7 @@ class TestDownloadMergeSplit(unittest.TestCase):
             # Area Change is only shown when original area > 0
             # self.assertIn("<!-- Area Change:", actual_output)
             self.assertIn("cross-batch boundary merging", actual_output)
-            
+
             # Verify statistics structure is correct
             lines = actual_output.split('\n')
             statistics_started = False
@@ -221,7 +221,7 @@ class TestDownloadMergeSplit(unittest.TestCase):
                     self.assertIsNotNone(match, "Original images count should be a number")
                     original_count = int(match.group(1))
                     self.assertGreaterEqual(original_count, 0, "Original images count should be >= 0")
-                    
+
                 if statistics_started and "<!-- Processed Images:" in line:
                     # Check that the processed images count is a number
                     match = re.search(r'<!-- Processed Images: (\d+) files -->', line)
@@ -234,21 +234,21 @@ class TestDownloadMergeSplit(unittest.TestCase):
         from pathlib import Path
         import io
         from unittest.mock import patch
-        
+
         # Create mock image files
         mock_original_images = [
             Path('/mock/img1.jpeg'),
             Path('/mock/img2.jpeg'),
         ]
-        
+
         mock_page_url = 'https://test.com/page'
         mock_feed_img_dir = Path('/mock/feed_img_dir')
-        
+
         with patch('sys.stdout', new_callable=io.StringIO) as mock_stdout, \
              patch('utils.download_merge_split.get_image_dimensions') as mock_get_dimensions, \
              patch('pathlib.Path.glob') as mock_glob, \
              patch('pathlib.Path.exists', return_value=True):
-            
+
             # Mock image dimensions
             mock_get_dimensions.side_effect = [
                 (800, 1200),  # Original image 1: 800x1200
@@ -256,24 +256,24 @@ class TestDownloadMergeSplit(unittest.TestCase):
                 (800, 600),   # Split image 1: 800x600
                 (800, 700),   # Split image 2: 800x700
             ]
-            
+
             # Mock glob to return split image files
             mock_split_files = [
                 Path('/mock/hash_1.1.jpeg'),
                 Path('/mock/hash_1.2.jpeg'),
             ]
             mock_glob.return_value = mock_split_files
-            
+
             # Call the statistics function directly
             utils.download_merge_split.print_statistics(
-                mock_original_images, 
-                [], 
-                mock_page_url, 
+                mock_original_images,
+                [],
+                mock_page_url,
                 mock_feed_img_dir
             )
-            
+
             output = mock_stdout.getvalue()
-            
+
             # Verify basic statistics structure
             self.assertIn("<!-- Image Processing Statistics -->", output)
             self.assertIn("<!-- Original Images: 2 files -->", output)
@@ -286,7 +286,7 @@ class TestDownloadMergeSplit(unittest.TestCase):
     def test_download_image_and_read_metadata(self):
         """Test parsing HTML and downloading images."""
         from bin.crawler import Crawler
-        
+
         test_html = (
             "<p>Some text</p>\n"
             "<img src='http://test.com/img1.jpg'/>\n"
@@ -325,119 +325,11 @@ class TestDownloadMergeSplit(unittest.TestCase):
         self.assertEqual(len(normal_html), 2)
         self.assertEqual(normal_html[0], "<p>Some text</p>")
         self.assertEqual(normal_html[1], "<span>More text</span>")
-        
+
         self.assertEqual(len(img_widths), 3)
         self.assertEqual(img_widths[0], "")
         self.assertEqual(img_widths[1], "width='50%'")
         self.assertEqual(img_widths[2], "")
-
-    def test_calculate_optimal_partition(self):
-        """Test the image partitioning logic."""
-        mock_files = [Path(f"/mock/img{i}.jpg") for i in range(5)]
-        
-        # Heights for the 5 mock images
-        heights = [10000, 15000, 5000, 20000, 10000]
-        
-        # Max height for a partition
-        max_height = 32767
-
-        def mock_get_dimensions(img_path):
-            index = int(str(img_path).split("img")[1].split(".")[0])
-            return (800, heights[index])
-
-        with patch('utils.download_merge_split.get_image_dimensions', side_effect=mock_get_dimensions):
-            # Test case 1: Standard partitioning
-            partitions = utils.download_merge_split.calculate_optimal_partition(mock_files, max_height)
-            self.assertEqual(len(partitions), 2)
-            # Partition 1: 10000 + 15000 + 5000 = 30000
-            self.assertEqual(partitions[0], [mock_files[0], mock_files[1], mock_files[2]])
-            # Partition 2: 20000 + 10000 = 30000
-            self.assertEqual(partitions[1], [mock_files[3], mock_files[4]])
-
-            # Test case 2: Empty list
-            partitions = utils.download_merge_split.calculate_optimal_partition([], max_height)
-            self.assertEqual(partitions, [])
-            
-            # Test case 3: All images fit in one partition
-            small_files = [Path(f"/mock/small{i}.jpg") for i in range(3)]
-            small_heights = [1000, 2000, 3000]
-            def mock_get_small_dimensions(img_path):
-                index = int(str(img_path).split("small")[1].split(".")[0])
-                return (800, small_heights[index])
-            
-            with patch('utils.download_merge_split.get_image_dimensions', side_effect=mock_get_small_dimensions):
-                 partitions = utils.download_merge_split.calculate_optimal_partition(small_files, max_height)
-                 self.assertEqual(len(partitions), 1)
-                 self.assertEqual(partitions[0], small_files)
-
-    def test_merge_images_with_pil(self):
-        """Test the image merging logic using PIL."""
-        from PIL import Image
-
-        mock_files = [Path("/mock/img1.png"), Path("/mock/img2.png")]
-        output_path = Path("/mock/merged.jpg")
-
-        # Mock Image.new to return a mock canvas
-        mock_canvas = MagicMock(spec=Image.Image)
-
-        with patch('PIL.Image.open') as mock_open, \
-             patch('PIL.Image.new', return_value=mock_canvas) as mock_new:
-            
-            # --- Correct Mocking Strategy ---
-
-            # 1. Create the mock image objects that will be returned
-            #    by the `with` statement's context.
-            mock_img_context1 = MagicMock(spec=Image.Image)
-            mock_img_context1.size = (800, 1200)
-            mock_img_context1.mode = 'RGB'
-            # .copy() should return the same mock for simplicity
-            mock_img_context1.copy.return_value = mock_img_context1 
-            
-            mock_img_context2 = MagicMock(spec=Image.Image)
-            mock_img_context2.size = (700, 1000)
-            mock_img_context2.mode = 'RGBA'
-            # Let's mock the convert call
-            mock_converted_img2 = MagicMock(spec=Image.Image)
-            mock_converted_img2.size = (700, 1000) # The converted image should have the same size
-            mock_img_context2.convert.return_value = mock_converted_img2
-            mock_converted_img2.copy.return_value = mock_converted_img2 # copy is called on the converted image
-            mock_img_context2.copy.return_value = mock_img_context2
-            
-            # 2. Create the mock objects returned by Image.open(), and configure
-            #    their __enter__ methods.
-            mock_opened_img1 = MagicMock()
-            mock_opened_img1.__enter__.return_value = mock_img_context1
-            
-            mock_opened_img2 = MagicMock()
-            mock_opened_img2.__enter__.return_value = mock_img_context2
-
-            # 3. Set the side_effect for the patched Image.open
-            mock_open.side_effect = [mock_opened_img1, mock_opened_img2]
-            
-            result = utils.download_merge_split.merge_images_with_pil(mock_files, output_path)
-
-            self.assertTrue(result)
-            
-            # Check if a new image canvas was created with the correct dimensions
-            # Max width = 800, total height = 1200 + 1000 = 2200
-            mock_new.assert_called_once_with("RGB", (800, 2200), "white")
-            
-            # Check if RGBA image was converted to RGB
-            mock_img_context2.convert.assert_called_once_with('RGB')
-            
-            # Check if images were pasted correctly
-            calls = mock_canvas.paste.call_args_list
-            self.assertEqual(len(calls), 2)
-            mock_canvas.paste.assert_any_call(mock_img_context1, (0, 0)) # First paste
-            mock_canvas.paste.assert_any_call(mock_converted_img2, (0, 1200)) # Second paste
-            
-            # Check if the final image was saved
-            mock_canvas.save.assert_called_once_with(output_path, format='JPEG', quality=75)
-
-        # Test failure case
-        with patch('PIL.Image.open', side_effect=IOError("Failed to open")):
-            result = utils.download_merge_split.merge_images_with_pil(mock_files, output_path)
-            self.assertFalse(result)
 
     def test_progressive_merge_and_split_logic(self):
         """Test the orchestration logic of progressive_merge_and_split."""
