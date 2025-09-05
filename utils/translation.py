@@ -77,7 +77,7 @@ class Translation:
         translation_req_list: List[str] = []
         untranslated_title_link_map: Dict[str, str] = {}
         for (link, en) in result_list:
-            print(f"{link=}, {en=}")
+            #print(f"{link=}, {en=}")
             if en in translation_map:
                 # 기존 번역 매핑 활용
                 ko = translation_map[en]
