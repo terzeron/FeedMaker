@@ -232,8 +232,8 @@ def _convert_jpeg_to_webp(src_path: Path, quality: int = 75) -> Optional[Path]:
         except Exception:
             pass
         return target_path
-    except Exception as e:
-        LOGGER.warning(f"Failed to convert to WEBP: {src_path}, {e}")
+    except Exception:
+        #LOGGER.warning(f"Failed to convert to WEBP: {src_path}, {e}")
         return None
 
 
@@ -314,8 +314,9 @@ def _fix_cross_batch_boundaries(feed_img_dir_path: Path, page_url: str, img_url_
             last_split_current.unlink()
 
         except (OSError, IOError, ValueError, TypeError) as e:
-            LOGGER.warning(f"Failed to merge cross-batch boundary between batch {current_batch} and {next_batch}: {e}")
+            #LOGGER.warning(f"Failed to merge cross-batch boundary between batch {current_batch} and {next_batch}: {e}")
             # 원본 파일들은 그대로 유지됨 (삭제하지 않음)
+            pass
 
 
 def _output_all_final_split_files(feed_img_dir_path: Path, page_url: str, img_url_prefix: str) -> None:
@@ -449,8 +450,8 @@ def _save_merged_chunk(merged_image: Image.Image, feed_img_dir_path: Path, page_
         merged_image.save(chunk_file_path, format='JPEG', quality=75)
         LOGGER.debug(f"Saved merged chunk to: {chunk_file_path}")
         return chunk_file_path
-    except (OSError, IOError, TypeError, ValueError, RuntimeError) as e:
-        LOGGER.error(f"Failed to save merged chunk: {e}")
+    except (OSError, IOError, TypeError, ValueError, RuntimeError):
+        #LOGGER.error(f"Failed to save merged chunk: {e}")
         raise
 
 
