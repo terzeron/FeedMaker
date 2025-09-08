@@ -102,8 +102,7 @@ class Translation:
         
     @staticmethod
     def translate(result_list: List[Tuple[str, str]], do_save=True, do_show_translated_only=False) -> List[Tuple[str, str]]:
-        translation_map_file_path = Path("translation_map.json")
-    
+        translation_map_file_path = Path(Env.get("FM_WORK_DIR")) / "translation_map.json"
         if translation_map_file_path.is_file():
             with translation_map_file_path.open("r", encoding="utf-8") as infile:
                 translation_map = json.load(infile)
