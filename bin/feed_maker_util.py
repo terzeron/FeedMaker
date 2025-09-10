@@ -39,8 +39,10 @@ class Data:
     def _to_hashable(item: Union[dict[str, Any], list[Any], Any]) -> Union[Hashable, tuple[tuple[str, Hashable], ...], tuple[Hashable, ...]]:
         if isinstance(item, dict):
             return tuple((str(k), Data._to_hashable(v)) for k, v in sorted(item.items()))
-        if isinstance(item, list):
+        if isinstance(item, (list, tuple)):
             return tuple(Data._to_hashable(x) for x in item)
+        if isinstance(item, (set, frozenset)):
+            return frozenset(Data._to_hashable(x) for x in item)
         if not isinstance(item, Hashable):
             raise TypeError(f"Item must be hashable, got {type(item)}")
         return item
@@ -362,7 +364,7 @@ class Config:
                 if "configuration" in data:
                     self.conf = data.get("configuration", {})
                     return
-                    
+
                 raise InvalidConfigFileError(f"can't get configuration from '{config_file_path} with invalid format")
         else:
             raise NotFoundConfigFileError(f"can't find configuration file '{config_file_path}'")
@@ -485,7 +487,7 @@ class Config:
                     "headers": Config._get_dict_config_value(extraction_conf, "headers", {}),
                 }
                 return conf
-            
+
         raise NotFoundConfigItemError("can't get configuration item 'extraction'")
 
     def get_rss_configs(self) -> dict[str, Any]:

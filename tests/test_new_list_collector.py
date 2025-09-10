@@ -32,7 +32,12 @@ class NewlistCollectorTest(unittest.TestCase):
         # without newline
         input_str1 = "https://url1\tworld\nhttps://url2\tcoffee"
         actual = NewlistCollector.split_result_into_items(input_str1)
-        expected1 = [("https://url1", "world"), ("https://url2", "coffee")]
+        expected1 = [("https://url1", "world", []), ("https://url2", "coffee", [])]
+        self.assertEqual(expected1, actual)
+
+        input_str2 = "https://url1\tworld\tmusic\t3\nhttps://url2\tcoffee\tbook\t4"
+        actual = NewlistCollector.split_result_into_items(input_str2)
+        expected1 = [("https://url1", "world", ["music", "3"]), ("https://url2", "coffee", ["book", "4"])]
         self.assertEqual(expected1, actual)
 
         # normal input
@@ -45,7 +50,7 @@ https://cartoon.media.daum.net/webtoon/view/mujigaebridge\t무지개다리 파�
         actual = self.collector.split_result_into_items(test_input)
         self.assertEqual(4, len(actual))
         for item in actual:
-            self.assertEqual(2, len(item))
+            self.assertEqual(3, len(item))
 
         # abnormal input
         test_input = '''
@@ -87,7 +92,7 @@ https://cartoon.media.daum.net/webtoon/view/mujigaebridge\t무지개다리 파�
 
         actual = self.collector._compose_url_list()
         self.assertGreaterEqual(len(actual), 5)
-        self.assertEqual(len(actual[0]), 2)
+        self.assertEqual(len(actual[0]), 3)
 
     @staticmethod
     def count_tsv_file(tsv_file_path: Path) -> tuple[int, int]:
@@ -98,15 +103,15 @@ https://cartoon.media.daum.net/webtoon/view/mujigaebridge\t무지개다리 파�
             num_lines = len(line_list)
             for line in line_list:
                 if "\t" in line:
-                    link, title = line.split("\t")
+                    link, title, _ = line.split("\t")
                     if link and title:
                         num_items += 1
         return num_lines, num_items
 
     def test_save_new_list_to_file(self) -> None:
-        new_list: list[tuple[str, str]] = [
-            ("http://cartoon.media.daum.net/webtoon/view/dontgiveheart", "그 책에 마음을 주지 마세요"),
-            ("http://cartoon.media.daum.net/webtoon/view/mujigaebridge", "무지개다리 파수꾼")
+        new_list: list[tuple[str, str, list[str]]] = [
+            ("http://cartoon.media.daum.net/webtoon/view/dontgiveheart", "그 책에 마음을 주지 마세요", []),
+            ("http://cartoon.media.daum.net/webtoon/view/mujigaebridge", "무지개다리 파수꾼", [])
         ]
         self.collector._save_new_list_to_file(new_list)
         if self.collector.new_list_file_path.is_file():
@@ -145,7 +150,7 @@ https://cartoon.media.daum.net/webtoon/view/mujigaebridge\t무지개다리 파�
 
         actual = self.collector.collect()
         self.assertGreaterEqual(len(actual), 5)
-        self.assertEqual(len(actual[0]), 2)
+        self.assertEqual(len(actual[0]), 3)
         if self.collector.new_list_file_path.is_file():
             num_lines, num_items = NewlistCollectorTest.count_tsv_file(self.collector.new_list_file_path)
             self.assertGreaterEqual(num_lines, 10)

@@ -151,14 +151,14 @@ class FeedMaker:
 
         return K
 
-    def _read_old_feed_list_from_file(self) -> list[tuple[str, str]]:
+    def _read_old_feed_list_from_file(self) -> list[tuple[str, str, list[str]]]:
         LOGGER.debug("# _read_old_feed_list_from_file()")
 
         if not self.collection_conf:
             LOGGER.error("Error: can't get collection configuration")
             return []
 
-        feed_list: list[tuple[str, str]] = []
+        feed_list: list[tuple[str, str, list[str]]] = []
         dt = Datetime.get_current_time()
         if not self.collection_conf.get("is_completed", False):
             # 아직 진행 중인 피드에 대해서는 현재 날짜에 가장 가까운
@@ -175,8 +175,8 @@ class FeedMaker:
                     with list_file_path.open('r', encoding='utf-8') as in_file:
                         for line in in_file:
                             line = line.rstrip()
-                            link, title = line.split("\t")
-                            feed_list.append((link, title))
+                            link, title, *metadata = line.split("\t")
+                            feed_list.append((link, title, metadata))
                         if feed_list:
                             break
         else:
@@ -190,8 +190,8 @@ class FeedMaker:
                 with file_path.open('r', encoding='utf-8') as in_file:
                     for line in in_file:
                         line = line.rstrip()
-                        link, title = line.split("\t")
-                        feed_list.append((link, title))
+                        link, title, *metadata = line.split("\t")
+                        feed_list.append((link, title, metadata))
 
         return Data.remove_duplicates(feed_list)
 
@@ -342,7 +342,7 @@ class FeedMaker:
                 out_file.write(f"{next_start_index}\t{current_time_str}\n")
         return next_start_index, current_time_str
 
-    def _fetch_old_feed_list_window(self, old_feed_list: list[tuple[str, str]]) -> Optional[list[tuple[str, str]]]:
+    def _fetch_old_feed_list_window(self, old_feed_list: list[tuple[str, str, list[str]]]) -> Optional[list[tuple[str, str, list[str]]]]:
         LOGGER.debug(f"# _fetch_old_feed_list_window(old_feed_list={old_feed_list}")
         # 오름차순 정렬
         feed_id_sort_field_list: list[dict[str, Any]] = []
@@ -354,7 +354,7 @@ class FeedMaker:
             raise NotFoundConfigItemError("can't get configuration item 'collection.sort_field_pattern'")
 
         for i, item in enumerate(old_feed_list):
-            link, title = item
+            link, title, _ = item
             m = re.search(sort_field_pattern, link + "\t" + title)
             if m:
                 sort_field = m.group(1)
@@ -383,7 +383,7 @@ class FeedMaker:
             LOGGER.error("ERROR: can't read start_idx.txt file")
             return None
         LOGGER.info(f"start index: {start_index}, end index: {end_index}, last modified time: {mtime}")
-        result_feed_list: list[tuple[str, str]] = []
+        result_feed_list: list[tuple[str, str, list[str]]] = []
         for i, feed in enumerate(sorted_feed_list):
             feed_id: int = feed.get("id", 0)
             if start_index <= i + 1 < end_index:
@@ -394,7 +394,7 @@ class FeedMaker:
             LOGGER.info(f"next start index: {next_start_index}, current time: {current_time_str}")
         return result_feed_list
 
-    def _get_recent_feed_list(self) -> list[tuple[str, str]]:
+    def _get_recent_feed_list(self) -> list[tuple[str, str, list[str]]]:
         LOGGER.debug("# _get_recent_feed_list()")
 
         short_date_str = Datetime.get_short_date_str()
@@ -402,27 +402,36 @@ class FeedMaker:
         collector = NewlistCollector(self.feed_dir_path, self.collection_conf, new_list_file_path)
         return collector.collect()
 
-    def _diff_feeds_and_make_htmls(self, recent_feed_list: list[tuple[str, str]], old_feed_list: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    def _get_new_feeds(self, recent_feed_list: list[tuple[str, str, list[str]]], old_feed_list: list[tuple[str, str, list[str]]]) -> list[tuple[str, str, list[str]]]:
+        # (link, title) 키 기반으로 새로운 피드만 필터링 (루프 사용)
+        old_keys: set[tuple[str, str]] = set()
+        for link, title, _tags in old_feed_list:
+            old_keys.add((link, title))
+        new_list: list[tuple[str, str, list[str]]] = []
+        for link, title, tags in recent_feed_list:
+            if (link, title) not in old_keys:
+                new_list.append((link, title, tags))
+        return new_list
+
+    def _diff_feeds_and_make_htmls(self, recent_feed_list: list[tuple[str, str, list[str]]], old_feed_list: list[tuple[str, str, list[str]]]) -> list[tuple[str, str, list[str]]]:
         LOGGER.debug(f"# _diff_feeds_and_make_htmls(recent_feed_list={recent_feed_list[:10]}, old_feed_list={old_feed_list[:10]})")
 
-        recent_set = OrderedSet(recent_feed_list)
-        old_set = OrderedSet(old_feed_list)
-        new_feed_list = list(recent_set - old_set)
-
+        # 차집합 연산을 별도 메소드로 수행
+        new_feed_list = self._get_new_feeds(recent_feed_list, old_feed_list)
         # collect items to be generated as RSS feed
         LOGGER.info(f"Appending {len(new_feed_list)} new items to the feed list")
-        merged_feed_list: list[tuple[str, str]] = []
-        for link, title in new_feed_list:
+        merged_feed_list: list[tuple[str, str, list[str]]] = []
+        for link, title, _ in new_feed_list:
             if self._make_html_file(link, title):
-                merged_feed_list.append((link, title))
+                merged_feed_list.append((link, title, []))
 
         LOGGER.info(f"Appending {len(old_feed_list)} old items to the feed list")
-        for link, title in old_feed_list:
+        for link, title, _ in old_feed_list:
             if self._make_html_file(link, title):
-                merged_feed_list.append((link, title))
+                merged_feed_list.append((link, title, []))
         return merged_feed_list[:self.window_size]
 
-    def _generate_rss_feed(self, merged_feed_list: list[tuple[str, str]]) -> bool:
+    def _generate_rss_feed(self, merged_feed_list: list[tuple[str, str, list[str]]]) -> bool:
         LOGGER.debug("# generate_rss_feed()")
 
         if not self.rss_conf:
@@ -437,7 +446,7 @@ class FeedMaker:
 
         LOGGER.info("Generating rss feed file...")
         rss_items: list[PyRSS2Gen.RSSItem] = []
-        for link, title in reversed(merged_feed_list):
+        for link, title, _ in reversed(merged_feed_list):
             html_file_path = FeedMaker._get_html_file_path(self.html_dir, link)
             LOGGER.info("%s\t%s\t%s", link, title, PathUtil.short_path(html_file_path))
             pub_date_str = Datetime.get_rss_date_str()
@@ -531,7 +540,7 @@ class FeedMaker:
         if self.do_collect_by_force or self.do_collect_only:
             self.collection_conf["is_completed"] = False
 
-        old_feed_list: list[tuple[str, str]] = []
+        old_feed_list: list[tuple[str, str, list[str]]] = []
         if not self.do_collect_only:
             # 과거 피드항목 리스트를 가져옴
             old_feed_list = self._read_old_feed_list_from_file()

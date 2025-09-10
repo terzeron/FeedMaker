@@ -45,7 +45,7 @@ def main() -> int:
             if re.search(r"^#", line):
                 continue
             line = line.rstrip()
-            (link, title) = line.split("\t")
+            link, title, _ = line.split("\t")
             line_num_link_map[line_num] = link + "\t" + title
 
             clean_title = title.lower()

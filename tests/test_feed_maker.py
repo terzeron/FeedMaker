@@ -50,7 +50,7 @@ class TestFeedMaker(unittest.TestCase):
         self.maker.collection_conf = self.config.get_collection_configs()
         self.maker.extraction_conf = self.config.get_extraction_configs()
         self.maker.rss_conf = self.config.get_rss_configs()
-        
+
         # 테스트를 위해 post_process_script_list를 비워서 download_image.py가 실행되지 않도록 함
         self.maker.extraction_conf["post_process_script_list"] = []
 
@@ -240,7 +240,7 @@ class TestFeedMaker(unittest.TestCase):
         with patch.object(LOGGER, "info") as mock_info:
             actual = self.maker._read_old_feed_list_from_file()
             self.assertIsNotNone(actual)
-            expected = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화")]
+            expected = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화", [])]
             self.assertEqual(expected, actual)
             self.assertTrue(assert_in_mock_logger(PathUtil.short_path(self.list_file2_path), mock_info))
 
@@ -248,7 +248,7 @@ class TestFeedMaker(unittest.TestCase):
         with patch.object(LOGGER, "info") as mock_info:
             actual = self.maker._read_old_feed_list_from_file()
             self.assertIsNotNone(actual)
-            expected = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화")]
+            expected = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화", [])]
             self.assertEqual(expected, actual)
             self.assertTrue(assert_in_mock_logger(PathUtil.short_path(self.list_file1_path), mock_info))
 
@@ -257,7 +257,7 @@ class TestFeedMaker(unittest.TestCase):
         with patch.object(LOGGER, "info") as mock_info:
             old_feed_list = self.maker._read_old_feed_list_from_file()
             actual = self.maker._fetch_old_feed_list_window(old_feed_list)
-            expected = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화")]
+            expected = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화", [])]
             self.assertEqual(expected, actual)
             self.assertTrue(assert_in_mock_logger(PathUtil.short_path(self.list_file2_path), mock_info))
             self.assertTrue(assert_in_mock_logger("start index", mock_info, True))
@@ -266,7 +266,7 @@ class TestFeedMaker(unittest.TestCase):
         with patch.object(LOGGER, "info") as mock_info:
             old_feed_list = self.maker._read_old_feed_list_from_file()
             actual = self.maker._fetch_old_feed_list_window(old_feed_list)
-            expected = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화")]
+            expected = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화", [])]
             self.assertEqual(expected, actual)
             self.assertTrue(assert_in_mock_logger(PathUtil.short_path(self.list_file1_path), mock_info))
             self.assertTrue(assert_in_mock_logger("start index", mock_info, True))
@@ -276,21 +276,21 @@ class TestFeedMaker(unittest.TestCase):
         with patch('bin.feed_maker.NewlistCollector') as mock_collector:
             # Configure mock to return test data
             mock_instance = mock_collector.return_value
-            mock_instance.collect.return_value = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화")]
-            
+            mock_instance.collect.return_value = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화", [])]
+
             self.maker.collection_conf["is_completed"] = True
             actual = self.maker._get_recent_feed_list()
             self.assertIsNotNone(actual)
             # Do NOT inspect the content of recent feeds
             self.assertEqual(1, len(actual))
-            self.assertEqual(2, len(actual[0]))
+            self.assertEqual(3, len(actual[0]))
 
             self.maker.collection_conf["is_completed"] = False
             actual = self.maker._get_recent_feed_list()
             self.assertIsNotNone(actual)
             # Do NOT inspect the content of recent feeds
             self.assertEqual(1, len(actual))
-            self.assertEqual(2, len(actual[0]))
+            self.assertEqual(3, len(actual[0]))
 
     def test_4_diff_feeds_and_make_htmls(self) -> None:
         # Mock all external dependencies
@@ -299,22 +299,22 @@ class TestFeedMaker(unittest.TestCase):
                 with patch('bin.feed_maker.NewlistCollector') as mock_collector, \
                      patch('bin.feed_maker.Crawler') as mock_crawler, \
                      patch.object(LOGGER, "info") as mock_info:
-                    
+
                     # Configure mock to return test data
                     mock_instance = mock_collector.return_value
-                    mock_instance.collect.return_value = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화")]
-                    
+                    mock_instance.collect.return_value = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화", [])]
+
                     # Mock crawler with larger HTML content to pass size check
                     mock_crawler_instance = mock_crawler.return_value
                     mock_crawler_instance.run.return_value = ("<html><body><div>This is a much larger HTML content that should be bigger than the template size to pass the size check in the feed maker. It needs to be at least 359 bytes to avoid being excluded. This content is intentionally made very long to ensure it passes the size threshold. We need to add more text here to make sure the file size is large enough. Let's add some more content to reach the required size. This should be sufficient now.</div></body></html>", None, None)
-                    
+
                     old_feed_list = self.maker._read_old_feed_list_from_file()
                     recent_feed_list = self.maker._get_recent_feed_list()
 
                     actual = self.maker._diff_feeds_and_make_htmls(recent_feed_list=recent_feed_list, old_feed_list=old_feed_list)
                     # Do NOT inspect the content of recent feeds
                     self.assertEqual(1, len(actual))  # 새로운 항목이 없으므로 기존 항목만 1개
-                    expected = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화")]
+                    expected = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화", [])]
                     self.assertEqual(expected, actual)
 
                     self.assertTrue(assert_in_mock_logger("Appending 0 new items to the feed list", mock_info))
@@ -327,15 +327,15 @@ class TestFeedMaker(unittest.TestCase):
                 with patch('bin.feed_maker.NewlistCollector') as mock_collector, \
                      patch('bin.feed_maker.Crawler') as mock_crawler, \
                      patch.object(LOGGER, "info") as mock_info:
-                    
+
                     # Configure mock to return test data
                     mock_instance = mock_collector.return_value
-                    mock_instance.collect.return_value = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화")]
-                    
+                    mock_instance.collect.return_value = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화", [])]
+
                     # Mock crawler with larger HTML content to pass size check
                     mock_crawler_instance = mock_crawler.return_value
                     mock_crawler_instance.run.return_value = ("<html><body><div>This is a much larger HTML content that should be bigger than the template size to pass the size check in the feed maker. It needs to be at least 359 bytes to avoid being excluded. This content is intentionally made very long to ensure it passes the size threshold. We need to add more text here to make sure the file size is large enough. Let's add some more content to reach the required size. This should be sufficient now.</div></body></html>", None, None)
-                    
+
                     old_feed_list = self.maker._read_old_feed_list_from_file()
                     recent_feed_list = self.maker._get_recent_feed_list()
                     merged_feed_list = self.maker._diff_feeds_and_make_htmls(recent_feed_list=recent_feed_list, old_feed_list=old_feed_list)
@@ -364,15 +364,15 @@ class TestFeedMaker(unittest.TestCase):
             with patch('bin.feed_maker.NewlistCollector') as mock_collector, \
                  patch('bin.feed_maker.Crawler') as mock_crawler, \
                  patch.object(LOGGER, "info") as mock_info:
-                
+
                 # Configure mock to return test data
                 mock_instance = mock_collector.return_value
-                mock_instance.collect.return_value = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화")]
-                
+                mock_instance.collect.return_value = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화", [])]
+
                 # Mock crawler
                 mock_crawler_instance = mock_crawler.return_value
                 mock_crawler_instance.run.return_value = ("mock_html_content", None, None)
-                
+
                 actual = self.maker.make()
                 self.assertTrue(actual)
 
@@ -401,17 +401,17 @@ class TestFeedMaker(unittest.TestCase):
         # 시나리오 3: 만료 테스트
         self.maker.rss_conf["ignore_broken_link"] = "1 second"
         expired_url = "http://example.com/expired"
-        
+
         # 시간을 과거로 조작하여 캐시 생성
         past_time = Datetime.get_current_time() - timedelta(seconds=5)
         with patch('bin.feed_maker_util.Datetime.get_current_time', return_value=past_time):
             self.maker._add_failed_url(expired_url, "expired failure")
-        
+
         self.assertTrue(self.maker.failed_urls_cache_file.exists())
-        
+
         # 현재 시간에는 만료되었어야 함
         self.assertFalse(self.maker._is_url_recently_failed(expired_url))
-        
+
         # 정리 작업 후에는 파일에서 삭제되어야 함
         self.maker._cleanup_expired_failed_urls()
         with self.maker.failed_urls_cache_file.open("r", encoding="utf-8") as f:
