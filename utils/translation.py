@@ -4,8 +4,10 @@
 import json
 import uuid
 import logging.config
+import time
 from pathlib import Path
-from typing import List, Tuple, Dict
+from typing import Protocol
+from enum import Enum
 
 from bin.feed_maker_util import Env
 from bin.crawler import Crawler, Method
@@ -14,17 +16,28 @@ from bin.crawler import Crawler, Method
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
-MAX_ITEMS_PER_BATCH = 50
+
+# 번역 서비스 제공자 구분을 위한 Enum 정의
+class TranslationProvider(Enum):
+    DEEPL = 'deepl'
+    AZURE = 'azure'
+    GOOGLE = 'google'
 
 
-class Translation:
+class TranslationService(Protocol):
+    MAX_ITEMS_PER_BATCH = 20
+    # 서비스 제공자를 나타내는 속성
+    provider: TranslationProvider
+
+    def translate_batch(self, texts: list[str]) -> dict[str, str]:
+        ...
+
     @staticmethod
-    def _chunk_by_items(texts: List[str], max_items: int = MAX_ITEMS_PER_BATCH) -> List[List[str]]:
+    def chunk_by_items(texts: list[str], max_items: int = MAX_ITEMS_PER_BATCH) -> list[list[str]]:
         batch = []
-        out: List[List[str]] = []
-        for t in texts:
-            t = "" if t is None else str(t)
-            batch.append(t)
+        out: list[list[str]] = []
+        for text in texts:
+            batch.append(text)
             if len(batch) >= max_items:
                 out.append(batch)
                 batch = []
@@ -33,127 +46,204 @@ class Translation:
         return out
 
 
-    @staticmethod
-    def _translate_by_deepl(crawler: Crawler, texts: List[str]) -> Dict[str, str]:
-        DEEPL_FREE_ENDPOINT = "https://api-free.deepl.com/v2/translate"
-    
-        translated_list: List[str] = []
-        result_map: Dict[str, str] = {}
-    
-        batches = Translation._chunk_by_items(texts, MAX_ITEMS_PER_BATCH)
+class DeepLTranslationService(TranslationService):
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.endpoint = "https://api-free.deepl.com/v2/translate"
+        # 서비스 제공자 설정
+        self.provider = TranslationProvider.DEEPL
+
+    def translate_batch(self, texts: list[str]) -> dict[str, str]:
+        result_map: dict[str, str] = {}
+        headers = {"Authorization": f"DeepL-Auth-Key {self.api_key}"}
+        # Crawler 클라이언트 사용
+        client = Crawler(method=Method.POST, headers=headers, timeout=10)
+
+        batches = TranslationService.chunk_by_items(texts, TranslationService.MAX_ITEMS_PER_BATCH)
         for batch in batches:
             payload = {
-                "text": batch,            # 리스트 그대로
+                "text": batch,
                 "target_lang": "KO",
-                "preserve_formatting": 1,       # 공백/줄바꿈 보존
-                "split_sentences": "nonewlines" # 줄바꿈 기준 유지
+                "preserve_formatting": 1,
+                "split_sentences": "nonewlines"
             }
-    
-            result, error, _ = crawler.run(url=DEEPL_FREE_ENDPOINT, data=payload)
-            if not result or error:
+
+            try:
+                # Crawler를 통해 요청
+                response_text, error_msg, _ = client.run(self.endpoint, data=payload)
+                if not response_text:
+                    print(f"DeepL translation request failed: {error_msg}")
+                    continue
+                time.sleep(1)
+                data = json.loads(response_text)
+                if "translations" in data:
+                    translations = data["translations"]
+                    for en, translation in zip(batch, translations):
+                        ko = translation.get("text", "")
+                        result_map[en] = ko
+            except Exception as e:
+                print(f"DeepL translation request failed: {e}")
                 continue
-            data = json.loads(result)
-            translated_list = []
-            if "translations" in data:
-                translations = data["translations"]
-                for item in translations:
-                    for line in item["text"].split("\n"):
-                        translated_list.append(line)
-    
-            #print(f"{len(batch)=}, {len(translated_list)=}")
-            for i in range(len(batch)):
-                en = batch[i]
-                ko = translated_list[i]
-                result_map[en] = ko
-    
+
         return result_map
 
-    @staticmethod
-    def _translate_by_azure(crawler: Crawler, texts: List[str]) -> Dict[str, str]:
-        AZURE_FREE_ENDPOINT = "https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to=ko"
+    def __eq__(self, other) -> bool:
+        return other is DeepLTranslationService
 
-        translated_list: List[str]= []
-        result_map: Dict[str, str] = {}
 
-        batches = Translation._chunk_by_items(texts, MAX_ITEMS_PER_BATCH)
+class AzureTranslationService(TranslationService):
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.endpoint = "https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to=ko"
+        # 서비스 제공자 설정
+        self.provider = TranslationProvider.AZURE
+
+    def translate_batch(self, texts: list[str]) -> dict[str, str]:
+        result_map: dict[str, str] = {}
+        # Crawler 클라이언트 사용
+        headers = {
+            "Ocp-Apim-Subscription-Key": self.api_key,
+            "Ocp-Apim-Subscription-Region": "koreacentral",
+            "Content-type": "application/json",
+            "X-ClientTraceId": str(uuid.uuid4())
+        }
+        client = Crawler(method=Method.POST, headers=headers, timeout=10)
+        batches = TranslationService.chunk_by_items(texts, TranslationService.MAX_ITEMS_PER_BATCH)
         for batch in batches:
-            payload = [ { "text": t } for t in batch ]
-            #print(f"{payload=}")
+            payload = [{"text": t} for t in batch]
 
-            result, error, h = crawler.run(url=AZURE_FREE_ENDPOINT, data=json.dumps(payload))
-            #print(f"{result=}, {error=}, {h=}")
-            if not result or error:
+            try:
+                response_text, error_msg, _ = client.run(self.endpoint, data=json.dumps(payload))
+                if not response_text:
+                    print(f"Azure translation request failed: {error_msg}")
+                    continue
+                time.sleep(1)
+                data = json.loads(response_text)
+                for payload_item, data_item in zip(payload, data):
+                    en = payload_item["text"]
+                    if "translations" in data_item:
+                        translations = data_item.get("translations", [])
+                        ko = translations[0].get("text", "")
+                        result_map[en] = ko
+            except Exception as e:
+                print(f"Azure translation request failed: {e}")
                 continue
-            data = json.loads(result)
-            translated_list = []
-            for data_chunk in data:
-                if "translations" in data_chunk:
-                    translations = data_chunk["translations"]
-                    for item in translations:
-                        translated_list.append(item["text"])
-
-            #print(f"{len(batch)=}, {len(translated_list)=}")
-            for i in range(len(batch)):
-                en = batch[i]
-                ko = translated_list[i]
-                result_map[en] = ko
 
         return result_map
-        
+
+    def __eq__(self, other) -> bool:
+        return other is AzureTranslationService
+
+
+class GoogleTranslationService(TranslationService):
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.endpoint = "https://translation.googleapis.com/language/translate/v2"
+        # 서비스 제공자 설정
+        self.provider = TranslationProvider.GOOGLE
+
+    def translate_batch(self, texts: list[str]) -> dict[str, str]:
+        result_map: dict[str, str] = {}
+        # Crawler 클라이언트 사용
+        client = Crawler(method=Method.POST, headers={'Content-Type': 'application/json'}, timeout=10)
+
+        batches = TranslationService.chunk_by_items(texts, TranslationService.MAX_ITEMS_PER_BATCH)
+        for batch in batches:
+            payload = {
+                'q': batch,
+                'key': self.api_key,
+            }
+
+            try:
+                response_text, error_msg, _ = client.run(self.endpoint, data=json.dumps(payload))
+                if not response_text:
+                    print(f"Google translation request failed: {error_msg}")
+                    continue
+                time.sleep(1)
+                data = json.loads(response_text)
+                if "data" in data and "translations" in data["data"]:
+                    translations = data["data"]["translations"]
+                    for original_text, translation in zip(batch, translations):
+                        translated_text = translation.get("translatedText", "")
+                        result_map[original_text] = translated_text
+            except Exception as e:
+                print(f"Google translation request failed: {e}")
+                continue
+
+        return result_map
+
+    def __eq__(self, other) -> bool:
+        return other is GoogleTranslationService
+
+
+class TranslationServiceFactory:
     @staticmethod
-    def translate(result_list: List[Tuple[str, str]], do_save=True, do_show_translated_only=False) -> List[Tuple[str, str]]:
+    def create_service() -> TranslationService | None:
+        if Env.get("DEEPL_API_KEY"):
+            return DeepLTranslationService(Env.get("DEEPL_API_KEY"))
+        if Env.get("AZURE_API_KEY"):
+            return AzureTranslationService(Env.get("AZURE_API_KEY"))
+        if Env.get("GOOGLE_API_KEY"):
+            return GoogleTranslationService(Env.get("GOOGLE_API_KEY"))
+        return None
+
+
+class Translation:
+    def __init__(self):
+        self.service = TranslationServiceFactory.create_service()
+        if not self.service:
+            LOGGER.error("어떤 번역 서비스 API 키도 설정되지 않음")
+
+    @staticmethod
+    def _load_translation_cache(file_path: Path) -> dict[str, str]:
+        """번역 캐시 파일을 로드합니다."""
+        if file_path.is_file():
+            with file_path.open("r", encoding="utf-8") as infile:
+                return json.load(infile)
+        return {}
+
+    @staticmethod
+    def _save_translation_cache(file_path: Path, translation_map: dict[str, str]) -> None:
+        """번역 캐시를 파일에 저장합니다."""
+        with file_path.open("w", encoding="utf-8") as outfile:
+            json.dump(translation_map, outfile, ensure_ascii=False, indent=4)
+
+    def translate(self, texts: list[tuple[str, str]], do_save: bool = True) -> list[tuple[str, str]]:
         translation_map_file_path = Path(Env.get("FM_WORK_DIR")) / "translation_map.json"
-        if translation_map_file_path.is_file():
-            with translation_map_file_path.open("r", encoding="utf-8") as infile:
-                translation_map = json.load(infile)
+
+        # 기존 번역 캐시 로드
+        all_translation_map = Translation._load_translation_cache(translation_map_file_path)
+
+        # 번역이 필요한 텍스트만 필터링
+        fresh_translation_map: dict[str, str] = {}
+        src_text_list: list[str] = [text for _, text in texts if text not in all_translation_map]
+
+        # 번역 서비스 생성 및 사용
+        if src_text_list:
+            print(f"캐시에 없는 {len(src_text_list)}개 텍스트를 번역합니다...")
+            fresh_translation_map = self.service.translate_batch(src_text_list)
+
+            if fresh_translation_map:
+                print(f"번역 완료: {len(fresh_translation_map)}개")
+                # 캐시 갱신
+                for en, ko in fresh_translation_map.items():
+                    all_translation_map[en] = ko
+            else:
+                print("번역 실패: 번역 서비스에서 결과를 받지 못했습니다")
         else:
-            translation_map = {}
-            
-        new_result_list: List[Tuple[str, str]] = []
-        translation_req_list: List[str] = []
-        untranslated_title_link_map: Dict[str, str] = {}
-        for (link, en) in result_list:
-            #print(f"{link=}, {en=}")
-            if en in translation_map:
-                # 기존 번역 매핑 활용
-                ko = translation_map[en]
-                new_result_list.append((link, f"{ko}({en})"))
-            else:
-                # 신규 번역 필요한 텍스트 수집
-                #new_result_list.append((link, title))
-                translation_req_list.append(en)
-                untranslated_title_link_map[en] = link
+            print("모든 텍스트가 캐시에 있습니다")
 
-        #print(f"{translation_req_list=}")
-        deepl_api_key = Env.get("DEEPL_API_KEY")
-        deepl_crawler = Crawler(render_js=False, method=Method.POST, headers={"Authorization": f"DeepL-Auth-Key {deepl_api_key}"})
-        en_ko_map = Translation._translate_by_deepl(deepl_crawler, translation_req_list)
-        if not en_ko_map:
-            azure_api_key = Env.get("AZURE_API_KEY")
-            azure_crawler = Crawler(render_js=False, method=Method.POST, headers={
-                "Ocp-Apim-Subscription-Key": azure_api_key,
-                "Ocp-Apim-Subscription-Region": "eastasia",
-                "Content-type": "application/json",
-                "X-ClientTraceId": str(uuid.uuid4())
-            })
-            en_ko_map = Translation._translate_by_azure(azure_crawler, translation_req_list)
-
-        for en, link in untranslated_title_link_map.items():
-            if en in en_ko_map:
-                ko = en_ko_map[en]
-                # 결과에 추가
-                if do_show_translated_only:
-                    new_result_list.append((link, f"{ko}"))
-                else:
-                    new_result_list.append((link, f"{ko}({en})"))
-
-                # 기존 번역 매핑 업데이트
-                translation_map[en] = ko
-            else:
-                new_result_list.append((link, f"{en}"))
-
+        # 번역 결과 저장
         if do_save:
-            with translation_map_file_path.open("w", encoding="utf-8") as outfile:
-                json.dump(translation_map, outfile, ensure_ascii=False, indent=4)
-    
+            Translation._save_translation_cache(translation_map_file_path, all_translation_map)
+
+        # 링크-원문 매핑 순회하며 포맷된 결과 구성 및 캐시 갱신
+        # 중복된 텍스트는 마지막 링크만 사용
+        unique: dict[str, str] = {}
+        for link, en in texts:
+            unique[en] = link
+        new_result_list: list[tuple[str, str]] = []
+        for en, link in unique.items():
+            ko = all_translation_map.get(en, en)
+            new_result_list.append((link, f"{ko}({en})"))
         return new_result_list
