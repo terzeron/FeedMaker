@@ -26,27 +26,29 @@ class NewlistCollector:
         del self.collection_conf
 
     @staticmethod
-    def split_result_into_items(result: str) -> list[tuple[str, str]]:
+    def split_result_into_items(result: str) -> list[tuple[str, str, list[str]]]:
         LOGGER.debug("# extract_urls()")
 
-        result_list = []
+        result_list: list[tuple[str, str, list[str]]] = []
         for line in result.rstrip().split("\n"):
             line = line.rstrip()
             if re.search(r'^#', line) or re.search(r'^\s*$', line):
                 continue
-            items = line.split("\t")
-            link = items[0]
-            title = items[1]
-            if not link or not title:
+            try:
+                link, title, *metadata = line.split("\t")
+                if not link or not title:
+                    LOGGER.error("Error: Can't split a line into link and title, line='%s'", line)
+                    return []
+            except ValueError:
                 LOGGER.error("Error: Can't split a line into link and title, line='%s'", line)
                 return []
-            result_list.append((link, title))
+            result_list.append((link, title, metadata))
         return result_list
 
-    def _compose_url_list(self) -> list[tuple[str, str]]:
+    def _compose_url_list(self) -> list[tuple[str, str, list[str]]]:
         LOGGER.debug("# compose_url_list()")
 
-        result_list: list[tuple[str, str]] = []
+        result_list: list[tuple[str, str, list[str]]] = []
         conf = self.collection_conf
         headers: dict[str, str] = conf.get("headers", {})
         if "referer" in conf:
@@ -93,16 +95,17 @@ class NewlistCollector:
         result_list = Data.remove_duplicates(result_list)
         return result_list
 
-    def _save_new_list_to_file(self, new_list: list[tuple[str, str]]) -> None:
+    def _save_new_list_to_file(self, new_list: list[tuple[str, str, list[str]]]) -> None:
         try:
             with open(self.new_list_file_path, 'w', encoding='utf-8') as out_file:
-                for link, title in new_list:
-                    out_file.write(f"{link}\t{title}\n")
+                for link, title, metadata in new_list:
+                    fields = [link, title] + (metadata if metadata else [""])
+                    out_file.write("\t".join(fields) + "\n")
         except IOError as e:
             LOGGER.error("Error: %s", e)
             sys.exit(-1)
 
-    def collect(self) -> list[tuple[str, str]]:
+    def collect(self) -> list[tuple[str, str, list[str]]]:
         LOGGER.debug("# collect()")
 
         # collect items from specified url list
