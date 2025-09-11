@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 
 
+import os
 import json
+import tempfile
+import uuid
 import logging.config
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING, cast, Any
@@ -251,6 +254,11 @@ class HeadlessBrowser:
             options.add_argument("--disable-dev-shm-usage")
             options.add_argument("--disable-extensions")
             options.add_argument("--disable-plugins")
+            profile_dir = os.path.join(tempfile.gettempdir(), "chrome-profiles", str(uuid.uuid4()))
+            os.makedirs(profile_dir, exist_ok=True)
+            options.add_argument(f"--user-data-dir={profile_dir}")
+            # remote debugging: port 충돌 피하려면 pipe 사용
+            options.add_argument("--remote-debugging-pipe")
 
             # Try to reuse cached driver first
             driver = self._get_cached_driver(options)
