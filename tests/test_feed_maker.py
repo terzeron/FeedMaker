@@ -40,7 +40,7 @@ class TestFeedMaker(unittest.TestCase):
         self.old_rss_file_path = self.feed_dir_path / f"{feed_name}.xml.old"
         self.old_rss_file_path.touch()
         self.sample_conf_file_path = Path(__file__).parent / "conf.naverwebtoon.json"
-        self.conf_file_path = self.feed_dir_path / "conf.json"
+        self.conf_file_path = self.feed_dir_path / Config.DEFAULT_CONF_FILE
         shutil.copy(self.sample_conf_file_path, self.conf_file_path)
 
         self.maker = FeedMaker(feed_dir_path=self.feed_dir_path, do_collect_by_force=False, do_collect_only=False, rss_file_path=self.rss_file_path)

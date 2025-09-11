@@ -288,7 +288,7 @@ class FeedMaker:
                     LOGGER.warning("Warning: excluded %s\t%s\t%s (%d bytes <= %d bytes of template)", item_url, title, PathUtil.short_path(html_file_path), size, self._get_size_of_template())
                     ret = False
 
-            except (OSError, IOError, ImportError, TypeError, ValueError, AttributeError, ConnectionError, RuntimeError) as e:
+            except (OSError, IOError, ImportError, TypeError, ValueError, AttributeError,  RuntimeError) as e:
                 self._add_failed_url(item_url, f"Unexpected error: {str(e)}")
                 return False
 
@@ -620,7 +620,7 @@ class FeedMaker:
                 if not line.strip():
                     continue
                 try:
-                    url, expiry_str = line.strip().split('\t')
+                    _, expiry_str = line.strip().split('\t')
                     expiry_dt = self.isoparser.isoparse(expiry_str)
                     if now < expiry_dt:
                         valid_entries.append(line)

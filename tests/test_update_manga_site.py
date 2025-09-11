@@ -11,25 +11,25 @@ from typing import Dict, Any
 from unittest.mock import patch
 from io import StringIO
 
-from bin.feed_maker_util import NotFoundConfigFileError, InvalidConfigFileError, NotFoundConfigItemError
+from bin.feed_maker_util import Config, NotFoundConfigFileError, InvalidConfigFileError, NotFoundConfigItemError
 from utils.update_manga_site import update_domain, check_site, print_usage, main
 
 
 class TestUpdateMangaSite(unittest.TestCase):
-    def setUp(self):  
+    def setUp(self):
         """Set up test fixtures before each test method."""
         self.temp_dir = tempfile.mkdtemp()
         self.original_cwd = os.getcwd()
         os.chdir(self.temp_dir)
-        
+
         # Create test directory structure
         self.site_config_path = Path("site_config.json")
         self.feed_dir = Path("test_feed")
         self.feed_dir.mkdir()
-        self.conf_file_path = self.feed_dir / "conf.json"
+        self.conf_file_path = self.feed_dir / Config.DEFAULT_CONF_FILE
         self.newlist_dir = self.feed_dir / "newlist"
         self.newlist_dir.mkdir()
-        
+
         # Create test files
         (self.newlist_dir / "test_file.txt").touch()
         (self.feed_dir / "test_feed.xml").touch()
@@ -40,7 +40,7 @@ class TestUpdateMangaSite(unittest.TestCase):
         self.mock_process = self.process_patcher.start()
         self.mock_process.return_value = ("", "")
 
-    def tearDown(self):  
+    def tearDown(self):
         """Clean up after each test method."""
         self.process_patcher.stop()
         os.chdir(self.original_cwd)
@@ -122,10 +122,10 @@ class TestUpdateMangaSite(unittest.TestCase):
 
         with patch('sys.stdout', new=StringIO()) as fake_out:
             result = update_domain(test_run=True, new_number=456)
-            
+
             self.assertTrue(result)
             output = fake_out.getvalue()
-            
+
             # Check that test output shows the changes
             self.assertIn("https://example.com", output)
             self.assertIn("456", output)
@@ -331,7 +331,7 @@ class TestUpdateMangaSite(unittest.TestCase):
         # Create multiple feed directories
         feed1_dir = Path("feed1")
         feed1_dir.mkdir()
-        feed1_conf = feed1_dir / "conf.json"
+        feed1_conf = feed1_dir / Config.DEFAULT_CONF_FILE
         feed1_config: Dict[str, Any] = {
             "configuration": {
                 "collection": {
@@ -346,7 +346,7 @@ class TestUpdateMangaSite(unittest.TestCase):
 
         feed2_dir = Path("feed2")
         feed2_dir.mkdir()
-        feed2_conf = feed2_dir / "conf.json"
+        feed2_conf = feed2_dir / Config.DEFAULT_CONF_FILE
         feed2_config: Dict[str, Any] = {
             "configuration": {
                 "collection": {
@@ -361,7 +361,7 @@ class TestUpdateMangaSite(unittest.TestCase):
 
         feed3_dir = Path("feed3")
         feed3_dir.mkdir()
-        feed3_conf = feed3_dir / "conf.json"
+        feed3_conf = feed3_dir / Config.DEFAULT_CONF_FILE
         feed3_config: Dict[str, Any] = {
             "configuration": {
                 "collection": {
@@ -406,7 +406,7 @@ class TestUpdateMangaSite(unittest.TestCase):
         # Create a dot directory
         dot_dir = Path(".hidden")
         dot_dir.mkdir()
-        dot_conf = dot_dir / "conf.json"
+        dot_conf = dot_dir / Config.DEFAULT_CONF_FILE
         dot_config: Dict[str, Any] = {
             "configuration": {
                 "collection": {

@@ -99,7 +99,7 @@ class FeedMakerRunner:
         for group_dir_path in self.work_dir_path.iterdir():
             if not group_dir_path.name.startswith("_") and group_dir_path.is_dir():
                 for feed_dir_path in group_dir_path.iterdir():
-                    conf_file_path = feed_dir_path / "conf.json"
+                    conf_file_path = feed_dir_path / Config.DEFAULT_CONF_FILE
                     if not feed_dir_path.name.startswith("_") and feed_dir_path.is_dir() and conf_file_path.is_file():
                         feed_dir_path_list.append(feed_dir_path)
 

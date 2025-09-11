@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
+import json
 import unittest
 import shutil
 import tempfile
@@ -11,7 +12,9 @@ from pathlib import Path
 from typing import Optional
 from unittest.mock import patch, MagicMock
 
+from bin.feed_maker_util import Config
 from bin.problem_manager import ProblemManager
+
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
@@ -24,7 +27,7 @@ class TestProblemManager(unittest.TestCase):
     def setUpClass(cls) -> None:
         # 임시 디렉토리 생성
         cls.temp_dir = Path(tempfile.mkdtemp())
-        
+
         print("🚀 Setting up mock environment for test_problem_manager...")
         print("✅ Mock environment ready for test_problem_manager")
 
@@ -33,25 +36,25 @@ class TestProblemManager(unittest.TestCase):
         # 임시 디렉토리 정리
         if cls.temp_dir and cls.temp_dir.exists():
             shutil.rmtree(cls.temp_dir)
-        
+
         print("🧹 Mock environment cleaned up for test_problem_manager")
 
     def setUp(self) -> None:
         # temp_dir이 None이 아님을 보장
         assert self.temp_dir is not None
-        
+
         # 테스트용 피드 디렉토리 생성
         self.test_feed_dir_path = self.temp_dir / "my_test_group" / "my_test_feed2"
         self.test_feed_dir_path.mkdir(parents=True, exist_ok=True)
-        
+
         # Mock Loki URL
         self.loki_url = "http://localhost:3100"
-        
+
         # DB를 완전히 mock으로 대체
         self.mock_session = MagicMock()
         self.mock_query = MagicMock()
         self.mock_session.query.return_value = self.mock_query
-        
+
         # ProblemManager 인스턴스 생성 (모든 외부 의존성을 mock으로 대체)
         with patch('bin.db.DB.session_ctx') as mock_session_ctx, \
              patch('bin.access_log_manager.AccessLogManager.loki_search') as mock_loki_search:
@@ -68,7 +71,7 @@ class TestProblemManager(unittest.TestCase):
         # 테스트 피드 디렉토리 정리
         if self.test_feed_dir_path.parent.exists():
             shutil.rmtree(self.test_feed_dir_path.parent)
-        
+
         del self.pm
 
     def test_get_feed_name_status_info_map(self) -> None:
@@ -89,9 +92,9 @@ class TestProblemManager(unittest.TestCase):
                     "file_path": "/path/to/feed.xml"
                 }
             }
-            
+
             result = ProblemManager.get_feed_name_status_info_map()
-        
+
         # 결과 검증
         self.assertIn("test_feed", result)
         status_info = result["test_feed"]
@@ -122,11 +125,11 @@ class TestProblemManager(unittest.TestCase):
                 }
             }
         }
-        
-        import json
-        with open(self.test_feed_dir_path / "conf.json", "w", encoding="utf-8") as f:
+
+        test_config_file_path = self.test_feed_dir_path / Config.DEFAULT_CONF_FILE
+        with test_config_file_path.open("w", encoding="utf-8") as f:
             json.dump(conf_data, f)
-        
+
         # 모든 의존성 메서드들을 mock으로 대체
         with patch('bin.feed_manager.FeedManager.remove_config_info') as mock_remove_config, \
              patch('bin.feed_manager.FeedManager.remove_rss_info') as mock_remove_rss, \
@@ -140,7 +143,7 @@ class TestProblemManager(unittest.TestCase):
              patch('bin.html_file_manager.HtmlFileManager.add_html_file') as mock_add_html, \
              patch.object(self.pm.feed_manager, 'remove_public_feed_by_feed_name') as mock_remove_public, \
              patch.object(self.pm.feed_manager, 'add_public_feed_by_feed_name') as mock_add_public:
-            
+
             # Mock 메서드들이 호출되지 않았음을 확인
             mock_remove_config.assert_not_called()
             mock_remove_rss.assert_not_called()
@@ -154,10 +157,10 @@ class TestProblemManager(unittest.TestCase):
             mock_add_html.assert_not_called()
             mock_remove_public.assert_not_called()
             mock_add_public.assert_not_called()
-            
+
             # update_feed_info 호출
             self.pm.update_feed_info(self.test_feed_dir_path)
-            
+
             # 모든 remove 메서드들이 올바른 순서로 호출되었는지 확인
             mock_remove_config.assert_called_once_with(self.test_feed_dir_path)
             mock_remove_rss.assert_called_once_with(self.test_feed_dir_path)
@@ -165,7 +168,7 @@ class TestProblemManager(unittest.TestCase):
             mock_remove_progress.assert_called_once_with(self.test_feed_dir_path)
             mock_remove_access.assert_called_once_with(self.test_feed_dir_path)
             mock_remove_html.assert_called_once_with("feed_dir_path", self.test_feed_dir_path)
-            
+
             # 모든 add 메서드들이 올바른 순서로 호출되었는지 확인
             mock_add_config.assert_called_once_with(self.test_feed_dir_path)
             mock_add_rss.assert_called_once_with(self.test_feed_dir_path)
@@ -178,11 +181,11 @@ class TestProblemManager(unittest.TestCase):
         """새로운 피드 디렉토리 경로로 업데이트하는 테스트"""
         # temp_dir이 None이 아님을 보장
         assert self.temp_dir is not None
-        
+
         # 새로운 피드 디렉토리 생성
         new_feed_dir_path: Path = self.temp_dir / "my_test_group" / "new_test_feed"
         new_feed_dir_path.mkdir(parents=True, exist_ok=True)
-        
+
         # 새로운 피드 디렉토리에 conf.json 생성
         conf_data = {
             "configuration": {
@@ -196,11 +199,11 @@ class TestProblemManager(unittest.TestCase):
                 }
             }
         }
-        
-        import json
-        with open(new_feed_dir_path / "conf.json", "w", encoding="utf-8") as f:
+
+        test_config_file_path = new_feed_dir_path / Config.DEFAULT_CONF_FILE
+        with test_config_file_path.open("w", encoding="utf-8") as f:
             json.dump(conf_data, f)
-        
+
         # 모든 의존성 메서드들을 mock으로 대체
         with patch('bin.feed_manager.FeedManager.remove_config_info') as mock_remove_config, \
              patch('bin.feed_manager.FeedManager.remove_rss_info') as mock_remove_rss, \
@@ -214,10 +217,10 @@ class TestProblemManager(unittest.TestCase):
              patch('bin.html_file_manager.HtmlFileManager.add_html_file') as mock_add_html, \
              patch.object(self.pm.feed_manager, 'remove_public_feed_by_feed_name') as mock_remove_public, \
              patch.object(self.pm.feed_manager, 'add_public_feed_by_feed_name') as mock_add_public:
-            
+
             # update_feed_info 호출 (새로운 경로 지정)
             self.pm.update_feed_info(self.test_feed_dir_path, new_feed_dir_path)
-            
+
             # 기존 피드 디렉토리에서 remove 메서드들이 호출되었는지 확인
             mock_remove_config.assert_called_once_with(self.test_feed_dir_path)
             mock_remove_rss.assert_called_once_with(self.test_feed_dir_path)
@@ -225,7 +228,7 @@ class TestProblemManager(unittest.TestCase):
             mock_remove_progress.assert_called_once_with(self.test_feed_dir_path)
             mock_remove_access.assert_called_once_with(self.test_feed_dir_path)
             mock_remove_html.assert_called_once_with("feed_dir_path", self.test_feed_dir_path)
-            
+
             # 새로운 피드 디렉토리에서 add 메서드들이 호출되었는지 확인
             mock_add_config.assert_called_once_with(new_feed_dir_path)
             mock_add_rss.assert_called_once_with(new_feed_dir_path)
@@ -233,7 +236,7 @@ class TestProblemManager(unittest.TestCase):
             mock_add_progress.assert_called_once_with(new_feed_dir_path)
             mock_add_access.assert_called_once()
             mock_add_html.assert_called_once_with(new_feed_dir_path)
-        
+
         # 정리
         if new_feed_dir_path.parent.exists():
             shutil.rmtree(new_feed_dir_path.parent)
@@ -242,9 +245,9 @@ class TestProblemManager(unittest.TestCase):
         """존재하지 않는 디렉토리들로 update_feed_info 호출하는 테스트"""
         # temp_dir이 None이 아님을 보장
         assert self.temp_dir is not None
-        
+
         nonexistent_path: Path = self.temp_dir / "nonexistent_group" / "nonexistent_feed"
-        
+
         # 모든 의존성 메서드들을 mock으로 대체
         with patch('bin.feed_manager.FeedManager.remove_config_info') as mock_remove_config, \
              patch('bin.feed_manager.FeedManager.remove_rss_info') as mock_remove_rss, \
@@ -259,13 +262,13 @@ class TestProblemManager(unittest.TestCase):
              patch.object(self.pm.feed_manager, 'remove_public_feed_by_feed_name') as mock_remove_public, \
              patch.object(self.pm.feed_manager, 'add_public_feed_by_feed_name') as mock_add_public, \
              patch('bin.problem_manager.LOGGER.warning') as mock_warning:
-            
+
             # update_feed_info 호출 (존재하지 않는 디렉토리)
             self.pm.update_feed_info(nonexistent_path)
-            
+
             # 경고 로그가 호출되었는지 확인
             mock_warning.assert_called_once()
-            
+
             # 모든 메서드들이 여전히 호출되었는지 확인 (경고가 있어도 처리 계속)
             mock_remove_config.assert_called_once_with(nonexistent_path)
             mock_remove_rss.assert_called_once_with(nonexistent_path)
@@ -295,7 +298,7 @@ class TestProblemManager(unittest.TestCase):
     </channel>
 </rss>"""
         rss_file_path.write_text(rss_content, encoding="utf-8")
-        
+
         # conf.json 파일 생성
         conf_data = {
             "configuration": {
@@ -309,11 +312,11 @@ class TestProblemManager(unittest.TestCase):
                 }
             }
         }
-        
-        import json
-        with open(self.test_feed_dir_path / "conf.json", "w", encoding="utf-8") as f:
+
+        test_config_file_path = self.test_feed_dir_path / Config.DEFAULT_CONF_FILE
+        with test_config_file_path.open("w", encoding="utf-8") as f:
             json.dump(conf_data, f)
-        
+
         # 모든 의존성 메서드들을 mock으로 대체
         with patch('bin.feed_manager.FeedManager.remove_config_info') as mock_remove_config, \
              patch('bin.feed_manager.FeedManager.remove_rss_info') as mock_remove_rss, \
@@ -327,10 +330,10 @@ class TestProblemManager(unittest.TestCase):
              patch('bin.html_file_manager.HtmlFileManager.add_html_file') as mock_add_html, \
              patch.object(self.pm.feed_manager, 'remove_public_feed_by_feed_name') as mock_remove_public, \
              patch.object(self.pm.feed_manager, 'add_public_feed_by_feed_name') as mock_add_public:
-            
+
             # update_feed_info 호출
             self.pm.update_feed_info(self.test_feed_dir_path)
-            
+
             # 모든 메서드들이 올바르게 호출되었는지 확인
             mock_remove_config.assert_called_once_with(self.test_feed_dir_path)
             mock_remove_rss.assert_called_once_with(self.test_feed_dir_path)
@@ -351,7 +354,7 @@ class TestProblemManager(unittest.TestCase):
         progress_file_path = self.test_feed_dir_path / "start_idx.txt"
         progress_content = "157\t2024-01-01 12:00:00\n"
         progress_file_path.write_text(progress_content, encoding="utf-8")
-        
+
         # conf.json 파일 생성
         conf_data = {
             "configuration": {
@@ -365,11 +368,11 @@ class TestProblemManager(unittest.TestCase):
                 }
             }
         }
-        
-        import json
-        with open(self.test_feed_dir_path / "conf.json", "w", encoding="utf-8") as f:
+
+        test_config_file_path = self.test_feed_dir_path / Config.DEFAULT_CONF_FILE
+        with test_config_file_path.open("w", encoding="utf-8") as f:
             json.dump(conf_data, f)
-        
+
         # 모든 의존성 메서드들을 mock으로 대체
         with patch('bin.feed_manager.FeedManager.remove_config_info') as mock_remove_config, \
              patch('bin.feed_manager.FeedManager.remove_rss_info') as mock_remove_rss, \
@@ -383,10 +386,10 @@ class TestProblemManager(unittest.TestCase):
              patch('bin.html_file_manager.HtmlFileManager.add_html_file') as mock_add_html, \
              patch.object(self.pm.feed_manager, 'remove_public_feed_by_feed_name') as mock_remove_public, \
              patch.object(self.pm.feed_manager, 'add_public_feed_by_feed_name') as mock_add_public:
-            
+
             # update_feed_info 호출
             self.pm.update_feed_info(self.test_feed_dir_path)
-            
+
             # 모든 메서드들이 올바르게 호출되었는지 확인
             mock_remove_config.assert_called_once_with(self.test_feed_dir_path)
             mock_remove_rss.assert_called_once_with(self.test_feed_dir_path)
@@ -406,7 +409,7 @@ class TestProblemManager(unittest.TestCase):
         # HTML 디렉토리 및 파일 생성
         html_dir_path = self.test_feed_dir_path / "html"
         html_dir_path.mkdir(exist_ok=True)
-        
+
         html_file_path = html_dir_path / "test.html"
         html_content = """<!DOCTYPE html>
 <html>
@@ -417,7 +420,7 @@ class TestProblemManager(unittest.TestCase):
 </body>
 </html>"""
         html_file_path.write_text(html_content, encoding="utf-8")
-        
+
         # conf.json 파일 생성
         conf_data = {
             "configuration": {
@@ -431,11 +434,11 @@ class TestProblemManager(unittest.TestCase):
                 }
             }
         }
-        
-        import json
-        with open(self.test_feed_dir_path / "conf.json", "w", encoding="utf-8") as f:
+
+        test_config_file_path = self.test_feed_dir_path / Config.DEFAULT_CONF_FILE
+        with test_config_file_path.open("w", encoding="utf-8") as f:
             json.dump(conf_data, f)
-        
+
         # 모든 의존성 메서드들을 mock으로 대체
         with patch('bin.feed_manager.FeedManager.remove_config_info') as mock_remove_config, \
              patch('bin.feed_manager.FeedManager.remove_rss_info') as mock_remove_rss, \
@@ -449,10 +452,10 @@ class TestProblemManager(unittest.TestCase):
              patch('bin.html_file_manager.HtmlFileManager.add_html_file') as mock_add_html, \
              patch.object(self.pm.feed_manager, 'remove_public_feed_by_feed_name') as mock_remove_public, \
              patch.object(self.pm.feed_manager, 'add_public_feed_by_feed_name') as mock_add_public:
-            
+
             # update_feed_info 호출
             self.pm.update_feed_info(self.test_feed_dir_path)
-            
+
             # 모든 메서드들이 올바르게 호출되었는지 확인
             mock_remove_config.assert_called_once_with(self.test_feed_dir_path)
             mock_remove_rss.assert_called_once_with(self.test_feed_dir_path)
@@ -482,11 +485,11 @@ class TestProblemManager(unittest.TestCase):
                 }
             }
         }
-        
-        import json
-        with open(self.test_feed_dir_path / "conf.json", "w", encoding="utf-8") as f:
+
+        test_config_file_path = self.test_feed_dir_path / Config.DEFAULT_CONF_FILE
+        with test_config_file_path.open("w", encoding="utf-8") as f:
             json.dump(conf_data, f)
-        
+
         # 의존성 메서드에서 예외를 발생시키도록 설정
         with patch('bin.feed_manager.FeedManager.remove_config_info', side_effect=Exception("Test exception")) as mock_remove_config, \
              patch('bin.feed_manager.FeedManager.remove_rss_info') as mock_remove_rss, \
@@ -500,13 +503,13 @@ class TestProblemManager(unittest.TestCase):
              patch('bin.html_file_manager.HtmlFileManager.add_html_file') as mock_add_html, \
              patch.object(self.pm.feed_manager, 'remove_public_feed_by_feed_name') as mock_remove_public, \
              patch.object(self.pm.feed_manager, 'add_public_feed_by_feed_name') as mock_add_public:
-            
+
             # 예외가 발생하는지 확인
             with self.assertRaises(Exception) as context:
                 self.pm.update_feed_info(self.test_feed_dir_path)
-            
+
             self.assertEqual(str(context.exception), "Test exception")
-            
+
             # 첫 번째 메서드만 호출되고 나머지는 호출되지 않았는지 확인
             mock_remove_config.assert_called_once_with(self.test_feed_dir_path)
             mock_remove_rss.assert_not_called()
@@ -527,11 +530,11 @@ class TestProblemManager(unittest.TestCase):
             mock_session = MagicMock()
             mock_session_ctx.return_value.__enter__.return_value = mock_session
             mock_session_ctx.return_value.__exit__.return_value = None
-            
+
             # Loki API 호출을 mock으로 대체
             with patch('bin.access_log_manager.AccessLogManager.loki_search') as mock_loki_search:
                 mock_loki_search.return_value = ([], {})  # 빈 로그와 통계 반환
-                
+
                 # load_all 호출 - 예외가 발생하지 않으면 성공
                 try:
                     self.pm.load_all(max_num_feeds=20, max_num_public_feeds=40, max_num_days=1)

@@ -9,13 +9,16 @@ import logging.config
 from shutil import rmtree
 from typing import Any, Optional
 import xml.etree.ElementTree as ET
+
 from bin.run import FeedMakerRunner
 from bin.feed_maker_util import Process, PathUtil, Env
 from bin.feed_manager import FeedManager
 from bin.access_log_manager import AccessLogManager
 from bin.html_file_manager import HtmlFileManager
 from bin.problem_manager import ProblemManager
+from bin.feed_maker_util import Config
 from utils.search_manga_site import SearchManager
+
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger(__name__)
@@ -25,7 +28,6 @@ class FeedMakerManager:
     work_dir_path = Path(Env.get("FM_WORK_DIR"))
     img_dir_path = Path(Env.get("WEB_SERVICE_IMAGE_DIR_PREFIX"))
     pdf_dir_path = Path(Env.get("WEB_SERVICE_PDF_DIR_PREFIX"))
-    CONF_FILE = "conf.json"
     SITE_CONF_FILE = "site_config.json"
 
     def __init__(self) -> None:
@@ -42,7 +44,7 @@ class FeedMakerManager:
         del self.html_file_manager
         del self.problem_manager
 
-    async def aclose(self) -> None:
+    def aclose(self) -> None:
         LOGGER.debug("# FeedMakerManager.aclose()")
         del self
         return None
@@ -71,7 +73,7 @@ class FeedMakerManager:
         return Process.exec_cmd(cmd, dir_path=self.work_dir_path)
 
     def _read_config_file(self, feed_dir_path: Path) -> dict[str, Any]:
-        conf_file_path = feed_dir_path / self.CONF_FILE
+        conf_file_path = feed_dir_path / Config.DEFAULT_CONF_FILE
         if conf_file_path.is_file():
             with conf_file_path.open('r', encoding='utf-8') as infile:
                 line_list: list[str] = []
@@ -93,7 +95,7 @@ class FeedMakerManager:
             title = feed_name
         return title
 
-    async def get_exec_result(self) -> tuple[str, str]:
+    def get_exec_result(self) -> tuple[str, str]:
         LOGGER.debug("# get_exec_result()")
         exec_result_file_path = self.work_dir_path / "logs" / "run_all_feeds_summary.log"
         if exec_result_file_path.is_file():
@@ -118,7 +120,7 @@ class FeedMakerManager:
         LOGGER.debug("# get_problems_public_feed_info()")
         return FeedManager.get_feed_name_public_feed_info_map(), ""
 
-    async def get_problems_html_info(self) -> tuple[dict[str, Any], str]:
+    def get_problems_html_info(self) -> tuple[dict[str, Any], str]:
         LOGGER.debug("# get_problems_html_info()")
         return {
             "html_file_size_map": self.html_file_manager.get_html_file_size_map(),
@@ -158,7 +160,7 @@ class FeedMakerManager:
     async def search_site(keyword: str) -> tuple[str, str]:
         LOGGER.debug("# search_site(keyword='%s')", keyword)
         search_manager = SearchManager()
-        result = search_manager.search("", keyword)
+        result = search_manager.search_sites("", keyword)
         if result:
             return result, ""
         return "", f"can't search site matching '{keyword}'"
@@ -199,7 +201,7 @@ class FeedMakerManager:
             return 1
         return 0
 
-    async def get_site_config(self, group_name: str) -> tuple[dict[str, str], str]:
+    def get_site_config(self, group_name: str) -> tuple[dict[str, str], str]:
         LOGGER.debug("# get_site_config(group_name='%s')", group_name)
         path = self.work_dir_path / group_name / self.SITE_CONF_FILE
         if path.is_file():
@@ -208,7 +210,7 @@ class FeedMakerManager:
                 return json_data, ""
         return {}, f"no feed list in group '{group_name}'"
 
-    async def save_site_config(self, group_name: str, post_data: dict[str, Any]) -> tuple[bool, str]:
+    def save_site_config(self, group_name: str, post_data: dict[str, Any]) -> tuple[bool, str]:
         LOGGER.debug("# save_site_config(group_name='%s', post_data=%r)", group_name, post_data)
         path = self.work_dir_path / group_name / self.SITE_CONF_FILE
         try:
@@ -218,7 +220,7 @@ class FeedMakerManager:
             return False, str(e)
         return True, ""
 
-    async def extract_titles_from_public_feed(self, feed_name: str) -> tuple[list[str] | str, str]:
+    def extract_titles_from_public_feed(self, feed_name: str) -> tuple[list[str] | str, str]:
         LOGGER.debug("# extract_titles_from_public_feed(feed_name='%s')", feed_name)
         public_feed_file_path = FeedManager.public_feed_dir_path / f"{feed_name}.xml"
         if not public_feed_file_path.exists():
@@ -258,7 +260,7 @@ class FeedMakerManager:
             return feed_info, ""
         return {}, f"can't get feed info of '{group_name}/{feed_name}'"
 
-    async def save_config_file(self, group_name: str, feed_name: str, post_data: dict[str, Any]) -> tuple[bool, str]:
+    def save_config_file(self, group_name: str, feed_name: str, post_data: dict[str, Any]) -> tuple[bool, str]:
         LOGGER.debug("# save_config_file(group_name='%s', feed_name='%s', post_data=%r)", group_name, feed_name, post_data)
         if "configuration" not in post_data:
             return False, "invalid configuration format (no 'configuration')"
@@ -267,7 +269,7 @@ class FeedMakerManager:
         if not ("collection" in configuration and "extraction" in configuration and "rss" in configuration):
             return False, "invalid configuration format (no 'collection' or 'extraction' or 'rss')"
 
-        config_file_path = self.work_dir_path / group_name / feed_name / self.CONF_FILE
+        config_file_path = self.work_dir_path / group_name / feed_name / Config.DEFAULT_CONF_FILE
         config_file_path.parent.mkdir(exist_ok=True)
         with config_file_path.open('w', encoding='utf-8') as outfile:
             outfile.write(json.dumps(post_data, indent=2, ensure_ascii=False))
@@ -282,7 +284,7 @@ class FeedMakerManager:
     def run(self, group_name: str, feed_name: str) -> tuple[bool, str]:
         LOGGER.debug("# run(group_name='%s', feed_name='%s')", group_name, feed_name)
         feed_dir_path = self.work_dir_path / group_name / feed_name
-        conf_file_path = feed_dir_path / self.CONF_FILE
+        conf_file_path = feed_dir_path / Config.DEFAULT_CONF_FILE
         with conf_file_path.open('rb') as infile:
             json_data = json.load(infile)
             if "configuration" in json_data:
@@ -315,14 +317,14 @@ class FeedMakerManager:
             LOGGER.debug("deleting %s", PathUtil.short_path(feed_pdf_dir_path))
             rmtree(feed_pdf_dir_path)
 
-    async def remove_list(self, group_name: str, feed_name: str) -> None:
+    def remove_list(self, group_name: str, feed_name: str) -> None:
         LOGGER.debug("# remove_list(group_name='%s', feed_name='%s')", group_name, feed_name)
         feed_dir_path = self.work_dir_path / group_name / feed_name
         list_dir_path = feed_dir_path / "newlist"
         if list_dir_path.is_dir():
             rmtree(list_dir_path)
 
-    async def remove_html(self, group_name: str, feed_name: str) -> None:
+    def remove_html(self, group_name: str, feed_name: str) -> None:
         LOGGER.debug("# remove_html(group_name='%s', feed_name='%s')", group_name, feed_name)
         feed_dir_path = self.work_dir_path / group_name / feed_name
         html_dir_path = feed_dir_path / "html"
@@ -330,20 +332,20 @@ class FeedMakerManager:
             rmtree(html_dir_path)
         self.html_file_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path, do_remove_file=True)
 
-    async def remove_html_file(self, group_name: str, feed_name: str, html_file_name: str) -> None:
+    def remove_html_file(self, group_name: str, feed_name: str, html_file_name: str) -> None:
         LOGGER.debug("# remove_html_file(group_name='%s', feed_name='%s')", group_name, feed_name)
         html_file_path = self.work_dir_path / group_name / feed_name / "html" / html_file_name
         html_file_path.unlink(missing_ok=True)
         self.html_file_manager.remove_html_file_in_path_from_info("file_path", html_file_path, do_remove_file=True)
 
-    async def remove_public_feed(self, feed_name: str) -> None:
+    def remove_public_feed(self, feed_name: str) -> None:
         LOGGER.debug("# remove_public_feed(feed_name='%s')", feed_name)
         self.feed_manager.remove_public_feed_by_feed_name(feed_name, do_remove_file=True)
 
-    async def remove_feed(self, group_name: str, feed_name: str) -> tuple[bool, str]:
+    def remove_feed(self, group_name: str, feed_name: str) -> tuple[bool, str]:
         LOGGER.debug(f"# remove_feed({group_name}, {feed_name})")
         feed_dir_path = self.work_dir_path / group_name / feed_name
-        conf_file_path = feed_dir_path / self.CONF_FILE
+        conf_file_path = feed_dir_path / Config.DEFAULT_CONF_FILE
         if not feed_dir_path or not conf_file_path:
             return False, f"can't remove feed '{PathUtil.short_path(feed_dir_path)}'"
 
@@ -366,7 +368,7 @@ class FeedMakerManager:
         self.html_file_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path, do_remove_file=True)
         return True, ""
 
-    async def remove_group(self, group_name: str) -> tuple[bool, str]:
+    def remove_group(self, group_name: str) -> tuple[bool, str]:
         LOGGER.debug(f"# remove_group({group_name})")
         group_dir_path = self.work_dir_path / group_name
         if not group_dir_path:

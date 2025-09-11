@@ -52,7 +52,6 @@ class Notification:
         try:
             self.naver_cloud_access_key = Env.get("MSG_EMAIL_NAVER_CLOUD_ACCESS_KEY")
             self.naver_cloud_secret_key = Env.get("MSG_EMAIL_NAVER_CLOUD_SECRET_KEY")
-            #self.send_msg = self._send_email_by_naver_cloud
         except NotFoundEnvError as e:
             LOGGER.warning(f"MSG_EMAIL_NAVER_CLOUD_ACCESS_KEY or MSG_EMAIL_NAVER_CLOUD_SECRET_KEY not found, {e}")
             self.naver_cloud_access_key = ""

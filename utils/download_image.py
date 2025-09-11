@@ -18,7 +18,7 @@ LOGGER = logging.getLogger()
 def replace_img_tag(match: re.Match[str], *, crawler: Crawler, feed_img_dir_path: Path, quality: int) -> str:
     img_url = match.group("img_url")
     original_tag = match.group(0)
-                
+
     try:
         _, new_img_url = ImageDownloader.download_image(crawler, feed_img_dir_path, img_url, quality=quality)
         if new_img_url:
@@ -35,7 +35,7 @@ def replace_img_tag(match: re.Match[str], *, crawler: Crawler, feed_img_dir_path
         LOGGER.error(f"이미지 다운로드 중 오류 발생: {e}")
         return "<img src='not_found.png' alt='error occurred'/>"
 
-    
+
 def main() -> int:
     feed_dir_path = Path.cwd()
     quality = 75  # default quality
@@ -71,39 +71,31 @@ def main() -> int:
         quality=quality
     )
 
-    line_list = IO.read_stdin_as_line_list()
-    for line in line_list:
-        # 이미지 태그 패턴
-        img_pattern = r'<img[^>]*src=[\"\'](?P<img_url>[^\"\']+)[\"\'][^>]*/?>'
-        
-        # 이미지가 있는지 확인
-        if re.search(img_pattern, line):
-            # 모든 이미지 태그를 교체
-            new_line = re.sub(img_pattern, replacer, line)
-            
-            # 더 정확한 HTML 요소 분리
-            # 중첩된 태그를 포함하여 완전한 HTML 요소를 찾는 패턴
-            element_pattern = r'<([^/>]+)>([^<]*(?:<[^>]+/>[^<]*)*)</\1>|<[^>]+/>'
-            
-            current_pos = 0
-            for match in re.finditer(element_pattern, new_line):
-                # 이전 위치부터 현재 매치 시작까지의 텍스트
-                if match.start() > current_pos:
-                    text_before = new_line[current_pos:match.start()].strip()
-                    if text_before:
-                        print(text_before)
-                
-                # 완전한 HTML 요소 출력
-                print(match.group(0))
-                current_pos = match.end()
-            
-            # 마지막 남은 텍스트 출력
-            if current_pos < len(new_line):
-                text_after = new_line[current_pos:].strip()
-                if text_after:
-                    print(text_after)
-        else:
-            print(line, end="")
+    def split_and_print(line: str, replacer: callable) -> None:
+        # 이미지 태그가 있으면 치환 후 태그/요소 단위로 분리 출력
+        img_pattern = r'<img[^>]*src=["\'](?P<img_url>[^"\']+)["\'][^>]*?/?>'
+        if not re.search(img_pattern, line):
+            print(line, end='')
+            return
+        new_line = re.sub(img_pattern, replacer, line)
+        # <tag>...</tag> 또는 <self-closing/> 패턴
+        element_pattern = r'<([^/\s>]+)[^>]*>.*?</\1>|<[^>]+/?>'
+        current = 0
+        for m in re.finditer(element_pattern, new_line):
+            if m.start() > current:
+                text = new_line[current:m.start()].strip()
+                if text:
+                    print(text)
+            print(m.group(0))
+            current = m.end()
+        # 남은 텍스트
+        if current < len(new_line):
+            tail = new_line[current:].strip()
+            if tail:
+                print(tail)
+
+    for line in IO.read_stdin_as_line_list():
+        split_and_print(line, replacer)
 
     return 0
 

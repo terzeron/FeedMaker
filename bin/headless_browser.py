@@ -29,11 +29,11 @@ class HeadlessBrowser:
     ID_OF_RENDERING_COMPLETION_IN_CONVERTING_BLOB = "rendering_completed_in_converting_blob"
     COOKIE_FILE = "cookies.headlessbrowser.json"
     DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-    
+
     # Class-level driver cache for reuse in tests
     _driver_cache: Optional[webdriver.Chrome] = None
     _driver_options_hash: Optional[str] = None
-    
+
     GETTING_METADATA_SCRIPT = '''
         var metas = document.getElementsByTagName("meta");
         var has_og_url_property = false;
@@ -64,7 +64,7 @@ class HeadlessBrowser:
             }
             document.body.appendChild(div);
         }());
-        
+
         var div = document.createElement("DIV");
         document.body.appendChild(div);
         div.id = "%s";
@@ -73,10 +73,10 @@ class HeadlessBrowser:
         function sleep(ms) {
            return new Promise(resolve => setTimeout(resolve, ms));
         }
-        
+
         // Wait for initial page load
         await sleep(1000);
-        
+
         // Scroll down
         var bottom = document.body.scrollHeight;
         for (var i = 0; i < bottom; i += 349) {
@@ -84,13 +84,13 @@ class HeadlessBrowser:
             await sleep(200);
             bottom = document.body.scrollHeight;
         }
-        
+
         // Scroll up
         for (var i = bottom; i >= 0; i -= 683) {
             window.scrollTo(0, i);
             await sleep(200);
         }
-        
+
         // Wait for images to load and JavaScript to execute
         // Check for the completion marker that the page's JavaScript creates
         var maxWaitTime = 10000; // 10 seconds
@@ -103,10 +103,10 @@ class HeadlessBrowser:
             }
             await sleep(500);
         }
-        
+
         // Additional wait for any final JavaScript execution
         await sleep(1000);
-        
+
         var div = document.createElement("DIV");
         document.body.appendChild(div);
         div.id = "%s";
@@ -174,13 +174,13 @@ class HeadlessBrowser:
         """Get cached driver if available and compatible"""
         if cls._driver_cache is None:
             return None
-        
+
         current_hash = cls._get_options_hash(options)
         if cls._driver_options_hash != current_hash:
             # Options changed, need new driver
             cls._cleanup_cached_driver()
             return None
-        
+
         # Check if driver is still alive
         try:
             _ = cls._driver_cache.current_url  # Test if driver is responsive
@@ -235,7 +235,7 @@ class HeadlessBrowser:
         LOGGER.debug(f"# make_request(url={url}, download_file={download_file})")
         driver = None
         driver_created = False
-        
+
         try:
             options = webdriver.ChromeOptions()
             if not self.disable_headless:
@@ -259,7 +259,7 @@ class HeadlessBrowser:
                 chrome_driver_path = which("chromedriver")
                 if not chrome_driver_path:
                     raise FileNotFoundError("chromedriver not found in PATH")
-                driver = webdriver.Chrome(options=options) 
+                driver = webdriver.Chrome(options=options)
                 driver.set_page_load_timeout(self.timeout)
                 self._set_cached_driver(driver, options)
                 driver_created = True
@@ -348,7 +348,7 @@ class HeadlessBrowser:
 
             return response
 
-        except (OSError, TypeError, ValueError, AttributeError, ImportError, ConnectionError, RuntimeError) as e:
+        except (OSError, TypeError, ValueError, AttributeError, ImportError, RuntimeError) as e:
             LOGGER.error(f"Unexpected error in make_request: {e}")
             return ""
         finally:
@@ -367,12 +367,12 @@ class HeadlessBrowser:
                     driver.switch_to.alert.dismiss()
                 except (WebDriverException, NoAlertPresentException):
                     pass  # No alert present
-                
+
                 # Clear local storage and cookies for clean state
                 try:
                     driver.execute_script("window.localStorage.clear();")
                     driver.execute_script("window.sessionStorage.clear();")
                 except WebDriverException:
                     pass  # Might fail if no page loaded
-        
+
         return ""  # Fallback return (should never be reached)

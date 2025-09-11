@@ -14,6 +14,7 @@ from typing import Any
 from bin.run import FeedMakerRunner
 from bin.feed_maker_util import Env, PathUtil
 from bin.feed_maker import FeedMaker
+from bin.feed_maker_util import Config
 
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -21,8 +22,8 @@ LOGGER = logging.getLogger()
 
 
 def assert_in_mock_logger(message: str, mock_logger: Mock, do_submatch: bool = False) -> bool:
-    for mock_call in mock_logger.call_args_list:  
-        formatted_message = mock_call.args[0] % mock_call.args[1:]  
+    for mock_call in mock_logger.call_args_list:
+        formatted_message = mock_call.args[0] % mock_call.args[1:]
         if do_submatch:
             if message in formatted_message:
                 return True
@@ -34,11 +35,11 @@ def assert_in_mock_logger(message: str, mock_logger: Mock, do_submatch: bool = F
 
 class OptimizedTestFeedMakerRunner(FeedMakerRunner):
     """경량화된 테스트용 FeedMakerRunner - 성능 최적화"""
-    
+
     def __init__(self, html_archiving_period: int, list_archiving_period: int):
         super().__init__(html_archiving_period, list_archiving_period)
         self._config_cache = {}  # 설정 파일 캐싱
-    
+
     def make_single_feed(self, feed_dir_path: Path, options: dict[str, Any]) -> bool:
         """테스트용 경량화된 make_single_feed - 모든 실제 작업을 mock으로 대체"""
         LOGGER.debug("# make_single_feed(feed_dir_path='%s', options=%r)", PathUtil.short_path(feed_dir_path), options)
@@ -53,10 +54,10 @@ class OptimizedTestFeedMakerRunner(FeedMakerRunner):
         with patch('bin.feed_maker.FeedMaker.make', return_value=True) as mock_make:
             # FeedMaker 인스턴스 생성은 하지만 실제 make() 호출은 mock
             feed_maker = FeedMaker(
-                feed_dir_path=feed_dir_path, 
-                do_collect_by_force=options.get("force_collection_opt", False), 
-                do_collect_only=options.get("collect_only_opt", False), 
-                rss_file_path=rss_file_path, 
+                feed_dir_path=feed_dir_path,
+                do_collect_by_force=options.get("force_collection_opt", False),
+                do_collect_only=options.get("collect_only_opt", False),
+                rss_file_path=rss_file_path,
                 window_size=options.get("window_size", FeedMaker.DEFAULT_WINDOW_SIZE)
             )
             result = mock_make.return_value
@@ -111,7 +112,7 @@ class TestFeedMakerRunner(unittest.TestCase):
         self.patcher_open.stop()
         for feed_dir_path, list_dir_path in zip(self.feed_dir_paths, self.list_dir_paths):
             try:
-                conf_file_path = feed_dir_path / "conf.json"
+                conf_file_path = feed_dir_path / Config.DEFAULT_CONF_FILE
                 if conf_file_path.exists():
                     conf_file_path.unlink()
                 if list_dir_path.exists():
