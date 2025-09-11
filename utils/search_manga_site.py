@@ -77,7 +77,7 @@ class Site:
 
     def set_payload(self, keyword: str = "") -> None:
         LOGGER.debug(f"# set_payload(keyword={keyword})")
-        
+
     def preprocess_search_result(self, search_result: str) -> str:
         return search_result
 
@@ -94,7 +94,7 @@ class Site:
             if not url:
                 url = self.get_base_url() + self.url_postfix
                 LOGGER.debug(f"url={url}")
-            response, error, _ = crawler.run(url=url, data=self.payload)
+            response, _, _ = crawler.run(url=url, data=self.payload)
             del crawler
             return response
         return None
@@ -108,7 +108,7 @@ class Site:
                 element.extract()
 
         result_list: list[str] = []
-            
+
         for key in attrs.keys():
             if key in ("id", "class"):
                 element_list = soup.find_all(attrs={key: attrs[key]})
@@ -123,15 +123,15 @@ class Site:
             for element_obj in element_list:
                 # HTML 조각 추출
                 html_fragment = str(element_obj)
-                
+
                 # 주석 제거
                 html_fragment = re.sub(r'<!--[^>]*-->', '', html_fragment)
-                
+
                 # href 속성의 상대 경로를 절대 경로로 변환
                 def replace_href(match):
                     href_value = match.group(1)
                     LOGGER.debug(f"Processing href: '{href_value}', url_prefix: '{self.url_prefix}'")
-                    
+
                     # javascript:;인 경우 빈 문자열로 변경
                     if href_value == "javascript:;":
                         LOGGER.debug("javascript:; found, returning empty href")
@@ -152,28 +152,28 @@ class Site:
                             return f'href="{absolute_url}"'
                         else:
                             return f'href="{self.get_base_url()}"'
-                
+
                 # href 처리 전후 로그
                 LOGGER.debug(f"Before href processing: {html_fragment[:200]}...")
-                
+
                 # href="" 패턴을 먼저 직접 처리
                 if 'href=""' in html_fragment:
                     LOGGER.debug("Found href=\"\" pattern, replacing directly")
                     html_fragment = html_fragment.replace('href=""', f'href="{self.get_base_url()}"')
-                
+
                 # 다양한 href 패턴 처리 (큰따옴표, 작은따옴표, 따옴표 없음)
                 html_fragment = re.sub(r'href="([^"]*)"', replace_href, html_fragment)
                 html_fragment = re.sub(r"href='([^']*)'", replace_href, html_fragment)
                 html_fragment = re.sub(r'href=([^"\s>]+)', replace_href, html_fragment)
-                
+
                 LOGGER.debug(f"After href processing: {html_fragment[:200]}...")
-                
+
                 # href가 있는 a 태그에만 target="_blank" 속성 추가
                 html_fragment = re.sub(r'<a\b([^>]*href=[^>]*)>', r'<a\1 target="_blank">', html_fragment)
-                
+
                 # img 태그 완전 제거
                 html_fragment = re.sub(r'<img[^>]*/?>', '', html_fragment)
-                
+
                 # SVG 태그와 하위 요소들 완전 제거
                 try:
                     soup_fragment = BeautifulSoup(html_fragment, "html.parser")
@@ -183,7 +183,7 @@ class Site:
                 except Exception:
                     # SVG 제거 실패 시 정규표현식으로 대체 처리
                     html_fragment = re.sub(r'<svg[^>]*>.*?</svg>', '', html_fragment, flags=re.DOTALL)
-                
+
                 # BeautifulSoup을 사용하여 안전하게 속성 제거
                 try:
                     soup_fragment = BeautifulSoup(html_fragment, "html.parser")
@@ -193,24 +193,24 @@ class Site:
                         for attr in attrs_to_remove:
                             if attr in tag.attrs:
                                 del tag.attrs[attr]
-                        
+
                         # onclick 등 on으로 시작하는 속성들 제거
                         attrs_to_remove_on = [attr for attr in tag.attrs.keys() if attr.startswith('on')]
                         for attr in attrs_to_remove_on:
                             del tag.attrs[attr]
-                        
+
                         # data-로 시작하는 속성들 제거
                         attrs_to_remove_data = [attr for attr in tag.attrs.keys() if attr.startswith('data-')]
                         for attr in attrs_to_remove_data:
                             del tag.attrs[attr]
-                    
+
                     html_fragment = str(soup_fragment)
-                    
+
                     # BeautifulSoup 처리 후 href 다시 확인 및 처리
                     if 'href=""' in html_fragment:
                         LOGGER.debug("Found href=\"\" after BeautifulSoup processing, replacing again")
                         html_fragment = html_fragment.replace('href=""', f'href="{self.get_base_url()}"')
-                    
+
                     # BeautifulSoup 처리 후 상대 경로 href도 다시 처리
                     html_fragment = re.sub(r'href="([^"]*)"', replace_href, html_fragment)
                     html_fragment = re.sub(r"href='([^']*)'", replace_href, html_fragment)
@@ -220,16 +220,16 @@ class Site:
                     html_fragment = re.sub(r'\s+(class|id|alt|on\w+)=["\'][^"\']*["\']', '', html_fragment)
                     html_fragment = re.sub(r'\s+style=["\'][^"\']*["\']', '', html_fragment)
                     html_fragment = re.sub(r'\s+data-[a-zA-Z0-9_-]*=["\'][^"\']*["\']', '', html_fragment)
-                
+
                 # article과 div 태그에 border 스타일 강제 추가
                 html_fragment = re.sub(r'<(article|div)([^>]*)>', r'<\1\2 style="border: 1px solid #ccc;">', html_fragment)
-                
+
                 # 빈 태그 정리 (속성이 모두 제거된 경우)
                 html_fragment = re.sub(r'<(\w+)\s+>', r'<\1>', html_fragment)
-                
+
                 # 연속된 공백을 공백 1개로 교체
                 html_fragment = re.sub(r'\s+', ' ', html_fragment)
-                
+
                 # HTML beautify 적용
                 try:
                     soup_fragment = BeautifulSoup(html_fragment, "html.parser")
@@ -237,7 +237,7 @@ class Site:
                 except Exception:
                     # beautify 실패 시 원본 유지
                     pass
-                
+
                 result_list.append(html_fragment)
 
         return "".join(result_list)
@@ -311,26 +311,6 @@ class Site:
                 if result1:
                     break
         return "".join(result_list)
-
-
-# class ManatokiSite(Site):
-#     def __init__(self, site_name: str) -> None:
-#         super().__init__(site_name)
-#         self.extraction_attrs = {"class": "list-item"}
-
-#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = quote(keyword)
-#         self.url_postfix = "/comic?stx=" + encoded_keyword
-
-
-# class NewtokiSite(Site):
-#     def __init__(self, site_name: str) -> None:
-#         super().__init__(site_name)
-#         self.extraction_attrs = {"class": "list-item"}
-
-#     def set_url_postfix_with_keyword(self, keyword: str) -> None:
-#         encoded_keyword = quote(keyword)
-#         self.url_postfix = "/webtoon?stx=" + encoded_keyword
 
 
 class WfwfSite(Site):
@@ -500,7 +480,7 @@ class MzgtoonSite(Site):
         encoded_keyword = quote(keyword)
         # 실제 API 엔드포인트 사용
         self.url_postfix = f"/api/search?q={encoded_keyword}"
-        
+
     def preprocess_search_result(self, search_result: str) -> str:
         # extract from pre tag and convert it into json
         soup = BeautifulSoup(search_result, "html.parser")
@@ -508,7 +488,7 @@ class MzgtoonSite(Site):
         if pre_tag:
             json_str = pre_tag.text
             data = json.loads(json_str)
-        
+
             # convert json to html
             result_list: list[str] = []
             if "toonData" in data:
@@ -518,9 +498,9 @@ class MzgtoonSite(Site):
                     link = f"/webtoon/{item['toon_id']}"
                     result_str = f"<div>\n<span>{title}</span>\t<span><a href=\"{link}\">{link}</a></span>\n</div>\n"
                     result_list.append(result_str)
-                    
+
             return "".join(result_list)
-        
+
         return ""
 
 
@@ -552,8 +532,6 @@ class SearchManager:
             (TorrentTipSite, "torrenttip"),
             (XtoonSite, "xtoon"),
             (BlacktoonSite, "blacktoon"),
-            #(ManatokiSite, "manatoki"),
-            #(NewtokiSite, "newtoki"),
             (TorrentJokSite, "torrentjok"),
             (WfwfSite, "wfwf"),
             (WtwtSite, "wtwt"),

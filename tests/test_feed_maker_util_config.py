@@ -46,7 +46,7 @@ class ConfigTest(unittest.TestCase):
                 }
             }
         }
-        conf_path = Path(__file__).parent / "conf.json"
+        conf_path = Path(__file__).parent / Config.DEFAULT_CONF_FILE
         with open(conf_path, "w", encoding="utf-8") as f:
             json.dump(conf_dict, f, ensure_ascii=False, indent=2)
         self.config = Config(feed_dir_path=Path(__file__).parent)
@@ -224,15 +224,15 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(configs["ignore_broken_link"], "")
 
         # 2. ignore_broken_link가 설정에 있을 때
-        conf_path = Path(__file__).parent / "conf.json"
+        conf_path = Path(__file__).parent / Config.DEFAULT_CONF_FILE
         with open(conf_path, "r", encoding="utf-8") as f:
             conf_dict = json.load(f)
-        
+
         conf_dict["configuration"]["rss"]["ignore_broken_link"] = "always"
-        
+
         with open(conf_path, "w", encoding="utf-8") as f:
             json.dump(conf_dict, f, ensure_ascii=False, indent=2)
-            
+
         config_with_ignore = Config(feed_dir_path=Path(__file__).parent)
         configs = config_with_ignore.get_rss_configs()
         self.assertEqual(configs["ignore_broken_link"], "always")

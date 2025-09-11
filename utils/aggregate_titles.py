@@ -35,7 +35,7 @@ def main() -> int:
     temp_output_file = file_prefix + ".temp"
     output_file = file_prefix + ".output"
     line_num_link_map: dict[int, str] = {}
-    title_existence_set: set[str] = set([])
+    title_existence_set: set[str] = set()
 
     # split link and title into two separate files
     # and make line number & link mapping table
@@ -46,14 +46,13 @@ def main() -> int:
                 continue
             line = line.rstrip()
             link, title, _ = line.split("\t")
-            line_num_link_map[line_num] = link + "\t" + title
-
             clean_title = title.lower()
             clean_title = re.sub(r'[\s!-/:-@\[-`]*', '', clean_title)
             if clean_title not in title_existence_set:
                 title_existence_set.add(clean_title)
-            out_file.write(f"{title}\n")
-            line_num += 1
+                line_num_link_map[line_num] = link + "\t" + title
+                out_file.write(f"{title}\n")
+                line_num += 1
 
     # hierarchical clustering
     cluster_dir = Path(__file__).parent.parent / "HierarchicalClustering"

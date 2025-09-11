@@ -9,7 +9,7 @@ import logging.config
 from pprint import pprint
 from typing import Dict, Any
 from pathlib import Path
-from bin.feed_maker_util import Process, NotFoundConfigFileError, InvalidConfigFileError, NotFoundConfigItemError
+from bin.feed_maker_util import Process, Config, NotFoundConfigFileError, InvalidConfigFileError, NotFoundConfigItemError
 
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -17,7 +17,6 @@ LOGGER = logging.getLogger()
 
 # Constants
 SITE_CONFIG_FILE = "site_config.json"
-CONF_FILE = "conf.json"
 URL_PATTERN = r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+)(?P<post>[^/]*)'
 LIST_URL_PATTERN = r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+)(?P<post>[\./].*)'
 
@@ -90,7 +89,7 @@ def update_feed_config(conf_file_path: Path, new_number: int, test_run: bool) ->
     """Update feed configuration file."""
     if not conf_file_path.is_file():
         return  # Skip if conf.json doesn't exist
-        
+
     temp_conf_file_path = conf_file_path.with_suffix(conf_file_path.suffix + ".temp")
 
     with conf_file_path.open("r", encoding="utf-8") as infile:
@@ -134,7 +133,7 @@ def cleanup_feed_directory(entry_path: Path) -> None:
 def process_feed_directory(entry_path: Path, new_number: int, test_run: bool) -> None:
     """Process a single feed directory."""
     print(f"- {entry_path}: ", end='')
-    conf_file_path = entry_path / CONF_FILE
+    conf_file_path = entry_path / Config.DEFAULT_CONF_FILE
 
     if not test_run:
         print(".", end='')

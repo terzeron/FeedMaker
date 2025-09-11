@@ -61,19 +61,19 @@ def get_modified_files(since: float, exclude_paths: Optional[set[str]] = None) -
     """Get modified Python files with better filtering"""
     if exclude_paths is None:
         exclude_paths = {'.pytest_cache', '__pycache__', '.git', 'node_modules'}
-    
+
     modified = []
     for root, dirs, files in os.walk(PROJECT_ROOT):
         # Skip excluded directories
         dirs[:] = [d for d in dirs if d not in exclude_paths]
-        
+
         for f in files:
             if f.endswith('.py'):
                 p = Path(root) / f
                 try:
                     # Only consider files modified after since time and skip backup/temp files
-                    if (p.stat().st_mtime > since and 
-                        not f.endswith('.bak') and 
+                    if (p.stat().st_mtime > since and
+                        not f.endswith('.bak') and
                         not f.startswith('.') and
                         p.stat().st_size > 0):  # Skip empty files
                         modified.append(p)
@@ -101,28 +101,28 @@ def get_failed_or_skipped_tests() -> list[str]:
     # Check if pytest cache exists and has failed tests
     cache_dir = Path(".pytest_cache/v/cache")
     lastfailed_file = cache_dir / "lastfailed"
-    
+
     if not lastfailed_file.exists():
         # No cache file means no failed tests
         return []
-    
+
     try:
         import json
         with open(lastfailed_file, 'r') as f:
             failed_data = json.load(f)
-        
+
         # If the cache is empty or all tests passed, return empty list
         if not failed_data:
             return []
-        
+
         # Extract test paths from the cache
         test_paths = []
         for test_key in failed_data.keys():
             if test_key.startswith("tests/") and "::" in test_key:
                 test_paths.append(test_key)
-        
+
         return test_paths
-        
+
     except (json.JSONDecodeError, FileNotFoundError, OSError, KeyError, TypeError, ValueError):
         # If there's any issue reading the cache, assume no failed tests
         return []
@@ -131,7 +131,7 @@ def is_test_actually_failed(test_path: Path) -> bool:
     """Check if a test file actually failed based on pytest cache"""
     failed_tests = get_failed_or_skipped_tests()
     test_file_str = str(test_path.relative_to(PROJECT_ROOT))
-    
+
     for failed_test in failed_tests:
         if failed_test.startswith(test_file_str):
             return True
@@ -143,7 +143,7 @@ def clean_test_data() -> None:
         TMP_DIR,
         PROJECT_ROOT / "capture_item_naverwebtoon.py",
     ]
-    
+
     for path in test_dirs_to_clean:
         if path.exists():
             if path.is_file():
@@ -270,14 +270,14 @@ def get_test_methods(test_file: Path) -> list[str]:
     result = subprocess.run([
         sys.executable, "-m", "pytest", str(test_file), "--collect-only"
     ], capture_output=True, text=True, check=False)
-    
+
     # 모든 테스트 메서드 수집 (Test*::test_* 패턴)
     test_methods = []
     for line in result.stdout.splitlines():
         line = line.strip()
         if line and "::test_" in line:
             test_methods.append(line)
-    
+
     return test_methods
 
 
@@ -285,7 +285,7 @@ def run_test_modules_sequentially(test_targets: list[Path]) -> tuple[bool, int, 
     """Run test modules sequentially and return (success, passed_count, failed_count)"""
     passed_count = 0
     failed_count = 0
-    
+
     for idx, t in enumerate(test_targets, 1):
         print(f"--- [{idx}/{len(test_targets)}] Running: {t} ---")
         # Use absolute path to avoid issues with working directory changes
@@ -293,7 +293,7 @@ def run_test_modules_sequentially(test_targets: list[Path]) -> tuple[bool, int, 
 
         # Measure execution time
         start_time = time.time()
-        result = subprocess.run([sys.executable, "-m", "pytest", "--tb=no", "--disable-warnings", str(absolute_path)],
+        result = subprocess.run([sys.executable, "-m", "pytest", str(absolute_path)],
                               capture_output=True, text=True, check=False)
         end_time = time.time()
         execution_time = end_time - start_time
@@ -325,18 +325,23 @@ def run_test_modules_sequentially(test_targets: list[Path]) -> tuple[bool, int, 
 
         if result.returncode != 0:
             print(f"❌ {t.name} FAILED.")
+            # 실패 시 pytest의 전체 stdout 및 stderr 출력
+            if result.stdout:
+                print(result.stdout)
+            if result.stderr:
+                print(result.stderr)
             failed_count += 1
         else:
             print(f"✅ {t.name} PASSED.")
             passed_count += 1
         print("")
-    
+
     overall_success = failed_count == 0
     if overall_success:
         print(f"✅ All {len(test_targets)} tests passed.")
     else:
         print(f"❌ {failed_count} out of {len(test_targets)} tests failed.")
-    
+
     return overall_success, passed_count, failed_count
 
 def run_specific_test_file(test_file: str) -> bool:
@@ -364,7 +369,7 @@ def run_specific_test_file(test_file: str) -> bool:
 def get_actual_execution_duration() -> float:
     """Get actual execution duration from cache or return 0 if not available"""
     performance_cache_file = PROJECT_ROOT / ".test_performance_cache"
-    
+
     if performance_cache_file.exists():
         try:
             import json
@@ -375,13 +380,13 @@ def get_actual_execution_duration() -> float:
                     return cached_data['actual_total_duration']
         except (json.JSONDecodeError, OSError, PermissionError, KeyError):
             pass
-    
+
     return 0.0
 
 def update_actual_execution_duration(duration: float) -> None:
     """Update actual execution duration in cache"""
     performance_cache_file = PROJECT_ROOT / ".test_performance_cache"
-    
+
     # Load existing cache
     cached_data = {}
     if performance_cache_file.exists():
@@ -391,11 +396,11 @@ def update_actual_execution_duration(duration: float) -> None:
                 cached_data = json.load(f)
         except (json.JSONDecodeError, OSError, PermissionError):
             cached_data = {}
-    
+
     # Update actual execution duration
     cached_data['actual_total_duration'] = duration
     cached_data['last_actual_execution'] = time.time()
-    
+
     # Save updated cache
     try:
         import json
@@ -413,43 +418,9 @@ def run_all_tests() -> bool:
         print("No tests to run")
         return False
 
-    total_start = time.time()
-    all_passed = True
-    for idx, t in enumerate(ordered_tests, 1):
-        print(f"--- [{idx}/{len(ordered_tests)}] Running: {t.name} ---")
-        start = time.time()
-        result = subprocess.run([sys.executable, "-m", "pytest", "--tb=no", "--disable-warnings", str(t)],
-                              capture_output=True, text=True, check=False)
-        end = time.time()
-
-        # Filter output to remove session start info and show only test results
-        filtered_output = []
-        in_session_start = False
-        for line in result.stdout.splitlines():
-            if "test session starts" in line:
-                in_session_start = True
-                continue
-            if in_session_start and ("collected" in line or "platform" in line or "rootdir" in line or
-                                   "configfile" in line or "plugins" in line or "cachedir" in line or
-                                   "hypothesis profile" in line):
-                continue
-            if in_session_start and line.strip() == "":
-                in_session_start = False
-                continue
-            if not in_session_start:
-                filtered_output.append(line)
-
-        # Print filtered output
-        if filtered_output:
-            print("\n".join(filtered_output))
-
-        update_test_performance_cache(t.name, end - start)
-        if result.returncode != 0:
-            all_passed = False
-    total_end = time.time()
-    update_actual_execution_duration(total_end - total_start)
-    print(f"⏱️  실제 총 수행 시간: {total_end - total_start:.1f}초")
-    return all_passed
+    # 개별 테스트 실행은 run_test_modules_sequentially로 위임
+    success, passed_count, failed_count = run_test_modules_sequentially(ordered_tests)
+    return success
 
 def run_failed_tests() -> bool:
     """Run only failed tests"""
@@ -581,14 +552,14 @@ def get_pytest_performance_data() -> dict[str, Any]:
     # Calculate test counts and average times per test
     file_test_counts = {}
     file_avg_times = {}
-    
+
     for test_file in test_files:
         file_name = test_file.name
         try:
             test_methods = get_test_methods(test_file)
             test_count = len(test_methods)
             file_test_counts[file_name] = test_count
-            
+
             if test_count > 0:
                 avg_time = file_durations[file_name] / test_count
                 file_avg_times[file_name] = avg_time
@@ -658,7 +629,7 @@ def print_test_statistics(stats: dict[str, Any]) -> None:
     print(f"📊 총 테스트 파일 수: {stats['total_test_files']}개")
     print(f"⏰ 마지막 성공 시간: {stats['last_success_time']}")
     print(f"🕐 예상 총 수행 시간: {perf_data['total_duration']:.1f}초")
-    
+
     # 실제 수행 시간 표시 (캐시에서 가져오기)
     actual_duration = get_actual_execution_duration()
     if actual_duration > 0:
@@ -666,7 +637,7 @@ def print_test_statistics(stats: dict[str, Any]) -> None:
         if perf_data['total_duration'] > 0:
             improvement = ((perf_data['total_duration'] - actual_duration) / perf_data['total_duration']) * 100
             print(f"📈 성능 개선율: {improvement:.1f}% (예상 대비 {actual_duration/perf_data['total_duration']:.1f}배 빠름)")
-    
+
     print(f"📈 평균 파일당 수행 시간: {perf_data['total_duration']/stats['total_test_files']:.1f}초")
 
     # Calculate total test count
@@ -684,7 +655,7 @@ def print_test_statistics(stats: dict[str, Any]) -> None:
     for i, (file_name, duration) in enumerate(perf_data['slowest_files'], 1):
         test_count = perf_data['file_test_counts'].get(file_name, 1)
         avg_time = perf_data['file_avg_times'].get(file_name, duration)
-        
+
         if duration >= 10:
             icon = "🔥"  # Very slow
         elif duration >= 5:
@@ -700,7 +671,7 @@ def print_test_statistics(stats: dict[str, Any]) -> None:
     for i, (file_name, avg_time) in enumerate(perf_data['slowest_avg_times'], 1):
         test_count = perf_data['file_test_counts'].get(file_name, 1)
         total_time = perf_data['file_durations'].get(file_name, 0)
-        
+
         if avg_time >= 5:
             icon = "🔥"  # Very slow per test
         elif avg_time >= 2:
@@ -715,19 +686,19 @@ def print_test_statistics(stats: dict[str, Any]) -> None:
     # Performance recommendations
     slow_files = [f for f, d in perf_data['file_durations'].items() if d >= 10]
     slow_avg_files = [f for f, avg in perf_data['file_avg_times'].items() if avg >= 2]
-    
+
     if slow_files:
         print(f"\n💡 성능 개선 권장사항:")
         print(f"   • {len(slow_files)}개 파일이 10초 이상 소요됩니다")
         print(f"   • Docker 컨테이너나 네트워크 호출이 있는 테스트 최적화 검토")
-    
+
     if slow_avg_files:
         print(f"   • {len(slow_avg_files)}개 파일의 평균 테스트 시간이 2초 이상입니다")
         print(f"   • 개별 테스트 최적화 검토 필요")
 
     fast_ratio = len([d for d in perf_data['file_durations'].values() if d < 1]) / len(perf_data['file_durations']) * 100
     fast_avg_ratio = len([avg for avg in perf_data['file_avg_times'].values() if avg < 0.5]) / len(perf_data['file_avg_times']) * 100
-    
+
     print(f"\n📊 성능 지표:")
     print(f"   • 빠른 테스트 비율 (<1초): {fast_ratio:.1f}%")
     print(f"   • 빠른 평균 테스트 비율 (<0.5초): {fast_avg_ratio:.1f}%")
@@ -833,7 +804,7 @@ def analyze_cprofile_results(profiler: cProfile.Profile, execution_time: float, 
     total_calls = 0
     # Use getattr for safer access to stats data
     stats_dict = getattr(ps, 'stats', {})
-    
+
     for func_data in stats_dict.values():
         total_calls += func_data[0]  # primitive calls
 
@@ -1035,35 +1006,35 @@ def is_test_module(path: Path) -> bool:
     """테스트 모듈 판별 함수 (Path.resolve()된 경로도 지원)"""
     resolved_path = path.resolve()
     resolved_test_dir = TEST_DIR.resolve()
-    return (resolved_path.name.startswith("test_") and 
-            resolved_path.suffix == ".py" and 
-            resolved_path.parent == resolved_test_dir and 
+    return (resolved_path.name.startswith("test_") and
+            resolved_path.suffix == ".py" and
+            resolved_path.parent == resolved_test_dir and
             resolved_path.name != "test_runner.py")
 
 
-def _get_test_modules_for_file(file_path: Path, deps: dict[Path, set[Path]], 
+def _get_test_modules_for_file(file_path: Path, deps: dict[Path, set[Path]],
                               reverse_deps: dict[Path, set[Path]]) -> set[Path]:
     """파일을 테스트하는 테스트 모듈들을 찾기"""
     test_modules = set()
-    
+
     # 1. 직접적인 테스트 모듈 찾기 (test_파일명.py)
     possible_test_names = [
         f"test_{file_path.stem}.py",
         f"test_{file_path.name}",
         f"test_{file_path.stem.replace('feed_maker_util_', 'feed_maker_util_')}.py"
     ]
-    
+
     for test_name in possible_test_names:
         test_path = TEST_DIR / test_name
         if is_test_module(test_path) and test_path.exists():
             test_modules.add(test_path)
-    
+
     # 2. 의존성 그래프에서 이 파일을 import하는 테스트 모듈들 찾기
     if file_path in reverse_deps:
         for importing_file in reverse_deps[file_path]:
             if is_test_module(importing_file):
                 test_modules.add(importing_file)
-    
+
     return test_modules
 
 
@@ -1133,7 +1104,7 @@ def analyze_all_dependencies() -> tuple[dict[Path, set[Path]], dict[Path, set[Pa
     # Performance optimization: Cache dependency analysis
     cache_file = PROJECT_ROOT / ".dependency_cache"
     cache_data = {}
-    
+
     # Try to load cached dependencies
     if cache_file.exists():
         try:
@@ -1141,7 +1112,7 @@ def analyze_all_dependencies() -> tuple[dict[Path, set[Path]], dict[Path, set[Pa
             import pickle
             with open(cache_file, 'rb') as f:
                 cache_data = pickle.load(f)
-            
+
             # Check if cache is still valid (based on file modification times)
             if _is_dependency_cache_valid(cache_data):
                 print("📦 Using cached dependency analysis (performance optimized)")
@@ -1152,11 +1123,11 @@ def analyze_all_dependencies() -> tuple[dict[Path, set[Path]], dict[Path, set[Pa
 
     print("🔍 Performing fresh dependency analysis...")
     start_time = time.time()
-    
+
     # Use AST-based dependency analysis instead of ModuleGraph
     deps = build_dependency_graph()
     reverse_deps = get_reverse_dependencies(deps)
-    
+
     elapsed = time.time() - start_time
     print(f"✅ Dependency analysis completed in {elapsed:.2f}s")
 
@@ -1179,30 +1150,30 @@ def analyze_all_dependencies() -> tuple[dict[Path, set[Path]], dict[Path, set[Pa
 def get_reverse_dependencies(deps: dict[Path, set[Path]]) -> dict[Path, set[Path]]:
     """Get reverse dependencies (who imports this file)"""
     reverse_deps: dict[Path, set[Path]] = {}
-    
+
     for src, targets in deps.items():
         for target in targets:
             if target not in reverse_deps:
                 reverse_deps[target] = set()
             reverse_deps[target].add(src)
-    
+
     return reverse_deps
 
-def get_affected_files(modified_files: list[Path], deps: dict[Path, set[Path]], 
+def get_affected_files(modified_files: list[Path], deps: dict[Path, set[Path]],
                       reverse_deps: dict[Path, set[Path]], max_depth: int = 2) -> set[Path]:
     """Get all files affected by the modified files (limited recursive dependency tracking)"""
     affected = set(modified_files)
     to_process = [(f, 0) for f in modified_files]  # (file, depth)
     processed = set()
-    
+
     # 제한된 깊이로 영향을 받는 파일을 찾기
     while to_process:
         current_file, depth = to_process.pop(0)
         if current_file in processed or depth >= max_depth:
             continue
-            
+
         processed.add(current_file)
-        
+
         # 현재 파일을 import하는 파일들을 찾기 (한 단계만)
         if current_file in reverse_deps:
             importers = reverse_deps[current_file]
@@ -1210,10 +1181,10 @@ def get_affected_files(modified_files: list[Path], deps: dict[Path, set[Path]],
                 if importer not in affected:
                     affected.add(importer)
                     to_process.append((importer, depth + 1))
-    
+
     return affected
 
-def print_simple_dependency_tree(deps: dict[Path, set[Path]], 
+def print_simple_dependency_tree(deps: dict[Path, set[Path]],
                                 focus_files: Optional[set[Path]] = None,
                                 max_depth: int = 2,
                                 executed_tests: Optional[set[Path]] = None,
@@ -1275,9 +1246,9 @@ def print_simple_dependency_tree(deps: dict[Path, set[Path]],
     print("="*80)
 
 
-def _print_branch_tree_node(node: Path, deps: dict[Path, set[Path]], 
+def _print_branch_tree_node(node: Path, deps: dict[Path, set[Path]],
                            max_depth: int, current_depth: int, visited: set[Path],
-                           executed_tests: set[Path], target_tests: set[Path], 
+                           executed_tests: set[Path], target_tests: set[Path],
                            failed_tests: set[Path], passed_tests: set[Path],
                            prefix: str = "", is_last: bool = True,
                            reverse_deps: Optional[dict[Path, set[Path]]] = None,
@@ -1287,26 +1258,26 @@ def _print_branch_tree_node(node: Path, deps: dict[Path, set[Path]],
     node = node.resolve()
     if current_depth > max_depth or node in visited:
         return
-    
+
     visited.add(node)
-    
+
     # Get status emoji (일반 모듈도 테스트 상태 반영)
     status = get_status_emoji(node, executed_tests, target_tests, failed_tests, passed_tests,
                              deps, reverse_deps, modified_files, affected_files)
-    
+
     # Handle invalid paths
     try:
         node_rel = node.relative_to(PROJECT_ROOT)
     except ValueError:
         # Skip invalid paths
         return
-    
+
     branch = prefix[:-4] + ("└── " if is_last else "├── ") if current_depth > 0 else ""
     print(f"{prefix}{branch}{status} {node_rel}")
-    
+
     if current_depth >= max_depth:
         return
-    
+
     dependencies = sorted([dep.resolve() for dep in deps.get(node, set())], key=lambda x: str(x))
     unvisited_deps = [dep for dep in dependencies if dep not in visited]
     for i, dep in enumerate(unvisited_deps):
@@ -1345,7 +1316,7 @@ def get_test_targets_with_dependencies(modified_files: list[Path]) -> list[Path]
     def get_passed_tests() -> set[Path]:
         cache_dir = Path(".pytest_cache/v/cache")
         lastfailed_file = cache_dir / "lastfailed"
-        
+
         # 실패한 테스트 파일 수집
         failed_files = set()
         if lastfailed_file.exists():
@@ -1360,16 +1331,16 @@ def get_test_targets_with_dependencies(modified_files: list[Path]) -> list[Path]
                             failed_files.add(test_file_path.resolve())
             except (json.JSONDecodeError, OSError, PermissionError):
                 pass
-        
+
         # 전체 테스트 목록
         all_tests = set()
         for test_file in TEST_DIR.glob("test_*.py"):
             if test_file.name != "test_runner.py":
                 all_tests.add(test_file.resolve())
-        
+
         # 성공한 테스트 = 전체 - 실패 하지만, 너무 공격적이면 빈 set 반환
         passed_tests = all_tests - failed_files
-        
+
         # 만약 실패한 테스트가 2개 이하라면 대부분 성공한 것으로 간주
         if len(failed_files) <= 2:
             return passed_tests
@@ -1419,7 +1390,7 @@ def get_test_targets_with_dependencies(modified_files: list[Path]) -> list[Path]
     # 수정된 파일에 대한 테스트는 항상 실행 (성공 여부와 관계없이)
     # 이미 성공한 테스트 모듈 중에서 수정된 파일과 관련 없는 것만 제외
     passed_tests = get_passed_tests()
-    
+
     # 수정된 파일과 관련된 테스트는 항상 포함
     modified_test_files = set()
     for modified_file in modified_files:
@@ -1437,13 +1408,13 @@ def get_test_targets_with_dependencies(modified_files: list[Path]) -> list[Path]
                 if is_test_module(test_path) and test_path.exists():
                     modified_test_files.add(test_path)
                     break
-    
+
     # affected_files에 포함된 테스트 모듈들도 항상 포함
     affected_test_files = set()
     for affected_file in affected_files:
         if is_test_module(affected_file):
             affected_test_files.add(affected_file)
-    
+
     # 수정된 파일과 관련된 테스트 또는 affected_files에 포함된 테스트는 제외하지 않음
     unique_targets = [t for t in unique_targets if t not in passed_tests or t in modified_test_files or t in affected_test_files]
 
@@ -1539,10 +1510,14 @@ def main() -> bool:
             print(f"❌ Test file not found: {args.file}")
             return False
     elif args.all:
-        # For all tests, show all test dependencies
+        # For all tests: 직접 개별 실행하여 에러를 바로 확인
         test_files = [f for f in TEST_DIR.glob("test_*.py") if f.name != "test_runner.py"]
-        target_tests = set(test_files)
-        print(f"🎯 Running all tests: {len(target_tests)} files")
+        print(f"🎯 Running all tests: {len(test_files)} files")
+        # run_test_modules_sequentially로 개별 테스트 실행 및 출력
+        success, passed_count, failed_count = run_test_modules_sequentially(test_files)
+        # 결과 카운트 설정
+        actual_passed_count = passed_count
+        actual_failed_count = failed_count
     else:
         # For default mode, show dependencies for changed files
         if modified_files:
@@ -1562,7 +1537,7 @@ def main() -> bool:
     # === 끝 ===
 
     success = False
-    
+
     if args.profile:
         # Profile the specified test module
         test_module = args.profile
@@ -1614,7 +1589,7 @@ def main() -> bool:
             else:
                 passed_tests.add(test_file)
                 actual_passed_count += 1
-        
+
         # Override success based on actual results
         success = actual_failed_count == 0
     else:
@@ -1622,12 +1597,12 @@ def main() -> bool:
         failed_tests_success = run_failed_tests()
         if not failed_tests_success:
             return False
-        
+
         # Run changed tests and get detailed results
         success, actual_passed_count, actual_failed_count = run_changed_tests_with_results()
-        
+
         print(f"\n📋 Test execution completed: {actual_passed_count} passed, {actual_failed_count} failed")
-        
+
         # Update test status after execution
         last_success = get_last_success_time()
         modified_files = set(get_modified_files(last_success))
@@ -1640,15 +1615,15 @@ def main() -> bool:
                     failed_tests.add(test_target)
                 else:
                     passed_tests.add(test_target)
-        
+
         # Override success based on actual results
         success = actual_failed_count == 0
-    
+
     # Update last success time if tests passed
     if success:
         set_last_success_time()
         print_test_statistics(get_test_statistics())
-    
+
     # Print final dependency tree with actual test results (간결하게)
     if executed_tests:
         print("\n" + "="*80)
@@ -1657,7 +1632,7 @@ def main() -> bool:
         print(f"✅ Passed: {actual_passed_count} tests")
         print(f"❌ Failed: {actual_failed_count} tests")
         print(f"📋 Total executed: {len(executed_tests)} tests")
-        
+
         if len(passed_tests) > 0:
             print(f"✅ Passed tests: {[t.name for t in list(passed_tests)[:5]]}{'...' if len(passed_tests) > 5 else ''}")
         if len(failed_tests) > 0:
@@ -1670,7 +1645,7 @@ def main() -> bool:
                                        target_tests=target_tests, reverse_deps=reverse_deps,
                                        executed_tests=executed_tests, failed_tests=failed_tests, passed_tests=passed_tests,
                                        modified_files=modified_files, affected_files=affected_files)
-    
+
     return success
 
 

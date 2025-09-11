@@ -8,9 +8,12 @@ from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from itertools import islice
 from typing import Any, Optional
+
 from bin.feed_maker_util import PathUtil, Env
 from bin.db import DB, Session
 from bin.models import FeedInfo, ElementNameCount
+from bin.feed_maker_util import Config
+
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
@@ -19,7 +22,7 @@ LOGGER = logging.getLogger()
 class FeedManager:
     work_dir_path = Path(Env.get("FM_WORK_DIR"))
     public_feed_dir_path = Path(Env.get("WEB_SERVICE_FEED_DIR_PREFIX"))
-    
+
     @classmethod
     def get_feed_name_list_url_count_map(cls) -> dict[str, dict[str, Any]]:
         LOGGER.debug("# get_feed_name_list_url_count_map()")
@@ -58,7 +61,7 @@ class FeedManager:
         LOGGER.debug("# remove_config_info(feed_dir_path='%s', do_remove_file=%r)", PathUtil.short_path(feed_dir_path), do_remove_file)
         feed_name = feed_dir_path.name
         if do_remove_file:
-            (feed_dir_path / "conf.json").unlink(missing_ok=True)
+            (feed_dir_path / Config.DEFAULT_CONF_FILE).unlink(missing_ok=True)
         with DB.session_ctx() as s:
             s.query(FeedInfo).filter_by(feed_name=feed_name).update({
                 FeedInfo.is_active: False,
@@ -95,7 +98,7 @@ class FeedManager:
         else:
             # active feed
             is_active = True
-            conf_json_file_path = feed_dir_path / "conf.json"
+            conf_json_file_path = feed_dir_path / Config.DEFAULT_CONF_FILE
             if feed_dir_path.is_dir() and conf_json_file_path.is_file():
                 st = feed_dir_path.stat()
                 config_modify_date = datetime.fromtimestamp(st.st_mtime, timezone.utc)
@@ -132,7 +135,7 @@ class FeedManager:
             existing_feed.unit_size_per_day = unit_size_per_day
         else:
             s.add(FeedInfo(feed_name=feed_name, group_name=group_name, feed_title=title, is_active=is_active, config=config_str, config_modify_date=config_modify_date, url_list_count=url_list_count, is_completed=is_completed, unit_size_per_day=unit_size_per_day))
-        
+
         s.flush()
 
     @classmethod
@@ -153,7 +156,7 @@ class FeedManager:
     def load_all_config_files(self, max_num_feeds: Optional[int] = None) -> None:
         LOGGER.debug("# load_all_config_files(max_num_feeds=%r)", max_num_feeds)
         start_ts = datetime.now(timezone.utc)
-        
+
         with DB.session_ctx() as s:
             # 기존 엘리먼트 카운트 데이터를 모두 삭제하여 누적 방지
             s.query(ElementNameCount).delete()
@@ -176,7 +179,7 @@ class FeedManager:
 
             for element_name, count in total_element_name_count_map.items():
                 s.add(ElementNameCount(element_name=element_name, count=count))
-                
+
         end_ts = datetime.now(timezone.utc)
         LOGGER.info("* The loading of all config files is done. %d items / %s sec", num_items, (end_ts - start_ts))
 
@@ -240,7 +243,7 @@ class FeedManager:
     def load_all_rss_files(self, max_num_feeds: Optional[int] = None) -> None:
         LOGGER.debug("# load_all_rss_files(max_num_feeds=%r)", max_num_feeds)
         start_ts = datetime.now(timezone.utc)
-        
+
         with DB.session_ctx() as s:
             num_items = 0
             for group_dir_path in islice(self.work_dir_path.iterdir(), max_num_feeds):
@@ -252,7 +255,7 @@ class FeedManager:
                         continue
                     FeedManager._add_rss_info(s, feed_dir_path)
                     num_items += 1
-            
+
         end_ts = datetime.now(timezone.utc)
         LOGGER.info("* The loading of all rss files is done. %d items / %s sec", num_items, (end_ts - start_ts))
 
@@ -320,11 +323,11 @@ class FeedManager:
                 feed.upload_date = upload_date
         else:
             s.add(FeedInfo(
-                feed_name=feed_name, 
-                public_html=True, 
-                public_feed_file_path=str(public_feed_file_path), 
-                file_size=file_size, 
-                num_items=num_items, 
+                feed_name=feed_name,
+                public_html=True,
+                public_feed_file_path=str(public_feed_file_path),
+                file_size=file_size,
+                num_items=num_items,
                 upload_date=upload_date
             ))
 
@@ -344,12 +347,12 @@ class FeedManager:
     def load_all_public_feed_files(self, max_num_public_feeds: Optional[int] = None) -> None:
         LOGGER.debug("# load_all_public_feed_files(max_num_public_feeds=%r)", max_num_public_feeds)
         start_ts = datetime.now(timezone.utc)
-        
+
         with DB.session_ctx() as s:
             num_items = 0
             for public_feed_file_path in islice(self.public_feed_dir_path.glob("*.xml"), max_num_public_feeds):
                 num_items += FeedManager._add_public_feed(s, public_feed_file_path)
-            
+
         end_ts = datetime.now(timezone.utc)
         LOGGER.info("* The loading of all public feed files is done. %d items / %s sec", num_items, (end_ts - start_ts))
 
@@ -411,7 +414,7 @@ class FeedManager:
         collect_date: Optional[datetime] = None
 
         # 설정 파일에서 is_completed 값을 읽어옴
-        conf_file_path = feed_dir_path / "conf.json"
+        conf_file_path = feed_dir_path / Config.DEFAULT_CONF_FILE
         if conf_file_path.is_file():
             try:
                 import json
@@ -419,12 +422,12 @@ class FeedManager:
                     conf_data = json.load(f)
                 if "configuration" in conf_data and "collection" in conf_data["configuration"]:
                     is_completed = conf_data["configuration"]["collection"].get("is_completed", False)
-            except (OSError, IOError, json.JSONDecodeError, KeyError, TypeError, ValueError, RuntimeError) as e:
+            except (OSError, IOError, json.JSONDecodeError, KeyError, TypeError, RuntimeError) as e:
                 LOGGER.warning("Failed to read is_completed from config file: %s", e)
 
         if group_name in (".mypy_cache", ".git", "test") or feed_name in (".mypy_cache", ".git", "test"):
             return 0
-        
+
         if group_name.startswith("_") or feed_name.startswith("_"):
             # disabled feed
             is_active = False
@@ -435,7 +438,7 @@ class FeedManager:
         else:
             # active feed
             is_active = True
-       
+
         row = s.query(FeedInfo).where(FeedInfo.feed_name == feed_name, FeedInfo.is_completed).first()
         if row is not None:
             unit_size_per_day = row.unit_size_per_day
@@ -482,7 +485,7 @@ class FeedManager:
                 feed.collect_date = collect_date
         else:
             s.add(FeedInfo(feed_name=feed_name, group_name=group_name, is_active=is_active, is_completed=is_completed, current_index=current_index, total_item_count=total_item_count, progress_ratio=progress_ratio, due_date=due_date, collect_date=collect_date))
-        
+
         return 1
 
     @classmethod
@@ -495,7 +498,7 @@ class FeedManager:
     def load_all_progress_info_from_files(self, max_num_feeds: Optional[int] = None) -> None:
         LOGGER.debug("# load_all_progress_info_from_files(max_num_feeds=%r)", max_num_feeds)
         start_ts = datetime.now(timezone.utc)
-        
+
         with DB.session_ctx() as s:
             num_items = 0
             for group_dir_path in islice(self.work_dir_path.iterdir(), max_num_feeds):
@@ -506,7 +509,7 @@ class FeedManager:
                     if not feed_dir_path.is_dir():
                         continue
                     num_items += FeedManager._add_progress_info(s, feed_dir_path)
-            
+
         end_ts = datetime.now(timezone.utc)
         LOGGER.info("* The loading of all progress info from files is done. %d items / %s sec", num_items, (end_ts - start_ts))
 
@@ -557,8 +560,8 @@ class FeedManager:
         LOGGER.debug("# get_feed_info(group_name='%s', feed_name='%s')", group_name, feed_name)
 
         with DB.session_ctx() as s:
-            feed = s.query(FeedInfo).where(FeedInfo.feed_name == feed_name, 
-                                           FeedInfo.group_name == group_name,                                    
+            feed = s.query(FeedInfo).where(FeedInfo.feed_name == feed_name,
+                                           FeedInfo.group_name == group_name,
                                            FeedInfo.config.isnot(None)).first()
 
         if not feed:

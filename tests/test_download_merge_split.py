@@ -10,6 +10,7 @@ from dotenv import dotenv_values
 
 from bin.feed_maker_util import Env
 import utils.download_merge_split
+from utils.download_merge_split import ThresholdOptions, ImageTypeOptions, ProcessOptions
 
 
 class TestDownloadMergeSplit(unittest.TestCase):
@@ -265,12 +266,7 @@ class TestDownloadMergeSplit(unittest.TestCase):
             mock_glob.return_value = mock_split_files
 
             # Call the statistics function directly
-            utils.download_merge_split.print_statistics(
-                mock_original_images,
-                [],
-                mock_page_url,
-                mock_feed_img_dir
-            )
+            utils.download_merge_split.print_statistics(mock_original_images, mock_page_url, mock_feed_img_dir)
 
             output = mock_stdout.getvalue()
 
@@ -340,6 +336,10 @@ class TestDownloadMergeSplit(unittest.TestCase):
         feed_img_dir_path = Path('/fake/img_dir')
         img_url_prefix = 'http://test.com/prefix'
 
+        threshold_options = ThresholdOptions(bandwidth=0, diff_threshold=0, size_threshold=0, acceptable_diff_of_color_value=0, num_units=0)
+        image_type_options = ImageTypeOptions(bgcolor_option="", orientation_option="", wider_scan_option="")
+        process_options = ProcessOptions(do_innercrop=False, do_only_merge=True)
+
         # Mock the functions called by the orchestrator
         with patch('utils.download_merge_split.create_merged_chunks') as mock_create_chunks, \
              patch('utils.download_merge_split.crop_image_file') as mock_crop, \
@@ -360,13 +360,11 @@ class TestDownloadMergeSplit(unittest.TestCase):
             mock_create_chunks.reset_mock()
             mock_split.reset_mock()
             mock_print.reset_mock()
+
             utils.download_merge_split.progressive_merge_and_split(
                 feed_dir_path=feed_dir_path, img_file_list=img_file_list, page_url=page_url,
                 feed_img_dir_path=feed_img_dir_path, img_url_prefix=img_url_prefix,
-                do_only_merge=True, do_innercrop=False, # Other args are irrelevant due to mocks
-                bandwidth=0, diff_threshold=0, size_threshold=0, acceptable_diff_of_color_value=0,
-                num_units=0, bgcolor_option="", orientation_option="", wider_scan_option=""
-            )
+                threshold_options=threshold_options, image_type_options=image_type_options, process_options=process_options)
             mock_split.assert_not_called()
             self.assertIn("width='100%'", mock_print.call_args_list[0].args[0])
             self.assertNotIn("width=", mock_print.call_args_list[1].args[0])
@@ -374,14 +372,13 @@ class TestDownloadMergeSplit(unittest.TestCase):
             # --- Scenario 3.1: Test do_innercrop=True ---
             mock_create_chunks.reset_mock()
             mock_crop.reset_mock()
-            mock_split.return_value = True # Ensure split is "successful"
+            mock_split.return_value = True  # Ensure split is "successful"
+            # process_options에서 do_innercrop=True로 설정
+            innercrop_options = ProcessOptions(do_innercrop=True, do_only_merge=True)
             utils.download_merge_split.progressive_merge_and_split(
                 feed_dir_path=feed_dir_path, img_file_list=img_file_list, page_url=page_url,
                 feed_img_dir_path=feed_img_dir_path, img_url_prefix=img_url_prefix,
-                do_only_merge=False, do_innercrop=True, # Test this flag
-                bandwidth=0, diff_threshold=0, size_threshold=0, acceptable_diff_of_color_value=0,
-                num_units=0, bgcolor_option="", orientation_option="", wider_scan_option=""
-            )
+                threshold_options=threshold_options, image_type_options=image_type_options, process_options=innercrop_options)
             self.assertEqual(mock_crop.call_count, 2)
             mock_crop.assert_any_call(feed_dir_path, mock_chunk_path1)
             mock_crop.assert_any_call(feed_dir_path, mock_chunk_path2)
@@ -390,13 +387,12 @@ class TestDownloadMergeSplit(unittest.TestCase):
             mock_fix.reset_mock()
             mock_output_files.reset_mock()
             mock_split.reset_mock()
+
+            process_options = ProcessOptions(do_innercrop=False, do_only_merge=False)
             utils.download_merge_split.progressive_merge_and_split(
                 feed_dir_path=feed_dir_path, img_file_list=img_file_list, page_url=page_url,
                 feed_img_dir_path=feed_img_dir_path, img_url_prefix=img_url_prefix,
-                do_only_merge=False, do_innercrop=False,
-                bandwidth=0, diff_threshold=0, size_threshold=0, acceptable_diff_of_color_value=0,
-                num_units=0, bgcolor_option="", orientation_option="", wider_scan_option=""
-            )
+                threshold_options=threshold_options, image_type_options=image_type_options, process_options=process_options)
             self.assertEqual(mock_split.call_count, 2)
             mock_fix.assert_called_once()
             mock_output_files.assert_called_once()
@@ -548,7 +544,7 @@ class TestDownloadMergeSplitWebPOutputs(unittest.TestCase):
 
             with patch('sys.stdout', new_callable=io.StringIO) as mock_stdout:
                 # original_images can be empty for this check
-                print_statistics([], [], page_url, feed_img_dir)
+                print_statistics([], page_url, feed_img_dir)
                 output = mock_stdout.getvalue()
 
             # Processed Images should count stems uniquely, preferring WEBP over JPEG

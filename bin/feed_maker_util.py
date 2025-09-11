@@ -349,6 +349,7 @@ class NotFoundConfigItemError(Exception):
 
 
 class Config:
+    DEFAULT_CONF_FILE = "conf.json"
     conf: dict[str, dict[str, Any]] = {}
 
     def __init__(self, feed_dir_path: Path = Path.cwd()) -> None:
@@ -357,7 +358,7 @@ class Config:
         if conf_file:
             config_file_path = Path(conf_file)
         else:
-            config_file_path = feed_dir_path / "conf.json"
+            config_file_path = feed_dir_path / Config.DEFAULT_CONF_FILE
         if config_file_path.is_file():
             with config_file_path.open('r', encoding="utf-8") as infile:
                 data = json.load(infile)
@@ -642,8 +643,8 @@ class FileManager:
                 for line in f:
                     if FileManager.IMAGE_NOT_FOUND_IMAGE in line:
                         result.append(FileManager.IMAGE_NOT_FOUND_IMAGE)
-                    escaped_image_url_prefix = re.sub(r'https', 'https?', Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"))
-                    escaped_image_url_prefix = re.sub(r'\.', '\\.', escaped_image_url_prefix)
+                    escaped_image_url_prefix: str = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX").replace("https", "https?")
+                    escaped_image_url_prefix = escaped_image_url_prefix.replace(".", "\\.")
                     m = re.search(r'<img src=[\"\']%s/[^/]+/(?P<img>\S+)[\"\']' % escaped_image_url_prefix, line)
                     if m:
                         # 실제로 다운로드되어 있는지 확인

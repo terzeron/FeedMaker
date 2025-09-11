@@ -146,13 +146,13 @@ def test_search_manga_site() -> None:
 
             # 결과가 문자열인지 확인
             assert isinstance(result, str), f"Expected string, got {type(result)}"
-            
+
             # HTML 조각이 제대로 추출되었는지 확인
             assert "테스트 만화 1" in result, "Expected '테스트 만화 1' in result"
             assert "테스트 만화 2" in result, "Expected '테스트 만화 2' in result"
             assert "/test1" in result, "Expected '/test1' in result"
             assert "/test2" in result, "Expected '/test2' in result"
-            
+
             # style, class, id 속성이 제거되었는지 확인
             assert 'style=' not in result, "Expected style attributes to be removed"
             assert 'class=' not in result, "Expected class attributes to be removed"
@@ -178,7 +178,7 @@ def test_search_manga_site() -> None:
 
             # 빈 검색 결과 테스트 (실제 사이트 설정 파일이 없어도 동작해야 함)
             try:
-                result = search_manager.search("", "존재하지않는키워드", False)
+                result = search_manager.search_sites("", "존재하지않는키워드", False)
                 assert isinstance(result, str)
                 LOGGER.info("✓ SearchManager empty search result test successful")
             except (OSError, KeyError, AttributeError) as e:
@@ -380,4 +380,4 @@ def test_search_manga_site() -> None:
 
 
 if __name__ == "__main__":
-    test_search_manga_site() 
+    test_search_manga_site()

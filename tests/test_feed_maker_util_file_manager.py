@@ -9,6 +9,7 @@ import logging.config
 from pathlib import Path
 
 from bin.feed_maker_util import Env, FileManager
+from bin.feed_maker_util import Config
 
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -34,7 +35,7 @@ class FileManagerTest(unittest.TestCase):
         self.feed_dir_path = Path(Env.get("FM_WORK_DIR")) / self.group_name / self.feed_name
         self.feed_dir_path.mkdir(exist_ok=True)
         self.sample_conf_file_path = Path(__file__).parent / "conf.naverwebtoon.json"
-        self.conf_file_path = self.feed_dir_path / "conf.json"
+        self.conf_file_path = self.feed_dir_path / Config.DEFAULT_CONF_FILE
         shutil.copy(self.sample_conf_file_path, self.conf_file_path)
 
         self.rss_file_path = self.feed_dir_path / f"{self.feed_name}.xml"

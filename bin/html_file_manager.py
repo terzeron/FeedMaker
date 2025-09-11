@@ -61,10 +61,10 @@ class HtmlFileManager:
                 update_date = row.update_date
                 feed_title = HtmlFileManager._get_feed_title_from_path(feed_dir_path)
                 html_file_size_map[file_name] = {
-                    "file_name": file_name, 
-                    "file_path": file_path, 
-                    "feed_dir_path": feed_dir_path, 
-                    "size": size, 
+                    "file_name": file_name,
+                    "file_path": file_path,
+                    "feed_dir_path": feed_dir_path,
+                    "size": size,
                     "update_date": update_date,
                     "feed_title": feed_title
                 }
@@ -173,7 +173,6 @@ class HtmlFileManager:
     def _add_html_file(self, s: Session, feed_dir_path: Path) -> int:
         LOGGER.debug("# _add_html_info(feed_dir_path=%s)", PathUtil.short_path(feed_dir_path))
         html_file_count = 0
-        update_date = datetime.now(timezone.utc)
 
         for path in feed_dir_path.glob("html/*"):
             feed_name = path.parent.name
@@ -212,10 +211,10 @@ class HtmlFileManager:
 
         with DB.session_ctx() as s:
             db_files = {row.file_path: row.update_date for row in s.query(HtmlFileInfo.file_path, HtmlFileInfo.update_date).all()}
-            
+
             new_files = []
             updated_files = []
-            
+
             file_system_paths = set()
 
             for group_path in islice(self.work_dir_path.iterdir(), max_num_feeds):
@@ -225,11 +224,11 @@ class HtmlFileManager:
                 for feed_dir_path in group_path.iterdir():
                     if not feed_dir_path.is_dir():
                         continue
-                    
+
                     for path in feed_dir_path.glob("html/*.html"):
                         file_path_str = PathUtil.short_path(path)
                         file_system_paths.add(file_path_str)
-                        
+
                         try:
                             mtime = datetime.fromtimestamp(path.stat().st_mtime, timezone.utc)
                         except FileNotFoundError:
@@ -241,7 +240,7 @@ class HtmlFileManager:
                         elif mtime != db_files[file_path_str]:
                             # Updated file
                             updated_files.append(self._prepare_html_file_info(path, mtime))
-            
+
             deleted_files = set(db_files.keys()) - file_system_paths
 
             if new_files:
@@ -275,12 +274,12 @@ class HtmlFileManager:
                         count_with_image_not_found += 1
         except (FileNotFoundError, UnicodeDecodeError) as e:
             LOGGER.warning("Could not process file %s: %s", file_path_str, e)
-        
+
         if image_tag_count > 1:
             count_with_many_image_tag = 1
         elif image_tag_count < 1:
             count_without_image_tag = 1
-        
+
         return {
             "file_path": file_path_str,
             "file_name": file_name,

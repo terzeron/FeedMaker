@@ -28,7 +28,7 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncGenerator[None, None]:
     try:
         DB.create_all_tables()
         fastapi_app.state.feed_maker_manager = FeedMakerManager()
-    except (OSError, ImportError, TypeError, ValueError, AttributeError, ConnectionError, RuntimeError) as e:
+    except (ImportError, TypeError, ValueError, AttributeError, RuntimeError, OSError) as e:
         DB.drop_all_tables()
         raise e
 
@@ -179,7 +179,7 @@ async def extract_titles_from_public_feed(feed_name: str, feed_maker_manager: Fe
     LOGGER.info("GET /public_feeds/%s/item_titles -> extract_titles_from_public_feed(%s)", feed_name, feed_name)
     response_object: dict[str, Any] = {}
     result, error = await feed_maker_manager.extract_titles_from_public_feed(feed_name)
-    
+
     if isinstance(result, list):
         response_object["status"] = "success"
         response_object["item_titles"] = result
@@ -188,7 +188,7 @@ async def extract_titles_from_public_feed(feed_name: str, feed_maker_manager: Fe
         response_object["status"] = "failure"
         response_object["message"] = error
         response_object["error_code"] = result
-        
+
     return response_object
 
 
