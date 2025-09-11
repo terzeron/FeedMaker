@@ -105,18 +105,18 @@ class FeedMakerManager:
             return "", f"can't find such file '{PathUtil.short_path(exec_result_file_path)}'"
 
     @staticmethod
-    async def get_problems_status_info() -> tuple[dict[str, dict[str, Any]], str]:
+    def get_problems_status_info() -> tuple[dict[str, dict[str, Any]], str]:
         LOGGER.debug("# get_problems_status_info()")
         feed_name_status_info = ProblemManager.get_feed_name_status_info_map()
         return feed_name_status_info, ""
 
     @staticmethod
-    async def get_problems_progress_info() -> tuple[dict[str, dict[str, Any]], str]:
+    def get_problems_progress_info() -> tuple[dict[str, dict[str, Any]], str]:
         LOGGER.debug("# get_problems_progress_info()")
         return FeedManager.get_feed_name_progress_info_map(), ""
 
     @staticmethod
-    async def get_problems_public_feed_info() -> tuple[dict[str, dict[str, Any]], str]:
+    def get_problems_public_feed_info() -> tuple[dict[str, dict[str, Any]], str]:
         LOGGER.debug("# get_problems_public_feed_info()")
         return FeedManager.get_feed_name_public_feed_info_map(), ""
 
@@ -130,12 +130,12 @@ class FeedMakerManager:
         }, ""
 
     @staticmethod
-    async def get_problems_element_info() -> tuple[dict[str, Any], str]:
+    def get_problems_element_info() -> tuple[dict[str, Any], str]:
         LOGGER.debug("# get_problems_element_info()")
         return FeedManager.get_element_name_count_map(), ""
 
     @staticmethod
-    async def get_problems_list_url_info() -> tuple[dict[str, Any], str]:
+    def get_problems_list_url_info() -> tuple[dict[str, Any], str]:
         LOGGER.debug("# get_problems_list_url_info()")
         return FeedManager.get_feed_name_list_url_count_map(), ""
 
@@ -148,7 +148,7 @@ class FeedMakerManager:
         return keyword in config_item
 
     @staticmethod
-    async def search(keywords: str) -> tuple[list[dict[str, Any]], str]:
+    def search(keywords: str) -> tuple[list[dict[str, Any]], str]:
         LOGGER.debug("# search(keywords='%s')", keywords)
         keyword_list = keywords.split(' ')
         result = FeedManager.search(keyword_list)
@@ -157,7 +157,7 @@ class FeedMakerManager:
         return [], f"can't search feed or group matching '{keywords}'"
 
     @staticmethod
-    async def search_site(keyword: str) -> tuple[str, str]:
+    def search_site(keyword: str) -> tuple[str, str]:
         LOGGER.debug("# search_site(keyword='%s')", keyword)
         search_manager = SearchManager()
         result = search_manager.search_sites("", keyword)
@@ -178,7 +178,7 @@ class FeedMakerManager:
         return 0
 
     @staticmethod
-    async def get_groups() -> tuple[list[dict[str, Any]], str]:
+    def get_groups() -> tuple[list[dict[str, Any]], str]:
         LOGGER.debug("# get_groups()")
         result = FeedManager.get_groups()
         if result:
@@ -244,7 +244,7 @@ class FeedMakerManager:
             return "PARSE_ERROR", f"RSS 파일 파싱에 실패했습니다: {e}"
 
     @staticmethod
-    async def get_feeds_by_group(group_name: str) -> tuple[list[dict[str, str]], str]:
+    def get_feeds_by_group(group_name: str) -> tuple[list[dict[str, str]], str]:
         LOGGER.debug("# get_feeds_by_group(group_name='%s')", group_name)
         result = FeedManager.get_feeds_by_group(group_name)
         if result:
@@ -253,7 +253,7 @@ class FeedMakerManager:
         return [], f"no feed list in group '{group_name}'"
 
     @staticmethod
-    async def get_feed_info_by_name(group_name: str, feed_name: str) -> tuple[dict[str, Any], str]:
+    def get_feed_info_by_name(group_name: str, feed_name: str) -> tuple[dict[str, Any], str]:
         LOGGER.debug("# get_feed_info_by_name(group_name='%s', feed_name='%s')", group_name, feed_name)
         feed_info = FeedManager.get_feed_info(group_name, feed_name)
         if feed_info:
@@ -397,7 +397,7 @@ class FeedMakerManager:
         return True, ""
 
     @staticmethod
-    async def toggle_feed(feed_name: str) -> tuple[str, str]:
+    def toggle_feed(feed_name: str) -> tuple[str, str]:
         LOGGER.debug("# toggle_feed(feed_name='%s')", feed_name)
 
         if FeedManager.toggle_feed(feed_name):
@@ -405,7 +405,7 @@ class FeedMakerManager:
         return "", f"can't toggle feed '{feed_name}'"
 
     @staticmethod
-    async def toggle_group(group_name: str) -> tuple[str, str]:
+    def toggle_group(group_name: str) -> tuple[str, str]:
         LOGGER.debug(f"# toggle_group({group_name})")
 
         if FeedManager.toggle_group(group_name):
@@ -413,6 +413,6 @@ class FeedMakerManager:
         return "", f"can't toggle group '{group_name}'"
 
     @staticmethod
-    async def check_running(group_name: str, feed_name: str) -> Optional[bool]:
+    def check_running(group_name: str, feed_name: str) -> Optional[bool]:
         # LOGGER.debug(f"# check_running({group_name}, {feed_name})")
         return FeedMakerRunner.check_running(group_name, feed_name)
