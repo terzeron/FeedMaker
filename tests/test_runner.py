@@ -19,6 +19,10 @@ import ast
 
 from graphlib import TopologicalSorter
 from modulegraph.modulegraph import ModuleGraph
+# 최근 테스트 실행 결과(파일 단위)를 보관하여 요약 출력에 활용
+LAST_RUN_PASSED: set[Path] = set()
+LAST_RUN_FAILED: set[Path] = set()
+
 
 # Always resolve project root (directory containing 'tests' folder)
 SCRIPT_PATH = Path(__file__).resolve()
@@ -42,6 +46,35 @@ def get_last_success_time() -> float:
     if LAST_SUCCESS_FILE.exists():
         return float(LAST_SUCCESS_FILE.read_text())
     return 0.0
+
+def get_last_run_time() -> float:
+    """Get the timestamp of the last test runner execution (regardless of success)."""
+    LAST_RUN_FILE = PROJECT_ROOT / ".last_test_run"
+    if LAST_RUN_FILE.exists():
+        try:
+            return float(LAST_RUN_FILE.read_text())
+        except (ValueError, OSError, PermissionError):
+            return 0.0
+    return 0.0
+
+def set_last_run_time() -> None:
+    """Persist the timestamp of the latest test runner execution."""
+    LAST_RUN_FILE = PROJECT_ROOT / ".last_test_run"
+    try:
+        LAST_RUN_FILE.write_text(str(time.time()))
+    except (OSError, PermissionError):
+        pass
+
+def get_reference_time_for_changes() -> float:
+    """Reference time for change detection.
+
+    Prefer last run time to avoid re-running all tests repeatedly when the last
+    successful time is old due to ongoing failures.
+    """
+    last_run = get_last_run_time()
+    if last_run > 0:
+        return last_run
+    return get_last_success_time()
 
 def _get_file_timestamps() -> dict[str, float]:
     """Get modification timestamps for all Python files"""
@@ -97,13 +130,21 @@ def get_test_modules_for_files(files: list[Path]) -> list[Path]:
     return list(test_modules)
 
 def get_failed_or_skipped_tests() -> list[str]:
-    """Get actually failed or skipped tests from pytest cache"""
-    # Check if pytest cache exists and has failed tests
-    cache_dir = Path(".pytest_cache/v/cache")
-    lastfailed_file = cache_dir / "lastfailed"
+    """Get actually failed or skipped tests from pytest cache (robust path resolution)"""
+    # Try both typical locations: tests/.pytest_cache and project/.pytest_cache (tests dir preferred)
+    candidate_cache_dirs = [
+        TEST_DIR / ".pytest_cache/v/cache",
+        PROJECT_ROOT / ".pytest_cache/v/cache",
+    ]
 
-    if not lastfailed_file.exists():
-        # No cache file means no failed tests
+    lastfailed_file = None
+    for cand in candidate_cache_dirs:
+        lf = cand / "lastfailed"
+        if lf.exists():
+            lastfailed_file = lf
+            break
+
+    if lastfailed_file is None:
         return []
 
     try:
@@ -111,20 +152,42 @@ def get_failed_or_skipped_tests() -> list[str]:
         with open(lastfailed_file, 'r') as f:
             failed_data = json.load(f)
 
-        # If the cache is empty or all tests passed, return empty list
         if not failed_data:
             return []
 
-        # Extract test paths from the cache
-        test_paths = []
+        # Normalize keys to always start with "tests/" for downstream consumers
+        normalized: list[str] = []
         for test_key in failed_data.keys():
-            if test_key.startswith("tests/") and "::" in test_key:
-                test_paths.append(test_key)
+            if "::" not in test_key:
+                continue
+            file_part, *rest = test_key.split("::")
 
-        return test_paths
+            # Build an absolute path candidate
+            file_path: Path
+            if os.path.isabs(file_part):
+                file_path = Path(file_part)
+            elif file_part.startswith("tests/"):
+                file_path = PROJECT_ROOT / file_part
+            else:
+                # Keys produced when cwd is tests/ (common in this runner)
+                file_path = TEST_DIR / file_part
+
+            # Only include files under tests directory
+            try:
+                rel_to_tests = file_path.resolve().relative_to(TEST_DIR.resolve())
+            except ValueError:
+                # Not under tests dir, skip
+                continue
+
+            # Reconstruct normalized key: tests/<relative>::<rest>
+            normalized_key = f"tests/{rel_to_tests.as_posix()}"
+            if rest:
+                normalized_key += "::" + "::".join(rest)
+            normalized.append(normalized_key)
+
+        return normalized
 
     except (json.JSONDecodeError, FileNotFoundError, OSError, KeyError, TypeError, ValueError):
-        # If there's any issue reading the cache, assume no failed tests
         return []
 
 def is_test_actually_failed(test_path: Path) -> bool:
@@ -286,6 +349,11 @@ def run_test_modules_sequentially(test_targets: list[Path]) -> tuple[bool, int, 
     passed_count = 0
     failed_count = 0
 
+    # 최근 실행 결과 초기화
+    global LAST_RUN_PASSED, LAST_RUN_FAILED
+    LAST_RUN_PASSED = set()
+    LAST_RUN_FAILED = set()
+
     for idx, t in enumerate(test_targets, 1):
         print(f"--- [{idx}/{len(test_targets)}] Running: {t} ---")
         # Use absolute path to avoid issues with working directory changes
@@ -331,9 +399,11 @@ def run_test_modules_sequentially(test_targets: list[Path]) -> tuple[bool, int, 
             if result.stderr:
                 print(result.stderr)
             failed_count += 1
+            LAST_RUN_FAILED.add(absolute_path)
         else:
             print(f"✅ {t.name} PASSED.")
             passed_count += 1
+            LAST_RUN_PASSED.add(absolute_path)
         print("")
 
     overall_success = failed_count == 0
@@ -422,11 +492,11 @@ def run_all_tests() -> bool:
     success, passed_count, failed_count = run_test_modules_sequentially(ordered_tests)
     return success
 
-def run_failed_tests() -> bool:
-    """Run only failed tests"""
+def run_failed_tests() -> tuple[bool, int, int, list[Path]]:
+    """Run only failed tests and return (success, passed_count, failed_count, executed_files)"""
     failed_tests = get_failed_or_skipped_tests()
     if not failed_tests:
-        return True
+        return True, 0, 0, []
 
     # Extract test file paths and convert to absolute paths
     test_files: list[Path] = []
@@ -450,11 +520,13 @@ def run_failed_tests() -> bool:
     for t in unique_test_files:
         print(f"  - {t}")
 
-    if not run_test_modules_sequentially(unique_test_files):
-        return False
+    success, passed_count, failed_count = run_test_modules_sequentially(unique_test_files)
+
+    if not success:
+        return False, passed_count, failed_count, unique_test_files
 
     print("All failed tests passed. Now running changed test modules (if any)...")
-    return True
+    return True, passed_count, failed_count, unique_test_files
 
 def run_changed_tests() -> bool:
     """Run tests for changed files with dependency consideration"""
@@ -463,7 +535,11 @@ def run_changed_tests() -> bool:
 
 def run_changed_tests_with_results() -> tuple[bool, int, int]:
     """Run tests for changed files and return detailed results"""
-    last_success = get_last_success_time()
+    last_success = get_reference_time_for_changes()
+    # 기준 성공 시각이 없으면 변경 테스트를 건너뜀 (초기 과도 실행 방지)
+    if last_success == 0:
+        print("⚪ 기준 성공 시각이 없어 변경 테스트를 건너뜁니다. 필요 시 -a 옵션으로 전체 실행하세요.")
+        return True, 0, 0
     modified_files = get_modified_files(last_success)
 
     # test_runner.py는 테스트 실행기이므로 무시
@@ -491,7 +567,7 @@ def get_test_statistics() -> dict[str, Any]:
     test_files = [f for f in TEST_DIR.glob("test_*.py") if f.name != "test_runner.py"]
 
     # Get last success time
-    last_success = get_last_success_time()
+    last_success = get_reference_time_for_changes()
     last_success_str = "Never" if last_success == 0 else datetime.fromtimestamp(last_success).strftime("%Y-%m-%d %H:%M:%S")
 
     # Check for failed tests
@@ -539,9 +615,9 @@ def get_pytest_performance_data() -> dict[str, Any]:
             with open(performance_cache_file, 'r') as f:
                 cached_data = json.load(f)
                 file_durations = cached_data.get('file_durations', {})
-                print(f"📊 Loaded cached performance data for {len(file_durations)} test files")
-        except (json.JSONDecodeError, OSError, PermissionError) as e:
-            print(f"⚠️  Failed to load performance cache: {e}")
+        except (json.JSONDecodeError, OSError, PermissionError):
+            # Quiet on purpose unless explicitly requested by caller
+            pass
 
     # Fill in missing durations with estimates
     for test_file in test_files:
@@ -1314,7 +1390,7 @@ def get_test_targets_with_dependencies(modified_files: list[Path]) -> list[Path]
 
     # pytest 캐시에서 이미 성공한 테스트 모듈 추출 (개선된 버전)
     def get_passed_tests() -> set[Path]:
-        cache_dir = Path(".pytest_cache/v/cache")
+        cache_dir = PROJECT_ROOT / ".pytest_cache/v/cache"
         lastfailed_file = cache_dir / "lastfailed"
 
         # 실패한 테스트 파일 수집
@@ -1521,10 +1597,15 @@ def main() -> bool:
     else:
         # For default mode, show dependencies for changed files
         if modified_files:
-            test_targets = get_test_targets_with_dependencies(list(modified_files))
-            target_tests = set(test_targets)
-            print(f"🎯 Running tests for modified files: {len(target_tests)} files")
-            print(f"📋 Modified files: {[f.name for f in modified_files]}")
+            if last_success == 0:
+                # 기준 성공 시각이 없으면 변경 테스트 타깃 계산/출력도 생략 (실패 테스트만 우선 재실행)
+                print("⚪ 기준 성공 시각이 없어 변경 테스트 목록 계산을 건너뜁니다.")
+                target_tests = set()
+            else:
+                test_targets = get_test_targets_with_dependencies(list(modified_files))
+                target_tests = set(test_targets)
+                print(f"🎯 Running tests for modified files: {len(target_tests)} files")
+                print(f"📋 Modified files: {[f.name for f in modified_files]}")
         else:
             print("📋 No changed files detected")
             target_tests = set()
@@ -1594,12 +1675,24 @@ def main() -> bool:
         success = actual_failed_count == 0
     else:
         # Default behavior: run failed tests first, then changed tests
-        failed_tests_success = run_failed_tests()
+        failed_tests_success, failed_passed_count, failed_failed_count, failed_executed = run_failed_tests()
         if not failed_tests_success:
-            return False
-
-        # Run changed tests and get detailed results
-        success, actual_passed_count, actual_failed_count = run_changed_tests_with_results()
+            # 실패 테스트 단계에서 실패하면 변경 테스트를 건너뛰고 즉시 요약을 위한 상태를 확정
+            actual_passed_count = failed_passed_count
+            actual_failed_count = failed_failed_count
+            executed_tests = set(failed_executed)
+            # passed/failed 집합도 즉시 반영
+            for t in failed_executed:
+                if is_test_actually_failed(t):
+                    failed_tests.add(t)
+                else:
+                    passed_tests.add(t)
+            success = False
+        else:
+            # Run changed tests and get detailed results
+            success, changed_passed_count, changed_failed_count = run_changed_tests_with_results()
+            actual_passed_count = failed_passed_count + changed_passed_count
+            actual_failed_count = failed_failed_count + changed_failed_count
 
         print(f"\n📋 Test execution completed: {actual_passed_count} passed, {actual_failed_count} failed")
 
@@ -1619,8 +1712,12 @@ def main() -> bool:
         # Override success based on actual results
         success = actual_failed_count == 0
 
-    # Update last success time if tests passed
-    if success:
+    # 러너 실행 시각은 항상 업데이트 (반복 실행 시 기준 시간으로 활용)
+    set_last_run_time()
+
+    # Update last success time and show performance statistics only when ALL tests passed
+    # 추가 가드: pytest 캐시에 실패 항목이 하나라도 있으면 통계 출력/갱신 금지
+    if success and actual_failed_count == 0 and len(get_failed_or_skipped_tests()) == 0:
         set_last_success_time()
         print_test_statistics(get_test_statistics())
 
@@ -1633,18 +1730,24 @@ def main() -> bool:
         print(f"❌ Failed: {actual_failed_count} tests")
         print(f"📋 Total executed: {len(executed_tests)} tests")
 
-        if len(passed_tests) > 0:
-            print(f"✅ Passed tests: {[t.name for t in list(passed_tests)[:5]]}{'...' if len(passed_tests) > 5 else ''}")
-        if len(failed_tests) > 0:
-            print(f"❌ Failed tests: {[t.name for t in failed_tests]}")
+        if actual_passed_count > 0:
+            # 실행 결과 기반(세션 로컬) 우선, 없으면 기존 집합 사용
+            if LAST_RUN_PASSED:
+                passed_names = [p.name for p in sorted(LAST_RUN_PASSED)]
+            else:
+                passed_names = [t.name for t in sorted(passed_tests)]
+            preview = passed_names[:5]
+            suffix = '...' if len(passed_names) > 5 else ''
+            print(f"✅ Passed tests: {preview}{suffix}")
 
-        # 실패한 테스트가 있을 때만 상세 트리 출력
-        if failed_tests:
-            print("\n🔴 FAILED TESTS DEPENDENCY TREE:")
-            print_simple_dependency_tree(deps, focus_files=failed_tests, max_depth=3,
-                                       target_tests=target_tests, reverse_deps=reverse_deps,
-                                       executed_tests=executed_tests, failed_tests=failed_tests, passed_tests=passed_tests,
-                                       modified_files=modified_files, affected_files=affected_files)
+        if actual_failed_count > 0:
+            if LAST_RUN_FAILED:
+                failed_names = [p.name for p in sorted(LAST_RUN_FAILED)]
+            else:
+                failed_names = [t.name for t in sorted(failed_tests)]
+            print(f"❌ Failed tests: {failed_names}")
+
+        # 실패한 테스트 트리 출력은 비활성화
 
     return success
 
