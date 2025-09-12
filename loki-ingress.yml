@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: loki-ingress
+  namespace: feedmaker
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: loki.k8s       # ⬅️ 고정 호스트명(DNS A레코드로 Ingress 외부 IP 연결)
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: loki-gateway   # ⬅️ Loki 차트가 만든 게이트웨이 서비스
+            port:
+              number: 80

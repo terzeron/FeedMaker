@@ -1,0 +1,73 @@
+deploymentMode: SingleBinary
+
+singleBinary:
+  replicas: 1
+
+# 다른 타깃은 0
+backend: { replicas: 0 }
+read: { replicas: 0 }
+write: { replicas: 0 }
+ingester: { replicas: 0 }
+querier: { replicas: 0 }
+queryFrontend: { replicas: 0 }
+queryScheduler: { replicas: 0 }
+distributor: { replicas: 0 }
+compactor: { replicas: 0 }
+indexGateway: { replicas: 0 }
+bloomCompactor: { replicas: 0 }
+bloomGateway: { replicas: 0 }
+
+loki:
+  auth_enabled: false
+
+  # 공통 설정(단일 노드)
+  commonConfig:
+    replication_factor: 1
+    path_prefix: /var/loki
+
+  # ⚠️ 반드시 정의: 템플릿이 참조하는 storage 트리
+  storage:
+    type: filesystem
+    filesystem:
+      chunks_directory: /var/loki/chunks
+      rules_directory: /var/loki/rules
+    # 템플릿 NPE 회피용 더미 값 (filesystem에서도 필요)
+    bucketNames:
+      chunks: chunks
+      ruler: ruler
+      admin: admin
+
+  # TSDB v13 + filesystem 스키마 (필수)
+  schemaConfig:
+    configs:
+      - from: "2024-01-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: loki_index_
+          period: 24h
+
+  # 파일시스템일 때 룰 저장소는 local
+  rulerConfig:
+    storage:
+      type: local
+
+  server:
+    http_listen_port: 3100
+
+# PVC로 /var/loki 마운트
+persistence:
+  enabled: true
+  size: 10Gi
+  # storageClass: ""  # 필요 시 지정
+
+service:
+  type: ClusterIP
+  port: 3100
+
+chunksCache:
+  enabled: false
+
+resultsCache:
+  enabled: false
