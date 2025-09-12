@@ -72,7 +72,7 @@ class DeepLTranslationService(TranslationService):
                 # Crawler를 통해 요청
                 response_text, error_msg, _ = client.run(self.endpoint, data=payload)
                 if not response_text:
-                    print(f"DeepL translation request failed: {error_msg}")
+                    LOGGER.error(f"DeepL translation request failed: {error_msg}")
                     continue
                 time.sleep(1)
                 data = json.loads(response_text)
@@ -82,7 +82,7 @@ class DeepLTranslationService(TranslationService):
                         ko = translation.get("text", "")
                         result_map[en] = ko
             except Exception as e:
-                print(f"DeepL translation request failed: {e}")
+                LOGGER.error(f"DeepL translation request failed: {e}")
                 continue
 
         return result_map
@@ -115,7 +115,7 @@ class AzureTranslationService(TranslationService):
             try:
                 response_text, error_msg, _ = client.run(self.endpoint, data=json.dumps(payload))
                 if not response_text:
-                    print(f"Azure translation request failed: {error_msg}")
+                    LOGGER.error(f"Azure translation request failed: {error_msg}")
                     continue
                 time.sleep(1)
                 data = json.loads(response_text)
@@ -126,7 +126,7 @@ class AzureTranslationService(TranslationService):
                         ko = translations[0].get("text", "")
                         result_map[en] = ko
             except Exception as e:
-                print(f"Azure translation request failed: {e}")
+                LOGGER.error(f"Azure translation request failed: {e}")
                 continue
 
         return result_map
@@ -157,7 +157,7 @@ class GoogleTranslationService(TranslationService):
             try:
                 response_text, error_msg, _ = client.run(self.endpoint, data=json.dumps(payload))
                 if not response_text:
-                    print(f"Google translation request failed: {error_msg}")
+                    LOGGER.error(f"Google translation request failed: {error_msg}")
                     continue
                 time.sleep(1)
                 data = json.loads(response_text)
@@ -167,7 +167,7 @@ class GoogleTranslationService(TranslationService):
                         translated_text = translation.get("translatedText", "")
                         result_map[original_text] = translated_text
             except Exception as e:
-                print(f"Google translation request failed: {e}")
+                LOGGER.error(f"Google translation request failed: {e}")
                 continue
 
         return result_map
@@ -220,18 +220,18 @@ class Translation:
 
         # 번역 서비스 생성 및 사용
         if src_text_list:
-            print(f"캐시에 없는 {len(src_text_list)}개 텍스트를 번역합니다...")
+            LOGGER.debug(f"캐시에 없는 {len(src_text_list)}개 텍스트를 번역합니다...")
             fresh_translation_map = self.service.translate_batch(src_text_list)
 
             if fresh_translation_map:
-                print(f"번역 완료: {len(fresh_translation_map)}개")
+                LOGGER.debug(f"번역 완료: {len(fresh_translation_map)}개")
                 # 캐시 갱신
                 for en, ko in fresh_translation_map.items():
                     all_translation_map[en] = ko
             else:
-                print("번역 실패: 번역 서비스에서 결과를 받지 못했습니다")
+                LOGGER.debug("번역 실패: 번역 서비스에서 결과를 받지 못했습니다")
         else:
-            print("모든 텍스트가 캐시에 있습니다")
+            LOGGER.debug("모든 텍스트가 캐시에 있습니다")
 
         # 번역 결과 저장
         if do_save:
