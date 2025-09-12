@@ -244,9 +244,9 @@ class HtmlFileManager:
             deleted_files = set(db_files.keys()) - file_system_paths
 
             if new_files:
-                s.bulk_insert_mappings(new_files)
+                s.bulk_insert_mappings(HtmlFileInfo.__mapper__, new_files)
             if updated_files:
-                s.bulk_update_mappings(updated_files)
+                s.bulk_update_mappings(HtmlFileInfo.__mapper__, updated_files)
             if deleted_files:
                 s.query(HtmlFileInfo).filter(HtmlFileInfo.file_path.in_(deleted_files)).delete(synchronize_session=False)
 

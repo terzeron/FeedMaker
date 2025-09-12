@@ -22,6 +22,7 @@ tests/tmp/
 .dependency_cache
 
 # 테스트 관련 임시 파일들
+.last_test_run
 .last_test_success
 .test_performance_cache
 .test_mondata*

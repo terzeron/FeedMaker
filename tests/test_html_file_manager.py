@@ -7,8 +7,10 @@ import shutil
 import logging.config
 from pathlib import Path
 from unittest.mock import patch, MagicMock
+from unittest.mock import ANY
+from types import SimpleNamespace
 
-from bin.feed_maker_util import header_str, Env
+from bin.feed_maker_util import header_str, Env, PathUtil
 from bin.feed_maker import FeedMaker
 from bin.html_file_manager import HtmlFileManager
 from bin.db import DB
@@ -170,7 +172,7 @@ class TestHtmlFileManager(unittest.TestCase):
             else:
                 # after remove
                 return [MagicMock()]
-        
+
         all_side_effect.counter = 0
         self.mock_query.all.side_effect = all_side_effect
 
@@ -178,16 +180,16 @@ class TestHtmlFileManager(unittest.TestCase):
         with patch('bin.db.DB.session_ctx') as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = self.mock_session
             mock_ctx.return_value.__exit__.return_value = None
-            
+
             # Mock the session's query method to return our mock_query
             self.mock_session.query.return_value = self.mock_query
-            
+
             # Mock the query's where method to return the same mock_query
             self.mock_query.where.return_value = self.mock_query
 
             with DB.session_ctx() as s:
-                rows11 = s.query(HtmlFileInfo).where(HtmlFileInfo.feed_dir_path == str(self.test_feed_dir_path), 
-                                                     HtmlFileInfo.file_path.is_not(None), 
+                rows11 = s.query(HtmlFileInfo).where(HtmlFileInfo.feed_dir_path == str(self.test_feed_dir_path),
+                                                     HtmlFileInfo.file_path.is_not(None),
                                                      HtmlFileInfo.update_date.is_not(None)).all()
                 assert rows11 is not None
 
@@ -195,8 +197,8 @@ class TestHtmlFileManager(unittest.TestCase):
             self.hfm.add_html_file(self.test_feed_dir_path)
 
             with DB.session_ctx() as s:
-                rows12 = s.query(HtmlFileInfo).where(HtmlFileInfo.feed_dir_path == str(self.test_feed_dir_path), 
-                                                     HtmlFileInfo.file_path.is_not(None), 
+                rows12 = s.query(HtmlFileInfo).where(HtmlFileInfo.feed_dir_path == str(self.test_feed_dir_path),
+                                                     HtmlFileInfo.file_path.is_not(None),
                                                      HtmlFileInfo.update_date.is_not(None)).all()
                 assert rows12 is not None
                 self.assertEqual(len(rows11) + 1, len(rows12))
@@ -204,8 +206,8 @@ class TestHtmlFileManager(unittest.TestCase):
             self.hfm.remove_html_file_in_path_from_info("feed_dir_path", self.test_feed_dir_path)
 
             with DB.session_ctx() as s:
-                rows13 = s.query(HtmlFileInfo).where(HtmlFileInfo.feed_dir_path == str(self.test_feed_dir_path), 
-                                                     HtmlFileInfo.file_path.is_not(None), 
+                rows13 = s.query(HtmlFileInfo).where(HtmlFileInfo.feed_dir_path == str(self.test_feed_dir_path),
+                                                     HtmlFileInfo.file_path.is_not(None),
                                                      HtmlFileInfo.update_date.is_not(None)).all()
                 assert rows13 is not None
                 self.assertEqual(len(rows11), len(rows13))
@@ -222,10 +224,10 @@ class TestHtmlFileManager(unittest.TestCase):
         with patch('bin.db.DB.session_ctx') as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = self.mock_session
             mock_ctx.return_value.__exit__.return_value = None
-            
+
             # Mock the session's query method to return our mock_query
             self.mock_session.query.return_value = self.mock_query
-            
+
             # Mock the query's where method to return the same mock_query
             self.mock_query.where.return_value = self.mock_query
 
@@ -237,6 +239,53 @@ class TestHtmlFileManager(unittest.TestCase):
                 self.assertIsNotNone(row.file_name)
                 self.assertIsNotNone(row.file_path)
                 self.assertIsNotNone(row.update_date)
+
+    def test_load_all_html_files_calls_bulk_with_mapper(self) -> None:
+        # 파일 시스템 픽스처 준비: grp1/feedA/html/{new1.html, upd1.html}
+        grp_path = self.hfm.work_dir_path / "grp1"
+        feed_path = grp_path / "feedA"
+        html_dir = feed_path / "html"
+        html_dir.mkdir(parents=True, exist_ok=True)
+
+        new1 = html_dir / "new1.html"
+        upd1 = html_dir / "upd1.html"
+        new1.write_text("<div>new</div>")
+        upd1.write_text("<div>upd</div>")
+
+        # mtime 설정
+        import os, time
+        now = time.time()
+        os.utime(new1, (now, now))
+        os.utime(upd1, (now, now))
+
+        # DB에 존재하는 파일(업데이트 대상)과 삭제 대상 구성
+        existing_upd_path = PathUtil.short_path(upd1)
+        to_delete_path = PathUtil.short_path(html_dir / "to_delete.html")
+
+        # HtmlFileInfo.file_path, update_date를 갖는 네임스페이스로 all() 결과 구성
+        db_rows = [
+            SimpleNamespace(file_path=existing_upd_path, update_date=None),
+            SimpleNamespace(file_path=to_delete_path, update_date=None),
+        ]
+
+        # session.query(...).all()가 위 목록을 반환하도록 설정
+        self.mock_session.query.return_value = self.mock_query
+        self.mock_query.all.return_value = db_rows
+
+        # where/filter 체이닝이 그대로 mock 동작하도록 구성
+        self.mock_query.where.return_value = self.mock_query
+        self.mock_query.filter.return_value = self.mock_query
+
+        # 실행 (탐색 범위를 제한하지 않음: islice 전체 순회)
+        self.hfm.load_all_html_files()
+
+        # bulk_insert_mappings/ bulk_update_mappings가 mapper를 첫 인자로 받는지 검증
+        self.mock_session.bulk_insert_mappings.assert_called_with(HtmlFileInfo.__mapper__, ANY)
+        self.mock_session.bulk_update_mappings.assert_called_with(HtmlFileInfo.__mapper__, ANY)
+
+        # 삭제는 synchronize_session=False로 호출되는지 검증
+        delete_mock = self.mock_query.delete
+        delete_mock.assert_called_with(synchronize_session=False)
 
 
 if __name__ == "__main__":
