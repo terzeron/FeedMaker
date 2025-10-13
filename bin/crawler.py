@@ -12,6 +12,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
 
+import urllib3
 import requests
 from requests.cookies import RequestsCookieJar
 
@@ -40,6 +41,8 @@ class RequestsClient:
         self.cookies: dict[str, str] = {}
         self.encoding: str = encoding or "utf-8"
         self.verify_ssl: bool = verify_ssl
+        if not self.verify_ssl:
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     def __del__(self) -> None:
         del self.headers
