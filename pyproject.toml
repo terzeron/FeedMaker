@@ -11,6 +11,7 @@ dependencies = [
     "fastapi>=0.118.2",
     "feedparser>=6.0.12",
     "filelock>=3.20.0",
+    "lxml>=6.0.2",
     "mail1>=4.1.0",
     "ordered-set>=4.1.0",
     "pdf2image>=1.17.0",
