@@ -26,6 +26,7 @@ dependencies = [
     "selenium>=4.36.0",
     "sqlalchemy>=2.0.43",
     "urllib3>=2.5.0",
+    "uvicorn>=0.37.0",
 ]
 
 [tool.black]
