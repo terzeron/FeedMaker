@@ -19,7 +19,7 @@ const props = defineProps({
   },
   version: {
     type: String,
-    default: 'v14.0'
+    default: 'v24.0'
   }
 });
 
@@ -89,9 +89,9 @@ const loadFacebookSDK = () => {
 
     (function(d, s, id){
       const fjs = d.getElementsByTagName(s)[0];
-      if (d.getElementById(id)) { 
+      if (d.getElementById(id)) {
         console.log('Facebook SDK script already exists');
-        return; 
+        return;
       }
       const js = d.createElement(s);
       js.id = id;
@@ -113,7 +113,7 @@ const login = async () => {
   console.log('Attempting Facebook login...');
   console.log('SDK loaded:', isSdkLoaded.value);
   console.log('Window FB:', !!window.FB);
-  
+
   if (!isSdkLoaded.value || !window.FB) {
     throw new Error('Facebook SDK is not loaded');
   }
@@ -121,7 +121,7 @@ const login = async () => {
   const loginOptions = {
     scope: 'public_profile, email' // 필요한 권한 지정
   };
-  
+
   try {
     return new Promise((resolve, reject) => {
       window.FB.login(function (response) {
@@ -146,7 +146,7 @@ const login = async () => {
 
 const logout = async () => {
   console.log('Attempting Facebook logout...');
-  
+
   if (!isSdkLoaded.value || !window.FB) {
     throw new Error('Facebook SDK is not loaded');
   }
@@ -170,7 +170,7 @@ const logout = async () => {
 
 const getProfile = async () => {
   console.log('Getting Facebook profile...');
-  
+
   if (!isSdkLoaded.value || !window.FB) {
     throw new Error('Facebook SDK is not loaded');
   }
@@ -212,7 +212,7 @@ onMounted(async () => {
     appId: props.appId,
     version: props.version
   });
-  
+
   try {
     await loadFacebookSDK();
   } catch (error) {
