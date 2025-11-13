@@ -5,7 +5,6 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     libpoppler-dev libpoppler-cpp-dev libheif-dev libcairo2-dev \
     build-essential git curl unzip gnupg ca-certificates chromium chromium-driver && \
-    # cleanup
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ARG USER_ID=1000
@@ -14,14 +13,14 @@ RUN useradd -u $USER_ID $USER_NAME && \
     mkdir -p /app /app/backend /app/bin /app/utils /fma /xml /home/$USER_NAME/.cache/pip /home/$USER_NAME/.local /home/$USER_NAME/.local/bin /run/dbus /tmp/logs /app/logs && \
     chown -R $USER_NAME /app /fma /xml /home/$USER_NAME/.cache/pip /home/$USER_NAME/.local /home/$USER_NAME/.local /tmp/logs /app/logs
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # user(1000)
 USER $USER_NAME
 WORKDIR /app
 
 ENV UV_SYSTEM_PYTHON=1 UV_LINK_MODE=copy UV_PYTHON=python3.12
-COPY pyproject.toml uv.lock /app
+COPY pyproject.toml uv.lock /app/
 RUN HOME=/tmp XDG_CACHE_HOME=/tmp/.cache UV_CACHE_DIR=/tmp/uv-cache \
     uv sync --locked --no-editable
 
