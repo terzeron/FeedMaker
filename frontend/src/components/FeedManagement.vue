@@ -972,8 +972,7 @@ export default {
     },
     getFeedInfo: function (groupName, feedName) {
       console.log(`getFeedInfo(${groupName}, ${feedName})`);
-      const url =
-        getApiUrlPath() + `/groups/${groupName}/feeds/${feedName}`;
+      const url = getApiUrlPath() + `/groups/${groupName}/feeds/${feedName}`;
       if (this.checkRunningInterval) {
         clearInterval(this.checkRunningInterval);
       }
@@ -1012,8 +1011,7 @@ export default {
     },
     getSiteConfig: function () {
       console.log(`getSiteConfig()`);
-      const url =
-        getApiUrlPath() + `/groups/${this.selectedGroupName}/site_config`;
+      const url = getApiUrlPath() + `/groups/${this.selectedGroupName}/site_config`;
       axios
         .get(url)
         .then((res) => {
@@ -1037,9 +1035,7 @@ export default {
       this.openConfirmModal("정말로 실행하시겠습니까?", () => {
         this.startButton("saveSiteConfigButton");
         const postData = this.jsonData;
-        const url =
-          getApiUrlPath() +
-          `/groups/${this.selectedGroupName}/site_config`;
+        const url = getApiUrlPath() + `/groups/${this.selectedGroupName}/site_config`;
         axios
           .put(url, postData)
           .then((res) => {
@@ -1105,24 +1101,19 @@ export default {
     },
     registerToInoreader: function () {
       console.log(`registerToInoreader()`);
-      const feederLink =
-        "https://www.inoreader.com/search/feeds/" + encodeURIComponent(this.rssUrl);
+      const feederLink = "https://www.inoreader.com/search/feeds/" + encodeURIComponent(this.rssUrl);
       window.open(feederLink);
     },
     registerToFeedly: function () {
       console.log(`registerToFeedly()`);
-      const feederLink =
-        "https://feedly.com/i/discover/sources?query=feed/" +
-        encodeURIComponent(this.rssUrl);
+      const feederLink = "https://feedly.com/i/discover?query=suggesto%2F" + encodeURIComponent(this.rssUrl);
       window.open(feederLink);
     },
     toggleStatus: function (target) {
       console.log(`toggleStatus(${target})`);
       let url = "";
       if (target === "feed") {
-        url =
-          getApiUrlPath() +
-          `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/toggle`;
+        url = getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/toggle`;
       } else {
         url = getApiUrlPath() + `/groups/${this.selectedGroupName}/toggle`;
       }
@@ -1173,9 +1164,7 @@ export default {
       console.log(`removelist()`);
       this.openConfirmModal("정말로 실행하시겠습니까?", () => {
         this.startButton("removelistButton");
-        const url =
-          getApiUrlPath() +
-          `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/list`;
+        const url = getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/list`;
         axios
           .delete(url)
           .then((res) => {
@@ -1194,9 +1183,7 @@ export default {
       console.log(`removeHtml()`);
       this.openConfirmModal("정말로 실행하시겠습니까?", () => {
         this.startButton("removeHtmlButton");
-        const url =
-          getApiUrlPath() +
-          `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/htmls`;
+        const url = getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/htmls`;
         axios
           .delete(url)
           .then((res) => {
@@ -1220,9 +1207,7 @@ export default {
 
       this.openConfirmModal("정말로 실행하시겠습니까?", () => {
         this.startButton("removeFeedButton");
-        const url =
-          getApiUrlPath() +
-          `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}`;
+        const url = getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}`;
         axios
           .delete(url)
           .then((res) => {
@@ -1248,8 +1233,7 @@ export default {
       }
       this.openConfirmModal("정말로 실행하시겠습니까?", () => {
         this.startButton("removeGroupButton");
-        const url =
-          getApiUrlPath() + `/groups/${this.selectedGroupName}`;
+        const url = getApiUrlPath() + `/groups/${this.selectedGroupName}`;
         axios
           .delete(url)
           .then((res) => {
@@ -1269,8 +1253,7 @@ export default {
     },
     getItemsOfRss: function () {
       console.log(`getItemsOfRss()`);
-      const url =
-        getApiUrlPath() + `/public_feeds/${this.selectedFeedName}/item_titles`;
+      const url = getApiUrlPath() + `/public_feeds/${this.selectedFeedName}/item_titles`;
       axios.get(url).then((res) => {
         console.log("getItemsOfRss response:", res.data);
         if (res.data.status === "success") {
@@ -1311,9 +1294,7 @@ export default {
     },
     checkRunning: function () {
       //console.log(`checkRunning()`);
-      const url =
-        getApiUrlPath() +
-        `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/check_running`;
+      const url = getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/check_running`;
       console.log("checkRunning URL:", url);
       axios
         .get(url)
