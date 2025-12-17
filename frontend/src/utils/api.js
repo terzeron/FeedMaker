@@ -16,8 +16,7 @@ export const getApiUrlPath = () => {
  */
 export const getCommonHeaders = () => {
   return {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*'
+    'Content-Type': 'application/json'
   };
 };
 
@@ -28,7 +27,7 @@ export const getCommonHeaders = () => {
  */
 export const handleApiError = (error, context = '') => {
   console.error(`API Error ${context}:`, error);
-  
+
   if (error.response) {
     // 서버가 응답했지만 상태 코드가 2xx가 아닌 경우
     console.error('Error data:', error.response.data);

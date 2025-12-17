@@ -12,11 +12,17 @@ from types import TracebackType
 from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import uvicorn
 
 from backend.feed_maker_manager import FeedMakerManager
+from backend.auth import (
+    require_auth, create_session, delete_session, cleanup_expired_sessions,
+    get_current_user, set_session_cookie, clear_session_cookie,
+)
 from bin.feed_maker_util import Env
 from bin.db import DB
+from bin.models import UserSession
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger(__name__)
@@ -46,8 +52,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"]
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Content-Type", "Authorization", "X-CSRF-Token"]
 )
 
 
@@ -69,6 +75,93 @@ def handle_exception(exc_type: Type[BaseException], exc_value: BaseException, ex
 
 
 sys.excepthook = handle_exception
+
+
+# Pydantic models for authentication requests
+class LoginRequest(BaseModel):
+    email: str
+    name: str
+    access_token: str
+
+
+# Authentication endpoints
+@app.post("/auth/login")
+async def login(request: LoginRequest) -> JSONResponse:
+    """
+    로그인 엔드포인트
+    - Facebook 로그인 성공 후 호출
+    - 서버에 세션 생성하고 httpOnly 쿠키 설정
+    - 허용된 이메일만 로그인 가능
+    """
+    LOGGER.info(f"POST /auth/login -> login({request.email})")
+
+    # 허용된 이메일 목록 확인
+    login_allowed_email_list = Env.get("VUE_APP_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST", "").split(",")
+    if request.email not in login_allowed_email_list:
+        LOGGER.warning(f"Unauthorized login attempt from {request.email}")
+        raise HTTPException(status_code=403, detail="이메일이 허용되지 않았습니다.")
+
+    # 세션 생성
+    try:
+        session_id = create_session(request.email, request.name, request.access_token)
+
+        response = JSONResponse(content={
+            "status": "success",
+            "message": "로그인되었습니다."
+        })
+
+        # httpOnly 쿠키 설정
+        set_session_cookie(response, session_id)
+
+        return response
+    except Exception as e:
+        LOGGER.error(f"Login failed for {request.email}: {str(e)}")
+        raise HTTPException(status_code=500, detail="로그인 중 오류가 발생했습니다.")
+
+
+@app.post("/auth/logout")
+async def logout(request: Request) -> JSONResponse:
+    """
+    로그아웃 엔드포인트
+    - 서버의 세션 삭제
+    - httpOnly 쿠키 제거
+    """
+    LOGGER.info("POST /auth/logout -> logout()")
+
+    session_id = request.cookies.get("session_id")
+    if session_id:
+        delete_session(session_id)
+
+    response = JSONResponse(content={
+        "status": "success",
+        "message": "로그아웃되었습니다."
+    })
+
+    # 쿠키 제거
+    clear_session_cookie(response)
+
+    return response
+
+
+@app.get("/auth/me")
+async def get_me(request: Request) -> dict[str, Any]:
+    """
+    현재 로그인 상태 확인 엔드포인트
+    - httpOnly 쿠키에서 세션 확인
+    - 로그인 여부와 사용자 정보 반환
+    """
+    user_session = get_current_user(request)
+
+    if not user_session:
+        return {
+            "is_authenticated": False
+        }
+
+    return {
+        "is_authenticated": True,
+        "email": user_session.user_email,
+        "name": user_session.user_name
+    }
 
 
 @app.get("/exec_result")

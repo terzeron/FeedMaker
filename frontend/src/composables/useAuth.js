@@ -1,63 +1,46 @@
 /**
- * 인증 관련 composable
+ * 인증 관련 composable (httpOnly 쿠키 기반)
+ *
+ * 보안 개선: localStorage 대신 서버 기반 세션 관리
+ * - 인증 상태는 서버에서만 관리
+ * - httpOnly 쿠키로 세션 ID 전송
+ * - XSS 공격으로부터 안전
  */
-import { ref, computed, getCurrentInstance } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { useStorage } from '@vueuse/core';
+import axios from 'axios';
+import { getApiUrlPath } from '@/utils/api';
 
 export function useAuth() {
   const router = useRouter();
-  const instance = getCurrentInstance();
-  const session = instance?.appContext.config.globalProperties.$session;
-
   const isAuthorized = ref(false);
-  
-  // Use localStorage for longer session persistence
-  const sessionIsAuthorized = useStorage("is_authorized", false, localStorage);
-  const sessionExpiry = useStorage("session_expiry", null, localStorage);
+  const userName = ref(null);
 
   /**
-   * 세션 만료 확인
+   * 서버에서 인증 상태 확인
    */
-  const checkSessionExpiry = () => {
-    if (sessionExpiry.value && new Date().getTime() > sessionExpiry.value) {
-      console.log("Session expired, clearing data");
-      clearSessionData();
+  const checkAuth = async () => {
+    try {
+      const response = await axios.get(
+        `${getApiUrlPath()}/auth/me`,
+        { withCredentials: true }
+      );
+
+      if (response.data.is_authenticated) {
+        isAuthorized.value = true;
+        userName.value = response.data.name || null;
+        return true;
+      } else {
+        isAuthorized.value = false;
+        userName.value = null;
+        return false;
+      }
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      isAuthorized.value = false;
+      userName.value = null;
       return false;
     }
-    return true;
-  };
-
-  /**
-   * 세션 데이터 초기화
-   */
-  const clearSessionData = () => {
-    sessionIsAuthorized.value = false;
-    sessionExpiry.value = null;
-    isAuthorized.value = false;
-    
-    // Clear other session data
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("name");
-  };
-
-  /**
-   * 인증 상태 확인
-   */
-  const checkAuth = () => {
-    // Check session expiry first
-    if (!checkSessionExpiry()) {
-      return false;
-    }
-    
-    if (session) {
-      isAuthorized.value = session.get('is_authorized') || false;
-      return isAuthorized.value;
-    }
-    
-    // Fallback to localStorage
-    isAuthorized.value = sessionIsAuthorized.value;
-    return isAuthorized.value;
   };
 
   /**
@@ -70,8 +53,9 @@ export function useAuth() {
   /**
    * 인증 필요한 페이지 가드
    */
-  const requireAuth = () => {
-    if (!checkAuth()) {
+  const requireAuth = async () => {
+    const authenticated = await checkAuth();
+    if (!authenticated) {
       redirectToLogin();
       return false;
     }
@@ -79,49 +63,74 @@ export function useAuth() {
   };
 
   /**
-   * 로그인 설정
+   * 로그아웃
    */
-  const setAuth = (authorized = true) => {
-    if (session) {
-      session.set('is_authorized', authorized);
-    }
-    sessionIsAuthorized.value = authorized;
-    isAuthorized.value = authorized;
-    
-    if (authorized) {
-      // Set session expiry - default 30 days, can be configured via environment variable
-      const sessionDays = process.env.VUE_APP_SESSION_EXPIRY_DAYS || 30;
-      sessionExpiry.value = new Date().getTime() + (sessionDays * 24 * 60 * 60 * 1000);
-    } else {
-      sessionExpiry.value = null;
+  const logout = async () => {
+    try {
+      await axios.post(
+        `${getApiUrlPath()}/auth/logout`,
+        {},
+        { withCredentials: true }
+      );
+    } catch (error) {
+      console.error('Logout failed:', error);
+    } finally {
+      // 로컬 상태 초기화
+      isAuthorized.value = false;
+      userName.value = null;
+
+      // 기존 localStorage 데이터 정리 (마이그레이션용)
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("name");
+      localStorage.removeItem("is_authorized");
+      localStorage.removeItem("session_expiry");
+
+      redirectToLogin();
     }
   };
 
   /**
-   * 로그아웃
+   * 세션 데이터 초기화 (deprecated - 하위 호환성용)
    */
-  const logout = () => {
-    clearSessionData();
-    redirectToLogin();
+  const clearSessionData = () => {
+    console.warn('clearSessionData is deprecated. Use logout() instead.');
+    isAuthorized.value = false;
+    userName.value = null;
+
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("name");
+    localStorage.removeItem("is_authorized");
+    localStorage.removeItem("session_expiry");
+  };
+
+  /**
+   * 세션 만료 확인 (deprecated - 서버에서 검증)
+   */
+  const checkSessionExpiry = () => {
+    console.warn('checkSessionExpiry is deprecated. Server validates session expiry.');
+    return true;
+  };
+
+  /**
+   * 로그인 설정 (deprecated - 서버에서 관리)
+   */
+  const setAuth = () => {
+    console.warn('setAuth is deprecated. Server manages authentication state.');
   };
 
   // computed 속성
-  const isLoggedIn = computed(() => {
-    checkSessionExpiry();
-    return isAuthorized.value;
-  });
-
-  // 초기화
-  checkAuth();
+  const isLoggedIn = computed(() => isAuthorized.value);
 
   return {
     isAuthorized,
     isLoggedIn,
+    userName,
     checkAuth,
     requireAuth,
-    setAuth,
     logout,
     redirectToLogin,
+    // Deprecated functions (하위 호환성)
+    setAuth,
     checkSessionExpiry,
     clearSessionData
   };

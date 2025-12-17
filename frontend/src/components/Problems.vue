@@ -45,10 +45,11 @@
                   :key="index"
                 >
                   <td v-for="field in statusInfoFields" :key="field.key" :data-label="field.label">
-                    <span
-                      v-if="field.key === 'feed_title'"
-                      v-html="item[field.key]"
-                    ></span>
+                    <span v-if="field.key === 'feed_title'">
+                      <router-link v-if="item.group_name && item.feed_name" :to="`/management/${item.group_name}/${item.feed_name}`">
+                        {{ item[field.key] || item.feed_name }}
+                      </router-link>
+                    </span>
                     <span v-else-if="field.key === 'action'">
                       <font-awesome-icon
                         :icon="['far', 'trash-alt']"
@@ -113,10 +114,12 @@
                   :key="index"
                 >
                   <td v-for="field in progressInfoFields" :key="field.key">
-                    <span
-                      v-if="field.key === 'feed_title'"
-                      v-html="item[field.key]"
-                    ></span>
+                    <span v-if="field.key === 'feed_title'">
+                      <router-link v-if="item.group_name && item.feed_name" :to="`/management/${item.group_name}/${item.feed_name}`">
+                        {{ item[field.key] || item.feed_name }}
+                      </router-link>
+                      <span v-else>{{ item[field.key] }}</span>
+                    </span>
                     <span v-else-if="field.key === 'progress_ratio'"
                       >{{ item[field.key] }}%</span
                     >
@@ -174,10 +177,12 @@
               <tbody>
                 <tr v-for="(item, index) in sortedListUrlInfolist" :key="index">
                   <td v-for="field in listUrlInfoFields" :key="field.key">
-                    <span
-                      v-if="field.key === 'feed_title'"
-                      v-html="item[field.key]"
-                    ></span>
+                    <span v-if="field.key === 'feed_title'">
+                      <router-link v-if="item.group_name && item.feed_name" :to="`/management/${item.group_name}/${item.feed_name}`">
+                        {{ item[field.key] || item.feed_name }}
+                      </router-link>
+                      <span v-else>{{ item[field.key] }}</span>
+                    </span>
                     <span v-else>{{ item[field.key] }}</span>
                   </td>
                 </tr>
@@ -595,14 +600,12 @@
                         'text-danger': item.numItemsIsDanger,
                         'text-warning': item.numItemsIsWarning,
                       }"
-                      v-html="item[field.key]"
-                    ></span>
+                    >{{ item[field.key] }}</span>
                     <span
                       v-else-if="field.key === 'upload_date'"
                       class="date-cell"
                       :class="{'text-danger': item.uploadDateIsDanger, 'text-warning': item.uploadDateIsWarning}"
-                      v-html="item[field.key]"
-                    ></span>
+                    >{{ item[field.key] }}</span>
                     <span v-else-if="field.key === 'action'">
                       <font-awesome-icon
                         :icon="['far', 'trash-alt']"
@@ -1056,11 +1059,7 @@ export default {
 
             // transformation
             this.statusInfolist = _.map(result, (o) => {
-              o["feed_title"] = this.getManagementLink(
-                o["feed_title"],
-                o["group_name"],
-                o["feed_name"]
-              );
+              // Keep feed_title as plain text, group_name and feed_name will be used in template
               o["http_request"] = o["http_request"] ? "O" : "X";
               o["public_html"] = o["public_html"] ? "O" : "X";
               o["feedmaker"] = o["feedmaker"] ? "O" : "X";
@@ -1099,11 +1098,7 @@ export default {
             }
 
             this.progressInfolist = _.map(result, (o) => {
-              o["feed_title"] = this.getManagementLink(
-                o["feed_title"],
-                o["group_name"],
-                o["feed_name"]
-              );
+              // Keep feed_title as plain text, group_name and feed_name will be used in template
               o["due_date"] = this.getShortDate(o["due_date"]);
               return o;
             });
@@ -1368,11 +1363,7 @@ export default {
             }
 
             this.listUrlInfolist = _.map(result, (o) => {
-              o["feed_title"] = this.getManagementLink(
-                o["feed_title"],
-                o["group_name"],
-                o["feed_name"]
-              );
+              // Keep feed_title as plain text, group_name and feed_name will be used in template
               return o;
             });
           }
@@ -1395,20 +1386,9 @@ export default {
     this.htmlFileWithImageNotFoundlist = [];
     this.publicFeedInfolist = [];
 
-    // Check session expiry before authorization check
-    const sessionExpiry = localStorage.getItem("session_expiry");
-    if (sessionExpiry && new Date().getTime() > parseInt(sessionExpiry)) {
-      console.log("Session expired, redirecting to login");
-      this.$session.clear();
-      this.$router.push("/login");
-      return;
-    }
-
-    if (this.$session.get("is_authorized")) {
-      this.getProblems();
-    } else {
-      this.$router.push("/login");
-    }
+    // 인증 검증은 router guard에서 처리됨 (server-side validation)
+    // localStorage의 session_expiry 검증 제거 (보안 취약점)
+    this.getProblems();
   },
 };
-</script> 
+</script>

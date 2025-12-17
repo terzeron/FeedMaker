@@ -1,4 +1,5 @@
 import { createApp } from 'vue';
+import axios from 'axios';
 import App from './App';
 import router from './router';
 
@@ -11,6 +12,9 @@ import 'bootstrap-vue-next/dist/bootstrap-vue-next.css';
 
 // Custom common styles
 import './assets/styles/common.css';
+
+// Axios 전역 설정: 모든 요청에 withCredentials 적용
+axios.defaults.withCredentials = true;
 
 // BootstrapVueNext 개별 컴포넌트 import
 import {
@@ -48,9 +52,6 @@ import {
 
 import { VMarkdownView } from 'vue3-markdown';
 import 'vue3-markdown/dist/vue3-markdown.css';
-
-// Custom session utility
-import session from './utils/session';
 
 const app = createApp(App);
 
@@ -91,8 +92,5 @@ app.component('BSpinner', BSpinner);
 
 app.component('VMarkdownView', VMarkdownView);
 app.use(router);
-
-// Add session as global property
-app.config.globalProperties.$session = session;
 
 app.mount('#app');

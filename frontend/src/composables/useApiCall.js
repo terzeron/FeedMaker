@@ -23,7 +23,8 @@ export function useApiCall() {
       const config = {
         method: 'GET',
         ...options,
-        url: getApiUrlPath() + endpoint
+        url: getApiUrlPath() + endpoint,
+        withCredentials: true  // httpOnly 쿠키를 포함하여 전송 (CSRF 방지를 위해 SameSite 속성과 함께 사용)
       };
 
       const response = await axios(config);
