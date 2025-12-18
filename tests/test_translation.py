@@ -89,18 +89,23 @@ class TranslationTest(unittest.TestCase):
         texts = [("/a", "Hello"), ("/b", "Good day")]
         result = translator.translate(texts)
 
-        # 번역 결과가 있는지 확인 (API 에러 시 빈 딕셔너리 반환 가능)
-        self.assertIsInstance(result, dict)
+        # 번역 결과가 있는지 확인 (API 에러 시 빈 리스트 반환 가능)
+        self.assertIsInstance(result, list)
 
         if len(result) > 0:
             # 번역이 성공한 경우
-            self.assertIn("Hello", result)
-            self.assertIn("Good day", result)
+            self.assertEqual(len(result), 2)
 
-            # 번역된 텍스트가 한국어인지 확인
-            for key, value in result:
-                self.assertIsInstance(value, str)
-                self.assertGreater(len(value), 0)
+            # 각 항목이 (link, text) 튜플인지 확인
+            for link, text in result:
+                self.assertIsInstance(link, str)
+                self.assertIsInstance(text, str)
+                self.assertGreater(len(text), 0)
+
+            # 원문이 번역 결과에 포함되어 있는지 확인
+            result_texts = [text for _, text in result]
+            self.assertTrue(any("Hello" in text for text in result_texts))
+            self.assertTrue(any("Good day" in text for text in result_texts))
         else:
             # API 에러로 인해 번역이 실패한 경우 (456 에러 등)
             # 이는 테스트 실패가 아닌 API 제한으로 인한 것으로 간주
@@ -114,18 +119,23 @@ class TranslationTest(unittest.TestCase):
         texts = [(f"/{i}", f"Test text {i}") for i in range(60)]
         result = translator.translate(texts)
 
-        # 번역 결과가 있는지 확인 (API 에러 시 빈 딕셔너리 반환 가능)
-        self.assertIsInstance(result, dict)
+        # 번역 결과가 있는지 확인 (API 에러 시 빈 리스트 반환 가능)
+        self.assertIsInstance(result, list)
 
         if len(result) > 0:
             # 번역이 성공한 경우
             self.assertEqual(len(result), 60)
 
             # 모든 번역 결과가 유효한지 확인
+            for link, text in result:
+                self.assertIsInstance(link, str)
+                self.assertIsInstance(text, str)
+                self.assertGreater(len(text), 0)
+
+            # 모든 원문이 번역 결과에 포함되어 있는지 확인
+            result_texts = [text for _, text in result]
             for i in range(60):
-                self.assertIn(f"Test text {i}", result)
-                self.assertIsInstance(result[i], str)
-                self.assertGreater(len(result[i]), 0)
+                self.assertTrue(any(f"Test text {i}" in text for text in result_texts))
         else:
             # API 에러로 인해 번역이 실패한 경우 (456 에러 등)
             # 이는 테스트 실패가 아닌 API 제한으로 인한 것으로 간주

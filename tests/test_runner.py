@@ -5,12 +5,10 @@ import os
 import argparse
 import subprocess
 import time
-import stat
+import platform
 from pathlib import Path
 from datetime import datetime
 from typing import Any, Optional
-import signal
-import traceback
 from collections import defaultdict, Counter
 import cProfile
 import pstats
@@ -19,6 +17,7 @@ import ast
 
 from graphlib import TopologicalSorter
 from modulegraph.modulegraph import ModuleGraph
+
 # 최근 테스트 실행 결과(파일 단위)를 보관하여 요약 출력에 활용
 LAST_RUN_PASSED: set[Path] = set()
 LAST_RUN_FAILED: set[Path] = set()
@@ -93,7 +92,13 @@ def set_last_success_time() -> None:
 def get_modified_files(since: float, exclude_paths: Optional[set[str]] = None) -> list[Path]:
     """Get modified Python files with better filtering"""
     if exclude_paths is None:
-        exclude_paths = {'.pytest_cache', '__pycache__', '.git', 'node_modules'}
+        exclude_paths = {
+            '.pytest_cache', '__pycache__', '.git', 'node_modules',
+            '.venv', 'venv', '.env',  # Virtual environments
+            '.idea', '.vscode', '.run',  # IDE directories
+            '.mypy_cache', '.hypothesis', '.coverage_out',  # Tool caches
+            'tmp', 'logs', 'work',  # Temporary/runtime directories
+        }
 
     modified = []
     for root, dirs, files in os.walk(PROJECT_ROOT):

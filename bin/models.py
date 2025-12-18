@@ -87,7 +87,7 @@ class LockForConcurrentLoading(Base):
     lock_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True, server_default=text('CURRENT_TIMESTAMP'))
 
 
-class TestTable(Base):
+class SampleTable(Base):
     __tablename__ = "test_table"
     name: Mapped[str] = mapped_column(String(256), primary_key=True)
     age: Mapped[int] = mapped_column(Integer, default=0)
