@@ -19,10 +19,19 @@ SESSION_COOKIE_NAME = "session_id"
 SESSION_EXPIRY_DAYS = 30
 COOKIE_MAX_AGE = SESSION_EXPIRY_DAYS * 24 * 60 * 60  # seconds
 
+# CSRF configuration
+CSRF_COOKIE_NAME = "csrf_token"
+CSRF_HEADER_NAME = "X-CSRF-Token"
+
 
 def generate_session_id() -> str:
     """Generate a secure random session ID"""
     return secrets.token_urlsafe(48)
+
+
+def generate_csrf_token() -> str:
+    """Generate a secure random CSRF token"""
+    return secrets.token_urlsafe(32)
 
 
 def create_session(user_email: str, user_name: str, facebook_access_token: str) -> str:
@@ -136,9 +145,33 @@ def set_session_cookie(response: Response, session_id: str) -> None:
     )
 
 
+def set_csrf_cookie(response: Response, csrf_token: str) -> None:
+    """Set CSRF cookie that is readable by JS"""
+    frontend_url = Env.get("FM_FRONTEND_URL", "")
+    is_production = "localhost" not in frontend_url and "127.0.0.1" not in frontend_url
+
+    response.set_cookie(
+        key=CSRF_COOKIE_NAME,
+        value=csrf_token,
+        max_age=COOKIE_MAX_AGE,
+        httponly=False,  # Must be readable by frontend JS
+        secure=is_production,
+        samesite="lax",
+        path="/"
+    )
+
+
 def clear_session_cookie(response: JSONResponse) -> None:
     """Clear session cookie"""
     response.delete_cookie(
         key=SESSION_COOKIE_NAME,
+        path="/"
+    )
+
+
+def clear_csrf_cookie(response: Response) -> None:
+    """Clear CSRF cookie"""
+    response.delete_cookie(
+        key=CSRF_COOKIE_NAME,
         path="/"
     )
