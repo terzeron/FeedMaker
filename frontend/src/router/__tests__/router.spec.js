@@ -4,8 +4,17 @@ import axios from 'axios';
 jest.mock('axios');
 
 describe('router guards', () => {
+  let consoleWarnSpy;
+
   beforeEach(() => {
     axios.get.mockReset();
+    // 테스트 중 console.warn 출력 억제
+    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    // console.warn restore
+    consoleWarnSpy?.mockRestore();
   });
 
   it('allows navigation when authenticated', async () => {

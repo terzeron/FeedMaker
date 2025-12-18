@@ -4,9 +4,18 @@ import axios from 'axios';
 jest.mock('axios');
 
 describe('composables/useApiCall', () => {
+  let consoleErrorSpy;
+
   beforeEach(() => {
     axios.mockReset?.();
     axios.get?.mockReset?.();
+    // 테스트 중 console.error 출력 억제
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    // console.error restore
+    consoleErrorSpy?.mockRestore();
   });
 
   it('calls GET and returns data', async () => {
