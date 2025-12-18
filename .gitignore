@@ -48,8 +48,10 @@ cookies.*.json
 *.pid
 .env.development
 .env.production
-*.lock
+package-lock.json
+yarn.lock
 .*.lock
+!uv.lock
 .env
 .env.tests.notification
 nohup.out
