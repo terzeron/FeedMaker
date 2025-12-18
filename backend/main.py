@@ -9,6 +9,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Type, Optional
 from types import TracebackType
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,16 +29,17 @@ logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger(__name__)
 
 
-app = FastAPI()
-
-@app.on_event("startup")
-def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
     DB.create_all_tables()
     app.state.feed_maker_manager = FeedMakerManager()
-
-@app.on_event("shutdown")
-def shutdown_event():
+    yield
+    # Shutdown
     app.state.feed_maker_manager.aclose()
+
+
+app = FastAPI(lifespan=lifespan)
 
 frontend_url = Env.get("FM_FRONTEND_URL")
 origins = [
