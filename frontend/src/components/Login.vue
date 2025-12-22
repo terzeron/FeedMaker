@@ -70,16 +70,11 @@ const name = computed(() => {
 });
 
 const authInitialized = () => {
-  console.log("Facebook Auth initialized in Login component");
   initialized.value = true;
-  console.log("Initialized value set to:", initialized.value);
 };
 
 const login = async () => {
-  console.log("Login button clicked");
-
   if (isAuthenticated.value) {
-    console.log("Already authenticated, redirecting to result");
     await router.push("/result");
     return;
   }
@@ -100,12 +95,8 @@ const login = async () => {
   }
 
   try {
-    console.log("Attempting to login...");
     accessToken.value = await authRef.value.login();
-    console.log("Login successful");
-
     profile.value = await authRef.value.getProfile();
-    console.log("Profile retrieved");
 
     if (!profile.value || !profile.value["email"] || !profile.value["name"]) {
       alert("프로필 정보를 가져올 수 없습니다.");
@@ -144,8 +135,6 @@ const login = async () => {
 };
 
 const logout = async () => {
-  console.log("Logout button clicked");
-
   try {
     // 백엔드로 로그아웃 요청 (세션 삭제 및 httpOnly 쿠키 제거)
     await axios.post(
@@ -206,8 +195,6 @@ const checkAuthStatus = async () => {
 };
 
 onMounted(async () => {
-  console.log("Login component mounted");
-
   // 기존 localStorage 데이터 정리 (보안 취약점 제거)
   localStorage.removeItem("access_token");
   localStorage.removeItem("name");
