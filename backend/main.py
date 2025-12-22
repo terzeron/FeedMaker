@@ -167,13 +167,16 @@ async def get_me(request: Request) -> dict[str, Any]:
     - httpOnly 쿠키에서 세션 확인
     - 로그인 여부와 사용자 정보 반환
     """
+    LOGGER.info(f"/auth/me called, cookies: {request.cookies}")
     user_session = get_current_user(request)
 
     if not user_session:
+        LOGGER.warning("/auth/me: No valid user session found")
         return {
             "is_authenticated": False
         }
 
+    LOGGER.info(f"/auth/me: User authenticated: {user_session.user_email}")
     return {
         "is_authenticated": True,
         "email": user_session.user_email,
@@ -182,7 +185,10 @@ async def get_me(request: Request) -> dict[str, Any]:
 
 
 @app.get("/exec_result")
-async def get_exec_result(feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+async def get_exec_result(
+    feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager),
+    user_session: UserSession = Depends(require_auth)
+) -> dict[str, Any]:
     LOGGER.info("/exec_result -> get_exec_result()")
     response_object: dict[str, Any] = {}
     result, error = feed_maker_manager.get_exec_result()

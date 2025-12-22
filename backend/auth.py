@@ -56,24 +56,33 @@ def create_session(user_email: str, user_name: str, facebook_access_token: str) 
 def get_session(session_id: str) -> Optional[UserSession]:
     """Get session from database and validate expiry"""
     if not session_id:
+        LOGGER.warning("get_session: Empty session_id provided")
         return None
 
+    LOGGER.info(f"get_session: Looking up session_id {session_id[:20]}...")
     with DB.session_ctx() as session:
         user_session = session.query(UserSession).filter(
             UserSession.session_id == session_id
         ).first()
 
         if not user_session:
+            LOGGER.warning(f"get_session: No session found in DB for {session_id[:20]}...")
             return None
 
         # Check if session is expired
-        if user_session.expires_at < datetime.now(timezone.utc):
-            LOGGER.info(f"Session {session_id} expired")
+        # DB에서 가져온 datetime이 timezone-naive일 수 있으므로 UTC로 처리
+        expires_at = user_session.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+        if expires_at < datetime.now(timezone.utc):
+            LOGGER.info(f"Session {session_id[:20]}... expired")
             session.delete(user_session)
             return None
 
         # Update last accessed time
         user_session.last_accessed_at = datetime.now(timezone.utc)
+        LOGGER.info(f"get_session: Valid session found for {user_session.user_email}")
 
         return user_session
 
@@ -98,9 +107,11 @@ def delete_session(session_id: str) -> bool:
 
 def cleanup_expired_sessions() -> int:
     """Clean up expired sessions from database"""
+    # DB가 timezone-naive로 저장하므로 비교도 timezone-naive로 수행
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     with DB.session_ctx() as session:
         count = session.query(UserSession).filter(
-            UserSession.expires_at < datetime.now(timezone.utc)
+            UserSession.expires_at < now
         ).delete()
         LOGGER.info(f"Cleaned up {count} expired sessions")
         return count
@@ -109,10 +120,17 @@ def cleanup_expired_sessions() -> int:
 def get_current_user(request: Request) -> Optional[UserSession]:
     """Get current authenticated user from session cookie"""
     session_id = request.cookies.get(SESSION_COOKIE_NAME)
+    LOGGER.info(f"get_current_user: session_id from cookie = {session_id}")
     if not session_id:
+        LOGGER.warning("get_current_user: No session_id cookie found")
         return None
 
-    return get_session(session_id)
+    user_session = get_session(session_id)
+    if user_session:
+        LOGGER.info(f"get_current_user: Found valid session for {user_session.user_email}")
+    else:
+        LOGGER.warning(f"get_current_user: No valid session found for session_id {session_id}")
+    return user_session
 
 
 def require_auth(request: Request) -> UserSession:
@@ -126,32 +144,26 @@ def require_auth(request: Request) -> UserSession:
 
 def set_session_cookie(response: Response, session_id: str) -> None:
     """Set session cookie with secure flags"""
-    frontend_url = Env.get("FM_FRONTEND_URL", "")
-    is_production = "localhost" not in frontend_url and "127.0.0.1" not in frontend_url
-
     response.set_cookie(
         key=SESSION_COOKIE_NAME,
         value=session_id,
         max_age=COOKIE_MAX_AGE,
         httponly=True,  # Prevent XSS attacks
-        secure=is_production,  # HTTPS only in production
-        samesite="lax",  # CSRF protection
+        secure=True,  # HTTPS only (required for SameSite=none)
+        samesite="none",  # Allow cross-origin cookies
         path="/"
     )
 
 
 def set_csrf_cookie(response: Response, csrf_token: str) -> None:
     """Set CSRF cookie that is readable by JS"""
-    frontend_url = Env.get("FM_FRONTEND_URL", "")
-    is_production = "localhost" not in frontend_url and "127.0.0.1" not in frontend_url
-
     response.set_cookie(
         key=CSRF_COOKIE_NAME,
         value=csrf_token,
         max_age=COOKIE_MAX_AGE,
         httponly=False,  # Must be readable by frontend JS
-        secure=is_production,
-        samesite="lax",
+        secure=True,  # HTTPS only (required for SameSite=none)
+        samesite="none",  # Allow cross-origin cookies
         path="/"
     )
 
