@@ -121,11 +121,6 @@ def require_auth(request: Request) -> UserSession:
     if not user_session:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    # Verify user is authorized
-    login_allowed_email_list = Env.get("VUE_APP_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST", "").split(",")
-    if user_session.user_email not in login_allowed_email_list:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
     return user_session
 
 

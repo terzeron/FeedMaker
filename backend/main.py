@@ -110,7 +110,7 @@ async def login(request: LoginRequest) -> JSONResponse:
     LOGGER.info(f"POST /auth/login -> login({request.email})")
 
     # 허용된 이메일 목록 확인
-    login_allowed_email_list = Env.get("VUE_APP_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST", "").split(",")
+    login_allowed_email_list = Env.get("FM_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST", "").split(",")
     if request.email not in login_allowed_email_list:
         LOGGER.warning(f"Unauthorized login attempt from {request.email}")
         raise HTTPException(status_code=403, detail="이메일이 허용되지 않았습니다.")
