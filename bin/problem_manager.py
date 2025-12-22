@@ -17,8 +17,12 @@ LOGGER = logging.getLogger()
 
 class ProblemManager:
     num_days = 60
+    is_tables_created = False
 
     def __init__(self, loki_url: Optional[str] = None) -> None:
+        if not ProblemManager.is_tables_created:
+            DB.create_all_tables()
+            ProblemManager.is_tables_created = True
         self.feed_manager = FeedManager()
         self.access_log_manager = AccessLogManager(loki_url=loki_url)
         self.html_file_manager = HtmlFileManager()
