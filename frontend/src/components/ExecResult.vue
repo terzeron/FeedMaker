@@ -62,7 +62,7 @@ const getExecResult = async () => {
   error.value = "";
   try {
     const path = getApiUrlPath() + "/exec_result";
-    const res = await axios.get(path);
+    const res = await axios.get(path, { withCredentials: true });
     if (res.data && res.data.exec_result) {
       source.value = res.data.exec_result;
     } else {

@@ -71,6 +71,7 @@ import {
   BCardHeader,
   BCardBody,
   BSpinner,
+  createBootstrap,
 } from 'bootstrap-vue-next';
 
 import { VMarkdownView } from 'vue3-markdown';
@@ -78,8 +79,8 @@ import 'vue3-markdown/dist/vue3-markdown.css';
 
 const app = createApp(App);
 
-// BootstrapVueNext 플러그인 등록
-// app.use(ToastPlugin);
+// BootstrapVueNext 플러그인 등록 (modalManager 등 필요한 플러그인 제공)
+app.use(createBootstrap());
 
 // BootstrapVueNext 컴포넌트들을 개별적으로 등록
 app.component('BButton', BButton);
