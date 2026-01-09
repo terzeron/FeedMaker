@@ -1663,20 +1663,14 @@ def main() -> bool:
             actual_passed_count = 0
             actual_failed_count = 1
     elif args.all:
-        success = run_all_tests()
-        # Update test status after execution based on actual pytest cache results
+        # 테스트는 이미 위에서(1593-1601) 실행됨, 여기서는 상태만 업데이트
         test_files = [f for f in TEST_DIR.glob("test_*.py") if f.name != "test_runner.py"]
         for test_file in test_files:
             executed_tests.add(test_file)
-            # Check actual test result from pytest cache
-            if is_test_actually_failed(test_file):
-                failed_tests.add(test_file)
-                actual_failed_count += 1
-            else:
-                passed_tests.add(test_file)
-                actual_passed_count += 1
-
-        # Override success based on actual results
+        # passed_tests와 failed_tests는 LAST_RUN_PASSED, LAST_RUN_FAILED에서 가져옴
+        passed_tests = LAST_RUN_PASSED.copy()
+        failed_tests = LAST_RUN_FAILED.copy()
+        # actual_passed_count와 actual_failed_count는 이미 설정되어 있음
         success = actual_failed_count == 0
     else:
         # Default behavior: run failed tests first, then changed tests
