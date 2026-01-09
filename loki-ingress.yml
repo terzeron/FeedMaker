@@ -4,15 +4,16 @@ metadata:
   name: loki-ingress
   namespace: feedmaker
 spec:
-  ingressClassName: nginx
+  ingressClassName: traefik
   rules:
-  - host: loki.k8s       # ⬅️ 고정 호스트명(DNS A레코드로 Ingress 외부 IP 연결)
+  - host: loki.k8s
     http:
       paths:
-      - path: /
+      - path: /loki
         pathType: Prefix
         backend:
           service:
-            name: loki-gateway   # ⬅️ Loki 차트가 만든 게이트웨이 서비스
+            name: loki-gateway
             port:
               number: 80
+
