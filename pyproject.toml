@@ -6,7 +6,6 @@ readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "bs4>=0.0.2",
-    "cairosvg>=2.8.2",
     "cryptography>=46.0.3",
     "dotenv>=0.9.9",
     "fastapi>=0.118.2",
@@ -25,6 +24,7 @@ dependencies = [
     "pyrss2gen>=1.1",
     "python-dateutil>=2.9.0.post0",
     "requests>=2.32.5",
+    "resvg-py>=0.2.4",
     "selenium>=4.36.0",
     "sqlalchemy>=2.0.43",
     "urllib3>=2.5.0",
@@ -179,4 +179,5 @@ dev = [
     "modulegraph>=0.19.6",
     "pytest>=8.4.2",
     "pytest-cov>=7.0.0",
+    "testcontainers>=4.8.2",
 ]

@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 from base64 import b64decode
 from typing import Optional
-import cairosvg
+import resvg_py
 import pyheif
 from PIL import Image, ImageOps, UnidentifiedImageError
 from bin.feed_maker_util import FileManager, PathUtil, Env
@@ -96,7 +96,9 @@ class ImageDownloader:
 
         if header.startswith(b"<svg"):
             new_cache_file_path = cache_file_path.with_suffix(".webp")
-            cairosvg.svg2png(url=str(cache_file_path), write_to=str(new_cache_file_path.with_suffix(".png")))
+            svg_content = cache_file_path.read_text()
+            png_bytes = resvg_py.svg_to_bytes(svg_string=svg_content)
+            new_cache_file_path.with_suffix(".png").write_bytes(png_bytes)
             # PNG를 WebP로 최적화
             with Image.open(new_cache_file_path.with_suffix(".png")) as img:
                 optimized_img = ImageDownloader.optimize_for_webtoon(img)
