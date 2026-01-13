@@ -2,17 +2,27 @@
 
 # namespace 생성 및 변경
 kubectl create namespace feedmaker
-kubens.sh feedmaker
+kubens feedmaker
 
 # mysql 설치
 helm repo add bitnami https://charts.bitnami.com/bitnami
 helm repo update
-helm install mysql bitnami/mysql --version 14.0.3 -n feedmaker --set auth.rootPassword="$MYSQL_ROOT_PASSWORD" --set auth.database="$MYSQL_DATABASE" --set auth.username="$MYSQL_USER" --set auth.password="$MYSQL_PASSWORD"
-
-# mysql 호스트명 노출
-ip=$(kubectl -n ingress-nginx get svc ingress-nginx-controller -o json | jq -r .status.loadBalancer.ingress\[0\].ip)
-echo "IP: $ip"
-grep $ip /etc/hosts > /dev/null && echo "You can use '$ip' as fixed service IP" || echo "no host name entry in /etc/hosts, you should add it"
+# bitnami repository를 bitnamilegacy로 지정해야 함
+helm install mysql bitnami/mysql \
+  -n feedmaker \
+  --create-namespace \
+  --set image.registry=docker.io \
+  --set image.repository=bitnamilegacy/mysql \
+  --set image.tag=8.0.40-debian-12-r1 \
+  --set auth.rootPassword=$MYSQL_ROOT_PASSWORD \
+  --set auth.database=$MYSQL_DATABASE \
+  --set auth.username=$MYSQL_USER \
+  --set auth.password=$MYSQL_PASSWORD \
+  --set primary.persistence.enabled=true \
+  --set primary.persistence.size=8Gi
+kubectl patch svc mysql -n feedmaker -p '{"spec":{"type":"LoadBalancer"}}'
+kubectl get svc mysql -n feedmaker
+mysql -h $FM_DB_HOST -P $FM_DB_PORT -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "show databases"
 
 # 초기 데이터 로딩
 echo "초기 데이터 로딩 중..."
@@ -27,9 +37,7 @@ helm install loki grafana/loki --version 6.40.0 -n feedmaker -f loki-values.yml
 # loki용 ingress 설정
 kubectl apply -f loki-ingress.yml
 sleep 5
-
-# 호스트명 등록 가이드
-echo "다음 호스트명과 IP를 등록하세요"
-kubectl get ingress loki-ingress -n feedmaker -o json | jq -r ".spec.rules[0].host"
-kubectl get ingress loki-ingress -n feedmaker -o json | jq -r ".status.loadBalancer.ingress[0].ip"
+'
+curl http://loki.k8s/loki/api/v1/status/buildinfo
+curl http://loki.k8s/loki/api/v1/labels
 

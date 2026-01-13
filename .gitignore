@@ -48,8 +48,10 @@ cookies.*.json
 *.pid
 .env.development
 .env.production
-*.lock
+package-lock.json
+yarn.lock
 .*.lock
+!uv.lock
 .env
 .env.tests.notification
 nohup.out
@@ -57,3 +59,27 @@ nohup.out.old
 backend/index.wsgi
 backend/uvicorn.log*
 
+# Coverage and test artifacts
+.coverage
+.coverage.*
+.coverage_out/
+coverage.xml
+coverage/
+htmlcov/
+.pytest_cache/
+.tox/
+tmp/
+frontend/coverage/
+frontend/node_modules/
+
+# Virtual envs and editor caches
+.venv/
+.DS_Store
+frontend/.eslintcache
+frontend/.cache/
+
+# Frontend build outputs
+frontend/dist/
+
+# Logs (plural)
+logs/

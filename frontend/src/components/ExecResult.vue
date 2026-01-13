@@ -22,9 +22,8 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { useStorage } from "@vueuse/core";
 import axios from "axios";
-import { getApiUrlPath, handleApiError } from "@/utils/api";
+import { getApiUrlPath } from "@/utils/api";
 
 // markdown-it을 동적으로 import하여 안전하게 처리
 let MarkdownIt = null;
@@ -52,8 +51,7 @@ const router = useRouter();
 const source = ref("### No result");
 const loading = ref(false);
 const error = ref("");
-
-const isAuthorized = useStorage("is_authorized", false, localStorage);
+const isAuthenticated = ref(false);
 
 // Computed properties for footer
 const adminEmail = computed(() => process.env.VUE_APP_FACEBOOK_ADMIN_EMAIL || 'admin');
@@ -64,7 +62,7 @@ const getExecResult = async () => {
   error.value = "";
   try {
     const path = getApiUrlPath() + "/exec_result";
-    const res = await axios.get(path);
+    const res = await axios.get(path, { withCredentials: true });
     if (res.data && res.data.exec_result) {
       source.value = res.data.exec_result;
     } else {
@@ -94,9 +92,27 @@ const renderedMarkdown = computed(() => {
   }
 });
 
+// 서버에서 인증 상태 확인
+const checkAuthStatus = async () => {
+  try {
+    const response = await axios.get(
+      `${getApiUrlPath()}/auth/me`,
+      { withCredentials: true }
+    );
+    return response.data.is_authenticated === true;
+  } catch (err) {
+    console.error('Auth check failed:', err);
+    return false;
+  }
+};
+
 onMounted(async () => {
   await initMarkdownIt();
-  if (isAuthorized.value) {
+
+  // 서버에서 인증 상태 확인 (localStorage 대신)
+  isAuthenticated.value = await checkAuthStatus();
+
+  if (isAuthenticated.value) {
     getExecResult();
   } else {
     router.push("/login");

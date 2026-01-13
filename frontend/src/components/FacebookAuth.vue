@@ -33,11 +33,6 @@ const initializationAttempted = ref(false);
 
 // Methods
 const loadFacebookSDK = () => {
-  console.log('Loading Facebook SDK...');
-  console.log('App ID:', props.appId);
-  console.log('Version:', props.version);
-  console.log('Environment VUE_APP_FACEBOOK_APP_ID:', process.env.VUE_APP_FACEBOOK_APP_ID);
-
   if (!props.appId || props.appId === 'test_app_id') {
     console.warn('Facebook App ID is not configured. Please set VUE_APP_FACEBOOK_APP_ID in your .env file');
     sdkLoadError.value = 'Facebook App ID is not configured';
@@ -49,7 +44,6 @@ const loadFacebookSDK = () => {
   return new Promise((resolve, reject) => {
     // Check if SDK is already loaded
     if (window.FB) {
-      console.log('Facebook SDK already loaded');
       isSdkLoaded.value = true;
       emit('auth-initialized');
       resolve();
@@ -58,11 +52,9 @@ const loadFacebookSDK = () => {
 
     // Check if fbAsyncInit is already set
     if (window.fbAsyncInit) {
-      console.log('fbAsyncInit already set, waiting for initialization...');
       // Wait a bit for initialization to complete
       setTimeout(() => {
         if (window.FB) {
-          console.log('Facebook SDK initialized via existing fbAsyncInit');
           isSdkLoaded.value = true;
           emit('auth-initialized');
           resolve();
@@ -74,7 +66,6 @@ const loadFacebookSDK = () => {
     }
 
     window.fbAsyncInit = () => {
-      console.log('Facebook SDK initialized');
       window.FB.init({
         appId: props.appId,
         cookie: true,
@@ -90,15 +81,11 @@ const loadFacebookSDK = () => {
     (function(d, s, id){
       const fjs = d.getElementsByTagName(s)[0];
       if (d.getElementById(id)) {
-        console.log('Facebook SDK script already exists');
         return;
       }
       const js = d.createElement(s);
       js.id = id;
       js.src = 'https://connect.facebook.net/en_US/sdk.js';
-      js.onload = () => {
-        console.log('Facebook SDK script loaded');
-      };
       js.onerror = (error) => {
         console.error('Facebook SDK script load error:', error);
         sdkLoadError.value = 'Failed to load Facebook SDK';
@@ -110,10 +97,6 @@ const loadFacebookSDK = () => {
 };
 
 const login = async () => {
-  console.log('Attempting Facebook login...');
-  console.log('SDK loaded:', isSdkLoaded.value);
-  console.log('Window FB:', !!window.FB);
-
   if (!isSdkLoaded.value || !window.FB) {
     throw new Error('Facebook SDK is not loaded');
   }
@@ -125,10 +108,8 @@ const login = async () => {
   try {
     return new Promise((resolve, reject) => {
       window.FB.login(function (response) {
-        console.log('Facebook login response:', response);
         if (response.authResponse) {
           if (response.status === 'connected') {
-            console.log('Login succeeded: ', response.authResponse.accessToken);
             resolve(response.authResponse.accessToken);
           } else {
             reject('Login failed: ' + response.status);
@@ -145,8 +126,6 @@ const login = async () => {
 };
 
 const logout = async () => {
-  console.log('Attempting Facebook logout...');
-
   if (!isSdkLoaded.value || !window.FB) {
     throw new Error('Facebook SDK is not loaded');
   }
@@ -156,7 +135,6 @@ const logout = async () => {
       window.FB.getLoginStatus(function (response) {
         if (response && response.status === 'connected') {
           window.FB.logout(function (response) {
-            console.log('Logout response:', response);
             resolve(response);
           });
         } else {
@@ -169,8 +147,6 @@ const logout = async () => {
 };
 
 const getProfile = async () => {
-  console.log('Getting Facebook profile...');
-
   if (!isSdkLoaded.value || !window.FB) {
     throw new Error('Facebook SDK is not loaded');
   }
@@ -178,7 +154,6 @@ const getProfile = async () => {
   const profilePromise = () => {
     return new Promise((resolve, reject) => {
       window.FB.api('/me', {fields: 'name,email'}, function (response) {
-        console.log('Profile response:', response);
         if (response && !response.error) {
           resolve(response);
         } else {
@@ -207,12 +182,6 @@ defineExpose({
 
 // Lifecycle
 onMounted(async () => {
-  console.log('FacebookAuth component mounted');
-  console.log('Component props:', {
-    appId: props.appId,
-    version: props.version
-  });
-
   try {
     await loadFacebookSDK();
   } catch (error) {

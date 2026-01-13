@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 from bin.db import DB
-from bin.models import TestTable
+from bin.models import SampleTable
 
 class TestDB(unittest.TestCase):
     def setUp(self) -> None:
@@ -73,20 +73,20 @@ class TestDB(unittest.TestCase):
         
         # Insert
         with DB.session_ctx(db_config=self.mock_db_config) as s:
-            s.add(TestTable(name="Alice", age=10))
-        
+            s.add(SampleTable(name="Alice", age=10))
+
         # Select - first query
         with DB.session_ctx(db_config=self.mock_db_config) as s:
-            rows = s.query(TestTable).all()
+            rows = s.query(SampleTable).all()
             assert rows is not None
             self.assertEqual(len(rows), 1)
             for row in rows:
                 self.assertEqual(row.name, "Alice")
                 self.assertEqual(row.age, 10)
-        
+
         # Select - second query (where clause)
         with DB.session_ctx(db_config=self.mock_db_config) as s:
-            rows = s.query(TestTable).where(TestTable.name == "Alice").all()
+            rows = s.query(SampleTable).where(SampleTable.name == "Alice").all()
             assert rows is not None
             self.assertEqual(len(rows), 1)
             for row in rows:
@@ -107,13 +107,13 @@ class TestDB(unittest.TestCase):
         
         # Upsert
         with DB.session_ctx(db_config=self.mock_db_config) as s:
-            s.merge(TestTable(name="Alice", age=20))
-        
+            s.merge(SampleTable(name="Alice", age=20))
+
         with DB.session_ctx(db_config=self.mock_db_config) as s:
-            s.merge(TestTable(name="Alice", age=30))
-        
+            s.merge(SampleTable(name="Alice", age=30))
+
         with DB.session_ctx(db_config=self.mock_db_config) as s:
-            rows = s.query(TestTable).where(TestTable.name == "Alice").all()
+            rows = s.query(SampleTable).where(SampleTable.name == "Alice").all()
             assert rows is not None
             for row in rows:
                 self.assertEqual(row.age, 30)

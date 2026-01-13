@@ -5,12 +5,10 @@ import os
 import argparse
 import subprocess
 import time
-import stat
+import platform
 from pathlib import Path
 from datetime import datetime
 from typing import Any, Optional
-import signal
-import traceback
 from collections import defaultdict, Counter
 import cProfile
 import pstats
@@ -19,6 +17,7 @@ import ast
 
 from graphlib import TopologicalSorter
 from modulegraph.modulegraph import ModuleGraph
+
 # 최근 테스트 실행 결과(파일 단위)를 보관하여 요약 출력에 활용
 LAST_RUN_PASSED: set[Path] = set()
 LAST_RUN_FAILED: set[Path] = set()
@@ -93,7 +92,13 @@ def set_last_success_time() -> None:
 def get_modified_files(since: float, exclude_paths: Optional[set[str]] = None) -> list[Path]:
     """Get modified Python files with better filtering"""
     if exclude_paths is None:
-        exclude_paths = {'.pytest_cache', '__pycache__', '.git', 'node_modules'}
+        exclude_paths = {
+            '.pytest_cache', '__pycache__', '.git', 'node_modules',
+            '.venv', 'venv', '.env',  # Virtual environments
+            '.idea', '.vscode', '.run',  # IDE directories
+            '.mypy_cache', '.hypothesis', '.coverage_out',  # Tool caches
+            'tmp', 'logs', 'work',  # Temporary/runtime directories
+        }
 
     modified = []
     for root, dirs, files in os.walk(PROJECT_ROOT):
@@ -1658,20 +1663,14 @@ def main() -> bool:
             actual_passed_count = 0
             actual_failed_count = 1
     elif args.all:
-        success = run_all_tests()
-        # Update test status after execution based on actual pytest cache results
+        # 테스트는 이미 위에서(1593-1601) 실행됨, 여기서는 상태만 업데이트
         test_files = [f for f in TEST_DIR.glob("test_*.py") if f.name != "test_runner.py"]
         for test_file in test_files:
             executed_tests.add(test_file)
-            # Check actual test result from pytest cache
-            if is_test_actually_failed(test_file):
-                failed_tests.add(test_file)
-                actual_failed_count += 1
-            else:
-                passed_tests.add(test_file)
-                actual_passed_count += 1
-
-        # Override success based on actual results
+        # passed_tests와 failed_tests는 LAST_RUN_PASSED, LAST_RUN_FAILED에서 가져옴
+        passed_tests = LAST_RUN_PASSED.copy()
+        failed_tests = LAST_RUN_FAILED.copy()
+        # actual_passed_count와 actual_failed_count는 이미 설정되어 있음
         success = actual_failed_count == 0
     else:
         # Default behavior: run failed tests first, then changed tests

@@ -811,7 +811,7 @@ export default {
       this.hideAllRelatedToGroup();
       this.hideAllRelatedToFeed();
 
-      const url = getApiUrlPath() + `/search/${this.searchKeyword}`;
+      const url = getApiUrlPath() + `/search/${encodeURIComponent(this.searchKeyword)}`;
       axios
         .get(url)
         .then((res) => {
@@ -1360,28 +1360,19 @@ export default {
     this.groups = this.groups || [];
     this.feeds = this.feeds || [];
 
-    // Check session expiry before authorization check
-    const sessionExpiry = localStorage.getItem("session_expiry");
-    if (sessionExpiry && new Date().getTime() > parseInt(sessionExpiry)) {
-      console.log("Session expired, redirecting to login");
-      this.$session.clear();
-      this.$router.push("/login");
-      return;
-    }
+    // 인증 검증은 router guard에서 처리됨 (server-side validation)
+    // localStorage의 session_expiry 검증 제거 (보안 취약점)
 
-    if (this.$session.get("is_authorized")) {
-      if (this.$route.params["group"] && this.$route.params["feed"]) {
-        this.selectedGroupName = this.$route.params["group"];
-        this.selectedFeedName = this.$route.params["feed"];
-        return this.feedNameButtonClicked(
-          this.selectedGroupName,
-          this.selectedFeedName
-        );
-      } else {
-        return this.getGroups();
-      }
+    // URL 파라미터에 따라 초기화
+    if (this.$route.params["group"] && this.$route.params["feed"]) {
+      this.selectedGroupName = this.$route.params["group"];
+      this.selectedFeedName = this.$route.params["feed"];
+      return this.feedNameButtonClicked(
+        this.selectedGroupName,
+        this.selectedFeedName
+      );
     } else {
-      this.$router.push("/login");
+      return this.getGroups();
     }
   },
   beforeUnmount: function () {

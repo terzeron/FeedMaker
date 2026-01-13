@@ -55,7 +55,7 @@
         </div>
       </BCol>
     </BRow>
-    
+
     <BRow>
       <BCol cols="12" class="mx-auto text-center mt-5 mb-3">
         Feed Manager by {{ adminEmail }}
@@ -116,7 +116,7 @@ export default {
       this.showSearchResult = true;
       this.searchError = "";
 
-      const url = getApiUrlPath() + `/search_site/${this.searchKeyword}`;
+      const url = getApiUrlPath() + `/search_site/${encodeURIComponent(this.searchKeyword)}`;
       axios
         .get(url)
         .then((res) => {
@@ -152,18 +152,8 @@ export default {
     },
   },
   mounted: function () {
-    // Check session expiry before authorization check
-    const sessionExpiry = localStorage.getItem("session_expiry");
-    if (sessionExpiry && new Date().getTime() > parseInt(sessionExpiry)) {
-      console.log("Session expired, redirecting to login");
-      this.$session.clear();
-      this.$router.push("/login");
-      return;
-    }
-
-    if (!this.$session.get("is_authorized")) {
-      this.$router.push("/login");
-    }
+    // 인증 검증은 router guard에서 처리됨 (server-side validation)
+    // localStorage의 session_expiry 검증 제거 (보안 취약점)
   },
 };
 </script>

@@ -1,4 +1,5 @@
 import { createApp } from 'vue';
+import axios from 'axios';
 import App from './App';
 import router from './router';
 
@@ -11,6 +12,32 @@ import 'bootstrap-vue-next/dist/bootstrap-vue-next.css';
 
 // Custom common styles
 import './assets/styles/common.css';
+
+// Axios 전역 설정: 모든 요청에 withCredentials 적용
+axios.defaults.withCredentials = true;
+
+// CSRF 토큰을 위한 Axios 요청 인터셉터 설정
+axios.interceptors.request.use(config => {
+  const method = config.method.toUpperCase();
+  if (['POST', 'PUT', 'DELETE'].includes(method)) {
+    const csrfToken = getCsrfToken();
+    if (csrfToken) {
+      config.headers['X-CSRF-Token'] = csrfToken;
+    }
+  }
+  return config;
+}, error => {
+  return Promise.reject(error);
+});
+
+// 쿠키에서 CSRF 토큰을 읽어오는 함수
+function getCsrfToken() {
+  const csrfCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('csrf_token='));
+  if (csrfCookie) {
+    return csrfCookie.split('=')[1];
+  }
+  return null;
+}
 
 // BootstrapVueNext 개별 컴포넌트 import
 import {
@@ -44,18 +71,16 @@ import {
   BCardHeader,
   BCardBody,
   BSpinner,
+  createBootstrap,
 } from 'bootstrap-vue-next';
 
 import { VMarkdownView } from 'vue3-markdown';
 import 'vue3-markdown/dist/vue3-markdown.css';
 
-// Custom session utility
-import session from './utils/session';
-
 const app = createApp(App);
 
-// BootstrapVueNext 플러그인 등록
-// app.use(ToastPlugin);
+// BootstrapVueNext 플러그인 등록 (modalManager 등 필요한 플러그인 제공)
+app.use(createBootstrap());
 
 // BootstrapVueNext 컴포넌트들을 개별적으로 등록
 app.component('BButton', BButton);
@@ -91,8 +116,5 @@ app.component('BSpinner', BSpinner);
 
 app.component('VMarkdownView', VMarkdownView);
 app.use(router);
-
-// Add session as global property
-app.config.globalProperties.$session = session;
 
 app.mount('#app');

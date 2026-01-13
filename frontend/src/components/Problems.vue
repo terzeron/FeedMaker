@@ -45,10 +45,11 @@
                   :key="index"
                 >
                   <td v-for="field in statusInfoFields" :key="field.key" :data-label="field.label">
-                    <span
-                      v-if="field.key === 'feed_title'"
-                      v-html="item[field.key]"
-                    ></span>
+                    <span v-if="field.key === 'feed_title'">
+                      <router-link v-if="item.group_name && item.feed_name" :to="`/management/${item.group_name}/${item.feed_name}`">
+                        {{ item[field.key] || item.feed_name }}
+                      </router-link>
+                    </span>
                     <span v-else-if="field.key === 'action'">
                       <font-awesome-icon
                         :icon="['far', 'trash-alt']"
@@ -113,10 +114,12 @@
                   :key="index"
                 >
                   <td v-for="field in progressInfoFields" :key="field.key">
-                    <span
-                      v-if="field.key === 'feed_title'"
-                      v-html="item[field.key]"
-                    ></span>
+                    <span v-if="field.key === 'feed_title'">
+                      <router-link v-if="item.group_name && item.feed_name" :to="`/management/${item.group_name}/${item.feed_name}`">
+                        {{ item[field.key] || item.feed_name }}
+                      </router-link>
+                      <span v-else>{{ item[field.key] }}</span>
+                    </span>
                     <span v-else-if="field.key === 'progress_ratio'"
                       >{{ item[field.key] }}%</span
                     >
@@ -174,10 +177,12 @@
               <tbody>
                 <tr v-for="(item, index) in sortedListUrlInfolist" :key="index">
                   <td v-for="field in listUrlInfoFields" :key="field.key">
-                    <span
-                      v-if="field.key === 'feed_title'"
-                      v-html="item[field.key]"
-                    ></span>
+                    <span v-if="field.key === 'feed_title'">
+                      <router-link v-if="item.group_name && item.feed_name" :to="`/management/${item.group_name}/${item.feed_name}`">
+                        {{ item[field.key] || item.feed_name }}
+                      </router-link>
+                      <span v-else>{{ item[field.key] }}</span>
+                    </span>
                     <span v-else>{{ item[field.key] }}</span>
                   </td>
                 </tr>
@@ -595,14 +600,12 @@
                         'text-danger': item.numItemsIsDanger,
                         'text-warning': item.numItemsIsWarning,
                       }"
-                      v-html="item[field.key]"
-                    ></span>
+                    >{{ item[field.key] }}</span>
                     <span
                       v-else-if="field.key === 'upload_date'"
                       class="date-cell"
                       :class="{'text-danger': item.uploadDateIsDanger, 'text-warning': item.uploadDateIsWarning}"
-                      v-html="item[field.key]"
-                    ></span>
+                    >{{ item[field.key] }}</span>
                     <span v-else-if="field.key === 'action'">
                       <font-awesome-icon
                         :icon="['far', 'trash-alt']"
@@ -1399,11 +1402,7 @@ export default {
 
             // transformation
             this.statusInfolist = _.map(result, (o) => {
-              o["feed_title"] = this.getManagementLink(
-                o["feed_title"],
-                o["group_name"],
-                o["feed_name"]
-              );
+              // Keep feed_title as plain text, group_name and feed_name will be used in template
               o["http_request"] = o["http_request"] ? "O" : "X";
               o["public_html"] = o["public_html"] ? "O" : "X";
               o["feedmaker"] = o["feedmaker"] ? "O" : "X";
@@ -1442,11 +1441,7 @@ export default {
             }
 
             this.progressInfolist = _.map(result, (o) => {
-              o["feed_title"] = this.getManagementLink(
-                o["feed_title"],
-                o["group_name"],
-                o["feed_name"]
-              );
+              // Keep feed_title as plain text, group_name and feed_name will be used in template
               o["due_date"] = this.getShortDate(o["due_date"]);
               return o;
             });
@@ -1711,11 +1706,7 @@ export default {
             }
 
             this.listUrlInfolist = _.map(result, (o) => {
-              o["feed_title"] = this.getManagementLink(
-                o["feed_title"],
-                o["group_name"],
-                o["feed_name"]
-              );
+              // Keep feed_title as plain text, group_name and feed_name will be used in template
               return o;
             });
           }
@@ -1738,74 +1729,9 @@ export default {
     this.htmlFileWithImageNotFoundlist = [];
     this.publicFeedInfolist = [];
 
-    // Check session expiry before authorization check
-    const sessionExpiry = localStorage.getItem("session_expiry");
-    if (sessionExpiry && new Date().getTime() > parseInt(sessionExpiry)) {
-      console.log("Session expired, redirecting to login");
-      this.$session.clear();
-      this.$router.push("/login");
-      return;
-    }
-
-    if (this.$session.get("is_authorized")) {
-      this.getProblems();
-    } else {
-      this.$router.push("/login");
-    }
+    // 인증 검증은 router guard에서 처리됨 (server-side validation)
+    // localStorage의 session_expiry 검증 제거 (보안 취약점)
+    this.getProblems();
   },
 };
 </script>
-
-<style>
-/* 피드 제목 ellipsis 스타일 */
-.feed-title-ellipsis {
-  display: inline-block;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.feed-title-ellipsis a {
-  color: #007bff;
-  text-decoration: underline;
-}
-
-.feed-title-ellipsis a:hover {
-  color: #0056b3;
-  text-decoration: underline;
-}
-
-/* 테이블 너비 제한 및 스크롤 방지 */
-.table {
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  table-layout: fixed;
-}
-
-.table td,
-.table th {
-  word-wrap: break-word;
-  overflow: visible;
-}
-
-/* 테이블 컨테이너 너비 제한 */
-.table-responsive {
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-/* col-lg-4 테이블 컨테이너 최대 폭 제한 */
-.col-lg-4 .table-responsive {
-  max-width: 100% !important;
-  overflow-x: hidden !important;
-}
-
-/* 날짜 셀만 폰트 작게 */
-.date-cell {
-  font-size: 0.75em;
-  color: #666;
-}
-
-</style>

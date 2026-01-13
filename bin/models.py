@@ -87,7 +87,24 @@ class LockForConcurrentLoading(Base):
     lock_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True, server_default=text('CURRENT_TIMESTAMP'))
 
 
-class TestTable(Base):
+class SampleTable(Base):
     __tablename__ = "test_table"
     name: Mapped[str] = mapped_column(String(256), primary_key=True)
     age: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class UserSession(Base):
+    __tablename__ = "user_session"
+
+    session_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_email: Mapped[str] = mapped_column(String(256), nullable=False)
+    user_name: Mapped[str] = mapped_column(String(256), nullable=False)
+    facebook_access_token: Mapped[str] = mapped_column(String(512), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text('CURRENT_TIMESTAMP'))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_accessed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text('CURRENT_TIMESTAMP'))
+
+    __table_args__ = (
+        Index("user_session_expires_at_idx", "expires_at"),
+        Index("user_session_user_email_idx", "user_email"),
+    )

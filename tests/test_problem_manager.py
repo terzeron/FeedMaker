@@ -28,6 +28,9 @@ class TestProblemManager(unittest.TestCase):
         # 임시 디렉토리 생성
         cls.temp_dir = Path(tempfile.mkdtemp())
 
+        # ProblemManager 클래스 변수 리셋 (다른 테스트와의 격리를 위해)
+        ProblemManager.is_tables_created = False
+
         print("🚀 Setting up mock environment for test_problem_manager...")
         print("✅ Mock environment ready for test_problem_manager")
 
@@ -55,10 +58,15 @@ class TestProblemManager(unittest.TestCase):
         self.mock_query = MagicMock()
         self.mock_session.query.return_value = self.mock_query
 
+        # ProblemManager 클래스 변수 리셋 (각 테스트 격리)
+        ProblemManager.is_tables_created = False
+
         # ProblemManager 인스턴스 생성 (모든 외부 의존성을 mock으로 대체)
-        with patch('bin.db.DB.session_ctx') as mock_session_ctx, \
+        with patch('bin.db.DB.create_all_tables') as mock_create_tables, \
+             patch('bin.db.DB.session_ctx') as mock_session_ctx, \
              patch('bin.access_log_manager.AccessLogManager.loki_search') as mock_loki_search:
 
+            mock_create_tables.return_value = None
             mock_session_ctx.return_value.__enter__.return_value = self.mock_session
             mock_session_ctx.return_value.__exit__.return_value = None
 
