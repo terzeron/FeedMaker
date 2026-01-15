@@ -30,8 +30,16 @@ axios.interceptors.request.use(config => {
   return Promise.reject(error);
 });
 
-// 쿠키에서 CSRF 토큰을 읽어오는 함수
+// CSRF 토큰을 읽어오는 함수
+// localStorage 우선 조회 (cross-origin 쿠키 접근 제한 우회), 없으면 쿠키에서 조회
 function getCsrfToken() {
+  // 1. localStorage에서 먼저 조회
+  const localToken = localStorage.getItem('csrf_token');
+  if (localToken) {
+    return localToken;
+  }
+
+  // 2. 쿠키에서 조회 (fallback)
   const csrfCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('csrf_token='));
   if (csrfCookie) {
     return csrfCookie.split('=')[1];
