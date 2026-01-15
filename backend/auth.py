@@ -151,7 +151,8 @@ def set_session_cookie(response: Response, session_id: str) -> None:
         httponly=True,  # Prevent XSS attacks
         secure=True,  # HTTPS only (required for SameSite=none)
         samesite="none",  # Allow cross-origin cookies
-        path="/"
+        path="/",
+        domain=".terzeron.com"  # Allow cookie sharing across subdomains
     )
 
 
@@ -164,7 +165,8 @@ def set_csrf_cookie(response: Response, csrf_token: str) -> None:
         httponly=False,  # Must be readable by frontend JS
         secure=True,  # HTTPS only (required for SameSite=none)
         samesite="none",  # Allow cross-origin cookies
-        path="/"
+        path="/",
+        domain=".terzeron.com"  # Allow cookie sharing across subdomains
     )
 
 
@@ -172,7 +174,8 @@ def clear_session_cookie(response: JSONResponse) -> None:
     """Clear session cookie"""
     response.delete_cookie(
         key=SESSION_COOKIE_NAME,
-        path="/"
+        path="/",
+        domain=".terzeron.com"  # Must match the domain used when setting
     )
 
 
@@ -180,5 +183,6 @@ def clear_csrf_cookie(response: Response) -> None:
     """Clear CSRF cookie"""
     response.delete_cookie(
         key=CSRF_COOKIE_NAME,
-        path="/"
+        path="/",
+        domain=".terzeron.com"  # Must match the domain used when setting
     )
