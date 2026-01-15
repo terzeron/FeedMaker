@@ -122,7 +122,8 @@ async def login(request: LoginRequest) -> JSONResponse:
 
         response = JSONResponse(content={
             "status": "success",
-            "message": "로그인되었습니다."
+            "message": "로그인되었습니다.",
+            "csrf_token": csrf_token  # 프론트엔드에서 localStorage에 저장하여 사용
         })
 
         # httpOnly 쿠키 설정

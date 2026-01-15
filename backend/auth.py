@@ -5,6 +5,7 @@ import secrets
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+from urllib.parse import urlparse
 from fastapi import HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 
@@ -22,6 +23,39 @@ COOKIE_MAX_AGE = SESSION_EXPIRY_DAYS * 24 * 60 * 60  # seconds
 # CSRF configuration
 CSRF_COOKIE_NAME = "csrf_token"
 CSRF_HEADER_NAME = "X-CSRF-Token"
+
+
+def get_cookie_domain() -> Optional[str]:
+    """
+    프론트엔드 URL에서 쿠키 공유를 위한 공통 도메인 추출
+    예: https://fm.terzeron.com -> .terzeron.com
+    """
+    frontend_url = Env.get("FM_FRONTEND_URL")
+    if not frontend_url:
+        LOGGER.warning("FM_FRONTEND_URL not set, cookie domain will be None")
+        return None
+
+    parsed = urlparse(frontend_url)
+    host = parsed.hostname
+    if not host:
+        return None
+
+    # localhost나 IP 주소인 경우 도메인 설정 안 함
+    if host in ("localhost", "127.0.0.1") or host.replace(".", "").isdigit():
+        return None
+
+    # 서브도메인을 제거하고 루트 도메인 추출 (예: fm.terzeron.com -> terzeron.com)
+    parts = host.split(".")
+    if len(parts) >= 2:
+        # 마지막 두 부분을 루트 도메인으로 사용 (예: terzeron.com)
+        root_domain = ".".join(parts[-2:])
+        return f".{root_domain}"
+
+    return None
+
+
+# 쿠키 도메인 (앱 시작 시 한 번만 계산)
+COOKIE_DOMAIN = get_cookie_domain()
 
 
 def generate_session_id() -> str:
@@ -152,7 +186,7 @@ def set_session_cookie(response: Response, session_id: str) -> None:
         secure=True,  # HTTPS only (required for SameSite=none)
         samesite="none",  # Allow cross-origin cookies
         path="/",
-        domain=".terzeron.com"  # Allow cookie sharing across subdomains
+        domain=COOKIE_DOMAIN  # Allow cookie sharing across subdomains
     )
 
 
@@ -166,7 +200,7 @@ def set_csrf_cookie(response: Response, csrf_token: str) -> None:
         secure=True,  # HTTPS only (required for SameSite=none)
         samesite="none",  # Allow cross-origin cookies
         path="/",
-        domain=".terzeron.com"  # Allow cookie sharing across subdomains
+        domain=COOKIE_DOMAIN  # Allow cookie sharing across subdomains
     )
 
 
@@ -175,7 +209,7 @@ def clear_session_cookie(response: JSONResponse) -> None:
     response.delete_cookie(
         key=SESSION_COOKIE_NAME,
         path="/",
-        domain=".terzeron.com"  # Must match the domain used when setting
+        domain=COOKIE_DOMAIN  # Must match the domain used when setting
     )
 
 
@@ -184,5 +218,5 @@ def clear_csrf_cookie(response: Response) -> None:
     response.delete_cookie(
         key=CSRF_COOKIE_NAME,
         path="/",
-        domain=".terzeron.com"  # Must match the domain used when setting
+        domain=COOKIE_DOMAIN  # Must match the domain used when setting
     )
