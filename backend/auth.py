@@ -20,9 +20,6 @@ SESSION_COOKIE_NAME = "session_id"
 SESSION_EXPIRY_DAYS = 30
 COOKIE_MAX_AGE = SESSION_EXPIRY_DAYS * 24 * 60 * 60  # seconds
 
-# CSRF configuration
-CSRF_COOKIE_NAME = "csrf_token"
-CSRF_HEADER_NAME = "X-CSRF-Token"
 
 
 def get_cookie_domain() -> Optional[str]:
@@ -61,11 +58,6 @@ COOKIE_DOMAIN = get_cookie_domain()
 def generate_session_id() -> str:
     """Generate a secure random session ID"""
     return secrets.token_urlsafe(48)
-
-
-def generate_csrf_token() -> str:
-    """Generate a secure random CSRF token"""
-    return secrets.token_urlsafe(32)
 
 
 def create_session(user_email: str, user_name: str, facebook_access_token: str) -> str:
@@ -183,22 +175,8 @@ def set_session_cookie(response: Response, session_id: str) -> None:
         value=session_id,
         max_age=COOKIE_MAX_AGE,
         httponly=True,  # Prevent XSS attacks
-        secure=True,  # HTTPS only (required for SameSite=none)
-        samesite="none",  # Allow cross-origin cookies
-        path="/",
-        domain=COOKIE_DOMAIN  # Allow cookie sharing across subdomains
-    )
-
-
-def set_csrf_cookie(response: Response, csrf_token: str) -> None:
-    """Set CSRF cookie that is readable by JS"""
-    response.set_cookie(
-        key=CSRF_COOKIE_NAME,
-        value=csrf_token,
-        max_age=COOKIE_MAX_AGE,
-        httponly=False,  # Must be readable by frontend JS
-        secure=True,  # HTTPS only (required for SameSite=none)
-        samesite="none",  # Allow cross-origin cookies
+        secure=True,  # HTTPS only
+        samesite="lax",  # CSRF protection: 외부 사이트 POST 요청 시 쿠키 미전송
         path="/",
         domain=COOKIE_DOMAIN  # Allow cookie sharing across subdomains
     )
@@ -213,10 +191,3 @@ def clear_session_cookie(response: JSONResponse) -> None:
     )
 
 
-def clear_csrf_cookie(response: Response) -> None:
-    """Clear CSRF cookie"""
-    response.delete_cookie(
-        key=CSRF_COOKIE_NAME,
-        path="/",
-        domain=COOKIE_DOMAIN  # Must match the domain used when setting
-    )

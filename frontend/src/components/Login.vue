@@ -117,15 +117,9 @@ const login = async () => {
     );
 
     if (response.data.status === "success") {
-      // 로그인 성공 - 서버가 httpOnly 쿠키 설정함
+      // 로그인 성공 - 서버가 httpOnly 쿠키 설정함 (SameSite=Lax로 CSRF 방어)
       userName.value = profile.value["name"];
       isAuthenticated.value = true;
-
-      // CSRF 토큰을 localStorage에 저장 (cross-origin 쿠키 접근 제한 우회)
-      if (response.data.csrf_token) {
-        localStorage.setItem("csrf_token", response.data.csrf_token);
-      }
-
       await router.push("/result");
     } else {
       alert(response.data.message || "로그인 실패");
@@ -165,7 +159,6 @@ const logout = async () => {
     localStorage.removeItem("name");
     localStorage.removeItem("is_authorized");
     localStorage.removeItem("session_expiry");
-    localStorage.removeItem("csrf_token");  // CSRF 토큰 제거
     sessionStorage.removeItem("access_token");
     sessionStorage.removeItem("name");
     sessionStorage.removeItem("is_authorized");

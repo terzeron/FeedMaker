@@ -13,39 +13,8 @@ import 'bootstrap-vue-next/dist/bootstrap-vue-next.css';
 // Custom common styles
 import './assets/styles/common.css';
 
-// Axios 전역 설정: 모든 요청에 withCredentials 적용
+// Axios 전역 설정: 모든 요청에 withCredentials 적용 (SameSite=Lax 쿠키 전송)
 axios.defaults.withCredentials = true;
-
-// CSRF 토큰을 위한 Axios 요청 인터셉터 설정
-axios.interceptors.request.use(config => {
-  const method = config.method.toUpperCase();
-  if (['POST', 'PUT', 'DELETE'].includes(method)) {
-    const csrfToken = getCsrfToken();
-    if (csrfToken) {
-      config.headers['X-CSRF-Token'] = csrfToken;
-    }
-  }
-  return config;
-}, error => {
-  return Promise.reject(error);
-});
-
-// CSRF 토큰을 읽어오는 함수
-// localStorage 우선 조회 (cross-origin 쿠키 접근 제한 우회), 없으면 쿠키에서 조회
-function getCsrfToken() {
-  // 1. localStorage에서 먼저 조회
-  const localToken = localStorage.getItem('csrf_token');
-  if (localToken) {
-    return localToken;
-  }
-
-  // 2. 쿠키에서 조회 (fallback)
-  const csrfCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('csrf_token='));
-  if (csrfCookie) {
-    return csrfCookie.split('=')[1];
-  }
-  return null;
-}
 
 // BootstrapVueNext 개별 컴포넌트 import
 import {

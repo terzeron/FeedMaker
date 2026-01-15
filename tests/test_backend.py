@@ -7,7 +7,6 @@ from fastapi.testclient import TestClient
 
 # Import the app from main
 from backend.main import app
-from backend.auth import CSRF_COOKIE_NAME, CSRF_HEADER_NAME
 
 # TestClient 인스턴스 생성
 client = TestClient(app)
@@ -15,10 +14,6 @@ client = TestClient(app)
 @pytest.fixture(scope="module", autouse=True)
 def setup_and_teardown():
     """테스트 모듈 전체에 대한 설정 및 정리"""
-    # verify_csrf_token을 no-op으로 만들기 위해 async 함수로 정의
-    async def mock_verify_csrf():
-        pass
-
     # 테스트 시작 전, DB 관련 메서드 mock
     with patch('bin.db.DB.create_all_tables'), \
          patch('bin.db.DB.session_ctx') as mock_session_ctx, \
@@ -38,14 +33,10 @@ def setup_and_teardown():
 
         # FeedMakerManager 인스턴스를 app.state에 설정
         from backend.feed_maker_manager import FeedMakerManager
-        from backend.main import verify_csrf_token
         app.state.feed_maker_manager = MagicMock(spec=FeedMakerManager)
         app.state.feed_maker_manager.search = mock_search
         app.state.feed_maker_manager.remove_group = mock_remove_group
         app.state.feed_maker_manager.get_groups = mock_get_groups
-
-        # CSRF 검증을 bypass하기 위해 dependency override
-        app.dependency_overrides[verify_csrf_token] = mock_verify_csrf
 
         # 테스트 실행
         yield
@@ -72,54 +63,10 @@ def test_invalid_endpoint():
     response = client.get("/nonexistent")
     assert response.status_code == 404
 
-@pytest.mark.skip(reason="TestClient cookie handling limitation - CSRF tested in integration tests")
-def test_csrf_protection():
-    """CSRF 보호 기능 테스트"""
-    # CSRF 검증을 실제로 테스트하기 위해 일시적으로 override 제거
-    from backend.main import verify_csrf_token
-    app.dependency_overrides.pop(verify_csrf_token, None)
 
-    try:
-        # 1. 로그인하여 세션 및 CSRF 쿠키 발급
-        login_data = {
-            "email": "test@example.com",
-            "name": "Test User",
-            "access_token": "fake-token"
-        }
-        # 환경 변수 mock 추가
-        with patch('bin.feed_maker_util.Env.get', return_value="test@example.com"):
-            response = client.post("/auth/login", json=login_data)
+# CSRF 보호는 SameSite=Lax 쿠키 설정으로 브라우저 레벨에서 처리됨
+# 별도의 CSRF 토큰 검증 테스트는 더 이상 필요하지 않음
 
-        assert response.status_code == 200
-        assert CSRF_COOKIE_NAME in client.cookies
-        csrf_token = client.cookies[CSRF_COOKIE_NAME]
-        assert csrf_token is not None
-
-        # 2. GET 요청은 CSRF 토큰 없이도 성공
-        response = client.get("/search/test")
-        assert response.status_code == 200
-
-        # 3. CSRF 헤더 없이 DELETE 요청 시 403 에러 발생
-        response = client.delete("/groups/some_group")
-        assert response.status_code == 403
-        assert "CSRF token mismatch" in response.json()["detail"]
-
-        # 4. 잘못된 CSRF 토큰으로 DELETE 요청 시 403 에러 발생
-        headers = {CSRF_HEADER_NAME: "wrong-token"}
-        response = client.delete("/groups/some_group", headers=headers)
-        assert response.status_code == 403
-        assert "CSRF token mismatch" in response.json()["detail"]
-
-        # 5. 올바른 CSRF 토큰으로 DELETE 요청 시 성공
-        headers = {CSRF_HEADER_NAME: csrf_token}
-        response = client.delete("/groups/some_group", headers=headers)
-        assert response.status_code == 200
-        assert response.json()["status"] == "success"
-    finally:
-        # 테스트 완료 후 override 복원
-        async def mock_verify_csrf():
-            pass
-        app.dependency_overrides[verify_csrf_token] = mock_verify_csrf
 
 if __name__ == "__main__":
     pytest.main()
