@@ -73,47 +73,53 @@ class HeadlessBrowser:
         div.id = "%s";
         ''' % ID_OF_RENDERING_COMPLETION_IN_CONVERTING_CANVAS
     SIMULATING_SCROLLING_SCRIPT = '''
-        function sleep(ms) {
-           return new Promise(resolve => setTimeout(resolve, ms));
-        }
+        const callback = arguments[0];
 
-        // Wait for initial page load
-        await sleep(1000);
+        (async () => {{
+            function sleep(ms) {{
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }}
 
-        // Scroll down
-        var bottom = document.body.scrollHeight;
-        for (var i = 0; i < bottom; i += 349) {
-            window.scrollTo(0, i);
-            await sleep(200);
-            bottom = document.body.scrollHeight;
-        }
+            // Wait for initial page load
+            await sleep(1000);
 
-        // Scroll up
-        for (var i = bottom; i >= 0; i -= 683) {
-            window.scrollTo(0, i);
-            await sleep(200);
-        }
+            // Scroll down
+            let bottom = document.body.scrollHeight;
+            for (let i = 0; i < bottom; i += 349) {{
+                window.scrollTo(0, i);
+                await sleep(200);
+                bottom = document.body.scrollHeight;
+            }}
 
-        // Wait for images to load and JavaScript to execute
-        // Check for the completion marker that the page's JavaScript creates
-        var maxWaitTime = 10000; // 10 seconds
-        var startTime = Date.now();
-        while (Date.now() - startTime < maxWaitTime) {
-            // Check if the page's JavaScript has added the completion marker
-            var completionMarker = document.getElementById("rendering_completed_in_scrolling");
-            if (completionMarker) {
-                break;
-            }
-            await sleep(500);
-        }
+            // Scroll up
+            for (let i = bottom; i >= 0; i -= 683) {{
+                window.scrollTo(0, i);
+                await sleep(200);
+            }}
 
-        // Additional wait for any final JavaScript execution
-        await sleep(1000);
+            // Wait for completion marker (max 10s)
+            const maxWaitTime = 10000;
+            const startTime = Date.now();
+            while (Date.now() - startTime < maxWaitTime) {{
+                if (document.getElementById("%s")) {{
+                    break;
+                }}
+                await sleep(500);
+            }}
 
-        var div = document.createElement("DIV");
-        document.body.appendChild(div);
-        div.id = "%s";
-        ''' % ID_OF_RENDERING_COMPLETION_IN_SCROLLING
+            // Final stabilization wait
+            await sleep(1000);
+
+            // Ensure completion marker exists
+            if (!document.getElementById("%s")) {{
+                const div = document.createElement("div");
+                div.id = "%s";
+                document.body.appendChild(div);
+            }}
+
+            // Notify Selenium that script is done
+            callback("done");
+        }})();''' % (ID_OF_RENDERING_COMPLETION_IN_SCROLLING, ID_OF_RENDERING_COMPLETION_IN_SCROLLING, ID_OF_RENDERING_COMPLETION_IN_SCROLLING)
     SETTING_PLUGINS_SCRIPT = "Object.defineProperty(navigator, 'plugins', {get: function() {return[1, 2, 3, 4, 5];},});"
     SETTING_LANGUAGES_SCRIPT = "Object.defineProperty(navigator, 'languages', {get: function() {return ['ko-KR', 'ko']}})"
     CONVERTING_BLOB_TO_DATAURL_SCRIPT = '''
@@ -329,7 +335,8 @@ class HeadlessBrowser:
             if self.simulate_scrolling:
                 LOGGER.debug("simulating scrolling")
                 try:
-                    driver.execute_script(HeadlessBrowser.SIMULATING_SCROLLING_SCRIPT)
+                    driver.set_script_timeout(60)
+                    driver.execute_async_script(HeadlessBrowser.SIMULATING_SCROLLING_SCRIPT)
                 except TimeoutException:
                     LOGGER.warning("Scrolling script timed out, continuing...")
 
