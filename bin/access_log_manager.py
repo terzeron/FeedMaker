@@ -61,7 +61,7 @@ class AccessLogManager:
             end_ns = int(end_dt.replace(tzinfo=local_tz).timestamp()) * 1_000_000_000 + end_dt.microsecond * 1000
             # print(f"{start_dt=} ~ {end_dt=}")
             params = {
-                "query": '{namespace="feedmaker"}',
+                "query": '{namespace="feedmaker",app="nginx"}',
                 "start": start_ns,
                 "end": end_ns,
                 "limit": 5000,
@@ -104,8 +104,8 @@ class AccessLogManager:
 
         latest_view: dict[str, datetime] = {}
         for view_date, feed_name in viewed_feed_list:
-            if not (prev := latest_access.get(feed_name)) or view_date > prev:
-                latest_access[feed_name] = view_date
+            if not (prev := latest_view.get(feed_name)) or view_date > prev:
+                latest_view[feed_name] = view_date
 
         return latest_access, latest_view
 
@@ -146,12 +146,15 @@ class AccessLogManager:
     def load_all_httpd_access_info(self, max_num_days: int = 30) -> None:
         LOGGER.debug("# load_all_httpd_access_info(max_num_days=%d)", max_num_days)
         start_ts = datetime.now(timezone.utc)
-        latest_access: dict[str, datetime] = {}
-        latest_view: dict[str, datetime] = {}
+        all_accessed_feeds: set[str] = set()
+        all_viewed_feeds: set[str] = set()
 
         for i in range(max_num_days, -1, -1):
             specific_date = datetime.today() - timedelta(days=i)
             latest_access, latest_view = self._add_httpd_access_info(specific_date)
+            all_accessed_feeds.update(latest_access.keys())
+            all_viewed_feeds.update(latest_view.keys())
+
             with DB.session_ctx() as s:
                 for feed_name, access_date in latest_access.items():
                     existing_feeds = s.query(FeedInfo).filter_by(feed_name=feed_name).all()
@@ -173,5 +176,5 @@ class AccessLogManager:
                         s.add(FeedInfo(feed_name=feed_name, http_request=True, view_date=view_date))
 
         end_ts = datetime.now(timezone.utc)
-        total_num_items = len(latest_access) + len(latest_view)
+        total_num_items = len(all_accessed_feeds) + len(all_viewed_feeds)
         LOGGER.info("* The loading of all httpd access logs is done. %d items / %s sec", total_num_items, (end_ts - start_ts))
