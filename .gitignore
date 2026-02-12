@@ -18,7 +18,7 @@ tests/work/
 tests/tmp/
 
 # AI/IDE 관련 캐시
-.claude/
+.claude*
 .dependency_cache
 
 # 테스트 관련 임시 파일들
