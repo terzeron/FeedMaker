@@ -565,11 +565,12 @@ class FeedMaker:
                 old_feed_list.clear()
 
             # 과거 피드항목 리스트와 최근 피드항목 리스트를 비교함
-            final_feed_list = self._diff_feeds_and_make_htmls(recent_feed_list, old_feed_list)
-            if not final_feed_list or len(final_feed_list) == 0:
-                LOGGER.info("No new feeds, no update of rss file")
+            if not self.do_collect_only:
+                final_feed_list = self._diff_feeds_and_make_htmls(recent_feed_list, old_feed_list)
+                if not final_feed_list or len(final_feed_list) == 0:
+                    LOGGER.info("No new feeds, no update of rss file")
 
-        if not self.do_collect_by_force:
+        if not self.do_collect_only:
             # generate RSS feed
             if not self._generate_rss_feed(final_feed_list):
                 return False

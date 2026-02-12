@@ -6,6 +6,7 @@ import getopt
 import logging.config
 import functools
 from pathlib import Path
+from urllib.parse import urlparse
 from utils.image_downloader import ImageDownloader
 from bin.feed_maker_util import Config, IO, PathUtil, Env
 from bin.crawler import Crawler
@@ -15,9 +16,34 @@ logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
-def replace_img_tag(match: re.Match[str], *, crawler: Crawler, feed_img_dir_path: Path, quality: int) -> str:
+def _get_base_domain(hostname: str) -> str:
+    parts = hostname.split(".")
+    if len(parts) <= 2:
+        return hostname
+    if parts[-2] in ("co", "or", "ne", "ac", "go"):
+        return ".".join(parts[-3:]) if len(parts) >= 3 else hostname
+    return ".".join(parts[-2:])
+
+
+def _is_same_origin(page_url: str, img_url: str) -> bool:
+    parsed_img = urlparse(img_url)
+    if not parsed_img.scheme or not parsed_img.hostname:
+        return True
+    if parsed_img.scheme == "data":
+        return True
+    parsed_page = urlparse(page_url)
+    if not parsed_page.hostname:
+        return True
+    return _get_base_domain(parsed_page.hostname) == _get_base_domain(parsed_img.hostname)
+
+
+def replace_img_tag(match: re.Match[str], *, crawler: Crawler, feed_img_dir_path: Path, quality: int, page_url: str = "", exclude_ad_images: bool = False) -> str:
     img_url = match.group("img_url")
     original_tag = match.group(0)
+
+    if exclude_ad_images and page_url and not _is_same_origin(page_url, img_url):
+        LOGGER.warning("광고 이미지 제외: %s (page: %s)", img_url, page_url)
+        return ""
 
     try:
         _, new_img_url = ImageDownloader.download_image(crawler, feed_img_dir_path, img_url, quality=quality)
@@ -58,6 +84,7 @@ def main() -> int:
 
     config = Config(feed_dir_path)
     extraction_conf = config.get_extraction_configs()
+    exclude_ad_images = extraction_conf.get("exclude_ad_images", False)
     headers = {
         "User-Agent": extraction_conf.get("user_agent", ""),
         "Referer": page_url
@@ -68,7 +95,9 @@ def main() -> int:
         replace_img_tag,
         crawler=crawler,
         feed_img_dir_path=feed_img_dir_path,
-        quality=quality
+        quality=quality,
+        page_url=page_url,
+        exclude_ad_images=exclude_ad_images
     )
 
     def split_and_print(line: str, replacer: callable) -> None:
