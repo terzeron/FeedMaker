@@ -5,11 +5,10 @@ import os
 import argparse
 import subprocess
 import time
-import platform
 from pathlib import Path
 from datetime import datetime
 from typing import Any, Optional
-from collections import defaultdict, Counter
+from collections import defaultdict
 import cProfile
 import pstats
 import io
@@ -520,6 +519,44 @@ def run_all_tests() -> tuple[bool, list[Path]]:
 
     return not failed_files, failed_files
 
+def clear_lastfailed_for_files(test_file_prefixes: list[str]) -> None:
+    """Remove stale lastfailed entries for the given test file prefixes.
+
+    pytest only removes lastfailed entries for tests that actually run.
+    If a test was renamed or deleted, its stale entry persists forever.
+    This function removes all entries whose file path matches any of the
+    given prefixes (e.g. "tests/test_foo.py").
+    """
+    candidate_cache_dirs = [
+        TEST_DIR / ".pytest_cache/v/cache",
+        PROJECT_ROOT / ".pytest_cache/v/cache",
+    ]
+
+    for cache_dir in candidate_cache_dirs:
+        lastfailed_file = cache_dir / "lastfailed"
+        if not lastfailed_file.exists():
+            continue
+
+        try:
+            import json
+            with open(lastfailed_file, 'r') as f:
+                data = json.load(f)
+
+            if not data:
+                continue
+
+            cleaned = {
+                key: val for key, val in data.items()
+                if not any(key.startswith(prefix + "::") for prefix in test_file_prefixes)
+            }
+
+            if cleaned != data:
+                with open(lastfailed_file, 'w') as f:
+                    json.dump(cleaned, f, indent=2)
+        except (json.JSONDecodeError, OSError, PermissionError):
+            pass
+
+
 def run_failed_tests() -> bool:
     """Run only failed tests"""
     failed_tests = get_failed_or_skipped_tests()
@@ -552,6 +589,18 @@ def run_failed_tests() -> bool:
     success, _, _, _ = run_test_modules_sequentially(unique_test_files)
     if not success:
         return False
+
+    # 성공한 테스트 파일의 lastfailed 항목을 명시적으로 제거
+    # (삭제/이름변경된 테스트의 stale 항목이 남는 문제 방지)
+    file_prefixes = []
+    for t in unique_test_files:
+        try:
+            rel = t.relative_to(PROJECT_ROOT)
+            file_prefixes.append(str(rel))
+        except ValueError:
+            pass
+    if file_prefixes:
+        clear_lastfailed_for_files(file_prefixes)
 
     print("All failed tests passed. Now running changed test modules (if any)...")
     return True
@@ -1268,7 +1317,7 @@ def get_reverse_dependencies(deps: dict[Path, set[Path]]) -> dict[Path, set[Path
     return reverse_deps
 
 def get_affected_files(modified_files: list[Path], deps: dict[Path, set[Path]],
-                      reverse_deps: dict[Path, set[Path]], max_depth: int = 2) -> set[Path]:
+                      reverse_deps: dict[Path, set[Path]], max_depth: int = 1) -> set[Path]:
     """Get all files affected by the modified files (limited recursive dependency tracking)"""
     affected = set(modified_files)
     to_process = [(f, 0) for f in modified_files]  # (file, depth)
@@ -1408,7 +1457,7 @@ def get_test_targets_with_dependencies(modified_files: list[Path]) -> list[Path]
         return []
 
     # Get all affected files with limited depth
-    affected_files = get_affected_files(modified_files, deps, reverse_deps, max_depth=2)
+    affected_files = get_affected_files(modified_files, deps, reverse_deps, max_depth=1)
 
     # Get failed tests to include their dependencies
     failed_tests = get_failed_or_skipped_tests()
@@ -1604,7 +1653,7 @@ def main() -> bool:
     # Calculate modified and affected files
     last_success = get_last_success_time()
     modified_files = set(get_modified_files(last_success))
-    affected_files = get_affected_files(list(modified_files), deps, reverse_deps, max_depth=2) if modified_files else set()
+    affected_files = get_affected_files(list(modified_files), deps, reverse_deps, max_depth=1) if modified_files else set()
 
     # Print dependency graph based on the mode
     if args.file:
