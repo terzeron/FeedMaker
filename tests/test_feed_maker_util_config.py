@@ -216,6 +216,9 @@ class ConfigTest(unittest.TestCase):
         actual2 = configs["headers"]
         self.assertEqual({}, actual2)
 
+        actual = configs["exclude_ad_images"]
+        self.assertFalse(actual)
+
     def test_get_rss_configs(self) -> None:
         # 1. ignore_broken_link가 설정에 없을 때
         configs = self.config.get_rss_configs()

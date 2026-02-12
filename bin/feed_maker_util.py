@@ -486,6 +486,8 @@ class Config:
                     "element_path_list": Config._get_list_config_value(extraction_conf, "element_path_list", []),
                     "post_process_script_list": Config._get_list_config_value(extraction_conf, "post_process_script_list", []),
                     "headers": Config._get_dict_config_value(extraction_conf, "headers", {}),
+
+                    "exclude_ad_images": Config._get_bool_config_value(extraction_conf, "exclude_ad_images", False),
                 }
                 return conf
 

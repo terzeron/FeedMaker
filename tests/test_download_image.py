@@ -248,5 +248,55 @@ class TestDownloadImage(unittest.TestCase):
             mock_crawler_instance.run.assert_not_called()
 
 
+    @patch('utils.image_downloader.ImageDownloader.download_image')
+    def test_exclude_ad_image_from_different_domain(self, mock_download: MagicMock) -> None:
+        """exclude_ad_images=True일 때 외부 도메인 이미지가 제거되는지 확인"""
+        dengeki_dir = Env.get("FM_WORK_DIR") + "/plamodel/dengeki"
+        fake_argv = ["download_image.py", "-f", dengeki_dir, "https://hobby.dengeki.com/news/123/"]
+
+        test_input = ("<p>기사 텍스트</p>"
+                     "<img src='https://ws-fe.amazon-adsystem.com/widgets/q?ServiceVersion=123'/>"
+                     "<p>더 많은 텍스트</p>")
+        expected_output = ("<p>기사 텍스트</p>\n"
+                          "<p>더 많은 텍스트</p>\n")
+
+        with (
+            patch("sys.argv", fake_argv),
+            patch("sys.stdin", new=io.StringIO(test_input)),
+            patch("sys.stdout", new_callable=io.StringIO) as mock_stdout,
+            patch("bin.feed_maker_util.Config.get_extraction_configs", return_value={
+                "user_agent": "",
+                "exclude_ad_images": True,
+            }),
+        ):
+            utils.download_image.main()
+            self.assertEqual(mock_stdout.getvalue(), expected_output)
+            mock_download.assert_not_called()
+
+    @patch('utils.image_downloader.ImageDownloader.download_image')
+    def test_keep_same_origin_image_when_exclude_ad_images_enabled(self, mock_download: MagicMock) -> None:
+        """exclude_ad_images=True여도 same-origin 이미지는 정상 다운로드"""
+        mock_download.return_value = (True, f"{Env.get('WEB_SERVICE_IMAGE_URL_PREFIX')}/dengeki/abc123.webp")
+
+        dengeki_dir = Env.get("FM_WORK_DIR") + "/plamodel/dengeki"
+        fake_argv = ["download_image.py", "-f", dengeki_dir, "https://hobby.dengeki.com/news/123/"]
+
+        test_input = "<img src='https://hobby.dengeki.com/ss/hobby/uploads/2024/image.jpg'/>"
+        expected_output = "<img src='%s/dengeki/abc123.webp'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
+
+        with (
+            patch("sys.argv", fake_argv),
+            patch("sys.stdin", new=io.StringIO(test_input)),
+            patch("sys.stdout", new_callable=io.StringIO) as mock_stdout,
+            patch("bin.feed_maker_util.Config.get_extraction_configs", return_value={
+                "user_agent": "",
+                "exclude_ad_images": True,
+            }),
+        ):
+            utils.download_image.main()
+            self.assertEqual(mock_stdout.getvalue(), expected_output)
+            mock_download.assert_called_once()
+
+
 if __name__ == "__main__":
     unittest.main()
