@@ -18,11 +18,6 @@ import ast
 from graphlib import TopologicalSorter
 from modulegraph.modulegraph import ModuleGraph
 
-# 최근 테스트 실행 결과(파일 단위)를 보관하여 요약 출력에 활용
-LAST_RUN_PASSED: set[Path] = set()
-LAST_RUN_FAILED: set[Path] = set()
-
-
 # Always resolve project root (directory containing 'tests' folder)
 SCRIPT_PATH = Path(__file__).resolve()
 PROJECT_ROOT = SCRIPT_PATH.parent.parent if SCRIPT_PATH.parent.name == 'tests' else SCRIPT_PATH.parent
@@ -336,28 +331,25 @@ def analyze_test_dependencies() -> list[Path]:
 def get_test_methods(test_file: Path) -> list[str]:
     """Extract all test methods from a test file"""
     result = subprocess.run([
-        sys.executable, "-m", "pytest", str(test_file), "--collect-only"
+        sys.executable, "-m", "pytest", str(test_file), "--collect-only", "-q"
     ], capture_output=True, text=True, check=False)
 
     # 모든 테스트 메서드 수집 (Test*::test_* 패턴)
+    # -q 옵션 사용 시 "tests/test_xxx.py::TestClass::test_method" 형식으로 출력됨
     test_methods = []
     for line in result.stdout.splitlines():
         line = line.strip()
-        if line and "::test_" in line:
+        if line and "::test_" in line and line.endswith(")") is False:
             test_methods.append(line)
 
     return test_methods
 
 
-def run_test_modules_sequentially(test_targets: list[Path]) -> tuple[bool, int, int]:
-    """Run test modules sequentially and return (success, passed_count, failed_count)"""
+def run_test_modules_sequentially(test_targets: list[Path]) -> tuple[bool, int, int, list[Path]]:
+    """Run test modules sequentially and return (success, passed_count, failed_count, failed_files)"""
     passed_count = 0
     failed_count = 0
-
-    # 최근 실행 결과 초기화
-    global LAST_RUN_PASSED, LAST_RUN_FAILED
-    LAST_RUN_PASSED = set()
-    LAST_RUN_FAILED = set()
+    failed_files = []
 
     for idx, t in enumerate(test_targets, 1):
         print(f"--- [{idx}/{len(test_targets)}] Running: {t} ---")
@@ -366,7 +358,7 @@ def run_test_modules_sequentially(test_targets: list[Path]) -> tuple[bool, int, 
 
         # Measure execution time
         start_time = time.time()
-        result = subprocess.run([sys.executable, "-m", "pytest", str(absolute_path)],
+        result = subprocess.run([sys.executable, "-m", "pytest", "--tb=no", "--disable-warnings", str(absolute_path)],
                               capture_output=True, text=True, check=False)
         end_time = time.time()
         execution_time = end_time - start_time
@@ -398,17 +390,11 @@ def run_test_modules_sequentially(test_targets: list[Path]) -> tuple[bool, int, 
 
         if result.returncode != 0:
             print(f"❌ {t.name} FAILED.")
-            # 실패 시 pytest의 전체 stdout 및 stderr 출력
-            if result.stdout:
-                print(result.stdout)
-            if result.stderr:
-                print(result.stderr)
             failed_count += 1
-            LAST_RUN_FAILED.add(absolute_path)
+            failed_files.append(t)
         else:
             print(f"✅ {t.name} PASSED.")
             passed_count += 1
-            LAST_RUN_PASSED.add(absolute_path)
         print("")
 
     overall_success = failed_count == 0
@@ -417,7 +403,7 @@ def run_test_modules_sequentially(test_targets: list[Path]) -> tuple[bool, int, 
     else:
         print(f"❌ {failed_count} out of {len(test_targets)} tests failed.")
 
-    return overall_success, passed_count, failed_count
+    return overall_success, passed_count, failed_count, failed_files
 
 def run_specific_test_file(test_file: str) -> bool:
     """Run a specific test file"""
@@ -484,24 +470,61 @@ def update_actual_execution_duration(duration: float) -> None:
     except (OSError, PermissionError, TypeError) as e:
         print(f"⚠️  Failed to save actual execution duration: {e}")
 
-def run_all_tests() -> bool:
-    """Run all tests in dependency order (개별 파일별로 실행 및 시간 측정)"""
+def run_all_tests() -> tuple[bool, list[Path]]:
+    """Run all tests in dependency order and return success and failed files"""
     print("=== Test Dependency Analysis and Execution (All Tests) ===")
     test_files = [f for f in TEST_DIR.glob("test_*.py") if f.name != "test_runner.py"]
     ordered_tests = sorted(test_files, key=lambda x: x.name)
     if not ordered_tests:
         print("No tests to run")
-        return False
+        return True, []
 
-    # 개별 테스트 실행은 run_test_modules_sequentially로 위임
-    success, passed_count, failed_count = run_test_modules_sequentially(ordered_tests)
-    return success
+    total_start = time.time()
+    failed_files = []
 
-def run_failed_tests() -> tuple[bool, int, int, list[Path]]:
-    """Run only failed tests and return (success, passed_count, failed_count, executed_files)"""
+    for idx, t in enumerate(ordered_tests, 1):
+        print(f"--- [{idx}/{len(ordered_tests)}] Running: {t.name} ---")
+        start = time.time()
+        result = subprocess.run([sys.executable, "-m", "pytest", "--tb=no", "--disable-warnings", str(t)],
+                              capture_output=True, text=True, check=False)
+        end = time.time()
+
+        # Filter output to remove session start info and show only test results
+        filtered_output = []
+        in_session_start = False
+        for line in result.stdout.splitlines():
+            if "test session starts" in line:
+                in_session_start = True
+                continue
+            if in_session_start and ("collected" in line or "platform" in line or "rootdir" in line or
+                                   "configfile" in line or "plugins" in line or "cachedir" in line or
+                                   "hypothesis profile" in line):
+                continue
+            if in_session_start and line.strip() == "":
+                in_session_start = False
+                continue
+            if not in_session_start:
+                filtered_output.append(line)
+
+        # Print filtered output
+        if filtered_output:
+            print("\n".join(filtered_output))
+
+        update_test_performance_cache(t.name, end - start)
+        if result.returncode != 0:
+            failed_files.append(t)
+
+    total_end = time.time()
+    update_actual_execution_duration(total_end - total_start)
+    print(f"⏱️  실제 총 수행 시간: {total_end - total_start:.1f}초")
+
+    return not failed_files, failed_files
+
+def run_failed_tests() -> bool:
+    """Run only failed tests"""
     failed_tests = get_failed_or_skipped_tests()
     if not failed_tests:
-        return True, 0, 0, []
+        return True
 
     # Extract test file paths and convert to absolute paths
     test_files: list[Path] = []
@@ -525,26 +548,26 @@ def run_failed_tests() -> tuple[bool, int, int, list[Path]]:
     for t in unique_test_files:
         print(f"  - {t}")
 
-    success, passed_count, failed_count = run_test_modules_sequentially(unique_test_files)
-
+    # 실패한 파일 목록을 받아오지만, 여기서는 성공 여부만 중요
+    success, _, _, _ = run_test_modules_sequentially(unique_test_files)
     if not success:
-        return False, passed_count, failed_count, unique_test_files
+        return False
 
     print("All failed tests passed. Now running changed test modules (if any)...")
-    return True, passed_count, failed_count, unique_test_files
+    return True
 
 def run_changed_tests() -> bool:
     """Run tests for changed files with dependency consideration"""
-    success, _, _ = run_changed_tests_with_results()
+    success, _, _, _ = run_changed_tests_with_results()
     return success
 
-def run_changed_tests_with_results() -> tuple[bool, int, int]:
+def run_changed_tests_with_results() -> tuple[bool, int, int, list[Path]]:
     """Run tests for changed files and return detailed results"""
     last_success = get_reference_time_for_changes()
     # 기준 성공 시각이 없으면 변경 테스트를 건너뜀 (초기 과도 실행 방지)
     if last_success == 0:
         print("⚪ 기준 성공 시각이 없어 변경 테스트를 건너뜁니다. 필요 시 -a 옵션으로 전체 실행하세요.")
-        return True, 0, 0
+        return True, 0, 0, []
     modified_files = get_modified_files(last_success)
 
     # test_runner.py는 테스트 실행기이므로 무시
@@ -552,14 +575,14 @@ def run_changed_tests_with_results() -> tuple[bool, int, int]:
 
     if not modified_files:
         print("✅ 변경된 테스트가 없습니다. 아무 테스트도 실행하지 않습니다.")
-        return True, 0, 0
+        return True, 0, 0, []
 
     # Get test targets considering import dependencies
     test_targets = get_test_targets_with_dependencies(modified_files)
 
     if not test_targets:
         print("No test targets found for changed files.")
-        return True, 0, 0
+        return True, 0, 0, []
 
     print("\n🎯 Running tests for changed files (with dependency analysis)...")
     print(f"📋 Found {len(test_targets)} test targets for {len(modified_files)} modified files")
@@ -613,21 +636,25 @@ def get_pytest_performance_data() -> dict[str, Any]:
     }
 
     # Try to load cached performance data
-    file_durations = {}
+    cached_durations = {}
     if performance_cache_file.exists():
         try:
             import json
             with open(performance_cache_file, 'r') as f:
                 cached_data = json.load(f)
-                file_durations = cached_data.get('file_durations', {})
+                cached_durations = cached_data.get('file_durations', {})
         except (json.JSONDecodeError, OSError, PermissionError):
             # Quiet on purpose unless explicitly requested by caller
             pass
 
-    # Fill in missing durations with estimates
+    # Build file_durations only for current test files (filter out stale cache entries)
+    current_test_names = {f.name for f in test_files}
+    file_durations = {}
     for test_file in test_files:
         file_name = test_file.name
-        if file_name not in file_durations:
+        if file_name in cached_durations:
+            file_durations[file_name] = cached_durations[file_name]
+        else:
             file_durations[file_name] = estimated_durations.get(file_name, 0.5)
 
     # Calculate test counts and average times per test
@@ -1565,10 +1592,10 @@ def main() -> bool:
     deps, reverse_deps = analyze_all_dependencies()
 
     # Initialize test status tracking
-    executed_tests = set()
-    target_tests = set()
-    failed_tests = set()
-    passed_tests = set()
+    executed_tests: set[Path] = set()
+    target_tests: set[Path] = set()
+    failed_tests: set[Path] = set()
+    passed_tests: set[Path] = set()
 
     # Initialize counters for actual execution results
     actual_passed_count = 0
@@ -1591,14 +1618,10 @@ def main() -> bool:
             print(f"❌ Test file not found: {args.file}")
             return False
     elif args.all:
-        # For all tests: 직접 개별 실행하여 에러를 바로 확인
+        # For all tests, show all test dependencies
         test_files = [f for f in TEST_DIR.glob("test_*.py") if f.name != "test_runner.py"]
-        print(f"🎯 Running all tests: {len(test_files)} files")
-        # run_test_modules_sequentially로 개별 테스트 실행 및 출력
-        success, passed_count, failed_count = run_test_modules_sequentially(test_files)
-        # 결과 카운트 설정
-        actual_passed_count = passed_count
-        actual_failed_count = failed_count
+        target_tests = set(test_files)
+        print(f"🎯 Running all tests: {len(target_tests)} files")
     else:
         # For default mode, show dependencies for changed files
         if modified_files:
@@ -1616,11 +1639,9 @@ def main() -> bool:
             target_tests = set()
 
     # === Global dependency tree 출력 (한 번만) ===
-    # test_runner.py가 수정된 경우에도 실제 의존성만 표시 (all_mode=False)
     print_global_dependency_tree(deps, max_depth=10, executed_tests=executed_tests, target_tests=target_tests,
                                  failed_tests=failed_tests, passed_tests=passed_tests, reverse_deps=reverse_deps,
                                  modified_files=modified_files, affected_files=affected_files, all_mode=args.all)
-    # === 끝 ===
 
     success = False
 
@@ -1663,35 +1684,25 @@ def main() -> bool:
             actual_passed_count = 0
             actual_failed_count = 1
     elif args.all:
-        # 테스트는 이미 위에서(1593-1601) 실행됨, 여기서는 상태만 업데이트
+        success, all_failed_files = run_all_tests()
+        failed_tests.update(all_failed_files)
+
         test_files = [f for f in TEST_DIR.glob("test_*.py") if f.name != "test_runner.py"]
-        for test_file in test_files:
-            executed_tests.add(test_file)
-        # passed_tests와 failed_tests는 LAST_RUN_PASSED, LAST_RUN_FAILED에서 가져옴
-        passed_tests = LAST_RUN_PASSED.copy()
-        failed_tests = LAST_RUN_FAILED.copy()
-        # actual_passed_count와 actual_failed_count는 이미 설정되어 있음
-        success = actual_failed_count == 0
+        executed_tests.update(test_files)
+        passed_tests.update(set(test_files) - failed_tests)
+
+        actual_passed_count = len(passed_tests)
+        actual_failed_count = len(failed_tests)
+
     else:
         # Default behavior: run failed tests first, then changed tests
-        failed_tests_success, failed_passed_count, failed_failed_count, failed_executed = run_failed_tests()
+        failed_tests_success = run_failed_tests()
         if not failed_tests_success:
-            # 실패 테스트 단계에서 실패하면 변경 테스트를 건너뛰고 즉시 요약을 위한 상태를 확정
-            actual_passed_count = failed_passed_count
-            actual_failed_count = failed_failed_count
-            executed_tests = set(failed_executed)
-            # passed/failed 집합도 즉시 반영
-            for t in failed_executed:
-                if is_test_actually_failed(t):
-                    failed_tests.add(t)
-                else:
-                    passed_tests.add(t)
-            success = False
-        else:
-            # Run changed tests and get detailed results
-            success, changed_passed_count, changed_failed_count = run_changed_tests_with_results()
-            actual_passed_count = failed_passed_count + changed_passed_count
-            actual_failed_count = failed_failed_count + changed_failed_count
+            return False
+
+        # Run changed tests and get detailed results
+        success, actual_passed_count, actual_failed_count, changed_failed_files = run_changed_tests_with_results()
+        failed_tests.update(changed_failed_files)
 
         print(f"\n📋 Test execution completed: {actual_passed_count} passed, {actual_failed_count} failed")
 
@@ -1700,23 +1711,16 @@ def main() -> bool:
         modified_files = set(get_modified_files(last_success))
         if modified_files:
             test_targets = get_test_targets_with_dependencies(list(modified_files))
-            for test_target in test_targets:
-                executed_tests.add(test_target)
-                # Check actual test result from pytest cache
-                if is_test_actually_failed(test_target):
-                    failed_tests.add(test_target)
-                else:
-                    passed_tests.add(test_target)
+            executed_tests.update(test_targets)
+            passed_tests.update(set(test_targets) - failed_tests)
 
-        # Override success based on actual results
-        success = actual_failed_count == 0
+        success = not failed_tests
 
     # 러너 실행 시각은 항상 업데이트 (반복 실행 시 기준 시간으로 활용)
     set_last_run_time()
 
-    # Update last success time and show performance statistics only when ALL tests passed
-    # 추가 가드: pytest 캐시에 실패 항목이 하나라도 있으면 통계 출력/갱신 금지
-    if success and actual_failed_count == 0 and len(get_failed_or_skipped_tests()) == 0:
+    # Update last success time if tests passed
+    if success:
         set_last_success_time()
         print_test_statistics(get_test_statistics())
 
@@ -1729,24 +1733,18 @@ def main() -> bool:
         print(f"❌ Failed: {actual_failed_count} tests")
         print(f"📋 Total executed: {len(executed_tests)} tests")
 
-        if actual_passed_count > 0:
-            # 실행 결과 기반(세션 로컬) 우선, 없으면 기존 집합 사용
-            if LAST_RUN_PASSED:
-                passed_names = [p.name for p in sorted(LAST_RUN_PASSED)]
-            else:
-                passed_names = [t.name for t in sorted(passed_tests)]
-            preview = passed_names[:5]
-            suffix = '...' if len(passed_names) > 5 else ''
-            print(f"✅ Passed tests: {preview}{suffix}")
+        if len(passed_tests) > 0:
+            print(f"✅ Passed tests: {[t.name for t in list(passed_tests)[:5]]}{'...' if len(passed_tests) > 5 else ''}")
+        if len(failed_tests) > 0:
+            print(f"❌ Failed tests: {[t.name for t in failed_tests]}")
 
-        if actual_failed_count > 0:
-            if LAST_RUN_FAILED:
-                failed_names = [p.name for p in sorted(LAST_RUN_FAILED)]
-            else:
-                failed_names = [t.name for t in sorted(failed_tests)]
-            print(f"❌ Failed tests: {failed_names}")
-
-        # 실패한 테스트 트리 출력은 비활성화
+        # 실패한 테스트가 있을 때만 상세 트리 출력
+        if failed_tests:
+            print("\n🔴 FAILED TESTS DEPENDENCY TREE:")
+            print_simple_dependency_tree(deps, focus_files=failed_tests, max_depth=3,
+                                       target_tests=target_tests, reverse_deps=reverse_deps,
+                                       executed_tests=executed_tests, failed_tests=failed_tests, passed_tests=passed_tests,
+                                       modified_files=modified_files, affected_files=affected_files)
 
     return success
 

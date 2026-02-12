@@ -273,7 +273,7 @@ class TestLokiIntegration(unittest.TestCase):
             test_logs = {
                 "streams": [
                     {
-                        "stream": {"namespace": "feedmaker", "job": "nginx"},
+                        "stream": {"namespace": "feedmaker", "job": "nginx", "app": "nginx"},
                         "values": [
                             # Feed access logs (RSS XML requests)
                             [
