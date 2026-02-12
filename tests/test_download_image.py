@@ -260,14 +260,19 @@ class TestDownloadImage(unittest.TestCase):
         expected_output = ("<p>기사 텍스트</p>\n"
                           "<p>더 많은 텍스트</p>\n")
 
+        mock_config_instance = MagicMock()
+        mock_config_instance.get_extraction_configs.return_value = {
+            "user_agent": "",
+            "exclude_ad_images": True,
+        }
+
         with (
             patch("sys.argv", fake_argv),
             patch("sys.stdin", new=io.StringIO(test_input)),
             patch("sys.stdout", new_callable=io.StringIO) as mock_stdout,
-            patch("bin.feed_maker_util.Config.get_extraction_configs", return_value={
-                "user_agent": "",
-                "exclude_ad_images": True,
-            }),
+            patch("pathlib.Path.is_dir", return_value=True),
+            patch("pathlib.Path.mkdir"),
+            patch("utils.download_image.Config", return_value=mock_config_instance),
         ):
             utils.download_image.main()
             self.assertEqual(mock_stdout.getvalue(), expected_output)
@@ -284,14 +289,19 @@ class TestDownloadImage(unittest.TestCase):
         test_input = "<img src='https://hobby.dengeki.com/ss/hobby/uploads/2024/image.jpg'/>"
         expected_output = "<img src='%s/dengeki/abc123.webp'/>\n" % Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
 
+        mock_config_instance = MagicMock()
+        mock_config_instance.get_extraction_configs.return_value = {
+            "user_agent": "",
+            "exclude_ad_images": True,
+        }
+
         with (
             patch("sys.argv", fake_argv),
             patch("sys.stdin", new=io.StringIO(test_input)),
             patch("sys.stdout", new_callable=io.StringIO) as mock_stdout,
-            patch("bin.feed_maker_util.Config.get_extraction_configs", return_value={
-                "user_agent": "",
-                "exclude_ad_images": True,
-            }),
+            patch("pathlib.Path.is_dir", return_value=True),
+            patch("pathlib.Path.mkdir"),
+            patch("utils.download_image.Config", return_value=mock_config_instance),
         ):
             utils.download_image.main()
             self.assertEqual(mock_stdout.getvalue(), expected_output)

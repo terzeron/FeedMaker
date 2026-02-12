@@ -563,47 +563,45 @@ def run_failed_tests() -> bool:
     if not failed_tests:
         return True
 
-    # Extract test file paths and convert to absolute paths
+    # 테스트 파일 추출 + 중복 제거 + 존재 확인을 한 패스로 처리
     test_files: list[Path] = []
-    for t in failed_tests:
-        file_path = t.split("::")[0]  # Remove test method part
-        if file_path.startswith("tests/"):
-            # Convert relative path to absolute path
-            absolute_path = PROJECT_ROOT / file_path
-            if absolute_path.resolve() != Path(__file__).resolve():
-                test_files.append(absolute_path)
-
-    # Remove duplicates while preserving order
-    unique_test_files: list[Path] = []
     seen: set[Path] = set()
-    for t in test_files:
-        if t not in seen:
-            unique_test_files.append(t)
-            seen.add(t)
+    for t in failed_tests:
+        file_path = t.split("::")[0]
+        if file_path.startswith("tests/"):
+            absolute_path = PROJECT_ROOT / file_path
+            if (absolute_path.exists()
+                    and absolute_path.resolve() != Path(__file__).resolve()
+                    and absolute_path not in seen):
+                test_files.append(absolute_path)
+                seen.add(absolute_path)
+
+    if not test_files:
+        return True
 
     print("Running only failed test modules:")
-    for t in unique_test_files:
+    for t in test_files:
         print(f"  - {t}")
 
-    # 실패한 파일 목록을 받아오지만, 여기서는 성공 여부만 중요
-    success, _, _, _ = run_test_modules_sequentially(unique_test_files)
-    if not success:
-        return False
+    success, _, _, _ = run_test_modules_sequentially(test_files)
 
-    # 성공한 테스트 파일의 lastfailed 항목을 명시적으로 제거
-    # (삭제/이름변경된 테스트의 stale 항목이 남는 문제 방지)
-    file_prefixes = []
-    for t in unique_test_files:
-        try:
-            rel = t.relative_to(PROJECT_ROOT)
-            file_prefixes.append(str(rel))
-        except ValueError:
-            pass
-    if file_prefixes:
-        clear_lastfailed_for_files(file_prefixes)
+    if success:
+        # 성공한 테스트 파일의 lastfailed 항목을 선택적으로 제거
+        # (삭제/이름변경된 테스트의 stale 항목이 남는 문제 방지)
+        file_prefixes = []
+        for t in test_files:
+            try:
+                rel = t.relative_to(PROJECT_ROOT)
+                file_prefixes.append(str(rel))
+            except ValueError:
+                pass
+        if file_prefixes:
+            clear_lastfailed_for_files(file_prefixes)
+        print("All failed tests passed. Now running changed test modules (if any)...")
+    else:
+        print("Some previously failed tests are still failing.")
 
-    print("All failed tests passed. Now running changed test modules (if any)...")
-    return True
+    return success
 
 def run_changed_tests() -> bool:
     """Run tests for changed files with dependency consideration"""
