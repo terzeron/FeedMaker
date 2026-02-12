@@ -1,29 +1,56 @@
 #!/bin/bash
 
-# Enable Docker BuildKit for better performance and features
-export DOCKER_BUILDKIT=1
-export COMPOSE_DOCKER_CLI_BUILD=1
-export USER_ID=$(id -u)
-export USER_NAME=$(whoami)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/.env"
 
-# Clean up unnecessary files before build
-rm -rf -- */{nohup.out*,run.log*,.mypy_cache,__pycache__,.idea,.git}
+TARGET=${1:-all}
 
-docker build -f backend/Dockerfile --build-arg FM_BACKEND_PORT="$FM_BACKEND_PORT" -t terzeron/fm_backend . && \
-docker tag terzeron/fm_backend:latest registry.terzeron.com/terzeron/fm_backend:latest && \
-docker push registry.terzeron.com/terzeron/fm_backend:latest || exit 1
+rm -rf */{nohup.out*,run.log*,.mypy_cache,__pycache__,.idea,.git}
 
-docker build -f frontend/Dockerfile -t terzeron/fm_frontend . && \
-docker tag terzeron/fm_frontend:latest registry.terzeron.com/terzeron/fm_frontend:latest && \
-docker push registry.terzeron.com/terzeron/fm_frontend:latest || exit 1
+build_backend() {
+    echo "=== Building backend ==="
+    docker build -f backend/Dockerfile --build-arg FM_BACKEND_PORT="$FM_BACKEND_PORT" -t terzeron/fm_backend . && \
+    docker tag terzeron/fm_backend:latest registry.terzeron.com/terzeron/fm_backend:latest && \
+    docker push registry.terzeron.com/terzeron/fm_backend:latest
+}
 
-echo
-echo 'You should run the initialization script;'
-echo 'python -c "from bin.db import DB; DB.create_all_tables()"'
-echo 'python -c "from bin.problem_manager import ProblemManager; pm = ProblemManager(); pm.load_all()"'
+build_frontend() {
+    echo "=== Building frontend ==="
+    docker build -f frontend/Dockerfile -t terzeron/fm_frontend . && \
+    docker tag terzeron/fm_frontend:latest registry.terzeron.com/terzeron/fm_frontend:latest && \
+    docker push registry.terzeron.com/terzeron/fm_frontend:latest
+}
 
-echo
-echo 'You might deploy the containers;'
-echo 'kubectl apply -f ~/k8s/feedmaker/fm-deployment.yml'
-echo 'kubectl rollout restart deployment fm-backend -n feedmaker'
-echo 'kubectl rollout restart deployment fm-frontend -n feedmaker'
+rollout_backend() {
+    echo "=== Rolling out backend ==="
+    kubectl rollout restart deployment fm-backend -n feedmaker
+}
+
+rollout_frontend() {
+    echo "=== Rolling out frontend ==="
+    kubectl rollout restart deployment fm-frontend -n feedmaker
+}
+
+case "$TARGET" in
+    backend)
+        build_backend && rollout_backend
+        ;;
+    frontend)
+        build_frontend && rollout_frontend
+        ;;
+    all|"")
+        build_backend && build_frontend && rollout_backend && rollout_frontend
+        ;;
+    *)
+        echo "Usage: $0 [backend|frontend]"
+        echo "  backend  - Build and rollout backend only"
+        echo "  frontend - Build and rollout frontend only"
+        echo "  (no arg) - Build and rollout both"
+        exit 1
+        ;;
+esac
+
+echo ""
+echo "Done! If this is a fresh install, run:"
+echo '  python -c "from bin.db import DB; DB.create_all_tables()"'
+echo '  python -c "from bin.problem_manager import ProblemManager; pm = ProblemManager(); pm.load_all()"'
