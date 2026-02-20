@@ -9,7 +9,7 @@ import logging.config
 from pathlib import Path
 
 from bin.feed_maker_util import Env
-from utils.translation import Translation, TranslationService, TranslationServiceFactory, DeepLTranslationService, AzureTranslationService, GoogleTranslationService
+from utils.translation import Translation, TranslationService, TranslationServiceFactory, DeepLTranslationService, AzureTranslationService, GoogleTranslationService, ClaudeTranslationService
 
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -205,6 +205,30 @@ class TranslationTest(unittest.TestCase):
         self.assertIsNotNone(service.endpoint)
         self.assertIsNotNone(service.api_key)
         self.assertEqual(service, GoogleTranslationService)
+
+    def test_claude_translator_initialization(self) -> None:
+        """ClaudeTranslator 초기화 테스트"""
+        service = ClaudeTranslationService(Env.get("ANTHROPIC_API_KEY", ""))
+        self.assertIsNotNone(service.endpoint)
+        self.assertIsNotNone(service.api_key)
+        self.assertEqual(service, ClaudeTranslationService)
+
+    @unittest.skipIf(Env.get("ANTHROPIC_API_KEY", "") == "", "ANTHROPIC_API_KEY not set")
+    def test_translate_by_claude_success(self) -> None:
+        """Claude 번역 성공 케이스 테스트"""
+        service = ClaudeTranslationService(Env.get("ANTHROPIC_API_KEY"))
+        result = service.translate_batch(["Hello", "Good day"])
+
+        self.assertIsInstance(result, dict)
+        if len(result) > 0:
+            self.assertEqual(len(result), 2)
+            self.assertIn("Hello", result)
+            self.assertIn("Good day", result)
+            for en, ko in result.items():
+                self.assertIsInstance(ko, str)
+                self.assertGreater(len(ko), 0)
+        else:
+            self.skipTest("Claude API returned empty result")
 
     def test_translate_uses_cache_without_api(self) -> None:
         """캐시 사용 테스트 (API 호출 없이)"""
