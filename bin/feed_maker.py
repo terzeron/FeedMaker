@@ -452,7 +452,8 @@ class FeedMaker:
             pub_date_str = Datetime.get_rss_date_str()
 
             content = ""
-            if self.rss_conf.get("ignore_broken_link", False) and not html_file_path.is_file():
+            if not html_file_path.is_file():
+                LOGGER.warning("Warning: html file '%s' not found, skipping", PathUtil.short_path(html_file_path))
                 continue
 
             with html_file_path.open("r", encoding="utf-8") as in_file:
