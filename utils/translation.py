@@ -289,8 +289,11 @@ class Translation:
 
         # 번역 서비스 생성 및 사용
         if src_text_list:
-            LOGGER.debug(f"캐시에 없는 {len(src_text_list)}개 텍스트를 번역합니다...")
-            fresh_translation_map = self.service.translate_batch(src_text_list)
+            if not self.service:
+                LOGGER.warning("번역 서비스가 없어 %d개 텍스트를 번역하지 못합니다", len(src_text_list))
+            else:
+                LOGGER.debug(f"캐시에 없는 {len(src_text_list)}개 텍스트를 번역합니다...")
+                fresh_translation_map = self.service.translate_batch(src_text_list)
 
             if fresh_translation_map:
                 LOGGER.debug(f"번역 완료: {len(fresh_translation_map)}개")
