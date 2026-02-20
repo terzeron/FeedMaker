@@ -22,6 +22,7 @@ class TranslationProvider(Enum):
     DEEPL = 'deepl'
     AZURE = 'azure'
     GOOGLE = 'google'
+    CLAUDE = 'claude'
 
 
 class TranslationService(Protocol):
@@ -176,6 +177,72 @@ class GoogleTranslationService(TranslationService):
         return other is GoogleTranslationService
 
 
+class ClaudeTranslationService(TranslationService):
+    MAX_ITEMS_PER_BATCH = 10
+
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.endpoint = "https://api.anthropic.com/v1/messages"
+        self.provider = TranslationProvider.CLAUDE
+
+    def translate_batch(self, texts: list[str]) -> dict[str, str]:
+        result_map: dict[str, str] = {}
+        headers = {
+            "x-api-key": self.api_key,
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json",
+        }
+        client = Crawler(method=Method.POST, headers=headers, timeout=30)
+
+        batches = TranslationService.chunk_by_items(texts, self.MAX_ITEMS_PER_BATCH)
+        for batch in batches:
+            numbered_texts = "\n".join(f"{i+1}. {t}" for i, t in enumerate(batch))
+            payload = json.dumps({
+                "model": "claude-haiku-4-5-20251001",
+                "max_tokens": 4096,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": f"Translate the following English texts to Korean. "
+                                   f"Return ONLY a JSON array of translated strings in the same order, "
+                                   f"with no additional text or explanation.\n\n{numbered_texts}"
+                    }
+                ]
+            })
+
+            try:
+                response_text, error_msg, _ = client.run(self.endpoint, data=payload)
+                if not response_text:
+                    LOGGER.error(f"Claude translation request failed: {error_msg}")
+                    continue
+                time.sleep(1)
+                data = json.loads(response_text)
+                # Messages API 응답에서 텍스트 추출
+                content_blocks = data.get("content", [])
+                text_content = ""
+                for block in content_blocks:
+                    if block.get("type") == "text":
+                        text_content += block.get("text", "")
+                # JSON 배열 파싱
+                translations = json.loads(text_content)
+                if isinstance(translations, list) and len(translations) == len(batch):
+                    for en, ko in zip(batch, translations):
+                        result_map[en] = ko
+                else:
+                    LOGGER.error(f"Claude translation returned unexpected format: expected {len(batch)} items, got {len(translations) if isinstance(translations, list) else 'non-list'}")
+            except (json.JSONDecodeError, KeyError) as e:
+                LOGGER.error(f"Claude translation response parsing failed: {e}")
+                continue
+            except Exception as e:
+                LOGGER.error(f"Claude translation request failed: {e}")
+                continue
+
+        return result_map
+
+    def __eq__(self, other) -> bool:
+        return other is ClaudeTranslationService
+
+
 class TranslationServiceFactory:
     @staticmethod
     def create_service() -> TranslationService | None:
@@ -185,6 +252,8 @@ class TranslationServiceFactory:
             return AzureTranslationService(Env.get("AZURE_API_KEY"))
         if Env.get("GOOGLE_API_KEY"):
             return GoogleTranslationService(Env.get("GOOGLE_API_KEY"))
+        if Env.get("ANTHROPIC_API_KEY"):
+            return ClaudeTranslationService(Env.get("ANTHROPIC_API_KEY"))
         return None
 
 
