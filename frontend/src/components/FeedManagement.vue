@@ -903,6 +903,8 @@ export default {
             this.activeFeedIndex = undefined;
             this.selectedFeedName = "";
 
+            this.showSearchResult = false;
+            this.showFeedlist = true;
             this.hideAllRelatedToFeed();
             this.showAllRelatedToGroup();
           }
