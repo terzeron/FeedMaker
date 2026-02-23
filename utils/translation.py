@@ -2,6 +2,7 @@
 
 
 import json
+import re
 import uuid
 import logging.config
 import time
@@ -223,6 +224,9 @@ class ClaudeTranslationService(TranslationService):
                 for block in content_blocks:
                     if block.get("type") == "text":
                         text_content += block.get("text", "")
+                # 마크다운 코드 펜스 제거 (```json ... ``` 등)
+                text_content = re.sub(r"^```(?:json)?\s*\n?", "", text_content.strip())
+                text_content = re.sub(r"\n?```\s*$", "", text_content.strip())
                 # JSON 배열 파싱
                 translations = json.loads(text_content)
                 if isinstance(translations, list) and len(translations) == len(batch):
