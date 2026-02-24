@@ -21,7 +21,7 @@ USER $USER_NAME
 WORKDIR /app
 
 ENV UV_SYSTEM_PYTHON=1 UV_LINK_MODE=copy UV_PYTHON=python3.12
-COPY pyproject.toml uv.lock /app/
+COPY pyproject.toml uv.lock README.md /app/
 RUN HOME=/tmp XDG_CACHE_HOME=/tmp/.cache UV_CACHE_DIR=/tmp/uv-cache \
     uv sync --locked --no-editable
 
