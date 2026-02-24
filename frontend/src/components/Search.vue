@@ -26,34 +26,62 @@
       </BCol>
     </BRow>
 
-    <!-- Search Results -->
-    <BRow>
-      <BCol id="search_result" cols="12" class="m-0 p-1" v-if="showSearchResult">
-        <BTableSimple
-          v-if="Array.isArray(searchResultlist) && searchResultlist.length > 0"
-          class="m-0 p-1 text-break"
-          small
-        >
-          <BThead head-variant="light" table-variant="light">
-            <BTr>
-              <BTh colspan="2">검색 결과</BTh>
-            </BTr>
-          </BThead>
-          <BTbody>
-            <BTr v-for="item in searchResultlist" :key="item.url">
-              <BTd>{{ item.title }}</BTd>
-              <BTd>
-                <a :href="item.url">{{ item.url }}</a>
-              </BTd>
-            </BTr>
-          </BTbody>
-        </BTableSimple>
-        <div v-else-if="searchError" class="alert alert-danger">
-          {{ searchError }}
-        </div>
-        <div v-else class="alert alert-info">
-          검색 결과가 없습니다.
-        </div>
+    <!-- Search Results - Per Site Cards -->
+    <BRow v-if="siteResults.length > 0">
+      <BCol
+        cols="12"
+        md="6"
+        v-for="site in siteResults"
+        :key="site.name"
+        class="p-1"
+      >
+        <BCard class="h-100">
+          <template #header>
+            <div class="d-flex align-items-center justify-content-between">
+              <strong>{{ site.name }}</strong>
+              <span v-if="site.status === 'loading'">
+                <BSpinner small />
+              </span>
+              <span
+                v-else-if="site.status === 'success' && site.html"
+                class="badge bg-success"
+              >
+                결과 있음
+              </span>
+              <span
+                v-else-if="site.status === 'success' && !site.html"
+                class="badge bg-secondary"
+              >
+                결과 없음
+              </span>
+              <span
+                v-else-if="site.status === 'error'"
+                class="badge bg-danger"
+              >
+                오류
+              </span>
+            </div>
+          </template>
+          <BCardBody>
+            <div v-if="site.status === 'loading'" class="text-muted small">
+              검색 중...
+            </div>
+            <div
+              v-else-if="site.status === 'success' && site.html"
+              class="search-result-html"
+              v-html="site.html"
+            ></div>
+            <div
+              v-else-if="site.status === 'success' && !site.html"
+              class="text-muted small"
+            >
+              이 사이트에서 결과를 찾지 못했습니다.
+            </div>
+            <div v-else-if="site.status === 'error'" class="text-danger small">
+              {{ site.error }}
+            </div>
+          </BCardBody>
+        </BCard>
       </BCol>
     </BRow>
 
@@ -66,7 +94,27 @@
   </BContainer>
 </template>
 
-<style></style>
+<style scoped>
+.search-result-html {
+  max-height: 400px;
+  overflow-y: auto;
+  font-size: 0.85rem;
+}
+
+.search-result-html :deep(div) {
+  padding: 4px 8px;
+  margin-bottom: 2px;
+}
+
+.search-result-html :deep(a) {
+  color: #0d6efd;
+  text-decoration: none;
+}
+
+.search-result-html :deep(a:hover) {
+  text-decoration: underline;
+}
+</style>
 
 <script>
 import axios from "axios";
@@ -79,17 +127,15 @@ import MyButton from "./MyButton";
 library.add(faSearch);
 
 export default {
-  name: "FeedManagement",
+  name: "SiteSearch",
   components: {
     MyButton,
   },
   props: [],
   data: function () {
     return {
-      showSearchResult: false,
       searchKeyword: "",
-      searchResultlist: [],
-      searchError: "",
+      siteResults: [],
     };
   },
   computed: {
@@ -97,10 +143,9 @@ export default {
       return process.env.VUE_APP_FACEBOOK_ADMIN_EMAIL;
     },
     appVersion: function () {
-      return process.env.VUE_APP_VERSION || 'dev';
+      return process.env.VUE_APP_VERSION || "dev";
     },
   },
-  watch: {},
   methods: {
     startButton: function (ref) {
       this.$refs[ref].doShowInitialIcon = false;
@@ -110,53 +155,66 @@ export default {
       this.$refs[ref].doShowInitialIcon = true;
       this.$refs[ref].doShowSpinner = false;
     },
-    resetButton: function (ref) {
-      this.$refs[ref].doShowInitialIcon = true;
-      this.$refs[ref].doShowSpinner = false;
-    },
-    search: function () {
-      this.startButton("searchButton");
-      this.showSearchResult = true;
-      this.searchError = "";
+    search: async function () {
+      const keyword = this.searchKeyword.trim();
+      if (!keyword) return;
 
-      const url = getApiUrlPath() + `/search_site/${encodeURIComponent(this.searchKeyword)}`;
-      axios
-        .get(url)
-        .then((res) => {
-          if (res.data.status === "failure") {
-            this.searchError = res.data.message || "검색 중 오류가 발생했습니다.";
-            this.searchResultlist = [];
-          } else {
-            const list = res.data.search_result_list;
-            if (Array.isArray(list)) {
-              this.searchResultlist = list.map((o) => {
-                if (Array.isArray(o) && o.length >= 2) {
-                  return { title: o[0], url: o[1] };
-                }
-                if (typeof o === "object" && o !== null) {
-                  return {
-                    title: o.title || o[0] || "",
-                    url: o.url || o[1] || "",
-                  };
-                }
-                return { title: String(o), url: "" };
-              });
-            } else {
-              this.searchResultlist = [];
-            }
-          }
+      this.startButton("searchButton");
+      this.siteResults = [];
+
+      try {
+        // 1. 사이트 목록 조회
+        const namesUrl = getApiUrlPath() + "/search_sites";
+        const namesRes = await axios.get(namesUrl);
+        if (namesRes.data.status !== "success" || !namesRes.data.site_names) {
           this.endButton("searchButton");
-        })
-        .catch((error) => {
-          this.searchError = "검색 중 오류가 발생했습니다.";
-          this.searchResultlist = [];
-          this.resetButton("searchButton");
+          return;
+        }
+
+        const siteNames = namesRes.data.site_names;
+
+        // 2. 사이트별 카드 초기화 (모두 loading 상태)
+        this.siteResults = siteNames.map((name) => ({
+          name,
+          status: "loading",
+          html: "",
+          error: "",
+        }));
+
+        // 3. 사이트별 병렬 검색
+        const promises = siteNames.map((siteName, index) => {
+          const searchUrl =
+            getApiUrlPath() +
+            `/search_sites/${encodeURIComponent(siteName)}/${encodeURIComponent(keyword)}`;
+          return axios
+            .get(searchUrl)
+            .then((res) => {
+              if (res.data.status === "success") {
+                this.siteResults[index].status = "success";
+                this.siteResults[index].html = res.data.search_result || "";
+              } else {
+                this.siteResults[index].status = "error";
+                this.siteResults[index].error =
+                  res.data.message || "검색 실패";
+              }
+            })
+            .catch(() => {
+              this.siteResults[index].status = "error";
+              this.siteResults[index].error = "검색 중 오류 발생";
+            });
         });
+
+        await Promise.all(promises);
+      } catch (error) {
+        // 사이트 목록 조회 실패
+        this.siteResults = [];
+      } finally {
+        this.endButton("searchButton");
+      }
     },
   },
   mounted: function () {
     // 인증 검증은 router guard에서 처리됨 (server-side validation)
-    // localStorage의 session_expiry 검증 제거 (보안 취약점)
   },
 };
 </script>

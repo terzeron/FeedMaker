@@ -14,46 +14,51 @@ const stubs = {
   BInputGroup: { template: '<div><slot /></div>' },
   BFormInput: { template: '<input />' },
   BInputGroupText: { template: '<div><slot /></div>' },
-  BTableSimple: { template: '<table><slot /></table>' },
-  BThead: { template: '<thead><slot /></thead>' },
-  BTbody: { template: '<tbody><slot /></tbody>' },
-  BTr: { template: '<tr><slot /></tr>' },
-  BTh: { template: '<th><slot /></th>' },
-  BTd: { template: '<td><slot /></td>' }
+  BCard: { template: '<div><slot /><slot name="header" /></div>' },
+  BCardBody: { template: '<div><slot /></div>' },
+  BSpinner: { template: '<span />' }
 };
 
 const flushPromises = () => new Promise(r => setTimeout(r));
 
 describe('Search.vue', () => {
-  it('performs search and renders results', async () => {
+  it('performs per-site search and renders results', async () => {
+    // 1st call: site names
     axios.get.mockResolvedValueOnce({
-      data: {
-        status: 'success',
-        search_result_list: [
-          ['제목1', 'https://a'],
-          { title: '제목2', url: 'https://b' }
-        ]
-      }
+      data: { status: 'success', site_names: ['funbe', 'toonkor'] }
+    });
+    // 2nd call: funbe result
+    axios.get.mockResolvedValueOnce({
+      data: { status: 'success', search_result: '<div><a href="https://a">제목1</a></div>' }
+    });
+    // 3rd call: toonkor result
+    axios.get.mockResolvedValueOnce({
+      data: { status: 'success', search_result: '' }
     });
 
     const wrapper = mount(Search, {
-      global: {
-        stubs,
-        components: { MyButton }
-      }
+      global: { stubs, components: { MyButton } }
     });
 
-    await wrapper.setData({ searchKeyword: '키워드' });
+    await wrapper.setData({ searchKeyword: '드래곤' });
     await wrapper.vm.search();
     await flushPromises();
 
-    // shows table and two rows
-    expect(wrapper.vm.searchResultlist.length).toBe(2);
-    expect(wrapper.text()).toContain('제목1');
-    expect(wrapper.text()).toContain('제목2');
+    expect(wrapper.vm.siteResults.length).toBe(2);
+    expect(wrapper.vm.siteResults[0].name).toBe('funbe');
+    expect(wrapper.vm.siteResults[0].status).toBe('success');
+    expect(wrapper.vm.siteResults[0].html).toContain('제목1');
+    expect(wrapper.vm.siteResults[1].name).toBe('toonkor');
+    expect(wrapper.vm.siteResults[1].status).toBe('success');
+    expect(wrapper.vm.siteResults[1].html).toBe('');
   });
 
-  it('handles search error', async () => {
+  it('handles per-site search error', async () => {
+    // 1st call: site names
+    axios.get.mockResolvedValueOnce({
+      data: { status: 'success', site_names: ['funbe'] }
+    });
+    // 2nd call: funbe fails
     axios.get.mockRejectedValueOnce(new Error('network'));
 
     const wrapper = mount(Search, {
@@ -64,7 +69,8 @@ describe('Search.vue', () => {
     await wrapper.vm.search();
     await flushPromises();
 
-    expect(wrapper.vm.searchError).toBeTruthy();
-    expect(wrapper.vm.searchResultlist).toEqual([]);
+    expect(wrapper.vm.siteResults.length).toBe(1);
+    expect(wrapper.vm.siteResults[0].status).toBe('error');
+    expect(wrapper.vm.siteResults[0].error).toBeTruthy();
   });
 });

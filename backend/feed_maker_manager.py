@@ -166,6 +166,16 @@ class FeedMakerManager:
         return "", f"can't search site matching '{keyword}'"
 
     @staticmethod
+    def get_search_site_names() -> list[str]:
+        return SearchManager.get_available_site_names(do_include_torrent_sites=False)
+
+    @staticmethod
+    def search_single_site(site_name: str, keyword: str) -> tuple[str, str]:
+        LOGGER.debug("# search_single_site(site_name='%s', keyword='%s')", site_name, keyword)
+        search_manager = SearchManager()
+        return search_manager.search_single_site(site_name, keyword)
+
+    @staticmethod
     def _compare_names(x: dict[str, Any], y: dict[str, Any]) -> int:
         if x['name'][0] == "_" and y['name'][0] != "_":
             return 1
