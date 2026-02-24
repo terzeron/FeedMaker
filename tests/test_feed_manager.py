@@ -438,5 +438,58 @@ class TestFeedManager(unittest.TestCase):
                     self.assertIsNotNone(row.due_date)
 
 
+    def test_search_empty_keywords(self) -> None:
+        result = FeedManager.search([])
+        self.assertEqual(result, [])
+
+    def test_search_blank_keywords(self) -> None:
+        result = FeedManager.search(["", " ", "  "])
+        self.assertEqual(result, [])
+
+    def test_search_single_keyword(self) -> None:
+        mock_row = MagicMock()
+        mock_row.feed_name = "one_piece"
+        mock_row.feed_title = "One Piece"
+        mock_row.group_name = "manga"
+        mock_row.is_active = True
+        self.mock_query.where.return_value = self.mock_query
+        self.mock_query.order_by.return_value = self.mock_query
+        self.mock_query.all.return_value = [mock_row]
+
+        result = FeedManager.search(["piece"])
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["feed_name"], "one_piece")
+
+    def test_search_multiple_keywords_no_duplicates(self) -> None:
+        mock_row = MagicMock()
+        mock_row.feed_name = "one_piece"
+        mock_row.feed_title = "One Piece"
+        mock_row.group_name = "manga"
+        mock_row.is_active = True
+        self.mock_query.where.return_value = self.mock_query
+        self.mock_query.order_by.return_value = self.mock_query
+        self.mock_query.all.return_value = [mock_row]
+
+        result = FeedManager.search(["one", "piece"])
+        # 단일 쿼리이므로 중복 없이 1건만 반환
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["feed_name"], "one_piece")
+
+    def test_search_trailing_spaces_filtered(self) -> None:
+        mock_row = MagicMock()
+        mock_row.feed_name = "manga_feed"
+        mock_row.feed_title = "Manga Feed"
+        mock_row.group_name = "comics"
+        mock_row.is_active = True
+        self.mock_query.where.return_value = self.mock_query
+        self.mock_query.order_by.return_value = self.mock_query
+        self.mock_query.all.return_value = [mock_row]
+
+        result = FeedManager.search(["manga", "", " "])
+        # 빈 키워드가 필터링되어 "manga"만으로 검색
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["feed_name"], "manga_feed")
+
+
 if __name__ == "__main__":
     unittest.main()
