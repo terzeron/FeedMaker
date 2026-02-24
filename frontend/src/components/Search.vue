@@ -136,6 +136,7 @@ export default {
     return {
       searchKeyword: "",
       siteResults: [],
+      isSearching: false,
     };
   },
   computed: {
@@ -157,8 +158,9 @@ export default {
     },
     search: async function () {
       const keyword = this.searchKeyword.trim();
-      if (!keyword) return;
+      if (!keyword || this.isSearching) return;
 
+      this.isSearching = true;
       this.startButton("searchButton");
       this.siteResults = [];
 
@@ -167,7 +169,6 @@ export default {
         const namesUrl = getApiUrlPath() + "/search_sites";
         const namesRes = await axios.get(namesUrl);
         if (namesRes.data.status !== "success" || !namesRes.data.site_names) {
-          this.endButton("searchButton");
           return;
         }
 
@@ -206,9 +207,10 @@ export default {
 
         await Promise.all(promises);
       } catch (error) {
-        // 사이트 목록 조회 실패
-        this.siteResults = [];
+        // 사이트 목록 조회 실패 시에도 이미 표시된 카드는 유지
+        console.error("Search failed:", error);
       } finally {
+        this.isSearching = false;
         this.endButton("searchButton");
       }
     },

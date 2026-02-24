@@ -246,7 +246,7 @@ async def search(keyword: str, feed_maker_manager: FeedMakerManager = Depends(ge
 
 
 @app.get("/search_site/{keyword}")
-async def search_site(keyword: str) -> dict[str, Any]:
+def search_site(keyword: str) -> dict[str, Any]:
     LOGGER.info("/search_site -> search_site(%s)", keyword)
     response_object: dict[str, Any] = {}
     result, error = FeedMakerManager.search_site(keyword)
@@ -261,7 +261,7 @@ async def search_site(keyword: str) -> dict[str, Any]:
 
 
 @app.get("/search_sites")
-async def get_search_site_names() -> dict[str, Any]:
+def get_search_site_names() -> dict[str, Any]:
     LOGGER.info("GET /search_sites -> get_search_site_names()")
     response_object: dict[str, Any] = {}
     site_names = FeedMakerManager.get_search_site_names()
@@ -271,7 +271,7 @@ async def get_search_site_names() -> dict[str, Any]:
 
 
 @app.get("/search_sites/{site_name}/{keyword}")
-async def search_single_site(site_name: str, keyword: str) -> dict[str, Any]:
+def search_single_site(site_name: str, keyword: str) -> dict[str, Any]:
     LOGGER.info("GET /search_sites/%s/%s -> search_single_site()", site_name, keyword)
     response_object: dict[str, Any] = {}
     result, error = FeedMakerManager.search_single_site(site_name, keyword)
