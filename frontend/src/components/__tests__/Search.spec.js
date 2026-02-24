@@ -4,6 +4,7 @@ import MyButton from '../MyButton.vue';
 import axios from 'axios';
 
 jest.mock('axios');
+axios.isCancel = jest.fn(() => false);
 
 const stubs = {
   'font-awesome-icon': true,
@@ -22,6 +23,11 @@ const stubs = {
 const flushPromises = () => new Promise(r => setTimeout(r));
 
 describe('Search.vue', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    axios.isCancel = jest.fn(() => false);
+  });
+
   it('performs per-site search and renders results', async () => {
     // 1st call: site names
     axios.get.mockResolvedValueOnce({
@@ -72,5 +78,38 @@ describe('Search.vue', () => {
     expect(wrapper.vm.siteResults.length).toBe(1);
     expect(wrapper.vm.siteResults[0].status).toBe('error');
     expect(wrapper.vm.siteResults[0].error).toBeTruthy();
+  });
+
+  it('aborts previous search when new search starts', async () => {
+    const abortSpy = jest.fn();
+    global.AbortController = jest.fn(() => ({
+      signal: { aborted: false },
+      abort: abortSpy,
+    }));
+
+    // First search: site names (will be aborted)
+    let resolveFirst;
+    axios.get.mockImplementationOnce(() =>
+      new Promise((resolve) => { resolveFirst = resolve; })
+    );
+    // Second search: site names
+    axios.get.mockResolvedValueOnce({
+      data: { status: 'success', site_names: [] }
+    });
+
+    const wrapper = mount(Search, {
+      global: { stubs, components: { MyButton } }
+    });
+
+    await wrapper.setData({ searchKeyword: '드래곤' });
+    // Start first search (won't resolve)
+    const p1 = wrapper.vm.search();
+
+    // Start second search - should abort first
+    await wrapper.setData({ searchKeyword: '무림' });
+    await wrapper.vm.search();
+    await flushPromises();
+
+    expect(abortSpy).toHaveBeenCalledTimes(1);
   });
 });

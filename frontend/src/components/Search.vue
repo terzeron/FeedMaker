@@ -136,6 +136,7 @@ export default {
       searchKeyword: "",
       siteResults: [],
       isSearching: false,
+      abortController: null,
     };
   },
   computed: {
@@ -157,7 +158,15 @@ export default {
     },
     search: async function () {
       const keyword = this.searchKeyword.trim();
-      if (!keyword || this.isSearching) return;
+      if (!keyword) return;
+
+      // 이전 검색이 진행 중이면 중단
+      if (this.abortController) {
+        this.abortController.abort();
+      }
+
+      this.abortController = new AbortController();
+      const { signal } = this.abortController;
 
       this.isSearching = true;
       this.startButton("searchButton");
@@ -166,7 +175,7 @@ export default {
       try {
         // 1. 사이트 목록 조회
         const namesUrl = getApiUrlPath() + "/search_sites";
-        const namesRes = await axios.get(namesUrl);
+        const namesRes = await axios.get(namesUrl, { signal });
         if (namesRes.data.status !== "success" || !namesRes.data.site_names) {
           return;
         }
@@ -187,7 +196,7 @@ export default {
             getApiUrlPath() +
             `/search_sites/${encodeURIComponent(siteName)}/${encodeURIComponent(keyword)}`;
           return axios
-            .get(searchUrl)
+            .get(searchUrl, { signal })
             .then((res) => {
               if (res.data.status === "success") {
                 this.siteResults[index].status = "success";
@@ -198,7 +207,9 @@ export default {
                   res.data.message || "검색 실패";
               }
             })
-            .catch(() => {
+            .catch((err) => {
+              // abort된 요청은 무시 (새 검색이 대체함)
+              if (axios.isCancel(err)) return;
               this.siteResults[index].status = "error";
               this.siteResults[index].error = "검색 중 오류 발생";
             });
@@ -206,11 +217,16 @@ export default {
 
         await Promise.all(promises);
       } catch (error) {
-        // 사이트 목록 조회 실패 시에도 이미 표시된 카드는 유지
+        // abort된 요청은 무시
+        if (axios.isCancel(error)) return;
         console.error("Search failed:", error);
       } finally {
-        this.isSearching = false;
-        this.endButton("searchButton");
+        // abort로 중단된 경우 새 검색이 상태를 관리하므로 건드리지 않음
+        if (!signal.aborted) {
+          this.isSearching = false;
+          this.abortController = null;
+          this.endButton("searchButton");
+        }
       }
     },
   },
