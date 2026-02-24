@@ -174,6 +174,12 @@ class Site:
                 # img 태그 완전 제거
                 html_fragment = re.sub(r'<img[^>]*/?>', '', html_fragment)
 
+                # script, iframe, style 태그와 하위 요소들 완전 제거
+                html_fragment = re.sub(r'<script[^>]*>.*?</script>', '', html_fragment, flags=re.DOTALL)
+                html_fragment = re.sub(r'<iframe[^>]*>.*?</iframe>', '', html_fragment, flags=re.DOTALL)
+                html_fragment = re.sub(r'<iframe[^>]*/>', '', html_fragment)
+                html_fragment = re.sub(r'<style[^>]*>.*?</style>', '', html_fragment, flags=re.DOTALL)
+
                 # SVG 태그와 하위 요소들 완전 제거
                 try:
                     soup_fragment = BeautifulSoup(html_fragment, "html.parser")
@@ -505,51 +511,75 @@ class MzgtoonSite(Site):
 
 
 class SearchManager:
+    SITE_CLASSES: list[tuple[type, str]] = [
+        (EleventoonSite, "11toon"),
+        (FunbeSite, "funbe"),
+        (JoatoonSite, "joatoon"),
+        (ToonkorSite, "toonkor"),
+        (TorrentQqSite, "torrentqq"),
+        (TorrentRjSite, "torrentrj"),
+        (TorrentZotaSite, "torrentzota"),
+        (TorrentTopSite, "torrenttop"),
+        (TorrentSeeSite, "torrentsee"),
+        (TorrentTipSite, "torrenttip"),
+        (XtoonSite, "xtoon"),
+        (BlacktoonSite, "blacktoon"),
+        (TorrentJokSite, "torrentjok"),
+        (WfwfSite, "wfwf"),
+        (WtwtSite, "wtwt"),
+        (MzgtoonSite, "mzgtoon"),
+    ]
+
     result_by_site: dict[Site, str] = {}
 
     def __init__(self) -> None:
         self.result_by_site = {}
+
+    @classmethod
+    def get_available_site_names(cls, do_include_torrent_sites: bool = False) -> list[str]:
+        available: list[str] = []
+        for site_class, site_name in cls.SITE_CLASSES:
+            if not do_include_torrent_sites and site_name.startswith("torrent"):
+                continue
+            try:
+                site_class(site_name)
+                available.append(site_name)
+            except (OSError, IOError, TypeError, ValueError, RuntimeError, NotFoundConfigFileError):
+                continue
+        return available
+
+    def search_single_site(self, site_name: str, keyword: str) -> tuple[str, str]:
+        """단일 사이트 검색. (result, error) 튜플 반환."""
+        for site_class, name in self.SITE_CLASSES:
+            if name == site_name:
+                try:
+                    site = site_class(name)
+                    return site.search(keyword), ""
+                except (OSError, IOError, TypeError, ValueError, RuntimeError, NotFoundConfigFileError) as e:
+                    LOGGER.warning(f"Failed to search site {site_name}: {e}")
+                    return "", str(e)
+        return "", f"unknown site: {site_name}"
 
     def worker(self, site: Site, keyword: str) -> None:
         #LOGGER.debug("# worker(site='%s', keyword='%s')", site, keyword)
         search_result = site.search(keyword)
         self.result_by_site[site] = search_result
 
-    def search_sites(self, site_name: str, keyword: str, do_include_torrent_sites: bool = False) -> str:
-        LOGGER.debug("# search(site_name='%s', keyword='%s', do_include_torrent_sites=%r)", site_name, keyword, do_include_torrent_sites)
-
-        # Create site list with exception handling for missing config files
-        site_classes = [
-            (EleventoonSite, "11toon"),
-            (FunbeSite, "funbe"),
-            (JoatoonSite, "joatoon"),
-            (ToonkorSite, "toonkor"),
-            (TorrentQqSite, "torrentqq"),
-            (TorrentRjSite, "torrentrj"),
-            (TorrentZotaSite, "torrentzota"),
-            (TorrentTopSite, "torrenttop"),
-            (TorrentSeeSite, "torrentsee"),
-            (TorrentTipSite, "torrenttip"),
-            (XtoonSite, "xtoon"),
-            (BlacktoonSite, "blacktoon"),
-            (TorrentJokSite, "torrentjok"),
-            (WfwfSite, "wfwf"),
-            (WtwtSite, "wtwt"),
-            (MzgtoonSite, "mzgtoon"),
-        ]
-
+    def _create_site_list(self) -> list[Site]:
         site_list: list[Site] = []
-        for site_class, site_name_param in site_classes:
+        for site_class, site_name_param in self.SITE_CLASSES:
             try:
                 site = site_class(site_name_param)
                 site_list.append(site)
-            except (OSError, IOError, TypeError, ValueError, RuntimeError) as e:
+            except (OSError, IOError, TypeError, ValueError, RuntimeError, NotFoundConfigFileError) as e:
                 LOGGER.warning(f"Failed to create site {site_name_param}: {e}, skipping")
                 continue
-            except NotFoundConfigFileError as e:
-                # Catch specific exceptions like NotFoundConfigFileError
-                LOGGER.warning(f"Failed to create site {site_name_param}: {e}, skipping")
-                continue
+        return site_list
+
+    def search_sites(self, site_name: str, keyword: str, do_include_torrent_sites: bool = False) -> str:
+        LOGGER.debug("# search(site_name='%s', keyword='%s', do_include_torrent_sites=%r)", site_name, keyword, do_include_torrent_sites)
+
+        site_list = self._create_site_list()
 
         result_list: list[str] = []
         if not site_name:
