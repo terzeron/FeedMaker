@@ -42,9 +42,9 @@ Dockerfile*
 docker-compose*
 
 # Documentation
-README.md
 LICENSE
 *.md
+!README.md
 
 # Temporary files
 tmp/
