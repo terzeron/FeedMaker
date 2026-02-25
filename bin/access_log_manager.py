@@ -45,42 +45,57 @@ class AccessLogManager:
 
         return logs, stats
 
-    def search_by_date(self, the_day: date) -> tuple[list[tuple[datetime, str]], list[tuple[datetime, str]]]:
-        duration_in_minutes = 60 * 24  # 1 day
-        step_in_minutes = 60 * 6  # by 6 hours
+    LOKI_QUERY_LIMIT = 5000
+    INITIAL_STEP_MINUTES = 60 * 6  # 6 hours
+    MIN_STEP_MINUTES = 15
 
+    def _search_time_range(self, start_dt: datetime, end_dt: datetime,
+                           accessed_feed_list: list[tuple[datetime, str]],
+                           viewed_feed_list: list[tuple[datetime, str]]) -> None:
+        start_ns = int(start_dt.timestamp()) * 1_000_000_000
+        end_ns = int(end_dt.timestamp()) * 1_000_000_000
+        params = {
+            "query": '{namespace="feedmaker",app="nginx"}',
+            "start": start_ns,
+            "end": end_ns,
+            "limit": self.LOKI_QUERY_LIMIT,
+            "direction": "forward"
+        }
+
+        result, _ = self.loki_search(params)
+
+        if len(result) >= self.LOKI_QUERY_LIMIT:
+            step_minutes = int((end_dt - start_dt).total_seconds() / 60)
+            if step_minutes > self.MIN_STEP_MINUTES:
+                half = step_minutes // 2
+                mid_dt = start_dt + timedelta(minutes=half)
+                self._search_time_range(start_dt, mid_dt, accessed_feed_list, viewed_feed_list)
+                self._search_time_range(mid_dt, end_dt, accessed_feed_list, viewed_feed_list)
+                return
+            LOGGER.warning("Loki query limit reached for %s ~ %s (step=%dm), some logs may be missed",
+                           start_dt, end_dt, step_minutes)
+
+        for log in result:
+            m = re.search(r'\[(?P<time>[^]]+)] "GET (?P<uri>[^ ]+) HTTP[^"]+\" (?P<status>\d+)', log)
+            if m and m.group("status") in ("200", "304"):
+                dt = datetime.strptime(m.group("time"), "%d/%b/%Y:%H:%M:%S %z")
+                uri = m.group("uri")
+                m1 = re.search(r'/xml/(?P<feed>.+).xml', uri)
+                if m1:
+                    accessed_feed_list.append((dt, m1.group("feed")))
+                m2 = re.search(r'/img/1x1\.jpg\?feed=(?P<feed>[^&]+)\.xml&item=(?P<item>.+)', uri)
+                if m2:
+                    viewed_feed_list.append((dt, m2.group("feed")))
+
+    def search_by_date(self, the_day: date) -> tuple[list[tuple[datetime, str]], list[tuple[datetime, str]]]:
         accessed_feed_list: list[tuple[datetime, str]] = []
         viewed_feed_list: list[tuple[datetime, str]] = []
         local_tz = datetime.now().astimezone().tzinfo
-        for i in range(0, duration_in_minutes, step_in_minutes):
-            start_dt = (datetime(the_day.year, the_day.month, the_day.day, tzinfo=local_tz) + timedelta(minutes=i))
-            start_ns = int(
-                start_dt.replace(tzinfo=local_tz).timestamp()) * 1_000_000_000 + start_dt.microsecond * 1000
-            end_dt = (datetime(the_day.year, the_day.month, the_day.day, tzinfo=local_tz) + timedelta(
-                minutes=i + step_in_minutes))
-            end_ns = int(end_dt.replace(tzinfo=local_tz).timestamp()) * 1_000_000_000 + end_dt.microsecond * 1000
-            # print(f"{start_dt=} ~ {end_dt=}")
-            params = {
-                "query": '{namespace="feedmaker",app="nginx"}',
-                "start": start_ns,
-                "end": end_ns,
-                "limit": 5000,
-                "direction": "forward"
-            }
 
-            result, _ = self.loki_search(params)
-            # print(result)
-            for log in result:
-                m = re.search(r'\[(?P<time>[^]]+)] "GET (?P<uri>[^ ]+) HTTP[^"]+\" (?P<status>\d+)', log)
-                if m and m.group("status") in ("200", "304"):
-                    dt = datetime.strptime(m.group("time"), "%d/%b/%Y:%H:%M:%S %z")
-                    uri = m.group("uri")
-                    m1 = re.search(r'/xml/(?P<feed>.+).xml', uri)
-                    if m1:
-                        accessed_feed_list.append((dt, m1.group("feed")))
-                    m2 = re.search(r'/img/1x1\.jpg\?feed=(?P<feed>[^&]+)\.xml&item=(?P<item>.+)', uri)
-                    if m2:
-                        viewed_feed_list.append((dt, m2.group("feed")))
+        for i in range(0, 60 * 24, self.INITIAL_STEP_MINUTES):
+            start_dt = datetime(the_day.year, the_day.month, the_day.day, tzinfo=local_tz) + timedelta(minutes=i)
+            end_dt = start_dt + timedelta(minutes=self.INITIAL_STEP_MINUTES)
+            self._search_time_range(start_dt, end_dt, accessed_feed_list, viewed_feed_list)
 
         return accessed_feed_list, viewed_feed_list
 

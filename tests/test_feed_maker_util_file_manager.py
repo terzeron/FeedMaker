@@ -83,9 +83,14 @@ class FileManagerTest(unittest.TestCase):
 
         self.html_file1_path.unlink(missing_ok=True)
         self.html_file2_path.unlink(missing_ok=True)
-        shutil.rmtree(self.html_dir_path)
+        shutil.rmtree(self.html_dir_path, ignore_errors=True)
 
         self.empty_img_file_path.unlink(missing_ok=True)
+        self.img_file1_path.unlink(missing_ok=True)
+        self.img_file2_path.unlink(missing_ok=True)
+        self.img_file3_path.unlink(missing_ok=True)
+        self.img_file4_path.unlink(missing_ok=True)
+        shutil.rmtree(self.feed_dir_path, ignore_errors=True)
 
     def test__get_cache_info_common_postfix(self) -> None:
         img_url = "https://image-comic.pstatic.net/webtoon/759457/50/20211007123156_e8e0d3210b1b5222a92a0d12de7068b3_IMAG01_1.jpg"

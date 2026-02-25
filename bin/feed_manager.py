@@ -225,13 +225,14 @@ class FeedManager:
                 st = rss_file_path.stat()
                 rss_update_date = datetime.fromtimestamp(st.st_mtime, timezone.utc)
 
-        existing_feeds = s.query(FeedInfo).filter_by(feed_name=feed_name, is_active=is_active).all()
+        existing_feeds = s.query(FeedInfo).filter_by(feed_name=feed_name, group_name=group_name).all()
         if existing_feeds:
             for feed in existing_feeds:
+                feed.is_active = is_active
                 feed.feedmaker = feedmaker
                 feed.rss_update_date = rss_update_date
         else:
-            s.add(FeedInfo(feed_name=feed_name, group_name=group_name, feedmaker=feedmaker, rss_update_date=rss_update_date))
+            s.add(FeedInfo(feed_name=feed_name, group_name=group_name, is_active=is_active, feedmaker=feedmaker, rss_update_date=rss_update_date))
 
     @classmethod
     def add_rss_info(cls, feed_dir_path: Path) -> None:
