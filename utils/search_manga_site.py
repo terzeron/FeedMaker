@@ -246,7 +246,15 @@ class Site:
 
                 result_list.append(html_fragment)
 
-        return "".join(result_list)
+        combined = "".join(result_list)
+
+        # 실제 텍스트 콘텐츠가 없으면 빈 문자열 반환 (빈 구조 태그만 남은 경우 방지)
+        if combined:
+            text_only = BeautifulSoup(combined, "html.parser").get_text(strip=True)
+            if not text_only:
+                return ""
+
+        return combined
 
     def extract_sub_content_from_site_like_agit(self, content: str, keyword: str) -> str:
         LOGGER.debug(f"# extract_sub_content_from_site_like_agit(keyword={keyword})")

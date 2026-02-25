@@ -201,7 +201,12 @@ export default {
             .then((res) => {
               if (res.data.status === "success") {
                 this.siteResults[index].status = "success";
-                this.siteResults[index].html = res.data.search_result || "";
+                const rawHtml = res.data.search_result || "";
+                // HTML 태그 제거 후 실제 텍스트가 있는지 확인 (이중 방어)
+                const textContent = rawHtml
+                  .replace(/<[^>]*>/g, "")
+                  .trim();
+                this.siteResults[index].html = textContent ? rawHtml : "";
               } else {
                 this.siteResults[index].status = "error";
                 this.siteResults[index].error =
