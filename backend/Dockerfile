@@ -1,11 +1,13 @@
+# syntax=docker/dockerfile:1
 FROM python:3.12-slim
 
 # root
-RUN apt-get update && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
     libpoppler-dev libpoppler-cpp-dev libheif-dev libcairo2-dev \
     build-essential git curl unzip gnupg ca-certificates chromium chromium-driver gosu && \
-    apt-get clean && rm -rf /var/lib/apt/lists/* && \
     printf '#!/bin/sh\nexec /usr/lib/chromium/chrome_crashpad_handler.real "$@" --database=/tmp/crashpad 2>/dev/null || true\n' \
         > /usr/lib/chromium/chrome_crashpad_handler.wrapper && \
     mv /usr/lib/chromium/chrome_crashpad_handler /usr/lib/chromium/chrome_crashpad_handler.real && \
@@ -21,22 +23,25 @@ RUN useradd -u $USER_ID $USER_NAME && \
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     cp /root/.local/bin/uv /usr/local/bin/
 
+# CartoonSplit을 COPY 전에 배치하여 코드 변경 시 캐시 유지
+RUN git clone https://github.com/terzeron/CartoonSplit /app/CartoonSplit && \
+    rm -rf /app/CartoonSplit/.git /app/CartoonSplit/test && \
+    chown -R $USER_NAME /app/CartoonSplit
+
 # user(1000) - 빌드 단계는 앱 유저로 실행
 USER $USER_NAME
 WORKDIR /app
 
 ENV UV_SYSTEM_PYTHON=1 UV_LINK_MODE=copy UV_PYTHON=python3.12
 COPY pyproject.toml uv.lock README.md /app/
-RUN HOME=/tmp XDG_CACHE_HOME=/tmp/.cache UV_CACHE_DIR=/tmp/uv-cache \
+RUN --mount=type=cache,target=/tmp/uv-cache,uid=1000 \
+    HOME=/tmp XDG_CACHE_HOME=/tmp/.cache UV_CACHE_DIR=/tmp/uv-cache \
     uv sync --locked --no-editable
 
 COPY logging.conf /app
 COPY backend /app/backend
 COPY bin /app/bin
 COPY utils /app/utils
-
-RUN git clone https://github.com/terzeron/CartoonSplit /app/CartoonSplit && \
-    rm -rf /app/CartoonSplit/.git /app/CartoonSplit/test
 
 VOLUME /fma
 VOLUME /xml

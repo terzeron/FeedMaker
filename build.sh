@@ -7,6 +7,8 @@ TARGET=${1:-all}
 
 rm -rf */{nohup.out*,run.log*,.mypy_cache,__pycache__,.idea,.git}
 
+GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+
 build_backend() {
     echo "=== Building backend ==="
     docker build -f backend/Dockerfile --build-arg FM_BACKEND_PORT="$FM_BACKEND_PORT" -t terzeron/fm_backend . && \
@@ -16,7 +18,7 @@ build_backend() {
 
 build_frontend() {
     echo "=== Building frontend ==="
-    docker build -f frontend/Dockerfile -t terzeron/fm_frontend . && \
+    docker build -f frontend/Dockerfile --build-arg GIT_COMMIT="$GIT_COMMIT" -t terzeron/fm_frontend . && \
     docker tag terzeron/fm_frontend:latest registry.terzeron.com/terzeron/fm_frontend:latest && \
     docker push registry.terzeron.com/terzeron/fm_frontend:latest
 }
