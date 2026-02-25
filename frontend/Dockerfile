@@ -5,10 +5,9 @@ WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm install -g npm@10.9.2 && npm install && npx browserslist@latest --update-db
 
-COPY .git/ .
-
+ARG GIT_COMMIT=unknown
 COPY frontend/ .
-RUN npm run build
+RUN GIT_COMMIT=$GIT_COMMIT npm run build
 
 
 FROM nginx:1.25
