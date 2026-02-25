@@ -210,6 +210,16 @@ class Site:
                         for attr in attrs_to_remove_data:
                             del tag.attrs[attr]
 
+                    # <a title="...">의 전체 텍스트로 잘린 헤딩 복원
+                    for a_tag in soup_fragment.find_all('a', title=True):
+                        title_text = a_tag.get('title', '').strip()
+                        if not title_text:
+                            continue
+                        for heading in a_tag.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+                            heading_text = heading.get_text(strip=True)
+                            if heading_text and title_text.startswith(heading_text) and len(heading_text) < len(title_text):
+                                heading.string = title_text
+
                     html_fragment = str(soup_fragment)
 
                     # BeautifulSoup 처리 후 href 다시 확인 및 처리
