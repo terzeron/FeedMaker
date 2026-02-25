@@ -534,7 +534,7 @@ class FeedManager:
                 )
             combined = or_(*conditions)
             rows = s.query(FeedInfo).where(combined & (FeedInfo.group_name != "")).order_by(FeedInfo.group_name, FeedInfo.feed_name).all()
-            return [{"feed_name": row.feed_name, "feed_title": row.feed_title, "group_name": row.group_name, "is_active": row.is_active} for row in rows]
+            return [{"feed_name": row.feed_name, "feed_title": row.feed_title if row.feed_title else row.feed_name, "group_name": row.group_name, "is_active": row.is_active} for row in rows]
 
     @classmethod
     def get_groups(cls) -> list[dict[str, Any]]:
