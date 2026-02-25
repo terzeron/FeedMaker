@@ -533,7 +533,7 @@ class FeedManager:
                     FeedInfo.group_name.like(pat, escape='\\')
                 )
             combined = or_(*conditions)
-            rows = s.query(FeedInfo).where(combined & FeedInfo.feedmaker).order_by(FeedInfo.group_name, FeedInfo.feed_name).all()
+            rows = s.query(FeedInfo).where(combined & (FeedInfo.group_name != "")).order_by(FeedInfo.group_name, FeedInfo.feed_name).all()
             return [{"feed_name": row.feed_name, "feed_title": row.feed_title, "group_name": row.group_name, "is_active": row.is_active} for row in rows]
 
     @classmethod
