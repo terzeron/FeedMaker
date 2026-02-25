@@ -17,6 +17,15 @@ from bin.crawler import Crawler, Method
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
+_RATE_LIMIT_STATUS_RE = re.compile(r"status code '(\d+)'")
+_RATE_LIMIT_CODES = {"429", "456", "529"}
+
+
+def _is_rate_limit_error(error_msg: str) -> bool:
+    """Crawler error_msg에서 rate limit 관련 상태 코드(429/456/529)를 감지한다."""
+    m = _RATE_LIMIT_STATUS_RE.search(error_msg)
+    return m is not None and m.group(1) in _RATE_LIMIT_CODES
+
 
 # 번역 서비스 제공자 구분을 위한 Enum 정의
 class TranslationProvider(Enum):
@@ -75,6 +84,8 @@ class DeepLTranslationService(TranslationService):
                 response_text, error_msg, _ = client.run(self.endpoint, data=payload)
                 if not response_text:
                     LOGGER.error(f"DeepL translation request failed: {error_msg}")
+                    if _is_rate_limit_error(error_msg):
+                        break
                     continue
                 time.sleep(1)
                 data = json.loads(response_text)
@@ -118,6 +129,8 @@ class AzureTranslationService(TranslationService):
                 response_text, error_msg, _ = client.run(self.endpoint, data=json.dumps(payload))
                 if not response_text:
                     LOGGER.error(f"Azure translation request failed: {error_msg}")
+                    if _is_rate_limit_error(error_msg):
+                        break
                     continue
                 time.sleep(1)
                 data = json.loads(response_text)
@@ -160,6 +173,8 @@ class GoogleTranslationService(TranslationService):
                 response_text, error_msg, _ = client.run(self.endpoint, data=json.dumps(payload))
                 if not response_text:
                     LOGGER.error(f"Google translation request failed: {error_msg}")
+                    if _is_rate_limit_error(error_msg):
+                        break
                     continue
                 time.sleep(1)
                 data = json.loads(response_text)
@@ -179,7 +194,8 @@ class GoogleTranslationService(TranslationService):
 
 
 class ClaudeTranslationService(TranslationService):
-    MAX_ITEMS_PER_BATCH = 10
+    MAX_ITEMS_PER_BATCH = 100
+    SYSTEM_PROMPT = "Translate English to Korean. Return ONLY a JSON array of translated strings, same order."
 
     def __init__(self, api_key: str):
         self.api_key = api_key
@@ -193,21 +209,18 @@ class ClaudeTranslationService(TranslationService):
             "anthropic-version": "2023-06-01",
             "Content-Type": "application/json",
         }
-        client = Crawler(method=Method.POST, headers=headers, timeout=30)
+        client = Crawler(method=Method.POST, headers=headers, timeout=60)
 
         batches = TranslationService.chunk_by_items(texts, self.MAX_ITEMS_PER_BATCH)
         for batch in batches:
-            numbered_texts = "\n".join(f"{i+1}. {t}" for i, t in enumerate(batch))
+            texts_json = json.dumps(batch, ensure_ascii=False)
             payload = json.dumps({
                 "model": "claude-haiku-4-5-20251001",
-                "max_tokens": 4096,
+                "max_tokens": len(batch) * 50,
+                "system": self.SYSTEM_PROMPT,
                 "messages": [
-                    {
-                        "role": "user",
-                        "content": f"Translate the following English texts to Korean. "
-                                   f"Return ONLY a JSON array of translated strings in the same order, "
-                                   f"with no additional text or explanation.\n\n{numbered_texts}"
-                    }
+                    {"role": "user", "content": texts_json},
+                    {"role": "assistant", "content": "["}
                 ]
             })
 
@@ -215,6 +228,8 @@ class ClaudeTranslationService(TranslationService):
                 response_text, error_msg, _ = client.run(self.endpoint, data=payload)
                 if not response_text:
                     LOGGER.error(f"Claude translation request failed: {error_msg}")
+                    if _is_rate_limit_error(error_msg):
+                        break
                     continue
                 time.sleep(1)
                 data = json.loads(response_text)
@@ -224,16 +239,18 @@ class ClaudeTranslationService(TranslationService):
                 for block in content_blocks:
                     if block.get("type") == "text":
                         text_content += block.get("text", "")
-                # 마크다운 코드 펜스 제거 (```json ... ``` 등)
-                text_content = re.sub(r"^```(?:json)?\s*\n?", "", text_content.strip())
-                text_content = re.sub(r"\n?```\s*$", "", text_content.strip())
-                # JSON 배열 파싱
+                # prefill한 "[" + 응답 텍스트로 JSON 배열 완성
+                text_content = "[" + text_content.strip()
+                # JSON 배열 파싱 — 부분 일치 허용
                 translations = json.loads(text_content)
-                if isinstance(translations, list) and len(translations) == len(batch):
+                if isinstance(translations, list):
+                    if len(translations) < len(batch):
+                        LOGGER.warning(f"Claude: {len(batch)}개 중 {len(translations)}개만 반환, 부분 매핑")
                     for en, ko in zip(batch, translations):
-                        result_map[en] = ko
+                        if isinstance(ko, str) and ko and ko != en:
+                            result_map[en] = ko
                 else:
-                    LOGGER.error(f"Claude translation returned unexpected format: expected {len(batch)} items, got {len(translations) if isinstance(translations, list) else 'non-list'}")
+                    LOGGER.error(f"Claude translation returned unexpected format: expected list, got {type(translations).__name__}")
             except (json.JSONDecodeError, KeyError) as e:
                 LOGGER.error(f"Claude translation response parsing failed: {e}")
                 continue
@@ -248,23 +265,37 @@ class ClaudeTranslationService(TranslationService):
 
 
 class TranslationServiceFactory:
+    # 우선순위: Azure(2M) → DeepL(500K) → Google(500K) → Claude(유료)
+    _PRIORITY: list[tuple[str, type]] = [
+        ("AZURE_API_KEY", AzureTranslationService),
+        ("DEEPL_API_KEY", DeepLTranslationService),
+        ("GOOGLE_API_KEY", GoogleTranslationService),
+        ("ANTHROPIC_API_KEY", ClaudeTranslationService),
+    ]
+
+    @staticmethod
+    def create_services() -> list[TranslationService]:
+        """사용 가능한 모든 번역 서비스를 우선순위 순으로 반환한다."""
+        services: list[TranslationService] = []
+        for env_key, cls in TranslationServiceFactory._PRIORITY:
+            key = Env.get(env_key)
+            if key:
+                services.append(cls(key))
+        return services
+
     @staticmethod
     def create_service() -> TranslationService | None:
-        if Env.get("DEEPL_API_KEY"):
-            return DeepLTranslationService(Env.get("DEEPL_API_KEY"))
-        if Env.get("AZURE_API_KEY"):
-            return AzureTranslationService(Env.get("AZURE_API_KEY"))
-        if Env.get("GOOGLE_API_KEY"):
-            return GoogleTranslationService(Env.get("GOOGLE_API_KEY"))
-        if Env.get("ANTHROPIC_API_KEY"):
-            return ClaudeTranslationService(Env.get("ANTHROPIC_API_KEY"))
-        return None
+        """하위 호환: 최우선 서비스 1개만 반환."""
+        services = TranslationServiceFactory.create_services()
+        return services[0] if services else None
 
 
 class Translation:
     def __init__(self):
-        self.service = TranslationServiceFactory.create_service()
-        if not self.service:
+        self.services = TranslationServiceFactory.create_services()
+        # 하위 호환
+        self.service = self.services[0] if self.services else None
+        if not self.services:
             LOGGER.error("어떤 번역 서비스 API 키도 설정되지 않음")
 
     @staticmethod
@@ -281,6 +312,24 @@ class Translation:
         with file_path.open("w", encoding="utf-8") as outfile:
             json.dump(translation_map, outfile, ensure_ascii=False, indent=4)
 
+    def _translate_with_fallback(self, texts: list[str]) -> dict[str, str]:
+        """서비스 순회하며 미번역 항목을 다음 서비스로 넘기는 fallback chain."""
+        result: dict[str, str] = {}
+        remaining = list(texts)
+        for svc in self.services:
+            if not remaining:
+                break
+            LOGGER.debug(f"[fallback] {svc.provider.value}로 {len(remaining)}개 번역 시도")
+            partial = svc.translate_batch(remaining)
+            if partial:
+                result.update(partial)
+                remaining = [t for t in remaining if t not in partial]
+            if not remaining:
+                break
+        if remaining:
+            LOGGER.warning(f"[fallback] {len(remaining)}개 텍스트가 모든 서비스에서 번역 실패")
+        return result
+
     def translate(self, texts: list[tuple[str, str]], do_save: bool = True) -> list[tuple[str, str]]:
         translation_map_file_path = Path(Env.get("FM_WORK_DIR")) / "translation_map.json"
 
@@ -293,11 +342,11 @@ class Translation:
 
         # 번역 서비스 생성 및 사용
         if src_text_list:
-            if not self.service:
+            if not self.services:
                 LOGGER.warning("번역 서비스가 없어 %d개 텍스트를 번역하지 못합니다", len(src_text_list))
             else:
                 LOGGER.debug(f"캐시에 없는 {len(src_text_list)}개 텍스트를 번역합니다...")
-                fresh_translation_map = self.service.translate_batch(src_text_list)
+                fresh_translation_map = self._translate_with_fallback(src_text_list)
 
             if fresh_translation_map:
                 LOGGER.debug(f"번역 완료: {len(fresh_translation_map)}개")

@@ -9,7 +9,14 @@ import logging.config
 from pathlib import Path
 
 from bin.feed_maker_util import Env
-from utils.translation import Translation, TranslationService, TranslationServiceFactory, DeepLTranslationService, AzureTranslationService, GoogleTranslationService, ClaudeTranslationService
+from unittest.mock import patch, MagicMock
+
+from bin.crawler import Crawler
+from utils.translation import (
+    Translation, TranslationService, TranslationServiceFactory,
+    DeepLTranslationService, AzureTranslationService, GoogleTranslationService,
+    ClaudeTranslationService, TranslationProvider, _is_rate_limit_error,
+)
 
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -423,6 +430,188 @@ class TranslationTest(unittest.TestCase):
         link, text = result[0]
         self.assertEqual(link, "/a")
         self.assertGreater(len(text), 0)
+
+
+class RateLimitErrorTest(unittest.TestCase):
+    """_is_rate_limit_error() 단위 테스트"""
+
+    def test_429_detected(self) -> None:
+        self.assertTrue(_is_rate_limit_error("can't get response from 'https://x' with status code '429'"))
+
+    def test_456_detected(self) -> None:
+        self.assertTrue(_is_rate_limit_error("can't get response from 'https://x' with status code '456'"))
+
+    def test_529_detected(self) -> None:
+        self.assertTrue(_is_rate_limit_error("can't get response from 'https://x' with status code '529'"))
+
+    def test_200_not_detected(self) -> None:
+        self.assertFalse(_is_rate_limit_error("can't get response from 'https://x' with status code '200'"))
+
+    def test_500_not_detected(self) -> None:
+        self.assertFalse(_is_rate_limit_error("can't get response from 'https://x' with status code '500'"))
+
+    def test_empty_string(self) -> None:
+        self.assertFalse(_is_rate_limit_error(""))
+
+    def test_no_status_code(self) -> None:
+        self.assertFalse(_is_rate_limit_error("some random error message"))
+
+
+class CreateServicesTest(unittest.TestCase):
+    """TranslationServiceFactory.create_services() 테스트"""
+
+    def test_priority_order(self) -> None:
+        """모든 키가 설정된 경우 Azure → DeepL → Google → Claude 순서"""
+        env = {
+            "AZURE_API_KEY": "az-key",
+            "DEEPL_API_KEY": "dl-key",
+            "GOOGLE_API_KEY": "gg-key",
+            "ANTHROPIC_API_KEY": "cl-key",
+        }
+        with patch.object(Env, "get", side_effect=lambda k, default="": env.get(k, default)):
+            services = TranslationServiceFactory.create_services()
+        self.assertEqual(len(services), 4)
+        self.assertEqual(services[0].provider, TranslationProvider.AZURE)
+        self.assertEqual(services[1].provider, TranslationProvider.DEEPL)
+        self.assertEqual(services[2].provider, TranslationProvider.GOOGLE)
+        self.assertEqual(services[3].provider, TranslationProvider.CLAUDE)
+
+    def test_missing_keys_filtered(self) -> None:
+        """키가 없는 서비스는 제외"""
+        env = {"DEEPL_API_KEY": "dl-key"}
+        with patch.object(Env, "get", side_effect=lambda k, default="": env.get(k, default)):
+            services = TranslationServiceFactory.create_services()
+        self.assertEqual(len(services), 1)
+        self.assertEqual(services[0].provider, TranslationProvider.DEEPL)
+
+    def test_no_keys_returns_empty(self) -> None:
+        """키가 하나도 없으면 빈 리스트"""
+        with patch.object(Env, "get", return_value=""):
+            services = TranslationServiceFactory.create_services()
+        self.assertEqual(services, [])
+
+    def test_create_service_backward_compat(self) -> None:
+        """create_service()는 첫 번째 서비스 반환"""
+        env = {"AZURE_API_KEY": "az-key", "DEEPL_API_KEY": "dl-key"}
+        with patch.object(Env, "get", side_effect=lambda k, default="": env.get(k, default)):
+            service = TranslationServiceFactory.create_service()
+        self.assertIsNotNone(service)
+        self.assertEqual(service.provider, TranslationProvider.AZURE)
+
+
+class FallbackChainTest(unittest.TestCase):
+    """_translate_with_fallback() fallback 시나리오 테스트"""
+
+    def setUp(self) -> None:
+        self._old_cwd = Path.cwd()
+        self.work_dir = Path(Env.get("FM_WORK_DIR")) / "fallback_test"
+        self.work_dir.mkdir(parents=True, exist_ok=True)
+        self._old_fm_work_dir = os.environ.get("FM_WORK_DIR", None)
+        os.environ["FM_WORK_DIR"] = str(self.work_dir)
+        os.chdir(self.work_dir)
+
+    def tearDown(self) -> None:
+        os.chdir(self._old_cwd)
+        shutil.rmtree(self.work_dir, ignore_errors=True)
+        if self._old_fm_work_dir is not None:
+            os.environ["FM_WORK_DIR"] = self._old_fm_work_dir
+        else:
+            os.environ.pop("FM_WORK_DIR", None)
+
+    def _make_mock_service(self, provider: TranslationProvider, result: dict[str, str]) -> MagicMock:
+        svc = MagicMock()
+        svc.provider = provider
+        svc.translate_batch.return_value = result
+        return svc
+
+    def test_first_service_handles_all(self) -> None:
+        """첫 번째 서비스가 모두 처리하면 두 번째 호출 안 함"""
+        svc1 = self._make_mock_service(TranslationProvider.AZURE, {"a": "가", "b": "나"})
+        svc2 = self._make_mock_service(TranslationProvider.DEEPL, {})
+
+        translator = Translation.__new__(Translation)
+        translator.services = [svc1, svc2]
+        translator.service = svc1
+
+        result = translator._translate_with_fallback(["a", "b"])
+        self.assertEqual(result, {"a": "가", "b": "나"})
+        svc2.translate_batch.assert_not_called()
+
+    def test_fallback_to_second_service(self) -> None:
+        """첫 번째 서비스가 부분 실패 → 나머지를 두 번째 서비스가 처리"""
+        svc1 = self._make_mock_service(TranslationProvider.AZURE, {"a": "가"})
+        svc2 = self._make_mock_service(TranslationProvider.DEEPL, {"b": "나"})
+
+        translator = Translation.__new__(Translation)
+        translator.services = [svc1, svc2]
+        translator.service = svc1
+
+        result = translator._translate_with_fallback(["a", "b"])
+        self.assertEqual(result, {"a": "가", "b": "나"})
+        svc2.translate_batch.assert_called_once_with(["b"])
+
+    def test_all_services_fail(self) -> None:
+        """모든 서비스 실패 시 빈 결과"""
+        svc1 = self._make_mock_service(TranslationProvider.AZURE, {})
+        svc2 = self._make_mock_service(TranslationProvider.DEEPL, {})
+
+        translator = Translation.__new__(Translation)
+        translator.services = [svc1, svc2]
+        translator.service = svc1
+
+        result = translator._translate_with_fallback(["a", "b"])
+        self.assertEqual(result, {})
+
+    def test_three_services_cascade(self) -> None:
+        """3개 서비스 캐스케이드: 각각 1개씩 처리"""
+        svc1 = self._make_mock_service(TranslationProvider.AZURE, {"a": "가"})
+        svc2 = self._make_mock_service(TranslationProvider.DEEPL, {"b": "나"})
+        svc3 = self._make_mock_service(TranslationProvider.GOOGLE, {"c": "다"})
+
+        translator = Translation.__new__(Translation)
+        translator.services = [svc1, svc2, svc3]
+        translator.service = svc1
+
+        result = translator._translate_with_fallback(["a", "b", "c"])
+        self.assertEqual(result, {"a": "가", "b": "나", "c": "다"})
+        svc2.translate_batch.assert_called_once_with(["b", "c"])
+        svc3.translate_batch.assert_called_once_with(["c"])
+
+
+class ClaudeRobustnessTest(unittest.TestCase):
+    """Claude 부분 일치/검증 테스트"""
+
+    def test_partial_match_accepted(self) -> None:
+        """반환 개수 < 배치 크기여도 앞에서부터 매핑"""
+        svc = ClaudeTranslationService("fake-key")
+        # 3개 요청에 2개만 응답하는 시나리오를 mock
+        response_json = json.dumps({
+            "content": [{"type": "text", "text": '"가", "나"]'}]
+        })
+        with patch.object(Crawler, "run", return_value=(response_json, "", {})):
+            result = svc.translate_batch(["a", "b", "c"])
+        # a→가, b→나만 매핑, c는 누락
+        self.assertEqual(result, {"a": "가", "b": "나"})
+
+    def test_empty_string_excluded(self) -> None:
+        """빈 문자열 번역은 제외"""
+        svc = ClaudeTranslationService("fake-key")
+        response_json = json.dumps({
+            "content": [{"type": "text", "text": '"가", ""]'}]
+        })
+        with patch.object(Crawler, "run", return_value=(response_json, "", {})):
+            result = svc.translate_batch(["a", "b"])
+        self.assertEqual(result, {"a": "가"})
+
+    def test_same_as_original_excluded(self) -> None:
+        """원문과 동일한 번역은 제외"""
+        svc = ClaudeTranslationService("fake-key")
+        response_json = json.dumps({
+            "content": [{"type": "text", "text": '"가", "b"]'}]
+        })
+        with patch.object(Crawler, "run", return_value=(response_json, "", {})):
+            result = svc.translate_batch(["a", "b"])
+        self.assertEqual(result, {"a": "가"})
 
 
 if __name__ == "__main__":
