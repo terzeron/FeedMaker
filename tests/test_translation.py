@@ -4,6 +4,7 @@
 import os
 import shutil
 import json
+import time
 import unittest
 import logging.config
 from pathlib import Path
@@ -16,6 +17,7 @@ from utils.translation import (
     Translation, TranslationService, TranslationServiceFactory,
     DeepLTranslationService, AzureTranslationService, GoogleTranslationService,
     ClaudeTranslationService, TranslationProvider, _is_rate_limit_error,
+    _CACHE_TTL_SECONDS,
 )
 
 
@@ -239,10 +241,12 @@ class TranslationTest(unittest.TestCase):
 
     def test_translate_uses_cache_without_api(self) -> None:
         """캐시 사용 테스트 (API 호출 없이)"""
-        # 캐시 파일 준비
+        # v2 포맷 캐시 파일 준비
+        now = int(time.time())
         cache = {
-            "Global warming": "지구 온난화",
-            "Speed of light": "빛의 속도",
+            "_version": 2,
+            "Global warming": {"t": "지구 온난화", "ts": now},
+            "Speed of light": {"t": "빛의 속도", "ts": now},
         }
         self.translation_map_path.write_text(json.dumps(cache, ensure_ascii=False, indent=4), encoding="utf-8")
 
@@ -291,16 +295,21 @@ class TranslationTest(unittest.TestCase):
         # 캐시 파일이 생성되었는지 확인
         self.assertTrue(self.translation_map_path.is_file())
 
-        # 캐시 파일에 번역이 저장되었는지 확인
+        # 캐시 파일에 번역이 v2 포맷으로 저장되었는지 확인
         saved_cache = json.loads(self.translation_map_path.read_text(encoding="utf-8"))
+        self.assertEqual(saved_cache["_version"], 2)
         self.assertIn("Hello world", saved_cache)
+        self.assertIn("t", saved_cache["Hello world"])
+        self.assertIn("ts", saved_cache["Hello world"])
 
     @unittest.skipIf(Env.get("DEEPL_API_KEY", "") == "" and Env.get("AZURE_API_KEY", "") == "", "No API keys set")
     def test_translate_mixed_cached_and_new(self) -> None:
         """캐시된 항목과 새로운 항목이 섞인 경우 테스트"""
-        # 캐시에 기존 번역 저장
+        # v2 포맷 캐시에 기존 번역 저장
+        now = int(time.time())
         cache = {
-            "Global warming": "지구 온난화",
+            "_version": 2,
+            "Global warming": {"t": "지구 온난화", "ts": now},
         }
         self.translation_map_path.write_text(json.dumps(cache, ensure_ascii=False, indent=4), encoding="utf-8")
 
@@ -326,10 +335,12 @@ class TranslationTest(unittest.TestCase):
     @unittest.skipIf(Env.get("DEEPL_API_KEY", "") == "" and Env.get("AZURE_API_KEY", "") == "", "No API keys set")
     def test_translate_comprehensive_integration(self) -> None:
         """실제 API를 사용한 포괄적인 통합 테스트"""
-        # 캐시에 기존 번역 저장
+        # v2 포맷 캐시에 기존 번역 저장
+        now = int(time.time())
         cache = {
-            "Global warming": "지구 온난화",
-            "Speed of light": "빛의 속도",
+            "_version": 2,
+            "Global warming": {"t": "지구 온난화", "ts": now},
+            "Speed of light": {"t": "빛의 속도", "ts": now},
         }
         self.translation_map_path.write_text(json.dumps(cache, ensure_ascii=False, indent=4), encoding="utf-8")
 
@@ -369,13 +380,13 @@ class TranslationTest(unittest.TestCase):
         self.assertIsInstance(new_d, str)
         self.assertGreater(len(new_d), 0)
 
-        # 캐시 파일에 모든 번역이 저장되었는지 확인
+        # 캐시 파일에 모든 번역이 v2 포맷으로 저장되었는지 확인
         self.assertTrue(self.translation_map_path.is_file())
         saved = json.loads(self.translation_map_path.read_text(encoding="utf-8"))
-        self.assertIn("Global warming", saved)
-        self.assertIn("Speed of light", saved)
-        self.assertIn("Artificial intelligence", saved)
-        self.assertIn("Law of gravity", saved)
+        self.assertEqual(saved["_version"], 2)
+        for key in ("Global warming", "Speed of light", "Artificial intelligence", "Law of gravity"):
+            self.assertIn(key, saved)
+            self.assertIn("t", saved[key])
 
     def test_translate_empty_input(self) -> None:
         """빈 입력 리스트 처리 테스트"""
@@ -612,6 +623,120 @@ class ClaudeRobustnessTest(unittest.TestCase):
         with patch.object(Crawler, "run", return_value=(response_json, "", {})):
             result = svc.translate_batch(["a", "b"])
         self.assertEqual(result, {"a": "가"})
+
+
+class CacheTTLTest(unittest.TestCase):
+    """캐시 TTL(7일) 만료 관련 테스트"""
+
+    def setUp(self) -> None:
+        self._old_cwd = Path.cwd()
+        self.work_dir = Path(Env.get("FM_WORK_DIR")) / "ttl_test"
+        self.work_dir.mkdir(parents=True, exist_ok=True)
+        self.cache_path = self.work_dir / "translation_map.json"
+        self._old_fm_work_dir = os.environ.get("FM_WORK_DIR", None)
+        os.environ["FM_WORK_DIR"] = str(self.work_dir)
+        os.chdir(self.work_dir)
+
+    def tearDown(self) -> None:
+        os.chdir(self._old_cwd)
+        shutil.rmtree(self.work_dir, ignore_errors=True)
+        if self._old_fm_work_dir is not None:
+            os.environ["FM_WORK_DIR"] = self._old_fm_work_dir
+        else:
+            os.environ.pop("FM_WORK_DIR", None)
+
+    def test_old_format_migration(self) -> None:
+        """구 포맷(flat dict) → v2 마이그레이션 시 ts=now 부여"""
+        old_cache = {"Hello": "안녕하세요", "World": "세계"}
+        self.cache_path.write_text(json.dumps(old_cache, ensure_ascii=False), encoding="utf-8")
+
+        now = 1_700_000_000
+        with patch("utils.translation.time") as mock_time:
+            mock_time.time.return_value = now
+            flat, ts_cache = Translation._load_translation_cache(self.cache_path)
+
+        self.assertEqual(flat, {"Hello": "안녕하세요", "World": "세계"})
+        self.assertEqual(ts_cache["Hello"], {"t": "안녕하세요", "ts": now})
+        self.assertEqual(ts_cache["World"], {"t": "세계", "ts": now})
+
+    def test_expired_entries_purged(self) -> None:
+        """TTL 초과 항목은 로드 시 제거"""
+        now = 1_700_000_000
+        expired_ts = now - _CACHE_TTL_SECONDS - 1  # 7일 + 1초 전
+        v2_cache = {
+            "_version": 2,
+            "Old": {"t": "오래된", "ts": expired_ts},
+            "New": {"t": "새로운", "ts": now - 100},
+        }
+        self.cache_path.write_text(json.dumps(v2_cache, ensure_ascii=False), encoding="utf-8")
+
+        with patch("utils.translation.time") as mock_time:
+            mock_time.time.return_value = now
+            flat, ts_cache = Translation._load_translation_cache(self.cache_path)
+
+        self.assertNotIn("Old", flat)
+        self.assertNotIn("Old", ts_cache)
+        self.assertEqual(flat["New"], "새로운")
+        self.assertIn("New", ts_cache)
+
+    def test_unexpired_entries_kept(self) -> None:
+        """TTL 미만 항목은 유지"""
+        now = 1_700_000_000
+        recent_ts = now - _CACHE_TTL_SECONDS + 3600  # 만료 1시간 전
+        v2_cache = {
+            "_version": 2,
+            "Recent": {"t": "최근", "ts": recent_ts},
+        }
+        self.cache_path.write_text(json.dumps(v2_cache, ensure_ascii=False), encoding="utf-8")
+
+        with patch("utils.translation.time") as mock_time:
+            mock_time.time.return_value = now
+            flat, ts_cache = Translation._load_translation_cache(self.cache_path)
+
+        self.assertEqual(flat["Recent"], "최근")
+        self.assertIn("Recent", ts_cache)
+
+    def test_expired_entry_becomes_retranslation_target(self) -> None:
+        """만료 항목은 재번역 대상이 됨"""
+        now = 1_700_000_000
+        expired_ts = now - _CACHE_TTL_SECONDS - 1
+        v2_cache = {
+            "_version": 2,
+            "Hello": {"t": "안녕하세요", "ts": expired_ts},
+        }
+        self.cache_path.write_text(json.dumps(v2_cache, ensure_ascii=False), encoding="utf-8")
+
+        mock_svc = MagicMock()
+        mock_svc.provider = TranslationProvider.AZURE
+        mock_svc.translate_batch.return_value = {"Hello": "안녕!"}
+
+        translator = Translation.__new__(Translation)
+        translator.services = [mock_svc]
+        translator.service = mock_svc
+
+        with patch("utils.translation.time") as mock_time:
+            mock_time.time.return_value = now
+            result = translator.translate([("/a", "Hello")])
+
+        # 만료되었으므로 API 호출됨
+        mock_svc.translate_batch.assert_called_once_with(["Hello"])
+        self.assertEqual(result, [("/a", "안녕!(Hello)")])
+
+    def test_save_includes_version_2(self) -> None:
+        """저장 시 _version: 2가 포함"""
+        ts_cache = {"Hello": {"t": "안녕", "ts": 1_700_000_000}}
+        Translation._save_translation_cache(self.cache_path, ts_cache)
+
+        saved = json.loads(self.cache_path.read_text(encoding="utf-8"))
+        self.assertEqual(saved["_version"], 2)
+        self.assertEqual(saved["Hello"]["t"], "안녕")
+        self.assertEqual(saved["Hello"]["ts"], 1_700_000_000)
+
+    def test_empty_file_returns_empty(self) -> None:
+        """캐시 파일이 없으면 빈 튜플 반환"""
+        flat, ts_cache = Translation._load_translation_cache(self.cache_path)
+        self.assertEqual(flat, {})
+        self.assertEqual(ts_cache, {})
 
 
 if __name__ == "__main__":

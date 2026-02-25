@@ -10,6 +10,12 @@ from pathlib import Path
 from typing import Protocol
 from enum import Enum
 
+# 캐시 항목 TTL: 7일
+_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60
+
+# 내부 타임스탬프 캐시 타입: {"en": {"t": "ko", "ts": unix_epoch}}
+_TimestampedCache = dict[str, dict]
+
 from bin.feed_maker_util import Env
 from bin.crawler import Crawler, Method
 
@@ -299,18 +305,48 @@ class Translation:
             LOGGER.error("어떤 번역 서비스 API 키도 설정되지 않음")
 
     @staticmethod
-    def _load_translation_cache(file_path: Path) -> dict[str, str]:
-        """번역 캐시 파일을 로드합니다."""
-        if file_path.is_file():
-            with file_path.open("r", encoding="utf-8") as infile:
-                return json.load(infile)
-        return {}
+    def _load_translation_cache(file_path: Path) -> tuple[dict[str, str], _TimestampedCache]:
+        """번역 캐시 파일을 로드하고, 만료 항목을 퍼지한다.
+
+        Returns:
+            (flat_map, ts_cache) — flat_map은 {en: ko}, ts_cache는 {en: {"t": ko, "ts": epoch}}
+        """
+        if not file_path.is_file():
+            return {}, {}
+
+        with file_path.open("r", encoding="utf-8") as infile:
+            raw: dict = json.load(infile)
+
+        now = int(time.time())
+
+        if raw.get("_version") == 2:
+            # v2 포맷: 만료 항목 퍼지
+            ts_cache: _TimestampedCache = {}
+            flat: dict[str, str] = {}
+            for key, val in raw.items():
+                if key == "_version":
+                    continue
+                if isinstance(val, dict) and now - val.get("ts", 0) < _CACHE_TTL_SECONDS:
+                    ts_cache[key] = val
+                    flat[key] = val.get("t", "")
+            return flat, ts_cache
+        else:
+            # 구 포맷 마이그레이션: 모든 항목에 현재 ts 부여
+            ts_cache = {}
+            flat = {}
+            for key, val in raw.items():
+                if isinstance(val, str):
+                    ts_cache[key] = {"t": val, "ts": now}
+                    flat[key] = val
+            return flat, ts_cache
 
     @staticmethod
-    def _save_translation_cache(file_path: Path, translation_map: dict[str, str]) -> None:
-        """번역 캐시를 파일에 저장합니다."""
+    def _save_translation_cache(file_path: Path, ts_cache: _TimestampedCache) -> None:
+        """번역 캐시를 v2 포맷으로 저장한다."""
+        data: dict = {"_version": 2}
+        data.update(ts_cache)
         with file_path.open("w", encoding="utf-8") as outfile:
-            json.dump(translation_map, outfile, ensure_ascii=False, indent=4)
+            json.dump(data, outfile, ensure_ascii=False, indent=4)
 
     def _translate_with_fallback(self, texts: list[str]) -> dict[str, str]:
         """서비스 순회하며 미번역 항목을 다음 서비스로 넘기는 fallback chain."""
@@ -333,8 +369,8 @@ class Translation:
     def translate(self, texts: list[tuple[str, str]], do_save: bool = True) -> list[tuple[str, str]]:
         translation_map_file_path = Path(Env.get("FM_WORK_DIR")) / "translation_map.json"
 
-        # 기존 번역 캐시 로드
-        all_translation_map = Translation._load_translation_cache(translation_map_file_path)
+        # 기존 번역 캐시 로드 (만료 항목은 이미 퍼지됨)
+        all_translation_map, ts_cache = Translation._load_translation_cache(translation_map_file_path)
 
         # 번역이 필요한 텍스트만 필터링
         fresh_translation_map: dict[str, str] = {}
@@ -350,9 +386,11 @@ class Translation:
 
             if fresh_translation_map:
                 LOGGER.debug(f"번역 완료: {len(fresh_translation_map)}개")
+                now = int(time.time())
                 # 캐시 갱신
                 for en, ko in fresh_translation_map.items():
                     all_translation_map[en] = ko
+                    ts_cache[en] = {"t": ko, "ts": now}
             else:
                 LOGGER.debug("번역 실패: 번역 서비스에서 결과를 받지 못했습니다")
         else:
@@ -360,7 +398,7 @@ class Translation:
 
         # 번역 결과 저장
         if do_save:
-            Translation._save_translation_cache(translation_map_file_path, all_translation_map)
+            Translation._save_translation_cache(translation_map_file_path, ts_cache)
 
         # 링크-원문 매핑 순회하며 포맷된 결과 구성 및 캐시 갱신
         # 중복된 텍스트는 마지막 링크만 사용
