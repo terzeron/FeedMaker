@@ -4,7 +4,7 @@ FROM python:3.12-slim
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     libpoppler-dev libpoppler-cpp-dev libheif-dev libcairo2-dev \
-    build-essential git curl unzip gnupg ca-certificates chromium chromium-driver && \
+    build-essential git curl unzip gnupg ca-certificates chromium chromium-driver gosu && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ARG USER_ID=1000
@@ -16,7 +16,7 @@ RUN useradd -u $USER_ID $USER_NAME && \
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     cp /root/.local/bin/uv /usr/local/bin/
 
-# user(1000)
+# user(1000) - 빌드 단계는 앱 유저로 실행
 USER $USER_NAME
 WORKDIR /app
 
@@ -40,9 +40,16 @@ VOLUME /logs
 ENV CARTOON_SPLIT_HOME_DIR="/app/CartoonSplit"
 ENV PATH="/app/.venv/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/home/$USER_NAME/.local/bin:/app/bin:/app/utils"
 ENV PYTHONPATH="/app"
+ENV APP_USER=$USER_NAME
 ARG FM_BACKEND_DEFAULT_PORT=8010
 ENV FM_BACKEND_PORT=$FM_BACKEND_DEFAULT_PORT
 
 EXPOSE $FM_BACKEND_PORT
 
-CMD ["sh", "-c", "uvicorn backend.main:app --workers 1 --host 0.0.0.0 --port 8010 --log-level debug --access-log --log-config /app/logging.conf"]
+# root로 전환하여 entrypoint에서 볼륨 권한 수정 후 앱 유저로 전환
+USER root
+COPY backend/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["uvicorn", "backend.main:app", "--workers", "1", "--host", "0.0.0.0", "--port", "8010", "--log-level", "debug", "--access-log", "--log-config", "/app/logging.conf"]

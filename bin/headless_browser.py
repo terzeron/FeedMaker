@@ -5,6 +5,7 @@ import os
 import json
 import tempfile
 import uuid
+import threading
 import logging.config
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING, cast, Any
@@ -33,9 +34,8 @@ class HeadlessBrowser:
     COOKIE_FILE = "cookies.headlessbrowser.json"
     DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
-    # Class-level driver cache for reuse in tests
-    _driver_cache: Optional[webdriver.Chrome] = None
-    _driver_options_hash: Optional[str] = None
+    # Thread-local driver cache for reuse (thread-safe for parallel searches)
+    _thread_local = threading.local()
 
     GETTING_METADATA_SCRIPT = '''
         var metas = document.getElementsByTagName("meta");
@@ -166,9 +166,24 @@ class HeadlessBrowser:
         self.disable_headless: bool = disable_headless
         self.blob_to_dataurl: bool = blob_to_dataurl
         self.timeout: int = timeout
+        self._cookie_dir: Optional[Path] = None
 
     def __del__(self) -> None:
         del self.headers
+
+    def _get_cookie_dir(self) -> Path:
+        if self._cookie_dir is not None:
+            return self._cookie_dir
+        if os.access(self.dir_path, os.W_OK):
+            self._cookie_dir = self.dir_path
+        else:
+            import hashlib
+            dir_hash = hashlib.md5(str(self.dir_path).encode()).hexdigest()[:12]
+            fallback = Path(tempfile.gettempdir()) / "fm_cookies" / dir_hash
+            fallback.mkdir(parents=True, exist_ok=True)
+            LOGGER.info("Cookie dir '%s' not writable, using fallback '%s'", self.dir_path, fallback)
+            self._cookie_dir = fallback
+        return self._cookie_dir
 
     @classmethod
     def _get_options_hash(cls, options: "webdriver.ChromeOptions") -> str:
@@ -180,40 +195,41 @@ class HeadlessBrowser:
 
     @classmethod
     def _get_cached_driver(cls, options: "webdriver.ChromeOptions") -> Optional[webdriver.Chrome]:
-        """Get cached driver if available and compatible"""
-        if cls._driver_cache is None:
+        """Get cached driver if available and compatible (thread-local)"""
+        cache = getattr(cls._thread_local, '_driver_cache', None)
+        if cache is None:
             return None
 
         current_hash = cls._get_options_hash(options)
-        if cls._driver_options_hash != current_hash:
-            # Options changed, need new driver
+        cached_hash = getattr(cls._thread_local, '_driver_options_hash', None)
+        if cached_hash != current_hash:
             cls._cleanup_cached_driver()
             return None
 
-        # Check if driver is still alive
         try:
-            _ = cls._driver_cache.current_url  # Test if driver is responsive
-            return cls._driver_cache
+            _ = cache.current_url
+            return cache
         except (WebDriverException, AttributeError):
             cls._cleanup_cached_driver()
             return None
 
     @classmethod
     def _set_cached_driver(cls, driver: webdriver.Chrome, options: "webdriver.ChromeOptions") -> None:
-        """Cache the driver for reuse"""
-        cls._driver_cache = driver
-        cls._driver_options_hash = cls._get_options_hash(options)
+        """Cache the driver for reuse (thread-local)"""
+        cls._thread_local._driver_cache = driver
+        cls._thread_local._driver_options_hash = cls._get_options_hash(options)
 
     @classmethod
     def _cleanup_cached_driver(cls) -> None:
-        """Clean up cached driver"""
-        if cls._driver_cache:
+        """Clean up cached driver (thread-local)"""
+        cache = getattr(cls._thread_local, '_driver_cache', None)
+        if cache:
             try:
-                cls._driver_cache.quit()
+                cache.quit()
             except (WebDriverException, OSError):
                 pass
-            cls._driver_cache = None
-            cls._driver_options_hash = None
+            cls._thread_local._driver_cache = None
+            cls._thread_local._driver_options_hash = None
 
     @classmethod
     def cleanup_all_drivers(cls) -> None:
@@ -222,12 +238,12 @@ class HeadlessBrowser:
 
     def _write_cookies_to_file(self, driver: webdriver.Chrome) -> None:
         cookies = driver.get_cookies()
-        cookie_file = self.dir_path / HeadlessBrowser.COOKIE_FILE
+        cookie_file = self._get_cookie_dir() / HeadlessBrowser.COOKIE_FILE
         with cookie_file.open("w", encoding='utf-8') as f:
             json.dump(cookies, f, indent=2, ensure_ascii=False)
 
     def _read_cookies_from_file(self, driver: webdriver.Chrome) -> None:
-        cookie_file = self.dir_path / HeadlessBrowser.COOKIE_FILE
+        cookie_file = self._get_cookie_dir() / HeadlessBrowser.COOKIE_FILE
         if cookie_file.is_file():
             try:
                 with cookie_file.open("r", encoding='utf-8') as f:
@@ -367,27 +383,26 @@ class HeadlessBrowser:
             LOGGER.error(f"Unexpected error in make_request: {e}")
             return ""
         finally:
+            cached = getattr(self._thread_local, '_driver_cache', None)
             # Only close driver if it was newly created or if there was an error
-            if driver and driver_created and driver != self._driver_cache:
+            if driver and driver_created and driver != cached:
                 try:
                     LOGGER.debug("Closing newly created driver")
                     driver.close()
                     driver.quit()
                 except (OSError, AttributeError, TypeError, RuntimeError) as e:
                     LOGGER.warning(f"Error closing driver: {e}")
-            elif driver and driver == self._driver_cache:
+            elif driver and driver == cached:
                 # For cached driver, just clear any alerts and reset state
                 try:
-                    # Clear any alerts
                     driver.switch_to.alert.dismiss()
                 except (WebDriverException, NoAlertPresentException):
-                    pass  # No alert present
+                    pass
 
-                # Clear local storage and cookies for clean state
                 try:
                     driver.execute_script("window.localStorage.clear();")
                     driver.execute_script("window.sessionStorage.clear();")
                 except WebDriverException:
-                    pass  # Might fail if no page loaded
+                    pass
 
         return ""  # Fallback return (should never be reached)

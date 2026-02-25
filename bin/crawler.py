@@ -7,6 +7,7 @@ import re
 import time
 import getopt
 import json
+import tempfile
 import logging.config
 from enum import Enum
 from pathlib import Path
@@ -41,22 +42,37 @@ class RequestsClient:
         self.cookies: dict[str, str] = {}
         self.encoding: str = encoding or "utf-8"
         self.verify_ssl: bool = verify_ssl
+        self._cookie_dir: Optional[Path] = None
         if not self.verify_ssl:
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     def __del__(self) -> None:
         del self.headers
 
+    def _get_cookie_dir(self) -> Path:
+        if self._cookie_dir is not None:
+            return self._cookie_dir
+        if os.access(self.dir_path, os.W_OK):
+            self._cookie_dir = self.dir_path
+        else:
+            import hashlib
+            dir_hash = hashlib.md5(str(self.dir_path).encode()).hexdigest()[:12]
+            fallback = Path(tempfile.gettempdir()) / "fm_cookies" / dir_hash
+            fallback.mkdir(parents=True, exist_ok=True)
+            LOGGER.info("Cookie dir '%s' not writable, using fallback '%s'", self.dir_path, fallback)
+            self._cookie_dir = fallback
+        return self._cookie_dir
+
     def write_cookies_to_file(self, cookies: RequestsCookieJar) -> None:
         cookie_data: list[dict[str, Any]] = []
         for k, v in cookies.items():
             cookie_data.append({"name": k, "value": v})
-        cookie_file = self.dir_path / RequestsClient.COOKIE_FILE
+        cookie_file = self._get_cookie_dir() / RequestsClient.COOKIE_FILE
         with cookie_file.open("w", encoding='utf-8') as f:
             json.dump(cookie_data, f, indent=2, ensure_ascii=False)
 
     def read_cookies_from_file(self) -> None:
-        cookie_file = self.dir_path / RequestsClient.COOKIE_FILE
+        cookie_file = self._get_cookie_dir() / RequestsClient.COOKIE_FILE
         if cookie_file.is_file():
             with cookie_file.open("r", encoding='utf-8') as f:
                 cookies = json.load(f)
