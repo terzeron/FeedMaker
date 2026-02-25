@@ -180,15 +180,18 @@ class Site:
                 html_fragment = re.sub(r'<iframe[^>]*/>', '', html_fragment)
                 html_fragment = re.sub(r'<style[^>]*>.*?</style>', '', html_fragment, flags=re.DOTALL)
 
-                # SVG 태그와 하위 요소들 완전 제거
+                # SVG 태그와 하위 요소들 완전 제거, font 태그 unwrap
                 try:
                     soup_fragment = BeautifulSoup(html_fragment, "html.parser")
                     for svg_element in soup_fragment.find_all("svg"):
                         svg_element.decompose()
+                    for font_element in soup_fragment.find_all("font"):
+                        font_element.unwrap()
                     html_fragment = str(soup_fragment)
                 except Exception:
                     # SVG 제거 실패 시 정규표현식으로 대체 처리
                     html_fragment = re.sub(r'<svg[^>]*>.*?</svg>', '', html_fragment, flags=re.DOTALL)
+                    html_fragment = re.sub(r'</?font[^>]*>', '', html_fragment)
 
                 # BeautifulSoup을 사용하여 안전하게 속성 제거
                 try:
