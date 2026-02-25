@@ -5,13 +5,18 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     libpoppler-dev libpoppler-cpp-dev libheif-dev libcairo2-dev \
     build-essential git curl unzip gnupg ca-certificates chromium chromium-driver gosu && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    printf '#!/bin/sh\nexec /usr/lib/chromium/chrome_crashpad_handler.real "$@" --database=/tmp/crashpad 2>/dev/null || true\n' \
+        > /usr/lib/chromium/chrome_crashpad_handler.wrapper && \
+    mv /usr/lib/chromium/chrome_crashpad_handler /usr/lib/chromium/chrome_crashpad_handler.real && \
+    mv /usr/lib/chromium/chrome_crashpad_handler.wrapper /usr/lib/chromium/chrome_crashpad_handler && \
+    chmod +x /usr/lib/chromium/chrome_crashpad_handler
 
 ARG USER_ID=1000
 ARG USER_NAME=terzeron
 RUN useradd -u $USER_ID $USER_NAME && \
     mkdir -p /app /app/backend /app/bin /app/utils /fma /xml /home/$USER_NAME/.cache/pip /home/$USER_NAME/.local /home/$USER_NAME/.local/bin /run/dbus /tmp/logs /app/logs && \
-    chown -R $USER_NAME /app /fma /xml /home/$USER_NAME/.cache/pip /home/$USER_NAME/.local /home/$USER_NAME/.local /tmp/logs /app/logs
+    chown -R $USER_NAME /app /fma /xml /home/$USER_NAME/.cache /home/$USER_NAME/.local /tmp/logs /app/logs
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     cp /root/.local/bin/uv /usr/local/bin/
