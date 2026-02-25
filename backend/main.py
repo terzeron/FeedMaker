@@ -274,7 +274,13 @@ def get_search_site_names() -> dict[str, Any]:
 def search_single_site(site_name: str, keyword: str) -> dict[str, Any]:
     LOGGER.info("GET /search_sites/%s/%s -> search_single_site()", site_name, keyword)
     response_object: dict[str, Any] = {}
-    result, error = FeedMakerManager.search_single_site(site_name, keyword)
+    try:
+        result, error = FeedMakerManager.search_single_site(site_name, keyword)
+    except Exception as e:
+        LOGGER.error("search_single_site error: %s: %s", type(e).__name__, e)
+        response_object["message"] = f"{type(e).__name__}: {e}"
+        response_object["status"] = "failure"
+        return response_object
     if error:
         response_object["message"] = error
         response_object["status"] = "failure"

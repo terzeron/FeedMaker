@@ -563,15 +563,19 @@ class SearchManager:
                 try:
                     site = site_class(name)
                     return site.search(keyword), ""
-                except (OSError, IOError, TypeError, ValueError, RuntimeError, NotFoundConfigFileError) as e:
-                    LOGGER.warning(f"Failed to search site {site_name}: {e}")
-                    return "", str(e)
+                except Exception as e:
+                    LOGGER.warning(f"Failed to search site {site_name}: {type(e).__name__}: {e}")
+                    return "", f"{type(e).__name__}: {e}"
         return "", f"unknown site: {site_name}"
 
     def worker(self, site: Site, keyword: str) -> None:
         #LOGGER.debug("# worker(site='%s', keyword='%s')", site, keyword)
-        search_result = site.search(keyword)
-        self.result_by_site[site] = search_result
+        try:
+            search_result = site.search(keyword)
+            self.result_by_site[site] = search_result
+        except Exception as e:
+            LOGGER.warning(f"Failed to search site {site.site_name}: {type(e).__name__}: {e}")
+            self.result_by_site[site] = ""
 
     def _create_site_list(self) -> list[Site]:
         site_list: list[Site] = []
