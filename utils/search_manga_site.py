@@ -90,7 +90,7 @@ class Site:
         if self.site_name:
             work_dir_path = self.get_work_dir()
             site_dir_path = work_dir_path / self.site_name
-            crawler: Crawler = Crawler(dir_path=site_dir_path, render_js=self.render_js, method=self.method, headers=self.headers, encoding=self.encoding, timeout=240)
+            crawler: Crawler = Crawler(dir_path=site_dir_path, render_js=self.render_js, method=self.method, headers=self.headers, encoding=self.encoding, timeout=240, num_retries=self.num_retries)
             if not url:
                 url = self.get_base_url() + self.url_postfix
                 LOGGER.debug(f"url={url}")
