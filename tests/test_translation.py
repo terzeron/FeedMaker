@@ -17,7 +17,7 @@ from utils.translation import (
     Translation, TranslationService, TranslationServiceFactory,
     DeepLTranslationService, AzureTranslationService, GoogleTranslationService,
     ClaudeTranslationService, TranslationProvider, _is_rate_limit_error,
-    _CACHE_TTL_SECONDS,
+    _CACHE_TTL_SECONDS, _is_unrecoverable_error, translate_html,
 )
 
 
@@ -468,6 +468,25 @@ class RateLimitErrorTest(unittest.TestCase):
         self.assertFalse(_is_rate_limit_error("some random error message"))
 
 
+class UnrecoverableErrorTest(unittest.TestCase):
+    """_is_unrecoverable_error() 단위 테스트"""
+
+    def test_401_detected(self) -> None:
+        self.assertTrue(_is_unrecoverable_error("can't get response from 'https://x' with status code '401'"))
+
+    def test_403_detected(self) -> None:
+        self.assertTrue(_is_unrecoverable_error("can't get response from 'https://x' with status code '403'"))
+
+    def test_429_detected(self) -> None:
+        self.assertTrue(_is_unrecoverable_error("can't get response from 'https://x' with status code '429'"))
+
+    def test_500_not_detected(self) -> None:
+        self.assertFalse(_is_unrecoverable_error("can't get response from 'https://x' with status code '500'"))
+
+    def test_200_not_detected(self) -> None:
+        self.assertFalse(_is_unrecoverable_error("can't get response from 'https://x' with status code '200'"))
+
+
 class CreateServicesTest(unittest.TestCase):
     """TranslationServiceFactory.create_services() 테스트"""
 
@@ -737,6 +756,98 @@ class CacheTTLTest(unittest.TestCase):
         flat, ts_cache = Translation._load_translation_cache(self.cache_path)
         self.assertEqual(flat, {})
         self.assertEqual(ts_cache, {})
+
+
+class TranslateHtmlTest(unittest.TestCase):
+    """translate_html() 테스트"""
+
+    def test_basic_text_translation(self) -> None:
+        """기본 텍스트 번역"""
+        html = "<p>Hello World</p>"
+        with patch.object(Translation, "__init__", return_value=None), \
+             patch.object(Translation, "_translate_with_fallback", return_value={"Hello World": "안녕 세계"}):
+            result = translate_html(html)
+        self.assertIn("안녕 세계", result)
+        self.assertNotIn("Hello World", result)
+
+    def test_skip_script_and_style(self) -> None:
+        """script, style 태그 내용은 번역하지 않음"""
+        html = "<script>var x = 1;</script><style>.a{color:red}</style><p>Hello</p>"
+        with patch.object(Translation, "__init__", return_value=None), \
+             patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}) as mock_fb:
+            result = translate_html(html)
+        # translate_with_fallback에 전달된 텍스트에 script/style 내용이 없어야 함
+        called_texts = mock_fb.call_args[0][0]
+        self.assertNotIn("var x = 1;", called_texts)
+        self.assertNotIn(".a{color:red}", called_texts)
+        self.assertIn("Hello", called_texts)
+
+    def test_skip_code_pre_textarea(self) -> None:
+        """code, pre, textarea 태그 내용은 번역하지 않음"""
+        html = "<code>print()</code><pre>logs</pre><textarea>input</textarea><p>Hello</p>"
+        with patch.object(Translation, "__init__", return_value=None), \
+             patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}) as mock_fb:
+            translate_html(html)
+        called_texts = mock_fb.call_args[0][0]
+        self.assertNotIn("print()", called_texts)
+        self.assertNotIn("logs", called_texts)
+        self.assertNotIn("input", called_texts)
+
+    def test_preserve_html_structure(self) -> None:
+        """HTML 구조 유지"""
+        html = '<div class="main"><a href="/link">Click here</a></div>'
+        with patch.object(Translation, "__init__", return_value=None), \
+             patch.object(Translation, "_translate_with_fallback", return_value={"Click here": "여기를 클릭"}):
+            result = translate_html(html)
+        self.assertIn('<a href="/link">', result)
+        self.assertIn("여기를 클릭", result)
+
+    def test_empty_html(self) -> None:
+        """빈 HTML"""
+        html = "<div></div>"
+        with patch.object(Translation, "__init__", return_value=None), \
+             patch.object(Translation, "_translate_with_fallback", return_value={}) as mock_fb:
+            result = translate_html(html)
+        mock_fb.assert_not_called()
+
+    def test_whitespace_only_text_skipped(self) -> None:
+        """공백만 있는 텍스트는 번역하지 않음"""
+        html = "<p>  \n  </p><p>Hello</p>"
+        with patch.object(Translation, "__init__", return_value=None), \
+             patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}) as mock_fb:
+            translate_html(html)
+        called_texts = mock_fb.call_args[0][0]
+        self.assertEqual(called_texts, ["Hello"])
+
+    def test_multiple_text_nodes(self) -> None:
+        """여러 텍스트 노드 번역"""
+        html = "<h1>Title</h1><p>Body text</p><span>Footer</span>"
+        translations = {"Title": "제목", "Body text": "본문", "Footer": "바닥글"}
+        with patch.object(Translation, "__init__", return_value=None), \
+             patch.object(Translation, "_translate_with_fallback", return_value=translations):
+            result = translate_html(html)
+        self.assertIn("제목", result)
+        self.assertIn("본문", result)
+        self.assertIn("바닥글", result)
+
+    def test_duplicate_texts_deduplicated(self) -> None:
+        """중복 텍스트는 한 번만 번역 요청"""
+        html = "<p>Hello</p><p>Hello</p>"
+        with patch.object(Translation, "__init__", return_value=None), \
+             patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}) as mock_fb:
+            result = translate_html(html)
+        called_texts = mock_fb.call_args[0][0]
+        self.assertEqual(called_texts.count("Hello"), 1)
+        self.assertEqual(result.count("안녕"), 2)
+
+    def test_untranslated_text_preserved(self) -> None:
+        """번역되지 않은 텍스트는 원문 유지"""
+        html = "<p>Hello</p><p>World</p>"
+        with patch.object(Translation, "__init__", return_value=None), \
+             patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}):
+            result = translate_html(html)
+        self.assertIn("안녕", result)
+        self.assertIn("World", result)
 
 
 if __name__ == "__main__":
