@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 
+import sys
 import json
 import re
 import uuid
@@ -23,14 +24,22 @@ from bin.crawler import Crawler, Method
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
-_RATE_LIMIT_STATUS_RE = re.compile(r"status code '(\d+)'")
+_STATUS_CODE_RE = re.compile(r"status code '(\d+)'")
 _RATE_LIMIT_CODES = {"429", "456", "529"}
+_AUTH_ERROR_CODES = {"401", "403"}
+_UNRECOVERABLE_CODES = _RATE_LIMIT_CODES | _AUTH_ERROR_CODES
 
 
 def _is_rate_limit_error(error_msg: str) -> bool:
     """Crawler error_msg에서 rate limit 관련 상태 코드(429/456/529)를 감지한다."""
-    m = _RATE_LIMIT_STATUS_RE.search(error_msg)
+    m = _STATUS_CODE_RE.search(error_msg)
     return m is not None and m.group(1) in _RATE_LIMIT_CODES
+
+
+def _is_unrecoverable_error(error_msg: str) -> bool:
+    """재시도해도 결과가 동일한 오류(인증 실패, rate limit 등)를 감지한다."""
+    m = _STATUS_CODE_RE.search(error_msg)
+    return m is not None and m.group(1) in _UNRECOVERABLE_CODES
 
 
 # 번역 서비스 제공자 구분을 위한 Enum 정의
@@ -89,8 +98,8 @@ class DeepLTranslationService(TranslationService):
                 # Crawler를 통해 요청
                 response_text, error_msg, _ = client.run(self.endpoint, data=payload)
                 if not response_text:
-                    LOGGER.error(f"DeepL translation request failed: {error_msg}")
-                    if _is_rate_limit_error(error_msg):
+                    LOGGER.debug(f"DeepL translation request failed: {error_msg}")
+                    if _is_unrecoverable_error(error_msg):
                         break
                     continue
                 time.sleep(1)
@@ -101,7 +110,7 @@ class DeepLTranslationService(TranslationService):
                         ko = translation.get("text", "")
                         result_map[en] = ko
             except Exception as e:
-                LOGGER.error(f"DeepL translation request failed: {e}")
+                LOGGER.debug(f"DeepL translation request failed: {e}")
                 continue
 
         return result_map
@@ -134,8 +143,8 @@ class AzureTranslationService(TranslationService):
             try:
                 response_text, error_msg, _ = client.run(self.endpoint, data=json.dumps(payload))
                 if not response_text:
-                    LOGGER.error(f"Azure translation request failed: {error_msg}")
-                    if _is_rate_limit_error(error_msg):
+                    LOGGER.debug(f"Azure translation request failed: {error_msg}")
+                    if _is_unrecoverable_error(error_msg):
                         break
                     continue
                 time.sleep(1)
@@ -147,7 +156,7 @@ class AzureTranslationService(TranslationService):
                         ko = translations[0].get("text", "")
                         result_map[en] = ko
             except Exception as e:
-                LOGGER.error(f"Azure translation request failed: {e}")
+                LOGGER.debug(f"Azure translation request failed: {e}")
                 continue
 
         return result_map
@@ -178,8 +187,8 @@ class GoogleTranslationService(TranslationService):
             try:
                 response_text, error_msg, _ = client.run(self.endpoint, data=json.dumps(payload))
                 if not response_text:
-                    LOGGER.error(f"Google translation request failed: {error_msg}")
-                    if _is_rate_limit_error(error_msg):
+                    LOGGER.debug(f"Google translation request failed: {error_msg}")
+                    if _is_unrecoverable_error(error_msg):
                         break
                     continue
                 time.sleep(1)
@@ -190,7 +199,7 @@ class GoogleTranslationService(TranslationService):
                         translated_text = translation.get("translatedText", "")
                         result_map[original_text] = translated_text
             except Exception as e:
-                LOGGER.error(f"Google translation request failed: {e}")
+                LOGGER.debug(f"Google translation request failed: {e}")
                 continue
 
         return result_map
@@ -233,8 +242,8 @@ class ClaudeTranslationService(TranslationService):
             try:
                 response_text, error_msg, _ = client.run(self.endpoint, data=payload)
                 if not response_text:
-                    LOGGER.error(f"Claude translation request failed: {error_msg}")
-                    if _is_rate_limit_error(error_msg):
+                    LOGGER.debug(f"Claude translation request failed: {error_msg}")
+                    if _is_unrecoverable_error(error_msg):
                         break
                     continue
                 time.sleep(1)
@@ -256,12 +265,12 @@ class ClaudeTranslationService(TranslationService):
                         if isinstance(ko, str) and ko and ko != en:
                             result_map[en] = ko
                 else:
-                    LOGGER.error(f"Claude translation returned unexpected format: expected list, got {type(translations).__name__}")
+                    LOGGER.debug(f"Claude translation returned unexpected format: expected list, got {type(translations).__name__}")
             except (json.JSONDecodeError, KeyError) as e:
-                LOGGER.error(f"Claude translation response parsing failed: {e}")
+                LOGGER.debug(f"Claude translation response parsing failed: {e}")
                 continue
             except Exception as e:
-                LOGGER.error(f"Claude translation request failed: {e}")
+                LOGGER.debug(f"Claude translation request failed: {e}")
                 continue
 
         return result_map
@@ -358,8 +367,10 @@ class Translation:
             LOGGER.debug(f"[fallback] {svc.provider.value}로 {len(remaining)}개 번역 시도")
             partial = svc.translate_batch(remaining)
             if partial:
-                result.update(partial)
-                remaining = [t for t in remaining if t not in partial]
+                # 원문과 다른 번역만 성공으로 처리
+                translated = {k: v for k, v in partial.items() if v != k}
+                result.update(translated)
+                remaining = [t for t in remaining if t not in translated]
             if not remaining:
                 break
         if remaining:
@@ -410,3 +421,59 @@ class Translation:
             ko = all_translation_map.get(en, en)
             new_result_list.append((link, f"{ko}({en})"))
         return new_result_list
+
+
+def translate_html(html: str) -> str:
+    """HTML 문자열에서 사람이 읽을 수 있는 텍스트 노드를 추출하여 번역한 HTML을 반환한다."""
+    from bs4 import BeautifulSoup, NavigableString
+
+    soup = BeautifulSoup(html, "html.parser")
+
+    # 번역 대상이 아닌 태그
+    skip_tags = {"script", "style", "code", "pre", "textarea"}
+
+    # 텍스트 노드 수집
+    text_nodes: list[NavigableString] = []
+    for node in soup.descendants:
+        if not isinstance(node, NavigableString):
+            continue
+        if node.parent and node.parent.name in skip_tags:
+            continue
+        stripped = node.strip()
+        if not stripped:
+            continue
+        text_nodes.append(node)
+
+    if not text_nodes:
+        return str(soup)
+
+    # 고유 텍스트 목록 추출
+    unique_texts = list(dict.fromkeys(node.strip() for node in text_nodes))
+
+    # 기존 Translation 클래스로 번역
+    translator = Translation()
+    translated_map = translator._translate_with_fallback(unique_texts)
+
+    # 텍스트 노드 치환
+    for node in text_nodes:
+        original = node.strip()
+        translated = translated_map.get(original)
+        if translated:
+            # 원본 텍스트 앞뒤 공백 보존
+            leading = node[: len(node) - len(node.lstrip())]
+            trailing = node[len(node.rstrip()) :]
+            node.replace_with(NavigableString(leading + translated + trailing))
+
+    return str(soup)
+
+
+def main():
+    """표준입력으로 HTML을 받아 텍스트를 번역하여 출력한다."""
+    html = sys.stdin.read()
+    if not html.strip():
+        return
+    print(translate_html(html))
+
+
+if __name__ == "__main__":
+    main()
