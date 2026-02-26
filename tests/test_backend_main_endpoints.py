@@ -103,7 +103,7 @@ def test_exec_and_search_and_problems_endpoints():
     r = asyncio.run(main.search("test", feed_maker_manager=mgr))
     assert r["status"] == "success" and "is_active" in r["feeds"][0]
 
-    r = asyncio.run(main.search_site("test"))
+    r = main.search_site("test")
     assert r["status"] == "success"
 
 
