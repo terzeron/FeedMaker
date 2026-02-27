@@ -25,9 +25,10 @@ class AccessLogManager:
     def __del__(self) -> None:
         del self.loki_url
 
-    def loki_search(self, params: dict[str, Any]) -> tuple[list[str], dict[str, Any]]:
+    def loki_search(self, params: dict[str, Any]) -> tuple[list[str], dict[str, Any], Optional[int]]:
         logs: list[str] = []
         stats: dict[str, Any] = {}
+        last_ts: Optional[int] = None
         response = requests.get(self.loki_url, params=params, timeout=60, verify=False)
         response.raise_for_status()
         if response:
@@ -39,43 +40,20 @@ class AccessLogManager:
                     result = data.get("result", [])
                     for result_item in result:
                         values = result_item.get("values", [])
-                        for _, log_item in values:
+                        for ts, log_item in values:
                             logs.append(log_item)
+                            last_ts = int(ts)
                     stats = data.get("stats", {})
 
-        return logs, stats
+        return logs, stats, last_ts
 
     LOKI_QUERY_LIMIT = 5000
     INITIAL_STEP_MINUTES = 60 * 6  # 6 hours
-    MIN_STEP_MINUTES = 15
 
-    def _search_time_range(self, start_dt: datetime, end_dt: datetime,
-                           accessed_feed_list: list[tuple[datetime, str]],
-                           viewed_feed_list: list[tuple[datetime, str]]) -> None:
-        start_ns = int(start_dt.timestamp()) * 1_000_000_000
-        end_ns = int(end_dt.timestamp()) * 1_000_000_000
-        params = {
-            "query": '{namespace="feedmaker",app="nginx"}',
-            "start": start_ns,
-            "end": end_ns,
-            "limit": self.LOKI_QUERY_LIMIT,
-            "direction": "forward"
-        }
-
-        result, _ = self.loki_search(params)
-
-        if len(result) >= self.LOKI_QUERY_LIMIT:
-            step_minutes = int((end_dt - start_dt).total_seconds() / 60)
-            if step_minutes > self.MIN_STEP_MINUTES:
-                half = step_minutes // 2
-                mid_dt = start_dt + timedelta(minutes=half)
-                self._search_time_range(start_dt, mid_dt, accessed_feed_list, viewed_feed_list)
-                self._search_time_range(mid_dt, end_dt, accessed_feed_list, viewed_feed_list)
-                return
-            LOGGER.warning("Loki query limit reached for %s ~ %s (step=%dm), some logs may be missed",
-                           start_dt, end_dt, step_minutes)
-
-        for log in result:
+    def _parse_logs(self, logs: list[str],
+                    accessed_feed_list: list[tuple[datetime, str]],
+                    viewed_feed_list: list[tuple[datetime, str]]) -> None:
+        for log in logs:
             m = re.search(r'\[(?P<time>[^]]+)] "GET (?P<uri>[^ ]+) HTTP[^"]+\" (?P<status>\d+)', log)
             if m and m.group("status") in ("200", "304"):
                 dt = datetime.strptime(m.group("time"), "%d/%b/%Y:%H:%M:%S %z")
@@ -86,6 +64,39 @@ class AccessLogManager:
                 m2 = re.search(r'/img/1x1\.jpg\?feed=(?P<feed>[^&]+)\.xml&item=(?P<item>.+)', uri)
                 if m2:
                     viewed_feed_list.append((dt, m2.group("feed")))
+
+    MAX_PAGINATION_ITERATIONS = 1000
+
+    def _search_time_range(self, start_dt: datetime, end_dt: datetime,
+                           accessed_feed_list: list[tuple[datetime, str]],
+                           viewed_feed_list: list[tuple[datetime, str]]) -> None:
+        current_start_ns = int(start_dt.timestamp()) * 1_000_000_000
+        end_ns = int(end_dt.timestamp()) * 1_000_000_000
+
+        for _ in range(self.MAX_PAGINATION_ITERATIONS):
+            if current_start_ns >= end_ns:
+                break
+
+            params = {
+                "query": '{namespace="feedmaker",app="nginx"}',
+                "start": current_start_ns,
+                "end": end_ns,
+                "limit": self.LOKI_QUERY_LIMIT,
+                "direction": "forward"
+            }
+
+            result, _, last_ts = self.loki_search(params)
+            self._parse_logs(result, accessed_feed_list, viewed_feed_list)
+
+            if len(result) < self.LOKI_QUERY_LIMIT:
+                break
+
+            # 페이지네이션: 마지막 타임스탬프 이후부터 계속 조회
+            if last_ts is not None and last_ts + 1 > current_start_ns:
+                current_start_ns = last_ts + 1
+            else:
+                LOGGER.warning("Pagination stalled for %s ~ %s, some logs may be missed", start_dt, end_dt)
+                break
 
     def search_by_date(self, the_day: date) -> tuple[list[tuple[datetime, str]], list[tuple[datetime, str]]]:
         accessed_feed_list: list[tuple[datetime, str]] = []

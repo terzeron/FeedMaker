@@ -71,7 +71,7 @@ class TestProblemManager(unittest.TestCase):
             mock_session_ctx.return_value.__exit__.return_value = None
 
             # Mock Loki search response
-            mock_loki_search.return_value = ([], {})
+            mock_loki_search.return_value = ([], {}, None)
 
             self.pm = ProblemManager(loki_url=self.loki_url)
 
@@ -541,7 +541,7 @@ class TestProblemManager(unittest.TestCase):
 
             # Loki API 호출을 mock으로 대체
             with patch('bin.access_log_manager.AccessLogManager.loki_search') as mock_loki_search:
-                mock_loki_search.return_value = ([], {})  # 빈 로그와 통계 반환
+                mock_loki_search.return_value = ([], {}, None)  # 빈 로그와 통계 반환
 
                 # load_all 호출 - 예외가 발생하지 않으면 성공
                 try:
