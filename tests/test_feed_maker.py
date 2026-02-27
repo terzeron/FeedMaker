@@ -91,11 +91,11 @@ class TestFeedMaker(unittest.TestCase):
     def tearDown(self) -> None:
         self.html_file2_path.unlink(missing_ok=True)
         self.html_file1_path.unlink(missing_ok=True)
-        shutil.rmtree(self.html_dir_path)
+        shutil.rmtree(self.html_dir_path, ignore_errors=True)
 
         self.list_file2_path.unlink(missing_ok=True)
         self.list_file1_path.unlink(missing_ok=True)
-        shutil.rmtree(self.list_dir_path)
+        shutil.rmtree(self.list_dir_path, ignore_errors=True)
 
         # 실패 URL 캐시 파일 정리
         if hasattr(self.maker, 'failed_urls_cache_file') and self.maker.failed_urls_cache_file.exists():
@@ -107,6 +107,7 @@ class TestFeedMaker(unittest.TestCase):
         self.old_rss_file_path.unlink(missing_ok=True)
         self.rss_file_path.unlink(missing_ok=True)
         shutil.rmtree(self.feed_dir_path, ignore_errors=True)
+        shutil.rmtree(self.feed_img_dir_path, ignore_errors=True)
 
     def test_get_image_tag_str(self) -> None:
         img_url_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")

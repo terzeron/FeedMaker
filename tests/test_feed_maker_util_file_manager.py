@@ -90,6 +90,7 @@ class FileManagerTest(unittest.TestCase):
         self.img_file2_path.unlink(missing_ok=True)
         self.img_file3_path.unlink(missing_ok=True)
         self.img_file4_path.unlink(missing_ok=True)
+        shutil.rmtree(self.feed_img_dir_path, ignore_errors=True)
         shutil.rmtree(self.feed_dir_path, ignore_errors=True)
 
     def test__get_cache_info_common_postfix(self) -> None:
