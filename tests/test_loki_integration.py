@@ -218,7 +218,7 @@ class TestLokiIntegration(unittest.TestCase):
                 "direction": "forward",
             }
 
-            logs, stats = alm.loki_search(params)
+            logs, stats, _ = alm.loki_search(params)
 
             # Verify results
             self.assertIsNotNone(logs)

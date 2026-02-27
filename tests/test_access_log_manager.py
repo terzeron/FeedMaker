@@ -83,9 +83,10 @@ class TestAccessLogManager(unittest.TestCase):
             # Mock Loki search response
             mock_loki_search.return_value = (
                 [{"timestamp": "1640995200000000000", "line": "test log entry"}],
-                {"status": "success", "stats": {"ingester": {"totalLinesSent": "10"}}}
+                {"status": "success", "stats": {"ingester": {"totalLinesSent": "10"}}},
+                1640995200000000000
             )
-            
+
             self.alm = AccessLogManager(loki_url=self.loki_url)
 
         self.test_feed_dir_path = AccessLogManager.work_dir_path / "my_test_group" / "my_test_feed3"
@@ -109,9 +110,10 @@ class TestAccessLogManager(unittest.TestCase):
         # Mock Loki search response
         mock_loki_search.return_value = (
             [{"timestamp": "1640995200000000000", "line": "test log entry"}],
-            {"status": "success", "stats": {"ingester": {"totalLinesSent": "10"}}}
+            {"status": "success", "stats": {"ingester": {"totalLinesSent": "10"}}},
+            1640995200000000000
         )
-        
+
         # from yesterday to today
         start_dt = datetime.now(timezone.utc) - timedelta(days=1)
         start_ns = int(
@@ -126,11 +128,12 @@ class TestAccessLogManager(unittest.TestCase):
             "limit": 5000,
             "direction": "forward"
         }
-        logs, stats = self.alm.loki_search(params)
+        logs, stats, last_ts = self.alm.loki_search(params)
         self.assertIsNotNone(logs)
         self.assertGreater(len(logs), 0)
         self.assertIsNotNone(stats)
         self.assertGreater(len(stats), 0)
+        self.assertIsNotNone(last_ts)
 
     @patch('bin.access_log_manager.AccessLogManager.search_by_date')
     def test_search(self, mock_search_by_date) -> None:
@@ -213,6 +216,62 @@ class TestAccessLogManager(unittest.TestCase):
                 assert row is not None
                 self.assertIsNotNone(row.feed_name)
                 self.assertIsNotNone(row.access_date)
+
+
+    @patch('bin.access_log_manager.AccessLogManager.loki_search')
+    def test_search_time_range_pagination(self, mock_loki_search) -> None:
+        """limit 도달 시 페이지네이션으로 모든 로그를 가져오는지 확인"""
+        local_tz = datetime.now().astimezone().tzinfo
+        start_dt = datetime(2024, 1, 1, tzinfo=local_tz)
+        end_dt = datetime(2024, 1, 1, 6, tzinfo=local_tz)
+        # start_dt 이후의 타임스탬프 사용
+        base_ts = int(start_dt.timestamp()) * 1_000_000_000 + 1_000_000_000
+
+        # 첫 번째 호출: limit(5000)개 반환 → 페이지네이션 트리거
+        page1_logs = [
+            f'[01/Jan/2024:12:00:00 +0000] "GET /xml/feed{i}.xml HTTP/1.1" 200'
+            for i in range(5000)
+        ]
+        # 두 번째 호출: limit 미만 반환 → 종료
+        page2_logs = [
+            '[01/Jan/2024:12:01:00 +0000] "GET /xml/extra_feed.xml HTTP/1.1" 200'
+        ]
+        mock_loki_search.side_effect = [
+            (page1_logs, {}, base_ts + 5000_000_000_000),
+            (page2_logs, {}, base_ts + 6000_000_000_000),
+        ]
+
+        accessed: list[tuple[datetime, str]] = []
+        viewed: list[tuple[datetime, str]] = []
+
+        self.alm._search_time_range(start_dt, end_dt, accessed, viewed)
+
+        # 두 번 호출되었는지 확인 (페이지네이션)
+        self.assertEqual(mock_loki_search.call_count, 2)
+        # 두 번째 호출의 start가 첫 번째 last_ts + 1인지 확인
+        second_call_params = mock_loki_search.call_args_list[1][0][0]
+        self.assertEqual(second_call_params["start"], base_ts + 5000_000_000_000 + 1)
+        # 모든 로그가 파싱되었는지 확인 (5000 + 1 = 5001)
+        self.assertEqual(len(accessed), 5001)
+
+    @patch('bin.access_log_manager.AccessLogManager.loki_search')
+    def test_search_time_range_no_pagination_needed(self, mock_loki_search) -> None:
+        """limit 미만일 때 한 번만 호출하는지 확인"""
+        logs = [
+            '[01/Jan/2024:12:00:00 +0000] "GET /xml/feed1.xml HTTP/1.1" 200'
+        ]
+        mock_loki_search.return_value = (logs, {}, 1700000000_000_000_000)
+
+        accessed: list[tuple[datetime, str]] = []
+        viewed: list[tuple[datetime, str]] = []
+        local_tz = datetime.now().astimezone().tzinfo
+        start_dt = datetime(2024, 1, 1, tzinfo=local_tz)
+        end_dt = datetime(2024, 1, 1, 6, tzinfo=local_tz)
+
+        self.alm._search_time_range(start_dt, end_dt, accessed, viewed)
+
+        self.assertEqual(mock_loki_search.call_count, 1)
+        self.assertEqual(len(accessed), 1)
 
 
 if __name__ == "__main__":
