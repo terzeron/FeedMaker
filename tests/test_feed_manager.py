@@ -255,46 +255,49 @@ class TestFeedManager(unittest.TestCase):
         example_rss_file_path = Path(__file__).parent / "sportsdonga.webtoon.1.result.xml"
         shutil.copy(example_rss_file_path, public_feed_file_path)
 
-        # Mock initial query result (before adding)
-        mock_row_before = MagicMock()
-        mock_row_before.feed_name = feed_name
-        mock_row_before.public_html = False
-        mock_row_before.upload_date = None
-        self.mock_query.all.return_value = [mock_row_before]
+        try:
+            # Mock initial query result (before adding)
+            mock_row_before = MagicMock()
+            mock_row_before.feed_name = feed_name
+            mock_row_before.public_html = False
+            mock_row_before.upload_date = None
+            self.mock_query.all.return_value = [mock_row_before]
 
-        with DB.session_ctx() as s:
-            rows11 = s.query(FeedInfo).where(FeedInfo.feed_name == feed_name,
-                                             FeedInfo.public_html.is_(True),
-                                             FeedInfo.upload_date.is_not(None)).all()
-            assert rows11 is not None
+            with DB.session_ctx() as s:
+                rows11 = s.query(FeedInfo).where(FeedInfo.feed_name == feed_name,
+                                                 FeedInfo.public_html.is_(True),
+                                                 FeedInfo.upload_date.is_not(None)).all()
+                assert rows11 is not None
 
-        FeedManager.add_public_feed(public_feed_file_path)
+            FeedManager.add_public_feed(public_feed_file_path)
 
-        # Mock query result after adding (should have 1 more row)
-        mock_row_after = MagicMock()
-        mock_row_after.feed_name = feed_name
-        mock_row_after.public_html = True
-        mock_row_after.upload_date = "2023-01-01"
-        self.mock_query.all.return_value = [mock_row_before, mock_row_after]
+            # Mock query result after adding (should have 1 more row)
+            mock_row_after = MagicMock()
+            mock_row_after.feed_name = feed_name
+            mock_row_after.public_html = True
+            mock_row_after.upload_date = "2023-01-01"
+            self.mock_query.all.return_value = [mock_row_before, mock_row_after]
 
-        with DB.session_ctx() as s:
-            rows12 = s.query(FeedInfo).where(FeedInfo.feed_name == feed_name,
-                                             FeedInfo.public_html.is_(True),
-                                             FeedInfo.upload_date.is_not(None)).all()
-            assert rows12 is not None
-            self.assertEqual(len(rows11) + 1, len(rows12))
+            with DB.session_ctx() as s:
+                rows12 = s.query(FeedInfo).where(FeedInfo.feed_name == feed_name,
+                                                 FeedInfo.public_html.is_(True),
+                                                 FeedInfo.upload_date.is_not(None)).all()
+                assert rows12 is not None
+                self.assertEqual(len(rows11) + 1, len(rows12))
 
-        FeedManager.remove_public_feed(public_feed_file_path)
+            FeedManager.remove_public_feed(public_feed_file_path)
 
-        # Mock query result after removing (back to original)
-        self.mock_query.all.return_value = [mock_row_before]
+            # Mock query result after removing (back to original)
+            self.mock_query.all.return_value = [mock_row_before]
 
-        with DB.session_ctx() as s:
-            rows13 = s.query(FeedInfo).where(FeedInfo.feed_name == feed_name,
-                                             FeedInfo.public_html.is_(True),
-                                             FeedInfo.upload_date.is_not(None)).all()
-            assert rows13 is not None
-            self.assertEqual(len(rows11), len(rows13))
+            with DB.session_ctx() as s:
+                rows13 = s.query(FeedInfo).where(FeedInfo.feed_name == feed_name,
+                                                 FeedInfo.public_html.is_(True),
+                                                 FeedInfo.upload_date.is_not(None)).all()
+                assert rows13 is not None
+                self.assertEqual(len(rows11), len(rows13))
+        finally:
+            public_feed_file_path.unlink(missing_ok=True)
 
     def test_load_all_public_feed_files(self) -> None:
         # Mock query result for public feed files

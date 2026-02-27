@@ -252,40 +252,43 @@ class TestHtmlFileManager(unittest.TestCase):
         new1.write_text("<div>new</div>")
         upd1.write_text("<div>upd</div>")
 
-        # mtime 설정
-        import os, time
-        now = time.time()
-        os.utime(new1, (now, now))
-        os.utime(upd1, (now, now))
+        try:
+            # mtime 설정
+            import os, time
+            now = time.time()
+            os.utime(new1, (now, now))
+            os.utime(upd1, (now, now))
 
-        # DB에 존재하는 파일(업데이트 대상)과 삭제 대상 구성
-        existing_upd_path = PathUtil.short_path(upd1)
-        to_delete_path = PathUtil.short_path(html_dir / "to_delete.html")
+            # DB에 존재하는 파일(업데이트 대상)과 삭제 대상 구성
+            existing_upd_path = PathUtil.short_path(upd1)
+            to_delete_path = PathUtil.short_path(html_dir / "to_delete.html")
 
-        # HtmlFileInfo.file_path, update_date를 갖는 네임스페이스로 all() 결과 구성
-        db_rows = [
-            SimpleNamespace(file_path=existing_upd_path, update_date=None),
-            SimpleNamespace(file_path=to_delete_path, update_date=None),
-        ]
+            # HtmlFileInfo.file_path, update_date를 갖는 네임스페이스로 all() 결과 구성
+            db_rows = [
+                SimpleNamespace(file_path=existing_upd_path, update_date=None),
+                SimpleNamespace(file_path=to_delete_path, update_date=None),
+            ]
 
-        # session.query(...).all()가 위 목록을 반환하도록 설정
-        self.mock_session.query.return_value = self.mock_query
-        self.mock_query.all.return_value = db_rows
+            # session.query(...).all()가 위 목록을 반환하도록 설정
+            self.mock_session.query.return_value = self.mock_query
+            self.mock_query.all.return_value = db_rows
 
-        # where/filter 체이닝이 그대로 mock 동작하도록 구성
-        self.mock_query.where.return_value = self.mock_query
-        self.mock_query.filter.return_value = self.mock_query
+            # where/filter 체이닝이 그대로 mock 동작하도록 구성
+            self.mock_query.where.return_value = self.mock_query
+            self.mock_query.filter.return_value = self.mock_query
 
-        # 실행 (탐색 범위를 제한하지 않음: islice 전체 순회)
-        self.hfm.load_all_html_files()
+            # 실행 (탐색 범위를 제한하지 않음: islice 전체 순회)
+            self.hfm.load_all_html_files()
 
-        # bulk_insert_mappings/ bulk_update_mappings가 mapper를 첫 인자로 받는지 검증
-        self.mock_session.bulk_insert_mappings.assert_called_with(HtmlFileInfo.__mapper__, ANY)
-        self.mock_session.bulk_update_mappings.assert_called_with(HtmlFileInfo.__mapper__, ANY)
+            # bulk_insert_mappings/ bulk_update_mappings가 mapper를 첫 인자로 받는지 검증
+            self.mock_session.bulk_insert_mappings.assert_called_with(HtmlFileInfo.__mapper__, ANY)
+            self.mock_session.bulk_update_mappings.assert_called_with(HtmlFileInfo.__mapper__, ANY)
 
-        # 삭제는 synchronize_session=False로 호출되는지 검증
-        delete_mock = self.mock_query.delete
-        delete_mock.assert_called_with(synchronize_session=False)
+            # 삭제는 synchronize_session=False로 호출되는지 검증
+            delete_mock = self.mock_query.delete
+            delete_mock.assert_called_with(synchronize_session=False)
+        finally:
+            shutil.rmtree(grp_path, ignore_errors=True)
 
 
 if __name__ == "__main__":
