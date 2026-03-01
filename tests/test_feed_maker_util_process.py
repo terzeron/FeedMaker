@@ -63,6 +63,11 @@ class ProcessTest(unittest.TestCase):
         self.assertEqual(result.strip(), "hello")
         self.assertEqual(error, "")
 
+    def test_exec_cmd_nonzero_exit(self) -> None:
+        result, error = Process.exec_cmd("exit 1", Path.cwd())
+        self.assertEqual(result, "")
+        self.assertIn("exit", error.lower())
+
     def test_find_process_group_and_kill_process_group(self) -> None:
         import time
         
