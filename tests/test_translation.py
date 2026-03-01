@@ -812,10 +812,23 @@ class CacheTTLTest(unittest.TestCase):
 class TranslateHtmlTest(unittest.TestCase):
     """translate_html() 테스트"""
 
+    def _patch_cache(self, cached_map=None, ts_cache=None):
+        """캐시 로드를 mock하는 헬퍼. 저장은 no-op으로 mock."""
+        if cached_map is None:
+            cached_map = {}
+        if ts_cache is None:
+            ts_cache = {}
+        return (
+            patch.object(Translation, "_load_translation_cache", return_value=(cached_map, ts_cache)),
+            patch.object(Translation, "_save_translation_cache"),
+        )
+
     def test_basic_text_translation(self) -> None:
         """기본 텍스트 번역"""
         html = "<p>Hello World</p>"
-        with patch.object(Translation, "__init__", return_value=None), \
+        p_load, p_save = self._patch_cache()
+        with p_load, p_save, \
+             patch.object(Translation, "__init__", return_value=None), \
              patch.object(Translation, "_translate_with_fallback", return_value={"Hello World": "안녕 세계"}):
             result, untranslated = translate_html(html)
         self.assertIn("안녕 세계", result)
@@ -825,7 +838,9 @@ class TranslateHtmlTest(unittest.TestCase):
     def test_skip_script_and_style(self) -> None:
         """script, style 태그 내용은 번역하지 않음"""
         html = "<script>var x = 1;</script><style>.a{color:red}</style><p>Hello</p>"
-        with patch.object(Translation, "__init__", return_value=None), \
+        p_load, p_save = self._patch_cache()
+        with p_load, p_save, \
+             patch.object(Translation, "__init__", return_value=None), \
              patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}) as mock_fb:
             result, _ = translate_html(html)
         # translate_with_fallback에 전달된 텍스트에 script/style 내용이 없어야 함
@@ -837,7 +852,9 @@ class TranslateHtmlTest(unittest.TestCase):
     def test_skip_code_pre_textarea(self) -> None:
         """code, pre, textarea 태그 내용은 번역하지 않음"""
         html = "<code>print()</code><pre>logs</pre><textarea>input</textarea><p>Hello</p>"
-        with patch.object(Translation, "__init__", return_value=None), \
+        p_load, p_save = self._patch_cache()
+        with p_load, p_save, \
+             patch.object(Translation, "__init__", return_value=None), \
              patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}) as mock_fb:
             translate_html(html)
         called_texts = mock_fb.call_args[0][0]
@@ -848,7 +865,9 @@ class TranslateHtmlTest(unittest.TestCase):
     def test_preserve_html_structure(self) -> None:
         """HTML 구조 유지"""
         html = '<div class="main"><a href="/link">Click here</a></div>'
-        with patch.object(Translation, "__init__", return_value=None), \
+        p_load, p_save = self._patch_cache()
+        with p_load, p_save, \
+             patch.object(Translation, "__init__", return_value=None), \
              patch.object(Translation, "_translate_with_fallback", return_value={"Click here": "여기를 클릭"}):
             result, _ = translate_html(html)
         self.assertIn('<a href="/link">', result)
@@ -857,7 +876,9 @@ class TranslateHtmlTest(unittest.TestCase):
     def test_empty_html(self) -> None:
         """빈 HTML"""
         html = "<div></div>"
-        with patch.object(Translation, "__init__", return_value=None), \
+        p_load, p_save = self._patch_cache()
+        with p_load, p_save, \
+             patch.object(Translation, "__init__", return_value=None), \
              patch.object(Translation, "_translate_with_fallback", return_value={}) as mock_fb:
             result, untranslated = translate_html(html)
         mock_fb.assert_not_called()
@@ -866,7 +887,9 @@ class TranslateHtmlTest(unittest.TestCase):
     def test_whitespace_only_text_skipped(self) -> None:
         """공백만 있는 텍스트는 번역하지 않음"""
         html = "<p>  \n  </p><p>Hello</p>"
-        with patch.object(Translation, "__init__", return_value=None), \
+        p_load, p_save = self._patch_cache()
+        with p_load, p_save, \
+             patch.object(Translation, "__init__", return_value=None), \
              patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}) as mock_fb:
             translate_html(html)
         called_texts = mock_fb.call_args[0][0]
@@ -876,7 +899,9 @@ class TranslateHtmlTest(unittest.TestCase):
         """여러 텍스트 노드 번역"""
         html = "<h1>Title</h1><p>Body text</p><span>Footer</span>"
         translations = {"Title": "제목", "Body text": "본문", "Footer": "바닥글"}
-        with patch.object(Translation, "__init__", return_value=None), \
+        p_load, p_save = self._patch_cache()
+        with p_load, p_save, \
+             patch.object(Translation, "__init__", return_value=None), \
              patch.object(Translation, "_translate_with_fallback", return_value=translations):
             result, _ = translate_html(html)
         self.assertIn("제목", result)
@@ -886,7 +911,9 @@ class TranslateHtmlTest(unittest.TestCase):
     def test_duplicate_texts_deduplicated(self) -> None:
         """중복 텍스트는 한 번만 번역 요청"""
         html = "<p>Hello</p><p>Hello</p>"
-        with patch.object(Translation, "__init__", return_value=None), \
+        p_load, p_save = self._patch_cache()
+        with p_load, p_save, \
+             patch.object(Translation, "__init__", return_value=None), \
              patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}) as mock_fb:
             result, _ = translate_html(html)
         called_texts = mock_fb.call_args[0][0]
@@ -896,12 +923,47 @@ class TranslateHtmlTest(unittest.TestCase):
     def test_untranslated_text_preserved(self) -> None:
         """번역되지 않은 텍스트는 원문 유지"""
         html = "<p>Hello</p><p>World</p>"
-        with patch.object(Translation, "__init__", return_value=None), \
+        p_load, p_save = self._patch_cache()
+        with p_load, p_save, \
+             patch.object(Translation, "__init__", return_value=None), \
              patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}):
             result, untranslated = translate_html(html)
         self.assertIn("안녕", result)
         self.assertIn("World", result)
         self.assertEqual(untranslated, 1)
+
+    def test_cached_texts_skip_api_call(self) -> None:
+        """캐시에 있는 텍스트는 API 호출하지 않음"""
+        html = "<p>Hello</p><p>World</p>"
+        cached = {"Hello": "안녕", "World": "세계"}
+        ts = {"Hello": {"t": "안녕", "ts": int(time.time())},
+              "World": {"t": "세계", "ts": int(time.time())}}
+        p_load, p_save = self._patch_cache(cached, ts)
+        with p_load, p_save, \
+             patch.object(Translation, "__init__", return_value=None), \
+             patch.object(Translation, "_translate_with_fallback", return_value={}) as mock_fb:
+            result, untranslated = translate_html(html)
+        mock_fb.assert_not_called()
+        self.assertIn("안녕", result)
+        self.assertIn("세계", result)
+        self.assertEqual(untranslated, 0)
+
+    def test_partial_failure_saves_successful(self) -> None:
+        """일부 번역 실패 시 성공분은 캐시에 저장"""
+        html = "<p>Hello</p><p>World</p><p>Foo</p>"
+        p_load, p_save = self._patch_cache()
+        # Hello만 번역 성공, World/Foo는 실패
+        with p_load, p_save as mock_save, \
+             patch.object(Translation, "__init__", return_value=None), \
+             patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}):
+            result, untranslated = translate_html(html)
+        # 저장이 호출되었는지 확인
+        mock_save.assert_called_once()
+        saved_cache = mock_save.call_args[0][1]
+        self.assertIn("Hello", saved_cache)
+        self.assertEqual(saved_cache["Hello"]["t"], "안녕")
+        # 미번역 2건
+        self.assertEqual(untranslated, 2)
 
 
 class ProviderFilterTest(unittest.TestCase):

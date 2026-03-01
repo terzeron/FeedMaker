@@ -474,17 +474,32 @@ def translate_html(html: str, provider: TranslationProvider | None = None) -> st
     # 고유 텍스트 목록 추출
     unique_texts = list(dict.fromkeys(node.strip() for node in text_nodes))
 
-    # 기존 Translation 클래스로 번역
+    # 번역 캐시 로드
+    translation_map_file_path = Path(Env.get("FM_WORK_DIR")) / "translation_map.json"
+    cached_map, ts_cache = Translation._load_translation_cache(translation_map_file_path)
+
+    # 캐시에 없는 텍스트만 번역 대상으로 선별
+    texts_to_translate = [t for t in unique_texts if t not in cached_map]
+
     translator = Translation(provider=provider)
-    translated_map = translator._translate_with_fallback(unique_texts)
+    if texts_to_translate:
+        LOGGER.debug(f"캐시에 없는 {len(texts_to_translate)}개 텍스트를 번역합니다...")
+        fresh_map = translator._translate_with_fallback(texts_to_translate)
+        # 새로 번역된 결과를 캐시에 반영 후 저장 (일부 실패해도 성공분은 보존)
+        if fresh_map:
+            now = int(time.time())
+            for en, ko in fresh_map.items():
+                cached_map[en] = ko
+                ts_cache[en] = {"t": ko, "ts": now}
+            Translation._save_translation_cache(translation_map_file_path, ts_cache)
 
     # 미번역 텍스트 수
-    untranslated = len(unique_texts) - len(translated_map)
+    untranslated = sum(1 for t in unique_texts if t not in cached_map)
 
     # 텍스트 노드 치환
     for node in text_nodes:
         original = node.strip()
-        translated = translated_map.get(original)
+        translated = cached_map.get(original)
         if translated:
             # 원본 텍스트 앞뒤 공백 보존
             leading = node[: len(node) - len(node.lstrip())]
