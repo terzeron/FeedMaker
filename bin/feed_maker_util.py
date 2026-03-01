@@ -131,6 +131,8 @@ class Process:
         try:
             with subprocess.Popen(new_cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8") as p:
                 result, error = p.communicate(input=input_data)
+                if p.returncode != 0:
+                    return "", error or f"Process exited with code {p.returncode}"
                 if error and "InsecureRequestWarning" not in error and "_RegisterApplication(), FAILED TO establish the default connection to the WindowServer" not in error:
                     if "error" in error.lower():
                         return "", error

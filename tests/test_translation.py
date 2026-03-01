@@ -633,15 +633,66 @@ class ClaudeRobustnessTest(unittest.TestCase):
             result = svc.translate_batch(["a", "b"])
         self.assertEqual(result, {"a": "가"})
 
-    def test_same_as_original_excluded(self) -> None:
-        """원문과 동일한 번역은 제외"""
+    def test_same_as_original_kept(self) -> None:
+        """원문과 동일한 번역도 결과에 포함 (다국어 원문 지원)"""
         svc = ClaudeTranslationService("fake-key")
         response_json = json.dumps({
             "content": [{"type": "text", "text": '"가", "b"]'}]
         })
         with patch.object(Crawler, "run", return_value=(response_json, "", {})):
             result = svc.translate_batch(["a", "b"])
-        self.assertEqual(result, {"a": "가"})
+        self.assertEqual(result, {"a": "가", "b": "b"})
+
+    def test_truncated_json_recovery(self) -> None:
+        """max_tokens로 잘린 JSON 응답을 마지막 완전한 항목까지 복구"""
+        svc = ClaudeTranslationService("fake-key")
+        # 잘린 JSON: 세 번째 항목이 불완전
+        response_json = json.dumps({
+            "stop_reason": "max_tokens",
+            "content": [{"type": "text", "text": '"가", "나", "다라마'}]
+        })
+        with patch.object(Crawler, "run", return_value=(response_json, "", {})):
+            result = svc.translate_batch(["a", "b", "c"])
+        self.assertEqual(result, {"a": "가", "b": "나"})
+
+    def test_truncated_json_no_complete_item(self) -> None:
+        """복구 불가능한 잘린 JSON은 JSONDecodeError 발생 → continue"""
+        svc = ClaudeTranslationService("fake-key")
+        response_json = json.dumps({
+            "stop_reason": "max_tokens",
+            "content": [{"type": "text", "text": '"가나다라마'}]
+        })
+        with patch.object(Crawler, "run", return_value=(response_json, "", {})):
+            result = svc.translate_batch(["a"])
+        self.assertEqual(result, {})
+
+    def test_stop_reason_max_tokens_warning(self) -> None:
+        """stop_reason이 max_tokens이면 경고 로그 출력"""
+        svc = ClaudeTranslationService("fake-key")
+        response_json = json.dumps({
+            "stop_reason": "max_tokens",
+            "content": [{"type": "text", "text": '"가"]'}]
+        })
+        with patch.object(Crawler, "run", return_value=(response_json, "", {})), \
+             self.assertLogs(level="WARNING") as cm:
+            svc.translate_batch(["a"])
+        self.assertTrue(any("max_tokens" in msg for msg in cm.output))
+
+    def test_api_error_response_aborts(self) -> None:
+        """HTTP 200이지만 type=error인 API 에러 응답은 전체 중단"""
+        svc = ClaudeTranslationService("fake-key")
+        error_json = json.dumps({
+            "type": "error",
+            "error": {"type": "overloaded_error", "message": "Overloaded"}
+        })
+        with patch.object(Crawler, "run", return_value=(error_json, "", {})) as mock_run, \
+             self.assertLogs(level="WARNING") as cm:
+            # 배치 2개 분량 (MAX_ITEMS_PER_BATCH=100이므로 101개)
+            result = svc.translate_batch([f"t{i}" for i in range(101)])
+        self.assertEqual(result, {})
+        # 첫 배치 에러 → break → 두 번째 배치 호출 없음
+        self.assertEqual(mock_run.call_count, 1)
+        self.assertTrue(any("overloaded_error" in msg for msg in cm.output))
 
 
 class CacheTTLTest(unittest.TestCase):
@@ -766,16 +817,17 @@ class TranslateHtmlTest(unittest.TestCase):
         html = "<p>Hello World</p>"
         with patch.object(Translation, "__init__", return_value=None), \
              patch.object(Translation, "_translate_with_fallback", return_value={"Hello World": "안녕 세계"}):
-            result = translate_html(html)
+            result, untranslated = translate_html(html)
         self.assertIn("안녕 세계", result)
         self.assertNotIn("Hello World", result)
+        self.assertEqual(untranslated, 0)
 
     def test_skip_script_and_style(self) -> None:
         """script, style 태그 내용은 번역하지 않음"""
         html = "<script>var x = 1;</script><style>.a{color:red}</style><p>Hello</p>"
         with patch.object(Translation, "__init__", return_value=None), \
              patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}) as mock_fb:
-            result = translate_html(html)
+            result, _ = translate_html(html)
         # translate_with_fallback에 전달된 텍스트에 script/style 내용이 없어야 함
         called_texts = mock_fb.call_args[0][0]
         self.assertNotIn("var x = 1;", called_texts)
@@ -798,7 +850,7 @@ class TranslateHtmlTest(unittest.TestCase):
         html = '<div class="main"><a href="/link">Click here</a></div>'
         with patch.object(Translation, "__init__", return_value=None), \
              patch.object(Translation, "_translate_with_fallback", return_value={"Click here": "여기를 클릭"}):
-            result = translate_html(html)
+            result, _ = translate_html(html)
         self.assertIn('<a href="/link">', result)
         self.assertIn("여기를 클릭", result)
 
@@ -807,8 +859,9 @@ class TranslateHtmlTest(unittest.TestCase):
         html = "<div></div>"
         with patch.object(Translation, "__init__", return_value=None), \
              patch.object(Translation, "_translate_with_fallback", return_value={}) as mock_fb:
-            result = translate_html(html)
+            result, untranslated = translate_html(html)
         mock_fb.assert_not_called()
+        self.assertEqual(untranslated, 0)
 
     def test_whitespace_only_text_skipped(self) -> None:
         """공백만 있는 텍스트는 번역하지 않음"""
@@ -825,7 +878,7 @@ class TranslateHtmlTest(unittest.TestCase):
         translations = {"Title": "제목", "Body text": "본문", "Footer": "바닥글"}
         with patch.object(Translation, "__init__", return_value=None), \
              patch.object(Translation, "_translate_with_fallback", return_value=translations):
-            result = translate_html(html)
+            result, _ = translate_html(html)
         self.assertIn("제목", result)
         self.assertIn("본문", result)
         self.assertIn("바닥글", result)
@@ -835,7 +888,7 @@ class TranslateHtmlTest(unittest.TestCase):
         html = "<p>Hello</p><p>Hello</p>"
         with patch.object(Translation, "__init__", return_value=None), \
              patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}) as mock_fb:
-            result = translate_html(html)
+            result, _ = translate_html(html)
         called_texts = mock_fb.call_args[0][0]
         self.assertEqual(called_texts.count("Hello"), 1)
         self.assertEqual(result.count("안녕"), 2)
@@ -845,9 +898,45 @@ class TranslateHtmlTest(unittest.TestCase):
         html = "<p>Hello</p><p>World</p>"
         with patch.object(Translation, "__init__", return_value=None), \
              patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}):
-            result = translate_html(html)
+            result, untranslated = translate_html(html)
         self.assertIn("안녕", result)
         self.assertIn("World", result)
+        self.assertEqual(untranslated, 1)
+
+
+class ProviderFilterTest(unittest.TestCase):
+    """Translation(provider=...) 필터링 테스트"""
+
+    def setUp(self) -> None:
+        self._old_cwd = Path.cwd()
+        self.work_dir = Path(Env.get("FM_WORK_DIR")) / "provider_test"
+        self.work_dir.mkdir(parents=True, exist_ok=True)
+        os.environ["FM_WORK_DIR"] = str(self.work_dir)
+        os.chdir(self.work_dir)
+
+    def tearDown(self) -> None:
+        os.chdir(self._old_cwd)
+        shutil.rmtree(self.work_dir, ignore_errors=True)
+
+    @patch.dict(os.environ, {"AZURE_API_KEY": "az", "DEEPL_API_KEY": "dl", "ANTHROPIC_API_KEY": "cl"})
+    def test_provider_filter_claude_only(self) -> None:
+        """provider=CLAUDE 시 Claude 서비스만 선택"""
+        t = Translation(provider=TranslationProvider.CLAUDE)
+        self.assertEqual(len(t.services), 1)
+        self.assertEqual(t.services[0].provider, TranslationProvider.CLAUDE)
+
+    @patch.dict(os.environ, {"AZURE_API_KEY": "az", "DEEPL_API_KEY": "dl"})
+    def test_provider_filter_deepl_only(self) -> None:
+        """provider=DEEPL 시 DeepL 서비스만 선택"""
+        t = Translation(provider=TranslationProvider.DEEPL)
+        self.assertEqual(len(t.services), 1)
+        self.assertEqual(t.services[0].provider, TranslationProvider.DEEPL)
+
+    @patch.dict(os.environ, {"AZURE_API_KEY": "az", "DEEPL_API_KEY": "dl", "ANTHROPIC_API_KEY": "cl"})
+    def test_no_provider_returns_all(self) -> None:
+        """provider 미지정 시 모든 서비스 반환"""
+        t = Translation()
+        self.assertEqual(len(t.services), 3)
 
 
 if __name__ == "__main__":

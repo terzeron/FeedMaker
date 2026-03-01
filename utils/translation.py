@@ -2,6 +2,7 @@
 
 
 import sys
+import getopt
 import json
 import re
 import uuid
@@ -13,6 +14,9 @@ from enum import Enum
 
 # 캐시 항목 TTL: 7일
 _CACHE_TTL_SECONDS = 7 * 24 * 60 * 60
+
+# 번역 요청 간 sleep 시간(초)
+_SLEEP_SECONDS: float = 1
 
 # 내부 타임스탬프 캐시 타입: {"en": {"t": "ko", "ts": unix_epoch}}
 _TimestampedCache = dict[str, dict]
@@ -102,7 +106,7 @@ class DeepLTranslationService(TranslationService):
                     if _is_unrecoverable_error(error_msg):
                         break
                     continue
-                time.sleep(1)
+                time.sleep(_SLEEP_SECONDS)
                 data = json.loads(response_text)
                 if "translations" in data:
                     translations = data["translations"]
@@ -147,7 +151,7 @@ class AzureTranslationService(TranslationService):
                     if _is_unrecoverable_error(error_msg):
                         break
                     continue
-                time.sleep(1)
+                time.sleep(_SLEEP_SECONDS)
                 data = json.loads(response_text)
                 for payload_item, data_item in zip(payload, data):
                     en = payload_item["text"]
@@ -191,7 +195,7 @@ class GoogleTranslationService(TranslationService):
                     if _is_unrecoverable_error(error_msg):
                         break
                     continue
-                time.sleep(1)
+                time.sleep(_SLEEP_SECONDS)
                 data = json.loads(response_text)
                 if "data" in data and "translations" in data["data"]:
                     translations = data["data"]["translations"]
@@ -231,7 +235,7 @@ class ClaudeTranslationService(TranslationService):
             texts_json = json.dumps(batch, ensure_ascii=False)
             payload = json.dumps({
                 "model": "claude-haiku-4-5-20251001",
-                "max_tokens": len(batch) * 50,
+                "max_tokens": len(batch) * 100,
                 "system": self.SYSTEM_PROMPT,
                 "messages": [
                     {"role": "user", "content": texts_json},
@@ -246,8 +250,17 @@ class ClaudeTranslationService(TranslationService):
                     if _is_unrecoverable_error(error_msg):
                         break
                     continue
-                time.sleep(1)
+                time.sleep(_SLEEP_SECONDS)
                 data = json.loads(response_text)
+                # API 에러 응답 체크 (HTTP 200이지만 type=error)
+                if data.get("type") == "error":
+                    err = data.get("error", {})
+                    LOGGER.warning(f"Claude API error: {err.get('type', 'unknown')} - {err.get('message', '')}")
+                    break
+                # stop_reason 체크: max_tokens이면 응답이 잘렸을 가능성
+                stop_reason = data.get("stop_reason", "")
+                if stop_reason == "max_tokens":
+                    LOGGER.warning("Claude: 응답이 max_tokens로 잘림, 복구 시도")
                 # Messages API 응답에서 텍스트 추출
                 content_blocks = data.get("content", [])
                 text_content = ""
@@ -256,13 +269,22 @@ class ClaudeTranslationService(TranslationService):
                         text_content += block.get("text", "")
                 # prefill한 "[" + 응답 텍스트로 JSON 배열 완성
                 text_content = "[" + text_content.strip()
-                # JSON 배열 파싱 — 부분 일치 허용
-                translations = json.loads(text_content)
+                # JSON 배열 파싱 — 잘린 응답 복구 시도
+                try:
+                    translations = json.loads(text_content)
+                except json.JSONDecodeError:
+                    # 잘린 JSON에서 마지막 완전한 항목까지 복구
+                    last_comma = text_content.rfind('",')
+                    if last_comma != -1:
+                        text_content = text_content[:last_comma + 1] + "]"
+                        translations = json.loads(text_content)
+                    else:
+                        raise
                 if isinstance(translations, list):
                     if len(translations) < len(batch):
                         LOGGER.warning(f"Claude: {len(batch)}개 중 {len(translations)}개만 반환, 부분 매핑")
                     for en, ko in zip(batch, translations):
-                        if isinstance(ko, str) and ko and ko != en:
+                        if isinstance(ko, str) and ko:
                             result_map[en] = ko
                 else:
                     LOGGER.debug(f"Claude translation returned unexpected format: expected list, got {type(translations).__name__}")
@@ -306,8 +328,11 @@ class TranslationServiceFactory:
 
 
 class Translation:
-    def __init__(self):
-        self.services = TranslationServiceFactory.create_services()
+    def __init__(self, provider: TranslationProvider | None = None):
+        services = TranslationServiceFactory.create_services()
+        if provider is not None:
+            services = [s for s in services if s.provider == provider]
+        self.services = services
         # 하위 호환
         self.service = self.services[0] if self.services else None
         if not self.services:
@@ -367,8 +392,7 @@ class Translation:
             LOGGER.debug(f"[fallback] {svc.provider.value}로 {len(remaining)}개 번역 시도")
             partial = svc.translate_batch(remaining)
             if partial:
-                # 원문과 다른 번역만 성공으로 처리
-                translated = {k: v for k, v in partial.items() if v != k}
+                translated = dict(partial)
                 result.update(translated)
                 remaining = [t for t in remaining if t not in translated]
             if not remaining:
@@ -423,7 +447,7 @@ class Translation:
         return new_result_list
 
 
-def translate_html(html: str) -> str:
+def translate_html(html: str, provider: TranslationProvider | None = None) -> str:
     """HTML 문자열에서 사람이 읽을 수 있는 텍스트 노드를 추출하여 번역한 HTML을 반환한다."""
     from bs4 import BeautifulSoup, NavigableString
 
@@ -445,14 +469,17 @@ def translate_html(html: str) -> str:
         text_nodes.append(node)
 
     if not text_nodes:
-        return str(soup)
+        return str(soup), 0
 
     # 고유 텍스트 목록 추출
     unique_texts = list(dict.fromkeys(node.strip() for node in text_nodes))
 
     # 기존 Translation 클래스로 번역
-    translator = Translation()
+    translator = Translation(provider=provider)
     translated_map = translator._translate_with_fallback(unique_texts)
+
+    # 미번역 텍스트 수
+    untranslated = len(unique_texts) - len(translated_map)
 
     # 텍스트 노드 치환
     for node in text_nodes:
@@ -464,15 +491,40 @@ def translate_html(html: str) -> str:
             trailing = node[len(node.rstrip()) :]
             node.replace_with(NavigableString(leading + translated + trailing))
 
-    return str(soup)
+    return str(soup), untranslated
 
 
 def main():
     """표준입력으로 HTML을 받아 텍스트를 번역하여 출력한다."""
+    _OPTION_MAP = {
+        "-c": TranslationProvider.CLAUDE,
+        "-g": TranslationProvider.GOOGLE,
+        "-z": TranslationProvider.AZURE,
+        "-d": TranslationProvider.DEEPL,
+    }
+    try:
+        opts, _ = getopt.getopt(sys.argv[1:], "cgzdf:t:")
+    except getopt.GetoptError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        print("Usage: translation.py [-c|-g|-z|-d] [-f <file>] [-t <seconds>]", file=sys.stderr)
+        sys.exit(1)
+
+    global _SLEEP_SECONDS
+    provider: TranslationProvider | None = None
+    for opt, val in opts:
+        if opt in _OPTION_MAP:
+            provider = _OPTION_MAP[opt]
+        elif opt == "-t":
+            _SLEEP_SECONDS = float(val)
+
     html = sys.stdin.read()
     if not html.strip():
         return
-    print(translate_html(html))
+    result, untranslated = translate_html(html, provider=provider)
+    if untranslated > 0:
+        LOGGER.warning(f"{untranslated}개 텍스트 번역 실패")
+        sys.exit(-1)
+    print(result)
 
 
 if __name__ == "__main__":
