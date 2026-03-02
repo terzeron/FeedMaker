@@ -106,6 +106,8 @@ def main() -> int:
         if not re.search(img_pattern, line):
             print(line, end='')
             return
+        # <noscript> 내 중복 이미지 제거
+        line = re.sub(r'<noscript>\s*<img[^>]*/?>\s*</noscript>', '', line)
         new_line = re.sub(img_pattern, replacer, line)
         # <tag>...</tag> 또는 <self-closing/> 패턴
         element_pattern = r'<([^/\s>]+)[^>]*>.*?</\1>|<[^>]+/?>'
