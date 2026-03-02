@@ -213,7 +213,7 @@ class GoogleTranslationService(TranslationService):
 
 
 class ClaudeTranslationService(TranslationService):
-    MAX_ITEMS_PER_BATCH = 100
+    MAX_ITEMS_PER_BATCH = 20
     SYSTEM_PROMPT = "Translate English to Korean. Return ONLY a JSON array of translated strings, same order."
 
     def __init__(self, api_key: str):
@@ -235,7 +235,7 @@ class ClaudeTranslationService(TranslationService):
             texts_json = json.dumps(batch, ensure_ascii=False)
             payload = json.dumps({
                 "model": "claude-haiku-4-5-20251001",
-                "max_tokens": len(batch) * 100,
+                "max_tokens": max(len(batch) * 100, 1024),
                 "system": self.SYSTEM_PROMPT,
                 "messages": [
                     {"role": "user", "content": texts_json},
