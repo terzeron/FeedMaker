@@ -13,7 +13,7 @@ from typing import Protocol
 from enum import Enum
 
 # 캐시 항목 TTL: 7일
-_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60
+_CACHE_TTL_SECONDS = 30 * 24 * 60 * 60
 
 # 번역 요청 간 sleep 시간(초)
 _SLEEP_SECONDS: float = 1
