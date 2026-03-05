@@ -70,6 +70,8 @@ AUTH_EXEMPT_PATHS = {"/auth/login", "/auth/logout", "/auth/me", "/docs", "/opena
 
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
+    if request.method == "OPTIONS":
+        return await call_next(request)
     if request.url.path not in AUTH_EXEMPT_PATHS:
         user_session = get_current_user(request)
         if not user_session:

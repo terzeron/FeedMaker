@@ -33,6 +33,9 @@ class TestFeedMaker(unittest.TestCase):
     def setUp(self) -> None:
         group_name = "naver"
         feed_name = "certain_webtoon"
+        self.public_feed_dir_path = Path(Env.get("WEB_SERVICE_FEED_DIR_PREFIX"))
+        self.public_rss_file_path = self.public_feed_dir_path / f"{feed_name}.xml"
+        self.public_old_rss_file_path = self.public_feed_dir_path / f"{feed_name}.xml.old"
         self.feed_dir_path = Path(Env.get("FM_WORK_DIR")) / group_name / feed_name
         self.feed_dir_path.mkdir(exist_ok=True)
         self.rss_file_path = self.feed_dir_path / f"{feed_name}.xml"
@@ -108,6 +111,8 @@ class TestFeedMaker(unittest.TestCase):
         self.rss_file_path.unlink(missing_ok=True)
         shutil.rmtree(self.feed_dir_path, ignore_errors=True)
         shutil.rmtree(self.feed_img_dir_path, ignore_errors=True)
+        self.public_rss_file_path.unlink(missing_ok=True)
+        self.public_old_rss_file_path.unlink(missing_ok=True)
 
     def test_get_image_tag_str(self) -> None:
         img_url_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
