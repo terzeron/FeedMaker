@@ -1,0 +1,33 @@
+serverBlock: |-
+  server {
+    listen 0.0.0.0:8080;
+    server_name _;
+
+    root /app;
+    index index.html index.htm;
+
+    # Readiness가 GET / 를 치므로 여기서 204로 성공 반환
+    location = / {
+      return 204;
+    }
+
+    # 루트 경로의 .xml 파일 요청을 /xml/ 디렉토리에서 서빙
+    location ~ ^/([^/]+\.xml)$ {
+      rewrite ^/(.*)$ /xml/$1 last;
+    }
+
+    # 정적 파일은 기존대로 제공 (필요시 조정)
+    location / {
+      try_files $uri $uri/ =404;
+    }
+  }
+
+extraVolumes:
+  - name: staticsite
+    persistentVolumeClaim:
+      claimName: public-html-pvc
+
+extraVolumeMounts:
+  - name: staticsite
+    mountPath: /app
+

@@ -1,0 +1,151 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fm-backend
+  namespace: feedmaker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fm-backend-app
+  template:
+    metadata:
+      labels:
+        app: fm-backend-app
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: fm-backend
+          image: registry.terzeron.com/terzeron/fm_backend:latest
+          ports:
+            - containerPort: 8010
+          env:
+            - name: MYSQL_DATABASE
+              value: feedmaker
+            - name: MYSQL_USER
+              value: feedmaker
+            - name: MYSQL_PASSWORD
+              value: micro170433
+
+            - name: FM_DB_HOST
+              value: fm-db-mysql
+            - name: FM_DB_PORT
+              value: "3306"
+            - name: FM_HOME_DIR
+              value: /app
+            - name: FM_WORK_DIR
+              value: /fma
+            - name: FM_LOG_DIR
+              value: /logs
+            - name: FM_BACKEND_PORT
+              value: "8010"
+            - name: FM_FRONTEND_URL
+              value: https://fm.terzeron.com
+            - name: FM_LOKI_URL
+              value: http://10.10.10.5:3100/loki/api/v1
+            - name: FM_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST
+              value: terzeron@gmail.com,choyoungil@gmail.com
+        
+            - name: WEB_SERVICE_URL
+              value: https://terzeron.com
+            - name: WEB_SERVICE_FEED_URL_PREFIX
+              value: https://terzeron.com/xml
+            - name: WEB_SERVICE_IMAGE_URL_PREFIX
+              value: https://terzeron.com/xml/img
+            - name: WEB_SERVICE_PDF_URL_PREFIX
+              value: https://terzeron.com/xml/pdf
+
+            - name: WEB_SERVICE_ROOT_DIR
+              value: /
+            - name: WEB_SERVICE_FEED_DIR_PREFIX
+              value: /xml
+            - name: WEB_SERVICE_IMAGE_DIR_PREFIX
+              value: /xml/img
+            - name: WEB_SERVICE_PDF_DIR_PREFIX
+              value: /xml/pdf
+
+            - name: MSG_CHANNEL
+              value: email
+            - name: MSG_EMAIL_SENDER_ADDR
+              value: feedmaker@terzeron.com
+            - name: MSG_EMAIL_SENDER_NAME
+              value: FeedMaker
+            - name: MSG_EMAIL_RECIPIENT_LIST
+              value: 조영일,terzeron@gmail.com
+            - name: MSG_EMAIL_NHN_CLOUD_APPKEY
+              value: IVVy5NFvzRdekG0m
+            - name: MSG_EMAIL_NHN_CLOUD_SECRETKEY
+              value: kCHMoKSdKhL63VTc03pO5PrMDjbBuOcs
+
+            - name: DEEPL_API_KEY
+              value: 0ead2103-e6eb-4478-ac30-3b295afc939b:fx
+
+          volumeMounts:
+            - name: public-html-xml-pvc
+              mountPath: /xml
+            - name: fma-pvc
+              mountPath: /fma
+      volumes:
+        - name: public-html-xml-pvc
+          persistentVolumeClaim:
+            claimName: public-html-xml-pvc
+        - name: fma-pvc
+          persistentVolumeClaim:
+            claimName: fma-pvc
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fm-frontend
+  namespace: feedmaker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fm-frontend-app
+  template:
+    metadata:
+      labels:
+        app: fm-frontend-app
+    spec:
+      containers:
+        - name: fm-frontend
+          image: registry.terzeron.com/terzeron/fm_frontend:latest
+          ports:
+            - containerPort: 80
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fm-backend
+  namespace: feedmaker
+spec:
+  selector:
+    app: fm-backend-app
+  ports:
+    - protocol: TCP
+      port: 8010
+      targetPort: 8010
+  type: NodePort
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fm-frontend
+  namespace: feedmaker
+spec:
+  selector:
+    app: fm-frontend-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: NodePort
+

@@ -1,0 +1,163 @@
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-storage
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv
+  namespace: feedmaker
+spec:
+  storageClassName: microk8s-hostpath
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  hostPath:
+    path: /home/terzeron/apps/k8s/mysql
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  namespace: feedmaker
+spec:
+  storageClassName: microk8s-hostpath
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  volumeName: mysql-pv
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: public-html-pv
+  namespace: feedmaker
+spec:
+  capacity:
+    storage: 200Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: microk8s-hostpath
+  hostPath:
+    path: /home/terzeron/public_html
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: public-html-pvc
+  namespace: feedmaker
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: microk8s-hostpath
+  volumeName: public-html-pv
+  resources:
+    requests:
+      storage: 200Gi
+  
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: public-html-xml-pv
+  namespace: feedmaker
+spec:
+  capacity:
+    storage: 200Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: microk8s-hostpath
+  hostPath:
+    path: /home/terzeron/public_html/xml
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: public-html-xml-pvc
+  namespace: feedmaker
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: microk8s-hostpath
+  volumeName: public-html-xml-pv
+  resources:
+    requests:
+      storage: 200Gi
+  
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: fma-pv
+  namespace: feedmaker
+spec:
+  capacity:
+    storage: 200Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: microk8s-hostpath
+  hostPath:
+    path: /home/terzeron/workspace/fma
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: fma-pvc
+  namespace: feedmaker
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: microk8s-hostpath
+  volumeName: fma-pv
+  resources:
+    requests:
+      storage: 200Gi
+  
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: fm-pv
+  namespace: feedmaker
+spec:
+  capacity:
+    storage: 1Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: microk8s-hostpath
+  hostPath:
+    path: /home/terzeron/workspace/fm
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: fm-pvc
+  namespace: feedmaker
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: microk8s-hostpath
+  volumeName: fm-pv
+  resources:
+    requests:
+      storage: 1Gi
+  
