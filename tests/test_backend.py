@@ -7,9 +7,21 @@ from fastapi.testclient import TestClient
 
 # Import the app from main
 from backend.main import app
+from bin.models import UserSession
 
 # TestClient 인스턴스 생성
 client = TestClient(app)
+
+# 인증된 세션을 시뮬레이션하기 위한 mock 세션 쿠키
+FAKE_SESSION_ID = "test-session-id-for-unit-tests"
+
+
+def _make_fake_user_session():
+    s = MagicMock(spec=UserSession)
+    s.user_email = "test@example.com"
+    s.user_name = "Test User"
+    return s
+
 
 @pytest.fixture(scope="module", autouse=True)
 def setup_and_teardown():
@@ -19,7 +31,8 @@ def setup_and_teardown():
          patch('bin.db.DB.session_ctx') as mock_session_ctx, \
          patch('backend.feed_maker_manager.FeedMakerManager.search') as mock_search, \
          patch('backend.feed_maker_manager.FeedMakerManager.remove_group') as mock_remove_group, \
-         patch('backend.feed_maker_manager.FeedMakerManager.get_groups') as mock_get_groups:
+         patch('backend.feed_maker_manager.FeedMakerManager.get_groups') as mock_get_groups, \
+         patch('backend.main.get_current_user', return_value=_make_fake_user_session()):
 
         # 세션 컨텍스트 매니저 mock
         mock_session = MagicMock()
@@ -66,6 +79,24 @@ def test_invalid_endpoint():
 
 # CSRF 보호는 SameSite=Lax 쿠키 설정으로 브라우저 레벨에서 처리됨
 # 별도의 CSRF 토큰 검증 테스트는 더 이상 필요하지 않음
+
+
+def test_unauthenticated_request_rejected():
+    """인증 없이 보호된 엔드포인트 접근 시 401 반환"""
+    with patch('backend.main.get_current_user', return_value=None):
+        response = client.get("/groups")
+        assert response.status_code == 401
+
+        response = client.delete("/groups/test_group")
+        assert response.status_code == 401
+
+
+def test_auth_endpoints_exempt():
+    """인증 엔드포인트는 미들웨어 인증 없이 접근 가능"""
+    with patch('backend.main.get_current_user', return_value=None):
+        response = client.get("/auth/me")
+        assert response.status_code == 200
+        assert response.json()["is_authenticated"] is False
 
 
 if __name__ == "__main__":

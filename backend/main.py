@@ -23,7 +23,6 @@ from backend.auth import (
 )
 from bin.feed_maker_util import Env
 from bin.db import DB
-from bin.models import UserSession
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger(__name__)
@@ -64,6 +63,18 @@ def get_feed_maker_manager(request: Request) -> "FeedMakerManager":
         return request.app.state.feed_maker_manager
     except AttributeError as e:
         raise HTTPException(500, detail="FeedMakerManager not initialized, {e}") from e
+
+
+AUTH_EXEMPT_PATHS = {"/auth/login", "/auth/logout", "/auth/me", "/docs", "/openapi.json", "/redoc"}
+
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    if request.url.path not in AUTH_EXEMPT_PATHS:
+        user_session = get_current_user(request)
+        if not user_session:
+            return JSONResponse(status_code=401, content={"detail": "Not authenticated"})
+    return await call_next(request)
 
 
 @app.exception_handler(Exception)
@@ -171,8 +182,7 @@ async def get_me(request: Request) -> dict[str, Any]:
 
 @app.get("/exec_result")
 async def get_exec_result(
-    feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager),
-    user_session: UserSession = Depends(require_auth)
+    feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)
 ) -> dict[str, Any]:
     LOGGER.info("/exec_result -> get_exec_result()")
     response_object: dict[str, Any] = {}
