@@ -1,0 +1,118 @@
+# fm.terzeron.com (frontend)
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: fm-frontend-route
+  namespace: feedmaker
+spec:
+  parentRefs:
+    - name: main-gateway
+      namespace: traefik
+  hostnames:
+    - "fm.terzeron.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: fm-frontend
+          port: 80
+
+---
+# api-fm.terzeron.com (backend)
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: fm-backend-route
+  namespace: feedmaker
+spec:
+  parentRefs:
+    - name: main-gateway
+      namespace: traefik
+  hostnames:
+    - "api-fm.terzeron.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: fm-backend
+          port: 8010
+
+---
+# terzeron.com static files (xml, img, etc)
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: static-files-route
+  namespace: feedmaker
+spec:
+  parentRefs:
+    - name: main-gateway
+      namespace: traefik
+  hostnames:
+    - "terzeron.com"
+  rules:
+    - matches:
+        - path:
+            type: Exact
+            value: /robots.txt
+        - path:
+            type: Exact
+            value: /ads.txt
+        - path:
+            type: Exact
+            value: /apple-touch-icon.png
+        - path:
+            type: Exact
+            value: /image-not-found.png
+        - path:
+            type: Exact
+            value: /1x1.jpg
+      backendRefs:
+        - name: web-nginx
+          port: 80
+    # 루트 경로의 .xml 파일 (RSS 피드) → web-nginx
+    - matches:
+        - path:
+            type: RegularExpression
+            value: "^/[^/]+\\.xml$"
+      backendRefs:
+        - name: web-nginx
+          port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /xml
+        - path:
+            type: PathPrefix
+            value: /img
+        - path:
+            type: PathPrefix
+            value: /book
+        - path:
+            type: PathPrefix
+            value: /bootstrap
+        - path:
+            type: PathPrefix
+            value: /crawler
+        - path:
+            type: PathPrefix
+            value: /doc
+        - path:
+            type: PathPrefix
+            value: /jquery
+        - path:
+            type: PathPrefix
+            value: /oauth
+        - path:
+            type: PathPrefix
+            value: /old
+        - path:
+            type: PathPrefix
+            value: /photo
+      backendRefs:
+        - name: web-nginx
+          port: 80
