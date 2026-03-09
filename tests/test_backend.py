@@ -99,5 +99,41 @@ def test_auth_endpoints_exempt():
         assert response.json()["is_authenticated"] is False
 
 
+def test_login_rejects_invalid_facebook_token():
+    """위조된 Facebook 토큰으로 로그인 시 401 반환"""
+    with patch('backend.main.verify_facebook_token', return_value=False):
+        response = client.post("/auth/login", json={
+            "email": "test@example.com",
+            "name": "Test",
+            "access_token": "fake_token"
+        })
+        assert response.status_code == 401
+
+
+def test_login_rejects_unallowed_email():
+    """유효한 토큰이지만 허용되지 않은 이메일이면 403 반환"""
+    with patch('backend.main.verify_facebook_token', return_value=True), \
+         patch('backend.main.Env.get', return_value="allowed@example.com"):
+        response = client.post("/auth/login", json={
+            "email": "notallowed@example.com",
+            "name": "Test",
+            "access_token": "valid_token"
+        })
+        assert response.status_code == 403
+
+
+def test_path_traversal_returns_400():
+    """경로 탐색 공격이 400 Bad Request로 거부되는지 확인"""
+    # _validate_name이 ValueError를 발생시키면 ValueError 핸들러가 400 반환
+    from backend.feed_maker_manager import FeedMakerManager
+    mock_mgr = MagicMock(spec=FeedMakerManager)
+    mock_mgr.get_site_config.side_effect = ValueError("Invalid group_name: '..etc'")
+    app.state.feed_maker_manager = mock_mgr
+
+    response = client.get("/groups/..etc/site_config")
+    assert response.status_code == 400
+    assert "Invalid" in response.json()["message"]
+
+
 if __name__ == "__main__":
     pytest.main()

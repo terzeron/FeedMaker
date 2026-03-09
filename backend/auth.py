@@ -6,6 +6,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from urllib.parse import urlparse
+import requests as http_requests
 from fastapi import HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 
@@ -55,6 +56,28 @@ def get_cookie_domain() -> Optional[str]:
 COOKIE_DOMAIN = get_cookie_domain()
 
 
+def verify_facebook_token(access_token: str, expected_email: str) -> bool:
+    """Facebook Graph API로 토큰 유효성과 이메일 일치 여부를 검증"""
+    try:
+        response = http_requests.get(
+            "https://graph.facebook.com/me",
+            params={"fields": "email", "access_token": access_token},
+            timeout=10
+        )
+        if response.status_code != 200:
+            LOGGER.warning("Facebook token verification failed: status %d", response.status_code)
+            return False
+        fb_data = response.json()
+        fb_email = fb_data.get("email")
+        if fb_email != expected_email:
+            LOGGER.warning("Facebook token email mismatch: expected=%s, got=%s", expected_email, fb_email)
+            return False
+        return True
+    except http_requests.RequestException as e:
+        LOGGER.error("Facebook token verification request failed: %s", e)
+        return False
+
+
 def generate_session_id() -> str:
     """Generate a secure random session ID"""
     return secrets.token_urlsafe(48)
@@ -85,14 +108,14 @@ def get_session(session_id: str) -> Optional[UserSession]:
         LOGGER.warning("get_session: Empty session_id provided")
         return None
 
-    LOGGER.info(f"get_session: Looking up session_id {session_id[:20]}...")
+    LOGGER.debug("get_session: Looking up session_id %s...", session_id[:8])
     with DB.session_ctx() as session:
         user_session = session.query(UserSession).filter(
             UserSession.session_id == session_id
         ).first()
 
         if not user_session:
-            LOGGER.warning(f"get_session: No session found in DB for {session_id[:20]}...")
+            LOGGER.warning("get_session: No session found for %s...", session_id[:8])
             return None
 
         # Check if session is expired
@@ -102,7 +125,7 @@ def get_session(session_id: str) -> Optional[UserSession]:
             expires_at = expires_at.replace(tzinfo=timezone.utc)
 
         if expires_at < datetime.now(timezone.utc):
-            LOGGER.info(f"Session {session_id[:20]}... expired")
+            LOGGER.info("Session %s... expired", session_id[:8])
             session.delete(user_session)
             return None
 
@@ -125,7 +148,7 @@ def delete_session(session_id: str) -> bool:
 
         if user_session:
             session.delete(user_session)
-            LOGGER.info(f"Deleted session {session_id}")
+            LOGGER.info("Deleted session %s...", session_id[:8])
             return True
 
     return False
@@ -146,16 +169,15 @@ def cleanup_expired_sessions() -> int:
 def get_current_user(request: Request) -> Optional[UserSession]:
     """Get current authenticated user from session cookie"""
     session_id = request.cookies.get(SESSION_COOKIE_NAME)
-    LOGGER.info(f"get_current_user: session_id from cookie = {session_id}")
     if not session_id:
-        LOGGER.warning("get_current_user: No session_id cookie found")
+        LOGGER.debug("get_current_user: No session_id cookie found")
         return None
 
     user_session = get_session(session_id)
     if user_session:
-        LOGGER.info(f"get_current_user: Found valid session for {user_session.user_email}")
+        LOGGER.debug("get_current_user: Valid session for %s", user_session.user_email)
     else:
-        LOGGER.warning(f"get_current_user: No valid session found for session_id {session_id}")
+        LOGGER.warning("get_current_user: Invalid session %s...", session_id[:8])
     return user_session
 
 

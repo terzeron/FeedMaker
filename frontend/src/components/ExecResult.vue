@@ -23,6 +23,7 @@
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
+import DOMPurify from "dompurify";
 import { getApiUrlPath } from "@/utils/api";
 
 // markdown-it을 동적으로 import하여 안전하게 처리
@@ -85,7 +86,7 @@ const renderedMarkdown = computed(() => {
     if (!md) {
       return source.value;
     }
-    return md.render(source.value);
+    return DOMPurify.sanitize(md.render(source.value));
   } catch (err) {
     console.error("Markdown rendering error:", err);
     return source.value || "";

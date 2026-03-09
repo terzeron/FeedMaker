@@ -3,12 +3,16 @@
 
 
 import os
+import re
+import shutil
 from pathlib import Path
 import json
 import logging.config
 from shutil import rmtree
 from typing import Any, Optional
 import xml.etree.ElementTree as ET
+
+from git import Repo, InvalidGitRepositoryError
 
 from bin.run import FeedMakerRunner
 from bin.feed_maker_util import Process, PathUtil, Env
@@ -22,6 +26,15 @@ from utils.search_manga_site import SearchManager
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger(__name__)
+
+
+_SAFE_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9가-힣_.\-]+$')
+
+
+def _validate_name(name: str, label: str = "name") -> None:
+    """경로 탐색 공격 방지를 위한 이름 검증"""
+    if not name or not _SAFE_NAME_PATTERN.match(name):
+        raise ValueError(f"Invalid {label}: {name!r}")
 
 
 class FeedMakerManager:
@@ -49,28 +62,49 @@ class FeedMakerManager:
         del self
         return None
 
+    def _get_repo(self) -> Repo:
+        return Repo(self.work_dir_path)
+
     def _git_add(self, feed_dir_path: Path) -> tuple[str, Optional[str]]:
         feed_name = feed_dir_path.name
-        conf_file_relative = PathUtil.short_path(feed_dir_path)
-        os.chdir(self.work_dir_path)
-        cmd = f"git add {conf_file_relative} && git commit -m 'add {feed_name}'"
-        return Process.exec_cmd(cmd, dir_path=self.work_dir_path)
+        try:
+            repo = self._get_repo()
+            rel_path = str(feed_dir_path.relative_to(self.work_dir_path))
+            repo.index.add([rel_path])
+            repo.index.commit(f"add {feed_name}")
+            return f"add {feed_name}", None
+        except (InvalidGitRepositoryError, Exception) as e:
+            LOGGER.error("git add failed: %s", e)
+            return "", str(e)
 
     def _git_rm(self, feed_dir_path: Path) -> tuple[str, Optional[str]]:
         feed_name = feed_dir_path.name
-        conf_file_relative = PathUtil.short_path(feed_dir_path)
-        os.chdir(self.work_dir_path)
-        cmd = f"git rm -r {conf_file_relative} && git commit -m 'remove {feed_name}'"
-        return Process.exec_cmd(cmd, dir_path=self.work_dir_path)
+        try:
+            repo = self._get_repo()
+            rel_path = str(feed_dir_path.relative_to(self.work_dir_path))
+            repo.index.remove([rel_path], r=True)
+            repo.index.commit(f"remove {feed_name}")
+            return f"remove {feed_name}", None
+        except (InvalidGitRepositoryError, Exception) as e:
+            LOGGER.error("git rm failed: %s", e)
+            return "", str(e)
 
     def _git_mv(self, feed_dir_path: Path, new_feed_dir_path: Path) -> tuple[str, Optional[str]]:
         feed_dir_name = feed_dir_path.name
         new_feed_dir_name = new_feed_dir_path.name
-        feed_dir_path_relative = PathUtil.short_path(feed_dir_path)
-        new_feed_dir_path_relative = PathUtil.short_path(new_feed_dir_path)
-        os.chdir(self.work_dir_path)
-        cmd = f"git mv {feed_dir_path_relative} {new_feed_dir_path_relative} && git commit -m 'rename {feed_dir_name} to {new_feed_dir_name}' || mv {feed_dir_path_relative} {new_feed_dir_path_relative}"
-        return Process.exec_cmd(cmd, dir_path=self.work_dir_path)
+        try:
+            repo = self._get_repo()
+            repo.index.move([str(feed_dir_path), str(new_feed_dir_path)])
+            repo.index.commit(f"rename {feed_dir_name} to {new_feed_dir_name}")
+            return f"rename {feed_dir_name} to {new_feed_dir_name}", None
+        except (InvalidGitRepositoryError, Exception) as e:
+            LOGGER.warning("git mv failed, falling back to shutil.move: %s", e)
+            try:
+                shutil.move(str(feed_dir_path), str(new_feed_dir_path))
+                return f"move {feed_dir_name} to {new_feed_dir_name}", None
+            except OSError as move_err:
+                LOGGER.error("shutil.move also failed: %s", move_err)
+                return "", str(move_err)
 
     def _read_config_file(self, feed_dir_path: Path) -> dict[str, Any]:
         conf_file_path = feed_dir_path / Config.DEFAULT_CONF_FILE
@@ -213,6 +247,7 @@ class FeedMakerManager:
 
     def get_site_config(self, group_name: str) -> tuple[dict[str, str], str]:
         LOGGER.debug("# get_site_config(group_name='%s')", group_name)
+        _validate_name(group_name, "group_name")
         path = self.work_dir_path / group_name / self.SITE_CONF_FILE
         if path.is_file():
             with path.open('r', encoding='utf-8') as infile:
@@ -222,6 +257,7 @@ class FeedMakerManager:
 
     def save_site_config(self, group_name: str, post_data: dict[str, Any]) -> tuple[bool, str]:
         LOGGER.debug("# save_site_config(group_name='%s', post_data=%r)", group_name, post_data)
+        _validate_name(group_name, "group_name")
         path = self.work_dir_path / group_name / self.SITE_CONF_FILE
         try:
             with path.open('w', encoding='utf-8') as outfile:
@@ -232,6 +268,7 @@ class FeedMakerManager:
 
     def extract_titles_from_public_feed(self, feed_name: str) -> tuple[list[str] | str, str]:
         LOGGER.debug("# extract_titles_from_public_feed(feed_name='%s')", feed_name)
+        _validate_name(feed_name, "feed_name")
         public_feed_file_path = FeedManager.public_feed_dir_path / f"{feed_name}.xml"
         if not public_feed_file_path.exists():
             return "FILE_NOT_FOUND", f"피드 파일이 존재하지 않습니다: {public_feed_file_path}"
@@ -256,6 +293,7 @@ class FeedMakerManager:
     @staticmethod
     def get_feeds_by_group(group_name: str) -> tuple[list[dict[str, str]], str]:
         LOGGER.debug("# get_feeds_by_group(group_name='%s')", group_name)
+        _validate_name(group_name, "group_name")
         result = FeedManager.get_feeds_by_group(group_name)
         if result:
             result.sort(key=lambda obj: obj["title"])
@@ -265,6 +303,8 @@ class FeedMakerManager:
     @staticmethod
     def get_feed_info_by_name(group_name: str, feed_name: str) -> tuple[dict[str, Any], str]:
         LOGGER.debug("# get_feed_info_by_name(group_name='%s', feed_name='%s')", group_name, feed_name)
+        _validate_name(group_name, "group_name")
+        _validate_name(feed_name, "feed_name")
         feed_info = FeedManager.get_feed_info(group_name, feed_name)
         if feed_info:
             return feed_info, ""
@@ -272,6 +312,8 @@ class FeedMakerManager:
 
     def save_config_file(self, group_name: str, feed_name: str, post_data: dict[str, Any]) -> tuple[bool, str]:
         LOGGER.debug("# save_config_file(group_name='%s', feed_name='%s', post_data=%r)", group_name, feed_name, post_data)
+        _validate_name(group_name, "group_name")
+        _validate_name(feed_name, "feed_name")
         if "configuration" not in post_data:
             return False, "invalid configuration format (no 'configuration')"
 
@@ -293,6 +335,8 @@ class FeedMakerManager:
 
     def run(self, group_name: str, feed_name: str) -> tuple[bool, str]:
         LOGGER.debug("# run(group_name='%s', feed_name='%s')", group_name, feed_name)
+        _validate_name(group_name, "group_name")
+        _validate_name(feed_name, "feed_name")
         feed_dir_path = self.work_dir_path / group_name / feed_name
         conf_file_path = feed_dir_path / Config.DEFAULT_CONF_FILE
         with conf_file_path.open('rb') as infile:
@@ -316,6 +360,7 @@ class FeedMakerManager:
 
     def _remove_public_img_pdf_feed_files(self, feed_name: str) -> None:
         LOGGER.debug("# _remove_public_img_pdf_feed_files(feed_name='%s')", feed_name)
+        _validate_name(feed_name, "feed_name")
         feed_img_dir_path = self.img_dir_path / feed_name
         feed_pdf_dir_path = self.pdf_dir_path / feed_name
 
@@ -329,6 +374,8 @@ class FeedMakerManager:
 
     def remove_list(self, group_name: str, feed_name: str) -> None:
         LOGGER.debug("# remove_list(group_name='%s', feed_name='%s')", group_name, feed_name)
+        _validate_name(group_name, "group_name")
+        _validate_name(feed_name, "feed_name")
         feed_dir_path = self.work_dir_path / group_name / feed_name
         list_dir_path = feed_dir_path / "newlist"
         if list_dir_path.is_dir():
@@ -336,6 +383,8 @@ class FeedMakerManager:
 
     def remove_html(self, group_name: str, feed_name: str) -> None:
         LOGGER.debug("# remove_html(group_name='%s', feed_name='%s')", group_name, feed_name)
+        _validate_name(group_name, "group_name")
+        _validate_name(feed_name, "feed_name")
         feed_dir_path = self.work_dir_path / group_name / feed_name
         html_dir_path = feed_dir_path / "html"
         if html_dir_path.is_dir():
@@ -344,16 +393,22 @@ class FeedMakerManager:
 
     def remove_html_file(self, group_name: str, feed_name: str, html_file_name: str) -> None:
         LOGGER.debug("# remove_html_file(group_name='%s', feed_name='%s')", group_name, feed_name)
+        _validate_name(group_name, "group_name")
+        _validate_name(feed_name, "feed_name")
+        _validate_name(html_file_name, "html_file_name")
         html_file_path = self.work_dir_path / group_name / feed_name / "html" / html_file_name
         html_file_path.unlink(missing_ok=True)
         self.html_file_manager.remove_html_file_in_path_from_info("file_path", html_file_path, do_remove_file=True)
 
     def remove_public_feed(self, feed_name: str) -> None:
         LOGGER.debug("# remove_public_feed(feed_name='%s')", feed_name)
+        _validate_name(feed_name, "feed_name")
         self.feed_manager.remove_public_feed_by_feed_name(feed_name, do_remove_file=True)
 
     def remove_feed(self, group_name: str, feed_name: str) -> tuple[bool, str]:
         LOGGER.debug(f"# remove_feed({group_name}, {feed_name})")
+        _validate_name(group_name, "group_name")
+        _validate_name(feed_name, "feed_name")
         feed_dir_path = self.work_dir_path / group_name / feed_name
         conf_file_path = feed_dir_path / Config.DEFAULT_CONF_FILE
         if not feed_dir_path or not conf_file_path:
@@ -380,6 +435,7 @@ class FeedMakerManager:
 
     def remove_group(self, group_name: str) -> tuple[bool, str]:
         LOGGER.debug(f"# remove_group({group_name})")
+        _validate_name(group_name, "group_name")
         group_dir_path = self.work_dir_path / group_name
         if not group_dir_path:
             return False, f"can't remove group '{group_name}'"
@@ -409,7 +465,7 @@ class FeedMakerManager:
     @staticmethod
     def toggle_feed(feed_name: str) -> tuple[str, str]:
         LOGGER.debug("# toggle_feed(feed_name='%s')", feed_name)
-
+        _validate_name(feed_name, "feed_name")
         if FeedManager.toggle_feed(feed_name):
             return feed_name, ""
         return "", f"can't toggle feed '{feed_name}'"
@@ -417,7 +473,7 @@ class FeedMakerManager:
     @staticmethod
     def toggle_group(group_name: str) -> tuple[str, str]:
         LOGGER.debug(f"# toggle_group({group_name})")
-
+        _validate_name(group_name, "group_name")
         if FeedManager.toggle_group(group_name):
             return group_name, ""
         return "", f"can't toggle group '{group_name}'"
@@ -425,4 +481,6 @@ class FeedMakerManager:
     @staticmethod
     def check_running(group_name: str, feed_name: str) -> Optional[bool]:
         # LOGGER.debug(f"# check_running({group_name}, {feed_name})")
+        _validate_name(group_name, "group_name")
+        _validate_name(feed_name, "feed_name")
         return FeedMakerRunner.check_running(group_name, feed_name)

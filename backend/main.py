@@ -19,7 +19,8 @@ import uvicorn
 from backend.feed_maker_manager import FeedMakerManager
 from backend.auth import (
     require_auth, create_session, delete_session, cleanup_expired_sessions,
-    get_current_user, set_session_cookie, clear_session_cookie
+    get_current_user, set_session_cookie, clear_session_cookie,
+    verify_facebook_token
 )
 from bin.feed_maker_util import Env
 from bin.db import DB
@@ -79,6 +80,12 @@ async def auth_middleware(request: Request, call_next):
     return await call_next(request)
 
 
+@app.exception_handler(ValueError)
+async def value_error_handler(_request: Request, exc: ValueError) -> JSONResponse:
+    LOGGER.warning("Invalid input: %s", exc)
+    return JSONResponse(status_code=400, content={"message": str(exc)})
+
+
 @app.exception_handler(Exception)
 async def exception_handler(_request: Request, _exc: Exception) -> JSONResponse:
     logging.exception("An error occurred")
@@ -108,12 +115,17 @@ async def login(request: LoginRequest) -> JSONResponse:
     - 서버에 세션 생성하고 httpOnly 쿠키 설정
     - 허용된 이메일만 로그인 가능
     """
-    LOGGER.info(f"POST /auth/login -> login({request.email})")
+    LOGGER.info("POST /auth/login -> login(%s)", request.email)
+
+    # Facebook 토큰 검증
+    if not verify_facebook_token(request.access_token, request.email):
+        LOGGER.warning("Facebook token verification failed for %s", request.email)
+        raise HTTPException(status_code=401, detail="Facebook 토큰 검증에 실패했습니다.")
 
     # 허용된 이메일 목록 확인
     login_allowed_email_list = Env.get("FM_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST", "").split(",")
     if request.email not in login_allowed_email_list:
-        LOGGER.warning(f"Unauthorized login attempt from {request.email}")
+        LOGGER.warning("Unauthorized login attempt from %s", request.email)
         raise HTTPException(status_code=403, detail="이메일이 허용되지 않았습니다.")
 
     # 세션 생성
@@ -130,7 +142,7 @@ async def login(request: LoginRequest) -> JSONResponse:
 
         return response
     except Exception as e:
-        LOGGER.error(f"Login failed for {request.email}: {str(e)}")
+        LOGGER.error("Login failed for %s: %s", request.email, e)
         raise HTTPException(status_code=500, detail="로그인 중 오류가 발생했습니다.")
 
 
@@ -165,16 +177,15 @@ async def get_me(request: Request) -> dict[str, Any]:
     - httpOnly 쿠키에서 세션 확인
     - 로그인 여부와 사용자 정보 반환
     """
-    LOGGER.info(f"/auth/me called, cookies: {request.cookies}")
     user_session = get_current_user(request)
 
     if not user_session:
-        LOGGER.warning("/auth/me: No valid user session found")
+        LOGGER.debug("/auth/me: No valid user session found")
         return {
             "is_authenticated": False
         }
 
-    LOGGER.info(f"/auth/me: User authenticated: {user_session.user_email}")
+    LOGGER.debug("/auth/me: User authenticated: %s", user_session.user_email)
     return {
         "is_authenticated": True,
         "email": user_session.user_email,

@@ -117,6 +117,7 @@
 
 <script>
 import axios from "axios";
+import DOMPurify from "dompurify";
 import { getApiUrlPath } from "../utils/api";
 
 import { library } from "@fortawesome/fontawesome-svg-core";
@@ -205,7 +206,7 @@ export default {
                 const textContent = rawHtml
                   .replace(/<[^>]*>/g, "")
                   .trim();
-                this.siteResults[index].html = textContent ? rawHtml : "";
+                this.siteResults[index].html = textContent ? DOMPurify.sanitize(rawHtml) : "";
               } else {
                 this.siteResults[index].status = "error";
                 this.siteResults[index].error =
