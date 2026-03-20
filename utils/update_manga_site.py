@@ -7,7 +7,7 @@ import json
 import getopt
 import logging.config
 from pprint import pprint
-from typing import Dict, Any
+from typing import Any
 from pathlib import Path
 from bin.feed_maker_util import Process, Config, NotFoundConfigFileError, InvalidConfigFileError, NotFoundConfigItemError
 
@@ -17,8 +17,8 @@ LOGGER = logging.getLogger()
 
 # Constants
 SITE_CONFIG_FILE = "site_config.json"
-URL_PATTERN = r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+)(?P<post>[^/]*)'
-LIST_URL_PATTERN = r'(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+)(?P<post>[\./].*)'
+URL_PATTERN = r"(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+)(?P<post>[^/]*)"
+LIST_URL_PATTERN = r"(?P<pre>https?://[\w\.\-]+\D)(?P<variant_postfix>\d+)(?P<post>[\./].*)"
 
 
 def print_usage() -> None:
@@ -27,19 +27,19 @@ def print_usage() -> None:
     print("\t\t\t-t: run for test (without updating)")
 
 
-def load_site_config(site_config_path: Path) -> Dict[str, Any]:
+def load_site_config(site_config_path: Path) -> dict[str, Any]:
     """Load and validate site configuration file."""
     if not site_config_path.is_file():
         raise NotFoundConfigFileError(f"can't find configuration file '{site_config_path}'")
 
     with site_config_path.open("r", encoding="utf-8") as f:
-        site_config = json.load(f)
+        site_config: dict[str, Any] = json.load(f)
         if not site_config:
             raise InvalidConfigFileError(f"can't get configuration from '{site_config_path}' with invalid format")
         return site_config
 
 
-def validate_site_config(site_config: Dict[str, Any]) -> tuple[str, str]:
+def validate_site_config(site_config: dict[str, Any]) -> tuple[str, str]:
     """Validate site configuration and return url and referer."""
     url = site_config.get("url", "")
     if not url:
@@ -53,7 +53,7 @@ def validate_site_config(site_config: Dict[str, Any]) -> tuple[str, str]:
 
 def update_url_pattern(url: str, new_number: int) -> str:
     """Update URL pattern with new number."""
-    return re.sub(URL_PATTERN, r'\g<pre>' + str(new_number) + r'\g<post>', url)
+    return re.sub(URL_PATTERN, r"\g<pre>" + str(new_number) + r"\g<post>", url)
 
 
 def update_list_url_pattern(list_url: str, new_number: int) -> str:
@@ -64,7 +64,7 @@ def update_list_url_pattern(list_url: str, new_number: int) -> str:
     return list_url
 
 
-def save_site_config(site_config: Dict[str, Any], site_config_path: Path, test_run: bool) -> None:
+def save_site_config(site_config: dict[str, Any], site_config_path: Path, test_run: bool) -> None:
     """Save site configuration to file."""
     if test_run:
         print(site_config.get("url", ""))
@@ -132,23 +132,23 @@ def cleanup_feed_directory(entry_path: Path) -> None:
 
 def process_feed_directory(entry_path: Path, new_number: int, test_run: bool) -> None:
     """Process a single feed directory."""
-    print(f"- {entry_path}: ", end='')
+    print(f"- {entry_path}: ", end="")
     conf_file_path = entry_path / Config.DEFAULT_CONF_FILE
 
     if not test_run:
-        print(".", end='')
+        print(".", end="")
 
     update_feed_config(conf_file_path, new_number, test_run)
 
     if not test_run:
-        print(".", end='')
+        print(".", end="")
         if conf_file_path.is_file():
             git_add_file(conf_file_path)
 
-        print(".", end='')
+        print(".", end="")
         cleanup_feed_directory(entry_path)
 
-        print(".", end='')
+        print(".", end="")
         print("")
 
 

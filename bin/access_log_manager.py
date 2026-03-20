@@ -21,15 +21,32 @@ class AccessLogManager:
 
     def __init__(self, *, loki_url: Optional[str] = None) -> None:
         self.loki_url = (loki_url if loki_url else Env.get("FM_LOKI_URL")) + "/query_range"
+        self.verify_ssl = self._get_verify_ssl()
 
     def __del__(self) -> None:
         del self.loki_url
+        del self.verify_ssl
+
+    @staticmethod
+    def _get_verify_ssl() -> bool | str:
+        ca_bundle = Env.get("FM_LOKI_CA_BUNDLE", "").strip()
+        if ca_bundle:
+            path = Path(ca_bundle)
+            if path.is_file():
+                return str(path)
+            LOGGER.warning("FM_LOKI_CA_BUNDLE not found: %s", ca_bundle)
+
+        raw = Env.get("FM_LOKI_VERIFY_SSL", "true").strip().lower()
+        if raw in ("0", "false", "no", "off"):
+            LOGGER.warning("FM_LOKI_VERIFY_SSL disabled; TLS verification is off")
+            return False
+        return True
 
     def loki_search(self, params: dict[str, Any]) -> tuple[list[str], dict[str, Any], Optional[int]]:
         logs: list[str] = []
         stats: dict[str, Any] = {}
         last_ts: Optional[int] = None
-        response = requests.get(self.loki_url, params=params, timeout=60, verify=False)
+        response = requests.get(self.loki_url, params=params, timeout=60, verify=self.verify_ssl)
         response.raise_for_status()
         if response:
             json_data = response.json()

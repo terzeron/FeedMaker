@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
 
+import subprocess
 import sys
 import re
 from pathlib import Path
-from bin.feed_maker_util import URL, IO, Process, Env
+from shutil import which
+from bin.feed_maker_util import URL, IO, Env
 
 
 def main() -> int:
@@ -22,15 +24,22 @@ def main() -> int:
             if not image_file_path.is_file():
                 video_file_path = Path(video_file)
                 if not video_file_path.is_file():
-                    cmd = f"rtmpdump -q -r '{movie_url}' > {video_file}"
-                    print(f"<!-- {cmd} -->")
-                    result, error = Process.exec_cmd(cmd)
-                    print(f"<!-- {result}, {error} -->")
+                    rtmpdump_path = which("rtmpdump")
+                    if rtmpdump_path:
+                        print(f"<!-- rtmpdump -q -r '{movie_url}' > {video_file} -->")
+                        try:
+                            with open(video_file_path, "wb") as f:
+                                subprocess.run([rtmpdump_path, "-q", "-r", movie_url], stdout=f, stderr=subprocess.PIPE, check=True)
+                        except subprocess.CalledProcessError as e:
+                            print(f"<!-- error: {e.stderr.decode(errors='replace') if e.stderr else e} -->")
 
-                cmd = f"extract_images_from_video.sh '{video_file}' '{img_dir_path}/{id_str}_' > /dev/null 2>&1"
-                print(f"<!-- {cmd} -->")
-                result, error = Process.exec_cmd(cmd)
-                print(f"<!-- {result}, {error}-->")
+                extract_path = which("extract_images_from_video.sh")
+                if extract_path:
+                    print(f"<!-- extract_images_from_video.sh '{video_file}' '{img_dir_path}/{id_str}_' -->")
+                    try:
+                        subprocess.run([extract_path, video_file, f"{img_dir_path}/{id_str}_"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+                    except subprocess.CalledProcessError as e:
+                        print(f"<!-- error: {e} -->")
 
             for entry in img_dir_path.iterdir():
                 if re.search(id_str + r"_\d+\.jpg", entry.name):

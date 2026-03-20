@@ -39,7 +39,7 @@ class HtmlFileManager:
                 feed_info = FeedManager.get_feed_info(group_name, feed_name)
                 LOGGER.debug("Feed info for %s/%s: %s", group_name, feed_name, feed_info)
                 if feed_info and "feed_title" in feed_info:
-                    return feed_info["feed_title"]
+                    return str(feed_info["feed_title"])
                 return feed_name
             return ""
         except (OSError, IOError, KeyError, TypeError, ValueError, AttributeError, RuntimeError) as e:
@@ -60,14 +60,7 @@ class HtmlFileManager:
                 size = row.size
                 update_date = row.update_date
                 feed_title = HtmlFileManager._get_feed_title_from_path(feed_dir_path)
-                html_file_size_map[file_name] = {
-                    "file_name": file_name,
-                    "file_path": file_path,
-                    "feed_dir_path": feed_dir_path,
-                    "size": size,
-                    "update_date": update_date,
-                    "feed_title": feed_title
-                }
+                html_file_size_map[file_name] = {"file_name": file_name, "file_path": file_path, "feed_dir_path": feed_dir_path, "size": size, "update_date": update_date, "feed_title": feed_title}
 
         return html_file_size_map
 
@@ -85,14 +78,7 @@ class HtmlFileManager:
                 count = row.count_with_many_image_tag
                 update_date = row.update_date
                 feed_title = HtmlFileManager._get_feed_title_from_path(feed_dir_path)
-                html_file_with_many_image_tag_map[file_name] = {
-                    "file_name": file_name,
-                    "file_path": file_path,
-                    "feed_dir_path": feed_dir_path,
-                    "count": count,
-                    "update_date": update_date,
-                    "feed_title": feed_title
-                }
+                html_file_with_many_image_tag_map[file_name] = {"file_name": file_name, "file_path": file_path, "feed_dir_path": feed_dir_path, "count": count, "update_date": update_date, "feed_title": feed_title}
 
         return html_file_with_many_image_tag_map
 
@@ -110,14 +96,7 @@ class HtmlFileManager:
                 count = row.count_without_image_tag
                 update_date = row.update_date
                 feed_title = HtmlFileManager._get_feed_title_from_path(feed_dir_path)
-                html_file_without_image_tag_map[file_name] = {
-                    "file_name": file_name,
-                    "file_path": file_path,
-                    "feed_dir_path": feed_dir_path,
-                    "count": count,
-                    "update_date": update_date,
-                    "feed_title": feed_title
-                }
+                html_file_without_image_tag_map[file_name] = {"file_name": file_name, "file_path": file_path, "feed_dir_path": feed_dir_path, "count": count, "update_date": update_date, "feed_title": feed_title}
 
         return html_file_without_image_tag_map
 
@@ -135,14 +114,7 @@ class HtmlFileManager:
                 count = row.count_with_image_not_found
                 update_date = row.update_date
                 feed_title = HtmlFileManager._get_feed_title_from_path(feed_dir_path)
-                html_file_image_not_found_map[file_name] = {
-                    "file_name": file_name,
-                    "file_path": file_path,
-                    "feed_dir_path": feed_dir_path,
-                    "count": count,
-                    "update_date": update_date,
-                    "feed_title": feed_title
-                }
+                html_file_image_not_found_map[file_name] = {"file_name": file_name, "file_path": file_path, "feed_dir_path": feed_dir_path, "count": count, "update_date": update_date, "feed_title": feed_title}
 
         return html_file_image_not_found_map
 
@@ -190,8 +162,8 @@ class HtmlFileManager:
                 update_date = datetime.fromtimestamp(st.st_mtime, timezone.utc)
                 size = st.st_size
 
-                #if size < FeedMaker.get_size_of_template_with_image_tag(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"), feed_name):
-                #print(f"{file_path_str=}, {size=}")
+                # if size < FeedMaker.get_size_of_template_with_image_tag(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"), feed_name):
+                # print(f"{file_path_str=}, {size=}")
                 s.merge(HtmlFileInfo(file_path=file_path_str, file_name=file_name, feed_dir_path=feed_dir_path_str, size=size, update_date=update_date))
                 s.flush()
 
@@ -266,11 +238,11 @@ class HtmlFileManager:
         image_tag_count = 0
 
         try:
-            with path.open('r', encoding="utf-8") as infile:
+            with path.open("r", encoding="utf-8") as infile:
                 for line in infile:
-                    if re.search(r'1x1\.jpg', line):
+                    if re.search(r"1x1\.jpg", line):
                         image_tag_count += 1
-                    if re.search(r'image-not-found\.png', line):
+                    if re.search(r"image-not-found\.png", line):
                         count_with_image_not_found += 1
         except (FileNotFoundError, UnicodeDecodeError) as e:
             LOGGER.warning("Could not process file %s: %s", file_path_str, e)
@@ -280,13 +252,4 @@ class HtmlFileManager:
         elif image_tag_count < 1:
             count_without_image_tag = 1
 
-        return {
-            "file_path": file_path_str,
-            "file_name": file_name,
-            "feed_dir_path": feed_dir_path_str,
-            "size": size,
-            "update_date": mtime,
-            "count_with_many_image_tag": count_with_many_image_tag,
-            "count_without_image_tag": count_without_image_tag,
-            "count_with_image_not_found": count_with_image_not_found,
-        }
+        return {"file_path": file_path_str, "file_name": file_name, "feed_dir_path": feed_dir_path_str, "size": size, "update_date": mtime, "count_with_many_image_tag": count_with_many_image_tag, "count_without_image_tag": count_without_image_tag, "count_with_image_not_found": count_with_image_not_found}

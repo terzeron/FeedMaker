@@ -36,7 +36,15 @@ dependencies = [
     "feedparser>=6.0.12",
     "termcolor>=3.1.0",
     "gitpython>=3.1.46",
+    "defusedxml>=0.7.1",
 ]
+
+[tool.ruff]
+line-length = 320
+
+[tool.ruff.format]
+quote-style = "double"
+skip-magic-trailing-comma = true
 
 [tool.black]
 line-length = 120
@@ -189,4 +197,7 @@ dev = [
     "pytest-cov>=7.0.0",
     "testcontainers>=4.8.2",
     "cryptography>=46.0.0",
+    "types-requests>=2.32.4.20260107",
+    "types-python-dateutil>=2.9.0.20260305",
+    "types-beautifulsoup4>=4.12.0.20250516",
 ]

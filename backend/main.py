@@ -9,7 +9,9 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Type, Optional
 from types import TracebackType
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from starlette.responses import Response
 from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,11 +19,7 @@ from pydantic import BaseModel
 import uvicorn
 
 from backend.feed_maker_manager import FeedMakerManager
-from backend.auth import (
-    require_auth, create_session, delete_session, cleanup_expired_sessions,
-    get_current_user, set_session_cookie, clear_session_cookie,
-    verify_facebook_token
-)
+from backend.auth import create_session, delete_session, get_current_user, set_session_cookie, clear_session_cookie, verify_facebook_token, require_admin
 from bin.feed_maker_util import Env
 from bin.db import DB
 
@@ -30,7 +28,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Startup
     DB.create_all_tables()
     app.state.feed_maker_manager = FeedMakerManager()
@@ -39,51 +37,42 @@ async def lifespan(app: FastAPI):
     app.state.feed_maker_manager.aclose()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
 
 frontend_url = Env.get("FM_FRONTEND_URL")
-origins = [
-    frontend_url,
-    "https://127.0.0.1:8081",
-    "https://localhost:8081",
-    "https://127.0.0.1:8082",
-    "https://localhost:8082"
-]
+origins = [frontend_url, "https://127.0.0.1:8081", "https://localhost:8081", "https://127.0.0.1:8082", "https://localhost:8082"]
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
-    allow_headers=["Content-Type", "Authorization"]
-)
+app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=True, allow_methods=["GET", "POST", "PUT", "DELETE"], allow_headers=["Content-Type", "Authorization"])
 
 
 def get_feed_maker_manager(request: Request) -> "FeedMakerManager":
     try:
-        return request.app.state.feed_maker_manager
+        manager: FeedMakerManager = request.app.state.feed_maker_manager
+        return manager
     except AttributeError as e:
         raise HTTPException(500, detail="FeedMakerManager not initialized, {e}") from e
 
 
-AUTH_EXEMPT_PATHS = {"/auth/login", "/auth/logout", "/auth/me", "/docs", "/openapi.json", "/redoc"}
+AUTH_EXEMPT_PATHS = {"/auth/login", "/auth/logout", "/auth/me"}
 
 
 @app.middleware("http")
-async def auth_middleware(request: Request, call_next):
+async def auth_middleware(request: Request, call_next: Any) -> Response:
     if request.method == "OPTIONS":
-        return await call_next(request)
+        response: Response = await call_next(request)
+        return response
     if request.url.path not in AUTH_EXEMPT_PATHS:
         user_session = get_current_user(request)
         if not user_session:
             return JSONResponse(status_code=401, content={"detail": "Not authenticated"})
-    return await call_next(request)
+    response = await call_next(request)
+    return response
 
 
 @app.exception_handler(ValueError)
 async def value_error_handler(_request: Request, exc: ValueError) -> JSONResponse:
     LOGGER.warning("Invalid input: %s", exc)
-    return JSONResponse(status_code=400, content={"message": str(exc)})
+    return JSONResponse(status_code=400, content={"message": "Invalid input"})
 
 
 @app.exception_handler(Exception)
@@ -130,12 +119,9 @@ async def login(request: LoginRequest) -> JSONResponse:
 
     # 세션 생성
     try:
-        session_id = create_session(request.email, request.name, request.access_token)
+        session_id = create_session(request.email, request.name)
 
-        response = JSONResponse(content={
-            "status": "success",
-            "message": "로그인되었습니다."
-        })
+        response = JSONResponse(content={"status": "success", "message": "로그인되었습니다."})
 
         # httpOnly 쿠키 설정 (SameSite=Lax로 CSRF 방어)
         set_session_cookie(response, session_id)
@@ -159,10 +145,7 @@ async def logout(request: Request) -> JSONResponse:
     if session_id:
         delete_session(session_id)
 
-    response = JSONResponse(content={
-        "status": "success",
-        "message": "로그아웃되었습니다."
-    })
+    response = JSONResponse(content={"status": "success", "message": "로그아웃되었습니다."})
 
     # 쿠키 제거
     clear_session_cookie(response)
@@ -181,22 +164,14 @@ async def get_me(request: Request) -> dict[str, Any]:
 
     if not user_session:
         LOGGER.debug("/auth/me: No valid user session found")
-        return {
-            "is_authenticated": False
-        }
+        return {"is_authenticated": False}
 
     LOGGER.debug("/auth/me: User authenticated: %s", user_session.user_email)
-    return {
-        "is_authenticated": True,
-        "email": user_session.user_email,
-        "name": user_session.user_name
-    }
+    return {"is_authenticated": True, "email": user_session.user_email, "name": user_session.user_name}
 
 
 @app.get("/exec_result")
-async def get_exec_result(
-    feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)
-) -> dict[str, Any]:
+async def get_exec_result(feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("/exec_result -> get_exec_result()")
     response_object: dict[str, Any] = {}
     result, error = feed_maker_manager.get_exec_result()
@@ -219,8 +194,7 @@ class ProblemType(str, Enum):
 
 
 @app.get("/problems/{problem_type}")
-async def get_problems(problem_type: ProblemType,
-                       feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+async def get_problems(problem_type: ProblemType, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("/problems/%r -> get_problems_%r()", problem_type, problem_type)
     response_object: dict[str, Any] = {}
     info_methods = {
@@ -253,13 +227,7 @@ async def search(keyword: str, feed_maker_manager: FeedMakerManager = Depends(ge
     result, error = feed_maker_manager.search(keyword)
     if result or not error:
         # is_active 필드가 없는 경우 추가
-        response_object["feeds"] = [
-            {
-                **feed,
-                "is_active": feed.get("is_active") if "is_active" in feed else not feed["feed_name"].startswith("_")
-            }
-            for feed in result
-        ]
+        response_object["feeds"] = [{**feed, "is_active": feed.get("is_active") if "is_active" in feed else not feed["feed_name"].startswith("_")} for feed in result]
         response_object["status"] = "success"
         LOGGER.debug(result)
     else:
@@ -314,8 +282,9 @@ def search_single_site(site_name: str, keyword: str) -> dict[str, Any]:
 
 
 @app.delete("/public_feeds/{feed_name}")
-async def remove_public_feed(feed_name: str, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+async def remove_public_feed(feed_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("DELETE /public_feeds/%s -> remove_public_feed(%s)", feed_name, feed_name)
+    require_admin(request)
     response_object: dict[str, Any] = {}
     feed_maker_manager.remove_public_feed(feed_name)
     response_object["status"] = "success"
@@ -356,9 +325,9 @@ async def get_site_config(group_name: str, feed_maker_manager: FeedMakerManager 
 
 
 @app.put("/groups/{group_name}/site_config")
-async def save_site_config(group_name: str, request: Request,
-                           feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+async def save_site_config(group_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.debug("/groups/%s/site_config -> save_site_config(%s)", group_name, group_name)
+    require_admin(request)
     response_object: dict[str, Any] = {}
     post_data = await request.json()
     success_or_fail, error = feed_maker_manager.save_site_config(group_name, post_data)
@@ -385,10 +354,9 @@ async def toggle_group(group_name: str, feed_maker_manager: FeedMakerManager = D
 
 
 @app.delete("/groups/{group_name}/feeds/{feed_name}/htmls/{html_file_name}")
-async def remove_html_file(group_name: str, feed_name: str, html_file_name: str,
-                           feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
-    LOGGER.info("DELETE /groups/%s/feeds/%s/htmls/%s -> remove_html_file(%s, %s, %s)", group_name, feed_name,
-                html_file_name, group_name, feed_name, html_file_name)
+async def remove_html_file(group_name: str, feed_name: str, html_file_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+    LOGGER.info("DELETE /groups/%s/feeds/%s/htmls/%s -> remove_html_file(%s, %s, %s)", group_name, feed_name, html_file_name, group_name, feed_name, html_file_name)
+    require_admin(request)
     response_object: dict[str, Any] = {}
     feed_maker_manager.remove_html_file(group_name, feed_name, html_file_name)
     response_object["status"] = "success"
@@ -396,9 +364,9 @@ async def remove_html_file(group_name: str, feed_name: str, html_file_name: str,
 
 
 @app.delete("/groups/{group_name}/feeds/{feed_name}/htmls")
-async def remove_html(group_name: str, feed_name: str,
-                      feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+async def remove_html(group_name: str, feed_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("DELETE /groups/%s/feeds/%s/htmls -> remove_html(%s, %s)", group_name, feed_name, group_name, feed_name)
+    require_admin(request)
     response_object: dict[str, Any] = {}
     feed_maker_manager.remove_html(group_name, feed_name)
     response_object["status"] = "success"
@@ -406,9 +374,9 @@ async def remove_html(group_name: str, feed_name: str,
 
 
 @app.post("/groups/{group_name}/feeds/{feed_name}/run")
-def run_feed(group_name: str, feed_name: str, _request: Request,
-        feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+def run_feed(group_name: str, feed_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("POST /groups/%s/feeds/%s/run -> run_feed(%s, %s)", group_name, feed_name, group_name, feed_name)
+    require_admin(request)
     response_object: dict[str, Any] = {}
     result, error = feed_maker_manager.run(group_name, feed_name)
     if result or not error:
@@ -420,8 +388,7 @@ def run_feed(group_name: str, feed_name: str, _request: Request,
 
 
 @app.put("/groups/{group_name}/feeds/{feed_name}/toggle")
-async def toggle_feed(group_name: str, feed_name: str,
-                      feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+async def toggle_feed(group_name: str, feed_name: str, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("/groups/%s/feeds/%s/toggle -> toggle_feed(%s, %s)", group_name, feed_name, group_name, feed_name)
     response_object: dict[str, Any] = {}
     result, error = feed_maker_manager.toggle_feed(feed_name)
@@ -435,9 +402,9 @@ async def toggle_feed(group_name: str, feed_name: str,
 
 
 @app.delete("/groups/{group_name}/feeds/{feed_name}/list")
-async def remove_list(group_name: str, feed_name: str,
-                      feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+async def remove_list(group_name: str, feed_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("DELETE /groups/%s/feeds/%s/list -> remove_list(%s, %s)", group_name, feed_name, group_name, feed_name)
+    require_admin(request)
     response_object: dict[str, Any] = {}
     feed_maker_manager.remove_list(group_name, feed_name)
     response_object["status"] = "success"
@@ -445,8 +412,7 @@ async def remove_list(group_name: str, feed_name: str,
 
 
 @app.get("/groups/{group_name}/feeds/{feed_name}/check_running")
-async def check_running(group_name: str, feed_name: str,
-                        feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+async def check_running(group_name: str, feed_name: str, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     # LOGGER.info("/groups/%s/feeds/%s/check_running -> check_running(%s, %s)", group_name, feed_name, group_name, feed_name)
     response_object: dict[str, Any] = {}
     result = feed_maker_manager.check_running(group_name, feed_name)
@@ -460,8 +426,7 @@ async def check_running(group_name: str, feed_name: str,
 
 
 @app.get("/groups/{group_name}/feeds/{feed_name}")
-async def get_feed_info(group_name: str, feed_name: str,
-                        feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+async def get_feed_info(group_name: str, feed_name: str, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("/groups/%s/feeds/%s -> get_feed_info(%s, %s)", group_name, feed_name, group_name, feed_name)
     response_object: dict[str, Any] = {}
     feed_info, error = feed_maker_manager.get_feed_info_by_name(group_name, feed_name)
@@ -477,9 +442,9 @@ async def get_feed_info(group_name: str, feed_name: str,
 
 
 @app.post("/groups/{group_name}/feeds/{feed_name}")
-async def post_feed_info(group_name: str, feed_name: str, request: Request,
-                         feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+async def post_feed_info(group_name: str, feed_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("POST /groups/%s/feeds/%s -> save_config_file(%s, %s)", group_name, feed_name, group_name, feed_name)
+    require_admin(request)
     response_object: dict[str, Any] = {}
     post_data = await request.json()
     result, error = feed_maker_manager.save_config_file(group_name, feed_name, post_data)
@@ -492,9 +457,9 @@ async def post_feed_info(group_name: str, feed_name: str, request: Request,
 
 
 @app.delete("/groups/{group_name}/feeds/{feed_name}")
-async def delete_feed_info(group_name: str, feed_name: str,
-                           feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+async def delete_feed_info(group_name: str, feed_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("DELETE /groups/%s/feeds/%s -> remove_feed(%s, %s)", group_name, feed_name, group_name, feed_name)
+    require_admin(request)
     response_object: dict[str, Any] = {}
     result, error = feed_maker_manager.remove_feed(group_name, feed_name)
     if result or not error:
@@ -513,13 +478,7 @@ async def get_feeds_by_group(group_name: str, feed_maker_manager: FeedMakerManag
     if result or not error:
         # success in case of group without any feed
         # is_active 필드가 없는 경우 추가
-        response_object["feeds"] = [
-            {
-                **feed,
-                "is_active": feed.get("is_active") if "is_active" in feed else not feed["name"].startswith("_")
-            }
-            for feed in result
-        ]
+        response_object["feeds"] = [{**feed, "is_active": feed.get("is_active") if "is_active" in feed else not feed["name"].startswith("_")} for feed in result]
         response_object["status"] = "success"
         LOGGER.debug(result)
     else:
@@ -529,8 +488,9 @@ async def get_feeds_by_group(group_name: str, feed_maker_manager: FeedMakerManag
 
 
 @app.delete("/groups/{group_name}")
-async def remove_group(group_name: str, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+async def remove_group(group_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("DELETE /groups/%s -> remove_group(%s)", group_name, group_name)
+    require_admin(request)
     response_object: dict[str, Any] = {}
     result, error = feed_maker_manager.remove_group(group_name)
     if result or not error:
@@ -550,13 +510,7 @@ async def get_groups(feed_maker_manager: FeedMakerManager = Depends(get_feed_mak
     result, error = feed_maker_manager.get_groups()
     if result or not error:
         # is_active 필드가 없는 경우 추가
-        response_object["groups"] = [
-            {
-                **group,
-                "is_active": group.get("is_active") if "is_active" in group else not group["name"].startswith("_")
-            }
-            for group in result
-        ]
+        response_object["groups"] = [{**group, "is_active": group.get("is_active") if "is_active" in group else not group["name"].startswith("_")} for group in result]
         response_object["status"] = "success"
         LOGGER.debug(result)
     else:

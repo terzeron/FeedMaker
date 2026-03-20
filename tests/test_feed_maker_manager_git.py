@@ -27,8 +27,10 @@ def git_repo(tmp_path):
 def manager(git_repo):
     """FeedMakerManager를 임시 git 저장소로 패치"""
     repo, tmp_path = git_repo
-    with patch.object(FeedMakerManager, '__init__', lambda self: None), \
-         patch.object(FeedMakerManager, 'work_dir_path', tmp_path):
+    with (
+        patch.object(FeedMakerManager, "__init__", lambda self: None),
+        patch.object(FeedMakerManager, "work_dir_path", tmp_path),
+    ):
         mgr = FeedMakerManager.__new__(FeedMakerManager)
         mgr.work_dir_path = tmp_path
         yield mgr
@@ -57,7 +59,7 @@ class TestGitAdd:
         feed_dir = tmp_path / "group" / malicious_name
         feed_dir.mkdir(parents=True)
         conf_file = feed_dir / "conf.json"
-        conf_file.write_text('{}')
+        conf_file.write_text("{}")
 
         result, error = manager._git_add(feed_dir)
 
@@ -74,7 +76,7 @@ class TestGitRm:
         feed_dir = tmp_path / "group" / "feed_to_remove"
         feed_dir.mkdir(parents=True)
         conf_file = feed_dir / "conf.json"
-        conf_file.write_text('{}')
+        conf_file.write_text("{}")
         repo.index.add([str(conf_file.relative_to(tmp_path))])
         repo.index.commit("add feed_to_remove")
 
@@ -102,7 +104,7 @@ class TestGitMv:
         src_dir = tmp_path / "group" / "old_feed"
         src_dir.mkdir(parents=True)
         conf_file = src_dir / "conf.json"
-        conf_file.write_text('{}')
+        conf_file.write_text("{}")
         repo.index.add([str(conf_file.relative_to(tmp_path))])
         repo.index.commit("add old_feed")
 
@@ -135,7 +137,7 @@ class TestGitMv:
         src_dir = tmp_path / "group" / "normal_feed"
         src_dir.mkdir(parents=True)
         conf_file = src_dir / "conf.json"
-        conf_file.write_text('{}')
+        conf_file.write_text("{}")
         repo.index.add([str(conf_file.relative_to(tmp_path))])
         repo.index.commit("add normal_feed")
 
@@ -188,6 +190,79 @@ class TestValidateName:
         for char in ["'", '"', "`", "$", "|", "&", "(", ")", "<", ">"]:
             with pytest.raises(ValueError):
                 _validate_name(f"feed{char}test", "feed_name")
+
+
+class TestDefusedXmlSecurity:
+    """defusedxml이 악성 XML(XXE, XML bomb)을 거부하는지 확인"""
+
+    def test_xxe_attack_rejected(self, manager, tmp_path):
+        """XXE(XML External Entity) 공격이 거부되는지 확인"""
+        xxe_xml = """<?xml version="1.0"?>
+<!DOCTYPE foo [
+  <!ENTITY xxe SYSTEM "file:///etc/passwd">
+]>
+<rss><channel>
+  <item><title>&xxe;</title></item>
+</channel></rss>"""
+        feed_dir = tmp_path / "feeds"
+        feed_dir.mkdir(exist_ok=True)
+        malicious_file = feed_dir / "evil.xml"
+        malicious_file.write_text(xxe_xml)
+
+        with (
+            patch.object(type(manager), "feed_manager", create=True),
+            patch("bin.feed_manager.FeedManager.public_feed_dir_path", feed_dir),
+        ):
+            result, error = manager.extract_titles_from_public_feed("evil")
+
+        # defusedxml은 DTD/엔티티를 거부하므로 파싱 에러 발생
+        assert result == "PARSE_ERROR"
+
+    def test_xml_bomb_rejected(self, manager, tmp_path):
+        """XML bomb(Billion Laughs) 공격이 거부되는지 확인"""
+        bomb_xml = """<?xml version="1.0"?>
+<!DOCTYPE lolz [
+  <!ENTITY lol "lol">
+  <!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">
+  <!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;">
+]>
+<rss><channel>
+  <item><title>&lol3;</title></item>
+</channel></rss>"""
+        feed_dir = tmp_path / "feeds"
+        feed_dir.mkdir(exist_ok=True)
+        bomb_file = feed_dir / "bomb.xml"
+        bomb_file.write_text(bomb_xml)
+
+        with (
+            patch.object(type(manager), "feed_manager", create=True),
+            patch("bin.feed_manager.FeedManager.public_feed_dir_path", feed_dir),
+        ):
+            result, error = manager.extract_titles_from_public_feed("bomb")
+
+        assert result == "PARSE_ERROR"
+
+    def test_normal_xml_parsed_successfully(self, manager, tmp_path):
+        """정상 XML은 올바르게 파싱되는지 확인"""
+        normal_xml = """<?xml version="1.0"?>
+<rss><channel>
+  <item><title>정상 제목</title></item>
+  <item><title>Normal Title</title></item>
+</channel></rss>"""
+        feed_dir = tmp_path / "feeds"
+        feed_dir.mkdir(exist_ok=True)
+        normal_file = feed_dir / "normal.xml"
+        normal_file.write_text(normal_xml)
+
+        with (
+            patch.object(type(manager), "feed_manager", create=True),
+            patch("bin.feed_manager.FeedManager.public_feed_dir_path", feed_dir),
+        ):
+            result, error = manager.extract_titles_from_public_feed("normal")
+
+        assert isinstance(result, list)
+        assert result == ["정상 제목", "Normal Title"]
+        assert error == ""
 
 
 class TestPathTraversalBlocked:

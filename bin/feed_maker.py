@@ -23,7 +23,7 @@ logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 SECONDS_PER_DAY = 60 * 60 * 24
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class Comparable(Protocol):
@@ -38,7 +38,7 @@ class FeedMaker:
     DEFAULT_WINDOW_SIZE = 5
     IMAGE_TAG_FMT_STR = "<img src='%s/1x1.jpg?feed=%s&item=%s'/>"
 
-    def __init__(self, *,  feed_dir_path: Path, do_collect_by_force: bool, do_collect_only: bool, rss_file_path: Path, window_size: int = DEFAULT_WINDOW_SIZE) -> None:
+    def __init__(self, *, feed_dir_path: Path, do_collect_by_force: bool, do_collect_only: bool, rss_file_path: Path, window_size: int = DEFAULT_WINDOW_SIZE) -> None:
         LOGGER.debug("# FeedMaker(feed_dir_path=%s, do_collect_by_force=%s, do_collect_only=%s, rss_file_path=%s)", PathUtil.short_path(feed_dir_path), do_collect_by_force, do_collect_only, PathUtil.short_path(rss_file_path))
 
         self.work_dir_path = Path(Env.get("FM_WORK_DIR"))
@@ -107,8 +107,8 @@ class FeedMaker:
 
     @staticmethod
     def _cmp_int_or_str(a: dict[str, str], b: dict[str, str]) -> int:
-        m1 = re.search(r'^\d+$', a["sf"])
-        m2 = re.search(r'^\d+$', b["sf"])
+        m1 = re.search(r"^\d+$", a["sf"])
+        m2 = re.search(r"^\d+$", b["sf"])
 
         if m1 and m2:
             ret = int(a["sf"]) - int(b["sf"])
@@ -127,10 +127,10 @@ class FeedMaker:
             def __init__(self, obj: dict[str, Any], *_: Any) -> None:
                 self.obj = obj
 
-            def __lt__(self, other: 'K') -> bool:
+            def __lt__(self, other: "K") -> bool:
                 return mycmp(self.obj, other.obj) < 0
 
-            def __gt__(self, other: 'K') -> bool:
+            def __gt__(self, other: "K") -> bool:
                 return mycmp(self.obj, other.obj) > 0
 
             def __eq__(self, other: object) -> bool:
@@ -138,10 +138,10 @@ class FeedMaker:
                     return NotImplemented
                 return mycmp(self.obj, other.obj) == 0
 
-            def __le__(self, other: 'K') -> bool:
+            def __le__(self, other: "K") -> bool:
                 return mycmp(self.obj, other.obj) <= 0
 
-            def __ge__(self, other: 'K') -> bool:
+            def __ge__(self, other: "K") -> bool:
                 return mycmp(self.obj, other.obj) >= 0
 
             def __ne__(self, other: object) -> bool:
@@ -172,7 +172,7 @@ class FeedMaker:
                 if list_file_path.is_file():
                     LOGGER.info(PathUtil.short_path(list_file_path))
                     # read the old list
-                    with list_file_path.open('r', encoding='utf-8') as in_file:
+                    with list_file_path.open("r", encoding="utf-8") as in_file:
                         for line in in_file:
                             line = line.rstrip()
                             link, title, *metadata = line.split("\t")
@@ -187,7 +187,7 @@ class FeedMaker:
 
                 file_path = self.list_dir / entry.name
                 LOGGER.info(PathUtil.short_path(file_path))
-                with file_path.open('r', encoding='utf-8') as in_file:
+                with file_path.open("r", encoding="utf-8") as in_file:
                     for line in in_file:
                         line = line.rstrip()
                         link, title, *metadata = line.split("\t")
@@ -228,7 +228,20 @@ class FeedMaker:
                 ret = False
         else:
             # 파일이 존재하지 않거나 크기가 작으니 다시 생성 시도
-            crawler = Crawler(dir_path=self.feed_dir_path, render_js=conf.get("render_js", False), method=Method.GET, headers=conf.get("headers", None), timeout=conf.get("timeout", 60), num_retries=conf.get("num_retries", 1), encoding=conf.get("encoding", "utf-8"), verify_ssl=conf.get("verify_ssl", True), copy_images_from_canvas=conf.get("copy_images_from_canvas", False), simulate_scrolling=conf.get("simulate_scrolling", False), disable_headless=conf.get("disable_headless", False), blob_to_dataurl=conf.get("blob_to_dataurl", False))
+            crawler = Crawler(
+                dir_path=self.feed_dir_path,
+                render_js=conf.get("render_js", False),
+                method=Method.GET,
+                headers=conf.get("headers", None),
+                timeout=conf.get("timeout", 60),
+                num_retries=conf.get("num_retries", 1),
+                encoding=conf.get("encoding", "utf-8"),
+                verify_ssl=conf.get("verify_ssl", True),
+                copy_images_from_canvas=conf.get("copy_images_from_canvas", False),
+                simulate_scrolling=conf.get("simulate_scrolling", False),
+                disable_headless=conf.get("disable_headless", False),
+                blob_to_dataurl=conf.get("blob_to_dataurl", False),
+            )
             option_str = Crawler.get_option_str(conf)
             crawler_cmd = f"crawler.py -f '{self.feed_dir_path}' {option_str} '{item_url}'"
             LOGGER.debug(f"cmd={crawler_cmd}")
@@ -288,7 +301,7 @@ class FeedMaker:
                     LOGGER.warning("Warning: excluded %s\t%s\t%s (%d bytes <= %d bytes of template)", item_url, title, PathUtil.short_path(html_file_path), size, self._get_size_of_template())
                     ret = False
 
-            except (OSError, IOError, ImportError, TypeError, ValueError, AttributeError,  RuntimeError) as e:
+            except (OSError, IOError, ImportError, TypeError, ValueError, AttributeError, RuntimeError) as e:
                 self._add_failed_url(item_url, f"Unexpected error: {str(e)}")
                 return False
 
@@ -307,9 +320,9 @@ class FeedMaker:
         LOGGER.debug("# get_index_data()")
 
         if self.start_index_file_path.is_file():
-            with self.start_index_file_path.open('r', encoding='utf-8') as in_file:
+            with self.start_index_file_path.open("r", encoding="utf-8") as in_file:
                 line = in_file.readline()
-                m = re.search(r'(?P<start_index>\d+)\t(?P<mtime>\S+)', line)
+                m = re.search(r"(?P<start_index>\d+)\t(?P<mtime>\S+)", line)
                 if m:
                     start_index = int(m.group("start_index"))
                     mtime_str = m.group("mtime")
@@ -337,7 +350,7 @@ class FeedMaker:
         current_time_str = None
         if do_write_initially or increment_size > 0:
             next_start_index = start_index + increment_size
-            with self.start_index_file_path.open('w', encoding='utf-8') as out_file:
+            with self.start_index_file_path.open("w", encoding="utf-8") as out_file:
                 current_time_str = Datetime.get_current_time_str()
                 out_file.write(f"{next_start_index}\t{current_time_str}\n")
         return next_start_index, current_time_str
@@ -429,7 +442,7 @@ class FeedMaker:
         for link, title, _ in old_feed_list:
             if self._make_html_file(link, title):
                 merged_feed_list.append((link, title, []))
-        return merged_feed_list[:self.window_size]
+        return merged_feed_list[: self.window_size]
 
     def _generate_rss_feed(self, merged_feed_list: list[tuple[str, str, list[str]]]) -> bool:
         LOGGER.debug("# generate_rss_feed()")
@@ -469,15 +482,7 @@ class FeedMaker:
                 guid = rss_url_prefix_for_guid + URL.get_url_path(link)
             else:
                 guid = link
-            rss_items.append(
-                PyRSS2Gen.RSSItem(
-                    title=title,
-                    link=link,
-                    guid=guid,
-                    pubDate=pub_date_str,
-                    description=content,
-                )
-            )
+            rss_items.append(PyRSS2Gen.RSSItem(title=title, link=link, guid=guid, pubDate=pub_date_str, description=content))
 
         rss_title = self.rss_conf.get("rss_title", "")
         if not rss_title:
@@ -485,15 +490,9 @@ class FeedMaker:
         rss_link = self.rss_conf.get("rss_link", "")
         if not rss_link:
             raise NotFoundConfigItemError("can't get configuration item 'rss.link'")
-        rss = PyRSS2Gen.RSS2(
-            title=rss_title,
-            description=rss_title,
-            link=rss_link,
-            lastBuildDate=last_build_date_str,
-            items=rss_items
-        )
-        with temp_rss_file_path.open('w', encoding="utf-8") as outfile:
-            rss.write_xml(outfile, encoding='utf-8')
+        rss = PyRSS2Gen.RSS2(title=rss_title, description=rss_title, link=rss_link, lastBuildDate=last_build_date_str, items=rss_items)
+        with temp_rss_file_path.open("w", encoding="utf-8") as outfile:
+            rss.write_xml(outfile, encoding="utf-8")
 
         # 이번에 만들어진 rss 파일이 이전 파일과 내용이 다른지 확인
         is_different = False
@@ -542,6 +541,7 @@ class FeedMaker:
             self.collection_conf["is_completed"] = False
 
         old_feed_list: list[tuple[str, str, list[str]]] = []
+        final_feed_list: list[tuple[str, str, list[str]]] = []
         if not self.do_collect_only:
             # 과거 피드항목 리스트를 가져옴
             old_feed_list = self._read_old_feed_list_from_file()
@@ -586,19 +586,18 @@ class FeedMaker:
             return False
 
         now = Datetime.get_current_time()
-        with self.failed_urls_cache_file.open('r', encoding='utf-8') as f:
+        with self.failed_urls_cache_file.open("r", encoding="utf-8") as f:
             for line in f:
                 if not line.strip():
                     continue
-                cached_url, expiry_str = line.strip().split('\t')
+                cached_url, expiry_str = line.strip().split("\t")
                 if cached_url == url:
                     try:
                         expiry_dt = self.isoparser.isoparse(expiry_str)
                         if now < expiry_dt:
                             return True
                     except ValueError:
-                        LOGGER.warning(
-                            "Invalid timestamp in .failed_urls_cache: %s", expiry_str)
+                        LOGGER.warning("Invalid timestamp in .failed_urls_cache: %s", expiry_str)
         return False
 
     def _add_failed_url(self, url: str, error_msg: str = "") -> None:
@@ -606,9 +605,8 @@ class FeedMaker:
         if not expiration_dt:
             return
 
-        LOGGER.info("Adding failed URL %s to cache, expires at %s. Reason: %s",
-                    url, expiration_dt.isoformat(), error_msg)
-        with self.failed_urls_cache_file.open('a', encoding='utf-8') as f:
+        LOGGER.info("Adding failed URL %s to cache, expires at %s. Reason: %s", url, expiration_dt.isoformat(), error_msg)
+        with self.failed_urls_cache_file.open("a", encoding="utf-8") as f:
             f.write(f"{url}\t{expiration_dt.isoformat()}\n")
 
     def _cleanup_expired_failed_urls(self) -> None:
@@ -617,20 +615,19 @@ class FeedMaker:
 
         now = Datetime.get_current_time()
         valid_entries = []
-        with self.failed_urls_cache_file.open('r', encoding='utf-8') as f:
+        with self.failed_urls_cache_file.open("r", encoding="utf-8") as f:
             for line in f:
                 if not line.strip():
                     continue
                 try:
-                    _, expiry_str = line.strip().split('\t')
+                    _, expiry_str = line.strip().split("\t")
                     expiry_dt = self.isoparser.isoparse(expiry_str)
                     if now < expiry_dt:
                         valid_entries.append(line)
                 except ValueError:
-                    LOGGER.warning(
-                        "Skipping invalid line in .failed_urls_cache: %s", line.strip())
+                    LOGGER.warning("Skipping invalid line in .failed_urls_cache: %s", line.strip())
 
-        with self.failed_urls_cache_file.open('w', encoding='utf-8') as f:
+        with self.failed_urls_cache_file.open("w", encoding="utf-8") as f:
             for entry in valid_entries:
                 f.write(entry)
 

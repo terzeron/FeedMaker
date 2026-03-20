@@ -5,6 +5,7 @@ import re
 import getopt
 import logging.config
 import functools
+from collections.abc import Callable
 from pathlib import Path
 from urllib.parse import urlparse
 from utils.image_downloader import ImageDownloader
@@ -85,36 +86,26 @@ def main() -> int:
     config = Config(feed_dir_path)
     extraction_conf = config.get_extraction_configs()
     exclude_ad_images = extraction_conf.get("exclude_ad_images", False)
-    headers = {
-        "User-Agent": extraction_conf.get("user_agent", ""),
-        "Referer": page_url
-    }
+    headers = {"User-Agent": extraction_conf.get("user_agent", ""), "Referer": page_url}
     crawler = Crawler(dir_path=feed_dir_path, headers=headers, num_retries=2)
 
-    replacer = functools.partial(
-        replace_img_tag,
-        crawler=crawler,
-        feed_img_dir_path=feed_img_dir_path,
-        quality=quality,
-        page_url=page_url,
-        exclude_ad_images=exclude_ad_images
-    )
+    replacer = functools.partial(replace_img_tag, crawler=crawler, feed_img_dir_path=feed_img_dir_path, quality=quality, page_url=page_url, exclude_ad_images=exclude_ad_images)
 
-    def split_and_print(line: str, replacer: callable) -> None:
+    def split_and_print(line: str, replacer: Callable[..., str]) -> None:
         # 이미지 태그가 있으면 치환 후 태그/요소 단위로 분리 출력
         img_pattern = r'<img[^>]*src=["\'](?P<img_url>[^"\']+)["\'][^>]*?/?>'
         if not re.search(img_pattern, line):
-            print(line, end='')
+            print(line, end="")
             return
         # <noscript> 내 중복 이미지 제거
-        line = re.sub(r'<noscript>\s*<img[^>]*/?>\s*</noscript>', '', line)
+        line = re.sub(r"<noscript>\s*<img[^>]*/?>\s*</noscript>", "", line)
         new_line = re.sub(img_pattern, replacer, line)
         # <tag>...</tag> 또는 <self-closing/> 패턴
-        element_pattern = r'<([^/\s>]+)[^>]*>.*?</\1>|<[^>]+/?>'
+        element_pattern = r"<([^/\s>]+)[^>]*>.*?</\1>|<[^>]+/?>"
         current = 0
         for m in re.finditer(element_pattern, new_line):
             if m.start() > current:
-                text = new_line[current:m.start()].strip()
+                text = new_line[current : m.start()].strip()
                 if text:
                     print(text)
             print(m.group(0))

@@ -83,7 +83,7 @@ def generate_session_id() -> str:
     return secrets.token_urlsafe(48)
 
 
-def create_session(user_email: str, user_name: str, facebook_access_token: str) -> str:
+def create_session(user_email: str, user_name: str) -> str:
     """Create a new session in the database and return session ID"""
     session_id = generate_session_id()
     expires_at = datetime.now(timezone.utc) + timedelta(days=SESSION_EXPIRY_DAYS)
@@ -93,7 +93,6 @@ def create_session(user_email: str, user_name: str, facebook_access_token: str) 
             session_id=session_id,
             user_email=user_email,
             user_name=user_name,
-            facebook_access_token=facebook_access_token,
             expires_at=expires_at
         )
         session.add(user_session)
@@ -190,6 +189,20 @@ def require_auth(request: Request) -> UserSession:
     return user_session
 
 
+def _get_admin_email_set() -> set[str]:
+    raw = Env.get("FM_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST", "")
+    return {email.strip() for email in raw.split(",") if email.strip()}
+
+
+def require_admin(request: Request) -> UserSession:
+    """Dependency that requires admin privileges"""
+    user_session = require_auth(request)
+    admin_emails = _get_admin_email_set()
+    if admin_emails and user_session.user_email not in admin_emails:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    return user_session
+
+
 def set_session_cookie(response: Response, session_id: str) -> None:
     """Set session cookie with secure flags"""
     response.set_cookie(
@@ -211,5 +224,4 @@ def clear_session_cookie(response: JSONResponse) -> None:
         path="/",
         domain=COOKIE_DOMAIN  # Must match the domain used when setting
     )
-
 

@@ -6,6 +6,9 @@ import os
 import sys
 import re
 import subprocess
+import shlex
+import socket
+import ipaddress
 import hashlib
 import json
 import base64
@@ -83,53 +86,75 @@ class Data:
 
 
 class Process:
+    _DISALLOWED_EXECUTABLES = {"sh", "bash", "zsh", "ksh", "fish", "env"}
+
+    @staticmethod
+    def _resolve_executable(program: str, dir_path: Path) -> Optional[str]:
+        if not program:
+            return None
+
+        # absolute path
+        if program.startswith("/"):
+            p = Path(program).resolve()
+            if p.exists() and p.is_file() and os.access(str(p), os.X_OK):
+                return str(p)
+            return None
+
+        # relative path
+        if program.startswith("./") or program.startswith("../"):
+            p = (dir_path / program).resolve()
+            if p.exists() and p.is_file() and os.access(str(p), os.X_OK):
+                return str(p)
+            return None
+
+        # PATH lookup
+        resolved = which(program)
+        if not resolved:
+            return None
+        p = Path(resolved).resolve()
+        if p.exists() and p.is_file() and os.access(str(p), os.X_OK):
+            return str(p)
+        return None
+
+    @staticmethod
+    def _build_argv(cmd: str, dir_path: Path) -> tuple[list[str], str]:
+        try:
+            argv = shlex.split(cmd, posix=True)
+        except ValueError as e:
+            return [], f"Invalid command: {e}"
+        if not argv:
+            return [], "Empty command"
+
+        program = argv[0]
+        program_base = Path(program).name
+        if program_base in Process._DISALLOWED_EXECUTABLES:
+            return [], f"Execution of '{program_base}' is not allowed"
+
+        resolved = Process._resolve_executable(program, dir_path)
+        if not resolved:
+            return [], f"Error in getting path of executable '{program}'"
+
+        argv[0] = resolved
+        return argv, ""
+
     @staticmethod
     def _replace_script_path(script: str, dir_path: Path) -> Optional[str]:
         if not dir_path or not dir_path.is_dir():
             return None
-
-        program = script.split(" ")[0]
-        program_full_path_str: Optional[str]
-
-        if program.startswith("/"):
-            # absolute path
-            program_full_path_str = program
-        elif program.startswith("./") or program.startswith("../"):
-            # relative path
-            program_full_path = (dir_path / program).resolve()
-            if not program_full_path.exists():
-                return None
-            program_full_path_str = str(program_full_path)
-        else:
-            # non-absolute path
-            program_full_path_str = which(program)
-            if not program_full_path_str:
-                return None
-
-        # For absolute and relative paths, check if file exists, is file or symlink, and is executable
-        if program.startswith("/") or program.startswith("./") or program.startswith("../"):
-            p = Path(program_full_path_str)
-            resolved = p.resolve()
-            if not (resolved.exists() and resolved.is_file() and os.access(str(resolved), os.X_OK)):
-                return None
-        # For non-absolute paths, which() already checked existence
-        elif not which(program_full_path_str):
+        argv, error = Process._build_argv(script, dir_path)
+        if error:
             return None
-
-        result = program_full_path_str
-        if len(script.split(" ")) > 1:
-            result += " " + " ".join(script.split(" ")[1:])
-        return result
+        return argv[0]
 
     @staticmethod
     def exec_cmd(cmd: str, dir_path: Path = Path.cwd(), input_data: Optional[str] = None) -> tuple[str, str]:
         LOGGER.debug("# Process.exec_cmd(cmd=%s, dir_path=%s, input_data=%d bytes)", cmd, PathUtil.short_path(dir_path), len(input_data) if input_data else 0)
-        new_cmd = Process._replace_script_path(cmd, dir_path)
-        if not new_cmd:
-            return "", f"Error in getting path of executable '{cmd}'"
-        LOGGER.debug(new_cmd)
+        argv, error = Process._build_argv(cmd, dir_path)
+        if error:
+            return "", error
+        LOGGER.debug("argv=%s", argv)
         try:
-            with subprocess.Popen(new_cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8") as p:
+            with subprocess.Popen(argv, shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8") as p:
                 result, error = p.communicate(input=input_data)
                 if p.returncode != 0:
                     return "", error or f"Process exited with code {p.returncode}"
@@ -333,6 +358,89 @@ class Env:
         if value is None:
             raise NotFoundEnvError(f"can't get environment variable '{var}'")
         return value
+
+
+class URLSafety:
+    _ALLOWED_SCHEMES = {"http", "https"}
+
+    @staticmethod
+    def _parse_allowed_hosts(raw: str) -> tuple[set[str], set[str]]:
+        raw = raw.strip()
+        if not raw:
+            return set(), set()
+        exact: set[str] = set()
+        suffixes: set[str] = set()
+        for token in (t.strip().lower() for t in raw.split(",")):
+            if not token:
+                continue
+            if token.startswith("."):
+                suffixes.add(token)
+            else:
+                exact.add(token)
+        return exact, suffixes
+
+    @staticmethod
+    def _is_allowed_host(host: str, exact: set[str], suffixes: set[str]) -> bool:
+        if host in exact:
+            return True
+        for suffix in suffixes:
+            if host.endswith(suffix):
+                return True
+        return False
+
+    @staticmethod
+    def _is_global_ip(ip: ipaddress._BaseAddress) -> bool:
+        return ip.is_global
+
+    @staticmethod
+    def check_url(url: str, *, allow_private: bool, allowed_hosts_raw: str = "") -> tuple[bool, str]:
+        try:
+            parsed = urlparse(url)
+        except Exception as e:
+            return False, f"Invalid URL: {e}"
+
+        if parsed.scheme not in URLSafety._ALLOWED_SCHEMES:
+            return False, f"Blocked URL scheme: {parsed.scheme or 'none'}"
+
+        host = (parsed.hostname or "").lower()
+        if not host:
+            return False, "Missing host"
+
+        exact, suffixes = URLSafety._parse_allowed_hosts(allowed_hosts_raw)
+        if URLSafety._is_allowed_host(host, exact, suffixes):
+            return True, ""
+
+        if host in ("localhost",):
+            return False, "Blocked host: localhost"
+
+        if allow_private:
+            return True, ""
+
+        # IP literal
+        try:
+            ip = ipaddress.ip_address(host)
+            if not URLSafety._is_global_ip(ip):
+                return False, f"Blocked IP: {ip}"
+            return True, ""
+        except ValueError:
+            pass
+
+        # Resolve DNS and block if any address is non-global
+        try:
+            infos = socket.getaddrinfo(host, None)
+        except socket.gaierror as e:
+            return False, f"DNS resolution failed for {host}: {e}"
+
+        for info in infos:
+            addr = info[4][0]
+            try:
+                ip = ipaddress.ip_address(addr)
+            except ValueError:
+                return False, f"Invalid resolved IP: {addr}"
+            if not URLSafety._is_global_ip(ip):
+                return False, f"Blocked IP: {ip}"
+
+        return True, ""
 
 
 class NotFoundConfigFileError(Exception):

@@ -8,9 +8,8 @@ import uuid
 import threading
 import logging.config
 from pathlib import Path
-from typing import Optional, TYPE_CHECKING, cast, Any
+from typing import Optional, Any
 from shutil import which
-import urllib3
 
 from selenium import webdriver
 from selenium.common.exceptions import InvalidCookieDomainException, TimeoutException, WebDriverException, NoAlertPresentException
@@ -18,13 +17,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.common.by import By
 
-from bin.feed_maker_util import PathUtil
+from bin.feed_maker_util import PathUtil, Env, URLSafety
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
-
-if TYPE_CHECKING:
-    from _typeshed import SupportsWrite
 
 
 class HeadlessBrowser:
@@ -37,7 +33,7 @@ class HeadlessBrowser:
     # Thread-local driver cache for reuse (thread-safe for parallel searches)
     _thread_local = threading.local()
 
-    GETTING_METADATA_SCRIPT = '''
+    GETTING_METADATA_SCRIPT = """
         var metas = document.getElementsByTagName("meta");
         var has_og_url_property = false;
         for (var i = 0; i < metas.length; i++) {
@@ -53,8 +49,9 @@ class HeadlessBrowser:
             new_meta.setAttribute("content", window.location.href);
             document.head.appendChild(new_meta);
         }
-        '''
-    CONVERTING_CANVAS_TO_IMAGES_SCRIPT = '''
+        """
+    CONVERTING_CANVAS_TO_IMAGES_SCRIPT = (
+        """
         (async function () {
             div = document.createElement("DIV");
             div.className = "images_from_canvas";
@@ -71,8 +68,10 @@ class HeadlessBrowser:
         var div = document.createElement("DIV");
         document.body.appendChild(div);
         div.id = "%s";
-        ''' % ID_OF_RENDERING_COMPLETION_IN_CONVERTING_CANVAS
-    SIMULATING_SCROLLING_SCRIPT = '''
+        """
+        % ID_OF_RENDERING_COMPLETION_IN_CONVERTING_CANVAS
+    )
+    SIMULATING_SCROLLING_SCRIPT = """
         const callback = arguments[0];
 
         (async () => {{
@@ -119,10 +118,11 @@ class HeadlessBrowser:
 
             // Notify Selenium that script is done
             callback("done");
-        }})();''' % (ID_OF_RENDERING_COMPLETION_IN_SCROLLING, ID_OF_RENDERING_COMPLETION_IN_SCROLLING, ID_OF_RENDERING_COMPLETION_IN_SCROLLING)
+        }})();""" % (ID_OF_RENDERING_COMPLETION_IN_SCROLLING, ID_OF_RENDERING_COMPLETION_IN_SCROLLING, ID_OF_RENDERING_COMPLETION_IN_SCROLLING)
     SETTING_PLUGINS_SCRIPT = "Object.defineProperty(navigator, 'plugins', {get: function() {return[1, 2, 3, 4, 5];},});"
     SETTING_LANGUAGES_SCRIPT = "Object.defineProperty(navigator, 'languages', {get: function() {return ['ko-KR', 'ko']}})"
-    CONVERTING_BLOB_TO_DATAURL_SCRIPT = '''
+    CONVERTING_BLOB_TO_DATAURL_SCRIPT = (
+        """
         function readFileAsync(file, img) {
             const reader = new FileReader();
             const promise = new Promise((resolve) => {
@@ -153,7 +153,9 @@ class HeadlessBrowser:
             document.body.appendChild(div);
             div.id = "%s";
         }());
-        ''' % ID_OF_RENDERING_COMPLETION_IN_CONVERTING_BLOB
+        """
+        % ID_OF_RENDERING_COMPLETION_IN_CONVERTING_BLOB
+    )
 
     def __init__(self, *, dir_path: Path = Path.cwd(), headers: Optional[dict[str, str]] = None, copy_images_from_canvas: bool = False, simulate_scrolling: bool = False, disable_headless: bool = False, blob_to_dataurl: bool = False, timeout: int = 60) -> None:
         LOGGER.debug("# HeadlessBrowser(dir_path=%s, headers=%r, copy_images_from_canvas=%s, simulate_scrolling=%s, disable_headless=%s, blob_to_dataurl=%s, timeout=%d)", PathUtil.short_path(dir_path), headers, copy_images_from_canvas, simulate_scrolling, disable_headless, blob_to_dataurl, timeout)
@@ -167,6 +169,8 @@ class HeadlessBrowser:
         self.blob_to_dataurl: bool = blob_to_dataurl
         self.timeout: int = timeout
         self._cookie_dir: Optional[Path] = None
+        self.allow_private_ips = Env.get("FM_CRAWLER_ALLOW_PRIVATE_IPS", "false").strip().lower() in ("1", "true", "yes", "on")
+        self.allowed_hosts_raw = Env.get("FM_CRAWLER_ALLOWED_HOSTS", "")
 
     def __del__(self) -> None:
         del self.headers
@@ -178,6 +182,7 @@ class HeadlessBrowser:
             self._cookie_dir = self.dir_path
         else:
             import hashlib
+
             dir_hash = hashlib.md5(str(self.dir_path).encode()).hexdigest()[:12]
             fallback = Path(tempfile.gettempdir()) / "fm_cookies" / dir_hash
             fallback.mkdir(parents=True, exist_ok=True)
@@ -189,6 +194,7 @@ class HeadlessBrowser:
     def _get_options_hash(cls, options: "webdriver.ChromeOptions") -> str:
         """Generate a hash for driver options to check if driver can be reused"""
         import hashlib
+
         # Create a string representation of the key options
         options_str = f"{options.arguments}"
         return hashlib.md5(options_str.encode()).hexdigest()
@@ -196,12 +202,12 @@ class HeadlessBrowser:
     @classmethod
     def _get_cached_driver(cls, options: "webdriver.ChromeOptions") -> Optional[webdriver.Chrome]:
         """Get cached driver if available and compatible (thread-local)"""
-        cache = getattr(cls._thread_local, '_driver_cache', None)
+        cache: webdriver.Chrome | None = getattr(cls._thread_local, "_driver_cache", None)
         if cache is None:
             return None
 
         current_hash = cls._get_options_hash(options)
-        cached_hash = getattr(cls._thread_local, '_driver_options_hash', None)
+        cached_hash = getattr(cls._thread_local, "_driver_options_hash", None)
         if cached_hash != current_hash:
             cls._cleanup_cached_driver()
             return None
@@ -222,7 +228,7 @@ class HeadlessBrowser:
     @classmethod
     def _cleanup_cached_driver(cls) -> None:
         """Clean up cached driver (thread-local)"""
-        cache = getattr(cls._thread_local, '_driver_cache', None)
+        cache = getattr(cls._thread_local, "_driver_cache", None)
         if cache:
             try:
                 cache.quit()
@@ -239,14 +245,14 @@ class HeadlessBrowser:
     def _write_cookies_to_file(self, driver: webdriver.Chrome) -> None:
         cookies = driver.get_cookies()
         cookie_file = self._get_cookie_dir() / HeadlessBrowser.COOKIE_FILE
-        with cookie_file.open("w", encoding='utf-8') as f:
+        with cookie_file.open("w", encoding="utf-8") as f:
             json.dump(cookies, f, indent=2, ensure_ascii=False)
 
     def _read_cookies_from_file(self, driver: webdriver.Chrome) -> None:
         cookie_file = self._get_cookie_dir() / HeadlessBrowser.COOKIE_FILE
         if cookie_file.is_file():
             try:
-                with cookie_file.open("r", encoding='utf-8') as f:
+                with cookie_file.open("r", encoding="utf-8") as f:
                     cookies = json.load(f)
                     for cookie in cookies:
                         if "expiry" in cookie:
@@ -258,6 +264,10 @@ class HeadlessBrowser:
 
     def make_request(self, url: str, download_file: Optional[Path] = None) -> str:
         LOGGER.debug(f"# make_request(url={url}, download_file={download_file})")
+        is_ok, reason = URLSafety.check_url(url, allow_private=self.allow_private_ips, allowed_hosts_raw=self.allowed_hosts_raw)
+        if not is_ok:
+            LOGGER.warning("Blocked URL: %s (%s)", url, reason)
+            return ""
         driver = None
         driver_created = False
 
@@ -300,12 +310,16 @@ class HeadlessBrowser:
 
             referer = self.headers.get("Referer", "")
             if referer:
+                is_ok, reason = URLSafety.check_url(referer, allow_private=self.allow_private_ips, allowed_hosts_raw=self.allowed_hosts_raw)
+                if not is_ok:
+                    LOGGER.warning("Blocked referer URL: %s (%s)", referer, reason)
+                    return ""
                 LOGGER.debug(f"visiting referer page '{referer}'")
                 driver.get(referer)
                 # bypass cloudflare test
                 try:
-                    WebDriverWait(driver, self.timeout).until(
-                        expected_conditions.invisibility_of_element_located((By.ID, "cf-content")))
+                    wait: Any = WebDriverWait(driver, self.timeout)
+                    wait.until(expected_conditions.invisibility_of_element_located((By.ID, "cf-content")))
                 except TimeoutException:
                     pass
                 self._write_cookies_to_file(driver)
@@ -321,15 +335,15 @@ class HeadlessBrowser:
                 LOGGER.warning(f"<!-- Warning: can't connect to '{url}' for temporary network error -->")
                 LOGGER.warning("<!-- %r -->", e)
                 return ""
-            except Exception as e:  # type: ignore
+            except Exception as e:
                 LOGGER.warning(f"<!-- Warning: can't connect to '{url}' for temporary network error -->")
                 LOGGER.warning("<!-- %r -->", e)
                 return ""
 
             # bypass cloudflare test
             try:
-                WebDriverWait(driver, self.timeout).until(
-                    expected_conditions.invisibility_of_element_located((By.ID, "cf-content")))
+                wait2: Any = WebDriverWait(driver, self.timeout)
+                wait2.until(expected_conditions.invisibility_of_element_located((By.ID, "cf-content")))
             except TimeoutException:
                 pass
 
@@ -364,8 +378,8 @@ class HeadlessBrowser:
             for option, waiting_div_id in ((self.copy_images_from_canvas, HeadlessBrowser.ID_OF_RENDERING_COMPLETION_IN_CONVERTING_CANVAS), (self.simulate_scrolling, HeadlessBrowser.ID_OF_RENDERING_COMPLETION_IN_SCROLLING), (self.blob_to_dataurl, HeadlessBrowser.ID_OF_RENDERING_COMPLETION_IN_CONVERTING_BLOB)):
                 if option:
                     try:
-                        WebDriverWait(driver, self.timeout).until(
-                            expected_conditions.presence_of_element_located((By.ID, waiting_div_id)))
+                        wait3: Any = WebDriverWait(driver, self.timeout)
+                        wait3.until(expected_conditions.presence_of_element_located((By.ID, waiting_div_id)))
                         LOGGER.debug(f"Found completion marker: {waiting_div_id}")
                     except TimeoutException:
                         LOGGER.warning(f"Timeout waiting for completion marker: {waiting_div_id}")
@@ -383,7 +397,7 @@ class HeadlessBrowser:
             LOGGER.error(f"Unexpected error in make_request: {e}")
             return ""
         finally:
-            cached = getattr(self._thread_local, '_driver_cache', None)
+            cached = getattr(self._thread_local, "_driver_cache", None)
             # Only close driver if it was newly created or if there was an error
             if driver and driver_created and driver != cached:
                 try:

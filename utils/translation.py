@@ -12,6 +12,9 @@ from pathlib import Path
 from typing import Protocol
 from enum import Enum
 
+from bin.feed_maker_util import Env
+from bin.crawler import Crawler, Method
+
 # 캐시 항목 TTL: 7일
 _CACHE_TTL_SECONDS = 30 * 24 * 60 * 60
 
@@ -20,9 +23,6 @@ _SLEEP_SECONDS: float = 1
 
 # 내부 타임스탬프 캐시 타입: {"en": {"t": "ko", "ts": unix_epoch}}
 _TimestampedCache = dict[str, dict]
-
-from bin.feed_maker_util import Env
-from bin.crawler import Crawler, Method
 
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -48,10 +48,10 @@ def _is_unrecoverable_error(error_msg: str) -> bool:
 
 # 번역 서비스 제공자 구분을 위한 Enum 정의
 class TranslationProvider(Enum):
-    DEEPL = 'deepl'
-    AZURE = 'azure'
-    GOOGLE = 'google'
-    CLAUDE = 'claude'
+    DEEPL = "deepl"
+    AZURE = "azure"
+    GOOGLE = "google"
+    CLAUDE = "claude"
 
 
 class TranslationService(Protocol):
@@ -59,8 +59,7 @@ class TranslationService(Protocol):
     # 서비스 제공자를 나타내는 속성
     provider: TranslationProvider
 
-    def translate_batch(self, texts: list[str]) -> dict[str, str]:
-        ...
+    def translate_batch(self, texts: list[str]) -> dict[str, str]: ...
 
     @staticmethod
     def chunk_by_items(texts: list[str], max_items: int = MAX_ITEMS_PER_BATCH) -> list[list[str]]:
@@ -91,12 +90,7 @@ class DeepLTranslationService(TranslationService):
 
         batches = TranslationService.chunk_by_items(texts, TranslationService.MAX_ITEMS_PER_BATCH)
         for batch in batches:
-            payload = {
-                "text": batch,
-                "target_lang": "KO",
-                "preserve_formatting": 1,
-                "split_sentences": "nonewlines"
-            }
+            payload = {"text": batch, "target_lang": "KO", "preserve_formatting": 1, "split_sentences": "nonewlines"}
 
             try:
                 # Crawler를 통해 요청
@@ -119,7 +113,7 @@ class DeepLTranslationService(TranslationService):
 
         return result_map
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         return other is DeepLTranslationService
 
 
@@ -133,12 +127,7 @@ class AzureTranslationService(TranslationService):
     def translate_batch(self, texts: list[str]) -> dict[str, str]:
         result_map: dict[str, str] = {}
         # Crawler 클라이언트 사용
-        headers = {
-            "Ocp-Apim-Subscription-Key": self.api_key,
-            "Ocp-Apim-Subscription-Region": "koreacentral",
-            "Content-type": "application/json",
-            "X-ClientTraceId": str(uuid.uuid4())
-        }
+        headers = {"Ocp-Apim-Subscription-Key": self.api_key, "Ocp-Apim-Subscription-Region": "koreacentral", "Content-type": "application/json", "X-ClientTraceId": str(uuid.uuid4())}
         client = Crawler(method=Method.POST, headers=headers, timeout=10)
         batches = TranslationService.chunk_by_items(texts, TranslationService.MAX_ITEMS_PER_BATCH)
         for batch in batches:
@@ -165,7 +154,7 @@ class AzureTranslationService(TranslationService):
 
         return result_map
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         return other is AzureTranslationService
 
 
@@ -179,14 +168,11 @@ class GoogleTranslationService(TranslationService):
     def translate_batch(self, texts: list[str]) -> dict[str, str]:
         result_map: dict[str, str] = {}
         # Crawler 클라이언트 사용
-        client = Crawler(method=Method.POST, headers={'Content-Type': 'application/json'}, timeout=10)
+        client = Crawler(method=Method.POST, headers={"Content-Type": "application/json"}, timeout=10)
 
         batches = TranslationService.chunk_by_items(texts, TranslationService.MAX_ITEMS_PER_BATCH)
         for batch in batches:
-            payload = {
-                'q': batch,
-                'key': self.api_key,
-            }
+            payload = {"q": batch, "key": self.api_key}
 
             try:
                 response_text, error_msg, _ = client.run(self.endpoint, data=json.dumps(payload))
@@ -208,7 +194,7 @@ class GoogleTranslationService(TranslationService):
 
         return result_map
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         return other is GoogleTranslationService
 
 
@@ -223,25 +209,13 @@ class ClaudeTranslationService(TranslationService):
 
     def translate_batch(self, texts: list[str]) -> dict[str, str]:
         result_map: dict[str, str] = {}
-        headers = {
-            "x-api-key": self.api_key,
-            "anthropic-version": "2023-06-01",
-            "Content-Type": "application/json",
-        }
+        headers = {"x-api-key": self.api_key, "anthropic-version": "2023-06-01", "Content-Type": "application/json"}
         client = Crawler(method=Method.POST, headers=headers, timeout=60)
 
         batches = TranslationService.chunk_by_items(texts, self.MAX_ITEMS_PER_BATCH)
         for batch in batches:
             texts_json = json.dumps(batch, ensure_ascii=False)
-            payload = json.dumps({
-                "model": "claude-haiku-4-5-20251001",
-                "max_tokens": max(len(batch) * 100, 1024),
-                "system": self.SYSTEM_PROMPT,
-                "messages": [
-                    {"role": "user", "content": texts_json},
-                    {"role": "assistant", "content": "["}
-                ]
-            })
+            payload = json.dumps({"model": "claude-haiku-4-5-20251001", "max_tokens": max(len(batch) * 100, 1024), "system": self.SYSTEM_PROMPT, "messages": [{"role": "user", "content": texts_json}, {"role": "assistant", "content": "["}]})
 
             try:
                 response_text, error_msg, _ = client.run(self.endpoint, data=payload)
@@ -276,7 +250,7 @@ class ClaudeTranslationService(TranslationService):
                     # 잘린 JSON에서 마지막 완전한 항목까지 복구
                     last_comma = text_content.rfind('",')
                     if last_comma != -1:
-                        text_content = text_content[:last_comma + 1] + "]"
+                        text_content = text_content[: last_comma + 1] + "]"
                         translations = json.loads(text_content)
                     else:
                         raise
@@ -297,18 +271,13 @@ class ClaudeTranslationService(TranslationService):
 
         return result_map
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         return other is ClaudeTranslationService
 
 
 class TranslationServiceFactory:
     # 우선순위: Azure(2M) → DeepL(500K) → Google(500K) → Claude(유료)
-    _PRIORITY: list[tuple[str, type]] = [
-        ("AZURE_API_KEY", AzureTranslationService),
-        ("DEEPL_API_KEY", DeepLTranslationService),
-        ("GOOGLE_API_KEY", GoogleTranslationService),
-        ("ANTHROPIC_API_KEY", ClaudeTranslationService),
-    ]
+    _PRIORITY: list[tuple[str, type]] = [("AZURE_API_KEY", AzureTranslationService), ("DEEPL_API_KEY", DeepLTranslationService), ("GOOGLE_API_KEY", GoogleTranslationService), ("ANTHROPIC_API_KEY", ClaudeTranslationService)]
 
     @staticmethod
     def create_services() -> list[TranslationService]:
@@ -447,7 +416,7 @@ class Translation:
         return new_result_list
 
 
-def translate_html(html: str, provider: TranslationProvider | None = None) -> str:
+def translate_html(html: str, provider: TranslationProvider | None = None) -> tuple[str, int]:
     """HTML 문자열에서 사람이 읽을 수 있는 텍스트 노드를 추출하여 번역한 HTML을 반환한다."""
     from bs4 import BeautifulSoup, NavigableString
 
@@ -509,14 +478,9 @@ def translate_html(html: str, provider: TranslationProvider | None = None) -> st
     return str(soup), untranslated
 
 
-def main():
+def main() -> None:
     """표준입력으로 HTML을 받아 텍스트를 번역하여 출력한다."""
-    _OPTION_MAP = {
-        "-c": TranslationProvider.CLAUDE,
-        "-g": TranslationProvider.GOOGLE,
-        "-z": TranslationProvider.AZURE,
-        "-d": TranslationProvider.DEEPL,
-    }
+    _OPTION_MAP = {"-c": TranslationProvider.CLAUDE, "-g": TranslationProvider.GOOGLE, "-z": TranslationProvider.AZURE, "-d": TranslationProvider.DEEPL}
     try:
         opts, _ = getopt.getopt(sys.argv[1:], "cgzdf:t:")
     except getopt.GetoptError as e:
