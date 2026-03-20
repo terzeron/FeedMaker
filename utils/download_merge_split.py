@@ -3,7 +3,6 @@
 
 import getopt
 import logging.config
-import os
 import re
 import sys
 from pathlib import Path
@@ -125,7 +124,8 @@ def get_image_dimensions(img_file_path: Path) -> tuple[int, int]:
     """Get image dimensions"""
     try:
         with Image.open(img_file_path) as img:
-            return img.size
+            width, height = img.size
+            return (width, height)
     except (OSError, IOError, TypeError, ValueError, RuntimeError) as e:
         LOGGER.error(f"Error reading image dimensions for {img_file_path}: {e}")
         return (0, 0)

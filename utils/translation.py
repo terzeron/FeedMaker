@@ -12,6 +12,9 @@ from pathlib import Path
 from typing import Protocol
 from enum import Enum
 
+from bin.feed_maker_util import Env
+from bin.crawler import Crawler, Method
+
 # 캐시 항목 TTL: 7일
 _CACHE_TTL_SECONDS = 30 * 24 * 60 * 60
 
@@ -20,9 +23,6 @@ _SLEEP_SECONDS: float = 1
 
 # 내부 타임스탬프 캐시 타입: {"en": {"t": "ko", "ts": unix_epoch}}
 _TimestampedCache = dict[str, dict]
-
-from bin.feed_maker_util import Env
-from bin.crawler import Crawler, Method
 
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -113,7 +113,7 @@ class DeepLTranslationService(TranslationService):
 
         return result_map
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         return other is DeepLTranslationService
 
 
@@ -154,7 +154,7 @@ class AzureTranslationService(TranslationService):
 
         return result_map
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         return other is AzureTranslationService
 
 
@@ -194,7 +194,7 @@ class GoogleTranslationService(TranslationService):
 
         return result_map
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         return other is GoogleTranslationService
 
 
@@ -271,7 +271,7 @@ class ClaudeTranslationService(TranslationService):
 
         return result_map
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         return other is ClaudeTranslationService
 
 

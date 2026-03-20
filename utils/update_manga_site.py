@@ -33,7 +33,7 @@ def load_site_config(site_config_path: Path) -> dict[str, Any]:
         raise NotFoundConfigFileError(f"can't find configuration file '{site_config_path}'")
 
     with site_config_path.open("r", encoding="utf-8") as f:
-        site_config = json.load(f)
+        site_config: dict[str, Any] = json.load(f)
         if not site_config:
             raise InvalidConfigFileError(f"can't get configuration from '{site_config_path}' with invalid format")
         return site_config

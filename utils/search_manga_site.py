@@ -8,9 +8,7 @@ from threading import Thread
 import logging.config
 from typing import Any
 from pathlib import Path
-from urllib.parse import urlparse, unquote, quote
-
-import requests
+from urllib.parse import urlparse, quote
 
 from bs4 import BeautifulSoup, Comment
 from bin.crawler import Crawler, Method
@@ -128,7 +126,7 @@ class Site:
                 html_fragment = re.sub(r"<!--[^>]*-->", "", html_fragment)
 
                 # href 속성의 상대 경로를 절대 경로로 변환
-                def replace_href(match):
+                def replace_href(match: re.Match[str]) -> str:
                     href_value = match.group(1)
                     LOGGER.debug(f"Processing href: '{href_value}', url_prefix: '{self.url_prefix}'")
 
