@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
     app.state.feed_maker_manager.aclose()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
 
 frontend_url = Env.get("FM_FRONTEND_URL")
 origins = [
@@ -66,7 +66,7 @@ def get_feed_maker_manager(request: Request) -> "FeedMakerManager":
         raise HTTPException(500, detail="FeedMakerManager not initialized, {e}") from e
 
 
-AUTH_EXEMPT_PATHS = {"/auth/login", "/auth/logout", "/auth/me", "/docs", "/openapi.json", "/redoc"}
+AUTH_EXEMPT_PATHS = {"/auth/login", "/auth/logout", "/auth/me"}
 
 
 @app.middleware("http")
