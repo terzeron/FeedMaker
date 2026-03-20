@@ -119,7 +119,7 @@ async def login(request: LoginRequest) -> JSONResponse:
 
     # 세션 생성
     try:
-        session_id = create_session(request.email, request.name)
+        session_id = create_session(request.email, request.name, request.access_token)
 
         response = JSONResponse(content={"status": "success", "message": "로그인되었습니다."})
 

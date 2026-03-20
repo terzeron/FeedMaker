@@ -22,7 +22,6 @@ SESSION_EXPIRY_DAYS = 30
 COOKIE_MAX_AGE = SESSION_EXPIRY_DAYS * 24 * 60 * 60  # seconds
 
 
-
 def get_cookie_domain() -> Optional[str]:
     """
     프론트엔드 URL에서 쿠키 공유를 위한 공통 도메인 추출
@@ -59,11 +58,7 @@ COOKIE_DOMAIN = get_cookie_domain()
 def verify_facebook_token(access_token: str, expected_email: str) -> bool:
     """Facebook Graph API로 토큰 유효성과 이메일 일치 여부를 검증"""
     try:
-        response = http_requests.get(
-            "https://graph.facebook.com/me",
-            params={"fields": "email", "access_token": access_token},
-            timeout=10
-        )
+        response = http_requests.get("https://graph.facebook.com/me", params={"fields": "email", "access_token": access_token}, timeout=10)
         if response.status_code != 200:
             LOGGER.warning("Facebook token verification failed: status %d", response.status_code)
             return False
@@ -83,18 +78,13 @@ def generate_session_id() -> str:
     return secrets.token_urlsafe(48)
 
 
-def create_session(user_email: str, user_name: str) -> str:
+def create_session(user_email: str, user_name: str, access_token: Optional[str] = None) -> str:
     """Create a new session in the database and return session ID"""
     session_id = generate_session_id()
     expires_at = datetime.now(timezone.utc) + timedelta(days=SESSION_EXPIRY_DAYS)
 
     with DB.session_ctx() as session:
-        user_session = UserSession(
-            session_id=session_id,
-            user_email=user_email,
-            user_name=user_name,
-            expires_at=expires_at
-        )
+        user_session = UserSession(session_id=session_id, user_email=user_email, user_name=user_name, facebook_access_token=access_token, expires_at=expires_at)
         session.add(user_session)
 
     LOGGER.info(f"Created session for user {user_email}")
@@ -109,9 +99,7 @@ def get_session(session_id: str) -> Optional[UserSession]:
 
     LOGGER.debug("get_session: Looking up session_id %s...", session_id[:8])
     with DB.session_ctx() as session:
-        user_session = session.query(UserSession).filter(
-            UserSession.session_id == session_id
-        ).first()
+        user_session = session.query(UserSession).filter(UserSession.session_id == session_id).first()
 
         if not user_session:
             LOGGER.warning("get_session: No session found for %s...", session_id[:8])
@@ -141,9 +129,7 @@ def delete_session(session_id: str) -> bool:
         return False
 
     with DB.session_ctx() as session:
-        user_session = session.query(UserSession).filter(
-            UserSession.session_id == session_id
-        ).first()
+        user_session = session.query(UserSession).filter(UserSession.session_id == session_id).first()
 
         if user_session:
             session.delete(user_session)
@@ -158,9 +144,7 @@ def cleanup_expired_sessions() -> int:
     # DB가 timezone-naive로 저장하므로 비교도 timezone-naive로 수행
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     with DB.session_ctx() as session:
-        count = session.query(UserSession).filter(
-            UserSession.expires_at < now
-        ).delete()
+        count = session.query(UserSession).filter(UserSession.expires_at < now).delete()
         LOGGER.info(f"Cleaned up {count} expired sessions")
         return count
 
@@ -213,7 +197,7 @@ def set_session_cookie(response: Response, session_id: str) -> None:
         secure=True,  # HTTPS only
         samesite="lax",  # CSRF protection: 외부 사이트 POST 요청 시 쿠키 미전송
         path="/",
-        domain=COOKIE_DOMAIN  # Allow cookie sharing across subdomains
+        domain=COOKIE_DOMAIN,  # Allow cookie sharing across subdomains
     )
 
 
@@ -222,6 +206,5 @@ def clear_session_cookie(response: JSONResponse) -> None:
     response.delete_cookie(
         key=SESSION_COOKIE_NAME,
         path="/",
-        domain=COOKIE_DOMAIN  # Must match the domain used when setting
+        domain=COOKIE_DOMAIN,  # Must match the domain used when setting
     )
-
