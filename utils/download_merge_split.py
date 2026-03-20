@@ -134,11 +134,14 @@ def get_image_dimensions(img_file_path: Path) -> tuple[int, int]:
 def crop_image_file(feed_dir_path: Path, img_file_path: Path) -> None:
     LOGGER.debug("# crop_image_file(feed_dir_path=%r, img_file_path=%r)", PathUtil.short_path(feed_dir_path), PathUtil.short_path(img_file_path))
     temp_img_file_path = img_file_path.with_suffix(img_file_path.suffix + ".temp")
-    cmd = f"innercrop -f 4 -m crop '{img_file_path}' '{temp_img_file_path}' && mv -f '{temp_img_file_path}' '{img_file_path}'"
+    cmd = f"innercrop -f 4 -m crop '{img_file_path}' '{temp_img_file_path}'"
     LOGGER.debug(cmd)
     _, error = Process.exec_cmd(cmd, dir_path=feed_dir_path)
     if error:
         LOGGER.error("<!-- can't crop the image file '%s', cmd='%s', %r -->", PathUtil.short_path(img_file_path), cmd, error)
+        return
+    if temp_img_file_path.exists():
+        temp_img_file_path.replace(img_file_path)
         # sys.exit(-1)
 
 

@@ -19,22 +19,23 @@ class ProcessTest(unittest.TestCase):
         # Test with a command that should exist
         cmd = "shuf"
         real_program_path = which("shuf")
-        expected = real_program_path
-        actual = Process._replace_script_path(cmd, Path.cwd())
-        self.assertEqual(expected, actual)
-        actual = Process._replace_script_path(cmd, Path("/usr/bin"))
-        self.assertEqual(expected, actual)
-        actual = Process._replace_script_path(cmd, Path("/usr"))
-        self.assertEqual(expected, actual)
-        actual = Process._replace_script_path(cmd, Path("/"))
-        self.assertEqual(expected, actual)
+        if real_program_path:
+            expected = str(Path(real_program_path).resolve())
+            actual = Process._replace_script_path(cmd, Path.cwd())
+            self.assertEqual(expected, actual)
+            actual = Process._replace_script_path(cmd, Path("/usr/bin"))
+            self.assertEqual(expected, actual)
+            actual = Process._replace_script_path(cmd, Path("/usr"))
+            self.assertEqual(expected, actual)
+            actual = Process._replace_script_path(cmd, Path("/"))
+            self.assertEqual(expected, actual)
         # Test with a non-existent command, should return None
         cmd = "no_such_command_abcdefg"
         actual = Process._replace_script_path(cmd, Path.cwd())
         self.assertIsNone(actual)
         # Test with an absolute path and arguments
         cmd = "/usr/bin/tail -5"
-        expected = "/usr/bin/tail -5"
+        expected = "/usr/bin/tail"
         actual = Process._replace_script_path(cmd, Path.cwd())
         self.assertEqual(expected, actual)
         # Test with a relative path to an existing file
@@ -64,25 +65,63 @@ class ProcessTest(unittest.TestCase):
         self.assertEqual(error, "")
 
     def test_exec_cmd_nonzero_exit(self) -> None:
-        result, error = Process.exec_cmd("exit 1", Path.cwd())
+        false_path = which("false")
+        if not false_path:
+            self.skipTest("'false' command not available on this system")
+        result, error = Process.exec_cmd(false_path, Path.cwd())
         self.assertEqual(result, "")
-        self.assertIn("exit", error.lower())
+        self.assertIn("code", error.lower())
+
+    def test_exec_cmd_disallow_shell(self) -> None:
+        result, error = Process.exec_cmd("sh -c 'echo hello'", Path.cwd())
+        self.assertEqual(result, "")
+        self.assertIn("not allowed", error.lower())
+
+    def test_exec_cmd_disallow_all_shells(self) -> None:
+        for shell in ["bash", "zsh", "ksh", "fish", "env"]:
+            result, error = Process.exec_cmd(f"{shell} -c 'echo hello'", Path.cwd())
+            self.assertEqual(result, "", f"{shell} should be blocked")
+            self.assertIn("not allowed", error.lower(), f"{shell} should be blocked")
+
+    def test_exec_cmd_shell_injection_semicolon(self) -> None:
+        # shell=False에서 세미콜론은 명령어 구분자가 아닌 일반 인자
+        result, error = Process.exec_cmd("echo hello; echo injected", Path.cwd())
+        self.assertEqual(error, "")
+        # "hello;"와 "echo"와 "injected"가 echo의 인자로 출력됨 (두 번째 명령 실행 아님)
+        self.assertEqual(result.strip(), "hello; echo injected")
+
+    def test_exec_cmd_shell_injection_pipe(self) -> None:
+        # 파이프를 통한 명령어 체이닝이 차단되는지 확인
+        result, error = Process.exec_cmd("echo hello | cat", Path.cwd())
+        if not error:
+            # shell=False에서 "|"와 "cat"은 echo의 인자
+            self.assertIn("|", result)
+
+    def test_build_argv_invalid_command(self) -> None:
+        argv, error = Process._build_argv("", Path.cwd())
+        self.assertEqual(argv, [])
+        self.assertIn("empty", error.lower())
+
+    def test_build_argv_unclosed_quote(self) -> None:
+        argv, error = Process._build_argv("echo 'unclosed", Path.cwd())
+        self.assertEqual(argv, [])
+        self.assertIn("invalid", error.lower())
 
     def test_find_process_group_and_kill_process_group(self) -> None:
         import time
-        
+
         # Use a unique sleep duration to avoid conflicts with other sleep processes
         unique_sleep_duration = "987654321"
-        
+
         # Count existing processes before starting our test process
         initial_count = len(Process._find_process_list(f"sleep {unique_sleep_duration}"))
-        
+
         # Start a long-running process with unique duration
         proc = subprocess.Popen(["sleep", unique_sleep_duration])
         try:
             # Give it a moment to start
             time.sleep(0.2)
-            
+
             # Find the process - should be initial_count + 1
             actual = len(Process._find_process_list(f"sleep {unique_sleep_duration}"))
             expected = initial_count + 1
@@ -91,11 +130,10 @@ class ProcessTest(unittest.TestCase):
             actual = Process.kill_process_group(f"sleep {unique_sleep_duration}")
             expected = 1
             self.assertEqual(expected, actual)
-            
-                        
+
             # Give it a moment to be killed
             time.sleep(0.2)
-            
+
             # Verify process is gone - should be back to initial count
             actual = len(Process._find_process_list(f"sleep {unique_sleep_duration}"))
             expected = initial_count
