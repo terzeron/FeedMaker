@@ -98,7 +98,6 @@ class Notification:
     def _send_email_by_naver_cloud(self, msg: str, subject: str = "") -> bool:
         LOGGER.debug(f"# _send_email_by_naver_cloud('{msg}', '{subject}')")
         LOGGER.debug("naver_cloud_access_key: %s", self.naver_cloud_access_key)
-        LOGGER.debug("naver_cloud_secret_key: %s", self.naver_cloud_secret_key)
         LOGGER.debug("mail_sender_address: %s", self.email_sender_address)
         LOGGER.debug("mail_sender_name: %s", self.email_sender_name)
         LOGGER.debug("mail_recipient_list: %r", self.email_recipient_list)
@@ -139,7 +138,6 @@ class Notification:
     def _send_email_by_nhn_cloud(self, msg: str, subject: str = "") -> bool:
         LOGGER.debug(f"# _send_email_by_nhn_cloud('{msg}', '{subject}')")
         LOGGER.debug("nhn_cloud_appkey: %s", self.nhn_cloud_appkey)
-        LOGGER.debug("nhn_cloud_secretkey: %s", self.nhn_cloud_secretkey)
         LOGGER.debug("mail_sender_address: %s", self.email_sender_address)
         LOGGER.debug("mail_sender_name: %s", self.email_sender_name)
         LOGGER.debug("mail_recipient_list: %r", self.email_recipient_list)
