@@ -1,61 +1,99 @@
 <template>
-  <div class="container-fluid">
-    <div class="row">
-      <div class="col-12">
-        <div id="facebookAuthView">
-          <div>
-            <FacebookAuth @auth-initialized="authInitialized" @auth-error="authFailed" ref="authRef" />
-            <div>
-              <div v-if="name">
-                <p>{{ name }}님으로 로그인하였습니다.</p>
-              </div>
-              <!-- SDK 로딩 중 -->
-              <div v-if="!initialized && !sdkFailed" class="text-muted">
-                <div class="spinner-border spinner-border-sm me-2" role="status">
-                  <span class="visually-hidden">Loading...</span>
-                </div>
-                로그인 준비 중...
-              </div>
-              <!-- SDK 로드 실패 -->
-              <div v-else-if="sdkFailed" class="text-danger">
-                <p>Facebook 로그인을 불러올 수 없습니다.</p>
-                <button class="btn btn-outline-secondary btn-sm" @click="retrySdk">
-                  <font-awesome-icon :icon="['fa', 'rotate-right']" class="me-1" />
-                  다시 시도
-                </button>
-              </div>
-              <!-- 로그아웃 버튼 -->
-              <button
-                v-else-if="is_logged"
-                class="btn btn-outline-primary"
-                :disabled="logoutLoading"
-                @click="logout()"
-              >
-                <span v-if="logoutLoading" class="spinner-border spinner-border-sm me-1" role="status" />
-                페이스북 로그아웃
-                <font-awesome-icon :icon="['fab', 'facebook']" />
-              </button>
-              <!-- 로그인 버튼 -->
-              <button
-                v-else
-                class="btn btn-outline-primary"
-                :disabled="loginLoading"
-                @click="login"
-              >
-                <span v-if="loginLoading" class="spinner-border spinner-border-sm me-1" role="status" />
-                페이스북 로그인
-                <font-awesome-icon :icon="['fab', 'facebook']" />
-              </button>
-            </div>
-          </div>
-        </div>
-        <ToastNotification :notification="notification" @hide="hideNotification" />
+  <div class="login-wrapper">
+    <div class="login-card">
+      <FacebookAuth @auth-initialized="authInitialized" @auth-error="authFailed" ref="authRef" />
+      <h5 class="login-title">FeedMaker</h5>
+      <div v-if="name" class="login-greeting">
+        {{ name }}님으로 로그인하였습니다.
       </div>
+      <!-- SDK 로딩 중 -->
+      <div v-if="!initialized && !sdkFailed" class="text-muted">
+        <div class="spinner-border spinner-border-sm me-2" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        로그인 준비 중...
+      </div>
+      <!-- SDK 로드 실패 -->
+      <div v-else-if="sdkFailed" class="text-danger text-center">
+        <p class="mb-2">Facebook 로그인을 불러올 수 없습니다.</p>
+        <button class="btn btn-outline-secondary btn-sm" @click="retrySdk">
+          <font-awesome-icon :icon="['fa', 'rotate-right']" class="me-1" />
+          다시 시도
+        </button>
+      </div>
+      <!-- 로그아웃 버튼 -->
+      <button
+        v-else-if="is_logged"
+        class="btn btn-outline-secondary w-100"
+        :disabled="logoutLoading"
+        @click="logout()"
+      >
+        <span v-if="logoutLoading" class="spinner-border spinner-border-sm me-1" role="status" />
+        <font-awesome-icon :icon="['fab', 'facebook']" class="me-1" />
+        로그아웃
+      </button>
+      <!-- 로그인 버튼 -->
+      <button
+        v-else
+        class="btn btn-facebook w-100"
+        :disabled="loginLoading"
+        @click="login"
+      >
+        <span v-if="loginLoading" class="spinner-border spinner-border-sm me-1" role="status" />
+        <font-awesome-icon :icon="['fab', 'facebook']" class="me-1" />
+        Facebook으로 로그인
+      </button>
     </div>
+    <ToastNotification :notification="notification" @hide="hideNotification" />
   </div>
 </template>
 
-<style></style>
+<style scoped>
+.login-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 56px);
+  background-color: #f5f5f5;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 360px;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.login-title {
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.login-greeting {
+  margin-bottom: 1rem;
+  color: #495057;
+}
+
+.btn-facebook {
+  background-color: #1877f2;
+  border-color: #1877f2;
+  color: #fff;
+}
+
+.btn-facebook:hover:not(:disabled) {
+  background-color: #166fe5;
+  border-color: #166fe5;
+  color: #fff;
+}
+
+.btn-facebook:disabled {
+  opacity: 0.7;
+}
+</style>
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
@@ -167,9 +205,7 @@ const login = async () => {
       // 로그인 성공 - 서버가 httpOnly 쿠키 설정함 (SameSite=Lax로 CSRF 방어)
       userName.value = profile.value["name"];
       isAuthenticated.value = true;
-      const pictureUrl = profile.value["id"]
-        ? `https://graph.facebook.com/${profile.value["id"]}/picture?type=normal`
-        : null;
+      const pictureUrl = profile.value?.picture?.data?.url || null;
       authStore.setAuthenticated(profile.value["name"], pictureUrl);
       await router.push("/result");
     } else {

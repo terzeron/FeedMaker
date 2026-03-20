@@ -153,7 +153,7 @@ const getProfile = async () => {
 
   const profilePromise = () => {
     return new Promise((resolve, reject) => {
-      window.FB.api('/me', {fields: 'id,name,email'}, function (response) {
+      window.FB.api('/me', {fields: 'id,name,email,picture.type(normal)'}, function (response) {
         if (response && !response.error) {
           resolve(response);
         } else {
