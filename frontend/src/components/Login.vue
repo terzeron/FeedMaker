@@ -128,16 +128,12 @@ const accessToken = ref(null);
 const status = ref(null);
 const profile = ref(null);
 
-// 세션 정보는 이제 서버에서 관리 (httpOnly 쿠키)
-const userName = ref(null);
-const isAuthenticated = ref(false);
-
 const is_logged = computed(() => {
-  return isAuthenticated.value;
+  return authStore.state.isAuthenticated;
 });
 
 const name = computed(() => {
-  return userName.value;
+  return authStore.state.userName;
 });
 
 const authInitialized = () => {
@@ -158,7 +154,7 @@ const retrySdk = async () => {
 };
 
 const login = async () => {
-  if (isAuthenticated.value) {
+  if (authStore.state.isAuthenticated) {
     await router.push("/result");
     return;
   }
@@ -203,8 +199,6 @@ const login = async () => {
 
     if (response.data.status === "success") {
       // 로그인 성공 - 서버가 httpOnly 쿠키 설정함 (SameSite=Lax로 CSRF 방어)
-      userName.value = profile.value["name"];
-      isAuthenticated.value = true;
       const pictureUrl = profile.value?.picture?.data?.url || null;
       authStore.setAuthenticated(profile.value["name"], pictureUrl);
       await router.push("/result");
@@ -235,9 +229,6 @@ const logout = async () => {
       }
     );
 
-    // 로컬 상태 초기화
-    userName.value = null;
-    isAuthenticated.value = false;
     authStore.clear();
 
     // Facebook 로그아웃
@@ -274,18 +265,12 @@ const checkAuthStatus = async () => {
     );
 
     if (response.data.is_authenticated) {
-      userName.value = response.data.name;
-      isAuthenticated.value = true;
       authStore.updateFromServer(true, response.data.name);
     } else {
-      userName.value = null;
-      isAuthenticated.value = false;
       authStore.updateFromServer(false, null);
     }
   } catch (error) {
     console.error("Auth status check error:", error);
-    userName.value = null;
-    isAuthenticated.value = false;
     authStore.updateFromServer(false, null);
   }
 };
