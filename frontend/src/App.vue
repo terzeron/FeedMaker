@@ -27,7 +27,15 @@
           <ul class="navbar-nav ms-auto">
             <li class="nav-item">
               <router-link to="/login" class="nav-link">
-                <font-awesome-icon :icon="['fa', 'user-circle']" />
+                <img
+                  v-if="auth.state.profilePictureUrl"
+                  :src="auth.state.profilePictureUrl"
+                  class="navbar-profile-img"
+                  referrerpolicy="no-referrer"
+                  alt="프로필"
+                  @error="onProfileImgError"
+                />
+                <font-awesome-icon v-else :icon="['fa', 'user-circle']" class="navbar-profile-icon" />
               </router-link>
             </li>
           </ul>
@@ -75,12 +83,30 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.navbar-profile-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.navbar-profile-icon {
+  font-size: 1.5rem;
+}
+
 </style>
 
 <script setup>
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faUserCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
+import { authStore } from "./stores/authStore";
 
 library.add(faUserCircle);
+
+const auth = authStore;
+
+const onProfileImgError = (e) => {
+  e.target.style.display = "none";
+};
 </script>
