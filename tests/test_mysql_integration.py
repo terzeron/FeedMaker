@@ -388,7 +388,6 @@ class TestMySQLIntegration(unittest.TestCase):
                         session_id="test_session_123",
                         user_email="test@example.com",
                         user_name="Test User",
-                        facebook_access_token="test_token_123",
                         created_at=now,
                         expires_at=now + timedelta(hours=24),
                         last_accessed_at=now
@@ -404,7 +403,6 @@ class TestMySQLIntegration(unittest.TestCase):
                         session_id="expired_session_456",
                         user_email="expired@example.com",
                         user_name="Expired User",
-                        facebook_access_token="expired_token_456",
                         created_at=now - timedelta(days=2),
                         expires_at=now - timedelta(hours=1),  # Expired 1 hour ago
                         last_accessed_at=now - timedelta(days=1)

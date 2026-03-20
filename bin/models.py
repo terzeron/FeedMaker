@@ -99,7 +99,7 @@ class UserSession(Base):
     session_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_email: Mapped[str] = mapped_column(String(256), nullable=False)
     user_name: Mapped[str] = mapped_column(String(256), nullable=False)
-    facebook_access_token: Mapped[str] = mapped_column(String(512), nullable=False)
+    facebook_access_token: Mapped[Optional[str]] = mapped_column(String(512), nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text('CURRENT_TIMESTAMP'))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     last_accessed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text('CURRENT_TIMESTAMP'))

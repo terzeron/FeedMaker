@@ -64,12 +64,9 @@ def test_read_groups():
     assert "groups" in response.json()
 
 def test_openapi_endpoint():
-    """GET /openapi.json 엔드포인트 테스트"""
+    """OpenAPI 비활성화 확인 테스트"""
     response = client.get("/openapi.json")
-    assert response.status_code == 200
-    data = response.json()
-    assert "openapi" in data
-    assert data["openapi"].startswith("3.")
+    assert response.status_code == 404
 
 def test_invalid_endpoint():
     """유효하지 않은 엔드포인트 테스트"""

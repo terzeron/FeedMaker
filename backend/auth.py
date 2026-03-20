@@ -83,7 +83,7 @@ def generate_session_id() -> str:
     return secrets.token_urlsafe(48)
 
 
-def create_session(user_email: str, user_name: str, facebook_access_token: str) -> str:
+def create_session(user_email: str, user_name: str) -> str:
     """Create a new session in the database and return session ID"""
     session_id = generate_session_id()
     expires_at = datetime.now(timezone.utc) + timedelta(days=SESSION_EXPIRY_DAYS)
@@ -93,7 +93,6 @@ def create_session(user_email: str, user_name: str, facebook_access_token: str) 
             session_id=session_id,
             user_email=user_email,
             user_name=user_name,
-            facebook_access_token=facebook_access_token,
             expires_at=expires_at
         )
         session.add(user_session)
