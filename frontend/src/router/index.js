@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import axios from 'axios';
+import { authStore } from '../stores/authStore';
 import ExecResult from '@/components/ExecResult.vue';
 import Problems from '@/components/Problems.vue';
 import FeedManagement from '@/components/FeedManagement.vue';
@@ -78,9 +79,12 @@ const checkAuthStatus = async () => {
                 withCredentials: true  // httpOnly 쿠키 포함
             }
         );
-        return response.data.is_authenticated === true;
+        const authenticated = response.data.is_authenticated === true;
+        authStore.updateFromServer(authenticated, response.data.name || null);
+        return authenticated;
     } catch (error) {
         console.error('Auth check failed:', error);
+        authStore.updateFromServer(false, null);
         return false;
     }
 };

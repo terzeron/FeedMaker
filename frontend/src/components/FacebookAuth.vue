@@ -24,7 +24,7 @@ const props = defineProps({
 });
 
 // Emits
-const emit = defineEmits(['auth-initialized']);
+const emit = defineEmits(['auth-initialized', 'auth-error']);
 
 // Reactive state
 const isSdkLoaded = ref(false);
@@ -153,7 +153,7 @@ const getProfile = async () => {
 
   const profilePromise = () => {
     return new Promise((resolve, reject) => {
-      window.FB.api('/me', {fields: 'name,email'}, function (response) {
+      window.FB.api('/me', {fields: 'id,name,email'}, function (response) {
         if (response && !response.error) {
           resolve(response);
         } else {
@@ -170,6 +170,19 @@ const isInitialized = () => {
   return isSdkLoaded.value && !!window.FB;
 };
 
+// SDK 재로드 메서드
+const retryLoadSDK = async () => {
+  sdkLoadError.value = null;
+  initializationAttempted.value = false;
+  try {
+    await loadFacebookSDK();
+  } catch (error) {
+    console.error('Error loading Facebook SDK', error);
+    sdkLoadError.value = error.message;
+    emit('auth-error', error.message);
+  }
+};
+
 // Expose methods for parent components
 defineExpose({
   login,
@@ -177,7 +190,8 @@ defineExpose({
   getProfile,
   isInitialized,
   isSdkLoaded,
-  sdkLoadError
+  sdkLoadError,
+  retryLoadSDK
 });
 
 // Lifecycle
@@ -187,6 +201,7 @@ onMounted(async () => {
   } catch (error) {
     console.error('Error loading Facebook SDK', error);
     sdkLoadError.value = error.message;
+    emit('auth-error', error.message);
   }
 });
 </script>
