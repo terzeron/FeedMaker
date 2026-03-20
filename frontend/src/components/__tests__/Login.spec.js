@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import Login from '../Login.vue';
 import axios from 'axios';
+import { authStore } from '../../stores/authStore';
 
 jest.mock('axios');
 
@@ -35,6 +36,7 @@ describe('Login.vue', () => {
   beforeEach(() => {
     axios.get.mockReset();
     axios.post.mockReset();
+    authStore.clear();
   });
 
   it('logs in and redirects on success', async () => {
