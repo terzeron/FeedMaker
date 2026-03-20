@@ -10,7 +10,7 @@ import json
 import logging.config
 from shutil import rmtree
 from typing import Any, Optional
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 
 from git import Repo, InvalidGitRepositoryError
 
