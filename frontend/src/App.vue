@@ -129,7 +129,6 @@ html {
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faUserCircle, faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
-import { useRouter } from "vue-router";
 import axios from "axios";
 import { authStore } from "./stores/authStore";
 import { getApiUrlPath } from "./utils/api";
@@ -137,7 +136,6 @@ import { getApiUrlPath } from "./utils/api";
 library.add(faUserCircle, faRightFromBracket);
 
 const auth = authStore;
-const router = useRouter();
 
 const handleLogout = async () => {
   try {
@@ -150,7 +148,7 @@ const handleLogout = async () => {
   localStorage.removeItem("name");
   localStorage.removeItem("is_authorized");
   localStorage.removeItem("session_expiry");
-  await router.push("/login");
+  window.location.href = "/login";
 };
 
 const onProfileImgError = (e) => {
