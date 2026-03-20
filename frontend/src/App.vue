@@ -26,7 +26,7 @@
           
           <ul class="navbar-nav ms-auto">
             <li class="nav-item">
-              <router-link to="/login" class="nav-link">
+              <router-link to="/login" class="nav-link" :class="{ 'nav-link-profile': auth.state.profilePictureUrl }">
                 <img
                   v-if="auth.state.profilePictureUrl"
                   :src="auth.state.profilePictureUrl"
@@ -81,6 +81,10 @@ html {
 #app {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.nav-link-profile {
+  padding: 0.25rem 1rem !important;
 }
 
 .navbar-profile-img {
