@@ -7,7 +7,7 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Optional, Any, List, Tuple
+from typing import Any
 from dataclasses import dataclass
 from PIL import Image
 
@@ -121,7 +121,7 @@ def download_image_and_read_metadata(feed_dir_path: Path, crawler: Crawler, feed
     return img_file_list, img_url_list, normal_html_lines, img_width_list
 
 
-def get_image_dimensions(img_file_path: Path) -> Tuple[int, int]:
+def get_image_dimensions(img_file_path: Path) -> tuple[int, int]:
     """Get image dimensions"""
     try:
         with Image.open(img_file_path) as img:
@@ -164,7 +164,7 @@ def split_image_file(*, feed_dir_path: Path, img_file_path: Path, threshold_opti
     return True
 
 
-def progressive_merge_and_split(*, feed_dir_path: Path, img_file_list: list[Path], page_url: str, feed_img_dir_path: Path, img_url_prefix: str, threshold_options: ThresholdOptions, image_type_options: ImageTypeOptions, process_options: ProcessOptions, img_width_list: Optional[list[str]] = None) -> None:
+def progressive_merge_and_split(*, feed_dir_path: Path, img_file_list: list[Path], page_url: str, feed_img_dir_path: Path, img_url_prefix: str, threshold_options: ThresholdOptions, image_type_options: ImageTypeOptions, process_options: ProcessOptions, img_width_list: list[str] | None = None) -> None:
     """
     Optimized progressive merge and split with single-pass processing
     """
@@ -184,7 +184,7 @@ def progressive_merge_and_split(*, feed_dir_path: Path, img_file_list: list[Path
         _output_all_final_split_files(feed_img_dir_path, page_url, img_url_prefix)
 
 
-def _run_normal_merge_split_process(img_file_list: list[Path], page_url: str, feed_dir_path: Path, feed_img_dir_path: Path, img_url_prefix: str, threshold_options: ThresholdOptions, image_type_options: ImageTypeOptions, process_options: ProcessOptions, img_width_list: Optional[list[str]] = None) -> None:
+def _run_normal_merge_split_process(img_file_list: list[Path], page_url: str, feed_dir_path: Path, feed_img_dir_path: Path, img_url_prefix: str, threshold_options: ThresholdOptions, image_type_options: ImageTypeOptions, process_options: ProcessOptions, img_width_list: list[str] | None = None) -> None:
     """Run the original merge/split process to create initial split files"""
 
     # Create merged chunks respecting WebP size limits
@@ -218,7 +218,7 @@ def _run_normal_merge_split_process(img_file_list: list[Path], page_url: str, fe
             chunk_file_path.unlink()
 
 
-def _convert_jpeg_to_webp(src_path: Path, quality: int = 75) -> Optional[Path]:
+def _convert_jpeg_to_webp(src_path: Path, quality: int = 75) -> Path | None:
     """Convert a JPEG file to WEBP format and remove the original JPEG.
 
     Returns the path to the WEBP file if successful, otherwise None.
@@ -355,13 +355,13 @@ def _output_all_final_split_files(feed_img_dir_path: Path, page_url: str, img_ur
             print(f"<img src='{split_img_url}.jpeg'/>")
 
 
-def create_merged_chunks(img_file_list: list[Path], feed_img_dir_path: Path, page_url: str, img_width_list: Optional[list[str]] = None) -> list[tuple[Path, str]]:
+def create_merged_chunks(img_file_list: list[Path], feed_img_dir_path: Path, page_url: str, img_width_list: list[str] | None = None) -> list[tuple[Path, str]]:
     """Create merged image chunks respecting JPEG size limits"""
     if img_width_list is None:
         img_width_list = [""] * len(img_file_list)
 
     merged_chunks: list[tuple[Path, str]] = []
-    current_merged_image: Optional[Image.Image] = None
+    current_merged_image: Image.Image | None = None
     current_height = 0
     current_width = 0
     chunk_index = 1
@@ -453,7 +453,7 @@ def _save_merged_chunk(merged_image: Image.Image, feed_img_dir_path: Path, page_
     return chunk_file_path
 
 
-def print_image_files(*, num_units: int, feed_img_dir_path: Path, img_url_prefix: str, img_url: str, img_file_path: Optional[Path], postfix: Optional[str], do_flip_right_to_left: bool) -> None:
+def print_image_files(*, num_units: int, feed_img_dir_path: Path, img_url_prefix: str, img_url: str, img_file_path: Path | None, postfix: str | None, do_flip_right_to_left: bool) -> None:
     img_url_str = img_url if not img_url.startswith("data:image") else img_url[:30]
     LOGGER.debug("# print_image_files(num_units=%d, feed_img_dir_path=%r, img_url_prefix='%s', img_url='%s', img_file_path=%r, postfix='%s', do_flip_right_to_left=%r)", num_units, PathUtil.short_path(feed_img_dir_path), img_url_prefix, img_url_str, PathUtil.short_path(img_file_path), postfix, do_flip_right_to_left)
     # print some split images
@@ -474,7 +474,7 @@ def print_image_files(*, num_units: int, feed_img_dir_path: Path, img_url_prefix
             print(f"<img src='{split_img_url}{suffix}'/>")
 
 
-def print_cached_image_file(feed_img_dir_path: Path, img_url_prefix: str, img_url: str, unit_num: Optional[int] = None) -> None:
+def print_cached_image_file(feed_img_dir_path: Path, img_url_prefix: str, img_url: str, unit_num: int | None = None) -> None:
     img_url_str = img_url if not img_url.startswith("data:image") else img_url[:30]
     LOGGER.debug("# print_cached_image_file(feed_img_dir_path=%r, img_url_prefix='%s', img_url='%s', unit_num=%d)", PathUtil.short_path(feed_img_dir_path), img_url_prefix, img_url_str, unit_num)
     img_file_path = FileManager.get_cache_file_path(path_prefix=feed_img_dir_path, img_url_for_hashing=img_url, postfix=unit_num)

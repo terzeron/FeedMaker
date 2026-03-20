@@ -6,7 +6,7 @@ import os
 import logging
 import logging.config
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 from contextlib import contextmanager
 import threading
 
@@ -28,15 +28,9 @@ class CommonTestUtil:
     """Common test utilities for feed maker tests"""
 
     @staticmethod
-    def get_test_config() -> Dict[str, Any]:
+    def get_test_config() -> dict[str, Any]:
         """Get test configuration"""
-        return {
-            'host': 'localhost',
-            'port': 3306,
-            'user': 'test',
-            'password': 'test',
-            'database': 'test'
-        }
+        return {"host": "localhost", "port": 3306, "user": "test", "password": "test", "database": "test"}
 
     @staticmethod
     def get_test_loki_url() -> str:
@@ -83,12 +77,7 @@ def start_mysql_container():
             # Test code...
     """
     LOGGER.info("Starting MySQL container...")
-    mysql = MySqlContainer(
-        image="mysql:8.0",
-        username="test",
-        password="test",
-        dbname="test"
-    )
+    mysql = MySqlContainer(image="mysql:8.0", username="test", password="test", dbname="test")
 
     try:
         mysql.start()
@@ -116,12 +105,7 @@ def start_containers_parallel():
     loki.with_exposed_ports(3100)
     loki.with_command(["-config.file=/etc/loki/local-config.yaml"])
 
-    mysql = MySqlContainer(
-        image="mysql:8.0",
-        username="test",
-        password="test",
-        dbname="test"
-    )
+    mysql = MySqlContainer(image="mysql:8.0", username="test", password="test", dbname="test")
 
     # Start containers in parallel
     errors = []
@@ -140,10 +124,7 @@ def start_containers_parallel():
         except Exception as e:
             errors.append(("mysql", e))
 
-    threads = [
-        threading.Thread(target=start_loki),
-        threading.Thread(target=start_mysql)
-    ]
+    threads = [threading.Thread(target=start_loki), threading.Thread(target=start_mysql)]
 
     for thread in threads:
         thread.start()
@@ -187,10 +168,7 @@ def start_containers_parallel():
             except Exception as e:
                 LOGGER.error(f"Error stopping MySQL: {e}")
 
-        threads = [
-            threading.Thread(target=stop_loki),
-            threading.Thread(target=stop_mysql)
-        ]
+        threads = [threading.Thread(target=stop_loki), threading.Thread(target=stop_mysql)]
 
         for thread in threads:
             thread.start()

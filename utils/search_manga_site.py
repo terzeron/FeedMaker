@@ -6,7 +6,7 @@ import re
 import getopt
 from threading import Thread
 import logging.config
-from typing import Optional, Union, Any, Tuple, List
+from typing import Any
 from pathlib import Path
 from urllib.parse import urlparse, unquote, quote
 
@@ -23,7 +23,7 @@ LOGGER = logging.getLogger()
 
 class Site:
     site_name: str = ""
-    work_dir_path: Optional[Path] = None
+    work_dir_path: Path | None = None
 
     url_prefix: str = ""
     url_postfix: str = ""
@@ -34,7 +34,7 @@ class Site:
     num_retries: int = 1
     method: Method = Method.GET
     headers: dict[str, str] = {}
-    payload: dict[str, Union[str, bytes]] = {}
+    payload: dict[str, str | bytes] = {}
 
     @classmethod
     def set_work_dir(cls, work_dir: str) -> None:
@@ -85,7 +85,7 @@ class Site:
         """사이트의 기본 URL을 생성합니다."""
         return URL.get_url_scheme(self.url_prefix) + "://" + URL.get_url_domain(self.url_prefix)
 
-    def get_data_from_site(self, url: str = "") -> Optional[str]:
+    def get_data_from_site(self, url: str = "") -> str | None:
         LOGGER.debug(f"# get_data_from_site(url={url})")
         if self.site_name:
             work_dir_path = self.get_work_dir()
