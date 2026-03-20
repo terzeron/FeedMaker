@@ -8,9 +8,8 @@ import uuid
 import threading
 import logging.config
 from pathlib import Path
-from typing import Optional, TYPE_CHECKING, cast, Any
+from typing import Optional, Any
 from shutil import which
-import urllib3
 
 from selenium import webdriver
 from selenium.common.exceptions import InvalidCookieDomainException, TimeoutException, WebDriverException, NoAlertPresentException
@@ -22,9 +21,6 @@ from bin.feed_maker_util import PathUtil
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
-
-if TYPE_CHECKING:
-    from _typeshed import SupportsWrite
 
 
 class HeadlessBrowser:
@@ -204,7 +200,7 @@ class HeadlessBrowser:
     @classmethod
     def _get_cached_driver(cls, options: "webdriver.ChromeOptions") -> Optional[webdriver.Chrome]:
         """Get cached driver if available and compatible (thread-local)"""
-        cache = getattr(cls._thread_local, "_driver_cache", None)
+        cache: webdriver.Chrome | None = getattr(cls._thread_local, "_driver_cache", None)
         if cache is None:
             return None
 
@@ -329,7 +325,7 @@ class HeadlessBrowser:
                 LOGGER.warning(f"<!-- Warning: can't connect to '{url}' for temporary network error -->")
                 LOGGER.warning("<!-- %r -->", e)
                 return ""
-            except Exception as e:  # type: ignore
+            except Exception as e:
                 LOGGER.warning(f"<!-- Warning: can't connect to '{url}' for temporary network error -->")
                 LOGGER.warning("<!-- %r -->", e)
                 return ""
