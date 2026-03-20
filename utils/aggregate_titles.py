@@ -4,7 +4,6 @@
 import sys
 import re
 import getopt
-import subprocess
 import logging.config
 from pathlib import Path
 from bin.feed_maker_util import IO, Process
@@ -16,6 +15,28 @@ LOGGER = logging.getLogger()
 
 def print_usage() -> None:
     print(f"_usage: {sys.argv[0]}\t[ -t <threshold> ] <output file>\n")
+
+
+def _extract_clustered_lines(temp_output_file: Path) -> list[tuple[str, str]]:
+    """TSV에서 2번째 필드 >= 3인 행의 (line_num, title) 쌍을 추출"""
+    results: list[tuple[str, str]] = []
+    if not temp_output_file.exists():
+        return results
+    with open(temp_output_file, encoding="utf-8") as f:
+        for line in f:
+            line = line.rstrip()
+            if not line:
+                continue
+            fields = line.split("\t")
+            if len(fields) < 3:
+                continue
+            count = int(fields[1])
+            if count < 3:
+                continue
+            # fields[2:]부터 (line_num, title) 쌍
+            for i in range(2, len(fields) - 1, 2):
+                results.append((fields[i], fields[i + 1]))
+    return results
 
 
 def main() -> int:
@@ -39,7 +60,7 @@ def main() -> int:
 
     # split link and title into two separate files
     # and make line number & link mapping table
-    with open(intermediate_file, 'w', encoding='utf-8') as out_file:
+    with open(intermediate_file, "w", encoding="utf-8") as out_file:
         line_num = 1
         for line in IO.read_stdin_as_line_list():
             if re.search(r"^#", line):
@@ -47,7 +68,7 @@ def main() -> int:
             line = line.rstrip()
             link, title, _ = line.split("\t")
             clean_title = title.lower()
-            clean_title = re.sub(r'[\s!-/:-@\[-`]*', '', clean_title)
+            clean_title = re.sub(r"[\s!-/:-@\[-`]*", "", clean_title)
             if clean_title not in title_existence_set:
                 title_existence_set.add(clean_title)
                 line_num_link_map[line_num] = link + "\t" + title
@@ -62,17 +83,11 @@ def main() -> int:
     LOGGER.debug(result, error)
 
     # convert & extract temporary output file
-    cmd = "awk -F'\t' '$2 >= 3 { for (i = 3; i < NF; i += 2) { print $(i) FS $(i + 1) } }' '" + temp_output_file + "'"
-    LOGGER.debug(cmd)
-    with subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) as p:
-        with open(output_file, 'w', encoding='utf-8') as out_file:
-            if p.stdout:
-                for buffer in p.stdout:
-                    line = str(buffer)
-                    line = line.rstrip()
-                    line_num_str, _ = line.split("\t")
-                    line_num = int(line_num_str)
-                    out_file.write(f"{line_num_link_map[line_num]}\n")
+    pairs = _extract_clustered_lines(Path(temp_output_file))
+    with open(output_file, "w", encoding="utf-8") as out_file:
+        for line_num_str, _ in pairs:
+            line_num = int(line_num_str)
+            out_file.write(f"{line_num_link_map[line_num]}\n")
 
     return 0
 
