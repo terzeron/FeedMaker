@@ -25,6 +25,7 @@
             </div>
           </div>
         </div>
+        <ToastNotification :notification="notification" @hide="hideNotification" />
       </div>
     </div>
   </div>
@@ -37,10 +38,12 @@ import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
 import FacebookAuth from "./FacebookAuth.vue";
+import ToastNotification from "./ToastNotification.vue";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faFacebook } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { getApiUrlPath } from "../utils/api";
+import { useNotification } from "../composables/useNotification";
 
 // Define component name for ESLint
 defineOptions({
@@ -50,6 +53,7 @@ defineOptions({
 library.add(faFacebook);
 
 const router = useRouter();
+const { notification, showError, showWarning, hideNotification } = useNotification();
 const authRef = ref(null);
 
 const initialized = ref(false);
@@ -84,13 +88,13 @@ const login = async () => {
 
   if (!isFacebookReady) {
     console.error("Facebook Auth is not initialized. Please wait...");
-    alert("Facebook Auth가 아직 초기화되지 않았습니다. 잠시 후 다시 시도해주세요.");
+    showWarning("Facebook Auth가 아직 초기화되지 않았습니다. 잠시 후 다시 시도해주세요.");
     return;
   }
 
   if (!authRef.value) {
     console.error("AuthRef is not available");
-    alert("Facebook Auth 참조를 찾을 수 없습니다.");
+    showError("Facebook Auth 참조를 찾을 수 없습니다.");
     return;
   }
 
@@ -99,7 +103,7 @@ const login = async () => {
     profile.value = await authRef.value.getProfile();
 
     if (!profile.value || !profile.value["email"] || !profile.value["name"]) {
-      alert("프로필 정보를 가져올 수 없습니다.");
+      showError("프로필 정보를 가져올 수 없습니다.");
       return;
     }
 
@@ -122,14 +126,14 @@ const login = async () => {
       isAuthenticated.value = true;
       await router.push("/result");
     } else {
-      alert(response.data.message || "로그인 실패");
+      showError(response.data.message || "로그인 실패");
     }
   } catch (error) {
     console.error("Login error:", error);
     if (error.response?.status === 403) {
-      alert("허용되지 않은 이메일입니다.");
+      showError("허용되지 않은 이메일입니다.");
     } else {
-      alert("로그인 중 오류가 발생했습니다: " + (error.response?.data?.detail || error.message));
+      showError("로그인 중 오류가 발생했습니다: " + (error.response?.data?.detail || error.message));
     }
   }
 };
@@ -166,7 +170,7 @@ const logout = async () => {
     await router.push("/result");
   } catch (error) {
     console.error("Logout error:", error);
-    alert("로그아웃 중 오류가 발생했습니다: " + error.message);
+    showError("로그아웃 중 오류가 발생했습니다: " + error.message);
   }
 };
 
