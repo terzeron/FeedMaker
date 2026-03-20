@@ -25,9 +25,47 @@
           </ul>
           
           <ul class="navbar-nav ms-auto">
-            <li class="nav-item">
+            <!-- 로그인 상태: 프로필 드롭다운 -->
+            <li v-if="auth.state.isAuthenticated" class="nav-item dropdown">
+              <a
+                class="nav-link dropdown-toggle d-flex align-items-center"
+                href="#"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <img
+                  v-if="auth.state.profilePictureUrl"
+                  :src="auth.state.profilePictureUrl"
+                  class="navbar-profile-img me-1"
+                  referrerpolicy="no-referrer"
+                  alt="프로필"
+                  @error="onProfileImgError"
+                />
+                <font-awesome-icon v-else :icon="['fa', 'user-circle']" />
+                <span class="ms-1 d-none d-md-inline">{{ auth.state.userName }}</span>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                  <router-link to="/login" class="dropdown-item">
+                    <font-awesome-icon :icon="['fa', 'user-circle']" class="me-2" />
+                    프로필
+                  </router-link>
+                </li>
+                <li><hr class="dropdown-divider" /></li>
+                <li>
+                  <a class="dropdown-item" href="#" @click.prevent="handleLogout">
+                    <font-awesome-icon :icon="['fa', 'right-from-bracket']" class="me-2" />
+                    로그아웃
+                  </a>
+                </li>
+              </ul>
+            </li>
+            <!-- 비로그인 상태: 로그인 링크 -->
+            <li v-else class="nav-item">
               <router-link to="/login" class="nav-link">
-                <font-awesome-icon :icon="['fa', 'user-circle']" />
+                <font-awesome-icon :icon="['fa', 'user-circle']" class="me-1" />
+                <span class="d-none d-md-inline">로그인</span>
               </router-link>
             </li>
           </ul>
@@ -74,12 +112,48 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+.navbar-profile-img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.dropdown-menu {
+  font-size: 0.875rem;
+}
 </style>
 
 <script setup>
 import { library } from "@fortawesome/fontawesome-svg-core";
-import { faUserCircle } from "@fortawesome/free-solid-svg-icons";
+import { faUserCircle, faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
+import { useRouter } from "vue-router";
+import axios from "axios";
+import { authStore } from "./stores/authStore";
+import { getApiUrlPath } from "./utils/api";
 
-library.add(faUserCircle);
+library.add(faUserCircle, faRightFromBracket);
+
+const auth = authStore;
+const router = useRouter();
+
+const handleLogout = async () => {
+  try {
+    await axios.post(`${getApiUrlPath()}/auth/logout`, {}, { withCredentials: true });
+  } catch (error) {
+    console.error("Logout error:", error);
+  }
+  auth.clear();
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("name");
+  localStorage.removeItem("is_authorized");
+  localStorage.removeItem("session_expiry");
+  await router.push("/login");
+};
+
+const onProfileImgError = (e) => {
+  e.target.style.display = "none";
+};
 </script>

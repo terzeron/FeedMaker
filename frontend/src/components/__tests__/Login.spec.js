@@ -25,7 +25,8 @@ const FacebookAuthStub = {
 
 const stubs = {
   'font-awesome-icon': true,
-  FacebookAuth: FacebookAuthStub
+  FacebookAuth: FacebookAuthStub,
+  ToastNotification: true
 };
 
 const flushPromises = () => new Promise(r => setTimeout(r));

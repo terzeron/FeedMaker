@@ -1,58 +1,129 @@
 <template>
-  <div class="container-fluid">
-    <div class="row">
-      <div class="col-12">
-        <div id="facebookAuthView">
-          <div>
-            <FacebookAuth @auth-initialized="authInitialized" ref="authRef" />
-            <div>
-              <div v-if="name">
-                <p>{{ name }}님으로 로그인하였습니다.</p>
-              </div>
-              <button
-                class="btn btn-outline-primary"
-                v-if="is_logged"
-                href="#"
-                @click="logout()"
-              >
-                페이스북 로그아웃
-                <font-awesome-icon :icon="['fab', 'facebook']" />
-              </button>
-              <button class="btn btn-outline-primary" v-else href="#" @click="login">
-                페이스북 로그인
-                <font-awesome-icon :icon="['fab', 'facebook']" />
-              </button>
-            </div>
-          </div>
-        </div>
+  <div class="login-wrapper">
+    <div class="login-card">
+      <FacebookAuth @auth-initialized="authInitialized" @auth-error="authFailed" ref="authRef" />
+      <h5 class="login-title">FeedMaker</h5>
+      <div v-if="name" class="login-greeting">
+        {{ name }}님으로 로그인하였습니다.
       </div>
+      <!-- SDK 로딩 중 -->
+      <div v-if="!initialized && !sdkFailed" class="text-muted">
+        <div class="spinner-border spinner-border-sm me-2" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        로그인 준비 중...
+      </div>
+      <!-- SDK 로드 실패 -->
+      <div v-else-if="sdkFailed" class="text-danger text-center">
+        <p class="mb-2">Facebook 로그인을 불러올 수 없습니다.</p>
+        <button class="btn btn-outline-secondary btn-sm" @click="retrySdk">
+          <font-awesome-icon :icon="['fa', 'rotate-right']" class="me-1" />
+          다시 시도
+        </button>
+      </div>
+      <!-- 로그아웃 버튼 -->
+      <button
+        v-else-if="is_logged"
+        class="btn btn-outline-secondary w-100"
+        :disabled="logoutLoading"
+        @click="logout()"
+      >
+        <span v-if="logoutLoading" class="spinner-border spinner-border-sm me-1" role="status" />
+        <font-awesome-icon :icon="['fab', 'facebook']" class="me-1" />
+        로그아웃
+      </button>
+      <!-- 로그인 버튼 -->
+      <button
+        v-else
+        class="btn btn-facebook w-100"
+        :disabled="loginLoading"
+        @click="login"
+      >
+        <span v-if="loginLoading" class="spinner-border spinner-border-sm me-1" role="status" />
+        <font-awesome-icon :icon="['fab', 'facebook']" class="me-1" />
+        Facebook으로 로그인
+      </button>
     </div>
+    <ToastNotification :notification="notification" @hide="hideNotification" />
   </div>
 </template>
 
-<style></style>
+<style scoped>
+.login-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 56px);
+  background-color: #f5f5f5;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 360px;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.login-title {
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.login-greeting {
+  margin-bottom: 1rem;
+  color: #495057;
+}
+
+.btn-facebook {
+  background-color: #1877f2;
+  border-color: #1877f2;
+  color: #fff;
+}
+
+.btn-facebook:hover:not(:disabled) {
+  background-color: #166fe5;
+  border-color: #166fe5;
+  color: #fff;
+}
+
+.btn-facebook:disabled {
+  opacity: 0.7;
+}
+</style>
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
 import FacebookAuth from "./FacebookAuth.vue";
+import ToastNotification from "./ToastNotification.vue";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faFacebook } from "@fortawesome/free-brands-svg-icons";
+import { faRotateRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { getApiUrlPath } from "../utils/api";
+import { useNotification } from "../composables/useNotification";
+import { authStore } from "../stores/authStore";
 
 // Define component name for ESLint
 defineOptions({
   name: "UserLogin",
 });
 
-library.add(faFacebook);
+library.add(faFacebook, faRotateRight);
 
 const router = useRouter();
+const { notification, showError, showWarning, hideNotification } = useNotification();
 const authRef = ref(null);
 
 const initialized = ref(false);
+const sdkFailed = ref(false);
+const loginLoading = ref(false);
+const logoutLoading = ref(false);
 const accessToken = ref(null);
 const status = ref(null);
 const profile = ref(null);
@@ -71,6 +142,19 @@ const name = computed(() => {
 
 const authInitialized = () => {
   initialized.value = true;
+  sdkFailed.value = false;
+};
+
+const authFailed = () => {
+  sdkFailed.value = true;
+};
+
+const retrySdk = async () => {
+  sdkFailed.value = false;
+  initialized.value = false;
+  if (authRef.value) {
+    await authRef.value.retryLoadSDK();
+  }
 };
 
 const login = async () => {
@@ -84,22 +168,23 @@ const login = async () => {
 
   if (!isFacebookReady) {
     console.error("Facebook Auth is not initialized. Please wait...");
-    alert("Facebook Auth가 아직 초기화되지 않았습니다. 잠시 후 다시 시도해주세요.");
+    showWarning("Facebook Auth가 아직 초기화되지 않았습니다. 잠시 후 다시 시도해주세요.");
     return;
   }
 
   if (!authRef.value) {
     console.error("AuthRef is not available");
-    alert("Facebook Auth 참조를 찾을 수 없습니다.");
+    showError("Facebook Auth 참조를 찾을 수 없습니다.");
     return;
   }
 
+  loginLoading.value = true;
   try {
     accessToken.value = await authRef.value.login();
     profile.value = await authRef.value.getProfile();
 
     if (!profile.value || !profile.value["email"] || !profile.value["name"]) {
-      alert("프로필 정보를 가져올 수 없습니다.");
+      showError("프로필 정보를 가져올 수 없습니다.");
       return;
     }
 
@@ -120,21 +205,26 @@ const login = async () => {
       // 로그인 성공 - 서버가 httpOnly 쿠키 설정함 (SameSite=Lax로 CSRF 방어)
       userName.value = profile.value["name"];
       isAuthenticated.value = true;
+      const pictureUrl = profile.value?.picture?.data?.url || null;
+      authStore.setAuthenticated(profile.value["name"], pictureUrl);
       await router.push("/result");
     } else {
-      alert(response.data.message || "로그인 실패");
+      showError(response.data.message || "로그인 실패");
     }
   } catch (error) {
     console.error("Login error:", error);
     if (error.response?.status === 403) {
-      alert("허용되지 않은 이메일입니다.");
+      showError("허용되지 않은 이메일입니다.");
     } else {
-      alert("로그인 중 오류가 발생했습니다: " + (error.response?.data?.detail || error.message));
+      showError("로그인 중 오류가 발생했습니다: " + (error.response?.data?.detail || error.message));
     }
+  } finally {
+    loginLoading.value = false;
   }
 };
 
 const logout = async () => {
+  logoutLoading.value = true;
   try {
     // 백엔드로 로그아웃 요청 (세션 삭제 및 httpOnly 쿠키 제거)
     await axios.post(
@@ -148,6 +238,7 @@ const logout = async () => {
     // 로컬 상태 초기화
     userName.value = null;
     isAuthenticated.value = false;
+    authStore.clear();
 
     // Facebook 로그아웃
     if (authRef.value) {
@@ -163,10 +254,12 @@ const logout = async () => {
     sessionStorage.removeItem("name");
     sessionStorage.removeItem("is_authorized");
 
-    await router.push("/result");
+    await router.push("/login");
   } catch (error) {
     console.error("Logout error:", error);
-    alert("로그아웃 중 오류가 발생했습니다: " + error.message);
+    showError("로그아웃 중 오류가 발생했습니다: " + error.message);
+  } finally {
+    logoutLoading.value = false;
   }
 };
 
@@ -183,14 +276,17 @@ const checkAuthStatus = async () => {
     if (response.data.is_authenticated) {
       userName.value = response.data.name;
       isAuthenticated.value = true;
+      authStore.updateFromServer(true, response.data.name);
     } else {
       userName.value = null;
       isAuthenticated.value = false;
+      authStore.updateFromServer(false, null);
     }
   } catch (error) {
     console.error("Auth status check error:", error);
     userName.value = null;
     isAuthenticated.value = false;
+    authStore.updateFromServer(false, null);
   }
 };
 
