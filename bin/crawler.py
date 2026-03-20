@@ -17,7 +17,7 @@ import urllib3
 import requests
 from requests.cookies import RequestsCookieJar
 
-from bin.feed_maker_util import PathUtil
+from bin.feed_maker_util import PathUtil, Env, URLSafety
 from bin.headless_browser import HeadlessBrowser
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -43,6 +43,8 @@ class RequestsClient:
         self.encoding: str = encoding or "utf-8"
         self.verify_ssl: bool = verify_ssl
         self._cookie_dir: Optional[Path] = None
+        self.allow_private_ips = Env.get("FM_CRAWLER_ALLOW_PRIVATE_IPS", "false").strip().lower() in ("1", "true", "yes", "on")
+        self.allowed_hosts_raw = Env.get("FM_CRAWLER_ALLOWED_HOSTS", "")
         if not self.verify_ssl:
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -87,9 +89,17 @@ class RequestsClient:
 
     def make_request(self, url: str, data: Any = None, download_file: Optional[Path] = None, allow_redirects: bool = True) -> tuple[str, str, dict[str, Any], Optional[int]]:
         LOGGER.debug(f"# make_request(url='{url}', allow_redirects={allow_redirects})")
+        is_ok, reason = URLSafety.check_url(url, allow_private=self.allow_private_ips, allowed_hosts_raw=self.allowed_hosts_raw)
+        if not is_ok:
+            LOGGER.warning("Blocked URL: %s (%s)", url, reason)
+            return "", f"blocked url: {reason}", {}, None
 
         referer = self.headers.get("Referer", "")
         if referer:
+            is_ok, reason = URLSafety.check_url(referer, allow_private=self.allow_private_ips, allowed_hosts_raw=self.allowed_hosts_raw)
+            if not is_ok:
+                LOGGER.warning("Blocked referer URL: %s (%s)", referer, reason)
+                return "", f"blocked url: {reason}", {}, None
             LOGGER.debug("visiting referer page '%s'", referer)
             self.read_cookies_from_file()
             try:

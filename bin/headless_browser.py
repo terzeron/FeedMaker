@@ -17,7 +17,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.common.by import By
 
-from bin.feed_maker_util import PathUtil
+from bin.feed_maker_util import PathUtil, Env, URLSafety
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
@@ -169,6 +169,8 @@ class HeadlessBrowser:
         self.blob_to_dataurl: bool = blob_to_dataurl
         self.timeout: int = timeout
         self._cookie_dir: Optional[Path] = None
+        self.allow_private_ips = Env.get("FM_CRAWLER_ALLOW_PRIVATE_IPS", "false").strip().lower() in ("1", "true", "yes", "on")
+        self.allowed_hosts_raw = Env.get("FM_CRAWLER_ALLOWED_HOSTS", "")
 
     def __del__(self) -> None:
         del self.headers
@@ -262,6 +264,10 @@ class HeadlessBrowser:
 
     def make_request(self, url: str, download_file: Optional[Path] = None) -> str:
         LOGGER.debug(f"# make_request(url={url}, download_file={download_file})")
+        is_ok, reason = URLSafety.check_url(url, allow_private=self.allow_private_ips, allowed_hosts_raw=self.allowed_hosts_raw)
+        if not is_ok:
+            LOGGER.warning("Blocked URL: %s (%s)", url, reason)
+            return ""
         driver = None
         driver_created = False
 
@@ -304,6 +310,10 @@ class HeadlessBrowser:
 
             referer = self.headers.get("Referer", "")
             if referer:
+                is_ok, reason = URLSafety.check_url(referer, allow_private=self.allow_private_ips, allowed_hosts_raw=self.allowed_hosts_raw)
+                if not is_ok:
+                    LOGGER.warning("Blocked referer URL: %s (%s)", referer, reason)
+                    return ""
                 LOGGER.debug(f"visiting referer page '{referer}'")
                 driver.get(referer)
                 # bypass cloudflare test
