@@ -189,6 +189,20 @@ def require_auth(request: Request) -> UserSession:
     return user_session
 
 
+def _get_admin_email_set() -> set[str]:
+    raw = Env.get("FM_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST", "")
+    return {email.strip() for email in raw.split(",") if email.strip()}
+
+
+def require_admin(request: Request) -> UserSession:
+    """Dependency that requires admin privileges"""
+    user_session = require_auth(request)
+    admin_emails = _get_admin_email_set()
+    if admin_emails and user_session.user_email not in admin_emails:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    return user_session
+
+
 def set_session_cookie(response: Response, session_id: str) -> None:
     """Set session cookie with secure flags"""
     response.set_cookie(
@@ -210,5 +224,4 @@ def clear_session_cookie(response: JSONResponse) -> None:
         path="/",
         domain=COOKIE_DOMAIN  # Must match the domain used when setting
     )
-
 

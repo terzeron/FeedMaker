@@ -109,6 +109,7 @@ def test_exec_and_search_and_problems_endpoints():
 
 def test_group_and_feed_mutations_unit():
     main.FeedMakerManager = DummyFeedMakerManager
+    main.require_admin = lambda _request: None
     mgr = DummyFeedMakerManager()
 
     assert (asyncio.run(main.get_site_config("g", feed_maker_manager=mgr)))["status"] == "success"
@@ -121,11 +122,11 @@ def test_group_and_feed_mutations_unit():
     assert (asyncio.run(main.toggle_feed("g", "f", feed_maker_manager=mgr)))["status"] == "success"
 
     assert (asyncio.run(main.extract_titles_from_public_feed("f", feed_maker_manager=mgr)))["status"] == "success"
-    assert (asyncio.run(main.remove_public_feed("f", feed_maker_manager=mgr)))["status"] == "success"
+    assert (asyncio.run(main.remove_public_feed("f", request=req, feed_maker_manager=mgr)))["status"] == "success"
 
-    assert (asyncio.run(main.remove_html_file("g", "f", "x.html", feed_maker_manager=mgr)))["status"] == "success"
-    assert (asyncio.run(main.remove_html("g", "f", feed_maker_manager=mgr)))["status"] == "success"
+    assert (asyncio.run(main.remove_html_file("g", "f", "x.html", request=req, feed_maker_manager=mgr)))["status"] == "success"
+    assert (asyncio.run(main.remove_html("g", "f", request=req, feed_maker_manager=mgr)))["status"] == "success"
 
-    assert main.run_feed("g", "f", _request=None, feed_maker_manager=mgr)["status"] == "success"
+    assert main.run_feed("g", "f", request=req, feed_maker_manager=mgr)["status"] == "success"
     assert (asyncio.run(main.check_running("g", "f", feed_maker_manager=mgr)))["status"] == "success"
     assert (asyncio.run(main.get_feed_info("g", "f", feed_maker_manager=mgr)))["status"] == "success"

@@ -19,7 +19,7 @@ from pydantic import BaseModel
 import uvicorn
 
 from backend.feed_maker_manager import FeedMakerManager
-from backend.auth import create_session, delete_session, get_current_user, set_session_cookie, clear_session_cookie, verify_facebook_token
+from backend.auth import create_session, delete_session, get_current_user, set_session_cookie, clear_session_cookie, verify_facebook_token, require_admin
 from bin.feed_maker_util import Env
 from bin.db import DB
 
@@ -282,8 +282,9 @@ def search_single_site(site_name: str, keyword: str) -> dict[str, Any]:
 
 
 @app.delete("/public_feeds/{feed_name}")
-async def remove_public_feed(feed_name: str, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+async def remove_public_feed(feed_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("DELETE /public_feeds/%s -> remove_public_feed(%s)", feed_name, feed_name)
+    require_admin(request)
     response_object: dict[str, Any] = {}
     feed_maker_manager.remove_public_feed(feed_name)
     response_object["status"] = "success"
@@ -326,6 +327,7 @@ async def get_site_config(group_name: str, feed_maker_manager: FeedMakerManager 
 @app.put("/groups/{group_name}/site_config")
 async def save_site_config(group_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.debug("/groups/%s/site_config -> save_site_config(%s)", group_name, group_name)
+    require_admin(request)
     response_object: dict[str, Any] = {}
     post_data = await request.json()
     success_or_fail, error = feed_maker_manager.save_site_config(group_name, post_data)
@@ -352,8 +354,9 @@ async def toggle_group(group_name: str, feed_maker_manager: FeedMakerManager = D
 
 
 @app.delete("/groups/{group_name}/feeds/{feed_name}/htmls/{html_file_name}")
-async def remove_html_file(group_name: str, feed_name: str, html_file_name: str, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+async def remove_html_file(group_name: str, feed_name: str, html_file_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("DELETE /groups/%s/feeds/%s/htmls/%s -> remove_html_file(%s, %s, %s)", group_name, feed_name, html_file_name, group_name, feed_name, html_file_name)
+    require_admin(request)
     response_object: dict[str, Any] = {}
     feed_maker_manager.remove_html_file(group_name, feed_name, html_file_name)
     response_object["status"] = "success"
@@ -361,8 +364,9 @@ async def remove_html_file(group_name: str, feed_name: str, html_file_name: str,
 
 
 @app.delete("/groups/{group_name}/feeds/{feed_name}/htmls")
-async def remove_html(group_name: str, feed_name: str, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+async def remove_html(group_name: str, feed_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("DELETE /groups/%s/feeds/%s/htmls -> remove_html(%s, %s)", group_name, feed_name, group_name, feed_name)
+    require_admin(request)
     response_object: dict[str, Any] = {}
     feed_maker_manager.remove_html(group_name, feed_name)
     response_object["status"] = "success"
@@ -370,8 +374,9 @@ async def remove_html(group_name: str, feed_name: str, feed_maker_manager: FeedM
 
 
 @app.post("/groups/{group_name}/feeds/{feed_name}/run")
-def run_feed(group_name: str, feed_name: str, _request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+def run_feed(group_name: str, feed_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("POST /groups/%s/feeds/%s/run -> run_feed(%s, %s)", group_name, feed_name, group_name, feed_name)
+    require_admin(request)
     response_object: dict[str, Any] = {}
     result, error = feed_maker_manager.run(group_name, feed_name)
     if result or not error:
@@ -397,8 +402,9 @@ async def toggle_feed(group_name: str, feed_name: str, feed_maker_manager: FeedM
 
 
 @app.delete("/groups/{group_name}/feeds/{feed_name}/list")
-async def remove_list(group_name: str, feed_name: str, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+async def remove_list(group_name: str, feed_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("DELETE /groups/%s/feeds/%s/list -> remove_list(%s, %s)", group_name, feed_name, group_name, feed_name)
+    require_admin(request)
     response_object: dict[str, Any] = {}
     feed_maker_manager.remove_list(group_name, feed_name)
     response_object["status"] = "success"
@@ -438,6 +444,7 @@ async def get_feed_info(group_name: str, feed_name: str, feed_maker_manager: Fee
 @app.post("/groups/{group_name}/feeds/{feed_name}")
 async def post_feed_info(group_name: str, feed_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("POST /groups/%s/feeds/%s -> save_config_file(%s, %s)", group_name, feed_name, group_name, feed_name)
+    require_admin(request)
     response_object: dict[str, Any] = {}
     post_data = await request.json()
     result, error = feed_maker_manager.save_config_file(group_name, feed_name, post_data)
@@ -450,8 +457,9 @@ async def post_feed_info(group_name: str, feed_name: str, request: Request, feed
 
 
 @app.delete("/groups/{group_name}/feeds/{feed_name}")
-async def delete_feed_info(group_name: str, feed_name: str, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+async def delete_feed_info(group_name: str, feed_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("DELETE /groups/%s/feeds/%s -> remove_feed(%s, %s)", group_name, feed_name, group_name, feed_name)
+    require_admin(request)
     response_object: dict[str, Any] = {}
     result, error = feed_maker_manager.remove_feed(group_name, feed_name)
     if result or not error:
@@ -480,8 +488,9 @@ async def get_feeds_by_group(group_name: str, feed_maker_manager: FeedMakerManag
 
 
 @app.delete("/groups/{group_name}")
-async def remove_group(group_name: str, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+async def remove_group(group_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("DELETE /groups/%s -> remove_group(%s)", group_name, group_name)
+    require_admin(request)
     response_object: dict[str, Any] = {}
     result, error = feed_maker_manager.remove_group(group_name)
     if result or not error:
