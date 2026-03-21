@@ -13,7 +13,7 @@ Note: These tests require Docker to be running.
 import unittest
 import logging.config
 from pathlib import Path
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from tests.common_test_util import start_mysql_container
 from bin.db import DB
@@ -371,44 +371,397 @@ class TestMySQLIntegration(unittest.TestCase):
                 DB.drop_all_tables(db_config)
                 DB.dispose_all()
 
-    def test_get_feed_name_status_info_map_excludes_inactive_feeds(self) -> None:
-        """비활성화된 피드가 get_feed_name_status_info_map 결과에서 제외되는지 검증"""
+    def _setup_status_info_db(self, mysql):
+        """get_feed_name_status_info_map 테스트용 DB 초기화 헬퍼"""
+        db_config = {"drivername": "mysql+pymysql", "user": mysql.username, "password": mysql.password, "host": "localhost", "port": int(mysql.get_exposed_port(3306)), "database": mysql.dbname}
+        DB.dispose_all()
+        DB.init(db_config)
+        DB.create_all_tables(db_config)
+        return db_config
+
+    def test_status_info_excludes_inactive_feeds(self) -> None:
+        """비활성화된 피드(is_active=False)가 결과에서 제외되는지 검증"""
         with start_mysql_container() as mysql:
-            db_config = {"drivername": "mysql+pymysql", "user": mysql.username, "password": mysql.password, "host": "localhost", "port": int(mysql.get_exposed_port(3306)), "database": mysql.dbname}
-
-            DB.dispose_all()
-            DB.init(db_config)
-            DB.create_all_tables(db_config)
-
+            db_config = self._setup_status_info_db(mysql)
             try:
                 now = datetime.now(timezone.utc)
-
                 with DB.session_ctx() as session:
-                    # 활성 피드: 문제가 있는 상태 (http_request=1, public_html=1, feedmaker=0)
-                    # public_html=True로 설정하여 조건2(http_request=1,public_html=0,feedmaker=0) 패턴에 걸리지 않도록 함
                     session.add(FeedInfo(feed_name="active_feed", group_name="mygroup", feed_title="Active Feed", is_active=True, http_request=True, public_html=True, feedmaker=False, access_date=now))
-                    # 비활성 피드: 같은 상태이지만 is_active=False
-                    # (_mygroup/feed → mygroup/feed로 정규화되어 DB에 들어간 경우)
                     session.add(FeedInfo(feed_name="inactive_feed", group_name="mygroup", feed_title="", is_active=False, http_request=True, public_html=True, feedmaker=False, access_date=now))
-                    # 비활성 피드: 다른 그룹에서 정규화된 동일 feed_name
+                    session.commit()
+
+                result = ProblemManager.get_feed_name_status_info_map()
+
+                self.assertIn("active_feed", result)
+                self.assertNotIn("inactive_feed", result)
+            finally:
+                DB.drop_all_tables(db_config)
+                DB.dispose_all()
+
+    def test_status_info_excludes_unregistered_feeds(self) -> None:
+        """조건1: http_request=0, public_html=0, feedmaker=0인 피드 제외 검증"""
+        with start_mysql_container() as mysql:
+            db_config = self._setup_status_info_db(mysql)
+            try:
+                now = datetime.now(timezone.utc)
+                with DB.session_ctx() as session:
+                    # 완전히 미등록된 피드 (모두 False) → 제외 대상
+                    session.add(FeedInfo(feed_name="unregistered", group_name="grp", feed_title="Unregistered", is_active=True, http_request=False, public_html=False, feedmaker=False))
+                    # 하나라도 True면 포함
+                    session.add(FeedInfo(feed_name="only_requested", group_name="grp", feed_title="Only Requested", is_active=True, http_request=True, public_html=True, feedmaker=False, access_date=now))
+                    session.add(FeedInfo(feed_name="only_public", group_name="grp", feed_title="Only Public", is_active=True, http_request=False, public_html=True, feedmaker=False))
+                    session.add(FeedInfo(feed_name="only_feedmaker", group_name="grp", feed_title="Only Feedmaker", is_active=True, http_request=False, public_html=False, feedmaker=True))
+                    session.commit()
+
+                result = ProblemManager.get_feed_name_status_info_map()
+
+                self.assertNotIn("unregistered", result)
+                self.assertIn("only_requested", result)
+                self.assertIn("only_public", result)
+                self.assertIn("only_feedmaker", result)
+            finally:
+                DB.drop_all_tables(db_config)
+                DB.dispose_all()
+
+    def test_status_info_same_feed_name_active_vs_inactive_groups(self) -> None:
+        """동일 feed_name이 활성/비활성 그룹에 존재할 때 활성 것만 반환 검증"""
+        with start_mysql_container() as mysql:
+            db_config = self._setup_status_info_db(mysql)
+            try:
+                now = datetime.now(timezone.utc)
+                with DB.session_ctx() as session:
                     session.add(FeedInfo(feed_name="shared_feed", group_name="groupA", feed_title="Shared Active", is_active=True, http_request=True, public_html=True, feedmaker=False, access_date=now))
                     session.add(FeedInfo(feed_name="shared_feed", group_name="groupB", feed_title="", is_active=False, http_request=True, public_html=True, feedmaker=False, access_date=now))
                     session.commit()
 
                 result = ProblemManager.get_feed_name_status_info_map()
 
-                # 활성 피드만 포함되어야 함
-                self.assertIn("active_feed", result)
-                self.assertEqual(result["active_feed"]["feed_title"], "Active Feed")
-
-                # 비활성 피드는 제외되어야 함
-                self.assertNotIn("inactive_feed", result)
-
-                # shared_feed는 활성인 groupA 것만 포함
                 self.assertIn("shared_feed", result)
                 self.assertEqual(result["shared_feed"]["group_name"], "groupA")
                 self.assertEqual(result["shared_feed"]["feed_title"], "Shared Active")
+            finally:
+                DB.drop_all_tables(db_config)
+                DB.dispose_all()
 
+    def test_status_info_empty_table(self) -> None:
+        """빈 테이블에서 빈 결과 반환 검증"""
+        with start_mysql_container() as mysql:
+            db_config = self._setup_status_info_db(mysql)
+            try:
+                result = ProblemManager.get_feed_name_status_info_map()
+                self.assertEqual(result, {})
+            finally:
+                DB.drop_all_tables(db_config)
+                DB.dispose_all()
+
+    def test_status_info_all_inactive_returns_empty(self) -> None:
+        """모든 피드가 비활성일 때 빈 결과 반환 검증"""
+        with start_mysql_container() as mysql:
+            db_config = self._setup_status_info_db(mysql)
+            try:
+                now = datetime.now(timezone.utc)
+                with DB.session_ctx() as session:
+                    session.add(FeedInfo(feed_name="feed1", group_name="grp", is_active=False, http_request=True, public_html=True, feedmaker=False, access_date=now))
+                    session.add(FeedInfo(feed_name="feed2", group_name="grp", is_active=False, http_request=True, public_html=False, feedmaker=True))
+                    session.commit()
+
+                result = ProblemManager.get_feed_name_status_info_map()
+                self.assertEqual(result, {})
+            finally:
+                DB.drop_all_tables(db_config)
+                DB.dispose_all()
+
+    def test_status_info_partial_setup_feeds_included(self) -> None:
+        """부분적으로 설정된 피드들(문제 있는 상태)이 결과에 포함되는지 검증"""
+        with start_mysql_container() as mysql:
+            db_config = self._setup_status_info_db(mysql)
+            try:
+                now = datetime.now(timezone.utc)
+                with DB.session_ctx() as session:
+                    # http_request=1, public_html=1, feedmaker=0 → 등록됐지만 feedmaker 미실행
+                    session.add(FeedInfo(feed_name="no_feedmaker", group_name="grp", feed_title="No Feedmaker", is_active=True, http_request=True, public_html=True, feedmaker=False, access_date=now))
+                    # http_request=0, public_html=1, feedmaker=1 → 요청은 안 됐지만 등록/생성됨
+                    session.add(FeedInfo(feed_name="no_request", group_name="grp", feed_title="No Request", is_active=True, http_request=False, public_html=True, feedmaker=True))
+                    # http_request=1, public_html=0, feedmaker=1 → 요청/생성은 됐지만 등록 안 됨
+                    session.add(FeedInfo(feed_name="no_public", group_name="grp", feed_title="No Public", is_active=True, http_request=True, public_html=False, feedmaker=True, access_date=now))
+                    session.commit()
+
+                result = ProblemManager.get_feed_name_status_info_map()
+
+                self.assertIn("no_feedmaker", result)
+                self.assertIn("no_request", result)
+                self.assertIn("no_public", result)
+            finally:
+                DB.drop_all_tables(db_config)
+                DB.dispose_all()
+
+    def test_status_info_result_contains_all_expected_fields(self) -> None:
+        """반환된 결과에 필요한 모든 필드가 포함되는지 검증"""
+        with start_mysql_container() as mysql:
+            db_config = self._setup_status_info_db(mysql)
+            try:
+                now = datetime.now(timezone.utc)
+                with DB.session_ctx() as session:
+                    session.add(FeedInfo(feed_name="test_feed", group_name="test_group", feed_title="Test Title", is_active=True, http_request=True, public_html=True, feedmaker=False, access_date=now, view_date=now, rss_update_date=now, upload_date=now, public_feed_file_path="/path/to/feed.xml"))
+                    session.commit()
+
+                result = ProblemManager.get_feed_name_status_info_map()
+
+                self.assertIn("test_feed", result)
+                info = result["test_feed"]
+                expected_keys = {"feed_name", "feed_title", "group_name", "http_request", "access_date", "view_date", "feedmaker", "update_date", "public_html", "file_path", "upload_date"}
+                self.assertEqual(set(info.keys()), expected_keys)
+                self.assertEqual(info["feed_name"], "test_feed")
+                self.assertEqual(info["feed_title"], "Test Title")
+                self.assertEqual(info["group_name"], "test_group")
+                self.assertTrue(info["http_request"])
+                self.assertTrue(info["public_html"])
+                self.assertFalse(info["feedmaker"])
+                self.assertEqual(info["file_path"], "/path/to/feed.xml")
+            finally:
+                DB.drop_all_tables(db_config)
+                DB.dispose_all()
+
+    def test_status_info_excludes_fully_healthy_feeds(self) -> None:
+        """조건3: 완전히 정상인 피드(요청+등록+생성+config+최근접근) 제외 검증"""
+        with start_mysql_container() as mysql:
+            db_config = self._setup_status_info_db(mysql)
+            try:
+                now = datetime.now(timezone.utc)
+                old = now - timedelta(days=90)
+
+                with DB.session_ctx() as session:
+                    # 정상 피드: 모두 갖춰져 있고 최근 접근됨 → 제외 대상
+                    session.add(FeedInfo(feed_name="healthy_feed", group_name="grp", feed_title="Healthy", is_active=True, http_request=True, public_html=True, feedmaker=True, config='{"rss":{}}', access_date=now))
+                    # 정상이지만 오래된 접근 → 문제 피드로 포함
+                    session.add(FeedInfo(feed_name="stale_feed", group_name="grp", feed_title="Stale", is_active=True, http_request=True, public_html=True, feedmaker=True, config='{"rss":{}}', access_date=old))
+                    session.commit()
+
+                result = ProblemManager.get_feed_name_status_info_map()
+
+                # 최근 접근된 정상 피드는 제외
+                self.assertNotIn("healthy_feed", result)
+                # 오래된 접근의 정상 피드는 포함 (문제 피드)
+                self.assertIn("stale_feed", result)
+            finally:
+                DB.drop_all_tables(db_config)
+                DB.dispose_all()
+
+    def test_status_info_excludes_old_requested_only_feeds(self) -> None:
+        """조건2: 요청만 되고(http_request=1, public_html=0, feedmaker=0) 오래 전 접근된 피드 제외 검증"""
+        with start_mysql_container() as mysql:
+            db_config = self._setup_status_info_db(mysql)
+            try:
+                now = datetime.now(timezone.utc)
+                old = now - timedelta(days=90)
+
+                with DB.session_ctx() as session:
+                    # 요청만 되고 오래 전 접근됨 → 제외 대상
+                    session.add(FeedInfo(feed_name="old_requested", group_name="grp", feed_title="Old Requested", is_active=True, http_request=True, public_html=False, feedmaker=False, access_date=old))
+                    # 요청만 되고 최근 접근됨 → 문제 피드로 포함
+                    session.add(FeedInfo(feed_name="recent_requested", group_name="grp", feed_title="Recent Requested", is_active=True, http_request=True, public_html=False, feedmaker=False, access_date=now))
+                    # 요청만 되고 access_date 없음 → 포함
+                    session.add(FeedInfo(feed_name="no_access_date", group_name="grp", feed_title="No Access Date", is_active=True, http_request=True, public_html=False, feedmaker=False, access_date=None))
+                    session.commit()
+
+                result = ProblemManager.get_feed_name_status_info_map()
+
+                # 오래 전 접근된 요청만 된 피드는 제외
+                self.assertNotIn("old_requested", result)
+                # 최근 접근된 요청만 된 피드는 포함
+                self.assertIn("recent_requested", result)
+                # access_date 없는 요청만 된 피드는 포함
+                self.assertIn("no_access_date", result)
+            finally:
+                DB.drop_all_tables(db_config)
+                DB.dispose_all()
+
+    def test_status_info_healthy_feed_with_view_date_only(self) -> None:
+        """조건3: view_date만 최근인 정상 피드도 제외되는지 검증"""
+        with start_mysql_container() as mysql:
+            db_config = self._setup_status_info_db(mysql)
+            try:
+                now = datetime.now(timezone.utc)
+
+                with DB.session_ctx() as session:
+                    # access_date 없고 view_date만 최근 → 정상이므로 제외
+                    session.add(FeedInfo(feed_name="viewed_only", group_name="grp", feed_title="Viewed Only", is_active=True, http_request=True, public_html=True, feedmaker=True, config='{"rss":{}}', access_date=None, view_date=now))
+                    # feedmaker=False면 조건3(http_request=1,public_html=1,feedmaker=1) 패턴에 매칭되지 않음 → 포함
+                    session.add(FeedInfo(feed_name="partial_setup", group_name="grp", feed_title="Partial Setup", is_active=True, http_request=True, public_html=True, feedmaker=False, access_date=now, view_date=now))
+                    session.commit()
+
+                result = ProblemManager.get_feed_name_status_info_map()
+
+                # view_date만 최근인 정상 피드는 제외
+                self.assertNotIn("viewed_only", result)
+                # feedmaker=False인 부분 설정 피드는 조건3에 해당하지 않으므로 포함
+                self.assertIn("partial_setup", result)
+            finally:
+                DB.drop_all_tables(db_config)
+                DB.dispose_all()
+
+    def test_status_info_condition2_boundary_at_num_days(self) -> None:
+        """조건2 경계값: 정확히 num_days(60일) 전 접근은 제외되지 않고, 61일 전은 제외"""
+        with start_mysql_container() as mysql:
+            db_config = self._setup_status_info_db(mysql)
+            try:
+                now = datetime.now(timezone.utc)
+                at_boundary = now - timedelta(days=60)
+                past_boundary = now - timedelta(days=61)
+
+                with DB.session_ctx() as session:
+                    # 정확히 60일 전 → DATEDIFF=60, 60 > 60 은 False → 포함
+                    session.add(FeedInfo(feed_name="at_60days", group_name="grp", is_active=True, http_request=True, public_html=False, feedmaker=False, access_date=at_boundary))
+                    # 61일 전 → DATEDIFF=61, 61 > 60 은 True → 제외
+                    session.add(FeedInfo(feed_name="at_61days", group_name="grp", is_active=True, http_request=True, public_html=False, feedmaker=False, access_date=past_boundary))
+                    session.commit()
+
+                result = ProblemManager.get_feed_name_status_info_map()
+
+                self.assertIn("at_60days", result)
+                self.assertNotIn("at_61days", result)
+            finally:
+                DB.drop_all_tables(db_config)
+                DB.dispose_all()
+
+    def test_status_info_condition3_boundary_at_num_days(self) -> None:
+        """조건3 경계값: 정확히 num_days(60일) 전 접근은 제외되지 않고, 59일 전은 제외"""
+        with start_mysql_container() as mysql:
+            db_config = self._setup_status_info_db(mysql)
+            try:
+                now = datetime.now(timezone.utc)
+                at_boundary = now - timedelta(days=60)
+                within_boundary = now - timedelta(days=59)
+
+                with DB.session_ctx() as session:
+                    # 정확히 60일 전 → DATEDIFF=60, 60 < 60 은 False → 포함 (문제 피드)
+                    session.add(FeedInfo(feed_name="at_60days", group_name="grp", is_active=True, http_request=True, public_html=True, feedmaker=True, config='{"rss":{}}', access_date=at_boundary))
+                    # 59일 전 → DATEDIFF=59, 59 < 60 은 True → 제외 (정상 피드)
+                    session.add(FeedInfo(feed_name="at_59days", group_name="grp", is_active=True, http_request=True, public_html=True, feedmaker=True, config='{"rss":{}}', access_date=within_boundary))
+                    session.commit()
+
+                result = ProblemManager.get_feed_name_status_info_map()
+
+                self.assertIn("at_60days", result)
+                self.assertNotIn("at_59days", result)
+            finally:
+                DB.drop_all_tables(db_config)
+                DB.dispose_all()
+
+    def test_status_info_condition3_or_logic_access_old_view_recent(self) -> None:
+        """조건3 OR 로직: access_date가 오래됐어도 view_date가 최근이면 정상으로 제외"""
+        with start_mysql_container() as mysql:
+            db_config = self._setup_status_info_db(mysql)
+            try:
+                now = datetime.now(timezone.utc)
+                old = now - timedelta(days=90)
+
+                with DB.session_ctx() as session:
+                    # access_date 오래됨 + view_date 최근 → OR 조건으로 정상 판정 → 제외
+                    session.add(FeedInfo(feed_name="old_access_recent_view", group_name="grp", is_active=True, http_request=True, public_html=True, feedmaker=True, config='{"rss":{}}', access_date=old, view_date=now))
+                    # access_date 최근 + view_date 오래됨 → OR 조건으로 정상 판정 → 제외
+                    session.add(FeedInfo(feed_name="recent_access_old_view", group_name="grp", is_active=True, http_request=True, public_html=True, feedmaker=True, config='{"rss":{}}', access_date=now, view_date=old))
+                    # 둘 다 오래됨 → OR 조건 모두 False → 포함 (문제 피드)
+                    session.add(FeedInfo(feed_name="both_old", group_name="grp", is_active=True, http_request=True, public_html=True, feedmaker=True, config='{"rss":{}}', access_date=old, view_date=old))
+                    session.commit()
+
+                result = ProblemManager.get_feed_name_status_info_map()
+
+                self.assertNotIn("old_access_recent_view", result)
+                self.assertNotIn("recent_access_old_view", result)
+                self.assertIn("both_old", result)
+            finally:
+                DB.drop_all_tables(db_config)
+                DB.dispose_all()
+
+    def test_status_info_condition2_not_applied_when_public_html_true(self) -> None:
+        """조건2는 public_html=0인 경우에만 적용됨. public_html=True면 매칭 안 됨"""
+        with start_mysql_container() as mysql:
+            db_config = self._setup_status_info_db(mysql)
+            try:
+                now = datetime.now(timezone.utc)
+                old = now - timedelta(days=90)
+
+                with DB.session_ctx() as session:
+                    # http_request=1, public_html=1, feedmaker=0, 오래된 접근
+                    # → 조건2 패턴(public_html=0)에 매칭 안 됨 → 제외 안 됨
+                    session.add(FeedInfo(feed_name="has_public", group_name="grp", is_active=True, http_request=True, public_html=True, feedmaker=False, access_date=old))
+                    # http_request=1, public_html=0, feedmaker=1, 오래된 접근
+                    # → 조건2 패턴(feedmaker=0)에 매칭 안 됨 → 제외 안 됨
+                    session.add(FeedInfo(feed_name="has_feedmaker", group_name="grp", is_active=True, http_request=True, public_html=False, feedmaker=True, access_date=old))
+                    session.commit()
+
+                result = ProblemManager.get_feed_name_status_info_map()
+
+                self.assertIn("has_public", result)
+                self.assertIn("has_feedmaker", result)
+            finally:
+                DB.drop_all_tables(db_config)
+                DB.dispose_all()
+
+    def test_status_info_condition3_empty_config_not_excluded(self) -> None:
+        """조건3: config가 빈 문자열이면 IS NOT NULL이지만 유효하지 않은 설정.
+        현재 구현에서는 빈 문자열도 IS NOT NULL로 판정되어 제외됨을 검증."""
+        with start_mysql_container() as mysql:
+            db_config = self._setup_status_info_db(mysql)
+            try:
+                now = datetime.now(timezone.utc)
+
+                with DB.session_ctx() as session:
+                    # config 빈 문자열 (모델 기본값) + 나머지 조건 모두 충족
+                    # → config IS NOT NULL = True (빈 문자열은 NULL이 아님)
+                    # → 조건3에 매칭되어 제외됨
+                    session.add(FeedInfo(feed_name="empty_config", group_name="grp", is_active=True, http_request=True, public_html=True, feedmaker=True, config="", access_date=now))
+                    # 유효한 config
+                    session.add(FeedInfo(feed_name="valid_config", group_name="grp", is_active=True, http_request=True, public_html=True, feedmaker=True, config='{"rss":{}}', access_date=now))
+                    session.commit()
+
+                result = ProblemManager.get_feed_name_status_info_map()
+
+                # 둘 다 조건3에 의해 정상 피드로 판정되어 제외됨
+                self.assertNotIn("empty_config", result)
+                self.assertNotIn("valid_config", result)
+            finally:
+                DB.drop_all_tables(db_config)
+                DB.dispose_all()
+
+    def test_status_info_comprehensive_mixed_scenario(self) -> None:
+        """다양한 상태의 피드들이 혼재된 종합 시나리오"""
+        with start_mysql_container() as mysql:
+            db_config = self._setup_status_info_db(mysql)
+            try:
+                now = datetime.now(timezone.utc)
+                old = now - timedelta(days=90)
+
+                with DB.session_ctx() as session:
+                    # 1. 비활성 → 제외
+                    session.add(FeedInfo(feed_name="inactive", group_name="grp", is_active=False, http_request=True, public_html=True, feedmaker=True, config='{"rss":{}}', access_date=now))
+                    # 2. 미등록 (모두 False) → 조건1에 의해 제외
+                    session.add(FeedInfo(feed_name="unregistered", group_name="grp", is_active=True, http_request=False, public_html=False, feedmaker=False))
+                    # 3. 요청전용 + 오래 전 접근 → 조건2에 의해 제외
+                    session.add(FeedInfo(feed_name="old_request_only", group_name="grp", is_active=True, http_request=True, public_html=False, feedmaker=False, access_date=old))
+                    # 4. 정상 피드 + 최근 접근 → 조건3에 의해 제외
+                    session.add(FeedInfo(feed_name="healthy", group_name="grp", is_active=True, http_request=True, public_html=True, feedmaker=True, config='{"rss":{}}', access_date=now))
+                    # 5. 요청전용 + 최근 접근 → 문제 피드, 포함
+                    session.add(FeedInfo(feed_name="recent_request_only", group_name="grp", is_active=True, http_request=True, public_html=False, feedmaker=False, access_date=now))
+                    # 6. 정상 구조이지만 오래된 접근 → 문제 피드, 포함
+                    session.add(FeedInfo(feed_name="stale_healthy", group_name="grp", is_active=True, http_request=True, public_html=True, feedmaker=True, config='{"rss":{}}', access_date=old))
+                    # 7. 부분 설정 (feedmaker 없음) → 문제 피드, 포함
+                    session.add(FeedInfo(feed_name="no_feedmaker", group_name="grp", is_active=True, http_request=True, public_html=True, feedmaker=False, access_date=now))
+                    session.commit()
+
+                result = ProblemManager.get_feed_name_status_info_map()
+
+                # 제외되어야 하는 피드
+                self.assertNotIn("inactive", result)
+                self.assertNotIn("unregistered", result)
+                self.assertNotIn("old_request_only", result)
+                self.assertNotIn("healthy", result)
+                # 포함되어야 하는 피드 (문제 피드)
+                self.assertIn("recent_request_only", result)
+                self.assertIn("stale_healthy", result)
+                self.assertIn("no_feedmaker", result)
+                self.assertEqual(len(result), 3)
             finally:
                 DB.drop_all_tables(db_config)
                 DB.dispose_all()
