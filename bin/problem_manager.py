@@ -40,10 +40,10 @@ class ProblemManager:
         # exclude feeds unrequested and unregistered and unmade
         # --> NOT ( http_request = 0 AND public_html = 0 AND feedmaker = 0 )
         # exclude feeds REQUESTED and unregistered and unmade but ACCESSED long ago
-        # --> NOT ( http_request = 1 AND public_html = 0 AND feedmaker = 0 AND access_date IS NOT NULL AND DATEDIFF(access_date, current_date) > %s )
+        # --> NOT ( http_request = 1 AND public_html = 0 AND feedmaker = 0 AND access_date IS NOT NULL AND DATEDIFF(current_date, access_date) > %s )
         # exclude feeds REQUESTED and REGISTERED and MADE AND ACCESSED OR VIEWED RECENTLY
         # --> NOT ( http_request = 1 AND public_html = 1 AND feedmaker = 1 AND ( access_date IS NOT NULL AND DATEDIFF(current_date, access_date) < %s OR view_date IS NOT NULL AND DATEDIFF(current_date, view_date) < %s ) )
-        # for row in self.db.query("SELECT * FROM feed_info WHERE NOT ( http_request = 0 AND public_html = 0 AND feedmaker = 0 ) AND NOT ( http_request = 1 AND public_html = 0 AND feedmaker = 0 AND access_date IS NOT NULL AND DATEDIFF(access_date, current_date) > %s ) AND NOT ( http_request = 1 AND public_html = 1 AND feedmaker = 1 AND config IS NOT NULL AND ( access_date IS NOT NULL AND DATEDIFF(current_date, access_date) < %s OR view_date IS NOT NULL AND DATEDIFF(current_date, view_date) < %s ) ) ORDER BY feedmaker, public_html, http_request, collect_date, rss_update_date, upload_date, access_date, view_date", self.num_days, self.num_days, self.num_days):
+        # for row in self.db.query("SELECT * FROM feed_info WHERE NOT ( http_request = 0 AND public_html = 0 AND feedmaker = 0 ) AND NOT ( http_request = 1 AND public_html = 0 AND feedmaker = 0 AND access_date IS NOT NULL AND DATEDIFF(current_date, access_date) > %s ) AND NOT ( http_request = 1 AND public_html = 1 AND feedmaker = 1 AND config IS NOT NULL AND ( access_date IS NOT NULL AND DATEDIFF(current_date, access_date) < %s OR view_date IS NOT NULL AND DATEDIFF(current_date, view_date) < %s ) ) ORDER BY feedmaker, public_html, http_request, collect_date, rss_update_date, upload_date, access_date, view_date", self.num_days, self.num_days, self.num_days):
         with DB.session_ctx() as s:
             rows = (
                 s.query(FeedInfo)
@@ -53,8 +53,8 @@ class ProblemManager:
                     # 1) http_request=0 AND public_html=0 AND feedmaker=0 인 행 제외
                     not_(and_(not_(FeedInfo.http_request), not_(FeedInfo.public_html), not_(FeedInfo.feedmaker))),
                     # 2) http_request=1, public_html=0, feedmaker=0, access_date IS NOT NULL,
-                    #    DATEDIFF(access_date, current_date) > num_days 인 행 제외
-                    not_(and_(FeedInfo.http_request, not_(FeedInfo.public_html), not_(FeedInfo.feedmaker), FeedInfo.access_date.isnot(None), func.datediff(FeedInfo.access_date, func.current_timestamp) > cls.num_days)),
+                    #    DATEDIFF(current_date, access_date) > num_days 인 행 제외
+                    not_(and_(FeedInfo.http_request, not_(FeedInfo.public_html), not_(FeedInfo.feedmaker), FeedInfo.access_date.isnot(None), func.datediff(func.current_date(), FeedInfo.access_date) > cls.num_days)),
                     # 3) http_request=1, public_html=1, feedmaker=1, config IS NOT NULL,
                     #    AND (access_date IS NOT NULL AND DATEDIFF(current_date,access_date)<num_days
                     #         OR view_date IS NOT NULL AND DATEDIFF(current_date,view_date)<num_days)
@@ -64,7 +64,7 @@ class ProblemManager:
                             FeedInfo.public_html,
                             FeedInfo.feedmaker,
                             FeedInfo.config.isnot(None),
-                            or_(and_(FeedInfo.access_date.isnot(None), func.datediff(func.current_timestamp, FeedInfo.access_date) < cls.num_days), and_(FeedInfo.view_date.isnot(None), func.datediff(func.current_timestamp, FeedInfo.view_date) < cls.num_days)),
+                            or_(and_(FeedInfo.access_date.isnot(None), func.datediff(func.current_date(), FeedInfo.access_date) < cls.num_days), and_(FeedInfo.view_date.isnot(None), func.datediff(func.current_date(), FeedInfo.view_date) < cls.num_days)),
                         )
                     ),
                 )
