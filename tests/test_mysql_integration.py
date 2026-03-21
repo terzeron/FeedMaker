@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 from tests.common_test_util import start_mysql_container
 from bin.db import DB
 from bin.models import SampleTable, FeedInfo, GroupInfo, UserSession
+from bin.problem_manager import ProblemManager
 
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -49,16 +50,9 @@ class TestMySQLIntegration(unittest.TestCase):
         """Test basic CRUD operations with MySQL container"""
         with start_mysql_container() as mysql:
             # Get connection details from container attributes
-            LOGGER.info(f"Testing CRUD operations with MySQL")
+            LOGGER.info("Testing CRUD operations with MySQL")
 
-            db_config = {
-                "drivername": "mysql+pymysql",
-                "user": mysql.username,
-                "password": mysql.password,
-                "host": "localhost",
-                "port": int(mysql.get_exposed_port(3306)),
-                "database": mysql.dbname
-            }
+            db_config = {"drivername": "mysql+pymysql", "user": mysql.username, "password": mysql.password, "host": "localhost", "port": int(mysql.get_exposed_port(3306)), "database": mysql.dbname}
 
             # Initialize DB
             DB.init(db_config)
@@ -115,14 +109,7 @@ class TestMySQLIntegration(unittest.TestCase):
     def test_mysql_multiple_records(self) -> None:
         """Test operations with multiple records"""
         with start_mysql_container() as mysql:
-            db_config = {
-                "drivername": "mysql+pymysql",
-                "user": mysql.username,
-                "password": mysql.password,
-                "host": "localhost",
-                "port": int(mysql.get_exposed_port(3306)),
-                "database": mysql.dbname
-            }
+            db_config = {"drivername": "mysql+pymysql", "user": mysql.username, "password": mysql.password, "host": "localhost", "port": int(mysql.get_exposed_port(3306)), "database": mysql.dbname}
 
             DB.init(db_config)
             DB.create_all_tables(db_config)
@@ -166,14 +153,7 @@ class TestMySQLIntegration(unittest.TestCase):
     def test_mysql_merge_upsert(self) -> None:
         """Test merge (upsert) operations"""
         with start_mysql_container() as mysql:
-            db_config = {
-                "drivername": "mysql+pymysql",
-                "user": mysql.username,
-                "password": mysql.password,
-                "host": "localhost",
-                "port": int(mysql.get_exposed_port(3306)),
-                "database": mysql.dbname
-            }
+            db_config = {"drivername": "mysql+pymysql", "user": mysql.username, "password": mysql.password, "host": "localhost", "port": int(mysql.get_exposed_port(3306)), "database": mysql.dbname}
 
             DB.init(db_config)
             DB.create_all_tables(db_config)
@@ -205,14 +185,7 @@ class TestMySQLIntegration(unittest.TestCase):
     def test_feed_info_access_date_update(self) -> None:
         """Test FeedInfo access_date update - core business logic"""
         with start_mysql_container() as mysql:
-            db_config = {
-                "drivername": "mysql+pymysql",
-                "user": mysql.username,
-                "password": mysql.password,
-                "host": "localhost",
-                "port": int(mysql.get_exposed_port(3306)),
-                "database": mysql.dbname
-            }
+            db_config = {"drivername": "mysql+pymysql", "user": mysql.username, "password": mysql.password, "host": "localhost", "port": int(mysql.get_exposed_port(3306)), "database": mysql.dbname}
 
             DB.init(db_config)
             DB.create_all_tables(db_config)
@@ -220,24 +193,8 @@ class TestMySQLIntegration(unittest.TestCase):
             try:
                 # Create initial FeedInfo records
                 with DB.session_ctx(db_config=db_config) as session:
-                    feed1 = FeedInfo(
-                        feed_name="comic/naver/test_feed1",
-                        feed_title="Test Feed 1",
-                        group_name="comic",
-                        is_active=True,
-                        http_request=False,
-                        access_date=None,
-                        view_date=None
-                    )
-                    feed2 = FeedInfo(
-                        feed_name="comic/daum/test_feed2",
-                        feed_title="Test Feed 2",
-                        group_name="comic",
-                        is_active=True,
-                        http_request=False,
-                        access_date=None,
-                        view_date=None
-                    )
+                    feed1 = FeedInfo(feed_name="comic/naver/test_feed1", feed_title="Test Feed 1", group_name="comic", is_active=True, http_request=False, access_date=None, view_date=None)
+                    feed2 = FeedInfo(feed_name="comic/daum/test_feed2", feed_title="Test Feed 2", group_name="comic", is_active=True, http_request=False, access_date=None, view_date=None)
                     session.add(feed1)
                     session.add(feed2)
                     session.commit()
@@ -291,20 +248,14 @@ class TestMySQLIntegration(unittest.TestCase):
 
                 # Query feeds with access_date (simulating AccessLogManager behavior)
                 with DB.session_ctx(db_config=db_config) as session:
-                    accessed_feeds = session.query(FeedInfo).filter(
-                        FeedInfo.http_request == True,
-                        FeedInfo.access_date.isnot(None)
-                    ).all()
+                    accessed_feeds = session.query(FeedInfo).filter(FeedInfo.http_request == True, FeedInfo.access_date.isnot(None)).all()
                     self.assertEqual(len(accessed_feeds), 1)
                     self.assertEqual(accessed_feeds[0].feed_name, "comic/naver/test_feed1")
                     LOGGER.info("Verified query for accessed feeds")
 
                 # Query feeds with view_date
                 with DB.session_ctx(db_config=db_config) as session:
-                    viewed_feeds = session.query(FeedInfo).filter(
-                        FeedInfo.http_request == True,
-                        FeedInfo.view_date.isnot(None)
-                    ).all()
+                    viewed_feeds = session.query(FeedInfo).filter(FeedInfo.http_request == True, FeedInfo.view_date.isnot(None)).all()
                     self.assertEqual(len(viewed_feeds), 1)
                     self.assertEqual(viewed_feeds[0].feed_name, "comic/daum/test_feed2")
                     LOGGER.info("Verified query for viewed feeds")
@@ -316,14 +267,7 @@ class TestMySQLIntegration(unittest.TestCase):
     def test_group_info_feed_info_relationship(self) -> None:
         """Test GroupInfo and FeedInfo relationship"""
         with start_mysql_container() as mysql:
-            db_config = {
-                "drivername": "mysql+pymysql",
-                "user": mysql.username,
-                "password": mysql.password,
-                "host": "localhost",
-                "port": int(mysql.get_exposed_port(3306)),
-                "database": mysql.dbname
-            }
+            db_config = {"drivername": "mysql+pymysql", "user": mysql.username, "password": mysql.password, "host": "localhost", "port": int(mysql.get_exposed_port(3306)), "database": mysql.dbname}
 
             DB.init(db_config)
             DB.create_all_tables(db_config)
@@ -331,22 +275,14 @@ class TestMySQLIntegration(unittest.TestCase):
             try:
                 # Create GroupInfo
                 with DB.session_ctx(db_config=db_config) as session:
-                    group = GroupInfo(
-                        group_name="comic",
-                        feed_name="comic/naver/test_feed"
-                    )
+                    group = GroupInfo(group_name="comic", feed_name="comic/naver/test_feed")
                     session.add(group)
                     session.commit()
                     LOGGER.info("Created GroupInfo: comic")
 
                 # Create FeedInfo with same group_name
                 with DB.session_ctx(db_config=db_config) as session:
-                    feed = FeedInfo(
-                        feed_name="comic/naver/test_feed",
-                        feed_title="Test Comic Feed",
-                        group_name="comic",
-                        is_active=True
-                    )
+                    feed = FeedInfo(feed_name="comic/naver/test_feed", feed_title="Test Comic Feed", group_name="comic", is_active=True)
                     session.add(feed)
                     session.commit()
                     LOGGER.info("Created FeedInfo with group_name: comic")
@@ -366,14 +302,7 @@ class TestMySQLIntegration(unittest.TestCase):
     def test_user_session_creation_and_expiry(self) -> None:
         """Test UserSession creation and expiry checking"""
         with start_mysql_container() as mysql:
-            db_config = {
-                "drivername": "mysql+pymysql",
-                "user": mysql.username,
-                "password": mysql.password,
-                "host": "localhost",
-                "port": int(mysql.get_exposed_port(3306)),
-                "database": mysql.dbname
-            }
+            db_config = {"drivername": "mysql+pymysql", "user": mysql.username, "password": mysql.password, "host": "localhost", "port": int(mysql.get_exposed_port(3306)), "database": mysql.dbname}
 
             DB.init(db_config)
             DB.create_all_tables(db_config)
@@ -384,14 +313,7 @@ class TestMySQLIntegration(unittest.TestCase):
                 # Create a valid session
                 with DB.session_ctx(db_config=db_config) as session:
                     now = datetime.now(timezone.utc)
-                    valid_session = UserSession(
-                        session_id="test_session_123",
-                        user_email="test@example.com",
-                        user_name="Test User",
-                        created_at=now,
-                        expires_at=now + timedelta(hours=24),
-                        last_accessed_at=now
-                    )
+                    valid_session = UserSession(session_id="test_session_123", user_email="test@example.com", user_name="Test User", created_at=now, expires_at=now + timedelta(hours=24), last_accessed_at=now)
                     session.add(valid_session)
                     session.commit()
                     LOGGER.info("Created valid UserSession")
@@ -405,7 +327,7 @@ class TestMySQLIntegration(unittest.TestCase):
                         user_name="Expired User",
                         created_at=now - timedelta(days=2),
                         expires_at=now - timedelta(hours=1),  # Expired 1 hour ago
-                        last_accessed_at=now - timedelta(days=1)
+                        last_accessed_at=now - timedelta(days=1),
                     )
                     session.add(expired_session)
                     session.commit()
@@ -414,9 +336,7 @@ class TestMySQLIntegration(unittest.TestCase):
                 # Query valid sessions
                 with DB.session_ctx(db_config=db_config) as session:
                     now = datetime.now(timezone.utc)
-                    valid_sessions = session.query(UserSession).filter(
-                        UserSession.expires_at > now
-                    ).all()
+                    valid_sessions = session.query(UserSession).filter(UserSession.expires_at > now).all()
                     self.assertEqual(len(valid_sessions), 1)
                     self.assertEqual(valid_sessions[0].session_id, "test_session_123")
                     LOGGER.info("Verified valid session query")
@@ -424,9 +344,7 @@ class TestMySQLIntegration(unittest.TestCase):
                 # Query expired sessions
                 with DB.session_ctx(db_config=db_config) as session:
                     now = datetime.now(timezone.utc)
-                    expired_sessions = session.query(UserSession).filter(
-                        UserSession.expires_at <= now
-                    ).all()
+                    expired_sessions = session.query(UserSession).filter(UserSession.expires_at <= now).all()
                     self.assertEqual(len(expired_sessions), 1)
                     self.assertEqual(expired_sessions[0].session_id, "expired_session_456")
                     LOGGER.info("Verified expired session query")
@@ -434,24 +352,62 @@ class TestMySQLIntegration(unittest.TestCase):
                 # Update last_accessed_at
                 with DB.session_ctx(db_config=db_config) as session:
                     now = datetime.now(timezone.utc)
-                    user_session = session.query(UserSession).filter_by(
-                        session_id="test_session_123"
-                    ).first()
+                    user_session = session.query(UserSession).filter_by(session_id="test_session_123").first()
                     user_session.last_accessed_at = now
                     session.commit()
                     LOGGER.info("Updated last_accessed_at")
 
                 # Verify update
                 with DB.session_ctx(db_config=db_config) as session:
-                    user_session = session.query(UserSession).filter_by(
-                        session_id="test_session_123"
-                    ).first()
+                    user_session = session.query(UserSession).filter_by(session_id="test_session_123").first()
                     # MySQL may return timezone-naive datetime, so ensure both are UTC-aware for comparison
                     last_accessed_aware = user_session.last_accessed_at.replace(tzinfo=timezone.utc) if user_session.last_accessed_at.tzinfo is None else user_session.last_accessed_at
                     now_aware = now.replace(tzinfo=timezone.utc) if now.tzinfo is None else now
                     time_diff = abs((last_accessed_aware - now_aware).total_seconds())
                     self.assertLess(time_diff, 1.0)
                     LOGGER.info("Verified last_accessed_at update")
+
+            finally:
+                DB.drop_all_tables(db_config)
+                DB.dispose_all()
+
+    def test_get_feed_name_status_info_map_excludes_inactive_feeds(self) -> None:
+        """비활성화된 피드가 get_feed_name_status_info_map 결과에서 제외되는지 검증"""
+        with start_mysql_container() as mysql:
+            db_config = {"drivername": "mysql+pymysql", "user": mysql.username, "password": mysql.password, "host": "localhost", "port": int(mysql.get_exposed_port(3306)), "database": mysql.dbname}
+
+            DB.dispose_all()
+            DB.init(db_config)
+            DB.create_all_tables(db_config)
+
+            try:
+                now = datetime.now(timezone.utc)
+
+                with DB.session_ctx() as session:
+                    # 활성 피드: 문제가 있는 상태 (http_request=1, public_html=1, feedmaker=0)
+                    # public_html=True로 설정하여 조건2(http_request=1,public_html=0,feedmaker=0) 패턴에 걸리지 않도록 함
+                    session.add(FeedInfo(feed_name="active_feed", group_name="mygroup", feed_title="Active Feed", is_active=True, http_request=True, public_html=True, feedmaker=False, access_date=now))
+                    # 비활성 피드: 같은 상태이지만 is_active=False
+                    # (_mygroup/feed → mygroup/feed로 정규화되어 DB에 들어간 경우)
+                    session.add(FeedInfo(feed_name="inactive_feed", group_name="mygroup", feed_title="", is_active=False, http_request=True, public_html=True, feedmaker=False, access_date=now))
+                    # 비활성 피드: 다른 그룹에서 정규화된 동일 feed_name
+                    session.add(FeedInfo(feed_name="shared_feed", group_name="groupA", feed_title="Shared Active", is_active=True, http_request=True, public_html=True, feedmaker=False, access_date=now))
+                    session.add(FeedInfo(feed_name="shared_feed", group_name="groupB", feed_title="", is_active=False, http_request=True, public_html=True, feedmaker=False, access_date=now))
+                    session.commit()
+
+                result = ProblemManager.get_feed_name_status_info_map()
+
+                # 활성 피드만 포함되어야 함
+                self.assertIn("active_feed", result)
+                self.assertEqual(result["active_feed"]["feed_title"], "Active Feed")
+
+                # 비활성 피드는 제외되어야 함
+                self.assertNotIn("inactive_feed", result)
+
+                # shared_feed는 활성인 groupA 것만 포함
+                self.assertIn("shared_feed", result)
+                self.assertEqual(result["shared_feed"]["group_name"], "groupA")
+                self.assertEqual(result["shared_feed"]["feed_title"], "Shared Active")
 
             finally:
                 DB.drop_all_tables(db_config)
