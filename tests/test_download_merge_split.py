@@ -32,8 +32,12 @@ class TestDownloadMergeSplit(unittest.TestCase):
         self.patcher_convert_image_format = patch("utils.image_downloader.ImageDownloader.convert_image_format", return_value=Path("dummy_path"))
         self.patcher_download_image = patch("utils.image_downloader.ImageDownloader.download_image", return_value=(Path("dummy_path"), "dummy_url"))
         self.patcher_is_file = patch.object(Path, "is_file", return_value=True)
+        self.patcher_is_dir = patch.object(Path, "is_dir", return_value=True)
         self.patcher_suffix = patch.object(Path, "suffix", ".jpeg")
         self.patcher_exec_cmd = patch("bin.feed_maker_util.Process.exec_cmd", return_value=("mock_result", None))
+        mock_config_instance = MagicMock()
+        mock_config_instance.get_extraction_configs.return_value = {"user_agent": "", "encoding": "utf-8", "render_js": False, "num_retries": 1, "verify_ssl": True, "headers": {}, "timeout": 60}
+        self.patcher_config = patch("utils.download_merge_split.Config", return_value=mock_config_instance)
 
         self.mock_argv = self.patcher_argv.start()
         self.mock_environ = self.patcher_environ.start()
@@ -50,8 +54,10 @@ class TestDownloadMergeSplit(unittest.TestCase):
         self.mock_convert_image_format = self.patcher_convert_image_format.start()
         self.mock_download_image = self.patcher_download_image.start()
         self.mock_is_file = self.patcher_is_file.start()
+        self.mock_is_dir = self.patcher_is_dir.start()
         self.mock_suffix = self.patcher_suffix.start()
         self.mock_exec_cmd = self.patcher_exec_cmd.start()
+        self.mock_config = self.patcher_config.start()
 
         page_url = "https://comic.naver.com/webtoon/detail.nhn?titleId=602910&no=197"
         work_dir = Env.get("FM_WORK_DIR") + "/naver/one_second"
@@ -77,8 +83,10 @@ class TestDownloadMergeSplit(unittest.TestCase):
         self.patcher_convert_image_format.stop()
         self.patcher_download_image.stop()
         self.patcher_is_file.stop()
+        self.patcher_is_dir.stop()
         self.patcher_suffix.stop()
         self.patcher_exec_cmd.stop()
+        self.patcher_config.stop()
 
     def test_download_merge_split(self) -> None:
         self.maxDiff = None
