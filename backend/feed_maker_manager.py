@@ -51,15 +51,14 @@ class FeedMakerManager:
 
     def __del__(self) -> None:
         LOGGER.debug("# FeedMakerManager.__del__()")
-        del self.feed_manager
-        del self.access_log_manager
-        del self.html_file_manager
-        del self.problem_manager
+        self.feed_manager = None
+        self.access_log_manager = None
+        self.html_file_manager = None
+        self.problem_manager = None
 
     def aclose(self) -> None:
         LOGGER.debug("# FeedMakerManager.aclose()")
-        del self
-        return None
+        self.__del__()
 
     def _get_repo(self) -> Repo:
         return Repo(self.work_dir_path)

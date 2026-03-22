@@ -89,19 +89,19 @@ class TestDel(unittest.TestCase):
     def test_del_deletes_managers(self, mock_fm, mock_alm, mock_hfm, mock_pm):
         mgr = FeedMakerManager()
         mgr.__del__()
-        # __del__ 호출 후 속성이 삭제됨
-        self.assertFalse(hasattr(mgr, "feed_manager"))
-        self.assertFalse(hasattr(mgr, "access_log_manager"))
-        self.assertFalse(hasattr(mgr, "html_file_manager"))
-        self.assertFalse(hasattr(mgr, "problem_manager"))
+        # __del__ 호출 후 속성이 None으로 정리됨
+        self.assertIsNone(mgr.feed_manager)
+        self.assertIsNone(mgr.access_log_manager)
+        self.assertIsNone(mgr.html_file_manager)
+        self.assertIsNone(mgr.problem_manager)
 
 
 class TestAclose(unittest.TestCase):
-    def test_aclose_returns_none(self):
+    def test_aclose_cleans_up(self):
         with tempfile.TemporaryDirectory() as tmp:
             mgr = _make_manager(Path(tmp))
-            result = mgr.aclose()
-            self.assertIsNone(result)
+            mgr.aclose()
+            self.assertIsNone(mgr.feed_manager)
 
 
 class TestGitAdd(unittest.TestCase):
