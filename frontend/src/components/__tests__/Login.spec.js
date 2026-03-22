@@ -34,10 +34,17 @@ const stubs = {
 const flushPromises = () => new Promise((r) => setTimeout(r));
 
 describe("Login.vue", () => {
+  let errorSpy;
+
   beforeEach(() => {
     axios.get.mockReset();
     axios.post.mockReset();
     authStore.clear();
+    errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    errorSpy.mockRestore();
   });
 
   it("logs in and redirects on success", async () => {

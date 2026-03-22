@@ -1609,4 +1609,113 @@ describe("FeedManagement.vue", () => {
       // Should not throw
     });
   });
+
+  describe("removelist", () => {
+    it("calls DELETE on list endpoint after confirm", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      wrapper.vm.removelist();
+
+      axios.delete = jest
+        .fn()
+        .mockResolvedValueOnce({ data: { status: "success" } });
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+
+      expect(axios.delete).toHaveBeenCalledWith(
+        expect.stringContaining("/groups/g1/feeds/f1/list"),
+      );
+    });
+  });
+
+  describe("registerToInoreader and registerToFeedly", () => {
+    it("opens Inoreader URL", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.newFeedName = "test_feed";
+      const openSpy = jest.spyOn(window, "open").mockImplementation(() => {});
+      wrapper.vm.registerToInoreader();
+      expect(openSpy).toHaveBeenCalledWith(
+        expect.stringContaining("inoreader.com"),
+      );
+      openSpy.mockRestore();
+    });
+
+    it("opens Feedly URL", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.newFeedName = "test_feed";
+      const openSpy = jest.spyOn(window, "open").mockImplementation(() => {});
+      wrapper.vm.registerToFeedly();
+      expect(openSpy).toHaveBeenCalledWith(
+        expect.stringContaining("feedly.com"),
+      );
+      openSpy.mockRestore();
+    });
+  });
+
+  describe("toggleStatus group branch", () => {
+    it("handles group toggle success", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+
+      axios.put = jest.fn().mockResolvedValueOnce({
+        data: { status: "success", new_name: "g1_renamed" },
+      });
+      // getGroups call after toggle
+      axios.get.mockResolvedValueOnce({
+        data: { status: "success", groups: [] },
+      });
+
+      wrapper.vm.toggleStatus("group");
+      await flushPromises();
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+
+      expect(axios.put).toHaveBeenCalledWith(
+        expect.stringContaining("/groups/g1/toggle"),
+      );
+    });
+  });
+
+  describe("mounted with route params", () => {
+    it("initializes from route params", async () => {
+      axios.get.mockReset();
+      // feedNameButtonClicked -> getFeedInfo
+      axios.get.mockResolvedValueOnce({
+        data: {
+          status: "success",
+          feed_info: {
+            config: {
+              rss: {
+                title: "Test",
+                link: "https://example.com/test.xml",
+                description: "",
+              },
+              collection: { list_url_list: ["https://example.com"] },
+            },
+            collection_info: {},
+            public_feed_info: {},
+            progress_info: {},
+            config_modify_date: "",
+          },
+        },
+      });
+
+      const wrapper = mount(FeedManagement, {
+        global: {
+          stubs,
+          mocks: { $route: { params: { group: "naver", feed: "myfeed" } } },
+        },
+      });
+      await flushPromises();
+
+      expect(wrapper.vm.selectedGroupName).toBe("naver");
+      expect(wrapper.vm.selectedFeedName).toBe("myfeed");
+    });
+  });
 });

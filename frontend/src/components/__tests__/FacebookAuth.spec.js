@@ -2,9 +2,18 @@ import { mount } from "@vue/test-utils";
 import FacebookAuth from "../FacebookAuth.vue";
 
 describe("FacebookAuth.vue", () => {
+  let warnSpy, errorSpy;
+
   beforeEach(() => {
     delete window.FB;
     delete window.fbAsyncInit;
+    warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
+    errorSpy.mockRestore();
   });
 
   it("renders without errors", () => {

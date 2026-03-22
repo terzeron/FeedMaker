@@ -246,6 +246,14 @@ describe("Search.vue", () => {
     expect(html).toContain("검색 실패");
   });
 
+  it("mounted hook executes without error", () => {
+    const wrapper = mount(Search, {
+      global: { stubs, components: { MyButton } },
+    });
+    // mounted is a no-op but should be covered
+    expect(wrapper.exists()).toBe(true);
+  });
+
   it("ignores cancel error in per-site catch", async () => {
     axios.isCancel = jest.fn((err) => err && err.__CANCEL__);
     // 1st call: site names success
