@@ -219,6 +219,33 @@ describe("Search.vue", () => {
     expect(wrapper.vm.siteResults.length).toBe(0);
   });
 
+  it("renders site result cards with all status variants", async () => {
+    const wrapper = mount(Search, {
+      global: { stubs, components: { MyButton } },
+    });
+
+    // Manually set siteResults with all status variants to trigger template branches
+    wrapper.vm.siteResults = [
+      { name: "site1", status: "loading", html: "", error: "" },
+      {
+        name: "site2",
+        status: "success",
+        html: "<div>result</div>",
+        error: "",
+      },
+      { name: "site3", status: "success", html: "", error: "" },
+      { name: "site4", status: "error", html: "", error: "검색 실패" },
+    ];
+    await flushPromises();
+
+    const html = wrapper.html();
+    expect(html).toContain("site1");
+    expect(html).toContain("site2");
+    expect(html).toContain("site3");
+    expect(html).toContain("site4");
+    expect(html).toContain("검색 실패");
+  });
+
   it("ignores cancel error in per-site catch", async () => {
     axios.isCancel = jest.fn((err) => err && err.__CANCEL__);
     // 1st call: site names success

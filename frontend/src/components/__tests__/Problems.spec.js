@@ -1874,6 +1874,292 @@ describe("Problems.vue", () => {
     window.alert.mockRestore();
   });
 
+  it("renders all table rows and cells when data is loaded", async () => {
+    // status_info with group_name/feed_name for router-link
+    axios.get.mockResolvedValueOnce({
+      data: {
+        status: "success",
+        result: [
+          {
+            feed_title: "A",
+            feed_name: "a",
+            group_name: "g1",
+            public_html: true,
+            http_request: true,
+            feedmaker: true,
+            update_date: "2024-10-10",
+            upload_date: "2024-10-11",
+            access_date: "2024-10-12",
+            view_date: "2024-10-13",
+          },
+        ],
+      },
+    });
+    // progress_info with group_name/feed_name
+    axios.get.mockResolvedValueOnce({
+      data: {
+        status: "success",
+        result: [
+          {
+            feed_title: "B",
+            feed_name: "b",
+            group_name: "g1",
+            current_index: 1,
+            total_item_count: 2,
+            unit_size_per_day: 1,
+            progress_ratio: 50,
+            due_date: "2024-10-15",
+          },
+        ],
+      },
+    });
+    // public_feed_info with all flag variants
+    axios.get.mockResolvedValueOnce({
+      data: {
+        status: "success",
+        result: [
+          {
+            feed_title: "Tiny",
+            feed_name: "tiny",
+            group_name: "g1",
+            num_items: 2,
+            file_size: 500,
+            upload_date: "2020-01-01",
+          },
+          {
+            feed_title: "Small",
+            feed_name: "small",
+            group_name: "g1",
+            num_items: 25,
+            file_size: 2000,
+            upload_date: "2024-10-01",
+          },
+        ],
+      },
+    });
+    // html_info with data in all sub-maps
+    axios.get.mockResolvedValueOnce({
+      data: {
+        status: "success",
+        result: {
+          html_file_size_map: [
+            {
+              feed_dir_path: "g1/c",
+              file_path: "g1/c/html/f.html",
+              size: 10,
+              feed_title: "HtmlSize",
+            },
+          ],
+          html_file_with_many_image_tag_map: [
+            {
+              feed_dir_path: "g1/d",
+              file_path: "g1/d/html/f2.html",
+              count: 30,
+              feed_title: "ManyImg",
+            },
+          ],
+          html_file_without_image_tag_map: [
+            {
+              feed_dir_path: "g1/e",
+              file_path: "g1/e/html/f3.html",
+              feed_title: "NoImg",
+            },
+          ],
+          html_file_image_not_found_map: [
+            {
+              feed_dir_path: "g1/f",
+              file_path: "g1/f/html/f4.html",
+              feed_title: "ImgNotFound",
+            },
+          ],
+        },
+      },
+    });
+    // element_info
+    axios.get.mockResolvedValueOnce({
+      data: {
+        status: "success",
+        result: [{ element_name: "title", count: 3 }],
+      },
+    });
+    // list_url_info with group_name/feed_name
+    axios.get.mockResolvedValueOnce({
+      data: {
+        status: "success",
+        result: [
+          { feed_title: "Url", count: 5, group_name: "g1", feed_name: "a" },
+        ],
+      },
+    });
+
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    await wrapper.vm.$nextTick();
+    const html = wrapper.html();
+
+    // status_info table: router-link with group_name/feed_name
+    expect(html).toContain("/management/g1/a");
+    // status_info table: date-cell class for date fields
+    expect(wrapper.findAll(".date-cell").length).toBeGreaterThanOrEqual(4);
+    // status_info table: action column with delete button
+    expect(wrapper.findAll("tr").length).toBeGreaterThan(6);
+
+    // progress_info table: progress_ratio with %
+    expect(html).toContain("50%");
+    // progress_info table: router-link with group_name/feed_name
+    expect(html).toContain("/management/g1/b");
+
+    // public_feed_info: text-danger for sizeIsDanger (file_size=500 < 1024)
+    const dangerSpans = wrapper.findAll(".text-danger");
+    expect(dangerSpans.length).toBeGreaterThanOrEqual(1);
+    // public_feed_info: text-warning for sizeIsWarning (file_size=2000)
+    const warningSpans = wrapper.findAll(".text-warning");
+    expect(warningSpans.length).toBeGreaterThanOrEqual(1);
+    // public_feed_info: size_formatted displayed
+    expect(html).toContain("500");
+    // public_feed_info: action delete button
+    expect(html).toContain("Tiny");
+    expect(html).toContain("Small");
+
+    // html file tables: feed_title links with management path
+    expect(html).toContain("HtmlSize");
+    expect(html).toContain("/management/g1/c");
+    expect(html).toContain("ManyImg");
+    expect(html).toContain("/management/g1/d");
+    expect(html).toContain("NoImg");
+    expect(html).toContain("/management/g1/e");
+    expect(html).toContain("ImgNotFound");
+    expect(html).toContain("/management/g1/f");
+
+    // element_info table renders element_name and count
+    expect(html).toContain("title");
+    expect(html).toContain("3");
+
+    // list_url_info table: router-link
+    expect(html).toContain("Url");
+    expect(html).toContain("/management/g1/a");
+
+    // Verify footer renders admin email and version
+    expect(html).toContain("dev");
+  });
+
+  it("handleConfirmCancel closes modal and clears action", async () => {
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: {
+        status: "success",
+        result: {
+          html_file_size_map: [],
+          html_file_with_many_image_tag_map: [],
+          html_file_without_image_tag_map: [],
+          html_file_image_not_found_map: [],
+        },
+      },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    const action = jest.fn();
+    wrapper.vm.openConfirmModal("Test?", action);
+    expect(wrapper.vm.showConfirmModal).toBe(true);
+
+    wrapper.vm.handleConfirmCancel();
+    expect(wrapper.vm.showConfirmModal).toBe(false);
+    expect(wrapper.vm.pendingAction).toBeNull();
+    expect(action).not.toHaveBeenCalled();
+  });
+
+  it("formatFileSize returns correct formatted sizes", async () => {
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: {
+        status: "success",
+        result: {
+          html_file_size_map: [],
+          html_file_with_many_image_tag_map: [],
+          html_file_without_image_tag_map: [],
+          html_file_image_not_found_map: [],
+        },
+      },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    expect(wrapper.vm.formatFileSize(0)).toBe("0 B");
+    expect(wrapper.vm.formatFileSize(500)).toContain("B");
+    expect(wrapper.vm.formatFileSize(2048)).toContain("KB");
+    expect(wrapper.vm.formatFileSize(5 * 1024 * 1024)).toContain("MB");
+    expect(wrapper.vm.formatFileSize(2 * 1024 * 1024 * 1024)).toContain("GB");
+  });
+
+  it("getManagementLink returns link or empty string", async () => {
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: {
+        status: "success",
+        result: {
+          html_file_size_map: [],
+          html_file_with_many_image_tag_map: [],
+          html_file_without_image_tag_map: [],
+          html_file_image_not_found_map: [],
+        },
+      },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    const link = wrapper.vm.getManagementLink("Title", "g1", "f1");
+    expect(link).toContain("/management/g1/f1");
+    expect(link).toContain("Title");
+    expect(wrapper.vm.getManagementLink("", "g1", "f1")).toBe("");
+  });
+
   it("removeHtmlFile handles failure and error responses", async () => {
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },

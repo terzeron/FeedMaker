@@ -1358,11 +1358,9 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.jsonData = { key: "value" };
       wrapper.vm.saveSiteConfig();
 
-      axios.put = jest
-        .fn()
-        .mockResolvedValueOnce({
-          data: { status: "failure", message: "Config save failed" },
-        });
+      axios.put = jest.fn().mockResolvedValueOnce({
+        data: { status: "failure", message: "Config save failed" },
+      });
       wrapper.vm.handleConfirmOk();
       await flushPromises();
       expect(wrapper.vm.alertMessage).toBe("Config save failed");
@@ -1390,11 +1388,9 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.selectedFeedName = "f1";
       wrapper.vm.toggleStatus("feed");
 
-      axios.put = jest
-        .fn()
-        .mockResolvedValueOnce({
-          data: { status: "failure", message: "Toggle failed" },
-        });
+      axios.put = jest.fn().mockResolvedValueOnce({
+        data: { status: "failure", message: "Toggle failed" },
+      });
       wrapper.vm.handleConfirmOk();
       await flushPromises();
       expect(wrapper.vm.alertMessage).toBe("Toggle failed");
@@ -1434,11 +1430,9 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.selectedFeedName = "f1";
       wrapper.vm.removeFeed();
 
-      axios.delete = jest
-        .fn()
-        .mockResolvedValueOnce({
-          data: { status: "failure", message: "Delete failed" },
-        });
+      axios.delete = jest.fn().mockResolvedValueOnce({
+        data: { status: "failure", message: "Delete failed" },
+      });
       wrapper.vm.handleConfirmOk();
       await flushPromises();
       expect(wrapper.vm.alertMessage).toBe("Delete failed");
@@ -1463,11 +1457,9 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.selectedGroupName = "g1";
       wrapper.vm.removeGroup();
 
-      axios.delete = jest
-        .fn()
-        .mockResolvedValueOnce({
-          data: { status: "failure", message: "Group delete failed" },
-        });
+      axios.delete = jest.fn().mockResolvedValueOnce({
+        data: { status: "failure", message: "Group delete failed" },
+      });
       axios.get.mockResolvedValueOnce({
         data: { status: "success", groups: [] },
       });
@@ -1489,6 +1481,77 @@ describe("FeedManagement.vue", () => {
     });
   });
 
+  describe("template rendering with data", () => {
+    it("renders group list items when groups are loaded", async () => {
+      axios.get.mockReset();
+      axios.get.mockResolvedValueOnce({
+        data: {
+          status: "success",
+          groups: [
+            { name: "group1", num_feeds: 3, is_active: true },
+            { name: "_inactive", num_feeds: 1, is_active: false },
+          ],
+        },
+      });
+
+      const wrapper = mount(FeedManagement, {
+        global: { stubs, mocks: { $route: { params: {} } } },
+      });
+      wrapper.vm.jsonData = { rss: { title: "", link: "", description: "" } };
+      await flushPromises();
+
+      expect(wrapper.vm.groups.length).toBe(2);
+      const html = wrapper.html();
+      expect(html).toContain("group1");
+    });
+
+    it("renders feed list items when feeds are loaded", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.showFeedlist = true;
+      wrapper.vm.feeds = [
+        { name: "feed1", title: "Feed One", is_active: true },
+        { name: "_disabled", title: "Disabled", is_active: false },
+      ];
+      await wrapper.vm.$nextTick();
+      const html = wrapper.html();
+      expect(html).toContain("Feed One");
+    });
+
+    it("renders feed info section when editor is shown", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.showFeedInfo = true;
+      wrapper.vm.showNewFeedNameInput = true;
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      wrapper.vm.numCollectionUrls = 3;
+      wrapper.vm.collectDate = "2024-01-15";
+      wrapper.vm.totalItemCount = 100;
+      wrapper.vm.numItemsInResult = 50;
+      wrapper.vm.sizeOfResultFile = 2048;
+      wrapper.vm.lastUploadDate = "2024-01-10";
+      wrapper.vm.currentIndex = 30;
+      wrapper.vm.progressRatio = 30;
+      wrapper.vm.feedCompletionDueDate = "2024-02-01";
+      await wrapper.vm.$nextTick();
+      const html = wrapper.html();
+      expect(html).toContain("g1/f1");
+    });
+
+    it("renders search results when showSearchResult is true", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.showSearchResult = true;
+      wrapper.vm.feeds = [
+        { group_name: "g", feed_name: "f", feed_title: "SearchResult" },
+      ];
+      await flushPromises();
+      const html = wrapper.html();
+      expect(html).toContain("SearchResult");
+    });
+  });
+
   describe("removelist / removeHtml failure paths", () => {
     it("shows alert on removelist failure response", async () => {
       const wrapper = createWrapper();
@@ -1497,11 +1560,9 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.selectedFeedName = "f1";
       wrapper.vm.removelist();
 
-      axios.delete = jest
-        .fn()
-        .mockResolvedValueOnce({
-          data: { status: "failure", message: "List delete failed" },
-        });
+      axios.delete = jest.fn().mockResolvedValueOnce({
+        data: { status: "failure", message: "List delete failed" },
+      });
       wrapper.vm.handleConfirmOk();
       await flushPromises();
       expect(wrapper.vm.alertMessage).toBe("List delete failed");
@@ -1527,11 +1588,9 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.selectedFeedName = "f1";
       wrapper.vm.removeHtml();
 
-      axios.delete = jest
-        .fn()
-        .mockResolvedValueOnce({
-          data: { status: "failure", message: "Html delete failed" },
-        });
+      axios.delete = jest.fn().mockResolvedValueOnce({
+        data: { status: "failure", message: "Html delete failed" },
+      });
       wrapper.vm.handleConfirmOk();
       await flushPromises();
       expect(wrapper.vm.alertMessage).toBe("Html delete failed");
