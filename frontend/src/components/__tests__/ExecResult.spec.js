@@ -68,4 +68,45 @@ describe("ExecResult.vue", () => {
     expect(wrapper.find(".alert-danger").exists()).toBe(true);
     expect(wrapper.text()).toContain("Error loading execution result");
   });
+
+  it("redirects to /login when not authenticated", async () => {
+    const pushMock = jest.fn();
+    jest.spyOn(require("vue-router"), "useRouter").mockReturnValue({
+      push: pushMock,
+    });
+
+    axios.get.mockResolvedValueOnce({
+      data: { is_authenticated: false },
+    });
+
+    mount(ExecResult, {
+      global: {
+        stubs: { "router-link": true, "router-view": true },
+      },
+    });
+
+    await flushPromises();
+    expect(pushMock).toHaveBeenCalledWith("/login");
+  });
+
+  it("handles checkAuthStatus error gracefully", async () => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    const pushMock = jest.fn();
+    jest.spyOn(require("vue-router"), "useRouter").mockReturnValue({
+      push: pushMock,
+    });
+
+    axios.get.mockRejectedValueOnce(new Error("Network error"));
+
+    mount(ExecResult, {
+      global: {
+        stubs: { "router-link": true, "router-view": true },
+      },
+    });
+
+    await flushPromises();
+    // auth check fails → not authenticated → redirect
+    expect(pushMock).toHaveBeenCalledWith("/login");
+    console.error.mockRestore();
+  });
 });

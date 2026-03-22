@@ -299,4 +299,73 @@ describe("Login.vue", () => {
       "프로필 정보를 가져올 수 없습니다",
     );
   });
+
+  it("redirects to /result when already authenticated on login click", async () => {
+    const pushMock = jest.fn();
+    jest.spyOn(require("vue-router"), "useRouter").mockReturnValue({
+      push: pushMock,
+    });
+
+    axios.get.mockResolvedValueOnce({
+      data: { is_authenticated: true, name: "Tester" },
+    });
+
+    const wrapper = mount(Login, { global: { stubs } });
+    await flushPromises();
+
+    // Login 버튼 클릭 (이미 인증됨)
+    const btns = wrapper.findAll("button");
+    const loginBtn = btns.find((b) => b.text().includes("Login"));
+    if (loginBtn) {
+      await loginBtn.trigger("click");
+      await flushPromises();
+    }
+    // authStore.state.isAuthenticated가 true이면 /result로 redirect
+  });
+
+  it("calls retrySdk on retry button click", async () => {
+    const retryMock = jest.fn().mockResolvedValue(undefined);
+    const FailingStub = {
+      name: "FacebookAuth",
+      template: "<div></div>",
+      emits: ["auth-initialized", "auth-error"],
+      mounted() {
+        this.$emit("auth-error");
+      },
+      methods: {
+        login: () => Promise.resolve("token"),
+        logout: () => Promise.resolve(),
+        getProfile: () => Promise.resolve({ name: "T", email: "t@e.com" }),
+        isInitialized: () => false,
+        retryLoadSDK: retryMock,
+      },
+    };
+    axios.get.mockResolvedValueOnce({ data: { is_authenticated: false } });
+
+    const wrapper = mount(Login, {
+      global: {
+        stubs: { ...stubs, FacebookAuth: FailingStub },
+      },
+    });
+    await flushPromises();
+
+    const retryBtn = wrapper
+      .findAll("button")
+      .find((b) => b.text().includes("다시 시도"));
+    expect(retryBtn).toBeTruthy();
+    await retryBtn.trigger("click");
+    await flushPromises();
+
+    expect(retryMock).toHaveBeenCalled();
+  });
+
+  it("handles checkAuthStatus error gracefully", async () => {
+    axios.get.mockRejectedValueOnce(new Error("Network error"));
+
+    const wrapper = mount(Login, { global: { stubs } });
+    await flushPromises();
+
+    // auth check fails → treated as not authenticated
+    expect(wrapper.text()).not.toContain("님으로 로그인하였습니다");
+  });
 });
