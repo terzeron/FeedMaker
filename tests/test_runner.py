@@ -356,8 +356,25 @@ def get_test_methods(test_file: Path) -> list[str]:
     return test_methods
 
 
+def _get_coverage_file() -> Path:
+    """커버리지 데이터 파일 경로를 반환한다."""
+    # pytest-cov는 rootdir 기준으로 .coverage를 생성함
+    for candidate in [PROJECT_ROOT / ".coverage", TEST_DIR / ".coverage"]:
+        if candidate.exists():
+            return candidate
+    return PROJECT_ROOT / ".coverage"
+
+
+def _clear_coverage_data() -> None:
+    """이전 커버리지 데이터를 초기화한다."""
+    for candidate in [PROJECT_ROOT / ".coverage", TEST_DIR / ".coverage"]:
+        if candidate.exists():
+            candidate.unlink()
+
+
 def run_test_modules_sequentially(test_targets: list[Path]) -> tuple[bool, int, int, list[Path]]:
     """Run test modules sequentially and return (success, passed_count, failed_count, failed_files)"""
+    _clear_coverage_data()
     passed_count = 0
     failed_count = 0
     failed_files = []
@@ -369,7 +386,7 @@ def run_test_modules_sequentially(test_targets: list[Path]) -> tuple[bool, int, 
 
         # Measure execution time
         start_time = time.time()
-        result = subprocess.run([sys.executable, "-m", "pytest", "--tb=no", "--disable-warnings", str(absolute_path)], capture_output=True, text=True, check=False)
+        result = subprocess.run([sys.executable, "-m", "pytest", "--tb=no", "--disable-warnings", "--cov=backend", "--cov=bin", "--cov=utils", "--cov-append", "--cov-report=", str(absolute_path)], capture_output=True, text=True, check=False)
         end_time = time.time()
         execution_time = end_time - start_time
 
@@ -424,7 +441,8 @@ def run_specific_test_file(test_file: str) -> bool:
 
     # Measure execution time
     start_time = time.time()
-    result = subprocess.run([sys.executable, "-m", "pytest", str(test_path), "-v"], check=False)
+    _clear_coverage_data()
+    result = subprocess.run([sys.executable, "-m", "pytest", str(test_path), "-v", "--cov=backend", "--cov=bin", "--cov=utils", "--cov-report="], check=False)
     end_time = time.time()
     execution_time = end_time - start_time
 
@@ -492,13 +510,14 @@ def run_all_tests() -> tuple[bool, list[Path]]:
         print("No tests to run")
         return True, []
 
+    _clear_coverage_data()
     total_start = time.time()
     failed_files = []
 
     for idx, t in enumerate(ordered_tests, 1):
         print(f"--- [{idx}/{len(ordered_tests)}] Running: {t.name} ---")
         start = time.time()
-        result = subprocess.run([sys.executable, "-m", "pytest", "--tb=no", "--disable-warnings", str(t)], capture_output=True, text=True, check=False)
+        result = subprocess.run([sys.executable, "-m", "pytest", "--tb=no", "--disable-warnings", "--cov=backend", "--cov=bin", "--cov=utils", "--cov-append", "--cov-report=", str(t)], capture_output=True, text=True, check=False)
         end = time.time()
 
         # Filter output to remove session start info and show only test results
@@ -1783,32 +1802,34 @@ def main() -> bool:
 
 
 def run_coverage_report() -> None:
-    """모든 테스트 성공 후 커버리지 리포트를 실행하여 요약을 출력한다."""
+    """테스트 실행 중 누적된 .coverage 데이터로 리포트를 생성한다."""
+    cov_file = _get_coverage_file()
+    if not cov_file.exists():
+        print("\n⚠️  .coverage 파일이 없어 커버리지 리포트를 건너뜁니다.")
+        return
+
     try:
         import coverage as _cov_mod  # noqa: F401
-        import pytest_cov as _pc_mod  # noqa: F401
     except ImportError:
-        print("\n⚠️  pytest-cov / coverage 패키지가 없어 커버리지를 건너뜁니다.")
+        print("\n⚠️  coverage 패키지가 없어 커버리지 리포트를 건너뜁니다.")
         return
 
     print("\n" + "=" * 80)
     print("📊 COVERAGE REPORT")
     print("=" * 80)
 
-    result = subprocess.run([sys.executable, "-m", "pytest", "-q", "--tb=no", "--no-header", "--disable-warnings", "--cov=backend", "--cov=bin", "--cov=utils", "--cov-report=term-missing:skip-covered", "--cov-report=html", str(TEST_DIR)], capture_output=True, text=True, cwd=str(PROJECT_ROOT))
+    cov_dir = str(cov_file.parent)
+    result = subprocess.run([sys.executable, "-m", "coverage", "report", "--show-missing", "--skip-covered"], capture_output=True, text=True, cwd=cov_dir)
+    if result.stdout:
+        print(result.stdout)
 
-    # term-missing 출력에서 커버리지 부분만 추출하여 표시
-    in_coverage = False
-    for line in result.stdout.splitlines():
-        if line.startswith("---------- coverage:") or line.startswith("Name "):
-            in_coverage = True
-        if in_coverage:
-            print(line)
-
-    if result.returncode != 0 and not in_coverage:
-        print("⚠️  커버리지 수집 중 오류가 발생했습니다.")
-        if result.stderr:
-            for line in result.stderr.splitlines()[-5:]:
+    html_result = subprocess.run([sys.executable, "-m", "coverage", "html"], capture_output=True, text=True, cwd=cov_dir)
+    if html_result.returncode == 0:
+        print("Coverage HTML written to dir htmlcov")
+    else:
+        print("⚠️  HTML 리포트 생성 중 오류가 발생했습니다.")
+        if html_result.stderr:
+            for line in html_result.stderr.splitlines()[-5:]:
                 print(f"  {line}")
 
 
