@@ -468,6 +468,30 @@ class TestUpdateMangaSite(unittest.TestCase):
         self.assertFalse((self.feed_dir / "test_feed.xml").exists())
         self.assertFalse((self.feed_dir / "test_feed.xml.old").exists())
 
+    def test_load_site_config_empty(self):
+        """Empty site config raises InvalidConfigFileError → covers L38."""
+        from utils.update_manga_site import load_site_config
+
+        with open(self.site_config_path, "w", encoding="utf-8") as f:
+            json.dump({}, f)
+        with self.assertRaises(InvalidConfigFileError):
+            load_site_config(self.site_config_path)
+
+    def test_update_list_url_pattern_no_match(self):
+        """URL with no matching pattern returns unchanged → covers L64."""
+        from utils.update_manga_site import update_list_url_pattern
+
+        result = update_list_url_pattern("https://example.com/no-digits-here/", 999)
+        self.assertEqual(result, "https://example.com/no-digits-here/")
+
+    def test_check_site_with_result(self):
+        """check_site prints result when exec_cmd returns output → covers L222."""
+        self.mock_process.return_value = ("site OK", "")
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            result = check_site()
+            self.assertTrue(result)
+            self.assertIn("site OK", fake_out.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

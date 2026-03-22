@@ -5,68 +5,29 @@ import io
 import logging
 import os
 import re
-import shutil
-import sys
-import time
 import unittest
 from pathlib import Path
-from typing import Optional
 from unittest.mock import patch, MagicMock
 
 import requests
 
-from bin.crawler import Crawler, Method, print_usage, DEFAULT_USER_AGENT, RequestsClient
+from bin.crawler import Crawler, Method, print_usage, RequestsClient
 from bin.headless_browser import HeadlessBrowser
 import tempfile
 from requests.cookies import RequestsCookieJar
-from bin.crawler import Crawler, Method, RequestsClient
-import sys as _sys
-from bin.crawler import main
 import sys as _sys
 from bin.crawler import main
 from pathlib import Path as _Path
-import sys as _sys
-from bin.crawler import main
-import sys as _sys
-from bin.crawler import main
-import sys as _sys
-from bin.crawler import main
-import sys as _sys
-from bin.crawler import main
-import sys as _sys
-from bin.crawler import main
-import sys as _sys
-from bin.crawler import main
-import sys as _sys
-from bin.crawler import main
-import sys as _sys
-from bin.crawler import main
-import sys as _sys
-from bin.crawler import main
-import sys as _sys
-from bin.crawler import main
-import sys as _sys
-from bin.crawler import main
-import sys as _sys
-from bin.crawler import main
-import sys as _sys
-from bin.crawler import main
-import sys as _sys
-from bin.crawler import main
-import sys as _sys
-from bin.crawler import main
-import sys as _sys
-from bin.crawler import main
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Common mock responses
-MOCK_HTML_RESPONSE = ('<!DOCTYPE html><html><body>Test</body></html>', '', {}, 200)
-MOCK_BASIC_HTML = ('<!DOCTYPE html><html><head><title>Basic Test</title></head><body><h1>Basic Test Page</h1></body></html>', '', {}, 200)
-MOCK_UNICODE_HTML = ('<!DOCTYPE html><html><body>안녕하세요</body></html>', '', {}, 200)
-MOCK_HEADLESS_HTML = '<!DOCTYPE html><html><body>Test</body></html>'
+MOCK_HTML_RESPONSE = ("<!DOCTYPE html><html><body>Test</body></html>", "", {}, 200)
+MOCK_BASIC_HTML = ("<!DOCTYPE html><html><head><title>Basic Test</title></head><body><h1>Basic Test Page</h1></body></html>", "", {}, 200)
+MOCK_UNICODE_HTML = ("<!DOCTYPE html><html><body>안녕하세요</body></html>", "", {}, 200)
+MOCK_HEADLESS_HTML = "<!DOCTYPE html><html><body>Test</body></html>"
 
 
 class TestCrawler(unittest.TestCase):
@@ -75,8 +36,8 @@ class TestCrawler(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # patcher 등록
-        cls.patcher_remove = patch('os.remove')
-        cls.patcher_isfile = patch('os.path.isfile', return_value=True)
+        cls.patcher_remove = patch("os.remove")
+        cls.patcher_isfile = patch("os.path.isfile", return_value=True)
         cls.mock_remove = cls.patcher_remove.start()
         cls.mock_isfile = cls.patcher_isfile.start()
         # Clean up cookie files once at the beginning (실제 파일 접근 없음)
@@ -94,8 +55,8 @@ class TestCrawler(unittest.TestCase):
 
     def setUp(self) -> None:
         # 각 테스트마다 requests, time.sleep 등 patch
-        self.patcher_sleep = patch('time.sleep')
-        self.patcher_requests = patch('requests.get')
+        self.patcher_sleep = patch("time.sleep")
+        self.patcher_requests = patch("requests.get")
         self.mock_sleep = self.patcher_sleep.start()
         self.mock_requests = self.patcher_requests.start()
 
@@ -104,232 +65,215 @@ class TestCrawler(unittest.TestCase):
         self.patcher_requests.stop()
 
     def test_print_usage(self) -> None:
-        with patch('sys.stdout', new=io.StringIO()) as stdout:
+        with patch("sys.stdout", new=io.StringIO()) as stdout:
             print_usage()
             output = stdout.getvalue()
             self.assertIn("Usage:", output)
             self.assertIn("--render-js", output)
 
     def test_get_option_str(self) -> None:
-        options = {
-            "render_js": True,
-            "copy_images_from_canvas": False,
-            "simulate_scrolling": True,
-            "user_agent": "Firefox",
-            "referer": "https://abc.com",
-            "encoding": "cp949",
-            "headers": {"Content-Type": "application/json", "Transfer-Encoding": "chunked"},
-            "timeout": 20
-        }
+        options = {"render_js": True, "copy_images_from_canvas": False, "simulate_scrolling": True, "user_agent": "Firefox", "referer": "https://abc.com", "encoding": "cp949", "headers": {"Content-Type": "application/json", "Transfer-Encoding": "chunked"}, "timeout": 20}
         actual = Crawler.get_option_str(options)
         expected = " --render-js=true --copy-images-from-canvas=false --simulate-scrolling=true --user-agent='Firefox' --referer='https://abc.com' --encoding='cp949' --header='Content-Type: application/json; Transfer-Encoding: chunked' --timeout=20"
         self.assertEqual(expected, actual)
 
-    @patch('bin.crawler.RequestsClient.make_request')
+    @patch("bin.crawler.RequestsClient.make_request")
     def test_crawler_basic(self, mock_make_request: MagicMock) -> None:
         mock_make_request.return_value = MOCK_BASIC_HTML
-        
+
         crawler = Crawler()
         self.assertTrue(crawler)
         url = "http://test.com/basic.html"
         actual, _, _ = crawler.run(url)
-        
+
         self.assertIsNotNone(actual)
         if actual:
-            m = re.search(r'<!DOCTYPE html>', actual, re.IGNORECASE)
+            m = re.search(r"<!DOCTYPE html>", actual, re.IGNORECASE)
             self.assertTrue(m)
 
-    @patch('bin.crawler.RequestsClient.make_request')
+    @patch("bin.crawler.RequestsClient.make_request")
     def test_crawler_without_options(self, mock_make_request: MagicMock) -> None:
         mock_make_request.return_value = MOCK_HTML_RESPONSE
-        
+
         crawler = Crawler()
         url = "http://test.com/test.html"
         actual, _, _ = crawler.run(url)
         self.assertIsNotNone(actual)
 
-    @patch('bin.crawler.RequestsClient.make_request')
+    @patch("bin.crawler.RequestsClient.make_request")
     def test_crawler_with_num_retries(self, mock_make_request: MagicMock) -> None:
         mock_make_request.return_value = MOCK_HTML_RESPONSE
-        
+
         crawler = Crawler(num_retries=3)
         url = "http://test.com/test.html"
         actual, _, _ = crawler.run(url)
         self.assertIsNotNone(actual)
 
-    @patch('bin.headless_browser.HeadlessBrowser.make_request')
+    @patch("bin.headless_browser.HeadlessBrowser.make_request")
     def test_crawler_with_render_js(self, mock_make_request: MagicMock) -> None:
         mock_make_request.return_value = MOCK_HEADLESS_HTML
-        
+
         crawler = Crawler(render_js=True)
         url = "http://test.com/test.html"
         actual, _, _ = crawler.run(url)
         self.assertIsNotNone(actual)
 
-    @patch('bin.crawler.RequestsClient.make_request')
+    @patch("bin.crawler.RequestsClient.make_request")
     def test_crawler_with_method(self, mock_make_request: MagicMock) -> None:
         mock_make_request.return_value = MOCK_HTML_RESPONSE
-        
+
         # Test HEAD method
         crawler = Crawler(method=Method.HEAD)
         url = "http://test.com/test.html"
         actual, _, _ = crawler.run(url)
         self.assertIsNotNone(actual)
-        
+
         # Test GET method
         crawler = Crawler(method=Method.GET)
         actual, _, _ = crawler.run(url)
         self.assertIsNotNone(actual)
 
-    @patch('bin.crawler.RequestsClient.make_request')
+    @patch("bin.crawler.RequestsClient.make_request")
     def test_crawler_with_headers(self, mock_make_request: MagicMock) -> None:
         mock_make_request.return_value = MOCK_HTML_RESPONSE
-        
+
         headers = {"User-Agent": "TestBot", "Referer": "http://test.com"}
         crawler = Crawler(headers=headers)
         url = "http://test.com/test.html"
         actual, _, _ = crawler.run(url)
         self.assertIsNotNone(actual)
 
-    @patch('bin.crawler.RequestsClient.make_request')
+    @patch("bin.crawler.RequestsClient.make_request")
     def test_crawler_with_timeout(self, mock_make_request: MagicMock) -> None:
         mock_make_request.return_value = MOCK_HTML_RESPONSE
-        
+
         crawler = Crawler(timeout=30)
         url = "http://test.com/test.html"
         actual, _, _ = crawler.run(url)
         self.assertIsNotNone(actual)
 
-    @patch('bin.crawler.RequestsClient.make_request')
+    @patch("bin.crawler.RequestsClient.make_request")
     def test_crawler_with_encoding(self, mock_make_request: MagicMock) -> None:
         mock_make_request.return_value = MOCK_HTML_RESPONSE
-        
+
         crawler = Crawler(encoding="cp949")
         url = "http://test.com/test.html"
         actual, _, _ = crawler.run(url)
         self.assertIsNotNone(actual)
 
-    @patch('bin.crawler.RequestsClient.make_request')
+    @patch("bin.crawler.RequestsClient.make_request")
     def test_crawler_with_verify_ssl(self, mock_make_request: MagicMock) -> None:
         mock_make_request.return_value = MOCK_HTML_RESPONSE
-        
+
         crawler = Crawler(verify_ssl=False)
         url = "http://test.com/test.html"
         actual, _, _ = crawler.run(url)
         self.assertIsNotNone(actual)
 
-    @patch('bin.crawler.RequestsClient.make_request')
+    @patch("bin.crawler.RequestsClient.make_request")
     def test_run_https_with_unicode(self, mock_make_request: MagicMock) -> None:
         mock_make_request.return_value = MOCK_UNICODE_HTML
-        
+
         crawler = Crawler()
         url = "https://test.com/unicode.html"
         actual, _, _ = crawler.run(url)
         self.assertIsNotNone(actual)
 
-    @patch('bin.crawler.RequestsClient.make_request')
-    @patch('time.sleep')  # Mock time.sleep to avoid 5-second delay
+    @patch("bin.crawler.RequestsClient.make_request")
+    @patch("time.sleep")  # Mock time.sleep to avoid 5-second delay
     def test_crawler_network_retry(self, mock_sleep: MagicMock, mock_make_request: MagicMock) -> None:
         # Mock with side effect for retry logic
         mock_make_request.side_effect = [
-            ('', 'Network error', {}, 500),  # First call fails
-            ('<!DOCTYPE html><html><body>Success</body></html>', '', {}, 200)  # Second call succeeds
+            ("", "Network error", {}, 500),  # First call fails
+            ("<!DOCTYPE html><html><body>Success</body></html>", "", {}, 200),  # Second call succeeds
         ]
-        
+
         crawler = Crawler(num_retries=2)
         url = "http://test.com/test.html"
         actual, _, _ = crawler.run(url)
         self.assertIsNotNone(actual)
 
-    @patch('bin.crawler.RequestsClient.make_request')
+    @patch("bin.crawler.RequestsClient.make_request")
     def test_crawler_with_custom_headers(self, mock_make_request: MagicMock) -> None:
         mock_make_request.return_value = MOCK_HTML_RESPONSE
-        
+
         custom_headers = {"X-Custom-Header": "test-value"}
         crawler = Crawler(headers=custom_headers)
         url = "http://test.com/test.html"
         actual, _, _ = crawler.run(url)
         self.assertIsNotNone(actual)
 
-    @patch('bin.headless_browser.HeadlessBrowser.make_request')
+    @patch("bin.headless_browser.HeadlessBrowser.make_request")
     def test_crawler_with_headless_browser_options(self, mock_make_request: MagicMock) -> None:
         mock_make_request.return_value = MOCK_HEADLESS_HTML
-        
-        crawler = Crawler(
-            render_js=True,
-            simulate_scrolling=True,
-            copy_images_from_canvas=True
-        )
+
+        crawler = Crawler(render_js=True, simulate_scrolling=True, copy_images_from_canvas=True)
         url = "http://test.com/test.html"
         actual, _, _ = crawler.run(url)
         self.assertIsNotNone(actual)
 
-    @patch('bin.crawler.RequestsClient.make_request')
+    @patch("bin.crawler.RequestsClient.make_request")
     def test_crawler_multiple_requests(self, mock_make_request: MagicMock) -> None:
         mock_make_request.return_value = MOCK_HTML_RESPONSE
-        
+
         crawler = Crawler()
-        urls = [
-            "http://test.com/page1.html",
-            "http://test.com/page2.html",
-            "http://test.com/page3.html"
-        ]
-        
+        urls = ["http://test.com/page1.html", "http://test.com/page2.html", "http://test.com/page3.html"]
+
         for url in urls:
             actual, _, _ = crawler.run(url)
             self.assertIsNotNone(actual)
 
-    @patch('bin.crawler.RequestsClient.make_request')
+    @patch("bin.crawler.RequestsClient.make_request")
     def test_user_agent_header(self, mock_make_request: MagicMock) -> None:
-        mock_make_request.return_value = ('<!DOCTYPE html><html><body><div id="user-agent">TestBot</div></body></html>', '', {}, 200)
-        
+        mock_make_request.return_value = ('<!DOCTYPE html><html><body><div id="user-agent">TestBot</div></body></html>', "", {}, 200)
+
         headers = {"User-Agent": "TestBot"}
         crawler = Crawler(headers=headers)
         url = "http://test.com/echo_headers.html"
         actual, _, _ = crawler.run(url)
         self.assertIsNotNone(actual)
 
-    @patch('bin.crawler.RequestsClient.make_request')
+    @patch("bin.crawler.RequestsClient.make_request")
     def test_referer_header(self, mock_make_request: MagicMock) -> None:
-        mock_make_request.return_value = ('<!DOCTYPE html><html><body><div id="referer">http://test.com/referer</div></body></html>', '', {}, 200)
-        
+        mock_make_request.return_value = ('<!DOCTYPE html><html><body><div id="referer">http://test.com/referer</div></body></html>', "", {}, 200)
+
         headers = {"Referer": "http://test.com/referer"}
         crawler = Crawler(headers=headers)
         url = "http://test.com/echo_headers.html"
         actual, _, _ = crawler.run(url)
         self.assertIsNotNone(actual)
 
-    @patch('bin.crawler.RequestsClient.make_request')
+    @patch("bin.crawler.RequestsClient.make_request")
     def test_encoding_utf8(self, mock_make_request: MagicMock) -> None:
-        mock_make_request.return_value = ('<!DOCTYPE html><html><body><div id="utf8">안녕하세요</div></body></html>', '', {}, 200)
-        
+        mock_make_request.return_value = ('<!DOCTYPE html><html><body><div id="utf8">안녕하세요</div></body></html>', "", {}, 200)
+
         crawler = Crawler(encoding="utf-8")
         url = "http://test.com/utf8.html"
         actual, _, _ = crawler.run(url)
         self.assertIsNotNone(actual)
 
-    @patch('bin.crawler.RequestsClient.make_request')
+    @patch("bin.crawler.RequestsClient.make_request")
     def test_encoding_cp949(self, mock_make_request: MagicMock) -> None:
-        mock_make_request.return_value = ('<!DOCTYPE html><html><body><div id="cp949">안녕하세요</div></body></html>', '', {}, 200)
-        
+        mock_make_request.return_value = ('<!DOCTYPE html><html><body><div id="cp949">안녕하세요</div></body></html>', "", {}, 200)
+
         crawler = Crawler(encoding="cp949")
         url = "http://test.com/cp949.html"
         actual, _, _ = crawler.run(url)
         self.assertIsNotNone(actual)
 
-    @patch('bin.crawler.RequestsClient.make_request')
+    @patch("bin.crawler.RequestsClient.make_request")
     def test_method_head(self, mock_make_request: MagicMock) -> None:
         mock_make_request.return_value = MOCK_HTML_RESPONSE
-        
+
         crawler = Crawler(method=Method.HEAD)
         url = "http://test.com/test.html"
         actual, _, _ = crawler.run(url)
         self.assertIsNotNone(actual)
 
-    @patch('bin.crawler.RequestsClient.make_request')
+    @patch("bin.crawler.RequestsClient.make_request")
     def test_method_get(self, mock_make_request: MagicMock) -> None:
         mock_make_request.return_value = MOCK_HTML_RESPONSE
-        
+
         crawler = Crawler(method=Method.GET)
         url = "http://test.com/test.html"
         actual, _, _ = crawler.run(url)
@@ -725,8 +669,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_url_arg(self, mock_crawler_cls: MagicMock) -> None:
-        import sys as _sys
-        from bin.crawler import main
 
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("response body", "", {})
@@ -740,8 +682,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_f_option(self, mock_crawler_cls: MagicMock) -> None:
-        import sys as _sys
-        from bin.crawler import main
 
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
@@ -751,14 +691,11 @@ class TestCrawlerMain(unittest.TestCase):
 
         self.assertEqual(result, 0)
         call_kwargs = mock_crawler_cls.call_args
-        from pathlib import Path as _Path
 
         self.assertEqual(call_kwargs.kwargs.get("dir_path") or call_kwargs[1].get("dir_path"), _Path("/tmp/feeddir"))
 
     @patch("bin.crawler.Crawler")
     def test_main_with_spider(self, mock_crawler_cls: MagicMock) -> None:
-        import sys as _sys
-        from bin.crawler import main
 
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
@@ -772,8 +709,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_render_js(self, mock_crawler_cls: MagicMock) -> None:
-        import sys as _sys
-        from bin.crawler import main
 
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
@@ -787,8 +722,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_verify_ssl_false(self, mock_crawler_cls: MagicMock) -> None:
-        import sys as _sys
-        from bin.crawler import main
 
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
@@ -802,8 +735,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_header(self, mock_crawler_cls: MagicMock) -> None:
-        import sys as _sys
-        from bin.crawler import main
 
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
@@ -818,8 +749,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_timeout_and_retry(self, mock_crawler_cls: MagicMock) -> None:
-        import sys as _sys
-        from bin.crawler import main
 
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
@@ -834,8 +763,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_encoding(self, mock_crawler_cls: MagicMock) -> None:
-        import sys as _sys
-        from bin.crawler import main
 
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
@@ -849,8 +776,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_download(self, mock_crawler_cls: MagicMock) -> None:
-        import sys as _sys
-        from bin.crawler import main
 
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
@@ -863,8 +788,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_user_agent_and_referer(self, mock_crawler_cls: MagicMock) -> None:
-        import sys as _sys
-        from bin.crawler import main
 
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
@@ -879,8 +802,6 @@ class TestCrawlerMain(unittest.TestCase):
         self.assertEqual(headers["Referer"], "http://ref.com")
 
     def test_main_no_args(self) -> None:
-        import sys as _sys
-        from bin.crawler import main
 
         with patch.object(_sys, "argv", ["crawler.py"]):
             with self.assertRaises(SystemExit) as cm:
@@ -888,8 +809,6 @@ class TestCrawlerMain(unittest.TestCase):
             self.assertEqual(cm.exception.code, -1)
 
     def test_main_h_option(self) -> None:
-        import sys as _sys
-        from bin.crawler import main
 
         with patch.object(_sys, "argv", ["crawler.py", "-h"]):
             with self.assertRaises(SystemExit) as cm:
@@ -898,8 +817,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_copy_images_from_canvas(self, mock_crawler_cls: MagicMock) -> None:
-        import sys as _sys
-        from bin.crawler import main
 
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
@@ -913,8 +830,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_simulate_scrolling(self, mock_crawler_cls: MagicMock) -> None:
-        import sys as _sys
-        from bin.crawler import main
 
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
@@ -928,8 +843,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_disable_headless(self, mock_crawler_cls: MagicMock) -> None:
-        import sys as _sys
-        from bin.crawler import main
 
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
@@ -943,8 +856,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_blob_to_dataurl(self, mock_crawler_cls: MagicMock) -> None:
-        import sys as _sys
-        from bin.crawler import main
 
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
@@ -958,8 +869,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_error_response(self, mock_crawler_cls: MagicMock) -> None:
-        import sys as _sys
-        from bin.crawler import main
 
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("", "connection error", {})
@@ -970,13 +879,90 @@ class TestCrawlerMain(unittest.TestCase):
         self.assertEqual(result, 0)
 
     def test_main_invalid_option(self) -> None:
-        import sys as _sys
-        from bin.crawler import main
 
         with patch.object(_sys, "argv", ["crawler.py", "--invalid-option", "https://example.com"]):
             with self.assertRaises(SystemExit) as cm:
                 main()
             self.assertEqual(cm.exception.code, -1)
+
+
+class TestRequestsClientReadTimeoutOnMainRequest(unittest.TestCase):
+    """make_request ReadTimeout on main request (not referer) → covers L135-138"""
+
+    @patch("bin.crawler.Env.get", return_value="false")
+    def setUp(self, mock_env):
+        self.client = RequestsClient(dir_path=Path(tempfile.mkdtemp()))
+
+    @patch("bin.crawler.URLSafety.check_url", return_value=(True, ""))
+    @patch("requests.get", side_effect=requests.exceptions.ReadTimeout("read timed out"))
+    def test_read_timeout_on_main_request(self, mock_get, mock_check):
+        result, error, headers, status = self.client.make_request("http://example.com/slow")
+        self.assertEqual(result, "")
+        self.assertIn("timeout", error)
+        self.assertIsNone(status)
+
+
+class TestRequestsClientResponseNone(unittest.TestCase):
+    """response is None after try block → covers L142"""
+
+    @patch("bin.crawler.Env.get", return_value="false")
+    def setUp(self, mock_env):
+        self.client = RequestsClient(dir_path=Path(tempfile.mkdtemp()))
+        # method を無効な値にして response = None のまま通過
+        self.client.method = MagicMock()  # not GET/POST/HEAD
+
+    @patch("bin.crawler.URLSafety.check_url", return_value=(True, ""))
+    def test_response_none(self, mock_check):
+        result, error, headers, status = self.client.make_request("http://example.com/page")
+        self.assertEqual(result, "")
+        self.assertIn("can't get response", error)
+        self.assertIsNone(status)
+
+
+class TestRequestsClientCookieWithExpiry(unittest.TestCase):
+    """read_cookies_from_file with expiry field → covers L83-84"""
+
+    @patch("bin.crawler.Env.get", return_value="false")
+    def setUp(self, mock_env):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.client = RequestsClient(dir_path=self.tmp)
+
+    def test_cookie_expiry_removed(self):
+        import json
+
+        cookie_file = self.tmp / RequestsClient.COOKIE_FILE
+        cookies = [{"name": "token", "value": "abc", "expiry": 9999999999}]
+        with cookie_file.open("w", encoding="utf-8") as f:
+            json.dump(cookies, f)
+
+        self.client.read_cookies_from_file()
+        self.assertEqual(self.client.cookies["token"], "abc")
+
+    def tearDown(self):
+        cookie_file = self.tmp / RequestsClient.COOKIE_FILE
+        cookie_file.unlink(missing_ok=True)
+
+
+class TestRequestsClientNoEncoding(unittest.TestCase):
+    """encoding not set → utf-8 fallback → covers L159"""
+
+    @patch("bin.crawler.Env.get", return_value="false")
+    def setUp(self, mock_env):
+        self.client = RequestsClient(dir_path=Path(tempfile.mkdtemp()), encoding="")
+
+    @patch("bin.crawler.URLSafety.check_url", return_value=(True, ""))
+    @patch("requests.get")
+    def test_no_encoding_defaults_utf8(self, mock_get, mock_check):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.cookies = RequestsCookieJar()
+        mock_resp.text = "<html><head></head><body>ok</body></html>"
+        mock_resp.request = MagicMock(url="http://example.com/page")
+        mock_get.return_value = mock_resp
+
+        result, error, headers, status = self.client.make_request("http://example.com/page")
+        self.assertEqual(status, 200)
+        self.assertEqual(mock_resp.encoding, "utf-8")
 
 
 if __name__ == "__main__":

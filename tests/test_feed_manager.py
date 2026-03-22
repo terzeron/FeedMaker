@@ -14,8 +14,7 @@ from bin.db import DB
 from bin.models import FeedInfo
 import json
 from datetime import datetime, timezone
-from unittest.mock import patch, MagicMock, PropertyMock
-from bin.feed_maker_util import Config
+from unittest.mock import PropertyMock
 
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -25,22 +24,16 @@ LOGGER = logging.getLogger()
 class TestFeedManager(unittest.TestCase):
     def setUp(self) -> None:
         # Mock DB config
-        self.mock_db_config = {
-            'host': 'localhost',
-            'port': 3306,
-            'user': 'test',
-            'password': 'test',
-            'database': 'test'
-        }
+        self.mock_db_config = {"host": "localhost", "port": 3306, "user": "test", "password": "test", "database": "test"}
         # Mock DB session
         self.mock_session = MagicMock()
         self.mock_query = MagicMock()
         self.mock_session.query.return_value = self.mock_query
         # Patch DB methods
-        self.patcher_init = patch('bin.db.DB.init', return_value=None)
-        self.patcher_create = patch('bin.db.DB.create_all_tables', return_value=None)
-        self.patcher_drop = patch('bin.db.DB.drop_all_tables', return_value=None)
-        self.patcher_session = patch('bin.db.DB.session_ctx')
+        self.patcher_init = patch("bin.db.DB.init", return_value=None)
+        self.patcher_create = patch("bin.db.DB.create_all_tables", return_value=None)
+        self.patcher_drop = patch("bin.db.DB.drop_all_tables", return_value=None)
+        self.patcher_session = patch("bin.db.DB.session_ctx")
         self.mock_session_ctx = self.patcher_session.start()
         self.mock_session_ctx.return_value.__enter__.return_value = self.mock_session
         self.mock_session_ctx.return_value.__exit__.return_value = None
@@ -116,7 +109,7 @@ class TestFeedManager(unittest.TestCase):
         self.mock_query.all.side_effect = all_side_effect
 
         # Mock DB.session_ctx to always return the same mock session
-        with patch('bin.db.DB.session_ctx') as mock_ctx:
+        with patch("bin.db.DB.session_ctx") as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = self.mock_session
             mock_ctx.return_value.__exit__.return_value = None
 
@@ -124,25 +117,19 @@ class TestFeedManager(unittest.TestCase):
             self.mock_session.query.return_value = self.mock_query
 
             with DB.session_ctx() as s:
-                rows11 = s.query(FeedInfo).where(FeedInfo.feed_name == self.test_feed_dir_path.name,
-                                                 FeedInfo.config.is_not(None),
-                                                 FeedInfo.config_modify_date.is_not(None)).all()
+                rows11 = s.query(FeedInfo).where(FeedInfo.feed_name == self.test_feed_dir_path.name, FeedInfo.config.is_not(None), FeedInfo.config_modify_date.is_not(None)).all()
                 print(f"DEBUG: rows11 length = {len(rows11)}")
                 assert rows11 is not None
 
             # Mock FeedManager methods
-            with patch('bin.feed_manager.FeedManager.add_config_info') as mock_add, \
-                 patch('bin.feed_manager.FeedManager.remove_config_info') as mock_remove:
-
+            with patch("bin.feed_manager.FeedManager.add_config_info") as mock_add, patch("bin.feed_manager.FeedManager.remove_config_info") as mock_remove:
                 mock_add.return_value = None
                 mock_remove.return_value = None
 
                 FeedManager.add_config_info(self.test_feed_dir_path)
 
                 with DB.session_ctx() as s:
-                    rows12 = s.query(FeedInfo).where(FeedInfo.feed_name == self.test_feed_dir_path.name,
-                                                     FeedInfo.config.is_not(None),
-                                                     FeedInfo.config_modify_date.is_not(None)).all()
+                    rows12 = s.query(FeedInfo).where(FeedInfo.feed_name == self.test_feed_dir_path.name, FeedInfo.config.is_not(None), FeedInfo.config_modify_date.is_not(None)).all()
                     print(f"DEBUG: rows12 length = {len(rows12)}")
                     assert rows12 is not None
                     self.assertEqual(len(rows11) + 1, len(rows12))
@@ -150,9 +137,7 @@ class TestFeedManager(unittest.TestCase):
                 FeedManager.remove_config_info(self.test_feed_dir_path)
 
                 with DB.session_ctx() as s:
-                    rows13 = s.query(FeedInfo).where(FeedInfo.feed_name == self.test_feed_dir_path.name,
-                                                     FeedInfo.config.is_not(None),
-                                                     FeedInfo.config_modify_date.is_not(None)).all()
+                    rows13 = s.query(FeedInfo).where(FeedInfo.feed_name == self.test_feed_dir_path.name, FeedInfo.config.is_not(None), FeedInfo.config_modify_date.is_not(None)).all()
                     print(f"DEBUG: rows13 length = {len(rows13)}")
                     assert rows13 is not None
                     self.assertEqual(len(rows11), len(rows13))
@@ -193,9 +178,7 @@ class TestFeedManager(unittest.TestCase):
         self.mock_query.all.return_value = [mock_row_before]
 
         with DB.session_ctx() as s:
-            rows11 = s.query(FeedInfo).where(FeedInfo.feed_name == self.test_feed_dir_path.name,
-                                             FeedInfo.feedmaker.is_not(None),
-                                             FeedInfo.rss_update_date.is_not(None)).all()
+            rows11 = s.query(FeedInfo).where(FeedInfo.feed_name == self.test_feed_dir_path.name, FeedInfo.feedmaker.is_not(None), FeedInfo.rss_update_date.is_not(None)).all()
             assert rows11 is not None
 
         FeedManager.add_rss_info(self.test_feed_dir_path)
@@ -208,9 +191,7 @@ class TestFeedManager(unittest.TestCase):
         self.mock_query.all.return_value = [mock_row_before, mock_row_after]
 
         with DB.session_ctx() as s:
-            rows12 = s.query(FeedInfo).where(FeedInfo.feed_name == self.test_feed_dir_path.name,
-                                             FeedInfo.feedmaker.is_not(None),
-                                             FeedInfo.rss_update_date.is_not(None)).all()
+            rows12 = s.query(FeedInfo).where(FeedInfo.feed_name == self.test_feed_dir_path.name, FeedInfo.feedmaker.is_not(None), FeedInfo.rss_update_date.is_not(None)).all()
             assert rows12 is not None
             self.assertEqual(len(rows11) + 1, len(rows12))
 
@@ -220,9 +201,7 @@ class TestFeedManager(unittest.TestCase):
         self.mock_query.all.return_value = [mock_row_before]
 
         with DB.session_ctx() as s:
-            rows13 = s.query(FeedInfo).where(FeedInfo.feed_name == self.test_feed_dir_path.name,
-                                             FeedInfo.feedmaker.is_not(None),
-                                             FeedInfo.rss_update_date.is_not(None)).all()
+            rows13 = s.query(FeedInfo).where(FeedInfo.feed_name == self.test_feed_dir_path.name, FeedInfo.feedmaker.is_not(None), FeedInfo.rss_update_date.is_not(None)).all()
             assert rows13 is not None
             self.assertEqual(len(rows11), len(rows13))
 
@@ -268,9 +247,7 @@ class TestFeedManager(unittest.TestCase):
             self.mock_query.all.return_value = [mock_row_before]
 
             with DB.session_ctx() as s:
-                rows11 = s.query(FeedInfo).where(FeedInfo.feed_name == feed_name,
-                                                 FeedInfo.public_html.is_(True),
-                                                 FeedInfo.upload_date.is_not(None)).all()
+                rows11 = s.query(FeedInfo).where(FeedInfo.feed_name == feed_name, FeedInfo.public_html.is_(True), FeedInfo.upload_date.is_not(None)).all()
                 assert rows11 is not None
 
             FeedManager.add_public_feed(public_feed_file_path)
@@ -283,9 +260,7 @@ class TestFeedManager(unittest.TestCase):
             self.mock_query.all.return_value = [mock_row_before, mock_row_after]
 
             with DB.session_ctx() as s:
-                rows12 = s.query(FeedInfo).where(FeedInfo.feed_name == feed_name,
-                                                 FeedInfo.public_html.is_(True),
-                                                 FeedInfo.upload_date.is_not(None)).all()
+                rows12 = s.query(FeedInfo).where(FeedInfo.feed_name == feed_name, FeedInfo.public_html.is_(True), FeedInfo.upload_date.is_not(None)).all()
                 assert rows12 is not None
                 self.assertEqual(len(rows11) + 1, len(rows12))
 
@@ -295,9 +270,7 @@ class TestFeedManager(unittest.TestCase):
             self.mock_query.all.return_value = [mock_row_before]
 
             with DB.session_ctx() as s:
-                rows13 = s.query(FeedInfo).where(FeedInfo.feed_name == feed_name,
-                                                 FeedInfo.public_html.is_(True),
-                                                 FeedInfo.upload_date.is_not(None)).all()
+                rows13 = s.query(FeedInfo).where(FeedInfo.feed_name == feed_name, FeedInfo.public_html.is_(True), FeedInfo.upload_date.is_not(None)).all()
                 assert rows13 is not None
                 self.assertEqual(len(rows11), len(rows13))
         finally:
@@ -359,7 +332,7 @@ class TestFeedManager(unittest.TestCase):
         self.mock_query.all.side_effect = all_side_effect
 
         # Mock DB.session_ctx to always return the same mock session
-        with patch('bin.db.DB.session_ctx') as mock_ctx:
+        with patch("bin.db.DB.session_ctx") as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = self.mock_session
             mock_ctx.return_value.__exit__.return_value = None
 
@@ -370,10 +343,7 @@ class TestFeedManager(unittest.TestCase):
             self.mock_query.where.return_value = self.mock_query
 
             # Mock FeedManager methods
-            with patch('bin.feed_manager.FeedManager.add_config_info') as mock_add_config, \
-                 patch('bin.feed_manager.FeedManager.add_progress_info') as mock_add_progress, \
-                 patch('bin.feed_manager.FeedManager.remove_progress_info') as mock_remove_progress:
-
+            with patch("bin.feed_manager.FeedManager.add_config_info") as mock_add_config, patch("bin.feed_manager.FeedManager.add_progress_info") as mock_add_progress, patch("bin.feed_manager.FeedManager.remove_progress_info") as mock_remove_progress:
                 mock_add_config.return_value = None
                 mock_add_progress.return_value = None
                 mock_remove_progress.return_value = None
@@ -386,26 +356,20 @@ class TestFeedManager(unittest.TestCase):
                     f.write(f"157\t{date_str}\n")
 
                 with DB.session_ctx() as s:
-                    rows1 = s.query(FeedInfo).where(FeedInfo.feed_name == self.test_feed_dir_path.name,
-                                                     FeedInfo.is_completed.is_(True),
-                                                     FeedInfo.due_date.is_not(None)).all()
+                    rows1 = s.query(FeedInfo).where(FeedInfo.feed_name == self.test_feed_dir_path.name, FeedInfo.is_completed.is_(True), FeedInfo.due_date.is_not(None)).all()
                     assert rows1 is not None
 
                 FeedManager.add_progress_info(self.test_feed_dir_path)
 
                 with DB.session_ctx() as s:
-                    rows2 = s.query(FeedInfo).where(FeedInfo.feed_name == self.test_feed_dir_path.name,
-                                                     FeedInfo.is_completed.is_(True),
-                                                     FeedInfo.due_date.is_not(None)).all()
+                    rows2 = s.query(FeedInfo).where(FeedInfo.feed_name == self.test_feed_dir_path.name, FeedInfo.is_completed.is_(True), FeedInfo.due_date.is_not(None)).all()
                     assert rows2 is not None
                     self.assertEqual(len(rows1) + 1, len(rows2))
 
                 FeedManager.remove_progress_info(self.test_feed_dir_path)
 
                 with DB.session_ctx() as s:
-                    rows3 = s.query(FeedInfo).where(FeedInfo.feed_name == self.test_feed_dir_path.name,
-                                                     FeedInfo.is_completed.is_(True),
-                                                     FeedInfo.due_date.is_not(None)).all()
+                    rows3 = s.query(FeedInfo).where(FeedInfo.feed_name == self.test_feed_dir_path.name, FeedInfo.is_completed.is_(True), FeedInfo.due_date.is_not(None)).all()
                     assert rows3 is not None
                     self.assertEqual(len(rows1), len(rows3))
 
@@ -418,7 +382,7 @@ class TestFeedManager(unittest.TestCase):
         self.mock_query.first.return_value = mock_row
 
         # Mock DB.session_ctx to always return the same mock session
-        with patch('bin.db.DB.session_ctx') as mock_ctx:
+        with patch("bin.db.DB.session_ctx") as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = self.mock_session
             mock_ctx.return_value.__exit__.return_value = None
 
@@ -429,9 +393,7 @@ class TestFeedManager(unittest.TestCase):
             self.mock_query.where.return_value = self.mock_query
 
             # Mock FeedManager methods to prevent actual file system access
-            with patch('bin.feed_manager.FeedManager.load_all_config_files') as mock_load_config, \
-                 patch('bin.feed_manager.FeedManager._add_progress_info', return_value=1):
-
+            with patch("bin.feed_manager.FeedManager.load_all_config_files") as mock_load_config, patch("bin.feed_manager.FeedManager._add_progress_info", return_value=1):
                 mock_load_config.return_value = None
 
                 self.fm.load_all_config_files(max_num_feeds=100)
@@ -443,7 +405,6 @@ class TestFeedManager(unittest.TestCase):
                     self.assertIsNotNone(row.feed_name)
                     self.assertIsNotNone(row.is_completed)
                     self.assertIsNotNone(row.due_date)
-
 
     def test_search_empty_keywords(self) -> None:
         result = FeedManager.search([])
@@ -1780,6 +1741,25 @@ class TestAddProgressInfoWrapper(FeedManagerTestBase):
         with patch.object(FeedManager, "_add_progress_info", return_value=1) as mock_add:
             FeedManager.add_progress_info(feed_dir_path)
             mock_add.assert_called_once()
+
+
+class TestAddProgressInfoInvalidConf(FeedManagerTestBase):
+    """_add_progress_info with invalid JSON in conf file → covers L426-427"""
+
+    def test_invalid_json_in_conf(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            feed_dir_path = Path(tmpdir) / "group" / "feed"
+            feed_dir_path.mkdir(parents=True)
+            conf_file = feed_dir_path / Config.DEFAULT_CONF_FILE
+            conf_file.write_text("INVALID JSON {{{")
+
+            self.mock_query.first.return_value = None
+            self.mock_query.all.return_value = []
+
+            result = FeedManager._add_progress_info(self.mock_session, feed_dir_path)
+            self.assertEqual(result, 1)
 
 
 if __name__ == "__main__":

@@ -24,6 +24,7 @@ logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
+
 class Method(Enum):
     GET = 1
     HEAD = 2
@@ -58,6 +59,7 @@ class RequestsClient:
             self._cookie_dir = self.dir_path
         else:
             import hashlib
+
             dir_hash = hashlib.md5(str(self.dir_path).encode()).hexdigest()[:12]
             fallback = Path(tempfile.gettempdir()) / "fm_cookies" / dir_hash
             fallback.mkdir(parents=True, exist_ok=True)
@@ -70,13 +72,13 @@ class RequestsClient:
         for k, v in cookies.items():
             cookie_data.append({"name": k, "value": v})
         cookie_file = self._get_cookie_dir() / RequestsClient.COOKIE_FILE
-        with cookie_file.open("w", encoding='utf-8') as f:
+        with cookie_file.open("w", encoding="utf-8") as f:
             json.dump(cookie_data, f, indent=2, ensure_ascii=False)
 
     def read_cookies_from_file(self) -> None:
         cookie_file = self._get_cookie_dir() / RequestsClient.COOKIE_FILE
         if cookie_file.is_file():
-            with cookie_file.open("r", encoding='utf-8') as f:
+            with cookie_file.open("r", encoding="utf-8") as f:
                 cookies = json.load(f)
                 for cookie in cookies:
                     if "expiry" in cookie:
@@ -85,7 +87,7 @@ class RequestsClient:
                     c_value = cookie.get("value", "")
                     if c_name and c_value:
                         self.cookies.update({c_name: c_value})
-            #LOGGER.debug(f"self.cookies={self.cookies}")
+            # LOGGER.debug(f"self.cookies={self.cookies}")
 
     def make_request(self, url: str, data: Any = None, download_file: Optional[Path] = None, allow_redirects: bool = True) -> tuple[str, str, dict[str, Any], Optional[int]]:
         LOGGER.debug(f"# make_request(url='{url}', allow_redirects={allow_redirects})")
@@ -119,9 +121,9 @@ class RequestsClient:
         response = None
         try:
             if self.method == Method.GET:
-                cookie_str = '; '.join([f'{name}={value}' for name, value in self.cookies.items()])
+                cookie_str = "; ".join([f"{name}={value}" for name, value in self.cookies.items()])
                 self.headers["Cookie"] = cookie_str
-                #LOGGER.debug(f"self.headers={self.headers}")
+                # LOGGER.debug(f"self.headers={self.headers}")
                 response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, allow_redirects=allow_redirects)
             elif self.method == Method.POST:
                 response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, data=data)
@@ -148,7 +150,7 @@ class RequestsClient:
 
         if download_file:
             response.raw.decode_content = True
-            with download_file.open('wb') as f:
+            with download_file.open("wb") as f:
                 f.writelines(response)
             os.utime(download_file, (time.time(), time.time()))
             return "200", "", {}, response.status_code
@@ -156,10 +158,10 @@ class RequestsClient:
         if self.encoding:
             response.encoding = self.encoding
         else:
-            response.encoding = 'utf-8'
+            response.encoding = "utf-8"
 
         if not re.search(r'<meta\s+property="og:url"\s+content="[^"]+"\s*/?>', response.text):
-            result = response.text.replace('</head>', f'<meta property="og:url" content="{response.request.url}"/>\n</head>')
+            result = response.text.replace("</head>", f'<meta property="og:url" content="{response.request.url}"/>\n</head>')
             return result, "", dict(response.headers), response.status_code
         return response.text, "", dict(response.headers), response.status_code
 
@@ -169,8 +171,37 @@ class Crawler:
         def __init__(self) -> None:
             super().__init__("Read timed out")
 
-    def __init__(self, *, dir_path: Path = Path.cwd(), render_js: bool = False, method: Method = Method.GET, headers: Optional[dict[str, str]] = None, timeout: int = 60, num_retries: int = 1, encoding: str = "utf-8", verify_ssl: bool = True, copy_images_from_canvas: bool = False, simulate_scrolling: bool = False, disable_headless: bool = False, blob_to_dataurl: bool = False) -> None:
-        LOGGER.debug("# Crawler(dir_path=%s, render_js=%s, method=%s, headers=%r, timeout=%d, num_retries=%d, encoding=%s, verify_ssl=%s, copy_images_from_canvas=%s, simulate_scrolling=%s, disable_headless=%s, blob_to_dataurl=%s)", PathUtil.short_path(dir_path), render_js, method, headers, timeout, num_retries, encoding, verify_ssl, copy_images_from_canvas, simulate_scrolling, disable_headless, blob_to_dataurl)
+    def __init__(
+        self,
+        *,
+        dir_path: Path = Path.cwd(),
+        render_js: bool = False,
+        method: Method = Method.GET,
+        headers: Optional[dict[str, str]] = None,
+        timeout: int = 60,
+        num_retries: int = 1,
+        encoding: str = "utf-8",
+        verify_ssl: bool = True,
+        copy_images_from_canvas: bool = False,
+        simulate_scrolling: bool = False,
+        disable_headless: bool = False,
+        blob_to_dataurl: bool = False,
+    ) -> None:
+        LOGGER.debug(
+            "# Crawler(dir_path=%s, render_js=%s, method=%s, headers=%r, timeout=%d, num_retries=%d, encoding=%s, verify_ssl=%s, copy_images_from_canvas=%s, simulate_scrolling=%s, disable_headless=%s, blob_to_dataurl=%s)",
+            PathUtil.short_path(dir_path),
+            render_js,
+            method,
+            headers,
+            timeout,
+            num_retries,
+            encoding,
+            verify_ssl,
+            copy_images_from_canvas,
+            simulate_scrolling,
+            disable_headless,
+            blob_to_dataurl,
+        )
         self.dir_path = dir_path
         self.render_js = render_js
         self.method = method
@@ -344,7 +375,7 @@ def main() -> int:
         elif o == "--blob-to-dataurl":
             blob_to_dataurl = a == "true"
         elif o == "--header":
-            m = re.search(r'^(?P<key>[^:]+)\s*:\s*(?P<value>.+)\s*$', a)
+            m = re.search(r"^(?P<key>[^:]+)\s*:\s*(?P<value>.+)\s*$", a)
             if m:
                 key = m.group("key")
                 value = m.group("value")
@@ -360,7 +391,20 @@ def main() -> int:
 
     url = args[0]
 
-    crawler = Crawler(dir_path=feed_dir_path, render_js=render_js, method=method, headers=headers, timeout=timeout, num_retries=num_retries, encoding=encoding, verify_ssl=verify_ssl, copy_images_from_canvas=copy_images_from_canvas, simulate_scrolling=simulate_scrolling, disable_headless=disable_headless, blob_to_dataurl=blob_to_dataurl)
+    crawler = Crawler(
+        dir_path=feed_dir_path,
+        render_js=render_js,
+        method=method,
+        headers=headers,
+        timeout=timeout,
+        num_retries=num_retries,
+        encoding=encoding,
+        verify_ssl=verify_ssl,
+        copy_images_from_canvas=copy_images_from_canvas,
+        simulate_scrolling=simulate_scrolling,
+        disable_headless=disable_headless,
+        blob_to_dataurl=blob_to_dataurl,
+    )
     response, error, _ = crawler.run(url, download_file=download_file)
     if not response:
         LOGGER.error(error)
@@ -368,5 +412,5 @@ def main() -> int:
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(main())

@@ -905,5 +905,22 @@ def test_group_and_feed_mutations_unit():
     assert (asyncio.run(main.get_feed_info("g", "f", feed_maker_manager=mgr)))["status"] == "success"
 
 
+def test_lifespan_startup_shutdown():
+    """lifespan context manager: startup creates tables and manager, shutdown closes → covers L33-37"""
+    from backend.main import lifespan, app as test_app
+
+    with patch("backend.main.DB") as mock_db, patch("backend.main.FeedMakerManager") as mock_fmm_cls:
+        mock_fmm = MagicMock()
+        mock_fmm_cls.return_value = mock_fmm
+
+        async def _run():
+            async with lifespan(test_app):
+                mock_db.create_all_tables.assert_called_once()
+                assert test_app.state.feed_maker_manager is mock_fmm
+            mock_fmm.aclose.assert_called_once()
+
+        asyncio.run(_run())
+
+
 if __name__ == "__main__":
     pytest.main()

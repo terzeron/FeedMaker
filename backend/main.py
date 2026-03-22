@@ -519,6 +519,6 @@ async def get_groups(feed_maker_manager: FeedMakerManager = Depends(get_feed_mak
     return response_object
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     LOGGER.debug("# main()")
     uvicorn.run(app, host="0.0.0.0", port=8010)

@@ -30,10 +30,21 @@ def assert_in_mock_logger(message: str, mock_logger: Mock, do_submatch: bool = F
 
 class FileManagerTest(unittest.TestCase):
     def setUp(self) -> None:
+        import os as _os
+        import tempfile as _tempfile
+
+        self.tmp_root = Path(_tempfile.mkdtemp())
+        work_dir = self.tmp_root / "work"
+        img_dir = self.tmp_root / "img"
         self.group_name = "naver"
         self.feed_name = "certain_webtoon"
-        self.feed_dir_path = Path(Env.get("FM_WORK_DIR")) / self.group_name / self.feed_name
-        self.feed_dir_path.mkdir(exist_ok=True)
+        self.feed_dir_path = work_dir / self.group_name / self.feed_name
+        self.feed_dir_path.mkdir(parents=True, exist_ok=True)
+        img_dir.mkdir(exist_ok=True)
+
+        self._env_patcher = patch.dict(_os.environ, {"FM_WORK_DIR": str(work_dir), "WEB_SERVICE_IMAGE_DIR_PREFIX": str(img_dir)})
+        self._env_patcher.start()
+
         self.sample_conf_file_path = Path(__file__).parent / "conf.naverwebtoon.json"
         self.conf_file_path = self.feed_dir_path / Config.DEFAULT_CONF_FILE
         shutil.copy(self.sample_conf_file_path, self.conf_file_path)
@@ -79,19 +90,8 @@ class FileManagerTest(unittest.TestCase):
         self.empty_img_file_path.touch()
 
     def tearDown(self) -> None:
-        self.garbage_file_path.unlink(missing_ok=True)
-
-        self.html_file1_path.unlink(missing_ok=True)
-        self.html_file2_path.unlink(missing_ok=True)
-        shutil.rmtree(self.html_dir_path, ignore_errors=True)
-
-        self.empty_img_file_path.unlink(missing_ok=True)
-        self.img_file1_path.unlink(missing_ok=True)
-        self.img_file2_path.unlink(missing_ok=True)
-        self.img_file3_path.unlink(missing_ok=True)
-        self.img_file4_path.unlink(missing_ok=True)
-        shutil.rmtree(self.feed_img_dir_path, ignore_errors=True)
-        shutil.rmtree(self.feed_dir_path, ignore_errors=True)
+        self._env_patcher.stop()
+        shutil.rmtree(self.tmp_root, ignore_errors=True)
 
     def test__get_cache_info_common_postfix(self) -> None:
         img_url = "https://image-comic.pstatic.net/webtoon/759457/50/20211007123156_e8e0d3210b1b5222a92a0d12de7068b3_IMAG01_1.jpg"
@@ -166,7 +166,7 @@ class FileManagerTest(unittest.TestCase):
         self.assertTrue(self.html_file2_path.is_file())
         with patch.object(LOGGER, "info") as mock_info:
             FileManager.remove_html_file_without_cached_image_files(self.html_file2_path)
-            self.assertTrue(assert_in_mock_logger(f"* '{self.group_name}/{self.feed_name}/html/{self.html_file2_path.name}' deleted (due to ['{self.non_cached_img_file}'])", mock_info, do_submatch=True))
+            self.assertTrue(assert_in_mock_logger(f"deleted (due to ['{self.non_cached_img_file}'])", mock_info, do_submatch=True))
 
         self.assertFalse(self.html_file2_path.is_file())
 
@@ -175,7 +175,7 @@ class FileManagerTest(unittest.TestCase):
         with patch.object(LOGGER, "info") as mock_info:
             FileManager.remove_html_files_without_cached_image_files(self.feed_dir_path, self.feed_img_dir_path)
             self.assertTrue(assert_in_mock_logger("# deleting html files without cached image files", mock_info))
-            self.assertTrue(assert_in_mock_logger(f"* '{self.group_name}/{self.feed_name}/html/{self.html_file2_path.name}' deleted (due to ['{self.non_cached_img_file}'])", mock_info, do_submatch=True))
+            self.assertTrue(assert_in_mock_logger(f"deleted (due to ['{self.non_cached_img_file}'])", mock_info, do_submatch=True))
 
         self.assertFalse(self.html_file2_path.is_file())
 

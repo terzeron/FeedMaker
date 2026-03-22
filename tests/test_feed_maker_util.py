@@ -689,5 +689,94 @@ class URLSafetyTest(unittest.TestCase):
         self.assertFalse(ok)
 
 
+class TestResolveExecutable(unittest.TestCase):
+    """Process._resolve_executable: relative path not found → covers L108"""
+
+    def test_relative_path_not_found(self) -> None:
+        result = Process._resolve_executable("./nonexistent_script.py", Path("/tmp"))
+        self.assertIsNone(result)
+
+    def test_relative_path_parent_not_found(self) -> None:
+        result = Process._resolve_executable("../nonexistent_script.py", Path("/tmp"))
+        self.assertIsNone(result)
+
+
+class TestDatetimeConvertToStr(unittest.TestCase):
+    """Datetime.convert_datetime_to_str with string input → covers L233-235"""
+
+    def test_string_input_returned_as_is(self) -> None:
+        from bin.feed_maker_util import Datetime
+
+        result = Datetime.convert_datetime_to_str("2024-01-01 00:00:00")
+        self.assertEqual(result, "2024-01-01 00:00:00")
+
+    def test_none_input(self) -> None:
+        from bin.feed_maker_util import Datetime
+
+        result = Datetime.convert_datetime_to_str(None)
+        self.assertIsNone(result)
+
+
+class TestConfigWithEnvVar(unittest.TestCase):
+    """Config __init__ with FM_CONF_FILE env var → covers L468-469"""
+
+    def test_fm_conf_file_env(self) -> None:
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump({"configuration": {"collection": {}}}, f)
+            f.flush()
+            with patch.dict(os.environ, {"FM_CONF_FILE": f.name}):
+                config = Config()
+                self.assertIn("collection", config.conf)
+        os.unlink(f.name)
+
+
+class TestURLGetDomainNoPath(unittest.TestCase):
+    """URL.get_url_domain with no path → covers L644"""
+
+    def test_domain_without_path(self) -> None:
+        result = URL.get_url_domain("https://example.com")
+        self.assertEqual(result, "example.com")
+
+
+class TestURLConcatenateWithQuestionMark(unittest.TestCase):
+    """URL.concatenate_url with url2 ending in '?' → covers L684"""
+
+    def test_concatenate_with_question_mark(self) -> None:
+        result = URL.concatenate_url("http://example.com/page", "?")
+        self.assertIn("?", result)
+
+
+class TestFileManagerGetIncompleteImageListEdgeCases(unittest.TestCase):
+    """FileManager.get_incomplete_image_list: IMAGE_NOT_FOUND and UnicodeDecodeError → covers L757,767-769"""
+
+    def test_image_not_found_in_html(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            feed_dir = Path(tmpdir) / "testfeed"
+            feed_dir.mkdir()
+            html_dir = feed_dir / "html"
+            html_dir.mkdir()
+            html_file = html_dir / "test.html"
+            html_file.write_text(f'<img src="http://img/testfeed/{FileManager.IMAGE_NOT_FOUND_IMAGE}"/>\n')
+            result = FileManager.get_incomplete_image_list(html_file)
+            self.assertIn(FileManager.IMAGE_NOT_FOUND_IMAGE, result)
+
+    def test_unicode_decode_error(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            feed_dir = Path(tmpdir) / "testfeed"
+            feed_dir.mkdir()
+            html_dir = feed_dir / "html"
+            html_dir.mkdir()
+            html_file = html_dir / "test.html"
+            html_file.write_bytes(b"\xff\xfe invalid utf-8 \x80\x81")
+            with self.assertRaises(UnicodeDecodeError):
+                FileManager.get_incomplete_image_list(html_file)
+
+
 if __name__ == "__main__":
     unittest.main()

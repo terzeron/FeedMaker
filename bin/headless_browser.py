@@ -412,11 +412,26 @@ class HeadlessBrowser:
                     driver.switch_to.alert.dismiss()
                 except (WebDriverException, NoAlertPresentException):
                     pass
+                except Exception:
+                    # Driver process died (e.g. ConnectionRefusedError) — invalidate cache
+                    LOGGER.warning("Cached driver is no longer responsive, invalidating cache")
+                    self._thread_local._driver_cache = None
+                    try:
+                        driver.quit()
+                    except Exception:
+                        pass
 
                 try:
                     driver.execute_script("window.localStorage.clear();")
                     driver.execute_script("window.sessionStorage.clear();")
                 except WebDriverException:
                     pass
+                except Exception:
+                    LOGGER.warning("Cached driver is no longer responsive, invalidating cache")
+                    self._thread_local._driver_cache = None
+                    try:
+                        driver.quit()
+                    except Exception:
+                        pass
 
         return ""  # Fallback return (should never be reached)
