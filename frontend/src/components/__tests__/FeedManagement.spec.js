@@ -1,58 +1,61 @@
-import { mount } from '@vue/test-utils';
-import FeedManagement from '../FeedManagement.vue';
-import axios from 'axios';
+import { mount } from "@vue/test-utils";
+import FeedManagement from "../FeedManagement.vue";
+import axios from "axios";
 
-jest.mock('axios');
-jest.mock('jsoneditor', () => {
+jest.mock("axios");
+jest.mock("jsoneditor", () => {
   return jest.fn().mockImplementation(() => ({
     set: jest.fn(),
     get: jest.fn().mockReturnValue({}),
     expandAll: jest.fn(),
-    destroy: jest.fn()
+    destroy: jest.fn(),
   }));
 });
 
 const stubs = {
-  MyButton: { template: '<button><slot /></button>', data: () => ({ doShowInitialIcon: true, doShowSpinner: false }) },
-  'font-awesome-icon': true,
-  BAlert: { template: '<div><slot /></div>' },
-  BModal: { template: '<div><slot /></div>' },
-  BContainer: { template: '<div><slot /></div>' },
-  BRow: { template: '<div><slot /></div>' },
-  BCol: { template: '<div><slot /></div>' },
-  BInputGroup: { template: '<div><slot /></div>' },
-  BFormInput: { template: '<input />' },
-  BInputGroupText: { template: '<div><slot /></div>' },
-  BTableSimple: { template: '<table><slot /></table>' },
-  BThead: { template: '<thead><slot /></thead>' },
-  BTbody: { template: '<tbody><slot /></tbody>' },
-  BTr: { template: '<tr><slot /></tr>' },
-  BTh: { template: '<th><slot /></th>' },
-  BTd: { template: '<td><slot /></td>' },
-  BProgress: { template: '<div><slot /></div>' },
-  BProgressBar: { template: '<div><slot /></div>' }
+  MyButton: {
+    template: "<button><slot /></button>",
+    data: () => ({ doShowInitialIcon: true, doShowSpinner: false }),
+  },
+  "font-awesome-icon": true,
+  BAlert: { template: "<div><slot /></div>" },
+  BModal: { template: "<div><slot /></div>" },
+  BContainer: { template: "<div><slot /></div>" },
+  BRow: { template: "<div><slot /></div>" },
+  BCol: { template: "<div><slot /></div>" },
+  BInputGroup: { template: "<div><slot /></div>" },
+  BFormInput: { template: "<input />" },
+  BInputGroupText: { template: "<div><slot /></div>" },
+  BTableSimple: { template: "<table><slot /></table>" },
+  BThead: { template: "<thead><slot /></thead>" },
+  BTbody: { template: "<tbody><slot /></tbody>" },
+  BTr: { template: "<tr><slot /></tr>" },
+  BTh: { template: "<th><slot /></th>" },
+  BTd: { template: "<td><slot /></td>" },
+  BProgress: { template: "<div><slot /></div>" },
+  BProgressBar: { template: "<div><slot /></div>" },
 };
 
-const flushPromises = () => new Promise(r => setTimeout(r));
+const flushPromises = () => new Promise((r) => setTimeout(r));
 
 const createWrapper = (routeParams = {}) => {
-  axios.get.mockResolvedValueOnce({ data: { status: 'success', groups: [] } });
+  axios.get.mockResolvedValueOnce({ data: { status: "success", groups: [] } });
   const wrapper = mount(FeedManagement, {
     global: {
       stubs,
-      mocks: { $route: { params: routeParams } }
-    }
+      mocks: { $route: { params: routeParams } },
+    },
   });
   // jsonData 초기값이 {}이므로 title computed에서 에러 방지
-  wrapper.vm.jsonData = { rss: { title: '', link: '', description: '' } };
+  wrapper.vm.jsonData = { rss: { title: "", link: "", description: "" } };
   return wrapper;
 };
 
-describe('FeedManagement.vue', () => {
+describe("FeedManagement.vue", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.spyOn(console, 'log').mockImplementation(() => {});
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, "log").mockImplementation(() => {});
+    jest.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -60,147 +63,190 @@ describe('FeedManagement.vue', () => {
     console.error.mockRestore();
   });
 
-  describe('mount', () => {
-    it('loads groups on mount', async () => {
+  describe("mount", () => {
+    it("loads groups on mount", async () => {
       axios.get.mockReset();
-      axios.get.mockResolvedValueOnce({ data: { status: 'success', groups: [
-        { name: 'group1', num_feeds: 1 },
-        { name: 'group2', num_feeds: 0 }
-      ]}});
+      axios.get.mockResolvedValueOnce({
+        data: {
+          status: "success",
+          groups: [
+            { name: "group1", num_feeds: 1 },
+            { name: "group2", num_feeds: 0 },
+          ],
+        },
+      });
 
-      const wrapper = mount(FeedManagement, { global: { stubs, mocks: { $route: { params: {} } } } });
-      wrapper.vm.jsonData = { rss: { title: '', link: '', description: '' } };
+      const wrapper = mount(FeedManagement, {
+        global: { stubs, mocks: { $route: { params: {} } } },
+      });
+      wrapper.vm.jsonData = { rss: { title: "", link: "", description: "" } };
       await flushPromises();
 
       expect(wrapper.vm.groups.length).toBe(2);
     });
 
-    it('loads feed directly when route has group and feed params', async () => {
+    it("loads feed directly when route has group and feed params", async () => {
       axios.get.mockReset();
-      axios.get.mockResolvedValueOnce({ data: {
-        status: 'success',
-        feed_info: {
-          config: { rss: { title: 'Test', link: 'https://terzeron.com/test.xml', description: 'Test' }, collection: { list_url_list: ['url1'] }, extraction: {} },
-          collection_info: { collect_date: '2024-01-01T00:00:00Z', total_item_count: 100 },
-          public_feed_info: { num_items: 50, file_size: 2048, upload_date: '2024-01-01T00:00:00Z' },
-          progress_info: { current_index: 30, total_item_count: 100, unit_size_per_day: 5, progress_ratio: 30, due_date: '2024-02-01T00:00:00Z' }
-        }
-      }});
-      axios.get.mockResolvedValue({ data: { status: 'success', running_status: false } });
+      axios.get.mockResolvedValueOnce({
+        data: {
+          status: "success",
+          feed_info: {
+            config: {
+              rss: {
+                title: "Test",
+                link: "https://terzeron.com/test.xml",
+                description: "Test",
+              },
+              collection: { list_url_list: ["url1"] },
+              extraction: {},
+            },
+            collection_info: {
+              collect_date: "2024-01-01T00:00:00Z",
+              total_item_count: 100,
+            },
+            public_feed_info: {
+              num_items: 50,
+              file_size: 2048,
+              upload_date: "2024-01-01T00:00:00Z",
+            },
+            progress_info: {
+              current_index: 30,
+              total_item_count: 100,
+              unit_size_per_day: 5,
+              progress_ratio: 30,
+              due_date: "2024-02-01T00:00:00Z",
+            },
+          },
+        },
+      });
+      axios.get.mockResolvedValue({
+        data: { status: "success", running_status: false },
+      });
 
       const wrapper = mount(FeedManagement, {
-        global: { stubs, mocks: { $route: { params: { group: 'testGroup', feed: 'testFeed' } } } }
+        global: {
+          stubs,
+          mocks: {
+            $route: { params: { group: "testGroup", feed: "testFeed" } },
+          },
+        },
       });
       await flushPromises();
 
-      expect(wrapper.vm.selectedGroupName).toBe('testGroup');
-      expect(wrapper.vm.selectedFeedName).toBe('testFeed');
+      expect(wrapper.vm.selectedGroupName).toBe("testGroup");
+      expect(wrapper.vm.selectedFeedName).toBe("testFeed");
     });
   });
 
-  describe('getShortDateStr', () => {
-    it('returns empty string for falsy input', async () => {
+  describe("getShortDateStr", () => {
+    it("returns empty string for falsy input", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      expect(wrapper.vm.getShortDateStr('')).toBe('');
-      expect(wrapper.vm.getShortDateStr(null)).toBe('');
+      expect(wrapper.vm.getShortDateStr("")).toBe("");
+      expect(wrapper.vm.getShortDateStr(null)).toBe("");
     });
 
-    it('extracts date from ISO string', async () => {
+    it("extracts date from ISO string", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      expect(wrapper.vm.getShortDateStr('2024-01-15T12:00:00Z')).toBe('2024-01-15');
+      expect(wrapper.vm.getShortDateStr("2024-01-15T12:00:00Z")).toBe(
+        "2024-01-15",
+      );
     });
   });
 
-  describe('determineStatus', () => {
-    it('returns true for active object', async () => {
+  describe("determineStatus", () => {
+    it("returns true for active object", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      expect(wrapper.vm.determineStatus({ name: 'test', is_active: true })).toBe(true);
+      expect(
+        wrapper.vm.determineStatus({ name: "test", is_active: true }),
+      ).toBe(true);
     });
 
-    it('returns false for inactive object', async () => {
+    it("returns false for inactive object", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      expect(wrapper.vm.determineStatus({ name: 'test', is_active: false })).toBe(false);
+      expect(
+        wrapper.vm.determineStatus({ name: "test", is_active: false }),
+      ).toBe(false);
     });
 
-    it('returns true when is_active is undefined', async () => {
+    it("returns true when is_active is undefined", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      expect(wrapper.vm.determineStatus({ name: 'test' })).toBe(true);
+      expect(wrapper.vm.determineStatus({ name: "test" })).toBe(true);
     });
 
-    it('returns false for string starting with underscore', async () => {
+    it("returns false for string starting with underscore", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      expect(wrapper.vm.determineStatus('_inactive')).toBe(false);
+      expect(wrapper.vm.determineStatus("_inactive")).toBe(false);
     });
 
-    it('returns true for string not starting with underscore', async () => {
+    it("returns true for string not starting with underscore", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      expect(wrapper.vm.determineStatus('active')).toBe(true);
+      expect(wrapper.vm.determineStatus("active")).toBe(true);
     });
 
-    it('returns true for non-object non-string input', async () => {
+    it("returns true for non-object non-string input", async () => {
       const wrapper = createWrapper();
       await flushPromises();
       expect(wrapper.vm.determineStatus(123)).toBe(true);
     });
   });
 
-  describe('alert / clearAlert', () => {
-    it('sets alert message and variant', async () => {
+  describe("alert / clearAlert", () => {
+    it("sets alert message and variant", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.alert('Error message', 'warning');
+      wrapper.vm.alert("Error message", "warning");
       expect(wrapper.vm.showAlert).toBe(true);
-      expect(wrapper.vm.alertMessage).toBe('Error message');
-      expect(wrapper.vm.alertVariant).toBe('warning');
+      expect(wrapper.vm.alertMessage).toBe("Error message");
+      expect(wrapper.vm.alertVariant).toBe("warning");
     });
 
-    it('uses danger as default variant', async () => {
+    it("uses danger as default variant", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.alert('Error');
-      expect(wrapper.vm.alertVariant).toBe('danger');
+      wrapper.vm.alert("Error");
+      expect(wrapper.vm.alertVariant).toBe("danger");
     });
 
-    it('clears alert', async () => {
+    it("clears alert", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.alert('Error');
+      wrapper.vm.alert("Error");
       wrapper.vm.clearAlert();
       expect(wrapper.vm.showAlert).toBe(false);
-      expect(wrapper.vm.alertMessage).toBe('');
+      expect(wrapper.vm.alertMessage).toBe("");
     });
   });
 
-  describe('confirm modal', () => {
-    it('opens confirm modal with message and action', async () => {
+  describe("confirm modal", () => {
+    it("opens confirm modal with message and action", async () => {
       const wrapper = createWrapper();
       await flushPromises();
       const action = jest.fn();
-      wrapper.vm.openConfirmModal('Are you sure?', action);
+      wrapper.vm.openConfirmModal("Are you sure?", action);
       expect(wrapper.vm.showConfirmModal).toBe(true);
-      expect(wrapper.vm.confirmMessage).toBe('Are you sure?');
+      expect(wrapper.vm.confirmMessage).toBe("Are you sure?");
       expect(wrapper.vm.pendingAction).toBe(action);
     });
 
-    it('handleConfirmOk executes pending action', async () => {
+    it("handleConfirmOk executes pending action", async () => {
       const wrapper = createWrapper();
       await flushPromises();
       const action = jest.fn();
-      wrapper.vm.openConfirmModal('Confirm?', action);
+      wrapper.vm.openConfirmModal("Confirm?", action);
       wrapper.vm.handleConfirmOk();
       expect(action).toHaveBeenCalled();
       expect(wrapper.vm.showConfirmModal).toBe(false);
       expect(wrapper.vm.pendingAction).toBeNull();
     });
 
-    it('handleConfirmOk does nothing when no pending action', async () => {
+    it("handleConfirmOk does nothing when no pending action", async () => {
       const wrapper = createWrapper();
       await flushPromises();
       wrapper.vm.showConfirmModal = true;
@@ -209,11 +255,11 @@ describe('FeedManagement.vue', () => {
       expect(wrapper.vm.showConfirmModal).toBe(false);
     });
 
-    it('handleConfirmCancel closes modal', async () => {
+    it("handleConfirmCancel closes modal", async () => {
       const wrapper = createWrapper();
       await flushPromises();
       const action = jest.fn();
-      wrapper.vm.openConfirmModal('Confirm?', action);
+      wrapper.vm.openConfirmModal("Confirm?", action);
       wrapper.vm.handleConfirmCancel();
       expect(wrapper.vm.showConfirmModal).toBe(false);
       expect(wrapper.vm.pendingAction).toBeNull();
@@ -221,15 +267,15 @@ describe('FeedManagement.vue', () => {
     });
   });
 
-  describe('setActiveGroup / setActiveFeed', () => {
-    it('sets active group index', async () => {
+  describe("setActiveGroup / setActiveFeed", () => {
+    it("sets active group index", async () => {
       const wrapper = createWrapper();
       await flushPromises();
       wrapper.vm.setActiveGroup(2);
       expect(wrapper.vm.activeGroupIndex).toBe(2);
     });
 
-    it('sets active feed index', async () => {
+    it("sets active feed index", async () => {
       const wrapper = createWrapper();
       await flushPromises();
       wrapper.vm.setActiveFeed(5);
@@ -237,8 +283,8 @@ describe('FeedManagement.vue', () => {
     });
   });
 
-  describe('show/hide related methods', () => {
-    it('showAllRelatedToFeed sets all flags', async () => {
+  describe("show/hide related methods", () => {
+    it("showAllRelatedToFeed sets all flags", async () => {
       const wrapper = createWrapper();
       await flushPromises();
       wrapper.vm.showAllRelatedToFeed();
@@ -251,7 +297,7 @@ describe('FeedManagement.vue', () => {
       expect(wrapper.vm.showFeedInfo).toBe(true);
     });
 
-    it('hideAllRelatedToFeed clears all flags', async () => {
+    it("hideAllRelatedToFeed clears all flags", async () => {
       const wrapper = createWrapper();
       await flushPromises();
       wrapper.vm.showAllRelatedToFeed();
@@ -261,27 +307,27 @@ describe('FeedManagement.vue', () => {
       expect(wrapper.vm.showRunButton).toBe(false);
     });
 
-    it('showAllRelatedToGroup sets group buttons when group selected', async () => {
+    it("showAllRelatedToGroup sets group buttons when group selected", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedGroupName = 'testGroup';
+      wrapper.vm.selectedGroupName = "testGroup";
       wrapper.vm.showAllRelatedToGroup();
       expect(wrapper.vm.showToggleGroupButton).toBe(true);
       expect(wrapper.vm.showRemoveGroupButton).toBe(true);
     });
 
-    it('showAllRelatedToGroup does nothing without group', async () => {
+    it("showAllRelatedToGroup does nothing without group", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedGroupName = '';
+      wrapper.vm.selectedGroupName = "";
       wrapper.vm.showAllRelatedToGroup();
       expect(wrapper.vm.showToggleGroupButton).toBe(false);
     });
 
-    it('hideAllRelatedToGroup clears group buttons', async () => {
+    it("hideAllRelatedToGroup clears group buttons", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedGroupName = 'test';
+      wrapper.vm.selectedGroupName = "test";
       wrapper.vm.showAllRelatedToGroup();
       wrapper.vm.hideAllRelatedToGroup();
       expect(wrapper.vm.showToggleGroupButton).toBe(false);
@@ -289,160 +335,185 @@ describe('FeedManagement.vue', () => {
     });
   });
 
-  describe('determineNewFeedNameFromJsonRssLink', () => {
-    it('extracts feed name from rss link', async () => {
+  describe("determineNewFeedNameFromJsonRssLink", () => {
+    it("extracts feed name from rss link", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.jsonData = { rss: { link: 'https://terzeron.com/my_feed.xml' } };
+      wrapper.vm.jsonData = {
+        rss: { link: "https://terzeron.com/my_feed.xml" },
+      };
       wrapper.vm.determineNewFeedNameFromJsonRssLink();
-      expect(wrapper.vm.newFeedName).toBe('my_feed');
+      expect(wrapper.vm.newFeedName).toBe("my_feed");
     });
 
-    it('does nothing when jsonData has no rss', async () => {
+    it("does nothing when jsonData has no rss", async () => {
       const wrapper = createWrapper();
       await flushPromises();
       wrapper.vm.jsonData = {};
       wrapper.vm.determineNewFeedNameFromJsonRssLink();
-      expect(wrapper.vm.newFeedName).toBe('');
+      expect(wrapper.vm.newFeedName).toBe("");
     });
   });
 
-  describe('determineDescriptionFromTitle', () => {
-    it('copies title to description', async () => {
+  describe("determineDescriptionFromTitle", () => {
+    it("copies title to description", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.jsonData = { rss: { title: 'My Feed', description: 'old' } };
+      wrapper.vm.jsonData = { rss: { title: "My Feed", description: "old" } };
       wrapper.vm.determineDescriptionFromTitle();
-      expect(wrapper.vm.jsonData.rss.description).toBe('My Feed');
+      expect(wrapper.vm.jsonData.rss.description).toBe("My Feed");
     });
   });
 
-  describe('setCollectionInfo', () => {
-    it('sets collection metadata', async () => {
+  describe("setCollectionInfo", () => {
+    it("sets collection metadata", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.setCollectionInfo({ collect_date: '2024-01-15T00:00:00Z', total_item_count: 100 }, 3);
+      wrapper.vm.setCollectionInfo(
+        { collect_date: "2024-01-15T00:00:00Z", total_item_count: 100 },
+        3,
+      );
       expect(wrapper.vm.numCollectionUrls).toBe(3);
-      expect(wrapper.vm.collectDate).toBe('2024-01-15');
+      expect(wrapper.vm.collectDate).toBe("2024-01-15");
       expect(wrapper.vm.totalItemCount).toBe(100);
     });
   });
 
-  describe('setPublicFeedInfo', () => {
-    it('sets public feed metadata', async () => {
+  describe("setPublicFeedInfo", () => {
+    it("sets public feed metadata", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.setPublicFeedInfo({ num_items: 50, file_size: 2048, upload_date: '2024-01-10T00:00:00Z' });
+      wrapper.vm.setPublicFeedInfo({
+        num_items: 50,
+        file_size: 2048,
+        upload_date: "2024-01-10T00:00:00Z",
+      });
       expect(wrapper.vm.numItemsInResult).toBe(50);
       expect(wrapper.vm.sizeOfResultFile).toBe(2048);
-      expect(wrapper.vm.lastUploadDate).toBe('2024-01-10');
+      expect(wrapper.vm.lastUploadDate).toBe("2024-01-10");
     });
 
-    it('skips upload_date when not present', async () => {
+    it("skips upload_date when not present", async () => {
       const wrapper = createWrapper();
       await flushPromises();
       wrapper.vm.setPublicFeedInfo({ num_items: 10, file_size: 100 });
-      expect(wrapper.vm.lastUploadDate).toBe('-');
+      expect(wrapper.vm.lastUploadDate).toBe("-");
     });
   });
 
-  describe('setProgressInfo', () => {
-    it('sets progress metadata', async () => {
+  describe("setProgressInfo", () => {
+    it("sets progress metadata", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.setProgressInfo({ current_index: 30, total_item_count: 100, unit_size_per_day: 5, progress_ratio: 30, due_date: '2024-02-01T00:00:00Z' });
+      wrapper.vm.setProgressInfo({
+        current_index: 30,
+        total_item_count: 100,
+        unit_size_per_day: 5,
+        progress_ratio: 30,
+        due_date: "2024-02-01T00:00:00Z",
+      });
       expect(wrapper.vm.currentIndex).toBe(30);
       expect(wrapper.vm.totalItemCount).toBe(100);
       expect(wrapper.vm.unitSizePerDay).toBe(5);
       expect(wrapper.vm.progressRatio).toBe(30);
-      expect(wrapper.vm.feedCompletionDueDate).toBe('2024-02-01');
+      expect(wrapper.vm.feedCompletionDueDate).toBe("2024-02-01");
     });
 
-    it('skips due_date when not present', async () => {
+    it("skips due_date when not present", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.setProgressInfo({ current_index: 0, total_item_count: 0, unit_size_per_day: 0, progress_ratio: 0 });
-      expect(wrapper.vm.feedCompletionDueDate).toBe('-');
+      wrapper.vm.setProgressInfo({
+        current_index: 0,
+        total_item_count: 0,
+        unit_size_per_day: 0,
+        progress_ratio: 0,
+      });
+      expect(wrapper.vm.feedCompletionDueDate).toBe("-");
     });
   });
 
-  describe('computed: sizeOfResultFileWithUnit', () => {
-    it('returns GiB for large files', async () => {
+  describe("computed: sizeOfResultFileWithUnit", () => {
+    it("returns GiB for large files", async () => {
       const wrapper = createWrapper();
       await flushPromises();
       wrapper.vm.sizeOfResultFile = 2 * 1024 * 1024 * 1024;
-      expect(wrapper.vm.sizeOfResultFileWithUnit).toContain('GiB');
+      expect(wrapper.vm.sizeOfResultFileWithUnit).toContain("GiB");
     });
 
-    it('returns MiB for medium files', async () => {
+    it("returns MiB for medium files", async () => {
       const wrapper = createWrapper();
       await flushPromises();
       wrapper.vm.sizeOfResultFile = 5 * 1024 * 1024;
-      expect(wrapper.vm.sizeOfResultFileWithUnit).toContain('MiB');
+      expect(wrapper.vm.sizeOfResultFileWithUnit).toContain("MiB");
     });
 
-    it('returns KiB for small files', async () => {
+    it("returns KiB for small files", async () => {
       const wrapper = createWrapper();
       await flushPromises();
       wrapper.vm.sizeOfResultFile = 2048;
-      expect(wrapper.vm.sizeOfResultFileWithUnit).toContain('KiB');
+      expect(wrapper.vm.sizeOfResultFileWithUnit).toContain("KiB");
     });
 
-    it('returns B for tiny files', async () => {
+    it("returns B for tiny files", async () => {
       const wrapper = createWrapper();
       await flushPromises();
       wrapper.vm.sizeOfResultFile = 500;
-      expect(wrapper.vm.sizeOfResultFileWithUnit).toContain('B');
+      expect(wrapper.vm.sizeOfResultFileWithUnit).toContain("B");
     });
   });
 
-  describe('computed: feedStatus / groupStatus', () => {
-    it('returns status from selected feed', async () => {
+  describe("computed: feedStatus / groupStatus", () => {
+    it("returns status from selected feed", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.feeds = [{ name: 'feed1', is_active: false }];
-      wrapper.vm.selectedFeedName = 'feed1';
+      wrapper.vm.feeds = [{ name: "feed1", is_active: false }];
+      wrapper.vm.selectedFeedName = "feed1";
       expect(wrapper.vm.feedStatus).toBe(false);
     });
 
-    it('returns true when no matching feed', async () => {
+    it("returns true when no matching feed", async () => {
       const wrapper = createWrapper();
       await flushPromises();
       wrapper.vm.feeds = [];
-      wrapper.vm.selectedFeedName = 'missing';
+      wrapper.vm.selectedFeedName = "missing";
       expect(wrapper.vm.feedStatus).toBe(true);
     });
 
-    it('returns status from selected group', async () => {
+    it("returns status from selected group", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.groups = [{ name: 'group1', is_active: false }];
-      wrapper.vm.selectedGroupName = 'group1';
+      wrapper.vm.groups = [{ name: "group1", is_active: false }];
+      wrapper.vm.selectedGroupName = "group1";
       expect(wrapper.vm.groupStatus).toBe(false);
     });
   });
 
-  describe('computed: feedStatusLabel / feedStatusIcon / groupStatusLabel', () => {
-    it('returns correct labels and icons', async () => {
+  describe("computed: feedStatusLabel / feedStatusIcon / groupStatusLabel", () => {
+    it("returns correct labels and icons", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.feeds = [{ name: 'f1', is_active: true }];
-      wrapper.vm.selectedFeedName = 'f1';
-      expect(wrapper.vm.feedStatusLabel).toBe('피드 비활성화');
-      expect(wrapper.vm.feedStatusIcon).toBe('toggle-off');
+      wrapper.vm.feeds = [{ name: "f1", is_active: true }];
+      wrapper.vm.selectedFeedName = "f1";
+      expect(wrapper.vm.feedStatusLabel).toBe("피드 비활성화");
+      expect(wrapper.vm.feedStatusIcon).toBe("toggle-off");
 
-      wrapper.vm.groups = [{ name: 'g1', is_active: true }];
-      wrapper.vm.selectedGroupName = 'g1';
-      expect(wrapper.vm.groupStatusLabel).toBe('그룹 비활성화');
+      wrapper.vm.groups = [{ name: "g1", is_active: true }];
+      wrapper.vm.selectedGroupName = "g1";
+      expect(wrapper.vm.groupStatusLabel).toBe("그룹 비활성화");
     });
   });
 
-  describe('search', () => {
-    it('fetches search results and updates feeds', async () => {
+  describe("search", () => {
+    it("fetches search results and updates feeds", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      axios.get.mockResolvedValueOnce({ data: { status: 'success', feeds: [{ group_name: 'g', feed_name: 'f', feed_title: 'title' }] } });
-      wrapper.vm.searchKeyword = 'test';
+      axios.get.mockResolvedValueOnce({
+        data: {
+          status: "success",
+          feeds: [{ group_name: "g", feed_name: "f", feed_title: "title" }],
+        },
+      });
+      wrapper.vm.searchKeyword = "test";
       wrapper.vm.search();
       await flushPromises();
       expect(wrapper.vm.showSearchResult).toBe(true);
@@ -450,32 +521,36 @@ describe('FeedManagement.vue', () => {
       expect(wrapper.vm.feeds.length).toBe(1);
     });
 
-    it('shows alert on failure response', async () => {
+    it("shows alert on failure response", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      axios.get.mockResolvedValueOnce({ data: { status: 'failure', message: 'Not found' } });
-      wrapper.vm.searchKeyword = 'bad';
+      axios.get.mockResolvedValueOnce({
+        data: { status: "failure", message: "Not found" },
+      });
+      wrapper.vm.searchKeyword = "bad";
       wrapper.vm.search();
       await flushPromises();
-      expect(wrapper.vm.alertMessage).toBe('Not found');
+      expect(wrapper.vm.alertMessage).toBe("Not found");
     });
 
-    it('handles search API error', async () => {
+    it("handles search API error", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      axios.get.mockRejectedValueOnce(new Error('Network'));
-      wrapper.vm.searchKeyword = 'error';
+      axios.get.mockRejectedValueOnce(new Error("Network"));
+      wrapper.vm.searchKeyword = "error";
       wrapper.vm.search();
       await flushPromises();
       // Should not throw
     });
   });
 
-  describe('grouplistButtonClicked', () => {
-    it('resets view and fetches groups', async () => {
+  describe("grouplistButtonClicked", () => {
+    it("resets view and fetches groups", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      axios.get.mockResolvedValueOnce({ data: { status: 'success', groups: [{ name: 'g1', num_feeds: 2 }] } });
+      axios.get.mockResolvedValueOnce({
+        data: { status: "success", groups: [{ name: "g1", num_feeds: 2 }] },
+      });
       wrapper.vm.grouplistButtonClicked();
       await flushPromises();
       expect(wrapper.vm.showGrouplist).toBe(true);
@@ -484,25 +559,29 @@ describe('FeedManagement.vue', () => {
     });
   });
 
-  describe('groupNameButtonClicked', () => {
-    it('selects group and loads feed list', async () => {
+  describe("groupNameButtonClicked", () => {
+    it("selects group and loads feed list", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      axios.get.mockResolvedValueOnce({ data: { status: 'success', feeds: [{ name: 'f1', title: 'Feed 1' }] } });
-      wrapper.vm.groupNameButtonClicked('group1', 1);
+      axios.get.mockResolvedValueOnce({
+        data: { status: "success", feeds: [{ name: "f1", title: "Feed 1" }] },
+      });
+      wrapper.vm.groupNameButtonClicked("group1", 1);
       await flushPromises();
-      expect(wrapper.vm.selectedGroupName).toBe('group1');
+      expect(wrapper.vm.selectedGroupName).toBe("group1");
       expect(wrapper.vm.showFeedlist).toBe(true);
       expect(wrapper.vm.showFeedlistButton).toBe(true);
     });
   });
 
-  describe('feedlistButtonClicked', () => {
-    it('shows feed list for selected group', async () => {
+  describe("feedlistButtonClicked", () => {
+    it("shows feed list for selected group", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedGroupName = 'group1';
-      axios.get.mockResolvedValueOnce({ data: { status: 'success', feeds: [] } });
+      wrapper.vm.selectedGroupName = "group1";
+      axios.get.mockResolvedValueOnce({
+        data: { status: "success", feeds: [] },
+      });
       wrapper.vm.feedlistButtonClicked();
       await flushPromises();
       expect(wrapper.vm.showFeedlist).toBe(true);
@@ -510,366 +589,463 @@ describe('FeedManagement.vue', () => {
     });
   });
 
-  describe('feedNameButtonClicked', () => {
-    it('loads feed info for regular feed', async () => {
+  describe("feedNameButtonClicked", () => {
+    it("loads feed info for regular feed", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      axios.get.mockResolvedValueOnce({ data: {
-        status: 'success',
-        feed_info: {
-          config: { rss: { title: 'Test', link: 'https://terzeron.com/test.xml', description: 'Test' }, collection: { list_url_list: ['url1'] }, extraction: {} },
-          collection_info: { collect_date: '2024-01-01T00:00:00Z', total_item_count: 100 },
-          public_feed_info: { num_items: 50, file_size: 2048 },
-          progress_info: { current_index: 30, total_item_count: 100, unit_size_per_day: 5, progress_ratio: 30 }
-        }
-      }});
-      axios.get.mockResolvedValue({ data: { status: 'success', running_status: false } });
-      wrapper.vm.feedNameButtonClicked('group1', 'feed1', 0);
+      axios.get.mockResolvedValueOnce({
+        data: {
+          status: "success",
+          feed_info: {
+            config: {
+              rss: {
+                title: "Test",
+                link: "https://terzeron.com/test.xml",
+                description: "Test",
+              },
+              collection: { list_url_list: ["url1"] },
+              extraction: {},
+            },
+            collection_info: {
+              collect_date: "2024-01-01T00:00:00Z",
+              total_item_count: 100,
+            },
+            public_feed_info: { num_items: 50, file_size: 2048 },
+            progress_info: {
+              current_index: 30,
+              total_item_count: 100,
+              unit_size_per_day: 5,
+              progress_ratio: 30,
+            },
+          },
+        },
+      });
+      axios.get.mockResolvedValue({
+        data: { status: "success", running_status: false },
+      });
+      wrapper.vm.feedNameButtonClicked("group1", "feed1", 0);
       await flushPromises();
-      expect(wrapper.vm.selectedFeedName).toBe('feed1');
+      expect(wrapper.vm.selectedFeedName).toBe("feed1");
     });
 
-    it('loads site config for site_config.json', async () => {
+    it("loads site config for site_config.json", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedGroupName = 'group1';
-      axios.get.mockResolvedValueOnce({ data: { status: 'success', configuration: { key1: 'v1', key2: 'v2' } } });
-      wrapper.vm.feedNameButtonClicked('group1', 'site_config.json', 1);
+      wrapper.vm.selectedGroupName = "group1";
+      axios.get.mockResolvedValueOnce({
+        data: { status: "success", configuration: { key1: "v1", key2: "v2" } },
+      });
+      wrapper.vm.feedNameButtonClicked("group1", "site_config.json", 1);
       await flushPromises();
-      expect(wrapper.vm.jsonData).toEqual({ key1: 'v1', key2: 'v2' });
+      expect(wrapper.vm.jsonData).toEqual({ key1: "v1", key2: "v2" });
     });
   });
 
-  describe('searchResultFeedNameButtonClicked', () => {
-    it('selects feed from search results', async () => {
+  describe("searchResultFeedNameButtonClicked", () => {
+    it("selects feed from search results", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      axios.get.mockResolvedValueOnce({ data: {
-        status: 'success',
-        feed_info: {
-          config: { rss: { title: 'T', link: 'https://terzeron.com/f.xml', description: 'T' }, collection: { list_url_list: [] }, extraction: {} },
-          collection_info: { collect_date: '', total_item_count: 0 },
-          public_feed_info: { num_items: 0, file_size: 0 },
-          progress_info: { current_index: 0, total_item_count: 0, unit_size_per_day: 0, progress_ratio: 0 }
-        }
-      }});
-      axios.get.mockResolvedValue({ data: { status: 'success', running_status: false } });
-      wrapper.vm.searchResultFeedNameButtonClicked('g1', 'f1', 1);
+      axios.get.mockResolvedValueOnce({
+        data: {
+          status: "success",
+          feed_info: {
+            config: {
+              rss: {
+                title: "T",
+                link: "https://terzeron.com/f.xml",
+                description: "T",
+              },
+              collection: { list_url_list: [] },
+              extraction: {},
+            },
+            collection_info: { collect_date: "", total_item_count: 0 },
+            public_feed_info: { num_items: 0, file_size: 0 },
+            progress_info: {
+              current_index: 0,
+              total_item_count: 0,
+              unit_size_per_day: 0,
+              progress_ratio: 0,
+            },
+          },
+        },
+      });
+      axios.get.mockResolvedValue({
+        data: { status: "success", running_status: false },
+      });
+      wrapper.vm.searchResultFeedNameButtonClicked("g1", "f1", 1);
       await flushPromises();
-      expect(wrapper.vm.selectedGroupName).toBe('g1');
-      expect(wrapper.vm.selectedFeedName).toBe('f1');
+      expect(wrapper.vm.selectedGroupName).toBe("g1");
+      expect(wrapper.vm.selectedFeedName).toBe("f1");
       expect(wrapper.vm.showFeedlistButton).toBe(false);
     });
   });
 
-  describe('save', () => {
-    it('posts feed configuration', async () => {
+  describe("save", () => {
+    it("posts feed configuration", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedGroupName = 'g1';
-      wrapper.vm.newFeedName = 'f1';
-      wrapper.vm.jsonData = { rss: { title: 'T', link: 'l', description: 'D' } };
-      axios.post.mockResolvedValueOnce({ data: { status: 'success' } });
-      axios.get.mockResolvedValueOnce({ data: {
-        status: 'success',
-        feed_info: {
-          config: { rss: { title: 'T', link: 'l', description: 'D' }, collection: { list_url_list: [] }, extraction: {} },
-          collection_info: { collect_date: '', total_item_count: 0 },
-          public_feed_info: { num_items: 0, file_size: 0 },
-          progress_info: { current_index: 0, total_item_count: 0, unit_size_per_day: 0, progress_ratio: 0 }
-        }
-      }});
-      axios.get.mockResolvedValue({ data: { status: 'success', running_status: false } });
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.newFeedName = "f1";
+      wrapper.vm.jsonData = {
+        rss: { title: "T", link: "l", description: "D" },
+      };
+      axios.post.mockResolvedValueOnce({ data: { status: "success" } });
+      axios.get.mockResolvedValueOnce({
+        data: {
+          status: "success",
+          feed_info: {
+            config: {
+              rss: { title: "T", link: "l", description: "D" },
+              collection: { list_url_list: [] },
+              extraction: {},
+            },
+            collection_info: { collect_date: "", total_item_count: 0 },
+            public_feed_info: { num_items: 0, file_size: 0 },
+            progress_info: {
+              current_index: 0,
+              total_item_count: 0,
+              unit_size_per_day: 0,
+              progress_ratio: 0,
+            },
+          },
+        },
+      });
+      axios.get.mockResolvedValue({
+        data: { status: "success", running_status: false },
+      });
       wrapper.vm.save();
       await flushPromises();
       expect(axios.post).toHaveBeenCalled();
     });
 
-    it('handles save API error', async () => {
+    it("handles save API error", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedGroupName = 'g1';
-      wrapper.vm.newFeedName = 'f1';
-      wrapper.vm.jsonData = { rss: { title: 'T', link: 'l', description: 'D' } };
-      axios.post.mockRejectedValueOnce(new Error('save failed'));
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.newFeedName = "f1";
+      wrapper.vm.jsonData = {
+        rss: { title: "T", link: "l", description: "D" },
+      };
+      axios.post.mockRejectedValueOnce(new Error("save failed"));
       wrapper.vm.save();
       await flushPromises();
       // Should not throw
     });
   });
 
-  describe('run', () => {
-    it('posts run request', async () => {
+  describe("run", () => {
+    it("posts run request", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedGroupName = 'g1';
-      wrapper.vm.newFeedName = 'f1';
-      wrapper.vm.selectedFeedName = 'f1';
-      axios.post.mockResolvedValueOnce({ data: { status: 'success' } });
-      axios.get.mockResolvedValueOnce({ data: {
-        status: 'success',
-        feed_info: {
-          config: { rss: { title: 'T', link: 'l', description: 'D' }, collection: { list_url_list: [] }, extraction: {} },
-          collection_info: { collect_date: '', total_item_count: 0 },
-          public_feed_info: { num_items: 0, file_size: 0 },
-          progress_info: { current_index: 0, total_item_count: 0, unit_size_per_day: 0, progress_ratio: 0 }
-        }
-      }});
-      axios.get.mockResolvedValue({ data: { status: 'success', running_status: false } });
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.newFeedName = "f1";
+      wrapper.vm.selectedFeedName = "f1";
+      axios.post.mockResolvedValueOnce({ data: { status: "success" } });
+      axios.get.mockResolvedValueOnce({
+        data: {
+          status: "success",
+          feed_info: {
+            config: {
+              rss: { title: "T", link: "l", description: "D" },
+              collection: { list_url_list: [] },
+              extraction: {},
+            },
+            collection_info: { collect_date: "", total_item_count: 0 },
+            public_feed_info: { num_items: 0, file_size: 0 },
+            progress_info: {
+              current_index: 0,
+              total_item_count: 0,
+              unit_size_per_day: 0,
+              progress_ratio: 0,
+            },
+          },
+        },
+      });
+      axios.get.mockResolvedValue({
+        data: { status: "success", running_status: false },
+      });
       wrapper.vm.run();
       await flushPromises();
       expect(axios.post).toHaveBeenCalled();
     });
 
-    it('handles run API error', async () => {
+    it("handles run API error", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedGroupName = 'g1';
-      wrapper.vm.newFeedName = 'f1';
-      axios.post.mockRejectedValueOnce(new Error('run failed'));
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.newFeedName = "f1";
+      axios.post.mockRejectedValueOnce(new Error("run failed"));
       wrapper.vm.run();
       await flushPromises();
     });
   });
 
-  describe('viewRss / registerToInoreader / registerToFeedly', () => {
-    it('opens RSS URL', async () => {
+  describe("viewRss / registerToInoreader / registerToFeedly", () => {
+    it("opens RSS URL", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.newFeedName = 'test_feed';
-      const openSpy = jest.spyOn(window, 'open').mockImplementation(() => {});
+      wrapper.vm.newFeedName = "test_feed";
+      const openSpy = jest.spyOn(window, "open").mockImplementation(() => {});
       wrapper.vm.viewRss();
-      expect(openSpy).toHaveBeenCalledWith('https://terzeron.com/test_feed.xml');
+      expect(openSpy).toHaveBeenCalledWith(
+        "https://terzeron.com/test_feed.xml",
+      );
       openSpy.mockRestore();
     });
 
-    it('opens Inoreader registration URL', async () => {
+    it("opens Inoreader registration URL", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.newFeedName = 'test_feed';
-      const openSpy = jest.spyOn(window, 'open').mockImplementation(() => {});
+      wrapper.vm.newFeedName = "test_feed";
+      const openSpy = jest.spyOn(window, "open").mockImplementation(() => {});
       wrapper.vm.registerToInoreader();
-      expect(openSpy).toHaveBeenCalledWith(expect.stringContaining('inoreader.com'));
+      expect(openSpy).toHaveBeenCalledWith(
+        expect.stringContaining("inoreader.com"),
+      );
       openSpy.mockRestore();
     });
 
-    it('opens Feedly registration URL', async () => {
+    it("opens Feedly registration URL", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.newFeedName = 'test_feed';
-      const openSpy = jest.spyOn(window, 'open').mockImplementation(() => {});
+      wrapper.vm.newFeedName = "test_feed";
+      const openSpy = jest.spyOn(window, "open").mockImplementation(() => {});
       wrapper.vm.registerToFeedly();
-      expect(openSpy).toHaveBeenCalledWith(expect.stringContaining('feedly.com'));
+      expect(openSpy).toHaveBeenCalledWith(
+        expect.stringContaining("feedly.com"),
+      );
       openSpy.mockRestore();
     });
   });
 
-  describe('removeFeed', () => {
-    it('alerts when no feed selected', async () => {
+  describe("removeFeed", () => {
+    it("alerts when no feed selected", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedFeedName = '';
+      wrapper.vm.selectedFeedName = "";
       wrapper.vm.removeFeed();
-      expect(wrapper.vm.alertMessage).toBe('Feed is not selected');
+      expect(wrapper.vm.alertMessage).toBe("Feed is not selected");
     });
 
-    it('opens confirm modal when feed is selected', async () => {
+    it("opens confirm modal when feed is selected", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedFeedName = 'f1';
-      wrapper.vm.selectedGroupName = 'g1';
+      wrapper.vm.selectedFeedName = "f1";
+      wrapper.vm.selectedGroupName = "g1";
       wrapper.vm.removeFeed();
       expect(wrapper.vm.showConfirmModal).toBe(true);
     });
   });
 
-  describe('removeGroup', () => {
-    it('alerts when no group selected', async () => {
+  describe("removeGroup", () => {
+    it("alerts when no group selected", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedGroupName = '';
+      wrapper.vm.selectedGroupName = "";
       wrapper.vm.removeGroup();
-      expect(wrapper.vm.alertMessage).toBe('Group is not selected');
+      expect(wrapper.vm.alertMessage).toBe("Group is not selected");
     });
 
-    it('opens confirm modal when group is selected', async () => {
+    it("opens confirm modal when group is selected", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedGroupName = 'g1';
+      wrapper.vm.selectedGroupName = "g1";
       wrapper.vm.removeGroup();
       expect(wrapper.vm.showConfirmModal).toBe(true);
     });
   });
 
-  describe('toggleStatus', () => {
-    it('opens confirm modal for feed toggle', async () => {
+  describe("toggleStatus", () => {
+    it("opens confirm modal for feed toggle", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedGroupName = 'g1';
-      wrapper.vm.selectedFeedName = 'f1';
-      wrapper.vm.toggleStatus('feed');
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      wrapper.vm.toggleStatus("feed");
       expect(wrapper.vm.showConfirmModal).toBe(true);
     });
 
-    it('opens confirm modal for group toggle', async () => {
+    it("opens confirm modal for group toggle", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedGroupName = 'g1';
-      wrapper.vm.toggleStatus('group');
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.toggleStatus("group");
       expect(wrapper.vm.showConfirmModal).toBe(true);
     });
   });
 
-  describe('removelist / removeHtml', () => {
-    it('removelist opens confirm modal', async () => {
+  describe("removelist / removeHtml", () => {
+    it("removelist opens confirm modal", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedGroupName = 'g1';
-      wrapper.vm.selectedFeedName = 'f1';
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
       wrapper.vm.removelist();
       expect(wrapper.vm.showConfirmModal).toBe(true);
     });
 
-    it('removeHtml opens confirm modal', async () => {
+    it("removeHtml opens confirm modal", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedGroupName = 'g1';
-      wrapper.vm.selectedFeedName = 'f1';
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
       wrapper.vm.removeHtml();
       expect(wrapper.vm.showConfirmModal).toBe(true);
     });
   });
 
-  describe('saveSiteConfig', () => {
-    it('opens confirm modal', async () => {
+  describe("saveSiteConfig", () => {
+    it("opens confirm modal", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedGroupName = 'g1';
-      wrapper.vm.jsonData = { key: 'value' };
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.jsonData = { key: "value" };
       wrapper.vm.saveSiteConfig();
       expect(wrapper.vm.showConfirmModal).toBe(true);
     });
   });
 
-  describe('getItemsOfRss', () => {
-    it('shows items on success', async () => {
+  describe("getItemsOfRss", () => {
+    it("shows items on success", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedFeedName = 'f1';
-      axios.get.mockResolvedValueOnce({ data: { status: 'success', item_titles: ['Title 1', 'Title 2'] } });
+      wrapper.vm.selectedFeedName = "f1";
+      axios.get.mockResolvedValueOnce({
+        data: { status: "success", item_titles: ["Title 1", "Title 2"] },
+      });
       wrapper.vm.getItemsOfRss();
       await flushPromises();
-      expect(wrapper.vm.itemsOfRss).toEqual(['Title 1', 'Title 2']);
+      expect(wrapper.vm.itemsOfRss).toEqual(["Title 1", "Title 2"]);
       expect(wrapper.vm.showViewItemsOfRssList).toBe(true);
     });
 
-    it('alerts when no items found', async () => {
+    it("alerts when no items found", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedFeedName = 'f1';
-      axios.get.mockResolvedValueOnce({ data: { status: 'success', item_titles: [] } });
+      wrapper.vm.selectedFeedName = "f1";
+      axios.get.mockResolvedValueOnce({
+        data: { status: "success", item_titles: [] },
+      });
       wrapper.vm.getItemsOfRss();
       await flushPromises();
       expect(wrapper.vm.showViewItemsOfRssList).toBe(false);
-      expect(wrapper.vm.alertMessage).toContain('아이템이 없습니다');
+      expect(wrapper.vm.alertMessage).toContain("아이템이 없습니다");
     });
 
-    it('handles FILE_NOT_FOUND error', async () => {
+    it("handles FILE_NOT_FOUND error", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedFeedName = 'f1';
-      axios.get.mockResolvedValueOnce({ data: { status: 'failure', error_code: 'FILE_NOT_FOUND' } });
+      wrapper.vm.selectedFeedName = "f1";
+      axios.get.mockResolvedValueOnce({
+        data: { status: "failure", error_code: "FILE_NOT_FOUND" },
+      });
       wrapper.vm.getItemsOfRss();
       await flushPromises();
-      expect(wrapper.vm.alertMessage).toContain('존재하지 않습니다');
+      expect(wrapper.vm.alertMessage).toContain("존재하지 않습니다");
     });
 
-    it('handles NO_ITEMS error', async () => {
+    it("handles NO_ITEMS error", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedFeedName = 'f1';
-      axios.get.mockResolvedValueOnce({ data: { status: 'failure', error_code: 'NO_ITEMS' } });
+      wrapper.vm.selectedFeedName = "f1";
+      axios.get.mockResolvedValueOnce({
+        data: { status: "failure", error_code: "NO_ITEMS" },
+      });
       wrapper.vm.getItemsOfRss();
       await flushPromises();
-      expect(wrapper.vm.alertMessage).toContain('아이템이 없습니다');
+      expect(wrapper.vm.alertMessage).toContain("아이템이 없습니다");
     });
 
-    it('handles PARSE_ERROR', async () => {
+    it("handles PARSE_ERROR", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedFeedName = 'f1';
-      axios.get.mockResolvedValueOnce({ data: { status: 'failure', error_code: 'PARSE_ERROR', message: 'Parse error' } });
+      wrapper.vm.selectedFeedName = "f1";
+      axios.get.mockResolvedValueOnce({
+        data: {
+          status: "failure",
+          error_code: "PARSE_ERROR",
+          message: "Parse error",
+        },
+      });
       wrapper.vm.getItemsOfRss();
       await flushPromises();
-      expect(wrapper.vm.alertMessage).toBe('Parse error');
+      expect(wrapper.vm.alertMessage).toBe("Parse error");
     });
 
-    it('handles generic failure', async () => {
+    it("handles generic failure", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedFeedName = 'f1';
-      axios.get.mockResolvedValueOnce({ data: { status: 'failure', message: 'Generic error' } });
+      wrapper.vm.selectedFeedName = "f1";
+      axios.get.mockResolvedValueOnce({
+        data: { status: "failure", message: "Generic error" },
+      });
       wrapper.vm.getItemsOfRss();
       await flushPromises();
-      expect(wrapper.vm.alertMessage).toBe('Generic error');
+      expect(wrapper.vm.alertMessage).toBe("Generic error");
     });
 
-    it('handles network error', async () => {
+    it("handles network error", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedFeedName = 'f1';
-      axios.get.mockRejectedValueOnce({ message: 'Network Error' });
+      wrapper.vm.selectedFeedName = "f1";
+      axios.get.mockRejectedValueOnce({ message: "Network Error" });
       wrapper.vm.getItemsOfRss();
       await flushPromises();
-      expect(wrapper.vm.alertMessage).toContain('에러가 발생했습니다');
+      expect(wrapper.vm.alertMessage).toContain("에러가 발생했습니다");
     });
   });
 
-  describe('checkRunning', () => {
-    it('starts button when running', async () => {
+  describe("checkRunning", () => {
+    it("starts button when running", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedGroupName = 'g1';
-      wrapper.vm.selectedFeedName = 'f1';
-      axios.get.mockResolvedValueOnce({ data: { status: 'success', running_status: true } });
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      axios.get.mockResolvedValueOnce({
+        data: { status: "success", running_status: true },
+      });
       wrapper.vm.checkRunning();
       await flushPromises();
     });
 
-    it('ends button when not running', async () => {
+    it("ends button when not running", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedGroupName = 'g1';
-      wrapper.vm.selectedFeedName = 'f1';
-      axios.get.mockResolvedValueOnce({ data: { status: 'success', running_status: false } });
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      axios.get.mockResolvedValueOnce({
+        data: { status: "success", running_status: false },
+      });
       wrapper.vm.checkRunning();
       await flushPromises();
     });
 
-    it('handles failure response', async () => {
+    it("handles failure response", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedGroupName = 'g1';
-      wrapper.vm.selectedFeedName = 'f1';
-      axios.get.mockResolvedValueOnce({ data: { status: 'failure', message: 'error' } });
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      axios.get.mockResolvedValueOnce({
+        data: { status: "failure", message: "error" },
+      });
       wrapper.vm.checkRunning();
       await flushPromises();
-      expect(wrapper.vm.alertMessage).toBe('error');
+      expect(wrapper.vm.alertMessage).toBe("error");
     });
 
-    it('handles API error', async () => {
+    it("handles API error", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedGroupName = 'g1';
-      wrapper.vm.selectedFeedName = 'f1';
-      axios.get.mockRejectedValueOnce(new Error('network'));
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      axios.get.mockRejectedValueOnce(new Error("network"));
       wrapper.vm.checkRunning();
       await flushPromises();
     });
   });
 
-  describe('beforeUnmount', () => {
-    it('clears interval and destroys editor', async () => {
+  describe("beforeUnmount", () => {
+    it("clears interval and destroys editor", async () => {
       const wrapper = createWrapper();
       await flushPromises();
       wrapper.vm.checkRunningInterval = setInterval(() => {}, 1000);
@@ -877,45 +1053,560 @@ describe('FeedManagement.vue', () => {
     });
   });
 
-  describe('getGroups failure', () => {
-    it('shows alert on failure status', async () => {
+  describe("getGroups failure", () => {
+    it("shows alert on failure status", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      axios.get.mockResolvedValueOnce({ data: { status: 'failure', message: 'No groups' } });
+      axios.get.mockResolvedValueOnce({
+        data: { status: "failure", message: "No groups" },
+      });
       wrapper.vm.getGroups();
       await flushPromises();
-      expect(wrapper.vm.alertMessage).toBe('No groups');
+      expect(wrapper.vm.alertMessage).toBe("No groups");
     });
 
-    it('handles API error', async () => {
+    it("handles API error", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      axios.get.mockRejectedValueOnce(new Error('Network'));
+      axios.get.mockRejectedValueOnce(new Error("Network"));
       wrapper.vm.getGroups();
       await flushPromises();
     });
   });
 
-  describe('getFeedlistByGroup failure', () => {
-    it('shows alert on failure status', async () => {
+  describe("getFeedlistByGroup failure", () => {
+    it("shows alert on failure status", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      axios.get.mockResolvedValueOnce({ data: { status: 'failure', message: 'No feeds' } });
-      wrapper.vm.getFeedlistByGroup('g1');
+      axios.get.mockResolvedValueOnce({
+        data: { status: "failure", message: "No feeds" },
+      });
+      wrapper.vm.getFeedlistByGroup("g1");
       await flushPromises();
-      expect(wrapper.vm.alertMessage).toBe('No feeds');
+      expect(wrapper.vm.alertMessage).toBe("No feeds");
     });
   });
 
-  describe('getSiteConfig failure', () => {
-    it('shows alert on failure', async () => {
+  describe("getSiteConfig failure", () => {
+    it("shows alert on failure", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      wrapper.vm.selectedGroupName = 'g1';
-      axios.get.mockResolvedValueOnce({ data: { status: 'failure', message: 'Config error' } });
+      wrapper.vm.selectedGroupName = "g1";
+      axios.get.mockResolvedValueOnce({
+        data: { status: "failure", message: "Config error" },
+      });
       wrapper.vm.getSiteConfig();
       await flushPromises();
-      expect(wrapper.vm.alertMessage).toBe('Config error');
+      expect(wrapper.vm.alertMessage).toBe("Config error");
+    });
+  });
+
+  describe("beforeUnmount cleanup", () => {
+    it("destroys jsonEditor on unmount", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      const destroySpy = jest.fn();
+      wrapper.vm.jsonEditor = { destroy: destroySpy };
+      wrapper.unmount();
+      expect(destroySpy).toHaveBeenCalled();
+    });
+
+    it("clears interval and sets jsonEditor to null", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      const intervalId = setInterval(() => {}, 10000);
+      wrapper.vm.checkRunningInterval = intervalId;
+      wrapper.vm.jsonEditor = { destroy: jest.fn() };
+      wrapper.unmount();
+      // After unmount, interval should be cleared (no error)
+    });
+
+    it("unmounts cleanly without interval or editor", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.checkRunningInterval = null;
+      wrapper.vm.jsonEditor = null;
+      wrapper.unmount();
+    });
+  });
+
+  describe("toggleStatus confirm action execution", () => {
+    it("executes feed toggle on confirm", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      wrapper.vm.toggleStatus("feed");
+      expect(wrapper.vm.showConfirmModal).toBe(true);
+
+      axios.put = jest.fn().mockResolvedValueOnce({
+        data: { status: "success", new_name: "f1_new" },
+      });
+      axios.get.mockResolvedValueOnce({
+        data: { status: "success", feeds: [] },
+      });
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      expect(axios.put).toHaveBeenCalled();
+    });
+
+    it("executes group toggle on confirm", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.toggleStatus("group");
+      expect(wrapper.vm.showConfirmModal).toBe(true);
+
+      axios.put = jest.fn().mockResolvedValueOnce({
+        data: { status: "success", new_name: "g1_new" },
+      });
+      axios.get.mockResolvedValueOnce({
+        data: { status: "success", groups: [] },
+      });
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      expect(axios.put).toHaveBeenCalled();
+    });
+  });
+
+  describe("removeFeed confirm action execution", () => {
+    it("executes feed deletion on confirm", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      wrapper.vm.removeFeed();
+      expect(wrapper.vm.showConfirmModal).toBe(true);
+
+      axios.delete = jest
+        .fn()
+        .mockResolvedValueOnce({ data: { status: "success" } });
+      axios.get.mockResolvedValueOnce({
+        data: { status: "success", feeds: [] },
+      });
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      expect(axios.delete).toHaveBeenCalled();
+    });
+  });
+
+  describe("removeGroup confirm action execution", () => {
+    it("executes group deletion on confirm", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.removeGroup();
+      expect(wrapper.vm.showConfirmModal).toBe(true);
+
+      axios.delete = jest
+        .fn()
+        .mockResolvedValueOnce({ data: { status: "success" } });
+      axios.get.mockResolvedValueOnce({
+        data: { status: "success", groups: [] },
+      });
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      expect(axios.delete).toHaveBeenCalled();
+    });
+  });
+
+  describe("save failure response", () => {
+    it("shows alert on failure status", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.newFeedName = "f1";
+      wrapper.vm.jsonData = {
+        rss: { title: "T", link: "l", description: "D" },
+      };
+      axios.post.mockResolvedValueOnce({
+        data: { status: "failure", message: "Save failed" },
+      });
+      axios.get.mockResolvedValueOnce({
+        data: {
+          status: "success",
+          feed_info: {
+            config: {
+              rss: { title: "T", link: "l", description: "D" },
+              collection: { list_url_list: [] },
+              extraction: {},
+            },
+            collection_info: { collect_date: "", total_item_count: 0 },
+            public_feed_info: { num_items: 0, file_size: 0 },
+            progress_info: {
+              current_index: 0,
+              total_item_count: 0,
+              unit_size_per_day: 0,
+              progress_ratio: 0,
+            },
+          },
+        },
+      });
+      axios.get.mockResolvedValue({
+        data: { status: "success", running_status: false },
+      });
+      wrapper.vm.save();
+      await flushPromises();
+      expect(wrapper.vm.alertMessage).toBe("Save failed");
+    });
+  });
+
+  describe("removelist / removeHtml confirm action execution", () => {
+    it("executes removelist on confirm", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      wrapper.vm.removelist();
+
+      axios.delete = jest
+        .fn()
+        .mockResolvedValueOnce({ data: { status: "success" } });
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      expect(axios.delete).toHaveBeenCalled();
+    });
+
+    it("executes removeHtml on confirm", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      wrapper.vm.removeHtml();
+
+      axios.delete = jest
+        .fn()
+        .mockResolvedValueOnce({ data: { status: "success" } });
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      expect(axios.delete).toHaveBeenCalled();
+    });
+  });
+
+  describe("getFeedInfo with sparse config", () => {
+    it("hides feed-related UI when config has fewer than 3 keys", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      axios.get.mockResolvedValueOnce({
+        data: {
+          status: "success",
+          feed_info: {
+            config: {
+              rss: { title: "T", link: "l", description: "D" },
+            },
+            collection_info: { collect_date: "", total_item_count: 0 },
+            public_feed_info: { num_items: 0, file_size: 0 },
+            progress_info: {
+              current_index: 0,
+              total_item_count: 0,
+              unit_size_per_day: 0,
+              progress_ratio: 0,
+            },
+          },
+        },
+      });
+      axios.get.mockResolvedValue({
+        data: { status: "success", running_status: false },
+      });
+      wrapper.vm.getFeedInfo("g1", "f1");
+      await flushPromises();
+      expect(wrapper.vm.showEditor).toBe(false);
+    });
+
+    it("handles getFeedInfo failure response", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      axios.get.mockResolvedValueOnce({
+        data: { status: "failure", message: "Feed not found" },
+      });
+      wrapper.vm.getFeedInfo("g1", "f1");
+      await flushPromises();
+      expect(wrapper.vm.alertMessage).toBe("Feed not found");
+    });
+
+    it("handles getFeedInfo network error", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      axios.get.mockRejectedValueOnce(new Error("network"));
+      wrapper.vm.getFeedInfo("g1", "f1");
+      await flushPromises();
+      // Should not throw
+    });
+  });
+
+  describe("saveSiteConfig confirm action execution", () => {
+    it("executes saveSiteConfig put on confirm", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.jsonData = { key: "value" };
+      wrapper.vm.saveSiteConfig();
+      expect(wrapper.vm.showConfirmModal).toBe(true);
+
+      axios.put = jest
+        .fn()
+        .mockResolvedValueOnce({ data: { status: "success" } });
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      expect(axios.put).toHaveBeenCalled();
+    });
+
+    it("shows alert on saveSiteConfig failure", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.jsonData = { key: "value" };
+      wrapper.vm.saveSiteConfig();
+
+      axios.put = jest.fn().mockResolvedValueOnce({
+        data: { status: "failure", message: "Config save failed" },
+      });
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      expect(wrapper.vm.alertMessage).toBe("Config save failed");
+    });
+
+    it("handles saveSiteConfig network error", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.jsonData = { key: "value" };
+      wrapper.vm.saveSiteConfig();
+
+      axios.put = jest.fn().mockRejectedValueOnce(new Error("network"));
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      // Should not throw
+    });
+  });
+
+  describe("toggleStatus failure and error paths", () => {
+    it("shows alert on feed toggle failure response", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      wrapper.vm.toggleStatus("feed");
+
+      axios.put = jest.fn().mockResolvedValueOnce({
+        data: { status: "failure", message: "Toggle failed" },
+      });
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      expect(wrapper.vm.alertMessage).toBe("Toggle failed");
+    });
+
+    it("handles feed toggle network error", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      wrapper.vm.toggleStatus("feed");
+
+      axios.put = jest.fn().mockRejectedValueOnce(new Error("network"));
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      // Should not throw
+    });
+
+    it("handles group toggle network error", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.toggleStatus("group");
+
+      axios.put = jest.fn().mockRejectedValueOnce(new Error("network"));
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      // Should not throw
+    });
+  });
+
+  describe("removeFeed/removeGroup failure within confirm action", () => {
+    it("shows alert on removeFeed failure response", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      wrapper.vm.removeFeed();
+
+      axios.delete = jest.fn().mockResolvedValueOnce({
+        data: { status: "failure", message: "Delete failed" },
+      });
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      expect(wrapper.vm.alertMessage).toBe("Delete failed");
+    });
+
+    it("handles removeFeed network error", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      wrapper.vm.removeFeed();
+
+      axios.delete = jest.fn().mockRejectedValueOnce(new Error("network"));
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      // Should not throw
+    });
+
+    it("shows alert on removeGroup failure response", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.removeGroup();
+
+      axios.delete = jest.fn().mockResolvedValueOnce({
+        data: { status: "failure", message: "Group delete failed" },
+      });
+      axios.get.mockResolvedValueOnce({
+        data: { status: "success", groups: [] },
+      });
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      expect(wrapper.vm.alertMessage).toBe("Group delete failed");
+    });
+
+    it("handles removeGroup network error", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.removeGroup();
+
+      axios.delete = jest.fn().mockRejectedValueOnce(new Error("network"));
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      // Should not throw
+    });
+  });
+
+  describe("template rendering with data", () => {
+    it("renders group list items when groups are loaded", async () => {
+      axios.get.mockReset();
+      axios.get.mockResolvedValueOnce({
+        data: {
+          status: "success",
+          groups: [
+            { name: "group1", num_feeds: 3, is_active: true },
+            { name: "_inactive", num_feeds: 1, is_active: false },
+          ],
+        },
+      });
+
+      const wrapper = mount(FeedManagement, {
+        global: { stubs, mocks: { $route: { params: {} } } },
+      });
+      wrapper.vm.jsonData = { rss: { title: "", link: "", description: "" } };
+      await flushPromises();
+
+      expect(wrapper.vm.groups.length).toBe(2);
+      const html = wrapper.html();
+      expect(html).toContain("group1");
+    });
+
+    it("renders feed list items when feeds are loaded", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.showFeedlist = true;
+      wrapper.vm.feeds = [
+        { name: "feed1", title: "Feed One", is_active: true },
+        { name: "_disabled", title: "Disabled", is_active: false },
+      ];
+      await wrapper.vm.$nextTick();
+      const html = wrapper.html();
+      expect(html).toContain("Feed One");
+    });
+
+    it("renders feed info section when editor is shown", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.showFeedInfo = true;
+      wrapper.vm.showNewFeedNameInput = true;
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      wrapper.vm.numCollectionUrls = 3;
+      wrapper.vm.collectDate = "2024-01-15";
+      wrapper.vm.totalItemCount = 100;
+      wrapper.vm.numItemsInResult = 50;
+      wrapper.vm.sizeOfResultFile = 2048;
+      wrapper.vm.lastUploadDate = "2024-01-10";
+      wrapper.vm.currentIndex = 30;
+      wrapper.vm.progressRatio = 30;
+      wrapper.vm.feedCompletionDueDate = "2024-02-01";
+      await wrapper.vm.$nextTick();
+      const html = wrapper.html();
+      expect(html).toContain("g1/f1");
+    });
+
+    it("renders search results when showSearchResult is true", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.showSearchResult = true;
+      wrapper.vm.feeds = [
+        { group_name: "g", feed_name: "f", feed_title: "SearchResult" },
+      ];
+      await flushPromises();
+      const html = wrapper.html();
+      expect(html).toContain("SearchResult");
+    });
+  });
+
+  describe("removelist / removeHtml failure paths", () => {
+    it("shows alert on removelist failure response", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      wrapper.vm.removelist();
+
+      axios.delete = jest.fn().mockResolvedValueOnce({
+        data: { status: "failure", message: "List delete failed" },
+      });
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      expect(wrapper.vm.alertMessage).toBe("List delete failed");
+    });
+
+    it("handles removelist network error", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      wrapper.vm.removelist();
+
+      axios.delete = jest.fn().mockRejectedValueOnce(new Error("network"));
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      // Should not throw
+    });
+
+    it("shows alert on removeHtml failure response", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      wrapper.vm.removeHtml();
+
+      axios.delete = jest.fn().mockResolvedValueOnce({
+        data: { status: "failure", message: "Html delete failed" },
+      });
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      expect(wrapper.vm.alertMessage).toBe("Html delete failed");
+    });
+
+    it("handles removeHtml network error", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      wrapper.vm.removeHtml();
+
+      axios.delete = jest.fn().mockRejectedValueOnce(new Error("network"));
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      // Should not throw
     });
   });
 });

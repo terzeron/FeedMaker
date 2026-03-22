@@ -100,5 +100,52 @@ class UploaderTest(unittest.TestCase):
         self.assertFalse((self.public_dir / rss.name).is_file())
 
 
+# ────────────────────────────────────────────────────────
+# From test_remaining_gaps.py: uploader main() 테스트
+# ────────────────────────────────────────────────────────
+class TestUploaderMain(unittest.TestCase):
+    """main(): lines 47, 51"""
+
+    @patch("bin.uploader.Uploader.upload", return_value=0)
+    def test_main_calls_upload(self, mock_upload):
+        from bin.uploader import main
+
+        with patch("sys.argv", ["uploader.py", "feed.xml"]):
+            ret = main()
+            self.assertEqual(ret, 0)
+            mock_upload.assert_called_once()
+            call_arg = mock_upload.call_args[0][0]
+            self.assertTrue(str(call_arg).endswith("feed.xml"))
+
+
+class TestUploaderNameMain(unittest.TestCase):
+    """if __name__ == '__main__' 블록 (lines 50-51) 커버리지"""
+
+    def test_name_main_block(self):
+        """runpy로 __main__ 블록 실행하여 sys.exit 호출 확인"""
+        import runpy
+        import sys
+        import os
+
+        # WEB_SERVICE_FEED_DIR_PREFIX 환경변수 설정 (Env.get에서 사용)
+        old_env = os.environ.get("WEB_SERVICE_FEED_DIR_PREFIX")
+        os.environ["WEB_SERVICE_FEED_DIR_PREFIX"] = "/tmp"
+        # 이미 로드된 모듈을 제거하여 runpy가 새로 로드하게 함
+        saved = sys.modules.pop("bin.uploader", None)
+        try:
+            with patch("sys.argv", ["uploader.py", "nonexistent.xml"]):
+                with self.assertRaises(SystemExit) as cm:
+                    runpy.run_module("bin.uploader", run_name="__main__", alter_sys=True)
+                # 존재하지 않는 파일이므로 upload()가 -1 반환 → sys.exit(-1)
+                self.assertNotEqual(cm.exception.code, 0)
+        finally:
+            if saved is not None:
+                sys.modules["bin.uploader"] = saved
+            if old_env is None:
+                os.environ.pop("WEB_SERVICE_FEED_DIR_PREFIX", None)
+            else:
+                os.environ["WEB_SERVICE_FEED_DIR_PREFIX"] = old_env
+
+
 if __name__ == "__main__":
     unittest.main()

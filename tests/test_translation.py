@@ -13,12 +13,10 @@ from bin.feed_maker_util import Env
 from unittest.mock import patch, MagicMock
 
 from bin.crawler import Crawler
-from utils.translation import (
-    Translation, TranslationService, TranslationServiceFactory,
-    DeepLTranslationService, AzureTranslationService, GoogleTranslationService,
-    ClaudeTranslationService, TranslationProvider, _is_rate_limit_error,
-    _CACHE_TTL_SECONDS, _is_unrecoverable_error, translate_html,
-)
+from utils.translation import Translation, TranslationService, TranslationServiceFactory, DeepLTranslationService, AzureTranslationService, GoogleTranslationService, ClaudeTranslationService, TranslationProvider, _is_rate_limit_error, _CACHE_TTL_SECONDS, _is_unrecoverable_error, translate_html
+import tempfile
+import io
+import utils.translation
 
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -243,18 +241,11 @@ class TranslationTest(unittest.TestCase):
         """캐시 사용 테스트 (API 호출 없이)"""
         # v2 포맷 캐시 파일 준비
         now = int(time.time())
-        cache = {
-            "_version": 2,
-            "Global warming": {"t": "지구 온난화", "ts": now},
-            "Speed of light": {"t": "빛의 속도", "ts": now},
-        }
+        cache = {"_version": 2, "Global warming": {"t": "지구 온난화", "ts": now}, "Speed of light": {"t": "빛의 속도", "ts": now}}
         self.translation_map_path.write_text(json.dumps(cache, ensure_ascii=False, indent=4), encoding="utf-8")
 
         translator = Translation()
-        result = translator.translate([
-            ("/a", "Global warming"),
-            ("/b", "Speed of light"),
-        ])
+        result = translator.translate([("/a", "Global warming"), ("/b", "Speed of light")])
 
         self.assertIn(("/a", "지구 온난화(Global warming)"), result)
         self.assertIn(("/b", "빛의 속도(Speed of light)"), result)
@@ -263,9 +254,7 @@ class TranslationTest(unittest.TestCase):
     def test_translate_do_save_false(self) -> None:
         """do_save=False 옵션 테스트"""
         translator = Translation()
-        result = translator.translate([
-            ("/a", "Test save false"),
-        ], do_save=False)
+        result = translator.translate([("/a", "Test save false")], do_save=False)
 
         # 번역이 성공했는지 확인
         self.assertEqual(len(result), 1)
@@ -282,9 +271,7 @@ class TranslationTest(unittest.TestCase):
     def test_translate_no_cache_file(self) -> None:
         """캐시 파일이 없는 경우 테스트"""
         translator = Translation()
-        result = translator.translate([
-            ("/a", "Hello world"),
-        ])
+        result = translator.translate([("/a", "Hello world")])
 
         # 번역이 성공했는지 확인
         self.assertEqual(len(result), 1)
@@ -307,17 +294,16 @@ class TranslationTest(unittest.TestCase):
         """캐시된 항목과 새로운 항목이 섞인 경우 테스트"""
         # v2 포맷 캐시에 기존 번역 저장
         now = int(time.time())
-        cache = {
-            "_version": 2,
-            "Global warming": {"t": "지구 온난화", "ts": now},
-        }
+        cache = {"_version": 2, "Global warming": {"t": "지구 온난화", "ts": now}}
         self.translation_map_path.write_text(json.dumps(cache, ensure_ascii=False, indent=4), encoding="utf-8")
 
         translator = Translation()
-        result = translator.translate([
-            ("/a", "Global warming"),  # 캐시된 항목
-            ("/b", "New test text"),   # 새로운 항목
-        ])
+        result = translator.translate(
+            [
+                ("/a", "Global warming"),  # 캐시된 항목
+                ("/b", "New test text"),  # 새로운 항목
+            ]
+        )
 
         # 결과가 2개인지 확인
         self.assertEqual(len(result), 2)
@@ -337,19 +323,15 @@ class TranslationTest(unittest.TestCase):
         """실제 API를 사용한 포괄적인 통합 테스트"""
         # v2 포맷 캐시에 기존 번역 저장
         now = int(time.time())
-        cache = {
-            "_version": 2,
-            "Global warming": {"t": "지구 온난화", "ts": now},
-            "Speed of light": {"t": "빛의 속도", "ts": now},
-        }
+        cache = {"_version": 2, "Global warming": {"t": "지구 온난화", "ts": now}, "Speed of light": {"t": "빛의 속도", "ts": now}}
         self.translation_map_path.write_text(json.dumps(cache, ensure_ascii=False, indent=4), encoding="utf-8")
 
         # 테스트 데이터: 캐시 2건 + 신규 2건
         inputs = [
-            ("/a", "Global warming"),           # 캐시
-            ("/b", "Speed of light"),           # 캐시
+            ("/a", "Global warming"),  # 캐시
+            ("/b", "Speed of light"),  # 캐시
             ("/c", "Artificial intelligence"),  # 신규
-            ("/d", "Law of gravity"),           # 신규
+            ("/d", "Law of gravity"),  # 신규
         ]
 
         translator = Translation()
@@ -397,10 +379,7 @@ class TranslationTest(unittest.TestCase):
     def test_translate_none_values_in_input(self) -> None:
         """입력에 None 값이 포함된 경우 테스트"""
         translator = Translation()
-        result = translator.translate([
-            ("/a", ""),
-            ("/b", "Valid text"),
-        ])
+        result = translator.translate([("/a", ""), ("/b", "Valid text")])
 
         # None은 빈 문자열로 변환되어 처리됨
         self.assertEqual(len(result), 2)
@@ -416,10 +395,12 @@ class TranslationTest(unittest.TestCase):
     def test_translate_duplicate_texts(self) -> None:
         """중복된 텍스트 처리 테스트"""
         translator = Translation()
-        result = translator.translate([
-            ("/a", "Hello"),
-            ("/b", "Hello"),  # 중복
-        ])
+        result = translator.translate(
+            [
+                ("/a", "Hello"),
+                ("/b", "Hello"),  # 중복
+            ]
+        )
 
         # 현재 구현에서는 중복된 텍스트는 마지막 링크만 처리됨
         # 이는 의도된 동작으로 보임 (같은 텍스트는 한 번만 번역)
@@ -432,9 +413,7 @@ class TranslationTest(unittest.TestCase):
     def test_translate_special_characters(self) -> None:
         """특수 문자 처리 테스트"""
         translator = Translation()
-        result = translator.translate([
-            ("/a", "Hello & World"),
-        ])
+        result = translator.translate([("/a", "Hello & World")])
 
         # 특수 문자가 포함된 텍스트도 번역됨
         self.assertEqual(len(result), 1)
@@ -492,12 +471,7 @@ class CreateServicesTest(unittest.TestCase):
 
     def test_priority_order(self) -> None:
         """모든 키가 설정된 경우 Azure → DeepL → Google → Claude 순서"""
-        env = {
-            "AZURE_API_KEY": "az-key",
-            "DEEPL_API_KEY": "dl-key",
-            "GOOGLE_API_KEY": "gg-key",
-            "ANTHROPIC_API_KEY": "cl-key",
-        }
+        env = {"AZURE_API_KEY": "az-key", "DEEPL_API_KEY": "dl-key", "GOOGLE_API_KEY": "gg-key", "ANTHROPIC_API_KEY": "cl-key"}
         with patch.object(Env, "get", side_effect=lambda k, default="": env.get(k, default)):
             services = TranslationServiceFactory.create_services()
         self.assertEqual(len(services), 4)
@@ -615,9 +589,7 @@ class ClaudeRobustnessTest(unittest.TestCase):
         """반환 개수 < 배치 크기여도 앞에서부터 매핑"""
         svc = ClaudeTranslationService("fake-key")
         # 3개 요청에 2개만 응답하는 시나리오를 mock
-        response_json = json.dumps({
-            "content": [{"type": "text", "text": '"가", "나"]'}]
-        })
+        response_json = json.dumps({"content": [{"type": "text", "text": '"가", "나"]'}]})
         with patch.object(Crawler, "run", return_value=(response_json, "", {})):
             result = svc.translate_batch(["a", "b", "c"])
         # a→가, b→나만 매핑, c는 누락
@@ -626,9 +598,7 @@ class ClaudeRobustnessTest(unittest.TestCase):
     def test_empty_string_excluded(self) -> None:
         """빈 문자열 번역은 제외"""
         svc = ClaudeTranslationService("fake-key")
-        response_json = json.dumps({
-            "content": [{"type": "text", "text": '"가", ""]'}]
-        })
+        response_json = json.dumps({"content": [{"type": "text", "text": '"가", ""]'}]})
         with patch.object(Crawler, "run", return_value=(response_json, "", {})):
             result = svc.translate_batch(["a", "b"])
         self.assertEqual(result, {"a": "가"})
@@ -636,9 +606,7 @@ class ClaudeRobustnessTest(unittest.TestCase):
     def test_same_as_original_kept(self) -> None:
         """원문과 동일한 번역도 결과에 포함 (다국어 원문 지원)"""
         svc = ClaudeTranslationService("fake-key")
-        response_json = json.dumps({
-            "content": [{"type": "text", "text": '"가", "b"]'}]
-        })
+        response_json = json.dumps({"content": [{"type": "text", "text": '"가", "b"]'}]})
         with patch.object(Crawler, "run", return_value=(response_json, "", {})):
             result = svc.translate_batch(["a", "b"])
         self.assertEqual(result, {"a": "가", "b": "b"})
@@ -647,10 +615,7 @@ class ClaudeRobustnessTest(unittest.TestCase):
         """max_tokens로 잘린 JSON 응답을 마지막 완전한 항목까지 복구"""
         svc = ClaudeTranslationService("fake-key")
         # 잘린 JSON: 세 번째 항목이 불완전
-        response_json = json.dumps({
-            "stop_reason": "max_tokens",
-            "content": [{"type": "text", "text": '"가", "나", "다라마'}]
-        })
+        response_json = json.dumps({"stop_reason": "max_tokens", "content": [{"type": "text", "text": '"가", "나", "다라마'}]})
         with patch.object(Crawler, "run", return_value=(response_json, "", {})):
             result = svc.translate_batch(["a", "b", "c"])
         self.assertEqual(result, {"a": "가", "b": "나"})
@@ -658,10 +623,7 @@ class ClaudeRobustnessTest(unittest.TestCase):
     def test_truncated_json_no_complete_item(self) -> None:
         """복구 불가능한 잘린 JSON은 JSONDecodeError 발생 → continue"""
         svc = ClaudeTranslationService("fake-key")
-        response_json = json.dumps({
-            "stop_reason": "max_tokens",
-            "content": [{"type": "text", "text": '"가나다라마'}]
-        })
+        response_json = json.dumps({"stop_reason": "max_tokens", "content": [{"type": "text", "text": '"가나다라마'}]})
         with patch.object(Crawler, "run", return_value=(response_json, "", {})):
             result = svc.translate_batch(["a"])
         self.assertEqual(result, {})
@@ -669,24 +631,16 @@ class ClaudeRobustnessTest(unittest.TestCase):
     def test_stop_reason_max_tokens_warning(self) -> None:
         """stop_reason이 max_tokens이면 경고 로그 출력"""
         svc = ClaudeTranslationService("fake-key")
-        response_json = json.dumps({
-            "stop_reason": "max_tokens",
-            "content": [{"type": "text", "text": '"가"]'}]
-        })
-        with patch.object(Crawler, "run", return_value=(response_json, "", {})), \
-             self.assertLogs(level="WARNING") as cm:
+        response_json = json.dumps({"stop_reason": "max_tokens", "content": [{"type": "text", "text": '"가"]'}]})
+        with patch.object(Crawler, "run", return_value=(response_json, "", {})), self.assertLogs(level="WARNING") as cm:
             svc.translate_batch(["a"])
         self.assertTrue(any("max_tokens" in msg for msg in cm.output))
 
     def test_api_error_response_aborts(self) -> None:
         """HTTP 200이지만 type=error인 API 에러 응답은 전체 중단"""
         svc = ClaudeTranslationService("fake-key")
-        error_json = json.dumps({
-            "type": "error",
-            "error": {"type": "overloaded_error", "message": "Overloaded"}
-        })
-        with patch.object(Crawler, "run", return_value=(error_json, "", {})) as mock_run, \
-             self.assertLogs(level="WARNING") as cm:
+        error_json = json.dumps({"type": "error", "error": {"type": "overloaded_error", "message": "Overloaded"}})
+        with patch.object(Crawler, "run", return_value=(error_json, "", {})) as mock_run, self.assertLogs(level="WARNING") as cm:
             # 배치 2개 분량 (MAX_ITEMS_PER_BATCH=100이므로 101개)
             result = svc.translate_batch([f"t{i}" for i in range(101)])
         self.assertEqual(result, {})
@@ -733,11 +687,7 @@ class CacheTTLTest(unittest.TestCase):
         """TTL 초과 항목은 로드 시 제거"""
         now = 1_700_000_000
         expired_ts = now - _CACHE_TTL_SECONDS - 1  # 7일 + 1초 전
-        v2_cache = {
-            "_version": 2,
-            "Old": {"t": "오래된", "ts": expired_ts},
-            "New": {"t": "새로운", "ts": now - 100},
-        }
+        v2_cache = {"_version": 2, "Old": {"t": "오래된", "ts": expired_ts}, "New": {"t": "새로운", "ts": now - 100}}
         self.cache_path.write_text(json.dumps(v2_cache, ensure_ascii=False), encoding="utf-8")
 
         with patch("utils.translation.time") as mock_time:
@@ -753,10 +703,7 @@ class CacheTTLTest(unittest.TestCase):
         """TTL 미만 항목은 유지"""
         now = 1_700_000_000
         recent_ts = now - _CACHE_TTL_SECONDS + 3600  # 만료 1시간 전
-        v2_cache = {
-            "_version": 2,
-            "Recent": {"t": "최근", "ts": recent_ts},
-        }
+        v2_cache = {"_version": 2, "Recent": {"t": "최근", "ts": recent_ts}}
         self.cache_path.write_text(json.dumps(v2_cache, ensure_ascii=False), encoding="utf-8")
 
         with patch("utils.translation.time") as mock_time:
@@ -770,10 +717,7 @@ class CacheTTLTest(unittest.TestCase):
         """만료 항목은 재번역 대상이 됨"""
         now = 1_700_000_000
         expired_ts = now - _CACHE_TTL_SECONDS - 1
-        v2_cache = {
-            "_version": 2,
-            "Hello": {"t": "안녕하세요", "ts": expired_ts},
-        }
+        v2_cache = {"_version": 2, "Hello": {"t": "안녕하세요", "ts": expired_ts}}
         self.cache_path.write_text(json.dumps(v2_cache, ensure_ascii=False), encoding="utf-8")
 
         mock_svc = MagicMock()
@@ -818,18 +762,13 @@ class TranslateHtmlTest(unittest.TestCase):
             cached_map = {}
         if ts_cache is None:
             ts_cache = {}
-        return (
-            patch.object(Translation, "_load_translation_cache", return_value=(cached_map, ts_cache)),
-            patch.object(Translation, "_save_translation_cache"),
-        )
+        return (patch.object(Translation, "_load_translation_cache", return_value=(cached_map, ts_cache)), patch.object(Translation, "_save_translation_cache"))
 
     def test_basic_text_translation(self) -> None:
         """기본 텍스트 번역"""
         html = "<p>Hello World</p>"
         p_load, p_save = self._patch_cache()
-        with p_load, p_save, \
-             patch.object(Translation, "__init__", return_value=None), \
-             patch.object(Translation, "_translate_with_fallback", return_value={"Hello World": "안녕 세계"}):
+        with p_load, p_save, patch.object(Translation, "__init__", return_value=None), patch.object(Translation, "_translate_with_fallback", return_value={"Hello World": "안녕 세계"}):
             result, untranslated = translate_html(html)
         self.assertIn("안녕 세계", result)
         self.assertNotIn("Hello World", result)
@@ -839,9 +778,7 @@ class TranslateHtmlTest(unittest.TestCase):
         """script, style 태그 내용은 번역하지 않음"""
         html = "<script>var x = 1;</script><style>.a{color:red}</style><p>Hello</p>"
         p_load, p_save = self._patch_cache()
-        with p_load, p_save, \
-             patch.object(Translation, "__init__", return_value=None), \
-             patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}) as mock_fb:
+        with p_load, p_save, patch.object(Translation, "__init__", return_value=None), patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}) as mock_fb:
             result, _ = translate_html(html)
         # translate_with_fallback에 전달된 텍스트에 script/style 내용이 없어야 함
         called_texts = mock_fb.call_args[0][0]
@@ -853,9 +790,7 @@ class TranslateHtmlTest(unittest.TestCase):
         """code, pre, textarea 태그 내용은 번역하지 않음"""
         html = "<code>print()</code><pre>logs</pre><textarea>input</textarea><p>Hello</p>"
         p_load, p_save = self._patch_cache()
-        with p_load, p_save, \
-             patch.object(Translation, "__init__", return_value=None), \
-             patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}) as mock_fb:
+        with p_load, p_save, patch.object(Translation, "__init__", return_value=None), patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}) as mock_fb:
             translate_html(html)
         called_texts = mock_fb.call_args[0][0]
         self.assertNotIn("print()", called_texts)
@@ -866,9 +801,7 @@ class TranslateHtmlTest(unittest.TestCase):
         """HTML 구조 유지"""
         html = '<div class="main"><a href="/link">Click here</a></div>'
         p_load, p_save = self._patch_cache()
-        with p_load, p_save, \
-             patch.object(Translation, "__init__", return_value=None), \
-             patch.object(Translation, "_translate_with_fallback", return_value={"Click here": "여기를 클릭"}):
+        with p_load, p_save, patch.object(Translation, "__init__", return_value=None), patch.object(Translation, "_translate_with_fallback", return_value={"Click here": "여기를 클릭"}):
             result, _ = translate_html(html)
         self.assertIn('<a href="/link">', result)
         self.assertIn("여기를 클릭", result)
@@ -877,9 +810,7 @@ class TranslateHtmlTest(unittest.TestCase):
         """빈 HTML"""
         html = "<div></div>"
         p_load, p_save = self._patch_cache()
-        with p_load, p_save, \
-             patch.object(Translation, "__init__", return_value=None), \
-             patch.object(Translation, "_translate_with_fallback", return_value={}) as mock_fb:
+        with p_load, p_save, patch.object(Translation, "__init__", return_value=None), patch.object(Translation, "_translate_with_fallback", return_value={}) as mock_fb:
             result, untranslated = translate_html(html)
         mock_fb.assert_not_called()
         self.assertEqual(untranslated, 0)
@@ -888,9 +819,7 @@ class TranslateHtmlTest(unittest.TestCase):
         """공백만 있는 텍스트는 번역하지 않음"""
         html = "<p>  \n  </p><p>Hello</p>"
         p_load, p_save = self._patch_cache()
-        with p_load, p_save, \
-             patch.object(Translation, "__init__", return_value=None), \
-             patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}) as mock_fb:
+        with p_load, p_save, patch.object(Translation, "__init__", return_value=None), patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}) as mock_fb:
             translate_html(html)
         called_texts = mock_fb.call_args[0][0]
         self.assertEqual(called_texts, ["Hello"])
@@ -900,9 +829,7 @@ class TranslateHtmlTest(unittest.TestCase):
         html = "<h1>Title</h1><p>Body text</p><span>Footer</span>"
         translations = {"Title": "제목", "Body text": "본문", "Footer": "바닥글"}
         p_load, p_save = self._patch_cache()
-        with p_load, p_save, \
-             patch.object(Translation, "__init__", return_value=None), \
-             patch.object(Translation, "_translate_with_fallback", return_value=translations):
+        with p_load, p_save, patch.object(Translation, "__init__", return_value=None), patch.object(Translation, "_translate_with_fallback", return_value=translations):
             result, _ = translate_html(html)
         self.assertIn("제목", result)
         self.assertIn("본문", result)
@@ -912,9 +839,7 @@ class TranslateHtmlTest(unittest.TestCase):
         """중복 텍스트는 한 번만 번역 요청"""
         html = "<p>Hello</p><p>Hello</p>"
         p_load, p_save = self._patch_cache()
-        with p_load, p_save, \
-             patch.object(Translation, "__init__", return_value=None), \
-             patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}) as mock_fb:
+        with p_load, p_save, patch.object(Translation, "__init__", return_value=None), patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}) as mock_fb:
             result, _ = translate_html(html)
         called_texts = mock_fb.call_args[0][0]
         self.assertEqual(called_texts.count("Hello"), 1)
@@ -924,9 +849,7 @@ class TranslateHtmlTest(unittest.TestCase):
         """번역되지 않은 텍스트는 원문 유지"""
         html = "<p>Hello</p><p>World</p>"
         p_load, p_save = self._patch_cache()
-        with p_load, p_save, \
-             patch.object(Translation, "__init__", return_value=None), \
-             patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}):
+        with p_load, p_save, patch.object(Translation, "__init__", return_value=None), patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}):
             result, untranslated = translate_html(html)
         self.assertIn("안녕", result)
         self.assertIn("World", result)
@@ -936,12 +859,9 @@ class TranslateHtmlTest(unittest.TestCase):
         """캐시에 있는 텍스트는 API 호출하지 않음"""
         html = "<p>Hello</p><p>World</p>"
         cached = {"Hello": "안녕", "World": "세계"}
-        ts = {"Hello": {"t": "안녕", "ts": int(time.time())},
-              "World": {"t": "세계", "ts": int(time.time())}}
+        ts = {"Hello": {"t": "안녕", "ts": int(time.time())}, "World": {"t": "세계", "ts": int(time.time())}}
         p_load, p_save = self._patch_cache(cached, ts)
-        with p_load, p_save, \
-             patch.object(Translation, "__init__", return_value=None), \
-             patch.object(Translation, "_translate_with_fallback", return_value={}) as mock_fb:
+        with p_load, p_save, patch.object(Translation, "__init__", return_value=None), patch.object(Translation, "_translate_with_fallback", return_value={}) as mock_fb:
             result, untranslated = translate_html(html)
         mock_fb.assert_not_called()
         self.assertIn("안녕", result)
@@ -953,9 +873,7 @@ class TranslateHtmlTest(unittest.TestCase):
         html = "<p>Hello</p><p>World</p><p>Foo</p>"
         p_load, p_save = self._patch_cache()
         # Hello만 번역 성공, World/Foo는 실패
-        with p_load, p_save as mock_save, \
-             patch.object(Translation, "__init__", return_value=None), \
-             patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}):
+        with p_load, p_save as mock_save, patch.object(Translation, "__init__", return_value=None), patch.object(Translation, "_translate_with_fallback", return_value={"Hello": "안녕"}):
             result, untranslated = translate_html(html)
         # 저장이 호출되었는지 확인
         mock_save.assert_called_once()
@@ -999,6 +917,740 @@ class ProviderFilterTest(unittest.TestCase):
         """provider 미지정 시 모든 서비스 반환"""
         t = Translation()
         self.assertEqual(len(t.services), 3)
+
+
+class TestDeepLTranslationService(unittest.TestCase):
+    def setUp(self) -> None:
+        self.svc = DeepLTranslationService(api_key="fake-deepl-key")
+
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_translate_batch_success(self, mock_crawler_cls: MagicMock, mock_sleep: MagicMock) -> None:
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        response = json.dumps({"translations": [{"text": "안녕"}, {"text": "세계"}]})
+        mock_client.run.return_value = (response, "", 200)
+
+        result = self.svc.translate_batch(["hello", "world"])
+        self.assertEqual(result, {"hello": "안녕", "world": "세계"})
+
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_translate_batch_rate_limit_breaks(self, mock_crawler_cls: MagicMock, mock_sleep: MagicMock) -> None:
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        mock_client.run.return_value = ("", "status code '429'", 429)
+
+        result = self.svc.translate_batch(["hello"])
+        self.assertEqual(result, {})
+
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_translate_batch_non_rate_limit_error_continues(self, mock_crawler_cls: MagicMock, mock_sleep: MagicMock) -> None:
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        # First call: non-unrecoverable error (500), second call: success
+        response = json.dumps({"translations": [{"text": "세계"}]})
+        mock_client.run.side_effect = [("", "status code '500'", 500), (response, "", 200)]
+
+        result = self.svc.translate_batch(["hello", "world"])
+        # With batch size 20, both go in one batch, so first call fails and continues
+        # but since both texts are in one batch, only one call is made per batch
+        # Actually chunk_by_items with max 20 puts both in one batch
+        # So only one call, which fails, then continues to next batch (none)
+        self.assertEqual(result, {})
+
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_translate_batch_request_exception(self, mock_crawler_cls: MagicMock, mock_sleep: MagicMock) -> None:
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        mock_client.run.side_effect = Exception("connection error")
+
+        result = self.svc.translate_batch(["hello"])
+        self.assertEqual(result, {})
+
+
+class TestAzureTranslationService(unittest.TestCase):
+    def setUp(self) -> None:
+        self.svc = AzureTranslationService(api_key="fake-azure-key")
+
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_translate_batch_success(self, mock_crawler_cls: MagicMock, mock_sleep: MagicMock) -> None:
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        response = json.dumps([{"translations": [{"text": "안녕"}]}, {"translations": [{"text": "세계"}]}])
+        mock_client.run.return_value = (response, "", 200)
+
+        result = self.svc.translate_batch(["hello", "world"])
+        self.assertEqual(result, {"hello": "안녕", "world": "세계"})
+
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_translate_batch_unrecoverable_error_breaks(self, mock_crawler_cls: MagicMock, mock_sleep: MagicMock) -> None:
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        mock_client.run.return_value = ("", "status code '403'", 403)
+
+        result = self.svc.translate_batch(["hello"])
+        self.assertEqual(result, {})
+
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_translate_batch_request_exception(self, mock_crawler_cls: MagicMock, mock_sleep: MagicMock) -> None:
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        mock_client.run.side_effect = Exception("timeout")
+
+        result = self.svc.translate_batch(["hello"])
+        self.assertEqual(result, {})
+
+
+class TestGoogleTranslationService(unittest.TestCase):
+    def setUp(self) -> None:
+        self.svc = GoogleTranslationService(api_key="fake-google-key")
+
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_translate_batch_success(self, mock_crawler_cls: MagicMock, mock_sleep: MagicMock) -> None:
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        response = json.dumps({"data": {"translations": [{"translatedText": "안녕"}, {"translatedText": "세계"}]}})
+        mock_client.run.return_value = (response, "", 200)
+
+        result = self.svc.translate_batch(["hello", "world"])
+        self.assertEqual(result, {"hello": "안녕", "world": "세계"})
+
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_translate_batch_error_empty_response(self, mock_crawler_cls: MagicMock, mock_sleep: MagicMock) -> None:
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        mock_client.run.return_value = ("", "status code '401'", 401)
+
+        result = self.svc.translate_batch(["hello"])
+        self.assertEqual(result, {})
+
+
+class TestClaudeTranslationService(unittest.TestCase):
+    def setUp(self) -> None:
+        self.svc = ClaudeTranslationService(api_key="fake-claude-key")
+
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_translate_batch_success(self, mock_crawler_cls: MagicMock, mock_sleep: MagicMock) -> None:
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        response = json.dumps({"content": [{"type": "text", "text": '"안녕", "세계"]'}], "stop_reason": "end_turn"})
+        mock_client.run.return_value = (response, "", 200)
+
+        result = self.svc.translate_batch(["hello", "world"])
+        self.assertEqual(result, {"hello": "안녕", "world": "세계"})
+
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_translate_batch_type_error_response(self, mock_crawler_cls: MagicMock, mock_sleep: MagicMock) -> None:
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        response = json.dumps({"type": "error", "error": {"type": "overloaded_error", "message": "overloaded"}})
+        mock_client.run.return_value = (response, "", 200)
+
+        result = self.svc.translate_batch(["hello"])
+        self.assertEqual(result, {})
+
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_translate_batch_max_tokens_truncation_with_recovery(self, mock_crawler_cls: MagicMock, mock_sleep: MagicMock) -> None:
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        # Truncated JSON: missing closing bracket, but has a recoverable last comma
+        response = json.dumps({"content": [{"type": "text", "text": '"안녕", "세계", "잘린텍'}], "stop_reason": "max_tokens"})
+        mock_client.run.return_value = (response, "", 200)
+
+        result = self.svc.translate_batch(["hello", "world", "truncated"])
+        # Recovery should parse ["안녕", "세계"] (up to last complete item)
+        self.assertEqual(result, {"hello": "안녕", "world": "세계"})
+
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_translate_batch_empty_response(self, mock_crawler_cls: MagicMock, mock_sleep: MagicMock) -> None:
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        mock_client.run.return_value = ("", "status code '529'", 529)
+
+        result = self.svc.translate_batch(["hello"])
+        self.assertEqual(result, {})
+
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_translate_batch_unexpected_format(self, mock_crawler_cls: MagicMock, mock_sleep: MagicMock) -> None:
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        # Returns a dict instead of list after prefill reconstruction
+        response = json.dumps({"content": [{"type": "text", "text": '{"key": "value"}]'}], "stop_reason": "end_turn"})
+        mock_client.run.return_value = (response, "", 200)
+
+        result = self.svc.translate_batch(["hello"])
+        # "[" + '{"key": "value"}]' => '[{"key": "value"}]' which is a list of dict, not list of str
+        # isinstance check on items will filter out non-str items
+        self.assertEqual(result, {})
+
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_translate_batch_general_exception(self, mock_crawler_cls: MagicMock, mock_sleep: MagicMock) -> None:
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        mock_client.run.side_effect = RuntimeError("unexpected")
+
+        result = self.svc.translate_batch(["hello"])
+        self.assertEqual(result, {})
+
+
+class TestTranslationServiceFactory(unittest.TestCase):
+    @patch("utils.translation.Env.get")
+    def test_create_services_with_all_keys(self, mock_env_get: MagicMock) -> None:
+        mock_env_get.side_effect = lambda k: {"AZURE_API_KEY": "azure-key", "DEEPL_API_KEY": "deepl-key", "GOOGLE_API_KEY": "google-key", "ANTHROPIC_API_KEY": "claude-key"}.get(k, "")
+
+        services = TranslationServiceFactory.create_services()
+        self.assertEqual(len(services), 4)
+        self.assertIsInstance(services[0], AzureTranslationService)
+        self.assertIsInstance(services[1], DeepLTranslationService)
+        self.assertIsInstance(services[2], GoogleTranslationService)
+        self.assertIsInstance(services[3], ClaudeTranslationService)
+
+    @patch("utils.translation.Env.get")
+    def test_create_services_with_no_keys(self, mock_env_get: MagicMock) -> None:
+        mock_env_get.return_value = ""
+
+        services = TranslationServiceFactory.create_services()
+        self.assertEqual(len(services), 0)
+
+    @patch("utils.translation.Env.get")
+    def test_create_services_partial_keys(self, mock_env_get: MagicMock) -> None:
+        mock_env_get.side_effect = lambda k: "deepl-key" if k == "DEEPL_API_KEY" else ""
+
+        services = TranslationServiceFactory.create_services()
+        self.assertEqual(len(services), 1)
+        self.assertIsInstance(services[0], DeepLTranslationService)
+
+
+class TestTranslationCacheLoadSave(unittest.TestCase):
+    def setUp(self) -> None:
+        self.work_dir = Path(Env.get("FM_WORK_DIR")) / "translation_ext_test"
+        self.work_dir.mkdir(parents=True, exist_ok=True)
+        self.cache_path = self.work_dir / "translation_map.json"
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.work_dir, ignore_errors=True)
+
+    def test_load_nonexistent_file(self) -> None:
+        flat, ts = Translation._load_translation_cache(self.cache_path)
+        self.assertEqual(flat, {})
+        self.assertEqual(ts, {})
+
+    def test_load_v1_format_migration(self) -> None:
+        v1_data = {"hello": "안녕", "world": "세계"}
+        with self.cache_path.open("w", encoding="utf-8") as f:
+            json.dump(v1_data, f)
+
+        flat, ts = Translation._load_translation_cache(self.cache_path)
+        self.assertEqual(flat, {"hello": "안녕", "world": "세계"})
+        # ts should have timestamps
+        self.assertIn("hello", ts)
+        self.assertIn("ts", ts["hello"])
+        self.assertEqual(ts["hello"]["t"], "안녕")
+
+    def test_load_v2_format(self) -> None:
+        now = int(time.time())
+        v2_data = {"_version": 2, "hello": {"t": "안녕", "ts": now}, "world": {"t": "세계", "ts": now}}
+        with self.cache_path.open("w", encoding="utf-8") as f:
+            json.dump(v2_data, f)
+
+        flat, ts = Translation._load_translation_cache(self.cache_path)
+        self.assertEqual(flat, {"hello": "안녕", "world": "세계"})
+        self.assertEqual(len(ts), 2)
+
+    def test_load_v2_expired_entries_purged(self) -> None:
+        old_ts = int(time.time()) - _CACHE_TTL_SECONDS - 100
+        now = int(time.time())
+        v2_data = {"_version": 2, "old_entry": {"t": "오래된", "ts": old_ts}, "new_entry": {"t": "새로운", "ts": now}}
+        with self.cache_path.open("w", encoding="utf-8") as f:
+            json.dump(v2_data, f)
+
+        flat, ts = Translation._load_translation_cache(self.cache_path)
+        self.assertNotIn("old_entry", flat)
+        self.assertIn("new_entry", flat)
+
+    def test_save_translation_cache(self) -> None:
+        now = int(time.time())
+        ts_cache = {"hello": {"t": "안녕", "ts": now}}
+        Translation._save_translation_cache(self.cache_path, ts_cache)
+
+        with self.cache_path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        self.assertEqual(data["_version"], 2)
+        self.assertEqual(data["hello"]["t"], "안녕")
+
+
+class TestTranslateWithFallback(unittest.TestCase):
+    @patch("utils.translation.TranslationServiceFactory.create_services")
+    def test_single_service_success(self, mock_create: MagicMock) -> None:
+        mock_svc = MagicMock()
+        mock_svc.provider = TranslationProvider.DEEPL
+        mock_svc.translate_batch.return_value = {"hello": "안녕"}
+        mock_create.return_value = [mock_svc]
+
+        translator = Translation.__new__(Translation)
+        translator.services = [mock_svc]
+        translator.service = mock_svc
+
+        result = translator._translate_with_fallback(["hello"])
+        self.assertEqual(result, {"hello": "안녕"})
+
+    @patch("utils.translation.TranslationServiceFactory.create_services")
+    def test_fallback_to_second_service(self, mock_create: MagicMock) -> None:
+        mock_svc1 = MagicMock()
+        mock_svc1.provider = TranslationProvider.DEEPL
+        mock_svc1.translate_batch.return_value = {}  # fails
+
+        mock_svc2 = MagicMock()
+        mock_svc2.provider = TranslationProvider.GOOGLE
+        mock_svc2.translate_batch.return_value = {"hello": "안녕"}
+
+        mock_create.return_value = [mock_svc1, mock_svc2]
+
+        translator = Translation.__new__(Translation)
+        translator.services = [mock_svc1, mock_svc2]
+        translator.service = mock_svc1
+
+        result = translator._translate_with_fallback(["hello"])
+        self.assertEqual(result, {"hello": "안녕"})
+        mock_svc2.translate_batch.assert_called_once_with(["hello"])
+
+    @patch("utils.translation.TranslationServiceFactory.create_services")
+    def test_all_services_fail(self, mock_create: MagicMock) -> None:
+        mock_svc1 = MagicMock()
+        mock_svc1.provider = TranslationProvider.DEEPL
+        mock_svc1.translate_batch.return_value = {}
+
+        mock_svc2 = MagicMock()
+        mock_svc2.provider = TranslationProvider.GOOGLE
+        mock_svc2.translate_batch.return_value = {}
+
+        mock_create.return_value = [mock_svc1, mock_svc2]
+
+        translator = Translation.__new__(Translation)
+        translator.services = [mock_svc1, mock_svc2]
+        translator.service = mock_svc1
+
+        result = translator._translate_with_fallback(["hello"])
+        self.assertEqual(result, {})
+
+
+class TestTranslateHtml(unittest.TestCase):
+    def setUp(self) -> None:
+        self.work_dir = Path(Env.get("FM_WORK_DIR")) / "translate_html_test"
+        self.work_dir.mkdir(parents=True, exist_ok=True)
+        self.cache_path = self.work_dir / "translation_map.json"
+        self._old_env = os.environ.get("FM_WORK_DIR", None)
+        os.environ["FM_WORK_DIR"] = str(self.work_dir)
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.work_dir, ignore_errors=True)
+        if self._old_env is not None:
+            os.environ["FM_WORK_DIR"] = self._old_env
+
+    @patch("utils.translation.TranslationServiceFactory.create_services")
+    def test_normal_html(self, mock_create: MagicMock) -> None:
+        mock_svc = MagicMock()
+        mock_svc.provider = TranslationProvider.DEEPL
+        mock_svc.translate_batch.return_value = {"Hello": "안녕"}
+        mock_create.return_value = [mock_svc]
+
+        html = "<p>Hello</p>"
+        result, untranslated = translate_html(html)
+        self.assertIn("안녕", result)
+        self.assertEqual(untranslated, 0)
+
+    @patch("utils.translation.TranslationServiceFactory.create_services")
+    def test_empty_text_nodes(self, mock_create: MagicMock) -> None:
+        mock_create.return_value = []
+        html = "<p>   </p><div>\n</div>"
+        result, untranslated = translate_html(html)
+        self.assertEqual(untranslated, 0)
+
+    @patch("utils.translation.TranslationServiceFactory.create_services")
+    def test_skip_tags(self, mock_create: MagicMock) -> None:
+        mock_svc = MagicMock()
+        mock_svc.provider = TranslationProvider.DEEPL
+        mock_svc.translate_batch.return_value = {"Visible": "보이는"}
+        mock_create.return_value = [mock_svc]
+
+        html = "<p>Visible</p><script>var x = 1;</script><style>body{}</style><code>code</code>"
+        result, untranslated = translate_html(html)
+        # script/style/code content should not be translated
+        mock_svc.translate_batch.assert_called_once()
+        call_args = mock_svc.translate_batch.call_args[0][0]
+        self.assertIn("Visible", call_args)
+        self.assertNotIn("var x = 1;", call_args)
+        self.assertNotIn("body{}", call_args)
+        self.assertNotIn("code", call_args)
+
+
+# ────────────────────────────────────────────────────────
+# From test_final_gaps.py: translation 추가 테스트
+# ────────────────────────────────────────────────────────
+class TestAzureTranslateBatchException(unittest.TestCase):
+    """Lines 191-193: Azure translate_batch request exception."""
+
+    @patch("utils.translation.Env")
+    def test_azure_exception(self, mock_env):
+        mock_env.get.return_value = "fake_key"
+        svc = AzureTranslationService(api_key="fake")
+        with patch("utils.translation.Crawler") as mock_crawler_cls:
+            mock_client = MagicMock()
+            mock_client.run.side_effect = RuntimeError("connection error")
+            mock_crawler_cls.return_value = mock_client
+            result = svc.translate_batch(["hello"])
+        self.assertEqual(result, {})
+
+
+class TestClaudeTranslateBatchGeneralException(unittest.TestCase):
+    """Line 264: Claude translate_batch unexpected format (not list)."""
+
+    @patch("utils.translation.Env")
+    def test_claude_general_exception(self, mock_env):
+        mock_env.get.return_value = "fake_key"
+        svc = ClaudeTranslationService(api_key="fake")
+
+        with patch("utils.translation.Crawler") as mock_crawler_cls:
+            mock_client = MagicMock()
+            mock_client.run.side_effect = Exception("general error")
+            mock_crawler_cls.return_value = mock_client
+            result = svc.translate_batch(["hello"])
+        self.assertEqual(result, {})
+
+
+class TestClaudeTranslateBatchNonListFormat(unittest.TestCase):
+    """Line 264: Claude returns non-list translations."""
+
+    @patch("utils.translation.time")
+    @patch("utils.translation.Env")
+    def test_claude_non_list_response(self, mock_env, mock_time):
+        mock_env.get.return_value = "fake_key"
+        mock_time.sleep.return_value = None
+        mock_time.time.return_value = 1000
+        svc = ClaudeTranslationService(api_key="fake")
+
+        response_data = {"content": [{"type": "text", "text": "null]"}]}
+
+        with patch("utils.translation.Crawler") as mock_crawler_cls:
+            mock_client = MagicMock()
+            mock_client.run.return_value = (json.dumps(response_data), "", 200)
+            mock_crawler_cls.return_value = mock_client
+
+            result = svc.translate_batch(["hello"])
+        self.assertEqual(result, {})
+
+
+class TestTranslationCacheV1Format(unittest.TestCase):
+    """Line 308: Translation cache v1 format migration."""
+
+    @patch("utils.translation.Env")
+    def test_v1_cache_migration(self, mock_env):
+        mock_env.get.return_value = "/tmp"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_file = Path(tmpdir) / "translation_map.json"
+            v1_data = {"hello": "안녕하세요", "world": "세계"}
+            cache_file.write_text(json.dumps(v1_data))
+
+            flat, ts_cache = Translation._load_translation_cache(cache_file)
+            self.assertEqual(flat["hello"], "안녕하세요")
+            self.assertEqual(flat["world"], "세계")
+            self.assertIn("hello", ts_cache)
+            self.assertIn("ts", ts_cache["hello"])
+            self.assertEqual(ts_cache["hello"]["t"], "안녕하세요")
+
+
+# ────────────────────────────────────────────────────────
+# From test_remaining_gaps.py: translation main() 테스트
+# ────────────────────────────────────────────────────────
+class TestTranslationMain(unittest.TestCase):
+    """main(): lines 486-489, 494-497, 499-506, 510"""
+
+    @patch("utils.translation.translate_html")
+    def test_main_with_c_option_and_valid_html(self, mock_translate_html):
+        import io
+
+        mock_translate_html.return_value = ("<p>번역됨</p>", 0)
+        argv = ["translation.py", "-c"]
+        with patch("sys.argv", argv), patch("sys.stdin", new=io.StringIO("<p>Hello</p>")), patch("sys.stdout", new_callable=io.StringIO) as out:
+            from utils.translation import main
+
+            main()
+            self.assertIn("번역됨", out.getvalue())
+            mock_translate_html.assert_called_once()
+            call_kwargs = mock_translate_html.call_args
+            self.assertEqual(call_kwargs.kwargs.get("provider") or call_kwargs[1].get("provider"), TranslationProvider.CLAUDE)
+
+    @patch("utils.translation.translate_html")
+    def test_main_with_empty_stdin(self, mock_translate_html):
+        import io
+
+        argv = ["translation.py"]
+        with patch("sys.argv", argv), patch("sys.stdin", new=io.StringIO("")):
+            from utils.translation import main
+
+            main()
+            mock_translate_html.assert_not_called()
+
+    def test_main_with_getopt_error(self):
+        argv = ["translation.py", "-x"]
+        with patch("sys.argv", argv), self.assertRaises(SystemExit) as ctx:
+            from utils.translation import main
+
+            main()
+        self.assertEqual(ctx.exception.code, 1)
+
+    @patch("utils.translation.translate_html")
+    def test_main_with_t_option(self, mock_translate_html):
+        import io
+
+        mock_translate_html.return_value = ("<p>OK</p>", 0)
+        argv = ["translation.py", "-t", "2.5"]
+        with patch("sys.argv", argv), patch("sys.stdin", new=io.StringIO("<p>test</p>")), patch("sys.stdout", new_callable=io.StringIO):
+            utils.translation.main()
+            self.assertEqual(utils.translation._SLEEP_SECONDS, 2.5)
+        utils.translation._SLEEP_SECONDS = 1
+
+    @patch("utils.translation.translate_html")
+    def test_main_with_untranslated(self, mock_translate_html):
+        import io
+
+        mock_translate_html.return_value = ("<p>partial</p>", 3)
+        argv = ["translation.py"]
+        with patch("sys.argv", argv), patch("sys.stdin", new=io.StringIO("<p>Hello</p>")), patch("sys.stdout", new_callable=io.StringIO):
+            with self.assertRaises(SystemExit) as ctx:
+                from utils.translation import main
+
+                main()
+            self.assertEqual(ctx.exception.code, -1)
+
+
+class TestUncoveredBranches(unittest.TestCase):
+    """커버리지 누락 라인/브랜치 보강 테스트"""
+
+    def setUp(self) -> None:
+        self._old_cwd = Path.cwd()
+        self.work_dir = Path(Env.get("FM_WORK_DIR")) / "uncovered_test"
+        self.work_dir.mkdir(parents=True, exist_ok=True)
+        self._old_fm_work_dir = os.environ.get("FM_WORK_DIR", None)
+        os.environ["FM_WORK_DIR"] = str(self.work_dir)
+        os.chdir(self.work_dir)
+
+    def tearDown(self) -> None:
+        os.chdir(self._old_cwd)
+        shutil.rmtree(self.work_dir, ignore_errors=True)
+        if self._old_fm_work_dir is not None:
+            os.environ["FM_WORK_DIR"] = self._old_fm_work_dir
+        else:
+            os.environ.pop("FM_WORK_DIR", None)
+
+    # Line 142: Azure - non-unrecoverable error (e.g. 500) → continue
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_azure_non_unrecoverable_error_continues(self, mock_crawler_cls, mock_sleep):
+        svc = AzureTranslationService(api_key="fake")
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        mock_client.run.return_value = ("", "status code '500'", 500)
+        result = svc.translate_batch(["hello"])
+        self.assertEqual(result, {})
+
+    # Line 183: Google - non-unrecoverable error → continue
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_google_non_unrecoverable_error_continues(self, mock_crawler_cls, mock_sleep):
+        svc = GoogleTranslationService(api_key="fake")
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        mock_client.run.return_value = ("", "status code '500'", 500)
+        result = svc.translate_batch(["hello"])
+        self.assertEqual(result, {})
+
+    # Lines 191-193: Google - exception in translate_batch
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_google_translate_batch_exception(self, mock_crawler_cls, mock_sleep):
+        svc = GoogleTranslationService(api_key="fake")
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        mock_client.run.side_effect = RuntimeError("network error")
+        result = svc.translate_batch(["hello"])
+        self.assertEqual(result, {})
+
+    # Line 226: Claude - non-unrecoverable error (e.g. 500) → continue
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_claude_non_unrecoverable_error_continues(self, mock_crawler_cls, mock_sleep):
+        svc = ClaudeTranslationService(api_key="fake")
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        mock_client.run.return_value = ("", "status code '500'", 500)
+        result = svc.translate_batch(["hello"])
+        self.assertEqual(result, {})
+
+    # Line 264: Claude - translations is not a list
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_claude_non_list_translations(self, mock_crawler_cls, mock_sleep):
+        svc = ClaudeTranslationService(api_key="fake")
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        response = json.dumps({"content": [{"type": "text", "text": '"hello"]'}], "stop_reason": "end_turn"})
+        mock_client.run.return_value = (response, "", 200)
+        original_loads = json.loads
+        call_count = [0]
+
+        def patched_loads(s, *a, **kw):
+            result = original_loads(s, *a, **kw)
+            call_count[0] += 1
+            if call_count[0] == 2 and isinstance(result, list):
+                return "not-a-list"
+            return result
+
+        with patch("json.loads", side_effect=patched_loads):
+            result = svc.translate_batch(["hello"])
+        self.assertEqual(result, {})
+
+    # Line 308: Translation.__init__ with no API keys → error log
+    def test_translation_init_no_keys(self):
+        with patch.object(Env, "get", return_value=""):
+            t = Translation()
+        self.assertEqual(t.services, [])
+        self.assertIsNone(t.service)
+
+    # Line 360: _translate_with_fallback - remaining already empty at start of loop
+    def test_fallback_empty_texts_list(self):
+        svc1 = MagicMock()
+        svc1.provider = TranslationProvider.AZURE
+        translator = Translation.__new__(Translation)
+        translator.services = [svc1]
+        translator.service = svc1
+        result = translator._translate_with_fallback([])
+        self.assertEqual(result, {})
+        svc1.translate_batch.assert_not_called()
+
+    # Line 386: translate() - no services, texts to translate
+    def test_translate_no_services_warning(self):
+        translator = Translation.__new__(Translation)
+        translator.services = []
+        translator.service = None
+
+        result = translator.translate([("/a", "Hello")], do_save=False)
+        self.assertEqual(len(result), 1)
+        self.assertIn("Hello", result[0][1])
+
+    # Line 399: translate() - fresh_translation_map empty after API call
+    @patch("utils.translation.time")
+    def test_translate_empty_fresh_map(self, mock_time):
+        mock_time.time.return_value = 1_700_000_000
+        svc = MagicMock()
+        svc.provider = TranslationProvider.AZURE
+        svc.translate_batch.return_value = {}
+
+        translator = Translation.__new__(Translation)
+        translator.services = [svc]
+        translator.service = svc
+
+        result = translator.translate([("/a", "Hello")], do_save=False)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0][1], "Hello(Hello)")
+
+    # Line 510: main() 직접 호출 (이미 test_main_with_c_option 등에서 테스트됨)
+    # __name__ == "__main__" 브랜치는 runpy를 통해 확인
+    @patch("utils.translation.translate_html")
+    def test_main_called_via_runpy(self, mock_translate_html):
+        import runpy
+
+        mock_translate_html.return_value = ("<p>OK</p>", 0)
+        with patch("sys.argv", ["translation.py"]), patch("sys.stdin", new=io.StringIO("<p>Test</p>")), patch("sys.stdout", new_callable=io.StringIO):
+            try:
+                runpy.run_module("utils.translation", run_name="__main__", alter_sys=True)
+            except SystemExit:
+                pass
+
+    # Branch 105->92: DeepL - response has no "translations" key
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_deepl_no_translations_key(self, mock_crawler_cls, mock_sleep):
+        svc = DeepLTranslationService(api_key="fake")
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        response = json.dumps({"error": "something"})
+        mock_client.run.return_value = (response, "", 200)
+        result = svc.translate_batch(["hello"])
+        self.assertEqual(result, {})
+
+    # Branch 147->145: Azure - data item has no "translations" key
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_azure_no_translations_key_in_item(self, mock_crawler_cls, mock_sleep):
+        svc = AzureTranslationService(api_key="fake")
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        response = json.dumps([{"error": "no translations"}])
+        mock_client.run.return_value = (response, "", 200)
+        result = svc.translate_batch(["hello"])
+        self.assertEqual(result, {})
+
+    # Branch 186->174: Google - response has no "data"/"translations" key
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_google_no_data_translations_key(self, mock_crawler_cls, mock_sleep):
+        svc = GoogleTranslationService(api_key="fake")
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        response = json.dumps({"error": "bad response"})
+        mock_client.run.return_value = (response, "", 200)
+        result = svc.translate_batch(["hello"])
+        self.assertEqual(result, {})
+
+    # Branch 242->241: Claude - no text-type content blocks
+    @patch("utils.translation.time.sleep")
+    @patch("utils.translation.Crawler")
+    def test_claude_no_text_content_blocks(self, mock_crawler_cls, mock_sleep):
+        svc = ClaudeTranslationService(api_key="fake")
+        mock_client = MagicMock()
+        mock_crawler_cls.return_value = mock_client
+        response = json.dumps({"content": [{"type": "image", "data": "xxx"}], "stop_reason": "end_turn"})
+        mock_client.run.return_value = (response, "", 200)
+        result = svc.translate_batch(["hello"])
+        self.assertEqual(result, {})
+
+    # Branch 341->340: v1 cache with non-string value (skipped in migration)
+    def test_v1_cache_non_string_value_skipped(self):
+        cache_path = self.work_dir / "cache_test.json"
+        v1_data = {"hello": "안녕", "bad_entry": 123, "nested": {"a": "b"}}
+        cache_path.write_text(json.dumps(v1_data))
+        flat, ts = Translation._load_translation_cache(cache_path)
+        self.assertEqual(flat, {"hello": "안녕"})
+        self.assertNotIn("bad_entry", flat)
+        self.assertNotIn("nested", flat)
+
+    # Branch 458->466: translate_html - fresh_map is empty (all translations fail)
+    @patch("utils.translation.TranslationServiceFactory.create_services")
+    def test_translate_html_empty_fresh_map_no_save(self, mock_create):
+        mock_svc = MagicMock()
+        mock_svc.provider = TranslationProvider.DEEPL
+        mock_svc.translate_batch.return_value = {}
+        mock_create.return_value = [mock_svc]
+
+        html = "<p>Hello</p>"
+        result, untranslated = translate_html(html)
+        self.assertIn("Hello", result)
+        self.assertEqual(untranslated, 1)
 
 
 if __name__ == "__main__":
