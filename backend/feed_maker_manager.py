@@ -408,8 +408,7 @@ class FeedMakerManager:
         _validate_name(group_name, "group_name")
         _validate_name(feed_name, "feed_name")
         feed_dir_path = self.work_dir_path / group_name / feed_name
-        conf_file_path = feed_dir_path / Config.DEFAULT_CONF_FILE
-        if not feed_dir_path or not conf_file_path:
+        if not feed_dir_path.is_dir():
             return False, f"can't remove feed '{PathUtil.short_path(feed_dir_path)}'"
 
         # remove files
@@ -435,11 +434,14 @@ class FeedMakerManager:
         LOGGER.debug(f"# remove_group({group_name})")
         _validate_name(group_name, "group_name")
         group_dir_path = self.work_dir_path / group_name
-        if not group_dir_path:
+        if not group_dir_path.is_dir():
             return False, f"can't remove group '{group_name}'"
 
+        # 삭제 전에 피드 목록을 미리 수집
+        feed_dir_paths = list(group_dir_path.iterdir())
+
         # remove files
-        for feed_dir_path in group_dir_path.iterdir():
+        for feed_dir_path in feed_dir_paths:
             feed_name = feed_dir_path.name
             self._remove_public_img_pdf_feed_files(feed_name)
 
@@ -450,8 +452,8 @@ class FeedMakerManager:
         if group_dir_path.is_dir():
             rmtree(group_dir_path)
 
-        # re-scan feeds by group
-        for feed_dir_path in group_dir_path.iterdir():
+        # re-scan feeds by group (미리 수집한 목록 사용)
+        for feed_dir_path in feed_dir_paths:
             FeedManager.remove_config_info(feed_dir_path, do_remove_file=True)
             FeedManager.remove_rss_info(feed_dir_path, do_remove_file=True)
             self.feed_manager.remove_public_feed_by_feed_name(feed_dir_path.name, do_remove_file=True)

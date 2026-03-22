@@ -3,7 +3,9 @@
 
 
 import io
+import runpy
 import unittest
+from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 from bin.feed_maker_util import Env
@@ -233,6 +235,224 @@ class TestDownloadImage(unittest.TestCase):
             utils.download_image.main()
             self.assertEqual(mock_stdout.getvalue(), expected_output)
             mock_download.assert_called_once()
+
+
+# ────────────────────────────────────────────────────────
+# From test_remaining_gaps.py: download_image 추가 테스트
+# ────────────────────────────────────────────────────────
+class TestGetBaseDomain(unittest.TestCase):
+    """_get_base_domain: lines 23, 25, 26"""
+
+    def test_two_parts_returns_as_is(self):
+        from utils.download_image import _get_base_domain
+
+        self.assertEqual(_get_base_domain("example.com"), "example.com")
+
+    def test_co_kr_suffix_returns_last_three(self):
+        from utils.download_image import _get_base_domain
+
+        self.assertEqual(_get_base_domain("www.example.co.kr"), "example.co.kr")
+
+    def test_three_plus_parts_returns_last_two(self):
+        from utils.download_image import _get_base_domain
+
+        self.assertEqual(_get_base_domain("sub.example.com"), "example.com")
+
+    def test_single_part(self):
+        from utils.download_image import _get_base_domain
+
+        self.assertEqual(_get_base_domain("localhost"), "localhost")
+
+
+class TestIsSameOrigin(unittest.TestCase):
+    """_is_same_origin: lines 32, 34, 37"""
+
+    def test_img_no_scheme_returns_true(self):
+        from utils.download_image import _is_same_origin
+
+        self.assertTrue(_is_same_origin("https://example.com/page", "/images/a.jpg"))
+
+    def test_img_data_scheme_returns_true(self):
+        from utils.download_image import _is_same_origin
+
+        self.assertTrue(_is_same_origin("https://example.com", "data:image/png;base64,abc"))
+
+    def test_img_data_scheme_with_hostname_returns_true(self):
+        """data:// 형태의 URL도 same-origin으로 취급 (line 33-34)"""
+        from utils.download_image import _is_same_origin
+
+        self.assertTrue(_is_same_origin("https://example.com", "data://host/image"))
+
+    def test_page_no_hostname_returns_true(self):
+        from utils.download_image import _is_same_origin
+
+        self.assertTrue(_is_same_origin("/local/path", "https://cdn.example.com/a.png"))
+
+
+class TestReplaceImgTagError(unittest.TestCase):
+    """replace_img_tag: lines 61-63 (OSError path)"""
+
+    @patch("utils.download_image.ImageDownloader.download_image", side_effect=OSError("disk full"))
+    def test_download_os_error_returns_error_tag(self, _mock_dl):
+        from utils.download_image import replace_img_tag
+
+        mock_match = MagicMock()
+        mock_match.group.side_effect = lambda key: {"img_url": "https://example.com/img.jpg", 0: "<img src='https://example.com/img.jpg'/>"}[key]
+        crawler = MagicMock()
+        result = replace_img_tag(mock_match, crawler=crawler, feed_img_dir_path=Path("/tmp"), quality=75)
+        self.assertIn("error occurred", result)
+
+
+class TestDownloadImageMain(unittest.TestCase):
+    """main(): lines 74-75 (-q), 78-79 (bad dir), 98-99 (no img), 110, 115-117 (tail)"""
+
+    def setUp(self):
+        self.work_dir = Env.get("FM_WORK_DIR") + "/naver/one_second"
+
+    @patch("utils.download_image.Config")
+    @patch("pathlib.Path.mkdir")
+    @patch("pathlib.Path.is_dir", return_value=True)
+    @patch("utils.image_downloader.ImageDownloader.download_image")
+    def test_quality_option(self, mock_dl, _is_dir, _mkdir, mock_config):
+        mock_config.return_value.get_extraction_configs.return_value = {"user_agent": "", "exclude_ad_images": False}
+        img_url_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
+        mock_dl.return_value = (True, f"{img_url_prefix}/one_second/abc.webp")
+
+        argv = ["download_image.py", "-f", self.work_dir, "-q", "50", "https://example.com/page"]
+        stdin_data = "<img src='https://example.com/img.jpg'/>"
+        with patch("sys.argv", argv), patch("sys.stdin", new=io.StringIO(stdin_data)), patch("sys.stdout", new_callable=io.StringIO) as out:
+            ret = utils.download_image.main()
+            self.assertEqual(ret, 0)
+            self.assertIn("img", out.getvalue())
+
+    @patch("utils.download_image.Config")
+    @patch("pathlib.Path.mkdir")
+    @patch("pathlib.Path.is_dir", return_value=True)
+    @patch("utils.image_downloader.ImageDownloader.download_image")
+    def test_quality_before_feed_dir(self, mock_dl, _is_dir, _mkdir, mock_config):
+        """-q 옵션이 -f 앞에 올 때 (branch 74->71 커버)"""
+        mock_config.return_value.get_extraction_configs.return_value = {"user_agent": "", "exclude_ad_images": False}
+        img_url_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
+        mock_dl.return_value = (True, f"{img_url_prefix}/one_second/abc.webp")
+
+        argv = ["download_image.py", "-q", "50", "-f", self.work_dir, "https://example.com/page"]
+        stdin_data = "<img src='https://example.com/img.jpg'/>"
+        with patch("sys.argv", argv), patch("sys.stdin", new=io.StringIO(stdin_data)), patch("sys.stdout", new_callable=io.StringIO) as out:
+            ret = utils.download_image.main()
+            self.assertEqual(ret, 0)
+            self.assertIn("img", out.getvalue())
+
+    @patch("pathlib.Path.is_dir", return_value=False)
+    def test_directory_not_found(self, _is_dir):
+        argv = ["download_image.py", "-f", "/nonexistent/dir", "https://example.com"]
+        with patch("sys.argv", argv):
+            ret = utils.download_image.main()
+            self.assertEqual(ret, -1)
+
+    @patch("utils.download_image.Config")
+    @patch("pathlib.Path.mkdir")
+    @patch("pathlib.Path.is_dir", return_value=True)
+    def test_line_without_img_tag(self, _is_dir, _mkdir, mock_config):
+        mock_config.return_value.get_extraction_configs.return_value = {"user_agent": "", "exclude_ad_images": False}
+        argv = ["download_image.py", "-f", self.work_dir, "https://example.com/page"]
+        stdin_data = "<p>Hello world</p>"
+        with patch("sys.argv", argv), patch("sys.stdin", new=io.StringIO(stdin_data)), patch("sys.stdout", new_callable=io.StringIO) as out:
+            ret = utils.download_image.main()
+            self.assertEqual(ret, 0)
+            self.assertIn("Hello world", out.getvalue())
+
+    @patch("utils.download_image.Config")
+    @patch("pathlib.Path.mkdir")
+    @patch("pathlib.Path.is_dir", return_value=True)
+    @patch("utils.image_downloader.ImageDownloader.download_image")
+    def test_trailing_whitespace_after_last_element(self, mock_dl, _is_dir, _mkdir, mock_config):
+        """이미지 태그 뒤에 공백만 있는 경우 (branch 116->exit 커버)"""
+        mock_config.return_value.get_extraction_configs.return_value = {"user_agent": "", "exclude_ad_images": False}
+        img_url_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
+        mock_dl.return_value = (True, f"{img_url_prefix}/one_second/abc.webp")
+
+        argv = ["download_image.py", "-f", self.work_dir, "https://example.com/page"]
+        # 이미지 태그 뒤에 공백만 있음 -> tail.strip()이 빈 문자열
+        stdin_data = "<img src='https://example.com/img.jpg'/>   "
+        with patch("sys.argv", argv), patch("sys.stdin", new=io.StringIO(stdin_data)), patch("sys.stdout", new_callable=io.StringIO) as out:
+            ret = utils.download_image.main()
+            self.assertEqual(ret, 0)
+            # 공백은 출력되지 않아야 함
+            self.assertNotIn("   ", out.getvalue())
+
+    @patch("utils.download_image.Config")
+    @patch("pathlib.Path.mkdir")
+    @patch("pathlib.Path.is_dir", return_value=True)
+    @patch("utils.image_downloader.ImageDownloader.download_image")
+    def test_tail_text_after_last_element(self, mock_dl, _is_dir, _mkdir, mock_config):
+        mock_config.return_value.get_extraction_configs.return_value = {"user_agent": "", "exclude_ad_images": False}
+        img_url_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
+        mock_dl.return_value = (True, f"{img_url_prefix}/one_second/abc.webp")
+
+        argv = ["download_image.py", "-f", self.work_dir, "https://example.com/page"]
+        stdin_data = "<img src='https://example.com/img.jpg'/>some tail text"
+        with patch("sys.argv", argv), patch("sys.stdin", new=io.StringIO(stdin_data)), patch("sys.stdout", new_callable=io.StringIO) as out:
+            ret = utils.download_image.main()
+            self.assertEqual(ret, 0)
+            output = out.getvalue()
+            self.assertIn("tail text", output)
+
+
+class TestIsSameOriginBlockedDomains(unittest.TestCase):
+    """_is_same_origin with data: scheme via replace_img_tag (lines 33-34)"""
+
+    @patch("utils.image_downloader.ImageDownloader.download_image")
+    def test_data_url_not_excluded_when_exclude_ad_images(self, mock_download: MagicMock) -> None:
+        """exclude_ad_images=True일 때 data: URL은 same-origin으로 취급되어 제외되지 않음"""
+        from utils.download_image import replace_img_tag
+
+        mock_download.return_value = (True, "http://example.com/img.webp")
+        mock_match = MagicMock()
+        data_url = "data:image/png;base64,iVBORw0KGgo="
+        mock_match.group.side_effect = lambda key: {"img_url": data_url, 0: f"<img src='{data_url}'/>"}[key]
+        crawler = MagicMock()
+        result = replace_img_tag(mock_match, crawler=crawler, feed_img_dir_path=Path("/tmp"), quality=75, page_url="https://example.com/page", exclude_ad_images=True)
+        # data: URL은 same-origin이므로 정상 처리됨
+        self.assertIn("img", result)
+        mock_download.assert_called_once()
+
+
+class TestSplitAndPrintTextBetweenElements(unittest.TestCase):
+    """split_and_print: bare text between elements (lines 109-110)"""
+
+    def setUp(self):
+        self.work_dir = Env.get("FM_WORK_DIR") + "/naver/one_second"
+
+    @patch("utils.download_image.Config")
+    @patch("pathlib.Path.mkdir")
+    @patch("pathlib.Path.is_dir", return_value=True)
+    @patch("utils.image_downloader.ImageDownloader.download_image")
+    def test_bare_text_between_img_elements(self, mock_dl, _is_dir, _mkdir, mock_config):
+        """이미지 태그 사이에 태그로 감싸지지 않은 텍스트가 있는 경우"""
+        mock_config.return_value.get_extraction_configs.return_value = {"user_agent": "", "exclude_ad_images": False}
+        img_url_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
+        mock_dl.return_value = (True, f"{img_url_prefix}/one_second/abc.webp")
+
+        argv = ["download_image.py", "-f", self.work_dir, "https://example.com/page"]
+        # 태그 사이에 bare text "중간텍스트"가 있음
+        stdin_data = "<img src='https://example.com/a.jpg'/>중간텍스트<img src='https://example.com/b.jpg'/>"
+        with patch("sys.argv", argv), patch("sys.stdin", new=io.StringIO(stdin_data)), patch("sys.stdout", new_callable=io.StringIO) as out:
+            ret = utils.download_image.main()
+            self.assertEqual(ret, 0)
+            self.assertIn("중간텍스트", out.getvalue())
+
+
+class TestMainBlock(unittest.TestCase):
+    """if __name__ == '__main__' block (lines 125-126)"""
+
+    def test_main_block(self):
+        """__main__ 블록이 sys.exit(main())을 호출하는지 확인"""
+        argv = ["download_image.py", "-f", "/nonexistent", "http://example.com"]
+        with patch("sys.argv", argv), patch("pathlib.Path.is_dir", return_value=False):
+            with self.assertRaises(SystemExit) as cm:
+                runpy.run_path(str(Path(utils.download_image.__file__)), run_name="__main__")
+            # main()이 -1을 반환하므로 sys.exit(-1) 호출
+            self.assertEqual(cm.exception.code, -1)
 
 
 if __name__ == "__main__":

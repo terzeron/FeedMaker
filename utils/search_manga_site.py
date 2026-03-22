@@ -144,20 +144,11 @@ class Site:
                     elif href_value.startswith("http"):
                         return f'href="{href_value}"'
                     else:
-                        # 빈 문자열이 아닌 경우에만 concatenate_url 사용
-                        if href_value:
-                            absolute_url = URL.concatenate_url(self.url_prefix, href_value)
-                            return f'href="{absolute_url}"'
-                        else:
-                            return f'href="{self.get_base_url()}"'
+                        absolute_url = URL.concatenate_url(self.url_prefix, href_value)
+                        return f'href="{absolute_url}"'
 
                 # href 처리 전후 로그
                 LOGGER.debug(f"Before href processing: {html_fragment[:200]}...")
-
-                # href="" 패턴을 먼저 직접 처리
-                if 'href=""' in html_fragment:
-                    LOGGER.debug('Found href="" pattern, replacing directly')
-                    html_fragment = html_fragment.replace('href=""', f'href="{self.get_base_url()}"')
 
                 # 다양한 href 패턴 처리 (큰따옴표, 작은따옴표, 따옴표 없음)
                 html_fragment = re.sub(r'href="([^"]*)"', replace_href, html_fragment)
@@ -222,11 +213,6 @@ class Site:
                                 heading.string = title_text
 
                     html_fragment = str(soup_fragment)
-
-                    # BeautifulSoup 처리 후 href 다시 확인 및 처리
-                    if 'href=""' in html_fragment:
-                        LOGGER.debug('Found href="" after BeautifulSoup processing, replacing again')
-                        html_fragment = html_fragment.replace('href=""', f'href="{self.get_base_url()}"')
 
                     # BeautifulSoup 처리 후 상대 경로 href도 다시 처리
                     html_fragment = re.sub(r'href="([^"]*)"', replace_href, html_fragment)

@@ -64,6 +64,7 @@ backend/uvicorn.log*
 .coverage
 .coverage.*
 .coverage_out/
+coverage.json
 coverage.xml
 coverage/
 htmlcov/

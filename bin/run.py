@@ -194,14 +194,7 @@ def determine_options() -> tuple[dict[str, Any], list[str]]:
         elif o == "-w":
             window_size = int(a)
 
-    options = {
-        "do_make_all_feeds": do_make_all_feeds,
-        "do_remove_all_files": do_remove_all_files,
-        "force_collection_opt": force_collection_opt,
-        "collect_only_opt": collect_only_opt,
-        "num_feeds": num_feeds,
-        "window_size": window_size
-    }
+    options = {"do_make_all_feeds": do_make_all_feeds, "do_remove_all_files": do_remove_all_files, "force_collection_opt": force_collection_opt, "collect_only_opt": collect_only_opt, "num_feeds": num_feeds, "window_size": window_size}
     return options, args
 
 
@@ -214,7 +207,7 @@ def main() -> int:
         if len(args) > 1:
             print_usage()
             return -1
-        feed_dir_path = Path(sys.argv[0])
+        feed_dir_path = Path(args[0])
     LOGGER.debug(options)
     LOGGER.debug(PathUtil.short_path(feed_dir_path))
 

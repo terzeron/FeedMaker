@@ -301,5 +301,205 @@ class TestAggregateTitles(unittest.TestCase):
             os.unlink(tmp_path)
 
 
+# ────────────────────────────────────────────────────────
+# From test_remaining_gaps.py: convert_movie_to_images 추가 테스트
+# ────────────────────────────────────────────────────────
+class TestConvertMovieToImagesExtended(unittest.TestCase):
+    """Lines 33-34, 41-42, 45-46"""
+
+    @patch("utils.convert_movie_to_images.IO.read_stdin_as_line_list")
+    @patch("utils.convert_movie_to_images.Env.get")
+    @patch("pathlib.Path.is_file")
+    @patch("utils.convert_movie_to_images.which")
+    def test_rtmpdump_called_process_error(self, mock_which, mock_is_file, mock_env_get, mock_stdin):
+        import subprocess
+
+        mock_stdin.return_value = ["<video src='http://x?videoPath=rtmp://stream.example.com/live&extra=1'>"]
+        mock_env_get.side_effect = lambda key: {"WEB_SERVICE_IMAGE_DIR_PREFIX": "/tmp/test_imgs", "WEB_SERVICE_IMAGE_URL_PREFIX": "http://img.example.com"}[key]
+        mock_is_file.return_value = False
+        mock_which.side_effect = lambda name: "/usr/bin/rtmpdump" if name == "rtmpdump" else None
+
+        with (
+            patch("sys.argv", ["convert_movie_to_images.py", "http://example.com/movie"]),
+            patch("builtins.open", MagicMock()),
+            patch("subprocess.run", side_effect=subprocess.CalledProcessError(1, "rtmpdump", stderr=b"connection failed")),
+            patch("pathlib.Path.iterdir", return_value=iter([])),
+            patch("sys.stdout", new_callable=io.StringIO) as out,
+        ):
+            from utils.convert_movie_to_images import main
+
+            ret = main()
+            self.assertEqual(ret, 0)
+            self.assertIn("connection failed", out.getvalue())
+
+    @patch("utils.convert_movie_to_images.IO.read_stdin_as_line_list")
+    @patch("utils.convert_movie_to_images.Env.get")
+    @patch("utils.convert_movie_to_images.which")
+    def test_extract_images_called_process_error(self, mock_which, mock_env_get, mock_stdin):
+        import subprocess
+
+        mock_stdin.return_value = ["<video src='http://x?videoPath=rtmp://stream.example.com/live&extra=1'>"]
+        mock_env_get.side_effect = lambda key: {"WEB_SERVICE_IMAGE_DIR_PREFIX": "/tmp/test_imgs", "WEB_SERVICE_IMAGE_URL_PREFIX": "http://img.example.com"}[key]
+
+        def which_side_effect(name):
+            if name == "rtmpdump":
+                return None
+            if name == "extract_images_from_video.sh":
+                return "/usr/bin/extract_images_from_video.sh"
+            return None
+
+        mock_which.side_effect = which_side_effect
+
+        with (
+            patch("sys.argv", ["convert_movie_to_images.py", "http://example.com/movie"]),
+            patch("pathlib.Path.is_file", return_value=False),
+            patch("subprocess.run", side_effect=subprocess.CalledProcessError(1, "extract", stderr=b"")),
+            patch("pathlib.Path.iterdir", return_value=iter([])),
+            patch("sys.stdout", new_callable=io.StringIO) as out,
+        ):
+            from utils.convert_movie_to_images import main
+
+            ret = main()
+            self.assertEqual(ret, 0)
+
+    @patch("utils.convert_movie_to_images.IO.read_stdin_as_line_list")
+    @patch("utils.convert_movie_to_images.Env.get")
+    @patch("utils.convert_movie_to_images.which")
+    def test_iterdir_matching_image_files(self, mock_which, mock_env_get, mock_stdin):
+        mock_stdin.return_value = ["<video src='http://x?videoPath=rtmp://stream.example.com/live&extra=1'>"]
+        mock_env_get.side_effect = lambda key: {"WEB_SERVICE_IMAGE_DIR_PREFIX": "/tmp/test_imgs", "WEB_SERVICE_IMAGE_URL_PREFIX": "http://img.example.com"}[key]
+        mock_which.return_value = None
+
+        mock_entry1 = MagicMock()
+        mock_entry1.name = "abc1234_0001.jpg"
+        mock_entry2 = MagicMock()
+        mock_entry2.name = "other_file.txt"
+
+        from bin.feed_maker_util import URL
+
+        id_str = URL.get_short_md5_name("http://example.com/movie")
+
+        mock_entry1.name = f"{id_str}_0001.jpg"
+
+        with patch("sys.argv", ["convert_movie_to_images.py", "http://example.com/movie"]), patch("pathlib.Path.is_file", return_value=True), patch("pathlib.Path.iterdir", return_value=iter([mock_entry1, mock_entry2])), patch("sys.stdout", new_callable=io.StringIO) as out:
+            from utils.convert_movie_to_images import main
+
+            ret = main()
+            self.assertEqual(ret, 0)
+            self.assertIn(f"{id_str}_0001.jpg", out.getvalue())
+
+
+# ────────────────────────────────────────────────────────
+# From test_post_process_extended.py
+# ────────────────────────────────────────────────────────
+class TestPostProcessOnlyForImagesExtended(unittest.TestCase):
+    """post_process_only_for_images: print_usage (10-13), getopt error + exit (22-24)"""
+
+    def test_print_usage(self) -> None:
+        """print_usage outputs expected text -> line 10-13"""
+        from io import StringIO
+
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            from utils.post_process_only_for_images import print_usage
+
+            print_usage()
+            output = mock_stdout.getvalue()
+            self.assertIn("Usage", output)
+            self.assertIn("-u", output)
+            self.assertIn("-r", output)
+
+    @patch("sys.argv", ["post_process_only_for_images.py", "--invalid-option"])
+    def test_invalid_option_exits(self) -> None:
+        """Invalid option triggers getopt error -> print_usage + sys.exit -> line 22-24"""
+        from io import StringIO
+
+        with patch("sys.stdout", new_callable=StringIO):
+            with self.assertRaises(SystemExit):
+                from utils.post_process_only_for_images import main
+
+                main()
+
+
+# ────────────────────────────────────────────────────────
+# From test_convert_pdf_to_image_extended.py
+# ────────────────────────────────────────────────────────
+class TestConvertPdfToImageMain(unittest.TestCase):
+    """main: -f option (26-27), HTTP URL download (33-42), download failure (39-40), line 69"""
+
+    @patch("utils.convert_pdf_to_image.convert_from_path")
+    @patch("utils.convert_pdf_to_image.FileManager")
+    @patch("utils.convert_pdf_to_image.Env")
+    @patch("utils.convert_pdf_to_image.header_str", "HEADER")
+    @patch("sys.stdin", new=io.StringIO(""))
+    @patch("sys.argv", ["convert_pdf_to_image.py", "-f", "/tmp/myfeed", "/tmp/test.pdf"])
+    def test_f_option_sets_feed_dir_path(self, mock_env, mock_fm, mock_convert) -> None:
+        """main with -f option -> line 26-27"""
+        mock_env.get.side_effect = lambda k: {"WEB_SERVICE_IMAGE_DIR_PREFIX": "/tmp/images", "WEB_SERVICE_IMAGE_URL_PREFIX": "http://img"}.get(k, "")
+
+        with patch.object(Path, "is_file", return_value=True), patch.object(Path, "mkdir"), patch.object(Path, "unlink"), patch("builtins.print"):
+            mock_image = MagicMock()
+            mock_convert.return_value = [mock_image]
+            mock_fm.get_cache_file_path.return_value = Path("/tmp/images/myfeed/cache")
+            mock_fm.get_cache_url.return_value = "http://img/myfeed/cache"
+
+            from utils.convert_pdf_to_image import main
+
+            result = main()
+            self.assertEqual(result, 0)
+
+    @patch("utils.convert_pdf_to_image.convert_from_path")
+    @patch("utils.convert_pdf_to_image.FileManager")
+    @patch("utils.convert_pdf_to_image.Crawler")
+    @patch("utils.convert_pdf_to_image.Env")
+    @patch("utils.convert_pdf_to_image.header_str", "HEADER")
+    @patch("sys.stdin", new=io.StringIO(""))
+    @patch("sys.argv", ["convert_pdf_to_image.py", "http://example.com/test.pdf"])
+    def test_http_url_download(self, mock_env, mock_crawler_cls, mock_fm, mock_convert) -> None:
+        """main with HTTP URL -> line 33-42"""
+        mock_env.get.side_effect = lambda k: {"WEB_SERVICE_PDF_DIR_PREFIX": "/tmp/pdfs", "WEB_SERVICE_IMAGE_DIR_PREFIX": "/tmp/images", "WEB_SERVICE_IMAGE_URL_PREFIX": "http://img"}.get(k, "")
+
+        mock_crawler = MagicMock()
+        mock_crawler_cls.return_value = mock_crawler
+        mock_crawler.run.return_value = ("ok", None, None)
+
+        mock_image = MagicMock()
+        mock_convert.return_value = [mock_image]
+        mock_fm.get_cache_file_path.return_value = Path("/tmp/images/myfeed/cache")
+        mock_fm.get_cache_url.return_value = "http://img/myfeed/cache"
+
+        with patch.object(Path, "is_file", return_value=False), patch.object(Path, "mkdir"), patch.object(Path, "unlink"), patch("builtins.print"):
+            from utils.convert_pdf_to_image import main
+
+            result = main()
+            self.assertEqual(result, 0)
+            mock_crawler.run.assert_called_once()
+
+    @patch("utils.convert_pdf_to_image.convert_from_path")
+    @patch("utils.convert_pdf_to_image.FileManager")
+    @patch("utils.convert_pdf_to_image.Crawler")
+    @patch("utils.convert_pdf_to_image.Env")
+    @patch("utils.convert_pdf_to_image.header_str", "HEADER")
+    @patch("sys.stdin", new=io.StringIO(""))
+    @patch("sys.argv", ["convert_pdf_to_image.py", "http://example.com/test.pdf"])
+    def test_http_url_download_failure(self, mock_env, mock_crawler_cls, mock_fm, mock_convert) -> None:
+        """main with URL download failure -> line 39-40"""
+        mock_env.get.side_effect = lambda k: {"WEB_SERVICE_PDF_DIR_PREFIX": "/tmp/pdfs", "WEB_SERVICE_IMAGE_DIR_PREFIX": "/tmp/images", "WEB_SERVICE_IMAGE_URL_PREFIX": "http://img"}.get(k, "")
+
+        mock_crawler = MagicMock()
+        mock_crawler_cls.return_value = mock_crawler
+        mock_crawler.run.return_value = ("", "download failed", None)
+
+        mock_image = MagicMock()
+        mock_convert.return_value = [mock_image]
+        mock_fm.get_cache_file_path.return_value = Path("/tmp/images/myfeed/cache")
+        mock_fm.get_cache_url.return_value = "http://img/myfeed/cache"
+
+        with patch.object(Path, "is_file", return_value=False), patch.object(Path, "mkdir"), patch.object(Path, "unlink"), patch("builtins.print"):
+            from utils.convert_pdf_to_image import main
+
+            result = main()
+            self.assertEqual(result, 0)
+
+
 if __name__ == "__main__":
     unittest.main()

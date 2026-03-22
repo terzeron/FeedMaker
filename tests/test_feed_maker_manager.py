@@ -2,10 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import json
+import shutil  # noqa: F401
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
+
+import pytest  # noqa: F401
+from git import Repo  # noqa: F401
 
 from backend.feed_maker_manager import FeedMakerManager, _validate_name
 
@@ -1114,6 +1118,429 @@ class TestCheckRunning(unittest.TestCase):
     def test_invalid_feed_raises(self):
         with self.assertRaises(ValueError):
             FeedMakerManager.check_running("group1", "../evil")
+
+
+# ────────────────────────────────────────────────────────
+# From test_defect_fixes.py: 결함 1 - remove_group() DB 정리
+# ────────────────────────────────────────────────────────
+class TestDefect1RemoveGroupDbCleanup(unittest.TestCase):
+    """rmtree로 디렉토리가 삭제된 후에도 re-scan(DB 정리)이 정상 실행되어야 한다."""
+
+    @patch("backend.feed_maker_manager.AccessLogManager.remove_httpd_access_info")
+    @patch("backend.feed_maker_manager.FeedManager.remove_progress_info")
+    @patch("backend.feed_maker_manager.FeedManager.remove_rss_info")
+    @patch("backend.feed_maker_manager.FeedManager.remove_config_info")
+    def test_db_cleanup_runs_after_rmtree(self, mock_rc, mock_rr, mock_rp, mock_ra):
+        """rmtree가 실제로 디렉토리를 삭제해도 DB 정리 함수가 호출되어야 한다."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            mgr = MagicMock(spec=FeedMakerManager)
+            mgr.work_dir_path = tmp_path
+            mgr._remove_public_img_pdf_feed_files = MagicMock()
+            mgr._git_rm = MagicMock(return_value=("ok", None))
+            mgr.feed_manager = MagicMock()
+            mgr.html_file_manager = MagicMock()
+
+            group_dir = tmp_path / "mygroup"
+            group_dir.mkdir()
+            (group_dir / "feed_a").mkdir()
+            (group_dir / "feed_b").mkdir()
+
+            result, error = FeedMakerManager.remove_group(mgr, "mygroup")
+
+            self.assertTrue(result)
+            self.assertEqual(error, "")
+            self.assertFalse(group_dir.exists())
+            self.assertEqual(mock_rc.call_count, 2)
+            self.assertEqual(mock_rr.call_count, 2)
+            self.assertEqual(mock_rp.call_count, 2)
+            self.assertEqual(mock_ra.call_count, 2)
+
+    def test_nonexistent_group_returns_false(self):
+        """존재하지 않는 그룹은 is_dir() 체크에서 False 반환."""
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = MagicMock(spec=FeedMakerManager)
+            mgr.work_dir_path = Path(tmp)
+            result, error = FeedMakerManager.remove_group(mgr, "nonexistent")
+            self.assertFalse(result)
+            self.assertIn("can't remove group", error)
+
+
+class TestDefect2RemoveFeedIsDir(unittest.TestCase):
+    """Path truthy 대신 is_dir()로 존재 여부를 확인해야 한다."""
+
+    def test_nonexistent_feed_returns_false(self):
+        """존재하지 않는 피드 디렉토리는 즉시 False를 반환해야 한다."""
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = MagicMock(spec=FeedMakerManager)
+            mgr.work_dir_path = Path(tmp)
+            (Path(tmp) / "group1").mkdir()
+            result, error = FeedMakerManager.remove_feed(mgr, "group1", "no_such_feed")
+            self.assertFalse(result)
+            self.assertIn("can't remove feed", error)
+
+    @patch("backend.feed_maker_manager.AccessLogManager.remove_httpd_access_info")
+    @patch("backend.feed_maker_manager.FeedManager.remove_progress_info")
+    @patch("backend.feed_maker_manager.FeedManager.remove_rss_info")
+    @patch("backend.feed_maker_manager.FeedManager.remove_config_info")
+    def test_existing_feed_removed_successfully(self, mock_rc, mock_rr, mock_rp, mock_ra):
+        """존재하는 피드 디렉토리는 정상 삭제되어야 한다."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            mgr = MagicMock(spec=FeedMakerManager)
+            mgr.work_dir_path = tmp_path
+            mgr._remove_public_img_pdf_feed_files = MagicMock()
+            mgr._git_rm = MagicMock(return_value=("ok", None))
+            mgr.feed_manager = MagicMock()
+            mgr.html_file_manager = MagicMock()
+
+            feed_dir = tmp_path / "group1" / "feed1"
+            feed_dir.mkdir(parents=True)
+
+            result, error = FeedMakerManager.remove_feed(mgr, "group1", "feed1")
+            self.assertTrue(result)
+            self.assertEqual(error, "")
+
+
+class TestDefect1RemoveGroupEdgeCases(unittest.TestCase):
+    @patch("backend.feed_maker_manager.AccessLogManager.remove_httpd_access_info")
+    @patch("backend.feed_maker_manager.FeedManager.remove_progress_info")
+    @patch("backend.feed_maker_manager.FeedManager.remove_rss_info")
+    @patch("backend.feed_maker_manager.FeedManager.remove_config_info")
+    def test_empty_group_no_feeds(self, mock_rc, mock_rr, mock_rp, mock_ra):
+        """피드가 없는 빈 그룹을 삭제해도 에러 없이 성공해야 한다."""
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = MagicMock(spec=FeedMakerManager)
+            mgr.work_dir_path = Path(tmp)
+            mgr._remove_public_img_pdf_feed_files = MagicMock()
+            mgr._git_rm = MagicMock(return_value=("ok", None))
+            mgr.feed_manager = MagicMock()
+            mgr.html_file_manager = MagicMock()
+            (Path(tmp) / "emptygroup").mkdir()
+
+            result, error = FeedMakerManager.remove_group(mgr, "emptygroup")
+            self.assertTrue(result)
+            self.assertEqual(error, "")
+            mock_rc.assert_not_called()
+
+    @patch("backend.feed_maker_manager.AccessLogManager.remove_httpd_access_info")
+    @patch("backend.feed_maker_manager.FeedManager.remove_progress_info")
+    @patch("backend.feed_maker_manager.FeedManager.remove_rss_info")
+    @patch("backend.feed_maker_manager.FeedManager.remove_config_info")
+    def test_group_with_files_and_dirs(self, mock_rc, mock_rr, mock_rp, mock_ra):
+        """그룹 안에 피드 디렉토리와 일반 파일이 섞여 있어도 정상 동작해야 한다."""
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = MagicMock(spec=FeedMakerManager)
+            mgr.work_dir_path = Path(tmp)
+            mgr._remove_public_img_pdf_feed_files = MagicMock()
+            mgr._git_rm = MagicMock(return_value=("ok", None))
+            mgr.feed_manager = MagicMock()
+            mgr.html_file_manager = MagicMock()
+
+            group_dir = Path(tmp) / "mixedgroup"
+            group_dir.mkdir()
+            (group_dir / "feed1").mkdir()
+            (group_dir / "site_config.json").write_text("{}")
+
+            result, error = FeedMakerManager.remove_group(mgr, "mixedgroup")
+            self.assertTrue(result)
+            self.assertEqual(mock_rc.call_count, 2)
+
+
+class TestDefect2RemoveFeedEdgeCases(unittest.TestCase):
+    def test_group_exists_but_feed_is_file_not_dir(self):
+        """피드 이름이 파일(디렉토리가 아님)이면 False를 반환해야 한다."""
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = MagicMock(spec=FeedMakerManager)
+            mgr.work_dir_path = Path(tmp)
+            group_dir = Path(tmp) / "group1"
+            group_dir.mkdir()
+            (group_dir / "not_a_feed").write_text("I'm a file")
+
+            result, error = FeedMakerManager.remove_feed(mgr, "group1", "not_a_feed")
+            self.assertFalse(result)
+            self.assertIn("can't remove feed", error)
+
+    def test_neither_group_nor_feed_exists(self):
+        """그룹과 피드 모두 존재하지 않으면 False를 반환해야 한다."""
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = MagicMock(spec=FeedMakerManager)
+            mgr.work_dir_path = Path(tmp)
+
+            result, error = FeedMakerManager.remove_feed(mgr, "nogroup", "nofeed")
+            self.assertFalse(result)
+            self.assertIn("can't remove feed", error)
+
+
+# ────────────────────────────────────────────────────────
+# From test_feed_maker_manager_git.py: 실제 git 저장소를 사용한 테스트
+# ────────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def git_repo(tmp_path):
+    """임시 git 저장소 생성"""
+    repo = Repo.init(tmp_path)
+    # 초기 커밋 생성
+    readme = tmp_path / "README.md"
+    readme.write_text("init")
+    repo.index.add(["README.md"])
+    repo.index.commit("initial commit")
+    return repo, tmp_path
+
+
+@pytest.fixture
+def git_manager(git_repo):
+    """FeedMakerManager를 임시 git 저장소로 패치"""
+    repo, tmp_path = git_repo
+    with patch.object(FeedMakerManager, "__init__", lambda self: None), patch.object(FeedMakerManager, "work_dir_path", tmp_path):
+        mgr = FeedMakerManager.__new__(FeedMakerManager)
+        mgr.work_dir_path = tmp_path
+        yield mgr
+
+
+class TestGitAddWithRepo:
+    def test_adds_and_commits_file(self, git_manager, git_repo):
+        repo, tmp_path = git_repo
+        feed_dir = tmp_path / "test_group" / "test_feed"
+        feed_dir.mkdir(parents=True)
+        conf_file = feed_dir / "conf.json"
+        conf_file.write_text('{"key": "value"}')
+
+        result, error = git_manager._git_add(feed_dir)
+
+        assert error is None
+        assert "test_feed" in result
+        # 커밋이 생성되었는지 확인
+        last_commit = repo.head.commit
+        assert "add test_feed" in last_commit.message
+
+    def test_special_chars_in_feed_name_no_injection(self, git_manager, git_repo):
+        """명령어 주입 시도가 안전하게 처리되는지 확인"""
+        repo, tmp_path = git_repo
+        malicious_name = "feed'; rm -rf /"
+        feed_dir = tmp_path / "group" / malicious_name
+        feed_dir.mkdir(parents=True)
+        conf_file = feed_dir / "conf.json"
+        conf_file.write_text("{}")
+
+        result, error = git_manager._git_add(feed_dir)
+
+        # 셸 실행 없이 안전하게 커밋됨
+        assert error is None
+        assert "add" in result
+        # 파일 시스템이 정상 상태인지 확인 (rm -rf 실행 안 됨)
+        assert (tmp_path / "README.md").exists()
+
+
+class TestGitRmWithRepo:
+    def test_removes_and_commits(self, git_manager, git_repo):
+        repo, tmp_path = git_repo
+        feed_dir = tmp_path / "group" / "feed_to_remove"
+        feed_dir.mkdir(parents=True)
+        conf_file = feed_dir / "conf.json"
+        conf_file.write_text("{}")
+        repo.index.add([str(conf_file.relative_to(tmp_path))])
+        repo.index.commit("add feed_to_remove")
+
+        result, error = git_manager._git_rm(feed_dir)
+
+        assert error is None
+        assert "feed_to_remove" in result
+        last_commit = repo.head.commit
+        assert "remove feed_to_remove" in last_commit.message
+
+    def test_rm_nonexistent_returns_error(self, git_manager, git_repo):
+        """존재하지 않는 파일 삭제 시 에러 반환"""
+        _, tmp_path = git_repo
+        feed_dir = tmp_path / "group" / "nonexistent"
+
+        result, error = git_manager._git_rm(feed_dir)
+
+        assert error is not None
+        assert result == ""
+
+
+class TestGitMvWithRepo:
+    def test_moves_and_commits(self, git_manager, git_repo):
+        repo, tmp_path = git_repo
+        src_dir = tmp_path / "group" / "old_feed"
+        src_dir.mkdir(parents=True)
+        conf_file = src_dir / "conf.json"
+        conf_file.write_text("{}")
+        repo.index.add([str(conf_file.relative_to(tmp_path))])
+        repo.index.commit("add old_feed")
+
+        dst_dir = tmp_path / "group" / "new_feed"
+
+        result, error = git_manager._git_mv(src_dir, dst_dir)
+
+        assert error is None
+        assert "new_feed" in result
+
+    def test_mv_fallback_to_shutil(self, git_manager, git_repo):
+        """git mv 실패 시 shutil.move 폴백"""
+        _, tmp_path = git_repo
+        src_dir = tmp_path / "untracked_dir"
+        src_dir.mkdir(parents=True)
+        (src_dir / "file.txt").write_text("data")
+
+        dst_dir = tmp_path / "moved_dir"
+
+        result, error = git_manager._git_mv(src_dir, dst_dir)
+
+        # git mv 실패 → shutil.move로 폴백 성공
+        assert error is None
+        assert dst_dir.exists()
+        assert not src_dir.exists()
+
+    def test_mv_special_chars_no_injection(self, git_manager, git_repo):
+        """명령어 주입 시도가 안전하게 처리되는지 확인"""
+        repo, tmp_path = git_repo
+        src_dir = tmp_path / "group" / "normal_feed"
+        src_dir.mkdir(parents=True)
+        conf_file = src_dir / "conf.json"
+        conf_file.write_text("{}")
+        repo.index.add([str(conf_file.relative_to(tmp_path))])
+        repo.index.commit("add normal_feed")
+
+        malicious_name = "feed && rm -rf /"
+        dst_dir = tmp_path / "group" / malicious_name
+
+        result, error = git_manager._git_mv(src_dir, dst_dir)
+
+        # 에러가 나든 폴백이든, 셸 명령어 주입은 발생하지 않음
+        assert error is None
+
+
+class TestValidateNamePytest:
+    """경로 탐색 공격 방지를 위한 이름 검증 테스트 (pytest 스타일)"""
+
+    def test_valid_names(self):
+        # 정상 이름은 통과
+        _validate_name("my_feed", "feed_name")
+        _validate_name("group-name", "group_name")
+        _validate_name("feed.v2", "feed_name")
+        _validate_name("한글그룹", "group_name")
+        _validate_name("_inactive_feed", "feed_name")
+        _validate_name("Feed123", "feed_name")
+
+    def test_path_traversal_rejected(self):
+        with pytest.raises(ValueError):
+            _validate_name("../../etc", "group_name")
+
+    def test_slash_rejected(self):
+        with pytest.raises(ValueError):
+            _validate_name("group/subdir", "group_name")
+
+    def test_backslash_rejected(self):
+        with pytest.raises(ValueError):
+            _validate_name("group\\subdir", "group_name")
+
+    def test_empty_rejected(self):
+        with pytest.raises(ValueError):
+            _validate_name("", "feed_name")
+
+    def test_semicolon_rejected(self):
+        with pytest.raises(ValueError):
+            _validate_name("feed;rm -rf /", "feed_name")
+
+    def test_space_rejected(self):
+        with pytest.raises(ValueError):
+            _validate_name("feed name", "feed_name")
+
+    def test_shell_special_chars_rejected(self):
+        for char in ["'", '"', "`", "$", "|", "&", "(", ")", "<", ">"]:
+            with pytest.raises(ValueError):
+                _validate_name(f"feed{char}test", "feed_name")
+
+
+class TestDefusedXmlSecurity:
+    """defusedxml이 악성 XML(XXE, XML bomb)을 거부하는지 확인"""
+
+    def test_xxe_attack_rejected(self, git_manager, tmp_path):
+        """XXE(XML External Entity) 공격이 거부되는지 확인"""
+        xxe_xml = """<?xml version="1.0"?>
+<!DOCTYPE foo [
+  <!ENTITY xxe SYSTEM "file:///etc/passwd">
+]>
+<rss><channel>
+  <item><title>&xxe;</title></item>
+</channel></rss>"""
+        feed_dir = tmp_path / "feeds"
+        feed_dir.mkdir(exist_ok=True)
+        malicious_file = feed_dir / "evil.xml"
+        malicious_file.write_text(xxe_xml)
+
+        with patch.object(type(git_manager), "feed_manager", create=True), patch("bin.feed_manager.FeedManager.public_feed_dir_path", feed_dir):
+            result, error = git_manager.extract_titles_from_public_feed("evil")
+
+        # defusedxml은 DTD/엔티티를 거부하므로 파싱 에러 발생
+        assert result == "PARSE_ERROR"
+
+    def test_xml_bomb_rejected(self, git_manager, tmp_path):
+        """XML bomb(Billion Laughs) 공격이 거부되는지 확인"""
+        bomb_xml = """<?xml version="1.0"?>
+<!DOCTYPE lolz [
+  <!ENTITY lol "lol">
+  <!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">
+  <!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;">
+]>
+<rss><channel>
+  <item><title>&lol3;</title></item>
+</channel></rss>"""
+        feed_dir = tmp_path / "feeds"
+        feed_dir.mkdir(exist_ok=True)
+        bomb_file = feed_dir / "bomb.xml"
+        bomb_file.write_text(bomb_xml)
+
+        with patch.object(type(git_manager), "feed_manager", create=True), patch("bin.feed_manager.FeedManager.public_feed_dir_path", feed_dir):
+            result, error = git_manager.extract_titles_from_public_feed("bomb")
+
+        assert result == "PARSE_ERROR"
+
+    def test_normal_xml_parsed_successfully(self, git_manager, tmp_path):
+        """정상 XML은 올바르게 파싱되는지 확인"""
+        normal_xml = """<?xml version="1.0"?>
+<rss><channel>
+  <item><title>정상 제목</title></item>
+  <item><title>Normal Title</title></item>
+</channel></rss>"""
+        feed_dir = tmp_path / "feeds"
+        feed_dir.mkdir(exist_ok=True)
+        normal_file = feed_dir / "normal.xml"
+        normal_file.write_text(normal_xml)
+
+        with patch.object(type(git_manager), "feed_manager", create=True), patch("bin.feed_manager.FeedManager.public_feed_dir_path", feed_dir):
+            result, error = git_manager.extract_titles_from_public_feed("normal")
+
+        assert isinstance(result, list)
+        assert result == ["정상 제목", "Normal Title"]
+        assert error == ""
+
+
+class TestPathTraversalBlocked:
+    """경로 탐색이 실제 메서드에서 차단되는지 확인"""
+
+    def test_get_site_config_blocks_traversal(self, git_manager):
+        with pytest.raises(ValueError):
+            git_manager.get_site_config("../../etc")
+
+    def test_save_site_config_blocks_traversal(self, git_manager):
+        with pytest.raises(ValueError):
+            git_manager.save_site_config("../../etc", {"key": "value"})
+
+    def test_remove_html_file_blocks_traversal(self, git_manager):
+        with pytest.raises(ValueError):
+            git_manager.remove_html_file("group", "feed", "../../etc/passwd")
+
+    def test_remove_feed_blocks_traversal(self, git_manager):
+        with pytest.raises(ValueError):
+            git_manager.remove_feed("../../", "etc")
+
+    def test_remove_group_blocks_traversal(self, git_manager):
+        with pytest.raises(ValueError):
+            git_manager.remove_group("../../etc")
 
 
 if __name__ == "__main__":
