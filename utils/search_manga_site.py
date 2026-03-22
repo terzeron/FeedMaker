@@ -102,7 +102,7 @@ class Site:
         element_list: list[Any] = []
         soup = BeautifulSoup(content, "html.parser")
         if soup.div:
-            for element in soup.div(text=lambda text: isinstance(text, Comment)):
+            for element in soup.div(string=lambda text: isinstance(text, Comment)):
                 element.extract()
 
         result_list: list[str] = []
