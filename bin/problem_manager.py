@@ -69,8 +69,14 @@ class ProblemManager:
                 .order_by(FeedInfo.feedmaker, FeedInfo.public_html, FeedInfo.http_request, FeedInfo.collect_date, FeedInfo.rss_update_date, FeedInfo.upload_date, FeedInfo.access_date, FeedInfo.view_date)
                 .all()
             )
+            # 같은 feed_name에 feedmaker=True인 레코드가 있는지 미리 수집
+            feedmaker_true_names: set[str] = {row.feed_name for row in rows if row.feedmaker}
+
             for row in rows:
                 feed_name = row.feed_name
+                # feedmaker=False인데 같은 이름으로 feedmaker=True가 존재하면 건너뜀
+                if not row.feedmaker and feed_name in feedmaker_true_names:
+                    continue
                 feed_name_status_info_map[feed_name] = {
                     "feed_name": feed_name,
                     "feed_title": row.feed_title,
