@@ -9,7 +9,7 @@ import tempfile
 from datetime import datetime, timezone
 import logging.config
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 from unittest.mock import patch, MagicMock
 
 from bin.feed_maker_util import Config
@@ -216,6 +216,98 @@ class TestProblemManager(unittest.TestCase):
 
             mock_fm_load.assert_called_once()
             mock_hf_load.assert_called_once()
+
+
+class TestGetFeedNameStatusInfoMapDuplicateFiltering(unittest.TestCase):
+    """같은 feed_name에 feedmaker=True/False 레코드가 공존할 때 필터링 검증"""
+
+    def _make_feed_row(self, feed_name: str, group_name: str, feedmaker: bool, **kwargs: Any) -> MagicMock:
+        row = MagicMock()
+        row.feed_name = feed_name
+        row.group_name = group_name
+        row.feedmaker = feedmaker
+        row.feed_title = kwargs.get("feed_title", "")
+        row.http_request = kwargs.get("http_request", True)
+        row.public_html = kwargs.get("public_html", True)
+        row.is_active = kwargs.get("is_active", True)
+        row.access_date = kwargs.get("access_date", datetime.now(timezone.utc))
+        row.view_date = kwargs.get("view_date", None)
+        row.rss_update_date = kwargs.get("rss_update_date", None)
+        row.public_feed_file_path = kwargs.get("public_feed_file_path", "")
+        row.upload_date = kwargs.get("upload_date", None)
+        row.config = kwargs.get("config", "")
+        return row
+
+    @patch("bin.db.DB.session_ctx")
+    def test_duplicate_feed_name_excludes_feedmaker_false(self, mock_session_ctx: MagicMock) -> None:
+        """feedmaker=True 레코드가 있으면 같은 이름의 feedmaker=False 레코드를 제외"""
+        mock_session = MagicMock()
+        mock_session_ctx.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_session_ctx.return_value.__exit__ = MagicMock(return_value=False)
+
+        # feedmaker 오름차순: False(mzgtoon) 먼저, True(wtwt) 나중
+        rows = [self._make_feed_row("dup_feed", "group_a", feedmaker=False), self._make_feed_row("dup_feed", "group_b", feedmaker=True)]
+        mock_session.query.return_value.where.return_value.order_by.return_value.all.return_value = rows
+
+        result = ProblemManager.get_feed_name_status_info_map()
+
+        # feedmaker=False인 group_a는 제외되고, feedmaker=True인 group_b만 남아야 함
+        self.assertIn("dup_feed", result)
+        self.assertEqual(result["dup_feed"]["group_name"], "group_b")
+        self.assertTrue(result["dup_feed"]["feedmaker"])
+
+    @patch("bin.db.DB.session_ctx")
+    def test_unique_feedmaker_false_is_kept(self, mock_session_ctx: MagicMock) -> None:
+        """feedmaker=True 레코드가 없으면 feedmaker=False 레코드를 유지"""
+        mock_session = MagicMock()
+        mock_session_ctx.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_session_ctx.return_value.__exit__ = MagicMock(return_value=False)
+
+        rows = [self._make_feed_row("solo_feed", "group_a", feedmaker=False)]
+        mock_session.query.return_value.where.return_value.order_by.return_value.all.return_value = rows
+
+        result = ProblemManager.get_feed_name_status_info_map()
+
+        self.assertIn("solo_feed", result)
+        self.assertFalse(result["solo_feed"]["feedmaker"])
+
+    @patch("bin.db.DB.session_ctx")
+    def test_multiple_duplicates_only_feedmaker_true_kept(self, mock_session_ctx: MagicMock) -> None:
+        """여러 그룹에 같은 feed_name이 있을 때 feedmaker=True만 유지"""
+        mock_session = MagicMock()
+        mock_session_ctx.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_session_ctx.return_value.__exit__ = MagicMock(return_value=False)
+
+        rows = [self._make_feed_row("multi_feed", "group_a", feedmaker=False), self._make_feed_row("multi_feed", "group_b", feedmaker=False), self._make_feed_row("multi_feed", "group_c", feedmaker=True)]
+        mock_session.query.return_value.where.return_value.order_by.return_value.all.return_value = rows
+
+        result = ProblemManager.get_feed_name_status_info_map()
+
+        self.assertIn("multi_feed", result)
+        self.assertEqual(result["multi_feed"]["group_name"], "group_c")
+        self.assertTrue(result["multi_feed"]["feedmaker"])
+
+    @patch("bin.db.DB.session_ctx")
+    def test_mixed_feeds_with_and_without_duplicates(self, mock_session_ctx: MagicMock) -> None:
+        """중복 피드와 단독 피드가 혼재할 때 각각 올바르게 처리"""
+        mock_session = MagicMock()
+        mock_session_ctx.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_session_ctx.return_value.__exit__ = MagicMock(return_value=False)
+
+        rows = [self._make_feed_row("dup_feed", "group_a", feedmaker=False), self._make_feed_row("normal_feed", "group_x", feedmaker=False), self._make_feed_row("dup_feed", "group_b", feedmaker=True), self._make_feed_row("another_feed", "group_y", feedmaker=True)]
+        mock_session.query.return_value.where.return_value.order_by.return_value.all.return_value = rows
+
+        result = ProblemManager.get_feed_name_status_info_map()
+
+        # dup_feed: feedmaker=False(group_a) 제외, feedmaker=True(group_b) 유지
+        self.assertIn("dup_feed", result)
+        self.assertEqual(result["dup_feed"]["group_name"], "group_b")
+        # normal_feed: 단독 feedmaker=False → 유지
+        self.assertIn("normal_feed", result)
+        self.assertFalse(result["normal_feed"]["feedmaker"])
+        # another_feed: 단독 feedmaker=True → 유지
+        self.assertIn("another_feed", result)
+        self.assertTrue(result["another_feed"]["feedmaker"])
 
 
 if __name__ == "__main__":
