@@ -22,7 +22,6 @@ def _make_manager(tmp_path):
         mgr.img_dir_path = tmp_path / "img"
         mgr.pdf_dir_path = tmp_path / "pdf"
         mgr.feed_manager = MagicMock()
-        mgr.access_log_manager = MagicMock()
         mgr.html_file_manager = MagicMock()
         mgr.problem_manager = MagicMock()
         return mgr
@@ -67,16 +66,13 @@ class TestValidateName(unittest.TestCase):
 class TestInit(unittest.TestCase):
     @patch("backend.feed_maker_manager.ProblemManager")
     @patch("backend.feed_maker_manager.HtmlFileManager")
-    @patch("backend.feed_maker_manager.AccessLogManager")
     @patch("backend.feed_maker_manager.FeedManager")
-    def test_init_creates_managers(self, mock_fm, mock_alm, mock_hfm, mock_pm):
+    def test_init_creates_managers(self, mock_fm, mock_hfm, mock_pm):
         mgr = FeedMakerManager()
         mock_fm.assert_called_once()
-        mock_alm.assert_called_once()
         mock_hfm.assert_called_once()
         mock_pm.assert_called_once()
         self.assertIsNotNone(mgr.feed_manager)
-        self.assertIsNotNone(mgr.access_log_manager)
         self.assertIsNotNone(mgr.html_file_manager)
         self.assertIsNotNone(mgr.problem_manager)
 
@@ -84,14 +80,11 @@ class TestInit(unittest.TestCase):
 class TestDel(unittest.TestCase):
     @patch("backend.feed_maker_manager.ProblemManager")
     @patch("backend.feed_maker_manager.HtmlFileManager")
-    @patch("backend.feed_maker_manager.AccessLogManager")
     @patch("backend.feed_maker_manager.FeedManager")
-    def test_del_deletes_managers(self, mock_fm, mock_alm, mock_hfm, mock_pm):
+    def test_del_deletes_managers(self, mock_fm, mock_hfm, mock_pm):
         mgr = FeedMakerManager()
         mgr.__del__()
-        # __del__ 호출 후 속성이 None으로 정리됨
         self.assertIsNone(mgr.feed_manager)
-        self.assertIsNone(mgr.access_log_manager)
         self.assertIsNone(mgr.html_file_manager)
         self.assertIsNone(mgr.problem_manager)
 

@@ -19,17 +19,15 @@ class ProblemManager:
     num_days = 60
     is_tables_created = False
 
-    def __init__(self, loki_url: Optional[str] = None) -> None:
+    def __init__(self) -> None:
         if not ProblemManager.is_tables_created:
             DB.create_all_tables()
             ProblemManager.is_tables_created = True
         self.feed_manager = FeedManager()
-        self.access_log_manager = AccessLogManager(loki_url=loki_url)
         self.html_file_manager = HtmlFileManager()
 
     def __del__(self) -> None:
         del self.feed_manager
-        del self.access_log_manager
         del self.html_file_manager
 
     @classmethod
@@ -107,14 +105,12 @@ class ProblemManager:
         FeedManager.add_rss_info(new_feed_dir_path)
         self.feed_manager.add_public_feed_by_feed_name(new_feed_dir_path.name)
         FeedManager.add_progress_info(new_feed_dir_path)
-        self.access_log_manager.add_httpd_access_info()
         self.html_file_manager.add_html_file(new_feed_dir_path)
 
-    def load_all(self, max_num_feeds: Optional[int] = None, max_num_public_feeds: Optional[int] = None, max_num_days: int = 30) -> int:
-        LOGGER.debug("# load_all(max_num_feeds=%r, max_num_public_feds=%r, max_num_days=%d)", max_num_feeds, max_num_public_feeds, max_num_days)
+    def load_all(self, max_num_feeds: Optional[int] = None, max_num_public_feeds: Optional[int] = None) -> int:
+        LOGGER.debug("# load_all(max_num_feeds=%r, max_num_public_feeds=%r)", max_num_feeds, max_num_public_feeds)
         LOGGER.info("* start loading information")
         self.feed_manager.load_all(max_num_feeds=max_num_feeds, max_num_public_feeds=max_num_public_feeds)
-        self.access_log_manager.load_all_httpd_access_info(max_num_days)
         self.html_file_manager.load_all_html_files(max_num_feeds)
         return 0
 

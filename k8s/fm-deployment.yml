@@ -45,11 +45,9 @@ spec:
               value: "8010"
             - name: FM_FRONTEND_URL
               value: https://fm.terzeron.com
-            - name: FM_LOKI_URL
-              value: http://10.10.10.5:3100/loki/api/v1
             - name: FM_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST
               value: terzeron@gmail.com,choyoungil@gmail.com
-        
+
             - name: WEB_SERVICE_URL
               value: https://terzeron.com
             - name: WEB_SERVICE_FEED_URL_PREFIX
@@ -148,4 +146,3 @@ spec:
       port: 80
       targetPort: 80
   type: NodePort
-

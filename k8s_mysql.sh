@@ -27,17 +27,3 @@ mysql -h $FM_DB_HOST -P $FM_DB_PORT -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_
 # 초기 데이터 로딩
 echo "초기 데이터 로딩 중..."
 python -c "from bin.problem_manager import ProblemManager; pm = ProblemManager(); pm.load_all()"
-
-
-# loki 설치
-helm repo add grafana https://grafana.github.io/helm-charts
-helm repo update
-helm install loki grafana/loki --version 6.40.0 -n feedmaker -f loki-values.yml
-
-# loki용 ingress 설정
-kubectl apply -f loki-ingress.yml
-sleep 5
-'
-curl http://loki.k8s/loki/api/v1/status/buildinfo
-curl http://loki.k8s/loki/api/v1/labels
-

@@ -11,12 +11,43 @@ serverBlock: |-
       return 204;
     }
 
-    # 루트 경로의 .xml 파일 요청을 /xml/ 디렉토리에서 서빙
+    # RSS feed XML - fm-backend로 프록시하여 접근 기록
+    # 백엔드 장애 시 정적 파일로 fallback (접근 기록은 누락되지만 피드는 제공)
     location ~ ^/([^/]+\.xml)$ {
-      rewrite ^/(.*)$ /xml/$1 last;
+      rewrite ^/(.+\.xml)$ /feed/$1 break;
+      proxy_pass http://fm-backend:8010;
+      proxy_connect_timeout 5s;
+      proxy_read_timeout 10s;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_intercept_errors on;
+      error_page 502 503 504 = @fallback_xml;
     }
 
-    # 정적 파일은 기존대로 제공 (필요시 조정)
+    location @fallback_xml {
+      rewrite ^/feed/(.+\.xml)$ /xml/$1 break;
+      try_files $uri =404;
+    }
+
+    # 트래킹 픽셀 - fm-backend로 프록시하여 조회 기록
+    location = /xml/img/1x1.jpg {
+      rewrite ^/xml/img/1x1\.jpg$ /feed/img/1x1.jpg break;
+      proxy_pass http://fm-backend:8010;
+      proxy_connect_timeout 5s;
+      proxy_read_timeout 10s;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_intercept_errors on;
+      error_page 502 503 504 = @fallback_pixel;
+    }
+
+    location @fallback_pixel {
+      try_files /xml/img/1x1.jpg =404;
+    }
+
+    # 정적 파일은 기존대로 제공 (이미지, PDF 등)
     location / {
       try_files $uri $uri/ =404;
     }
@@ -30,4 +61,3 @@ extraVolumes:
 extraVolumeMounts:
   - name: staticsite
     mountPath: /app
-

@@ -12,8 +12,8 @@ from types import TracebackType
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from starlette.responses import Response
-from fastapi import FastAPI, Request, Depends, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi import BackgroundTasks, FastAPI, Request, Depends, HTTPException
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
@@ -21,6 +21,7 @@ import uvicorn
 from backend.feed_maker_manager import FeedMakerManager
 from backend.auth import create_session, delete_session, get_current_user, set_session_cookie, clear_session_cookie, verify_facebook_token, require_admin
 from bin.feed_maker_util import Env
+from bin.access_log_manager import AccessLogManager
 from bin.db import DB
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -54,6 +55,13 @@ def get_feed_maker_manager(request: Request) -> "FeedMakerManager":
 
 
 AUTH_EXEMPT_PATHS = {"/auth/login", "/auth/logout", "/auth/me"}
+AUTH_EXEMPT_PREFIXES = ("/feed/",)
+
+
+def _is_auth_exempt(path: str) -> bool:
+    if path in AUTH_EXEMPT_PATHS:
+        return True
+    return any(path.startswith(p) for p in AUTH_EXEMPT_PREFIXES)
 
 
 @app.middleware("http")
@@ -61,7 +69,7 @@ async def auth_middleware(request: Request, call_next: Any) -> Response:
     if request.method == "OPTIONS":
         response: Response = await call_next(request)
         return response
-    if request.url.path not in AUTH_EXEMPT_PATHS:
+    if not _is_auth_exempt(request.url.path):
         user_session = get_current_user(request)
         if not user_session:
             return JSONResponse(status_code=401, content={"detail": "Not authenticated"})
@@ -518,6 +526,34 @@ async def get_groups(feed_maker_manager: FeedMakerManager = Depends(get_feed_mak
         response_object["message"] = error
         response_object["status"] = "failure"
     return response_object
+
+
+# Feed serving endpoints (auth-exempt, proxied from web-nginx)
+FEED_DIR = Path(Env.get("WEB_SERVICE_FEED_DIR_PREFIX", "/xml"))
+TRACKING_PIXEL_PATH = FEED_DIR / "img" / "1x1.jpg"
+
+
+FEED_DIR_RESOLVED = FEED_DIR.resolve()
+
+
+@app.get("/feed/{feed_name}.xml")
+async def serve_feed(feed_name: str, background_tasks: BackgroundTasks) -> FileResponse:
+    xml_path = (FEED_DIR / f"{feed_name}.xml").resolve()
+    if not xml_path.is_relative_to(FEED_DIR_RESOLVED):
+        raise HTTPException(status_code=400, detail="Invalid feed name")
+    if not xml_path.is_file():
+        raise HTTPException(status_code=404, detail="Feed not found")
+    background_tasks.add_task(AccessLogManager.record_feed_access, feed_name)
+    return FileResponse(xml_path, media_type="application/xml")
+
+
+@app.get("/feed/img/1x1.jpg")
+async def tracking_pixel(background_tasks: BackgroundTasks, feed: str, item: str = "") -> FileResponse:
+    feed_name = feed.removesuffix(".xml")
+    background_tasks.add_task(AccessLogManager.record_item_view, feed_name)
+    if not TRACKING_PIXEL_PATH.is_file():
+        raise HTTPException(status_code=404, detail="Tracking pixel not found")
+    return FileResponse(TRACKING_PIXEL_PATH, media_type="image/jpeg")
 
 
 if __name__ == "__main__":  # pragma: no cover
