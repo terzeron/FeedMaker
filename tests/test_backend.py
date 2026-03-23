@@ -933,5 +933,62 @@ def test_lifespan_startup_shutdown():
         asyncio.run(_run())
 
 
+class TestFeedServingEndpoints:
+    """Feed serving + tracking pixel endpoints (auth-exempt)"""
+
+    def test_serve_feed_returns_xml(self, tmp_path):
+        xml_content = '<?xml version="1.0"?><rss><channel><title>Test</title></channel></rss>'
+        xml_file = tmp_path / "testfeed.xml"
+        xml_file.write_text(xml_content)
+
+        with patch("backend.main.FEED_DIR", tmp_path), patch("backend.main.FEED_DIR_RESOLVED", tmp_path.resolve()), patch("backend.main.AccessLogManager.record_feed_access") as mock_record, patch("backend.main.get_current_user", return_value=None):
+            response = client.get("/feed/testfeed.xml")
+            assert response.status_code == 200
+            assert "xml" in response.headers["content-type"]
+            assert "<title>Test</title>" in response.text
+            mock_record.assert_called_once_with("testfeed")
+
+    def test_serve_feed_not_found(self, tmp_path):
+        with patch("backend.main.FEED_DIR", tmp_path), patch("backend.main.FEED_DIR_RESOLVED", tmp_path.resolve()), patch("backend.main.get_current_user", return_value=None):
+            response = client.get("/feed/nonexistent.xml")
+            assert response.status_code == 404
+
+    def test_serve_feed_path_traversal_blocked(self, tmp_path):
+        with patch("backend.main.FEED_DIR", tmp_path), patch("backend.main.FEED_DIR_RESOLVED", tmp_path.resolve()), patch("backend.main.get_current_user", return_value=None):
+            response = client.get("/feed/..%2F..%2Fetc%2Fpasswd.xml")
+            assert response.status_code in (400, 404)
+
+    def test_tracking_pixel_returns_image(self, tmp_path):
+        img_dir = tmp_path / "img"
+        img_dir.mkdir()
+        pixel_file = img_dir / "1x1.jpg"
+        pixel_file.write_bytes(b"\xff\xd8\xff\xe0")  # minimal JPEG header
+
+        with patch("backend.main.TRACKING_PIXEL_PATH", pixel_file), patch("backend.main.AccessLogManager.record_item_view") as mock_record, patch("backend.main.get_current_user", return_value=None):
+            response = client.get("/feed/img/1x1.jpg?feed=myfeed.xml&item=item001")
+            assert response.status_code == 200
+            assert "image" in response.headers["content-type"]
+            mock_record.assert_called_once_with("myfeed")
+
+    def test_tracking_pixel_without_item_param(self, tmp_path):
+        img_dir = tmp_path / "img"
+        img_dir.mkdir()
+        pixel_file = img_dir / "1x1.jpg"
+        pixel_file.write_bytes(b"\xff\xd8\xff\xe0")
+
+        with patch("backend.main.TRACKING_PIXEL_PATH", pixel_file), patch("backend.main.AccessLogManager.record_item_view"), patch("backend.main.get_current_user", return_value=None):
+            response = client.get("/feed/img/1x1.jpg?feed=myfeed.xml")
+            assert response.status_code == 200
+
+    def test_feed_endpoints_are_auth_exempt(self):
+        """Verify /feed/ prefix is exempt from authentication"""
+        from backend.main import _is_auth_exempt
+
+        assert _is_auth_exempt("/feed/something.xml")
+        assert _is_auth_exempt("/feed/img/1x1.jpg")
+        assert not _is_auth_exempt("/groups")
+        assert not _is_auth_exempt("/exec_result")
+
+
 if __name__ == "__main__":
     pytest.main()

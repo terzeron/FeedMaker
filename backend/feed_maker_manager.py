@@ -45,14 +45,12 @@ class FeedMakerManager:
     def __init__(self) -> None:
         LOGGER.debug("# FeedMakerManager.__init__()")
         self.feed_manager = FeedManager()
-        self.access_log_manager = AccessLogManager()
         self.html_file_manager = HtmlFileManager()
         self.problem_manager = ProblemManager()
 
     def __del__(self) -> None:
         LOGGER.debug("# FeedMakerManager.__del__()")
         self.feed_manager = None
-        self.access_log_manager = None
         self.html_file_manager = None
         self.problem_manager = None
 
