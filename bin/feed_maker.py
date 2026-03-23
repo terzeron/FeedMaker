@@ -470,11 +470,18 @@ class FeedMaker:
                 continue
 
             with html_file_path.open("r", encoding="utf-8") as in_file:
+                last_line = ""
                 for line in in_file:
+                    last_line = line
                     content += line
                     # restrict big contents
                     if len(content) >= self.MAX_CONTENT_LENGTH:
                         content = "<strong>본문이 너무 길어서 전문을 싣지 않았습니다. 다음의 원문 URL을 참고해주세요.</strong><br/>" + content
+                        # 파일 마지막 줄의 1x1 트래킹 태그가 잘리지 않도록 보존
+                        for remaining_line in in_file:
+                            last_line = remaining_line
+                        if "1x1.jpg" in last_line and last_line not in content:
+                            content += last_line
                         break
 
             rss_url_prefix_for_guid = self.rss_conf.get("rss_url_prefix_for_guid", "")
