@@ -98,7 +98,7 @@ class TestAclose(unittest.TestCase):
 
 
 class TestGitAdd(unittest.TestCase):
-    def test_success(self):
+    def test_success_new_file(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             mgr = _make_manager(tmp_path)
@@ -106,6 +106,7 @@ class TestGitAdd(unittest.TestCase):
             feed_dir.mkdir(parents=True)
 
             mock_repo = MagicMock()
+            mock_repo.git.ls_files.return_value = ""
             with patch.object(mgr, "_get_repo", return_value=mock_repo):
                 result, error = mgr._git_add(feed_dir)
 
@@ -113,6 +114,23 @@ class TestGitAdd(unittest.TestCase):
             self.assertIn("feed1", result)
             mock_repo.index.add.assert_called_once()
             mock_repo.index.commit.assert_called_once_with("add feed1")
+
+    def test_success_modify_existing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            mgr = _make_manager(tmp_path)
+            feed_dir = tmp_path / "group" / "feed1"
+            feed_dir.mkdir(parents=True)
+
+            mock_repo = MagicMock()
+            mock_repo.git.ls_files.return_value = "group/feed1/conf.json"
+            with patch.object(mgr, "_get_repo", return_value=mock_repo):
+                result, error = mgr._git_add(feed_dir)
+
+            self.assertIsNone(error)
+            self.assertEqual(result, "modify feed1")
+            mock_repo.index.add.assert_called_once()
+            mock_repo.index.commit.assert_called_once_with("modify feed1")
 
     def test_invalid_repo_returns_error(self):
         with tempfile.TemporaryDirectory() as tmp:
