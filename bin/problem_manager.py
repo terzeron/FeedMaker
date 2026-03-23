@@ -48,12 +48,16 @@ class ProblemManager:
                 .where(
                     # 비활성화된 피드 제외
                     FeedInfo.is_active,
-                    # 1) http_request=0 AND public_html=0 AND feedmaker=0 인 행 제외
-                    not_(and_(not_(FeedInfo.http_request), not_(FeedInfo.public_html), not_(FeedInfo.feedmaker))),
+                    # 1) http_request=0 AND public_html=0 AND feedmaker=0 AND config="" 인 행 제외
+                    #    (설정이 있는 미운영 피드는 문제로 표시)
+                    not_(and_(not_(FeedInfo.http_request), not_(FeedInfo.public_html), not_(FeedInfo.feedmaker), FeedInfo.config == "")),
                     # 2) http_request=1, public_html=0, feedmaker=0, access_date IS NOT NULL,
                     #    DATEDIFF(current_date, access_date) > num_days 인 행 제외
                     not_(and_(FeedInfo.http_request, not_(FeedInfo.public_html), not_(FeedInfo.feedmaker), FeedInfo.access_date.isnot(None), func.datediff(func.current_date(), FeedInfo.access_date) > cls.num_days)),
                     # 3) http_request=1, public_html=1, feedmaker=1, config IS NOT NULL,
+                    #    AND (access_date IS NOT NULL AND DATEDIFF(current_date,access_date)<num_days
+                    #         OR view_date IS NOT NULL AND DATEDIFF(current_date,view_date)<num_days)
+                    # 3) http_request=1, public_html=1, feedmaker=1, config 비어있지 않음,
                     #    AND (access_date IS NOT NULL AND DATEDIFF(current_date,access_date)<num_days
                     #         OR view_date IS NOT NULL AND DATEDIFF(current_date,view_date)<num_days)
                     not_(
@@ -61,7 +65,7 @@ class ProblemManager:
                             FeedInfo.http_request,
                             FeedInfo.public_html,
                             FeedInfo.feedmaker,
-                            FeedInfo.config.isnot(None),
+                            FeedInfo.config != "",
                             or_(and_(FeedInfo.access_date.isnot(None), func.datediff(func.current_date(), FeedInfo.access_date) < cls.num_days), and_(FeedInfo.view_date.isnot(None), func.datediff(func.current_date(), FeedInfo.view_date) < cls.num_days)),
                         )
                     ),
@@ -69,8 +73,8 @@ class ProblemManager:
                 .order_by(FeedInfo.feedmaker, FeedInfo.public_html, FeedInfo.http_request, FeedInfo.collect_date, FeedInfo.rss_update_date, FeedInfo.upload_date, FeedInfo.access_date, FeedInfo.view_date)
                 .all()
             )
-            # 같은 feed_name에 feedmaker=True인 레코드가 있는지 미리 수집
-            feedmaker_true_names: set[str] = {row.feed_name for row in rows if row.feedmaker}
+            # 전체 테이블에서 feedmaker=True인 feed_name 수집 (필터링된 rows가 아닌 원본)
+            feedmaker_true_names: set[str] = {r.feed_name for r in s.query(FeedInfo.feed_name).filter(FeedInfo.feedmaker).all()}
 
             for row in rows:
                 feed_name = row.feed_name
