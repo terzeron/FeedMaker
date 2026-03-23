@@ -26,30 +26,17 @@ LOGGER = logging.getLogger()
 class TranslationTest(unittest.TestCase):
     def setUp(self) -> None:
         self._old_cwd = Path.cwd()
-        self.work_dir = Path(Env.get("FM_WORK_DIR")) / "translation_test"
-        self.work_dir.mkdir(parents=True, exist_ok=True)
+        self.work_dir = Path(tempfile.mkdtemp())
         self.translation_map_path = self.work_dir / "translation_map.json"
-        if self.translation_map_path.is_file():
-            self.translation_map_path.unlink(missing_ok=True)
 
-        # 테스트용 환경 변수 설정
-        self._old_fm_work_dir = os.environ.get("FM_WORK_DIR", None)
-        os.environ["FM_WORK_DIR"] = str(self.work_dir)
+        self._env_patcher = patch.dict(os.environ, {"FM_WORK_DIR": str(self.work_dir)})
+        self._env_patcher.start()
         os.chdir(self.work_dir)
 
     def tearDown(self) -> None:
-        # 캐시 파일 삭제
-        if self.translation_map_path.is_file():
-            self.translation_map_path.unlink(missing_ok=True)
-        # 원래 디렉토리로 복귀
         os.chdir(self._old_cwd)
-        # 작업 디렉토리 및 하위 파일/디렉토리 모두 삭제
+        self._env_patcher.stop()
         shutil.rmtree(self.work_dir, ignore_errors=True)
-        # 환경 변수 복원
-        if self._old_fm_work_dir is not None:
-            os.environ["FM_WORK_DIR"] = self._old_fm_work_dir
-        else:
-            os.environ.pop("FM_WORK_DIR", None)
 
     def test_chunk_by_items_basic(self) -> None:
         items = ["a", "b", "c", "d", "e"]
@@ -508,19 +495,15 @@ class FallbackChainTest(unittest.TestCase):
 
     def setUp(self) -> None:
         self._old_cwd = Path.cwd()
-        self.work_dir = Path(Env.get("FM_WORK_DIR")) / "fallback_test"
-        self.work_dir.mkdir(parents=True, exist_ok=True)
-        self._old_fm_work_dir = os.environ.get("FM_WORK_DIR", None)
-        os.environ["FM_WORK_DIR"] = str(self.work_dir)
+        self.work_dir = Path(tempfile.mkdtemp())
+        self._env_patcher = patch.dict(os.environ, {"FM_WORK_DIR": str(self.work_dir)})
+        self._env_patcher.start()
         os.chdir(self.work_dir)
 
     def tearDown(self) -> None:
         os.chdir(self._old_cwd)
+        self._env_patcher.stop()
         shutil.rmtree(self.work_dir, ignore_errors=True)
-        if self._old_fm_work_dir is not None:
-            os.environ["FM_WORK_DIR"] = self._old_fm_work_dir
-        else:
-            os.environ.pop("FM_WORK_DIR", None)
 
     def _make_mock_service(self, provider: TranslationProvider, result: dict[str, str]) -> MagicMock:
         svc = MagicMock()
@@ -654,20 +637,16 @@ class CacheTTLTest(unittest.TestCase):
 
     def setUp(self) -> None:
         self._old_cwd = Path.cwd()
-        self.work_dir = Path(Env.get("FM_WORK_DIR")) / "ttl_test"
-        self.work_dir.mkdir(parents=True, exist_ok=True)
+        self.work_dir = Path(tempfile.mkdtemp())
         self.cache_path = self.work_dir / "translation_map.json"
-        self._old_fm_work_dir = os.environ.get("FM_WORK_DIR", None)
-        os.environ["FM_WORK_DIR"] = str(self.work_dir)
+        self._env_patcher = patch.dict(os.environ, {"FM_WORK_DIR": str(self.work_dir)})
+        self._env_patcher.start()
         os.chdir(self.work_dir)
 
     def tearDown(self) -> None:
         os.chdir(self._old_cwd)
+        self._env_patcher.stop()
         shutil.rmtree(self.work_dir, ignore_errors=True)
-        if self._old_fm_work_dir is not None:
-            os.environ["FM_WORK_DIR"] = self._old_fm_work_dir
-        else:
-            os.environ.pop("FM_WORK_DIR", None)
 
     def test_old_format_migration(self) -> None:
         """구 포맷(flat dict) → v2 마이그레이션 시 ts=now 부여"""
@@ -889,13 +868,14 @@ class ProviderFilterTest(unittest.TestCase):
 
     def setUp(self) -> None:
         self._old_cwd = Path.cwd()
-        self.work_dir = Path(Env.get("FM_WORK_DIR")) / "provider_test"
-        self.work_dir.mkdir(parents=True, exist_ok=True)
-        os.environ["FM_WORK_DIR"] = str(self.work_dir)
+        self.work_dir = Path(tempfile.mkdtemp())
+        self._env_patcher = patch.dict(os.environ, {"FM_WORK_DIR": str(self.work_dir)})
+        self._env_patcher.start()
         os.chdir(self.work_dir)
 
     def tearDown(self) -> None:
         os.chdir(self._old_cwd)
+        self._env_patcher.stop()
         shutil.rmtree(self.work_dir, ignore_errors=True)
 
     @patch.dict(os.environ, {"AZURE_API_KEY": "az", "DEEPL_API_KEY": "dl", "ANTHROPIC_API_KEY": "cl"})
@@ -1137,8 +1117,7 @@ class TestTranslationServiceFactory(unittest.TestCase):
 
 class TestTranslationCacheLoadSave(unittest.TestCase):
     def setUp(self) -> None:
-        self.work_dir = Path(Env.get("FM_WORK_DIR")) / "translation_ext_test"
-        self.work_dir.mkdir(parents=True, exist_ok=True)
+        self.work_dir = Path(tempfile.mkdtemp())
         self.cache_path = self.work_dir / "translation_map.json"
 
     def tearDown(self) -> None:
@@ -1250,16 +1229,14 @@ class TestTranslateWithFallback(unittest.TestCase):
 
 class TestTranslateHtml(unittest.TestCase):
     def setUp(self) -> None:
-        self.work_dir = Path(Env.get("FM_WORK_DIR")) / "translate_html_test"
-        self.work_dir.mkdir(parents=True, exist_ok=True)
+        self.work_dir = Path(tempfile.mkdtemp())
         self.cache_path = self.work_dir / "translation_map.json"
-        self._old_env = os.environ.get("FM_WORK_DIR", None)
-        os.environ["FM_WORK_DIR"] = str(self.work_dir)
+        self._env_patcher = patch.dict(os.environ, {"FM_WORK_DIR": str(self.work_dir)})
+        self._env_patcher.start()
 
     def tearDown(self) -> None:
+        self._env_patcher.stop()
         shutil.rmtree(self.work_dir, ignore_errors=True)
-        if self._old_env is not None:
-            os.environ["FM_WORK_DIR"] = self._old_env
 
     @patch("utils.translation.TranslationServiceFactory.create_services")
     def test_normal_html(self, mock_create: MagicMock) -> None:
@@ -1443,19 +1420,15 @@ class TestUncoveredBranches(unittest.TestCase):
 
     def setUp(self) -> None:
         self._old_cwd = Path.cwd()
-        self.work_dir = Path(Env.get("FM_WORK_DIR")) / "uncovered_test"
-        self.work_dir.mkdir(parents=True, exist_ok=True)
-        self._old_fm_work_dir = os.environ.get("FM_WORK_DIR", None)
-        os.environ["FM_WORK_DIR"] = str(self.work_dir)
+        self.work_dir = Path(tempfile.mkdtemp())
+        self._env_patcher = patch.dict(os.environ, {"FM_WORK_DIR": str(self.work_dir)})
+        self._env_patcher.start()
         os.chdir(self.work_dir)
 
     def tearDown(self) -> None:
         os.chdir(self._old_cwd)
+        self._env_patcher.stop()
         shutil.rmtree(self.work_dir, ignore_errors=True)
-        if self._old_fm_work_dir is not None:
-            os.environ["FM_WORK_DIR"] = self._old_fm_work_dir
-        else:
-            os.environ.pop("FM_WORK_DIR", None)
 
     # Line 142: Azure - non-unrecoverable error (e.g. 500) → continue
     @patch("utils.translation.time.sleep")

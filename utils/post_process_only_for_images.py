@@ -28,11 +28,10 @@ def main() -> int:
         if o == "-r":
             remove_not_found_images = True
 
-
     prev_img_tag: str = ""
     for line in sys.stdin:
-        if re.search(r'<(meta|style)', line):
-            print(line, end='')
+        if re.search(r"<(meta|style)", line):
+            print(line, end="")
         match = re.search(r'(?P<img_tag><img src=[\'"]?[^\'"]+[\'"]?[^>]*>)', line)
         if match:
             img_tag = match.group("img_tag")
@@ -46,5 +45,5 @@ def main() -> int:
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(main())

@@ -78,13 +78,13 @@ def generate_session_id() -> str:
     return secrets.token_urlsafe(48)
 
 
-def create_session(user_email: str, user_name: str, access_token: Optional[str] = None) -> str:
+def create_session(user_email: str, user_name: str, access_token: Optional[str] = None, profile_picture_url: Optional[str] = None) -> str:
     """Create a new session in the database and return session ID"""
     session_id = generate_session_id()
     expires_at = datetime.now(timezone.utc) + timedelta(days=SESSION_EXPIRY_DAYS)
 
     with DB.session_ctx() as session:
-        user_session = UserSession(session_id=session_id, user_email=user_email, user_name=user_name, facebook_access_token=access_token, expires_at=expires_at)
+        user_session = UserSession(session_id=session_id, user_email=user_email, user_name=user_name, facebook_access_token=access_token, profile_picture_url=profile_picture_url, expires_at=expires_at)
         session.add(user_session)
 
     LOGGER.info(f"Created session for user {user_email}")

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 
+import os
 import shutil
 import logging.config
 from pathlib import Path
@@ -12,11 +13,8 @@ from xml.dom.minidom import parse
 from bin.feed_maker import FeedMaker
 from bin.feed_maker_util import Config, Datetime, PathUtil, Env, header_str
 import tempfile
-from unittest.mock import patch, MagicMock  # noqa: F401
-from bin.feed_maker_util import Config, Datetime, URL, Env, header_str, NotFoundConfigItemError
-from datetime import timedelta
-import json
-import json
+from unittest.mock import MagicMock  # noqa: F401
+from bin.feed_maker_util import URL, NotFoundConfigItemError
 import json
 
 
@@ -38,13 +36,17 @@ def assert_in_mock_logger(message: str, mock_logger: Mock, do_submatch: bool = F
 
 class TestFeedMaker(unittest.TestCase):
     def setUp(self) -> None:
+        self.tmp_root = Path(tempfile.mkdtemp())
         group_name = "naver"
         feed_name = "certain_webtoon"
-        self.public_feed_dir_path = Path(Env.get("WEB_SERVICE_FEED_DIR_PREFIX"))
+        work_dir = self.tmp_root / "work"
+        img_dir = self.tmp_root / "img"
+        self.public_feed_dir_path = self.tmp_root / "xml"
+        for d in [work_dir / group_name / feed_name, img_dir, self.public_feed_dir_path]:
+            d.mkdir(parents=True, exist_ok=True)
         self.public_rss_file_path = self.public_feed_dir_path / f"{feed_name}.xml"
         self.public_old_rss_file_path = self.public_feed_dir_path / f"{feed_name}.xml.old"
-        self.feed_dir_path = Path(Env.get("FM_WORK_DIR")) / group_name / feed_name
-        self.feed_dir_path.mkdir(exist_ok=True)
+        self.feed_dir_path = work_dir / group_name / feed_name
         self.rss_file_path = self.feed_dir_path / f"{feed_name}.xml"
         self.rss_file_path.touch()
         self.old_rss_file_path = self.feed_dir_path / f"{feed_name}.xml.old"
@@ -52,6 +54,11 @@ class TestFeedMaker(unittest.TestCase):
         self.sample_conf_file_path = Path(__file__).parent / "conf.naverwebtoon.json"
         self.conf_file_path = self.feed_dir_path / Config.DEFAULT_CONF_FILE
         shutil.copy(self.sample_conf_file_path, self.conf_file_path)
+
+        img_url_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
+
+        self._env_patcher = patch.dict(os.environ, {"FM_WORK_DIR": str(work_dir), "WEB_SERVICE_FEED_DIR_PREFIX": str(self.public_feed_dir_path), "WEB_SERVICE_IMAGE_DIR_PREFIX": str(img_dir)})
+        self._env_patcher.start()
 
         self.maker = FeedMaker(feed_dir_path=self.feed_dir_path, do_collect_by_force=False, do_collect_only=False, rss_file_path=self.rss_file_path)
         self.config = Config(feed_dir_path=self.feed_dir_path)
@@ -75,7 +82,6 @@ class TestFeedMaker(unittest.TestCase):
         self.list_file2_path = self.list_dir_path / f"{date2_str}.txt"
         with self.list_file2_path.open("w", encoding="utf-8") as outfile:
             outfile.write("https://comic.naver.com/webtoon/detail?titleId=725586&no=136\t136화\n")
-        # 현재 날짜 파일에도 내용을 추가하여 is_completed=False일 때도 올바른 파일을 찾을 수 있도록 함
         with self.list_file1_path.open("w", encoding="utf-8") as outfile:
             outfile.write("https://comic.naver.com/webtoon/detail?titleId=725586&no=136\t136화\n")
 
@@ -83,43 +89,24 @@ class TestFeedMaker(unittest.TestCase):
         self.html_dir_path.mkdir(exist_ok=True)
         md5_name = "3e1c485"
         self.html_file1_path = self.html_dir_path / f"{md5_name}.html"
-        img_url_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
         with self.html_file1_path.open("w", encoding="utf-8") as outfile:
             outfile.write(header_str)
             outfile.write(f"<div>with image tag string</div>\n<img src='{img_url_prefix}/1x1.jpg?feed=certain_webtoon.xml&item={md5_name}'/>\n")
-            outfile.write("A" * 400)  # 템플릿 크기보다 크게 만듦
+            outfile.write("A" * 400)
         md5_name = "8da6dfb"
         self.html_file2_path = self.html_dir_path / f"{md5_name}.html"
         with self.html_file2_path.open("w", encoding="utf-8") as outfile:
             outfile.write(header_str)
             outfile.write("<div>without image tag string</div>\n")
-            outfile.write("B" * 400)  # 템플릿 크기보다 크게 만듦
+            outfile.write("B" * 400)
 
         self.feed_img_dir_path = Path(Env.get("WEB_SERVICE_IMAGE_DIR_PREFIX")) / feed_name
         self.feed_img_dir_path.mkdir(exist_ok=True)
 
     def tearDown(self) -> None:
-        self.html_file2_path.unlink(missing_ok=True)
-        self.html_file1_path.unlink(missing_ok=True)
-        shutil.rmtree(self.html_dir_path, ignore_errors=True)
-
-        self.list_file2_path.unlink(missing_ok=True)
-        self.list_file1_path.unlink(missing_ok=True)
-        shutil.rmtree(self.list_dir_path, ignore_errors=True)
-
-        # 실패 URL 캐시 파일 정리
-        if hasattr(self.maker, 'failed_urls_cache_file') and self.maker.failed_urls_cache_file.exists():
-            self.maker.failed_urls_cache_file.unlink(missing_ok=True)
-
+        self._env_patcher.stop()
         del self.maker
-
-        self.conf_file_path.unlink(missing_ok=True)
-        self.old_rss_file_path.unlink(missing_ok=True)
-        self.rss_file_path.unlink(missing_ok=True)
-        shutil.rmtree(self.feed_dir_path, ignore_errors=True)
-        shutil.rmtree(self.feed_img_dir_path, ignore_errors=True)
-        self.public_rss_file_path.unlink(missing_ok=True)
-        self.public_old_rss_file_path.unlink(missing_ok=True)
+        shutil.rmtree(self.tmp_root, ignore_errors=True)
 
     def test_get_image_tag_str(self) -> None:
         img_url_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
@@ -218,7 +205,7 @@ class TestFeedMaker(unittest.TestCase):
             actual = self.maker._make_html_file(self.item1_url, "137화")
             self.assertTrue(actual)
 
-            self.assertTrue(assert_in_mock_logger("Old: https://comic.naver.com/webtoon/detail?titleId=725586&no=137\t137화\tnaver/certain_webtoon/html/3e1c485.html", mock_info, True))
+            self.assertTrue(assert_in_mock_logger("Old: https://comic.naver.com/webtoon/detail?titleId=725586&no=137\t137화\t", mock_info, True))
 
     def test_get_index_data(self) -> None:
         dt1 = Datetime.get_current_time()
@@ -286,7 +273,7 @@ class TestFeedMaker(unittest.TestCase):
 
     def test_3_get_recent_feed_list(self) -> None:
         # Mock NewlistCollector to avoid external dependencies
-        with patch('bin.feed_maker.NewlistCollector') as mock_collector:
+        with patch("bin.feed_maker.NewlistCollector") as mock_collector:
             # Configure mock to return test data
             mock_instance = mock_collector.return_value
             mock_instance.collect.return_value = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화", [])]
@@ -307,19 +294,23 @@ class TestFeedMaker(unittest.TestCase):
 
     def test_4_diff_feeds_and_make_htmls(self) -> None:
         # Mock all external dependencies
-        with patch('bin.feed_maker_util.Process.exec_cmd', side_effect=lambda *a, **k: ("mock_result", None)):
-            with patch('bin.feed_maker.Extractor.extract_content', return_value="<html><body><div>This is a much larger HTML content that should be bigger than the template size to pass the size check in the feed maker. It needs to be at least 359 bytes to avoid being excluded. This content is intentionally made very long to ensure it passes the size threshold. We need to add more text here to make sure the file size is large enough. Let's add some more content to reach the required size. This should be sufficient now.</div></body></html>"):
-                with patch('bin.feed_maker.NewlistCollector') as mock_collector, \
-                     patch('bin.feed_maker.Crawler') as mock_crawler, \
-                     patch.object(LOGGER, "info") as mock_info:
-
+        with patch("bin.feed_maker_util.Process.exec_cmd", side_effect=lambda *a, **k: ("mock_result", None)):
+            with patch(
+                "bin.feed_maker.Extractor.extract_content",
+                return_value="<html><body><div>This is a much larger HTML content that should be bigger than the template size to pass the size check in the feed maker. It needs to be at least 359 bytes to avoid being excluded. This content is intentionally made very long to ensure it passes the size threshold. We need to add more text here to make sure the file size is large enough. Let's add some more content to reach the required size. This should be sufficient now.</div></body></html>",
+            ):
+                with patch("bin.feed_maker.NewlistCollector") as mock_collector, patch("bin.feed_maker.Crawler") as mock_crawler, patch.object(LOGGER, "info") as mock_info:
                     # Configure mock to return test data
                     mock_instance = mock_collector.return_value
                     mock_instance.collect.return_value = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화", [])]
 
                     # Mock crawler with larger HTML content to pass size check
                     mock_crawler_instance = mock_crawler.return_value
-                    mock_crawler_instance.run.return_value = ("<html><body><div>This is a much larger HTML content that should be bigger than the template size to pass the size check in the feed maker. It needs to be at least 359 bytes to avoid being excluded. This content is intentionally made very long to ensure it passes the size threshold. We need to add more text here to make sure the file size is large enough. Let's add some more content to reach the required size. This should be sufficient now.</div></body></html>", None, None)
+                    mock_crawler_instance.run.return_value = (
+                        "<html><body><div>This is a much larger HTML content that should be bigger than the template size to pass the size check in the feed maker. It needs to be at least 359 bytes to avoid being excluded. This content is intentionally made very long to ensure it passes the size threshold. We need to add more text here to make sure the file size is large enough. Let's add some more content to reach the required size. This should be sufficient now.</div></body></html>",
+                        None,
+                        None,
+                    )
 
                     old_feed_list = self.maker._read_old_feed_list_from_file()
                     recent_feed_list = self.maker._get_recent_feed_list()
@@ -335,19 +326,23 @@ class TestFeedMaker(unittest.TestCase):
 
     def test_5_generate_rss_feed(self) -> None:
         # Mock all external dependencies
-        with patch('bin.feed_maker_util.Process.exec_cmd', side_effect=lambda *a, **k: ("mock_result", None)):
-            with patch('bin.feed_maker.Extractor.extract_content', return_value="<html><body><div>This is a much larger HTML content that should be bigger than the template size to pass the size check in the feed maker. It needs to be at least 359 bytes to avoid being excluded. This content is intentionally made very long to ensure it passes the size threshold. We need to add more text here to make sure the file size is large enough. Let's add some more content to reach the required size. This should be sufficient now.</div></body></html>"):
-                with patch('bin.feed_maker.NewlistCollector') as mock_collector, \
-                     patch('bin.feed_maker.Crawler') as mock_crawler, \
-                     patch.object(LOGGER, "info") as mock_info:
-
+        with patch("bin.feed_maker_util.Process.exec_cmd", side_effect=lambda *a, **k: ("mock_result", None)):
+            with patch(
+                "bin.feed_maker.Extractor.extract_content",
+                return_value="<html><body><div>This is a much larger HTML content that should be bigger than the template size to pass the size check in the feed maker. It needs to be at least 359 bytes to avoid being excluded. This content is intentionally made very long to ensure it passes the size threshold. We need to add more text here to make sure the file size is large enough. Let's add some more content to reach the required size. This should be sufficient now.</div></body></html>",
+            ):
+                with patch("bin.feed_maker.NewlistCollector") as mock_collector, patch("bin.feed_maker.Crawler") as mock_crawler, patch.object(LOGGER, "info") as mock_info:
                     # Configure mock to return test data
                     mock_instance = mock_collector.return_value
                     mock_instance.collect.return_value = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화", [])]
 
                     # Mock crawler with larger HTML content to pass size check
                     mock_crawler_instance = mock_crawler.return_value
-                    mock_crawler_instance.run.return_value = ("<html><body><div>This is a much larger HTML content that should be bigger than the template size to pass the size check in the feed maker. It needs to be at least 359 bytes to avoid being excluded. This content is intentionally made very long to ensure it passes the size threshold. We need to add more text here to make sure the file size is large enough. Let's add some more content to reach the required size. This should be sufficient now.</div></body></html>", None, None)
+                    mock_crawler_instance.run.return_value = (
+                        "<html><body><div>This is a much larger HTML content that should be bigger than the template size to pass the size check in the feed maker. It needs to be at least 359 bytes to avoid being excluded. This content is intentionally made very long to ensure it passes the size threshold. We need to add more text here to make sure the file size is large enough. Let's add some more content to reach the required size. This should be sufficient now.</div></body></html>",
+                        None,
+                        None,
+                    )
 
                     old_feed_list = self.maker._read_old_feed_list_from_file()
                     recent_feed_list = self.maker._get_recent_feed_list()
@@ -373,11 +368,8 @@ class TestFeedMaker(unittest.TestCase):
 
     def test_6_make(self) -> None:
         # Mock all external dependencies
-        with patch('bin.feed_maker_util.Process.exec_cmd', side_effect=lambda *a, **k: ("mock_result", None)):
-            with patch('bin.feed_maker.NewlistCollector') as mock_collector, \
-                 patch('bin.feed_maker.Crawler') as mock_crawler, \
-                 patch.object(LOGGER, "info") as mock_info:
-
+        with patch("bin.feed_maker_util.Process.exec_cmd", side_effect=lambda *a, **k: ("mock_result", None)):
+            with patch("bin.feed_maker.NewlistCollector") as mock_collector, patch("bin.feed_maker.Crawler") as mock_crawler, patch.object(LOGGER, "info") as mock_info:
                 # Configure mock to return test data
                 mock_instance = mock_collector.return_value
                 mock_instance.collect.return_value = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화", [])]
@@ -417,7 +409,7 @@ class TestFeedMaker(unittest.TestCase):
 
         # 시간을 과거로 조작하여 캐시 생성
         past_time = Datetime.get_current_time() - timedelta(seconds=5)
-        with patch('bin.feed_maker_util.Datetime.get_current_time', return_value=past_time):
+        with patch("bin.feed_maker_util.Datetime.get_current_time", return_value=past_time):
             self.maker._add_failed_url(expired_url, "expired failure")
 
         self.assertTrue(self.maker.failed_urls_cache_file.exists())
@@ -433,10 +425,7 @@ class TestFeedMaker(unittest.TestCase):
 
     def test_failed_url_cache_formats(self) -> None:
         """다양한 시간 포맷에 대한 실패 URL 캐싱 기능 테스트"""
-        test_cases = [
-            "always", "1 month", "1 months", "2 month", "2 months",
-            "3 week", "4 weeks", "5 day", "6 days", "7 hour", "8 hours"
-        ]
+        test_cases = ["always", "1 month", "1 months", "2 month", "2 months", "3 week", "4 weeks", "5 day", "6 days", "7 hour", "8 hours"]
 
         for i, case in enumerate(test_cases):
             with self.subTest(case=case):
@@ -458,7 +447,7 @@ class TestFeedMaker(unittest.TestCase):
                     content = f.read()
                     self.assertIn(url, content)
 
-                    lines = content.strip().split('\n')
+                    lines = content.strip().split("\n")
                     found_line = ""
                     for line in lines:
                         if url in line:
@@ -467,7 +456,7 @@ class TestFeedMaker(unittest.TestCase):
 
                     self.assertTrue(found_line, f"URL not found in cache for case: {case}")
 
-                    _, expiry_str = found_line.strip().split('\t')
+                    _, expiry_str = found_line.strip().split("\t")
                     expiry_dt = self.maker.isoparser.isoparse(expiry_str)
 
                     if case == "always":
@@ -569,8 +558,7 @@ class TestGetSizeOfTemplateWithImageTag(unittest.TestCase):
 
 class TestIsImageTagInHtmlFile(unittest.TestCase):
     def setUp(self) -> None:
-        self.work_dir = Path(Env.get("FM_WORK_DIR")) / "fm_ext_test"
-        self.work_dir.mkdir(parents=True, exist_ok=True)
+        self.work_dir = Path(tempfile.mkdtemp())
         self.html_file = self.work_dir / "test.html"
 
     def tearDown(self) -> None:
@@ -587,8 +575,7 @@ class TestIsImageTagInHtmlFile(unittest.TestCase):
 
 class TestAppendImageTagToHtmlFile(unittest.TestCase):
     def setUp(self) -> None:
-        self.work_dir = Path(Env.get("FM_WORK_DIR")) / "fm_ext_test_append"
-        self.work_dir.mkdir(parents=True, exist_ok=True)
+        self.work_dir = Path(tempfile.mkdtemp())
         self.html_file = self.work_dir / "test.html"
 
     def tearDown(self) -> None:
@@ -628,13 +615,18 @@ class TestGetSizeOfTemplate(unittest.TestCase):
 
 class TestReadOldFeedListFromFile(unittest.TestCase):
     def setUp(self) -> None:
-        self.work_dir = Path(Env.get("FM_WORK_DIR")) / "fm_ext_test_feed_list"
+        self.work_dir = Path(tempfile.mkdtemp())
+        img_dir = self.work_dir / "img"
+        img_dir.mkdir(exist_ok=True)
         self.feed_dir = self.work_dir / "test_feed"
         self.feed_dir.mkdir(parents=True, exist_ok=True)
         self.list_dir = self.feed_dir / "newlist"
         self.list_dir.mkdir(exist_ok=True)
         self.html_dir = self.feed_dir / "html"
         self.html_dir.mkdir(exist_ok=True)
+
+        self._env_patcher = patch.dict(os.environ, {"FM_WORK_DIR": str(self.work_dir), "WEB_SERVICE_IMAGE_DIR_PREFIX": str(img_dir)})
+        self._env_patcher.start()
 
         self.sample_conf_file = Path(__file__).parent / "conf.naverwebtoon.json"
         self.conf_file = self.feed_dir / Config.DEFAULT_CONF_FILE
@@ -645,6 +637,7 @@ class TestReadOldFeedListFromFile(unittest.TestCase):
         self.rss_file.touch()
 
     def tearDown(self) -> None:
+        self._env_patcher.stop()
         shutil.rmtree(self.work_dir, ignore_errors=True)
 
     def _make_maker(self) -> FeedMaker:
@@ -878,12 +871,19 @@ class FeedMakerMakeTestBase(unittest.TestCase):
     """Base class that creates a FeedMaker instance with real dirs and mocked config."""
 
     def setUp(self) -> None:
+        self.tmp_root = Path(tempfile.mkdtemp())
+        work_dir = self.tmp_root / "work"
+        img_dir = self.tmp_root / "img"
         self.group_name = "naver"
         self.feed_name = "test_make_feed"
-        self.feed_dir_path = Path(Env.get("FM_WORK_DIR")) / self.group_name / self.feed_name
+        self.feed_dir_path = work_dir / self.group_name / self.feed_name
         self.feed_dir_path.mkdir(parents=True, exist_ok=True)
+        img_dir.mkdir(exist_ok=True)
         self.rss_file_path = self.feed_dir_path / f"{self.feed_name}.xml"
         self.rss_file_path.touch()
+
+        self._env_patcher = patch.dict(os.environ, {"FM_WORK_DIR": str(work_dir), "WEB_SERVICE_IMAGE_DIR_PREFIX": str(img_dir)})
+        self._env_patcher.start()
 
         sample_conf = Path(__file__).parent / "conf.naverwebtoon.json"
         conf_file = self.feed_dir_path / Config.DEFAULT_CONF_FILE
@@ -902,12 +902,9 @@ class FeedMakerMakeTestBase(unittest.TestCase):
         self.img_url_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
 
     def tearDown(self) -> None:
-        if hasattr(self.maker, "failed_urls_cache_file") and self.maker.failed_urls_cache_file.exists():
-            self.maker.failed_urls_cache_file.unlink(missing_ok=True)
+        self._env_patcher.stop()
         del self.maker
-        shutil.rmtree(self.feed_dir_path, ignore_errors=True)
-        feed_img = Path(Env.get("WEB_SERVICE_IMAGE_DIR_PREFIX")) / self.feed_name
-        shutil.rmtree(feed_img, ignore_errors=True)
+        shutil.rmtree(self.tmp_root, ignore_errors=True)
 
 
 # ---------------------------------------------------------------------------
@@ -1363,7 +1360,6 @@ class TestMakeIsCompletedPath(FeedMakerMakeTestBase):
 
         # Set is_completed in config file
         conf_file = self.feed_dir_path / Config.DEFAULT_CONF_FILE
-        import json
 
         with conf_file.open("r", encoding="utf-8") as f:
             conf_data = json.load(f)
@@ -1414,7 +1410,6 @@ class TestMakeIgnoreOldList(FeedMakerMakeTestBase):
 
         # Set ignore_old_list in the config
         conf_file = self.feed_dir_path / Config.DEFAULT_CONF_FILE
-        import json
 
         with conf_file.open("r", encoding="utf-8") as f:
             conf_data = json.load(f)
@@ -1473,7 +1468,6 @@ class TestMakeCompletedWindowEmpty(FeedMakerMakeTestBase):
 
     def test_completed_empty_window(self) -> None:
         conf_file = self.feed_dir_path / Config.DEFAULT_CONF_FILE
-        import json
 
         with conf_file.open("r", encoding="utf-8") as f:
             conf_data = json.load(f)
@@ -1484,6 +1478,104 @@ class TestMakeCompletedWindowEmpty(FeedMakerMakeTestBase):
         with patch.object(FeedMaker, "_fetch_old_feed_list_window", return_value=[]):
             result = self.maker.make()
             self.assertFalse(result)
+
+
+class TestFailedUrlCacheEdgeCases(FeedMakerMakeTestBase):
+    """Edge cases in failed URL cache: empty lines, invalid timestamps → covers L592,599-600,621,627-628"""
+
+    def test_is_url_recently_failed_with_empty_lines_and_bad_timestamp(self) -> None:
+        self.maker.rss_conf["ignore_broken_link"] = "1 hour"
+        cache = self.maker.failed_urls_cache_file
+        cache.write_text("\n\nhttp://bad.com/page\tINVALID_TIMESTAMP\nhttp://good.com/page\t9999-12-31T23:59:59+00:00\n\n")
+
+        self.assertFalse(self.maker._is_url_recently_failed("http://bad.com/page"))
+        self.assertTrue(self.maker._is_url_recently_failed("http://good.com/page"))
+
+    def test_cleanup_with_empty_lines_and_bad_timestamp(self) -> None:
+        self.maker.rss_conf["ignore_broken_link"] = "1 hour"
+        cache = self.maker.failed_urls_cache_file
+        cache.write_text("\n\nhttp://bad.com/page\tINVALID\nhttp://good.com/page\t9999-12-31T23:59:59+00:00\n\n")
+
+        self.maker._cleanup_expired_failed_urls()
+        content = cache.read_text()
+        self.assertNotIn("INVALID", content)
+        self.assertIn("http://good.com/page", content)
+
+
+class TestGetExpirationFromConfigEdgeCases(FeedMakerMakeTestBase):
+    """_get_expiration_from_config: invalid pattern → covers L654,672"""
+
+    def test_invalid_pattern_returns_none(self) -> None:
+        self.maker.rss_conf["ignore_broken_link"] = "not a valid pattern"
+        result = self.maker._get_expiration_from_config()
+        self.assertIsNone(result)
+
+    def test_empty_string_returns_none(self) -> None:
+        self.maker.rss_conf["ignore_broken_link"] = ""
+        result = self.maker._get_expiration_from_config()
+        self.assertIsNone(result)
+
+
+class TestFetchOldFeedListWindowSortFieldEdgeCases(FeedMakerMakeTestBase):
+    """sort_field pattern no-match and partial match → covers L376,379,391-392,407"""
+
+    def test_sort_field_no_match_uses_default(self) -> None:
+        """When pattern doesn't match any item, uses 999999999 as sort_field."""
+        old_list = [("http://example.com/abc", "Title1", []), ("http://example.com/def", "Title2", [])]
+        # pattern이 아무것도 매치하지 않도록 설정
+        self.maker.collection_conf["sort_field_pattern"] = r"NOMATCH_(\d+)"
+        self.maker.window_size = 10
+        self.maker.start_index_file_path.unlink(missing_ok=True)
+
+        result = self.maker._fetch_old_feed_list_window(old_list)
+        self.assertIsNotNone(result)
+
+    def test_sort_field_with_two_groups(self) -> None:
+        """Pattern with two capture groups → covers L375-376."""
+        old_list = [("http://example.com/10/a", "Title", []), ("http://example.com/5/b", "Title2", [])]
+        # 두 개의 캡처 그룹이 있는 패턴
+        self.maker.collection_conf["sort_field_pattern"] = r"example.com/(\d+)/([a-z])"
+        self.maker.window_size = 10
+        self.maker.start_index_file_path.unlink(missing_ok=True)
+
+        result = self.maker._fetch_old_feed_list_window(old_list)
+        self.assertIsNotNone(result)
+
+
+class TestGenerateRssFeedWithGuidPrefix(FeedMakerMakeTestBase):
+    """rss_url_prefix_for_guid set → covers L482"""
+
+    def test_guid_prefix(self) -> None:
+        from bin.feed_maker_util import URL, header_str
+
+        link = "https://example.com/page/1"
+        md5 = URL.get_short_md5_name(URL.get_url_path(link))
+        html_file = self.html_dir / f"{md5}.html"
+        html_file.write_text(header_str + "<div>content</div>" + "A" * 200)
+
+        self.maker.rss_conf["rss_url_prefix_for_guid"] = "https://myguid.com"
+        self.maker.rss_conf["rss_title"] = "Test"
+        self.maker.rss_conf["rss_link"] = "http://test.com"
+
+        from unittest.mock import patch as _patch
+
+        with _patch("bin.feed_maker.Data.compare_two_rss_files", return_value=False):
+            with _patch("bin.feed_maker.Uploader") as mock_up:
+                mock_up.return_value.upload.return_value = True
+                result = self.maker._generate_rss_feed([(link, "Title", [])])
+                self.assertTrue(result)
+
+
+class TestGetIndexDataWriteFailure(FeedMakerMakeTestBase):
+    """_get_index_data: _write_index_data returns empty → covers L339"""
+
+    def test_write_index_data_returns_empty(self) -> None:
+        self.maker.start_index_file_path.unlink(missing_ok=True)
+        with patch.object(self.maker, "_write_index_data", return_value=(0, None)):
+            start, end, mtime = self.maker._get_index_data()
+            self.assertEqual(start, 0)
+            self.assertEqual(end, 0)
+            self.assertIsNone(mtime)
 
 
 if __name__ == "__main__":

@@ -93,6 +93,7 @@ class LoginRequest(BaseModel):
     email: str
     name: str
     access_token: str
+    profile_picture_url: Optional[str] = None
 
 
 # Authentication endpoints
@@ -119,7 +120,7 @@ async def login(request: LoginRequest) -> JSONResponse:
 
     # 세션 생성
     try:
-        session_id = create_session(request.email, request.name, request.access_token)
+        session_id = create_session(request.email, request.name, request.access_token, request.profile_picture_url)
 
         response = JSONResponse(content={"status": "success", "message": "로그인되었습니다."})
 
@@ -167,7 +168,7 @@ async def get_me(request: Request) -> dict[str, Any]:
         return {"is_authenticated": False}
 
     LOGGER.debug("/auth/me: User authenticated: %s", user_session.user_email)
-    return {"is_authenticated": True, "email": user_session.user_email, "name": user_session.user_name}
+    return {"is_authenticated": True, "email": user_session.user_email, "name": user_session.user_name, "profile_picture_url": user_session.profile_picture_url}
 
 
 @app.get("/exec_result")
@@ -519,6 +520,6 @@ async def get_groups(feed_maker_manager: FeedMakerManager = Depends(get_feed_mak
     return response_object
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     LOGGER.debug("# main()")
     uvicorn.run(app, host="0.0.0.0", port=8010)

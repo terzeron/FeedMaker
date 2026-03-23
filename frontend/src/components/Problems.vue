@@ -1355,6 +1355,9 @@ export default {
         : "";
     },
     getShortDate(date) {
+      if (!date) {
+        return "";
+      }
       let d = moment(date);
       if (!d.isValid()) {
         return "";
@@ -1478,7 +1481,7 @@ export default {
             day2MonthAgo.setTime(
               day2MonthAgo.getTime() - 2 * 30 * 24 * 60 * 60 * 1000
             ); // 2 months ago
-            day2MonthAgo = day2MonthAgo.toISOString().substring(0, 12);
+            day2MonthAgo = day2MonthAgo.toISOString().substring(0, 10);
             this.publicFeedInfolist = _.filter(result, (o) => {
               return (
                 o["upload_date"] < day2MonthAgo ||

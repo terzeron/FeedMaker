@@ -1,11 +1,11 @@
-import { reactive, computed } from 'vue';
+import { reactive, computed } from "vue";
 
-const PICTURE_KEY = 'auth_profile_picture';
+const PICTURE_KEY = "auth_profile_picture";
 
 const state = reactive({
   isAuthenticated: false,
   userName: null,
-  profilePictureUrl: sessionStorage.getItem(PICTURE_KEY) || null
+  profilePictureUrl: sessionStorage.getItem(PICTURE_KEY) || null,
 });
 
 export const authStore = {
@@ -22,10 +22,13 @@ export const authStore = {
     }
   },
 
-  updateFromServer(isAuthenticated, name) {
+  updateFromServer(isAuthenticated, name, pictureUrl) {
     state.isAuthenticated = isAuthenticated;
     state.userName = isAuthenticated ? name : null;
-    if (!isAuthenticated) {
+    if (isAuthenticated && pictureUrl) {
+      state.profilePictureUrl = pictureUrl;
+      sessionStorage.setItem(PICTURE_KEY, pictureUrl);
+    } else if (!isAuthenticated) {
       state.profilePictureUrl = null;
       sessionStorage.removeItem(PICTURE_KEY);
     }
@@ -36,5 +39,5 @@ export const authStore = {
     state.userName = null;
     state.profilePictureUrl = null;
     sessionStorage.removeItem(PICTURE_KEY);
-  }
+  },
 };

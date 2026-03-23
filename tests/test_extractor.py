@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup, Comment
 from bin.extractor import Extractor
 from bin.feed_maker_util import Config, header_str
 from unittest.mock import patch, MagicMock
-from bin.extractor import Extractor, main
+from bin.extractor import main
 import html as html_module
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -24,7 +24,7 @@ dummy_url = "https://test.com"
 class ExtractTest(unittest.TestCase):
     def setUp(self) -> None:
         self.config = Config(feed_dir_path=Path(__file__).parent)
-        self.html_content = '''
+        self.html_content = """
         <html>
         <body>
         <div id="content">message1</div>
@@ -37,7 +37,7 @@ class ExtractTest(unittest.TestCase):
         </span>        
         </div>        
         </body>
-        </html>'''
+        </html>"""
         parser = "html.parser"
         self.soup = BeautifulSoup(self.html_content, parser)
 
@@ -51,16 +51,14 @@ class ExtractTest(unittest.TestCase):
     def test_extract_content(self) -> None:
         extraction_conf = self.config.get_extraction_configs()
         actual = Extractor.extract_content(extraction_conf, dummy_url, input_data=self.html_content)
-        expected = ExtractTest.wrap_header(
-            '''<div>\nmessage2</div>\n<div>\nmessage3</div>\n<div>\nmessage1</div>'''
-        )
+        expected = ExtractTest.wrap_header("""<div>\nmessage2</div>\n<div>\nmessage3</div>\n<div>\nmessage1</div>""")
         self.assertEqual(expected, actual)
 
     def test_traverse_element(self) -> None:
         extractor = Extractor()
         element = self.soup.find(id="content")
         actual = extractor._traverse_element(element, dummy_url, "utf-8")
-        expected = '<div>\nmessage1</div>\n'
+        expected = "<div>\nmessage1</div>\n"
         self.assertEqual(expected, actual)
 
     def test_check_element_class(self) -> None:
@@ -75,11 +73,11 @@ class ExtractTest(unittest.TestCase):
 
     def test_paragraph_simple(self) -> None:
         extractor = Extractor()
-        html = '<p>Test paragraph</p>'
+        html = "<p>Test paragraph</p>"
         soup = BeautifulSoup(html, "html.parser")
         element = soup.p
         actual = extractor._traverse_element(element, dummy_url, "utf-8")
-        expected = '<p>\nTest paragraph</p>\n'
+        expected = "<p>\nTest paragraph</p>\n"
         self.assertEqual(expected, actual)
 
     def test_image_data_lazy_src(self) -> None:
@@ -133,10 +131,7 @@ class ExtractTest(unittest.TestCase):
         soup = BeautifulSoup(html, "html.parser")
         element = soup.iframe
         actual = extractor._traverse_element(element, dummy_url, "utf-8")
-        expected = (
-            "<iframe src='video_player.nhn?id=123'></iframe><br/>\n"
-            "<a href='video_player.nhn?id=123'>video_player.nhn?id=123</a><br/>\n"
-        )
+        expected = "<iframe src='video_player.nhn?id=123'></iframe><br/>\n<a href='video_player.nhn?id=123'>video_player.nhn?id=123</a><br/>\n"
         self.assertEqual(expected, actual)
 
     def test_iframe_normal(self) -> None:
@@ -157,7 +152,7 @@ class ExtractTest(unittest.TestCase):
 
     def test_pre_preserve(self) -> None:
         extractor = Extractor()
-        html = '<pre>  pre\n text  </pre>'
+        html = "<pre>  pre\n text  </pre>"
         soup = BeautifulSoup(html, "html.parser")
         element = soup.pre
         actual = extractor._traverse_element(element, dummy_url, "utf-8")
@@ -166,7 +161,7 @@ class ExtractTest(unittest.TestCase):
 
     def test_default_handler(self) -> None:
         extractor = Extractor()
-        html = '<custom>abc</custom>'
+        html = "<custom>abc</custom>"
         soup = BeautifulSoup(html, "html.parser")
         element = soup.custom
         actual = extractor._traverse_element(element, dummy_url, "utf-8")
@@ -175,7 +170,7 @@ class ExtractTest(unittest.TestCase):
 
     def test_comment_skip(self) -> None:
         extractor = Extractor()
-        html = '<!-- comment text --><div>OK</div>'
+        html = "<!-- comment text --><div>OK</div>"
         soup = BeautifulSoup(html, "html.parser")
         comment = [c for c in soup.contents if isinstance(c, Comment)][0]
         actual = extractor._traverse_element(comment, dummy_url, "utf-8")
@@ -187,10 +182,7 @@ class ExtractTest(unittest.TestCase):
         soup = BeautifulSoup(html, "html.parser")
         element = soup.embed
         actual = extractor._traverse_element(element, dummy_url, "utf-8")
-        expected = (
-            "<embed src='movie.swf'></embed><br/>\n"
-            "<a href='movie.swf'>movie.swf</a><br/>\n"
-        )
+        expected = "<embed src='movie.swf'></embed><br/>\n<a href='movie.swf'>movie.swf</a><br/>\n"
         self.assertEqual(expected, actual)
 
     def test_embed_normal(self) -> None:
@@ -238,7 +230,7 @@ class ExtractTest(unittest.TestCase):
 
     def test_style_skip(self) -> None:
         extractor = Extractor()
-        html = '<style>h1{color:red;}</style>'
+        html = "<style>h1{color:red;}</style>"
         soup = BeautifulSoup(html, "html.parser")
         element = soup.style
         actual = extractor._traverse_element(element, dummy_url, "utf-8")
@@ -273,12 +265,12 @@ class ExtractTest(unittest.TestCase):
 
     def test_br_tag(self) -> None:
         extractor = Extractor()
-        html = '<br/>'
+        html = "<br/>"
         soup = BeautifulSoup(html, "html.parser")
         element = soup.br
         actual = extractor._traverse_element(element, dummy_url, "utf-8")
         # default_handler 적용
-        expected = '<br>\n</br>\n'
+        expected = "<br>\n</br>\n"
         self.assertEqual(expected, actual)
 
     def test_input_non_origin(self) -> None:
@@ -300,31 +292,21 @@ class ExtractTest(unittest.TestCase):
 
     def test_complex_mixed_scenario(self) -> None:
         extractor = Extractor()
-        html = '''
+        html = """
         <div style="visibility:hidden"><table><tr><td>A</td></tr></table></div>
         <p>Visible<br>Line</p>
         <map>X<area href="/map_link" alt="Map"/></map>
         <img data-lazy-src="/lazy.png" src="//cdn/a.png"/>
         <param name="Src" value="f.swf"/>
         <br/>
-        '''
+        """
         soup = BeautifulSoup(html, "html.parser")
         # wrap in a container to traverse
         container = soup.new_tag("div")
         for node in soup.find_all(recursive=False):
             container.append(node)
         actual = extractor._traverse_element(container, dummy_url, "utf-8")
-        expected = (
-            "<div>\n"
-            "<p>\nVisible<br>\n</br>\nLine</p>\n"
-            "<br/><br/><strong><a href='/map_link'>Map</a></strong><br/><br/>\n"
-            "<img src='https://test.com/lazy.png'/>\n"
-            "<video src='f.swf'></video><br/>\n"
-            "<a href='f.swf'>f.swf</a><br/>\n"
-            "<br>\n"
-            "</br>\n"
-            "</div>\n"
-        )
+        expected = "<div>\n<p>\nVisible<br>\n</br>\nLine</p>\n<br/><br/><strong><a href='/map_link'>Map</a></strong><br/><br/>\n<img src='https://test.com/lazy.png'/>\n<video src='f.swf'></video><br/>\n<a href='f.swf'>f.swf</a><br/>\n<br>\n</br>\n</div>\n"
         self.assertEqual(expected, actual)
 
 
@@ -736,6 +718,54 @@ class TestExtractorExtended(unittest.TestCase):
         result = Extractor._handle_pre(el, dummy_url, "utf-8")
         self.assertIn("<pre>", result)
         self.assertIn("x = 1", result)
+
+    # ── _check_element_class: raw_classes is a string → covers L78 ──
+
+    def test_check_element_class_string_class(self) -> None:
+        """When element['class'] returns a plain string instead of a list."""
+        soup = BeautifulSoup('<div class="myclass">text</div>', "html.parser")
+        el = soup.div
+        # Force class to be a string (some parsers do this)
+        el["class"] = "myclass"
+        result = Extractor._check_element_class(el, "div", "myclass")
+        self.assertTrue(result)
+
+    def test_check_element_class_no_class_attr(self) -> None:
+        """Element without class attribute → covers L76."""
+        soup = BeautifulSoup("<div>text</div>", "html.parser")
+        el = soup.div
+        result = Extractor._check_element_class(el, "div", "myclass")
+        self.assertFalse(result)
+
+    # ── _handle_text: UnicodeEncodeError → covers L103-109 ──
+
+    def test_handle_text_unicode_encode_error(self) -> None:
+        """UnicodeEncodeError in html.escape triggers word-by-word fallback."""
+        original_escape = html_module.escape
+
+        call_count = 0
+
+        def mock_escape(s, quote=True):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise UnicodeEncodeError("utf-8", "", 0, 1, "mock error")
+            return original_escape(s, quote)
+
+        with patch("bin.extractor.html.escape", side_effect=mock_escape):
+            result = Extractor._handle_text("hello world")
+            # word-by-word fallback should produce something
+            self.assertIn("hello", result)
+
+    def test_handle_text_unicode_encode_error_all_words(self) -> None:
+        """UnicodeEncodeError on every word → returns empty string."""
+
+        def always_fail(s, quote=True):
+            raise UnicodeEncodeError("utf-8", "", 0, 1, "mock error")
+
+        with patch("bin.extractor.html.escape", side_effect=always_fail):
+            result = Extractor._handle_text("hello world")
+            self.assertEqual(result, "")
 
 
 if __name__ == "__main__":

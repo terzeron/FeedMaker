@@ -18,8 +18,15 @@ const stubs = {
 const flushPromises = () => new Promise((r) => setTimeout(r));
 
 describe("Problems.vue", () => {
+  let warnSpy;
+
   beforeEach(() => {
     axios.get.mockReset();
+    warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
   });
 
   it("loads problem tables and computes sorted lists", async () => {
@@ -110,6 +117,7 @@ describe("Problems.vue", () => {
       },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -174,6 +182,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -234,6 +243,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -285,6 +295,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -333,6 +344,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -383,6 +395,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -438,6 +451,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -504,6 +518,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -557,6 +572,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -606,6 +622,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -651,6 +668,7 @@ describe("Problems.vue", () => {
       },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -693,6 +711,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -732,6 +751,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -771,6 +791,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -822,6 +843,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -858,6 +880,7 @@ describe("Problems.vue", () => {
       data: { status: "failure" },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -878,6 +901,7 @@ describe("Problems.vue", () => {
     axios.get.mockRejectedValueOnce(new Error("network"));
     axios.get.mockRejectedValueOnce(new Error("network"));
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -982,6 +1006,7 @@ describe("Problems.vue", () => {
       },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -1041,6 +1066,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -1085,6 +1111,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -1122,6 +1149,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: null },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -1171,6 +1199,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -1219,6 +1248,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -1263,6 +1293,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -1307,6 +1338,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -1350,6 +1382,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -1402,6 +1435,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -1451,6 +1485,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -1511,6 +1546,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -1577,6 +1613,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -1650,6 +1687,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -1735,6 +1773,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -1775,6 +1814,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: 99 },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -1818,6 +1858,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -1861,6 +1902,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -1992,6 +2034,7 @@ describe("Problems.vue", () => {
       },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -2072,6 +2115,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -2113,6 +2157,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -2151,6 +2196,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -2188,6 +2234,7 @@ describe("Problems.vue", () => {
       data: { status: "success", result: [] },
     });
 
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
@@ -2212,5 +2259,327 @@ describe("Problems.vue", () => {
     );
 
     window.alert.mockRestore();
+  });
+
+  it("removeHtmlFile handles success response", async () => {
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    axios.delete = jest
+      .fn()
+      .mockResolvedValueOnce({ data: { status: "success" } });
+    const result = wrapper.vm.removeHtmlFile("g/f/html/test.html");
+    await flushPromises();
+
+    expect(result).toBe(true);
+    expect(axios.delete).toHaveBeenCalledWith(
+      expect.stringContaining("/groups/g/feeds/f/htmls/test.html"),
+    );
+  });
+
+  it("getShortDate returns empty for invalid date", () => {
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+    const wrapper = mount(Problems, { global: { stubs } });
+
+    expect(wrapper.vm.getShortDate(null)).toBe("");
+    expect(wrapper.vm.getShortDate("")).toBe("");
+    expect(wrapper.vm.getShortDate("not-a-date")).toBe("");
+    expect(wrapper.vm.getShortDate("2024-10-10")).toBe("24-10-10");
+  });
+
+  it("formatFileSize handles various sizes", () => {
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+    const wrapper = mount(Problems, { global: { stubs } });
+
+    expect(wrapper.vm.formatFileSize(0)).toBe("0 B");
+    expect(wrapper.vm.formatFileSize(512)).toBe("512 B");
+    expect(wrapper.vm.formatFileSize(1024)).toBe("1 KB");
+    expect(wrapper.vm.formatFileSize(1024 * 1024)).toBe("1 MB");
+  });
+
+  it("sortData handles null and empty inputs", () => {
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+    const wrapper = mount(Problems, { global: { stubs } });
+
+    expect(wrapper.vm.sortData(null, "key", false)).toBeNull();
+    expect(wrapper.vm.sortData([], "key", false)).toEqual([]);
+    expect(wrapper.vm.sortData([{ a: 1 }], null, false)).toEqual([{ a: 1 }]);
+    expect(wrapper.vm.sortData([{ a: 1 }], "", false)).toEqual([{ a: 1 }]);
+  });
+
+  it("sortedStatusInfolist handles non-array data", async () => {
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    wrapper.vm.statusInfolist = "not-an-array";
+    expect(wrapper.vm.sortedStatusInfolist).toEqual([]);
+
+    wrapper.vm.statusInfolist = null;
+    expect(wrapper.vm.sortedStatusInfolist).toEqual([]);
+  });
+
+  it("removePublicFeed calls confirm and deletes on ok", async () => {
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    axios.delete = jest
+      .fn()
+      .mockResolvedValueOnce({ data: { status: "success" } });
+    wrapper.vm.removePublicFeed("test_feed");
+    wrapper.vm.handleConfirmOk();
+    await flushPromises();
+
+    expect(axios.delete).toHaveBeenCalledWith(
+      expect.stringContaining("/public_feeds/test_feed"),
+    );
+  });
+
+  it("statusInfoDeleteClicked opens confirm with feed name", async () => {
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    wrapper.vm.statusInfoDeleteClicked({
+      item: { feed_name: "f1", group_name: "g1" },
+    });
+    expect(wrapper.vm.showConfirmModal).toBe(true);
+  });
+
+  it("publicFeedInfoDeleteClicked opens confirm", async () => {
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    wrapper.vm.publicFeedInfoDeleteClicked({ item: { feed_name: "f1" } });
+    expect(wrapper.vm.showConfirmModal).toBe(true);
+  });
+
+  it("imageWithoutImageTagDeleteClicked opens confirm", async () => {
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    wrapper.vm.imageWithoutImageTagDeleteClicked({
+      item: { file_path: "g/f/html/x.html" },
+    });
+    expect(wrapper.vm.showConfirmModal).toBe(true);
+  });
+
+  it("imageWithManyImageTagDeleteClicked opens confirm", async () => {
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    wrapper.vm.imageWithManyImageTagDeleteClicked({
+      item: { file_path: "g/f/html/x.html" },
+    });
+    expect(wrapper.vm.showConfirmModal).toBe(true);
+  });
+
+  it("imageNotFoundDeleteClicked opens confirm", async () => {
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    wrapper.vm.imageNotFoundDeleteClicked({
+      item: { file_path: "g/f/html/x.html" },
+    });
+    expect(wrapper.vm.showConfirmModal).toBe(true);
+  });
+
+  it("htmlFileSizeDeleteClicked opens confirm", async () => {
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    wrapper.vm.htmlFileSizeDeleteClicked({
+      item: { file_path: "g/f/html/x.html" },
+    });
+    expect(wrapper.vm.showConfirmModal).toBe(true);
+  });
+
+  it("getManagementLink returns correct link html", () => {
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+    const wrapper = mount(Problems, { global: { stubs } });
+
+    const result = wrapper.vm.getManagementLink("My Feed", "naver", "myfeed");
+    expect(result).toContain("/naver/myfeed");
+    expect(result).toContain("My Feed");
+  });
+
+  it("getProblems publicFeedInfo covers size/numItems/date thresholds", async () => {
+    // status_info
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    // progress_info
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    // public_feed_info with diverse data to hit all branches
+    axios.get.mockResolvedValueOnce({
+      data: {
+        status: "success",
+        result: [
+          {
+            feed_name: "f1",
+            feed_title: "",
+            file_size: 500,
+            num_items: 3,
+            upload_date: "2020-01-01",
+          },
+          {
+            feed_name: "f2",
+            feed_title: "F2",
+            file_size: 2048,
+            num_items: 25,
+            upload_date: "2020-01-01",
+          },
+          {
+            feed_name: "f3",
+            feed_title: "F3",
+            file_size: 100,
+            num_items: 10,
+            upload_date: new Date().toISOString(),
+          },
+        ],
+      },
+    });
+    // html_info
+    axios.get.mockResolvedValueOnce({
+      data: {
+        status: "success",
+        result: {
+          html_file_size_map: [],
+          html_file_with_many_image_tag_map: [],
+          html_file_without_image_tag_map: [],
+          html_file_image_not_found_map: [],
+        },
+      },
+    });
+    // element_info
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    // list_url_info
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    // fallback
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    const list = wrapper.vm.publicFeedInfolist;
+    // f1: file_size=500 < 1024 → sizeIsDanger, num_items=3 < 5 → numItemsIsWarning
+    const f1 = list.find((o) => o.feed_name === "f1");
+    expect(f1).toBeTruthy();
+    expect(f1.sizeIsDanger).toBe(true);
+    expect(f1.numItemsIsWarning).toBe(true);
+    expect(f1.feed_title).toBe("f1"); // empty title filled from feed_name
+
+    // f2: file_size=2048 < 4096 → sizeIsWarning, num_items=25 > 20 → numItemsIsDanger
+    const f2 = list.find((o) => o.feed_name === "f2");
+    expect(f2).toBeTruthy();
+    expect(f2.sizeIsWarning).toBe(true);
+    expect(f2.numItemsIsDanger).toBe(true);
+  });
+
+  it("getProblems html_info covers feed_title extraction from feed_dir_path", async () => {
+    // status_info
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    // progress_info
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    // public_feed_info
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    // html_info with feed_dir_path but no feed_title
+    axios.get.mockResolvedValueOnce({
+      data: {
+        status: "success",
+        result: {
+          html_file_size_map: [
+            {
+              feed_dir_path: "group1/feed1",
+              file_path: "group1/feed1/html/abc.html",
+              size: 10,
+              feed_title: "",
+            },
+          ],
+          html_file_with_many_image_tag_map: [
+            {
+              feed_dir_path: "group2/feed2",
+              file_path: "group2/feed2/html/def.html",
+              count: 30,
+              feed_title: "",
+            },
+          ],
+          html_file_without_image_tag_map: [
+            {
+              feed_dir_path: "group3/feed3",
+              file_path: "group3/feed3/html/ghi.html",
+              feed_title: "",
+            },
+          ],
+          html_file_image_not_found_map: [
+            {
+              feed_dir_path: "group4/feed4",
+              file_path: "group4/feed4/html/jkl.html",
+              feed_title: "",
+            },
+          ],
+        },
+      },
+    });
+    // element_info
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    // list_url_info
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    // fallback
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    // feed_title이 빈 문자열일 때 feed_dir_path에서 추출
+    expect(wrapper.vm.htmlFileSizelist.length).toBe(1);
+    expect(wrapper.vm.htmlFileSizelist[0].feed_title).toBe("feed1");
+    expect(wrapper.vm.htmlFileWithManyImageTaglist.length).toBe(1);
+    expect(wrapper.vm.htmlFileWithManyImageTaglist[0].feed_title).toBe("feed2");
+    expect(wrapper.vm.htmlFileWithoutImageTaglist.length).toBe(1);
+    expect(wrapper.vm.htmlFileWithoutImageTaglist[0].feed_title).toBe("feed3");
+    expect(wrapper.vm.htmlFileWithImageNotFoundlist.length).toBe(1);
+    expect(wrapper.vm.htmlFileWithImageNotFoundlist[0].feed_title).toBe(
+      "feed4",
+    );
+  });
+
+  it("getProblems handles failure responses", async () => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    // All APIs return failure
+    axios.get.mockResolvedValue({
+      data: { status: "failure", message: "error" },
+    });
+
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    expect(wrapper.vm.statusInfolist).toEqual([]);
+    expect(wrapper.vm.progressInfolist).toEqual([]);
+    expect(wrapper.vm.publicFeedInfolist).toEqual([]);
+    console.error.mockRestore();
   });
 });

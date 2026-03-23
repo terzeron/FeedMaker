@@ -236,5 +236,5 @@ def main() -> int:
     return 0 if result else -1
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(main())

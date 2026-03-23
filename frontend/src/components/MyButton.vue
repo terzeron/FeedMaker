@@ -76,17 +76,6 @@ defineExpose({
   doShowSpinner,
   doShowInitialIcon
 });
-
-// 디버깅을 위한 watch 추가
-import { watch } from 'vue';
-
-watch(doShowSpinner, (newVal) => {
-  console.log('MyButton doShowSpinner changed to:', newVal);
-});
-
-watch(doShowInitialIcon, (newVal) => {
-  console.log('MyButton doShowInitialIcon changed to:', newVal);
-});
 </script>
 
 <style scoped>

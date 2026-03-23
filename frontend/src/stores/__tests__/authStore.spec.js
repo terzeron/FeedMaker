@@ -55,13 +55,29 @@ describe("stores/authStore", () => {
       expect(sessionStorage.getItem("auth_profile_picture")).toBeNull();
     });
 
-    it("keeps profilePictureUrl when authenticated", () => {
+    it("keeps profilePictureUrl when authenticated without pictureUrl", () => {
       authStore.setAuthenticated("User", "https://example.com/pic.jpg");
       authStore.updateFromServer(true, "User");
       expect(authStore.state.isAuthenticated).toBe(true);
       expect(authStore.state.userName).toBe("User");
       expect(authStore.state.profilePictureUrl).toBe(
         "https://example.com/pic.jpg",
+      );
+    });
+
+    it("restores profilePictureUrl from server when authenticated", () => {
+      authStore.updateFromServer(
+        true,
+        "User",
+        "https://example.com/server-pic.jpg",
+      );
+      expect(authStore.state.isAuthenticated).toBe(true);
+      expect(authStore.state.userName).toBe("User");
+      expect(authStore.state.profilePictureUrl).toBe(
+        "https://example.com/server-pic.jpg",
+      );
+      expect(sessionStorage.getItem("auth_profile_picture")).toBe(
+        "https://example.com/server-pic.jpg",
       );
     });
   });
