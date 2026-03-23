@@ -810,6 +810,76 @@ class TestFeedMakerContentTruncation(unittest.TestCase):
             self.assertTrue(result)
 
 
+class TestFeedMakerContentTruncationPreserves1x1(unittest.TestCase):
+    """긴 본문이 잘려도 마지막 줄의 1x1 트래킹 태그가 보존되는지 검증"""
+
+    @patch("bin.feed_maker.Env")
+    @patch("bin.feed_maker.Data")
+    def test_1x1_tag_preserved_after_truncation(self, mock_data, mock_env):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_env.get.side_effect = lambda k, d="": {"FM_WORK_DIR": tmpdir, "WEB_SERVICE_IMAGE_DIR_PREFIX": tmpdir, "WEB_SERVICE_IMAGE_URL_PREFIX": "http://img"}.get(k, d)
+
+            feed_dir = Path(tmpdir) / "testfeed"
+            feed_dir.mkdir()
+            (feed_dir / "newlist").mkdir()
+            html_dir = feed_dir / "html"
+            html_dir.mkdir()
+
+            rss_file = feed_dir / "testfeed.xml"
+
+            fm = FeedMaker(feed_dir_path=feed_dir, do_collect_by_force=False, do_collect_only=False, rss_file_path=rss_file)
+            fm.rss_conf = {"rss_title": "Test", "rss_link": "http://test.com"}
+
+            link = "https://example.com/big-with-1x1"
+            md5 = URL.get_short_md5_name(URL.get_url_path(link))
+            html_file = html_dir / f"{md5}.html"
+            # 64KB 초과 본문 + 마지막 줄에 1x1 태그
+            big_content = "x" * (FeedMaker.MAX_CONTENT_LENGTH + 1000) + "\n"
+            tracking_tag = "<img src='http://img/1x1.jpg?feed=testfeed.xml&item=abc123'/>"
+            html_file.write_text(big_content + tracking_tag)
+
+            mock_data.compare_two_rss_files.return_value = False
+
+            feed_list = [(link, "Big Content With Tracking", [])]
+            result = fm._generate_rss_feed(feed_list)
+            self.assertTrue(result)
+
+            rss_content = rss_file.read_text(encoding="utf-8")
+            self.assertIn("1x1.jpg", rss_content)
+
+    @patch("bin.feed_maker.Env")
+    @patch("bin.feed_maker.Data")
+    def test_no_1x1_tag_no_extra_append(self, mock_data, mock_env):
+        """1x1 태그가 없는 긴 본문은 추가 없이 그대로 잘림"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_env.get.side_effect = lambda k, d="": {"FM_WORK_DIR": tmpdir, "WEB_SERVICE_IMAGE_DIR_PREFIX": tmpdir, "WEB_SERVICE_IMAGE_URL_PREFIX": "http://img"}.get(k, d)
+
+            feed_dir = Path(tmpdir) / "testfeed"
+            feed_dir.mkdir()
+            (feed_dir / "newlist").mkdir()
+            html_dir = feed_dir / "html"
+            html_dir.mkdir()
+
+            rss_file = feed_dir / "testfeed.xml"
+
+            fm = FeedMaker(feed_dir_path=feed_dir, do_collect_by_force=False, do_collect_only=False, rss_file_path=rss_file)
+            fm.rss_conf = {"rss_title": "Test", "rss_link": "http://test.com"}
+
+            link = "https://example.com/big-no-1x1"
+            md5 = URL.get_short_md5_name(URL.get_url_path(link))
+            html_file = html_dir / f"{md5}.html"
+            html_file.write_text("y" * (FeedMaker.MAX_CONTENT_LENGTH + 1000))
+
+            mock_data.compare_two_rss_files.return_value = False
+
+            feed_list = [(link, "Big No Tracking", [])]
+            result = fm._generate_rss_feed(feed_list)
+            self.assertTrue(result)
+
+            rss_content = rss_file.read_text(encoding="utf-8")
+            self.assertNotIn("1x1.jpg", rss_content)
+
+
 class TestFeedMakerRssFileNotExistIsDifferent(unittest.TestCase):
     """Line 503: rss_file_path doesn't exist, is_different=True."""
 
