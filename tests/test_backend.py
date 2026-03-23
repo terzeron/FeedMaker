@@ -598,12 +598,22 @@ def test_logout_without_session():
 
 def test_get_me_authenticated():
     req = types.SimpleNamespace()
-    session = types.SimpleNamespace(user_email="test@example.com", user_name="Test")
+    session = types.SimpleNamespace(user_email="test@example.com", user_name="Test", profile_picture_url="https://example.com/pic.jpg")
     with patch("backend.main.get_current_user", return_value=session):
         r = asyncio.run(main.get_me(request=req))
     assert r["is_authenticated"] is True
     assert r["email"] == "test@example.com"
     assert r["name"] == "Test"
+    assert r["profile_picture_url"] == "https://example.com/pic.jpg"
+
+
+def test_get_me_authenticated_without_picture():
+    req = types.SimpleNamespace()
+    session = types.SimpleNamespace(user_email="test@example.com", user_name="Test", profile_picture_url=None)
+    with patch("backend.main.get_current_user", return_value=session):
+        r = asyncio.run(main.get_me(request=req))
+    assert r["is_authenticated"] is True
+    assert r["profile_picture_url"] is None
 
 
 # --- get_me unauthenticated ---
@@ -660,11 +670,12 @@ class TestBackendLogin(unittest.TestCase):
     """Login endpoint: lines 121-132"""
 
     def test_login_success(self):
-        with patch.object(bmain, "verify_facebook_token", return_value=True), patch.object(bmain, "Env") as mock_env, patch.object(bmain, "create_session", return_value="session123"), patch.object(bmain, "set_session_cookie"):
+        with patch.object(bmain, "verify_facebook_token", return_value=True), patch.object(bmain, "Env") as mock_env, patch.object(bmain, "create_session", return_value="session123") as mock_create, patch.object(bmain, "set_session_cookie"):
             mock_env.get.return_value = "user@example.com"
-            request = bmain.LoginRequest(email="user@example.com", name="User", access_token="tok")
+            request = bmain.LoginRequest(email="user@example.com", name="User", access_token="tok", profile_picture_url="https://example.com/pic.jpg")
             response = asyncio.run(bmain.login(request))
             self.assertEqual(response.status_code, 200)
+            mock_create.assert_called_once_with("user@example.com", "User", "tok", "https://example.com/pic.jpg")
 
     def test_login_create_session_exception(self):
         with patch.object(bmain, "verify_facebook_token", return_value=True), patch.object(bmain, "Env") as mock_env, patch.object(bmain, "create_session", side_effect=RuntimeError("db error")):

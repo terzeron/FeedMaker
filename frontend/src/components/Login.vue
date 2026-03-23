@@ -185,12 +185,14 @@ const login = async () => {
     }
 
     // 백엔드로 로그인 요청 (세션 생성 및 httpOnly 쿠키 설정)
+    const pictureUrl = profile.value?.picture?.data?.url || null;
     const response = await axios.post(
       `${getApiUrlPath()}/auth/login`,
       {
         email: profile.value["email"],
         name: profile.value["name"],
-        access_token: accessToken.value
+        access_token: accessToken.value,
+        profile_picture_url: pictureUrl
       },
       {
         withCredentials: true  // 쿠키 포함
@@ -199,7 +201,6 @@ const login = async () => {
 
     if (response.data.status === "success") {
       // 로그인 성공 - 서버가 httpOnly 쿠키 설정함 (SameSite=Lax로 CSRF 방어)
-      const pictureUrl = profile.value?.picture?.data?.url || null;
       authStore.setAuthenticated(profile.value["name"], pictureUrl);
       await router.push("/result");
     } else {

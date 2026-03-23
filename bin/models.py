@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     Base = DeclarativeBase
 else:
     from sqlalchemy.orm import declarative_base
+
     Base = declarative_base()
 
 
@@ -16,7 +17,7 @@ class GroupInfo(Base):
     __tablename__ = "group_info"
     group_name: Mapped[str] = mapped_column(String(256), primary_key=True)
     feed_name: Mapped[str] = mapped_column(String(256))
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=text('CURRENT_TIMESTAMP'))
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
 
 
 class FeedInfo(Base):
@@ -53,10 +54,7 @@ class FeedInfo(Base):
     access_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     view_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    __table_args__ = (
-        Index("feed_info_access_date_idx", "access_date"),
-        Index("feed_info_view_date_idx", "view_date"),
-    )
+    __table_args__ = (Index("feed_info_access_date_idx", "access_date"), Index("feed_info_view_date_idx", "view_date"))
 
 
 class HtmlFileInfo(Base):
@@ -71,9 +69,7 @@ class HtmlFileInfo(Base):
     count_with_image_not_found: Mapped[int] = mapped_column(Integer, default=0)
     update_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    __table_args__ = (
-        Index("html_file_info_feed_dir_path_idx", "feed_dir_path"),
-    )
+    __table_args__ = (Index("html_file_info_feed_dir_path_idx", "feed_dir_path"),)
 
 
 class ElementNameCount(Base):
@@ -84,7 +80,7 @@ class ElementNameCount(Base):
 
 class LockForConcurrentLoading(Base):
     __tablename__ = "lock_for_concurrent_loading"
-    lock_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True, server_default=text('CURRENT_TIMESTAMP'))
+    lock_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True, server_default=text("CURRENT_TIMESTAMP"))
 
 
 class SampleTable(Base):
@@ -100,11 +96,9 @@ class UserSession(Base):
     user_email: Mapped[str] = mapped_column(String(256), nullable=False)
     user_name: Mapped[str] = mapped_column(String(256), nullable=False)
     facebook_access_token: Mapped[Optional[str]] = mapped_column(String(512), nullable=True, default=None)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text('CURRENT_TIMESTAMP'))
+    profile_picture_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True, default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("CURRENT_TIMESTAMP"))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    last_accessed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text('CURRENT_TIMESTAMP'))
+    last_accessed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("CURRENT_TIMESTAMP"))
 
-    __table_args__ = (
-        Index("user_session_expires_at_idx", "expires_at"),
-        Index("user_session_user_email_idx", "user_email"),
-    )
+    __table_args__ = (Index("user_session_expires_at_idx", "expires_at"), Index("user_session_user_email_idx", "user_email"))
