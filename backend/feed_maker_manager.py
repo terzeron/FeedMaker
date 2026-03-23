@@ -11,7 +11,7 @@ from shutil import rmtree
 from typing import Any, Optional
 import defusedxml.ElementTree as ET
 
-from git import Repo, InvalidGitRepositoryError
+from git import Repo
 
 from bin.run import FeedMakerRunner
 from bin.feed_maker_util import PathUtil, Env
@@ -66,10 +66,12 @@ class FeedMakerManager:
         try:
             repo = self._get_repo()
             rel_path = str(feed_dir_path.relative_to(self.work_dir_path))
+            tracked = repo.git.ls_files(rel_path).strip()
+            verb = "modify" if tracked else "add"
             repo.index.add([rel_path])
-            repo.index.commit(f"add {feed_name}")
-            return f"add {feed_name}", None
-        except (InvalidGitRepositoryError, Exception) as e:
+            repo.index.commit(f"{verb} {feed_name}")
+            return f"{verb} {feed_name}", None
+        except Exception as e:
             LOGGER.error("git add failed: %s", e)
             return "", str(e)
 
@@ -81,7 +83,7 @@ class FeedMakerManager:
             repo.index.remove([rel_path], r=True)
             repo.index.commit(f"remove {feed_name}")
             return f"remove {feed_name}", None
-        except (InvalidGitRepositoryError, Exception) as e:
+        except Exception as e:
             LOGGER.error("git rm failed: %s", e)
             return "", str(e)
 
@@ -93,7 +95,7 @@ class FeedMakerManager:
             repo.index.move([str(feed_dir_path), str(new_feed_dir_path)])
             repo.index.commit(f"rename {feed_dir_name} to {new_feed_dir_name}")
             return f"rename {feed_dir_name} to {new_feed_dir_name}", None
-        except (InvalidGitRepositoryError, Exception) as e:
+        except Exception as e:
             LOGGER.warning("git mv failed, falling back to shutil.move: %s", e)
             try:
                 shutil.move(str(feed_dir_path), str(new_feed_dir_path))
@@ -322,7 +324,7 @@ class FeedMakerManager:
         with config_file_path.open("w", encoding="utf-8") as outfile:
             outfile.write(json.dumps(post_data, indent=2, ensure_ascii=False))
 
-        self._git_add(config_file_path)
+        self._git_add(config_file_path.parent)
 
         # re-scan feeds by group
         FeedManager.add_config_info(config_file_path.parent)
