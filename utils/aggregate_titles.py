@@ -80,7 +80,7 @@ def main() -> int:
     cmd = f"{cluster_dir}/hcluster -t '{threshold}' -s stop_words.txt '{intermediate_file}' '{temp_output_file}'"
     LOGGER.debug(cmd)
     result, error = Process.exec_cmd(cmd)
-    LOGGER.debug(result, error)
+    LOGGER.debug("%s %s", result, error)
 
     # convert & extract temporary output file
     pairs = _extract_clustered_lines(Path(temp_output_file))

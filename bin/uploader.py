@@ -20,19 +20,21 @@ class Uploader:
         public_feed_dir_path = Path(Env.get("WEB_SERVICE_FEED_DIR_PREFIX"))
         old_rss_file_path = rss_file_path.with_suffix(rss_file_path.suffix + ".old")
 
-        if rss_file_path.is_file():
-            LOGGER.info("new rss file exists")
-            if old_rss_file_path.is_file():
-                if Data.compare_two_rss_files(rss_file_path, old_rss_file_path):
-                    LOGGER.warning("Warning: upload failed! no change from old rss file")
-                    return 0
-                LOGGER.info("two files are different")
-            else:
-                LOGGER.info("old rss file doesn't exist")
-                shutil.copy(rss_file_path, old_rss_file_path)
-        else:
+        if not rss_file_path.is_file():
             LOGGER.error("Error: Upload failed! No new RSS file")
             return -1
+
+        LOGGER.info("new rss file exists")
+        public_feed_file_path = public_feed_dir_path / rss_file_path.name
+
+        if old_rss_file_path.is_file():
+            if Data.compare_two_rss_files(rss_file_path, old_rss_file_path) and public_feed_file_path.is_file():
+                LOGGER.warning("Warning: upload skipped, no change from old rss file")
+                return 0
+            LOGGER.info("uploading: files are different or public feed file is missing")
+        else:
+            LOGGER.info("old rss file doesn't exist")
+            shutil.copy(rss_file_path, old_rss_file_path)
 
         shutil.copy(rss_file_path, public_feed_dir_path)
         LOGGER.info("upload success!")

@@ -40,56 +40,37 @@ class ProblemManager:
         # exclude feeds unrequested and unregistered and unmade
         # --> NOT ( http_request = 0 AND public_html = 0 AND feedmaker = 0 )
         # exclude feeds REQUESTED and unregistered and unmade but ACCESSED long ago
-        # --> NOT ( http_request = 1 AND public_html = 0 AND feedmaker = 0 AND access_date IS NOT NULL AND DATEDIFF(access_date, current_date) > %s )
+        # --> NOT ( http_request = 1 AND public_html = 0 AND feedmaker = 0 AND access_date IS NOT NULL AND DATEDIFF(current_date, access_date) > %s )
         # exclude feeds REQUESTED and REGISTERED and MADE AND ACCESSED OR VIEWED RECENTLY
         # --> NOT ( http_request = 1 AND public_html = 1 AND feedmaker = 1 AND ( access_date IS NOT NULL AND DATEDIFF(current_date, access_date) < %s OR view_date IS NOT NULL AND DATEDIFF(current_date, view_date) < %s ) )
-        #for row in self.db.query("SELECT * FROM feed_info WHERE NOT ( http_request = 0 AND public_html = 0 AND feedmaker = 0 ) AND NOT ( http_request = 1 AND public_html = 0 AND feedmaker = 0 AND access_date IS NOT NULL AND DATEDIFF(access_date, current_date) > %s ) AND NOT ( http_request = 1 AND public_html = 1 AND feedmaker = 1 AND config IS NOT NULL AND ( access_date IS NOT NULL AND DATEDIFF(current_date, access_date) < %s OR view_date IS NOT NULL AND DATEDIFF(current_date, view_date) < %s ) ) ORDER BY feedmaker, public_html, http_request, collect_date, rss_update_date, upload_date, access_date, view_date", self.num_days, self.num_days, self.num_days):
+        # for row in self.db.query("SELECT * FROM feed_info WHERE NOT ( http_request = 0 AND public_html = 0 AND feedmaker = 0 ) AND NOT ( http_request = 1 AND public_html = 0 AND feedmaker = 0 AND access_date IS NOT NULL AND DATEDIFF(current_date, access_date) > %s ) AND NOT ( http_request = 1 AND public_html = 1 AND feedmaker = 1 AND config IS NOT NULL AND ( access_date IS NOT NULL AND DATEDIFF(current_date, access_date) < %s OR view_date IS NOT NULL AND DATEDIFF(current_date, view_date) < %s ) ) ORDER BY feedmaker, public_html, http_request, collect_date, rss_update_date, upload_date, access_date, view_date", self.num_days, self.num_days, self.num_days):
         with DB.session_ctx() as s:
-            rows = s.query(FeedInfo).where(
-                # 1) http_request=0 AND public_html=0 AND feedmaker=0 인 행 제외
-                not_(and_(
-                    not_(FeedInfo.http_request),
-                    not_(FeedInfo.public_html),
-                    not_(FeedInfo.feedmaker),
-                )),
-                # 2) http_request=1, public_html=0, feedmaker=0, access_date IS NOT NULL,
-                #    DATEDIFF(access_date, current_date) > num_days 인 행 제외
-                not_(and_(
-                    FeedInfo.http_request,
-                    not_(FeedInfo.public_html),
-                    not_(FeedInfo.feedmaker),
-                    FeedInfo.access_date.isnot(None),
-                    func.datediff(FeedInfo.access_date, func.current_timestamp) > cls.num_days,
-                )),
-                # 3) http_request=1, public_html=1, feedmaker=1, config IS NOT NULL,
-                #    AND (access_date IS NOT NULL AND DATEDIFF(current_date,access_date)<num_days
-                #         OR view_date IS NOT NULL AND DATEDIFF(current_date,view_date)<num_days)
-                not_(and_(
-                    FeedInfo.http_request,
-                    FeedInfo.public_html,
-                    FeedInfo.feedmaker,
-                    FeedInfo.config.isnot(None),
-                    or_(
+            rows = (
+                s.query(FeedInfo)
+                .where(
+                    # 비활성화된 피드 제외
+                    FeedInfo.is_active,
+                    # 1) http_request=0 AND public_html=0 AND feedmaker=0 인 행 제외
+                    not_(and_(not_(FeedInfo.http_request), not_(FeedInfo.public_html), not_(FeedInfo.feedmaker))),
+                    # 2) http_request=1, public_html=0, feedmaker=0, access_date IS NOT NULL,
+                    #    DATEDIFF(current_date, access_date) > num_days 인 행 제외
+                    not_(and_(FeedInfo.http_request, not_(FeedInfo.public_html), not_(FeedInfo.feedmaker), FeedInfo.access_date.isnot(None), func.datediff(func.current_date(), FeedInfo.access_date) > cls.num_days)),
+                    # 3) http_request=1, public_html=1, feedmaker=1, config IS NOT NULL,
+                    #    AND (access_date IS NOT NULL AND DATEDIFF(current_date,access_date)<num_days
+                    #         OR view_date IS NOT NULL AND DATEDIFF(current_date,view_date)<num_days)
+                    not_(
                         and_(
-                            FeedInfo.access_date.isnot(None),
-                            func.datediff(func.current_timestamp, FeedInfo.access_date) < cls.num_days,
-                        ),
-                        and_(
-                            FeedInfo.view_date.isnot(None),
-                            func.datediff(func.current_timestamp, FeedInfo.view_date) < cls.num_days,
-                        ),
+                            FeedInfo.http_request,
+                            FeedInfo.public_html,
+                            FeedInfo.feedmaker,
+                            FeedInfo.config.isnot(None),
+                            or_(and_(FeedInfo.access_date.isnot(None), func.datediff(func.current_date(), FeedInfo.access_date) < cls.num_days), and_(FeedInfo.view_date.isnot(None), func.datediff(func.current_date(), FeedInfo.view_date) < cls.num_days)),
+                        )
                     ),
-                )),
-            ).order_by(
-                FeedInfo.feedmaker,
-                FeedInfo.public_html,
-                FeedInfo.http_request,
-                FeedInfo.collect_date,
-                FeedInfo.rss_update_date,
-                FeedInfo.upload_date,
-                FeedInfo.access_date,
-                FeedInfo.view_date,
-            ).all()
+                )
+                .order_by(FeedInfo.feedmaker, FeedInfo.public_html, FeedInfo.http_request, FeedInfo.collect_date, FeedInfo.rss_update_date, FeedInfo.upload_date, FeedInfo.access_date, FeedInfo.view_date)
+                .all()
+            )
             for row in rows:
                 feed_name = row.feed_name
                 feed_name_status_info_map[feed_name] = {
@@ -103,7 +84,7 @@ class ProblemManager:
                     "update_date": row.rss_update_date,
                     "public_html": row.public_html,
                     "file_path": row.public_feed_file_path,
-                    "upload_date": row.upload_date
+                    "upload_date": row.upload_date,
                 }
 
         return feed_name_status_info_map
@@ -128,7 +109,6 @@ class ProblemManager:
         FeedManager.add_progress_info(new_feed_dir_path)
         self.access_log_manager.add_httpd_access_info()
         self.html_file_manager.add_html_file(new_feed_dir_path)
-
 
     def load_all(self, max_num_feeds: Optional[int] = None, max_num_public_feeds: Optional[int] = None, max_num_days: int = 30) -> int:
         LOGGER.debug("# load_all(max_num_feeds=%r, max_num_public_feds=%r, max_num_days=%d)", max_num_feeds, max_num_public_feeds, max_num_days)

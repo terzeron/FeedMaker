@@ -19,7 +19,7 @@ from modulegraph.modulegraph import ModuleGraph
 
 # Always resolve project root (directory containing 'tests' folder)
 SCRIPT_PATH = Path(__file__).resolve()
-PROJECT_ROOT = SCRIPT_PATH.parent.parent if SCRIPT_PATH.parent.name == 'tests' else SCRIPT_PATH.parent
+PROJECT_ROOT = SCRIPT_PATH.parent.parent if SCRIPT_PATH.parent.name == "tests" else SCRIPT_PATH.parent
 PYTHON_DIRS = [PROJECT_ROOT / d for d in ["bin", "utils", "backend", "tests"]]
 TEST_DIR = PROJECT_ROOT / "tests"
 TMP_DIR = PROJECT_ROOT / "tmp"
@@ -28,17 +28,20 @@ WORK_DIR = TMP_DIR / "work"
 LOGS_DIR = WORK_DIR / "logs"
 RESOURCES_DIR = TEST_DIR / "resources"
 
+
 def read_resource(filename: str) -> str:
     """Read a resource file from tests/resources/ directory"""
     resource_path = RESOURCES_DIR / filename
-    with open(resource_path, 'r', encoding='utf-8') as f:
+    with open(resource_path, "r", encoding="utf-8") as f:
         return f.read()
+
 
 def get_last_success_time() -> float:
     LAST_SUCCESS_FILE = PROJECT_ROOT / ".last_test_success"
     if LAST_SUCCESS_FILE.exists():
         return float(LAST_SUCCESS_FILE.read_text())
     return 0.0
+
 
 def get_last_run_time() -> float:
     """Get the timestamp of the last test runner execution (regardless of success)."""
@@ -50,6 +53,7 @@ def get_last_run_time() -> float:
             return 0.0
     return 0.0
 
+
 def set_last_run_time() -> None:
     """Persist the timestamp of the latest test runner execution."""
     LAST_RUN_FILE = PROJECT_ROOT / ".last_test_run"
@@ -57,6 +61,7 @@ def set_last_run_time() -> None:
         LAST_RUN_FILE.write_text(str(time.time()))
     except (OSError, PermissionError):
         pass
+
 
 def get_reference_time_for_changes() -> float:
     """Reference time for change detection.
@@ -69,6 +74,7 @@ def get_reference_time_for_changes() -> float:
         return last_run
     return get_last_success_time()
 
+
 def _get_file_timestamps() -> dict[str, float]:
     """Get modification timestamps for all Python files"""
     timestamps = {}
@@ -79,19 +85,32 @@ def _get_file_timestamps() -> dict[str, float]:
             pass
     return timestamps
 
+
 def set_last_success_time() -> None:
     LAST_SUCCESS_FILE = PROJECT_ROOT / ".last_test_success"
     LAST_SUCCESS_FILE.write_text(str(time.time()))
+
 
 def get_modified_files(since: float, exclude_paths: Optional[set[str]] = None) -> list[Path]:
     """Get modified Python files with better filtering"""
     if exclude_paths is None:
         exclude_paths = {
-            '.pytest_cache', '__pycache__', '.git', 'node_modules',
-            '.venv', 'venv', '.env',  # Virtual environments
-            '.idea', '.vscode', '.run',  # IDE directories
-            '.mypy_cache', '.hypothesis', '.coverage_out',  # Tool caches
-            'tmp', 'logs', 'work',  # Temporary/runtime directories
+            ".pytest_cache",
+            "__pycache__",
+            ".git",
+            "node_modules",
+            ".venv",
+            "venv",
+            ".env",  # Virtual environments
+            ".idea",
+            ".vscode",
+            ".run",  # IDE directories
+            ".mypy_cache",
+            ".hypothesis",
+            ".coverage_out",  # Tool caches
+            "tmp",
+            "logs",
+            "work",  # Temporary/runtime directories
         }
 
     modified = []
@@ -100,18 +119,16 @@ def get_modified_files(since: float, exclude_paths: Optional[set[str]] = None) -
         dirs[:] = [d for d in dirs if d not in exclude_paths]
 
         for f in files:
-            if f.endswith('.py'):
+            if f.endswith(".py"):
                 p = Path(root) / f
                 try:
                     # Only consider files modified after since time and skip backup/temp files
-                    if (p.stat().st_mtime > since and
-                        not f.endswith('.bak') and
-                        not f.startswith('.') and
-                        p.stat().st_size > 0):  # Skip empty files
+                    if p.stat().st_mtime > since and not f.endswith(".bak") and not f.startswith(".") and p.stat().st_size > 0:  # Skip empty files
                         modified.append(p)
                 except (OSError, PermissionError):
                     continue
     return modified
+
 
 def get_test_modules_for_files(files: list[Path]) -> list[Path]:
     test_modules = set()
@@ -128,13 +145,11 @@ def get_test_modules_for_files(files: list[Path]) -> list[Path]:
                 test_modules.add(test_path)
     return list(test_modules)
 
+
 def get_failed_or_skipped_tests() -> list[str]:
     """Get actually failed or skipped tests from pytest cache (robust path resolution)"""
     # Try both typical locations: tests/.pytest_cache and project/.pytest_cache (tests dir preferred)
-    candidate_cache_dirs = [
-        TEST_DIR / ".pytest_cache/v/cache",
-        PROJECT_ROOT / ".pytest_cache/v/cache",
-    ]
+    candidate_cache_dirs = [TEST_DIR / ".pytest_cache/v/cache", PROJECT_ROOT / ".pytest_cache/v/cache"]
 
     lastfailed_file = None
     for cand in candidate_cache_dirs:
@@ -148,7 +163,8 @@ def get_failed_or_skipped_tests() -> list[str]:
 
     try:
         import json
-        with open(lastfailed_file, 'r') as f:
+
+        with open(lastfailed_file, "r") as f:
             failed_data = json.load(f)
 
         if not failed_data:
@@ -189,6 +205,7 @@ def get_failed_or_skipped_tests() -> list[str]:
     except (json.JSONDecodeError, FileNotFoundError, OSError, KeyError, TypeError, ValueError):
         return []
 
+
 def is_test_actually_failed(test_path: Path) -> bool:
     """Check if a test file actually failed based on pytest cache"""
     failed_tests = get_failed_or_skipped_tests()
@@ -199,12 +216,10 @@ def is_test_actually_failed(test_path: Path) -> bool:
             return True
     return False
 
+
 def clean_test_data() -> None:
     """Clean up existing test data completely"""
-    test_dirs_to_clean = [
-        TMP_DIR,
-        PROJECT_ROOT / "capture_item_naverwebtoon.py",
-    ]
+    test_dirs_to_clean = [TMP_DIR, PROJECT_ROOT / "capture_item_naverwebtoon.py"]
 
     for path in test_dirs_to_clean:
         if path.exists():
@@ -212,26 +227,24 @@ def clean_test_data() -> None:
                 path.unlink()
             else:
                 import shutil
+
                 shutil.rmtree(path)
+
 
 def create_test_directories() -> None:
     """Create basic test directory structure"""
-    test_dirs = [
-        XML_DIR,
-        XML_DIR / "img",
-        XML_DIR / "pdf",
-        WORK_DIR,
-        LOGS_DIR,
-    ]
+    test_dirs = [XML_DIR, XML_DIR / "img", XML_DIR / "pdf", WORK_DIR, LOGS_DIR]
 
     for dir_path in test_dirs:
         dir_path.mkdir(parents=True, exist_ok=True)
+
 
 def setup_test_environment() -> None:
     """Setup test environment variables and create basic test structure"""
     clean_test_data()
     create_test_directories()
     # Note: Individual test modules should create their own test data
+
 
 def collect_python_files() -> list[Path]:
     files: list[Path] = []
@@ -240,31 +253,31 @@ def collect_python_files() -> list[Path]:
             files.extend([f.resolve() for f in dir_path.rglob("*.py")])
     return files
 
+
 def load_modules_to_graph(mg: ModuleGraph, files: list[Path]) -> None:
     """Load Python files into the module graph"""
     for py_file in files:
         try:
             # 파일 경로를 모듈 이름으로 변환
             rel_path = py_file.relative_to(PROJECT_ROOT)
-            module_name = '.'.join(rel_path.with_suffix('').parts)
+            module_name = ".".join(rel_path.with_suffix("").parts)
 
             # import_hook을 사용하여 모듈을 그래프에 추가
             mg.import_hook(module_name, None, None)
         except (ImportError, SyntaxError, ModuleNotFoundError, RuntimeError) as e:
             print(f"Warning: Could not load {py_file}: {e}")
 
+
 def is_test_file(file_path: Path) -> bool:
     """Check if a file is a test file (excluding test_runner.py)"""
-    return (file_path.parent == TEST_DIR and
-            file_path.name.startswith("test_") and
-            file_path.name != "test_runner.py")
+    return file_path.parent == TEST_DIR and file_path.name.startswith("test_") and file_path.name != "test_runner.py"
+
 
 def extract_dependencies_from_graph(mg: ModuleGraph) -> dict[Path, set[Path]]:
     """Extract dependencies between test files from the module graph"""
     deps = {}
     for node in mg.flatten():
-        if (node.filename and
-            is_test_file(Path(node.filename))):
+        if node.filename and is_test_file(Path(node.filename)):
             src = Path(node.filename)
             targets = set()
             _, out_edges = mg.get_edges(node)
@@ -273,12 +286,11 @@ def extract_dependencies_from_graph(mg: ModuleGraph) -> dict[Path, set[Path]]:
                     continue
                 if isinstance(edge, tuple) and len(edge) >= 2:
                     dep = edge[1]
-                    if (hasattr(dep, "filename") and
-                        dep.filename and
-                        is_test_file(Path(dep.filename))):
+                    if hasattr(dep, "filename") and dep.filename and is_test_file(Path(dep.filename)):
                         targets.add(Path(dep.filename))
             deps[src] = targets
     return deps
+
 
 def print_dependency_analysis(deps: dict[Path, set[Path]]) -> None:
     """Print dependency analysis results"""
@@ -289,11 +301,13 @@ def print_dependency_analysis(deps: dict[Path, set[Path]]) -> None:
         else:
             print(f"{src.name} -> (no dependencies)")
 
+
 def print_execution_order(ordered: list[Path]) -> None:
     """Print test execution order"""
     print("\n=== Test Execution Order ===")
     for i, path in enumerate(ordered, 1):
         print(f"{i:2d}. {path.name}")
+
 
 def analyze_test_dependencies() -> list[Path]:
     """Analyze dependencies between test files and determine execution order"""
@@ -329,9 +343,7 @@ def analyze_test_dependencies() -> list[Path]:
 
 def get_test_methods(test_file: Path) -> list[str]:
     """Extract all test methods from a test file"""
-    result = subprocess.run([
-        sys.executable, "-m", "pytest", str(test_file), "--collect-only", "-q"
-    ], capture_output=True, text=True, check=False)
+    result = subprocess.run([sys.executable, "-m", "pytest", str(test_file), "--collect-only", "-q"], capture_output=True, text=True, check=False)
 
     # 모든 테스트 메서드 수집 (Test*::test_* 패턴)
     # -q 옵션 사용 시 "tests/test_xxx.py::TestClass::test_method" 형식으로 출력됨
@@ -344,8 +356,25 @@ def get_test_methods(test_file: Path) -> list[str]:
     return test_methods
 
 
+def _get_coverage_file() -> Path:
+    """커버리지 데이터 파일 경로를 반환한다."""
+    # pytest-cov는 rootdir 기준으로 .coverage를 생성함
+    for candidate in [PROJECT_ROOT / ".coverage", TEST_DIR / ".coverage"]:
+        if candidate.exists():
+            return candidate
+    return PROJECT_ROOT / ".coverage"
+
+
+def _clear_coverage_data() -> None:
+    """이전 커버리지 데이터를 초기화한다."""
+    for candidate in [PROJECT_ROOT / ".coverage", TEST_DIR / ".coverage"]:
+        if candidate.exists():
+            candidate.unlink()
+
+
 def run_test_modules_sequentially(test_targets: list[Path]) -> tuple[bool, int, int, list[Path]]:
     """Run test modules sequentially and return (success, passed_count, failed_count, failed_files)"""
+    _clear_coverage_data()
     passed_count = 0
     failed_count = 0
     failed_files = []
@@ -357,8 +386,7 @@ def run_test_modules_sequentially(test_targets: list[Path]) -> tuple[bool, int, 
 
         # Measure execution time
         start_time = time.time()
-        result = subprocess.run([sys.executable, "-m", "pytest", "--tb=no", "--disable-warnings", str(absolute_path)],
-                              capture_output=True, text=True, check=False)
+        result = subprocess.run([sys.executable, "-m", "pytest", "--tb=no", "--disable-warnings", "--cov=backend", "--cov=bin", "--cov=utils", "--cov-append", "--cov-report=", str(absolute_path)], capture_output=True, text=True, check=False)
         end_time = time.time()
         execution_time = end_time - start_time
 
@@ -369,9 +397,7 @@ def run_test_modules_sequentially(test_targets: list[Path]) -> tuple[bool, int, 
             if "test session starts" in line:
                 in_session_start = True
                 continue
-            if in_session_start and ("collected" in line or "platform" in line or "rootdir" in line or
-                                   "configfile" in line or "plugins" in line or "cachedir" in line or
-                                   "hypothesis profile" in line):
+            if in_session_start and ("collected" in line or "platform" in line or "rootdir" in line or "configfile" in line or "plugins" in line or "cachedir" in line or "hypothesis profile" in line):
                 continue
             if in_session_start and line.strip() == "":
                 in_session_start = False
@@ -404,6 +430,7 @@ def run_test_modules_sequentially(test_targets: list[Path]) -> tuple[bool, int, 
 
     return overall_success, passed_count, failed_count, failed_files
 
+
 def run_specific_test_file(test_file: str) -> bool:
     """Run a specific test file"""
     print(f"=== Running Specific Test File: {test_file} ===")
@@ -414,9 +441,8 @@ def run_specific_test_file(test_file: str) -> bool:
 
     # Measure execution time
     start_time = time.time()
-    result = subprocess.run([
-        sys.executable, "-m", "pytest", str(test_path), "-v"
-    ], check=False)
+    _clear_coverage_data()
+    result = subprocess.run([sys.executable, "-m", "pytest", str(test_path), "-v", "--cov=backend", "--cov=bin", "--cov=utils", "--cov-report="], check=False)
     end_time = time.time()
     execution_time = end_time - start_time
 
@@ -426,6 +452,7 @@ def run_specific_test_file(test_file: str) -> bool:
 
     return result.returncode == 0
 
+
 def get_actual_execution_duration() -> float:
     """Get actual execution duration from cache or return 0 if not available"""
     performance_cache_file = PROJECT_ROOT / ".test_performance_cache"
@@ -433,15 +460,17 @@ def get_actual_execution_duration() -> float:
     if performance_cache_file.exists():
         try:
             import json
-            with open(performance_cache_file, 'r') as f:
+
+            with open(performance_cache_file, "r") as f:
                 cached_data = json.load(f)
                 # 실제 실행 시간이 저장되어 있다면 반환
-                if 'actual_total_duration' in cached_data:
-                    return cached_data['actual_total_duration']
+                if "actual_total_duration" in cached_data:
+                    return cached_data["actual_total_duration"]
         except (json.JSONDecodeError, OSError, PermissionError, KeyError):
             pass
 
     return 0.0
+
 
 def update_actual_execution_duration(duration: float) -> None:
     """Update actual execution duration in cache"""
@@ -452,22 +481,25 @@ def update_actual_execution_duration(duration: float) -> None:
     if performance_cache_file.exists():
         try:
             import json
-            with open(performance_cache_file, 'r') as f:
+
+            with open(performance_cache_file, "r") as f:
                 cached_data = json.load(f)
         except (json.JSONDecodeError, OSError, PermissionError):
             cached_data = {}
 
     # Update actual execution duration
-    cached_data['actual_total_duration'] = duration
-    cached_data['last_actual_execution'] = time.time()
+    cached_data["actual_total_duration"] = duration
+    cached_data["last_actual_execution"] = time.time()
 
     # Save updated cache
     try:
         import json
-        with open(performance_cache_file, 'w') as f:
+
+        with open(performance_cache_file, "w") as f:
             json.dump(cached_data, f, indent=2)
     except (OSError, PermissionError, TypeError) as e:
         print(f"⚠️  Failed to save actual execution duration: {e}")
+
 
 def run_all_tests() -> tuple[bool, list[Path]]:
     """Run all tests in dependency order and return success and failed files"""
@@ -478,14 +510,14 @@ def run_all_tests() -> tuple[bool, list[Path]]:
         print("No tests to run")
         return True, []
 
+    _clear_coverage_data()
     total_start = time.time()
     failed_files = []
 
     for idx, t in enumerate(ordered_tests, 1):
         print(f"--- [{idx}/{len(ordered_tests)}] Running: {t.name} ---")
         start = time.time()
-        result = subprocess.run([sys.executable, "-m", "pytest", "--tb=no", "--disable-warnings", str(t)],
-                              capture_output=True, text=True, check=False)
+        result = subprocess.run([sys.executable, "-m", "pytest", "--tb=no", "--disable-warnings", "--cov=backend", "--cov=bin", "--cov=utils", "--cov-append", "--cov-report=", str(t)], capture_output=True, text=True, check=False)
         end = time.time()
 
         # Filter output to remove session start info and show only test results
@@ -495,9 +527,7 @@ def run_all_tests() -> tuple[bool, list[Path]]:
             if "test session starts" in line:
                 in_session_start = True
                 continue
-            if in_session_start and ("collected" in line or "platform" in line or "rootdir" in line or
-                                   "configfile" in line or "plugins" in line or "cachedir" in line or
-                                   "hypothesis profile" in line):
+            if in_session_start and ("collected" in line or "platform" in line or "rootdir" in line or "configfile" in line or "plugins" in line or "cachedir" in line or "hypothesis profile" in line):
                 continue
             if in_session_start and line.strip() == "":
                 in_session_start = False
@@ -519,6 +549,7 @@ def run_all_tests() -> tuple[bool, list[Path]]:
 
     return not failed_files, failed_files
 
+
 def clear_lastfailed_for_files(test_file_prefixes: list[str]) -> None:
     """Remove stale lastfailed entries for the given test file prefixes.
 
@@ -527,10 +558,7 @@ def clear_lastfailed_for_files(test_file_prefixes: list[str]) -> None:
     This function removes all entries whose file path matches any of the
     given prefixes (e.g. "tests/test_foo.py").
     """
-    candidate_cache_dirs = [
-        TEST_DIR / ".pytest_cache/v/cache",
-        PROJECT_ROOT / ".pytest_cache/v/cache",
-    ]
+    candidate_cache_dirs = [TEST_DIR / ".pytest_cache/v/cache", PROJECT_ROOT / ".pytest_cache/v/cache"]
 
     for cache_dir in candidate_cache_dirs:
         lastfailed_file = cache_dir / "lastfailed"
@@ -539,19 +567,17 @@ def clear_lastfailed_for_files(test_file_prefixes: list[str]) -> None:
 
         try:
             import json
-            with open(lastfailed_file, 'r') as f:
+
+            with open(lastfailed_file, "r") as f:
                 data = json.load(f)
 
             if not data:
                 continue
 
-            cleaned = {
-                key: val for key, val in data.items()
-                if not any(key.startswith(prefix + "::") for prefix in test_file_prefixes)
-            }
+            cleaned = {key: val for key, val in data.items() if not any(key.startswith(prefix + "::") for prefix in test_file_prefixes)}
 
             if cleaned != data:
-                with open(lastfailed_file, 'w') as f:
+                with open(lastfailed_file, "w") as f:
                     json.dump(cleaned, f, indent=2)
         except (json.JSONDecodeError, OSError, PermissionError):
             pass
@@ -570,9 +596,7 @@ def run_failed_tests() -> bool:
         file_path = t.split("::")[0]
         if file_path.startswith("tests/"):
             absolute_path = PROJECT_ROOT / file_path
-            if (absolute_path.exists()
-                    and absolute_path.resolve() != Path(__file__).resolve()
-                    and absolute_path not in seen):
+            if absolute_path.exists() and absolute_path.resolve() != Path(__file__).resolve() and absolute_path not in seen:
                 test_files.append(absolute_path)
                 seen.add(absolute_path)
 
@@ -603,10 +627,12 @@ def run_failed_tests() -> bool:
 
     return success
 
+
 def run_changed_tests() -> bool:
     """Run tests for changed files with dependency consideration"""
     success, _, _, _ = run_changed_tests_with_results()
     return success
+
 
 def run_changed_tests_with_results() -> tuple[bool, int, int, list[Path]]:
     """Run tests for changed files and return detailed results"""
@@ -636,6 +662,7 @@ def run_changed_tests_with_results() -> tuple[bool, int, int, list[Path]]:
 
     return run_test_modules_sequentially(test_targets)
 
+
 def get_test_statistics() -> dict[str, Any]:
     """Get comprehensive test performance statistics"""
     # Get all test files
@@ -651,13 +678,8 @@ def get_test_statistics() -> dict[str, Any]:
     # Get performance data from last pytest run if available
     performance_data = get_pytest_performance_data()
 
-    return {
-        "total_test_files": len(test_files),
-        "last_success_time": last_success_str,
-        "failed_tests_count": len(failed_tests),
-        "failed_tests": failed_tests,
-        "performance_data": performance_data
-    }
+    return {"total_test_files": len(test_files), "last_success_time": last_success_str, "failed_tests_count": len(failed_tests), "failed_tests": failed_tests, "performance_data": performance_data}
+
 
 def get_pytest_performance_data() -> dict[str, Any]:
     """Extract performance data from actual pytest execution"""
@@ -687,9 +709,10 @@ def get_pytest_performance_data() -> dict[str, Any]:
     if performance_cache_file.exists():
         try:
             import json
-            with open(performance_cache_file, 'r') as f:
+
+            with open(performance_cache_file, "r") as f:
                 cached_data = json.load(f)
-                cached_durations = cached_data.get('file_durations', {})
+                cached_durations = cached_data.get("file_durations", {})
         except (json.JSONDecodeError, OSError, PermissionError):
             # Quiet on purpose unless explicitly requested by caller
             pass
@@ -733,8 +756,9 @@ def get_pytest_performance_data() -> dict[str, Any]:
         "file_test_counts": file_test_counts,
         "file_avg_times": file_avg_times,
         "slowest_files": sorted(file_durations.items(), key=lambda x: x[1], reverse=True)[:10],
-        "slowest_avg_times": sorted(file_avg_times.items(), key=lambda x: x[1], reverse=True)[:10]
+        "slowest_avg_times": sorted(file_avg_times.items(), key=lambda x: x[1], reverse=True)[:10],
     }
+
 
 def update_test_performance_cache(test_file: str, execution_time: float) -> None:
     """Update performance cache with actual test execution time"""
@@ -745,13 +769,14 @@ def update_test_performance_cache(test_file: str, execution_time: float) -> None
     if performance_cache_file.exists():
         try:
             import json
-            with open(performance_cache_file, 'r') as f:
+
+            with open(performance_cache_file, "r") as f:
                 cached_data = json.load(f)
         except (json.JSONDecodeError, OSError, PermissionError):
             cached_data = {}
 
     # Update with new execution time (use exponential moving average)
-    file_durations = cached_data.get('file_durations', {})
+    file_durations = cached_data.get("file_durations", {})
     alpha = 0.3  # Smoothing factor (30% new, 70% old)
 
     if test_file in file_durations:
@@ -761,25 +786,27 @@ def update_test_performance_cache(test_file: str, execution_time: float) -> None
         new_time = execution_time
 
     file_durations[test_file] = new_time
-    cached_data['file_durations'] = file_durations
-    cached_data['last_updated'] = time.time()
+    cached_data["file_durations"] = file_durations
+    cached_data["last_updated"] = time.time()
 
     # Save updated cache
     try:
         import json
-        with open(performance_cache_file, 'w') as f:
+
+        with open(performance_cache_file, "w") as f:
             json.dump(cached_data, f, indent=2)
         print(f"📊 Updated performance cache: {test_file} = {new_time:.2f}s")
     except (OSError, PermissionError, TypeError) as e:
         print(f"⚠️  Failed to save performance cache: {e}")
 
+
 def print_test_statistics(stats: dict[str, Any]) -> None:
     """Print comprehensive test performance statistics"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("⚡ TEST PERFORMANCE STATISTICS")
-    print("="*60)
+    print("=" * 60)
 
-    perf_data = stats['performance_data']
+    perf_data = stats["performance_data"]
 
     print(f"📊 총 테스트 파일 수: {stats['total_test_files']}개")
     print(f"⏰ 마지막 성공 시간: {stats['last_success_time']}")
@@ -789,27 +816,27 @@ def print_test_statistics(stats: dict[str, Any]) -> None:
     actual_duration = get_actual_execution_duration()
     if actual_duration > 0:
         print(f"⏱️  실제 총 수행 시간: {actual_duration:.1f}초")
-        if perf_data['total_duration'] > 0:
-            improvement = ((perf_data['total_duration'] - actual_duration) / perf_data['total_duration']) * 100
-            print(f"📈 성능 개선율: {improvement:.1f}% (예상 대비 {actual_duration/perf_data['total_duration']:.1f}배 빠름)")
+        if perf_data["total_duration"] > 0:
+            improvement = ((perf_data["total_duration"] - actual_duration) / perf_data["total_duration"]) * 100
+            print(f"📈 성능 개선율: {improvement:.1f}% (예상 대비 {actual_duration / perf_data['total_duration']:.1f}배 빠름)")
 
-    print(f"📈 평균 파일당 수행 시간: {perf_data['total_duration']/stats['total_test_files']:.1f}초")
+    print(f"📈 평균 파일당 수행 시간: {perf_data['total_duration'] / stats['total_test_files']:.1f}초")
 
     # Calculate total test count
-    total_test_count = sum(perf_data['file_test_counts'].values())
+    total_test_count = sum(perf_data["file_test_counts"].values())
     if total_test_count > 0:
         print(f"🧪 총 테스트 개수: {total_test_count}개")
-        print(f"📊 평균 테스트당 수행 시간: {perf_data['total_duration']/total_test_count:.2f}초")
+        print(f"📊 평균 테스트당 수행 시간: {perf_data['total_duration'] / total_test_count:.2f}초")
 
-    if stats['failed_tests_count'] > 0:
+    if stats["failed_tests_count"] > 0:
         print(f"❌ 실패한 테스트: {stats['failed_tests_count']}개")
     else:
         print("✅ 실패한 테스트: 없음")
 
-    print(f"\n🐌 수행 시간이 긴 테스트 파일 TOP 10:")
-    for i, (file_name, duration) in enumerate(perf_data['slowest_files'], 1):
-        test_count = perf_data['file_test_counts'].get(file_name, 1)
-        avg_time = perf_data['file_avg_times'].get(file_name, duration)
+    print("\n🐌 수행 시간이 긴 테스트 파일 TOP 10:")
+    for i, (file_name, duration) in enumerate(perf_data["slowest_files"], 1):
+        test_count = perf_data["file_test_counts"].get(file_name, 1)
+        avg_time = perf_data["file_avg_times"].get(file_name, duration)
 
         if duration >= 10:
             icon = "🔥"  # Very slow
@@ -822,10 +849,10 @@ def print_test_statistics(stats: dict[str, Any]) -> None:
 
         print(f"   {i:2d}. {icon} {file_name:<35} {duration:>6.1f}초 ({test_count}개 테스트, 평균 {avg_time:.2f}초)")
 
-    print(f"\n🐌 평균 테스트 수행시간이 긴 파일 TOP 10:")
-    for i, (file_name, avg_time) in enumerate(perf_data['slowest_avg_times'], 1):
-        test_count = perf_data['file_test_counts'].get(file_name, 1)
-        total_time = perf_data['file_durations'].get(file_name, 0)
+    print("\n🐌 평균 테스트 수행시간이 긴 파일 TOP 10:")
+    for i, (file_name, avg_time) in enumerate(perf_data["slowest_avg_times"], 1):
+        test_count = perf_data["file_test_counts"].get(file_name, 1)
+        total_time = perf_data["file_durations"].get(file_name, 0)
 
         if avg_time >= 5:
             icon = "🔥"  # Very slow per test
@@ -839,27 +866,28 @@ def print_test_statistics(stats: dict[str, Any]) -> None:
         print(f"   {i:2d}. {icon} {file_name:<35} 평균 {avg_time:>6.2f}초 ({test_count}개 테스트, 총 {total_time:.1f}초)")
 
     # Performance recommendations
-    slow_files = [f for f, d in perf_data['file_durations'].items() if d >= 10]
-    slow_avg_files = [f for f, avg in perf_data['file_avg_times'].items() if avg >= 2]
+    slow_files = [f for f, d in perf_data["file_durations"].items() if d >= 10]
+    slow_avg_files = [f for f, avg in perf_data["file_avg_times"].items() if avg >= 2]
 
     if slow_files:
-        print(f"\n💡 성능 개선 권장사항:")
+        print("\n💡 성능 개선 권장사항:")
         print(f"   • {len(slow_files)}개 파일이 10초 이상 소요됩니다")
-        print(f"   • Docker 컨테이너나 네트워크 호출이 있는 테스트 최적화 검토")
+        print("   • Docker 컨테이너나 네트워크 호출이 있는 테스트 최적화 검토")
 
     if slow_avg_files:
         print(f"   • {len(slow_avg_files)}개 파일의 평균 테스트 시간이 2초 이상입니다")
-        print(f"   • 개별 테스트 최적화 검토 필요")
+        print("   • 개별 테스트 최적화 검토 필요")
 
-    fast_ratio = len([d for d in perf_data['file_durations'].values() if d < 1]) / len(perf_data['file_durations']) * 100
-    fast_avg_ratio = len([avg for avg in perf_data['file_avg_times'].values() if avg < 0.5]) / len(perf_data['file_avg_times']) * 100
+    fast_ratio = len([d for d in perf_data["file_durations"].values() if d < 1]) / len(perf_data["file_durations"]) * 100
+    fast_avg_ratio = len([avg for avg in perf_data["file_avg_times"].values() if avg < 0.5]) / len(perf_data["file_avg_times"]) * 100
 
-    print(f"\n📊 성능 지표:")
+    print("\n📊 성능 지표:")
     print(f"   • 빠른 테스트 비율 (<1초): {fast_ratio:.1f}%")
     print(f"   • 빠른 평균 테스트 비율 (<0.5초): {fast_avg_ratio:.1f}%")
     print(f"   • 병렬 실행 시 예상 시간: {max(perf_data['file_durations'].values()):.1f}초")
 
-    print("="*60)
+    print("=" * 60)
+
 
 def profile_slow_tests() -> None:
     """Profile the slowest test files to identify bottlenecks"""
@@ -870,13 +898,13 @@ def profile_slow_tests() -> None:
 
     # Get estimated slow tests
     perf_data = get_pytest_performance_data()
-    slow_tests = [name for name, duration in perf_data['slowest_files'][:5] if duration >= 5.0]
+    slow_tests = [name for name, duration in perf_data["slowest_files"][:5] if duration >= 5.0]
 
     print(f"\n📋 분석 대상 테스트 파일 ({len(slow_tests)}개):")
     for test_name in slow_tests:
         print(f"   • {test_name}")
 
-    print(f"\n🚀 프로파일링 시작...")
+    print("\n🚀 프로파일링 시작...")
 
     all_analyses = []
 
@@ -889,20 +917,21 @@ def profile_slow_tests() -> None:
         success, analysis = run_test_with_profiling(test_path)
         all_analyses.append(analysis)
 
-        if analysis['total_samples'] > 0:
+        if analysis["total_samples"] > 0:
             print_profiling_analysis(analysis)
         else:
             print(f"⚡ {test_name}: 너무 빨라서 샘플링되지 않음 ({analysis['execution_time']:.2f}초)")
 
     # Overall summary
-    print(f"\n📈 전체 프로파일링 요약:")
-    total_samples = sum(a['total_samples'] for a in all_analyses)
-    total_time = sum(a['execution_time'] for a in all_analyses)
+    print("\n📈 전체 프로파일링 요약:")
+    total_samples = sum(a["total_samples"] for a in all_analyses)
+    total_time = sum(a["execution_time"] for a in all_analyses)
 
     print(f"   • 총 실행 시간: {total_time:.2f}초")
     print(f"   • 총 샘플 수: {total_samples}개")
     if total_time > 0:
-        print(f"   • 평균 샘플링 밀도: {total_samples/total_time:.1f} 샘플/초")
+        print(f"   • 평균 샘플링 밀도: {total_samples / total_time:.1f} 샘플/초")
+
 
 def run_test_with_profiling(test_file: Path) -> tuple[bool, dict[str, Any]]:
     """Run a single test file with profiling"""
@@ -921,11 +950,13 @@ def run_test_with_profiling(test_file: Path) -> tuple[bool, dict[str, Any]]:
         import pytest
 
         # Run pytest with the test file in the current process
-        exit_code = pytest.main([
-            str(test_file),
-            "-v",
-            "--tb=short"  # Quiet mode to reduce output noise
-        ])
+        exit_code = pytest.main(
+            [
+                str(test_file),
+                "-v",
+                "--tb=short",  # Quiet mode to reduce output noise
+            ]
+        )
 
         success = exit_code == 0
 
@@ -941,9 +972,10 @@ def run_test_with_profiling(test_file: Path) -> tuple[bool, dict[str, Any]]:
 
     # Analyze profiling results
     analysis = analyze_cprofile_results(profiler, execution_time, test_file.name)
-    analysis['success'] = success
+    analysis["success"] = success
 
     return success, analysis
+
 
 def analyze_cprofile_results(profiler: cProfile.Profile, execution_time: float, test_file: str) -> dict[str, Any]:
     """Analyze cProfile results and extract meaningful insights"""
@@ -953,12 +985,12 @@ def analyze_cprofile_results(profiler: cProfile.Profile, execution_time: float, 
     ps = pstats.Stats(profiler, stream=s)
 
     # Sort by cumulative time and get stats
-    ps.sort_stats('cumulative')
+    ps.sort_stats("cumulative")
 
     # Get total calls and primitive calls from stats
     total_calls = 0
     # Use getattr for safer access to stats data
-    stats_dict = getattr(ps, 'stats', {})
+    stats_dict = getattr(ps, "stats", {})
 
     for func_data in stats_dict.values():
         total_calls += func_data[0]  # primitive calls
@@ -969,139 +1001,118 @@ def analyze_cprofile_results(profiler: cProfile.Profile, execution_time: float, 
         filename, line_number, function_name = func
 
         # Only include relevant files (skip standard library)
-        if any(path in filename for path in ['/tests/', '/bin/', '/utils/', 'test_', 'crawler', 'feed_maker']):
-            function_stats.append({
-                'filename': Path(filename).name,
-                'line': line_number,
-                'function': function_name,
-                'calls': nc,  # primitive calls
-                'total_calls': cc,  # total calls including recursive
-                'total_time': tt,  # total time spent in function
-                'cumulative_time': ct,  # cumulative time including subcalls
-                'time_per_call': tt / nc if nc > 0 else 0,
-                'cum_time_per_call': ct / nc if nc > 0 else 0
-            })
+        if any(path in filename for path in ["/tests/", "/bin/", "/utils/", "test_", "crawler", "feed_maker"]):
+            function_stats.append(
+                {
+                    "filename": Path(filename).name,
+                    "line": line_number,
+                    "function": function_name,
+                    "calls": nc,  # primitive calls
+                    "total_calls": cc,  # total calls including recursive
+                    "total_time": tt,  # total time spent in function
+                    "cumulative_time": ct,  # cumulative time including subcalls
+                    "time_per_call": tt / nc if nc > 0 else 0,
+                    "cum_time_per_call": ct / nc if nc > 0 else 0,
+                }
+            )
 
     # Sort by cumulative time
-    function_stats.sort(key=lambda x: x['cumulative_time'], reverse=True)
+    function_stats.sort(key=lambda x: x["cumulative_time"], reverse=True)
 
     # Find hotspots (functions taking most time)
     hotspots = function_stats[:15]
 
     # Find most called functions
-    most_called = sorted(function_stats, key=lambda x: x['calls'], reverse=True)[:10]
+    most_called = sorted(function_stats, key=lambda x: x["calls"], reverse=True)[:10]
 
     # Find functions with highest time per call
-    slowest_per_call = sorted(
-        [f for f in function_stats if f['calls'] > 0],
-        key=lambda x: x['time_per_call'],
-        reverse=True
-    )[:10]
+    slowest_per_call = sorted([f for f in function_stats if f["calls"] > 0], key=lambda x: x["time_per_call"], reverse=True)[:10]
     # File-level aggregation with type annotation
-    file_stats: dict[str, dict[str, float | int]] = defaultdict(lambda: {
-        'total_time': 0.0,
-        'cumulative_time': 0.0,
-        'calls': 0,
-        'functions': 0
-    })
+    file_stats: dict[str, dict[str, float | int]] = defaultdict(lambda: {"total_time": 0.0, "cumulative_time": 0.0, "calls": 0, "functions": 0})
 
     for func_stat in function_stats:
-        filename = func_stat['filename']
-        file_stats[filename]['total_time'] += func_stat['total_time']
-        file_stats[filename]['cumulative_time'] += func_stat['cumulative_time']
-        file_stats[filename]['calls'] += func_stat['calls']
-        file_stats[filename]['functions'] += 1
+        filename = func_stat["filename"]
+        file_stats[filename]["total_time"] += func_stat["total_time"]
+        file_stats[filename]["cumulative_time"] += func_stat["cumulative_time"]
+        file_stats[filename]["calls"] += func_stat["calls"]
+        file_stats[filename]["functions"] += 1
 
     # Convert to list and sort
-    file_stats_list = [
-        {
-            'filename': filename,
-            **stats
-        }
-        for filename, stats in file_stats.items()
-    ]
-    file_stats_list.sort(key=lambda x: x['cumulative_time'], reverse=True)
+    file_stats_list = [{"filename": filename, **stats} for filename, stats in file_stats.items()]
+    file_stats_list.sort(key=lambda x: x["cumulative_time"], reverse=True)
 
-    return {
-        'test_file': test_file,
-        'execution_time': execution_time,
-        'total_calls': total_calls,
-        'function_count': len(function_stats),
-        'hotspots': hotspots,
-        'most_called': most_called,
-        'slowest_per_call': slowest_per_call,
-        'file_stats': file_stats_list[:10]
-    }
+    return {"test_file": test_file, "execution_time": execution_time, "total_calls": total_calls, "function_count": len(function_stats), "hotspots": hotspots, "most_called": most_called, "slowest_per_call": slowest_per_call, "file_stats": file_stats_list[:10]}
+
 
 def print_profiling_analysis(analysis: dict[str, Any]) -> None:
     """Print profiling analysis results"""
     print(f"\n🔬 PROFILING ANALYSIS: {analysis['test_file']}")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
 
     print(f"⏱️  총 실행 시간: {analysis['execution_time']:.3f}초")
     print(f"📞 총 함수 호출: {analysis['total_calls']:,}회")
     print(f"🔧 분석된 함수: {analysis['function_count']}개")
 
     # Top hotspots by cumulative time
-    print(f"\n🔥 성능 핫스팟 (누적 시간 기준 TOP 15):")
+    print("\n🔥 성능 핫스팟 (누적 시간 기준 TOP 15):")
     print(f"{'Rank':<4} {'File':<25} {'Function':<25} {'Calls':<8} {'Total(s)':<8} {'Cumul(s)':<8} {'Per Call(ms)':<12}")
     print("-" * 100)
-    for i, func in enumerate(analysis['hotspots'], 1):
-        print(f"{i:<4} {func['filename']:<25} {func['function']:<25} "
-              f"{func['calls']:<8} {func['total_time']:<8.3f} {func['cumulative_time']:<8.3f} "
-              f"{func['time_per_call']*1000:<12.2f}")
+    for i, func in enumerate(analysis["hotspots"], 1):
+        print(f"{i:<4} {func['filename']:<25} {func['function']:<25} {func['calls']:<8} {func['total_time']:<8.3f} {func['cumulative_time']:<8.3f} {func['time_per_call'] * 1000:<12.2f}")
 
     # Most called functions
-    print(f"\n📞 가장 많이 호출된 함수 TOP 10:")
+    print("\n📞 가장 많이 호출된 함수 TOP 10:")
     print(f"{'Rank':<4} {'Calls':<10} {'File':<25} {'Function':<25} {'Total(s)':<8}")
     print("-" * 80)
-    for i, func in enumerate(analysis['most_called'], 1):
-        print(f"{i:<4} {func['calls']:<10} {func['filename']:<25} {func['function']:<25} "
-              f"{func['total_time']:<8.3f}")
+    for i, func in enumerate(analysis["most_called"], 1):
+        print(f"{i:<4} {func['calls']:<10} {func['filename']:<25} {func['function']:<25} {func['total_time']:<8.3f}")
 
     # Slowest functions per call
-    print(f"\n🐌 호출당 가장 느린 함수 TOP 10:")
+    print("\n🐌 호출당 가장 느린 함수 TOP 10:")
     print(f"{'Rank':<4} {'Per Call(ms)':<12} {'Calls':<8} {'File':<25} {'Function':<25}")
     print("-" * 80)
-    for i, func in enumerate(analysis['slowest_per_call'], 1):
-        print(f"{i:<4} {func['time_per_call']*1000:<12.2f} {func['calls']:<8} "
-              f"{func['filename']:<25} {func['function']:<25}")
+    for i, func in enumerate(analysis["slowest_per_call"], 1):
+        print(f"{i:<4} {func['time_per_call'] * 1000:<12.2f} {func['calls']:<8} {func['filename']:<25} {func['function']:<25}")
 
     # File-level summary
-    print(f"\n📁 파일별 성능 요약:")
+    print("\n📁 파일별 성능 요약:")
     print(f"{'Rank':<4} {'File':<30} {'Functions':<9} {'Calls':<10} {'Total(s)':<8} {'Cumul(s)':<8}")
     print("-" * 80)
-    for i, file_stat in enumerate(analysis['file_stats'], 1):
-        print(f"{i:<4} {file_stat['filename']:<30} {file_stat['functions']:<9} "
-              f"{file_stat['calls']:<10} {file_stat['total_time']:<8.3f} {file_stat['cumulative_time']:<8.3f}")
+    for i, file_stat in enumerate(analysis["file_stats"], 1):
+        print(f"{i:<4} {file_stat['filename']:<30} {file_stat['functions']:<9} {file_stat['calls']:<10} {file_stat['total_time']:<8.3f} {file_stat['cumulative_time']:<8.3f}")
 
     # Performance recommendations
-    print(f"\n💡 성능 개선 권장사항:")
-    top_hotspot = analysis['hotspots'][0] if analysis['hotspots'] else None
+    print("\n💡 성능 개선 권장사항:")
+    top_hotspot = analysis["hotspots"][0] if analysis["hotspots"] else None
     if top_hotspot:
         print(f"   • 최대 병목점: {top_hotspot['filename']}::{top_hotspot['function']}")
-        print(f"     - 누적 시간: {top_hotspot['cumulative_time']:.3f}초 "
-              f"({top_hotspot['cumulative_time']/analysis['execution_time']*100:.1f}%)")
+        print(f"     - 누적 시간: {top_hotspot['cumulative_time']:.3f}초 ({top_hotspot['cumulative_time'] / analysis['execution_time'] * 100:.1f}%)")
 
-    top_called = analysis['most_called'][0] if analysis['most_called'] else None
-    if top_called and top_called['calls'] > 1000:
+    top_called = analysis["most_called"][0] if analysis["most_called"] else None
+    if top_called and top_called["calls"] > 1000:
         print(f"   • 과도한 호출: {top_called['filename']}::{top_called['function']}")
         print(f"     - {top_called['calls']:,}회 호출, 캐싱 또는 최적화 고려")
 
-    slow_per_call = analysis['slowest_per_call'][0] if analysis['slowest_per_call'] else None
-    if slow_per_call and slow_per_call['time_per_call'] > 0.001:
+    slow_per_call = analysis["slowest_per_call"][0] if analysis["slowest_per_call"] else None
+    if slow_per_call and slow_per_call["time_per_call"] > 0.001:
         print(f"   • 느린 함수: {slow_per_call['filename']}::{slow_per_call['function']}")
-        print(f"     - 호출당 {slow_per_call['time_per_call']*1000:.2f}ms, 내부 로직 최적화 필요")
+        print(f"     - 호출당 {slow_per_call['time_per_call'] * 1000:.2f}ms, 내부 로직 최적화 필요")
 
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
 
-def get_status_emoji(path: Path, executed_tests: Optional[set[Path]] = None,
-                    target_tests: Optional[set[Path]] = None, failed_tests: Optional[set[Path]] = None,
-                    passed_tests: Optional[set[Path]] = None, deps: Optional[dict[Path, set[Path]]] = None,
-                    reverse_deps: Optional[dict[Path, set[Path]]] = None,
-                    modified_files: Optional[set[Path]] = None,
-                    affected_files: Optional[set[Path]] = None,
-                    all_mode: bool = False) -> str:
+
+def get_status_emoji(
+    path: Path,
+    executed_tests: Optional[set[Path]] = None,
+    target_tests: Optional[set[Path]] = None,
+    failed_tests: Optional[set[Path]] = None,
+    passed_tests: Optional[set[Path]] = None,
+    deps: Optional[dict[Path, set[Path]]] = None,
+    reverse_deps: Optional[dict[Path, set[Path]]] = None,
+    modified_files: Optional[set[Path]] = None,
+    affected_files: Optional[set[Path]] = None,
+    all_mode: bool = False,
+) -> str:
     """Unified function to get status emoji for a file (일반 모듈도 테스트 상태 반영)"""
     if executed_tests is None:
         executed_tests = set()
@@ -1161,23 +1172,15 @@ def is_test_module(path: Path) -> bool:
     """테스트 모듈 판별 함수 (Path.resolve()된 경로도 지원)"""
     resolved_path = path.resolve()
     resolved_test_dir = TEST_DIR.resolve()
-    return (resolved_path.name.startswith("test_") and
-            resolved_path.suffix == ".py" and
-            resolved_path.parent == resolved_test_dir and
-            resolved_path.name != "test_runner.py")
+    return resolved_path.name.startswith("test_") and resolved_path.suffix == ".py" and resolved_path.parent == resolved_test_dir and resolved_path.name != "test_runner.py"
 
 
-def _get_test_modules_for_file(file_path: Path, deps: dict[Path, set[Path]],
-                              reverse_deps: dict[Path, set[Path]]) -> set[Path]:
+def _get_test_modules_for_file(file_path: Path, deps: dict[Path, set[Path]], reverse_deps: dict[Path, set[Path]]) -> set[Path]:
     """파일을 테스트하는 테스트 모듈들을 찾기"""
     test_modules = set()
 
     # 1. 직접적인 테스트 모듈 찾기 (test_파일명.py)
-    possible_test_names = [
-        f"test_{file_path.stem}.py",
-        f"test_{file_path.name}",
-        f"test_{file_path.stem.replace('feed_maker_util_', 'feed_maker_util_')}.py"
-    ]
+    possible_test_names = [f"test_{file_path.stem}.py", f"test_{file_path.name}", f"test_{file_path.stem.replace('feed_maker_util_', 'feed_maker_util_')}.py"]
 
     for test_name in possible_test_names:
         test_path = TEST_DIR / test_name
@@ -1197,7 +1200,7 @@ def extract_imports_from_file(file_path: Path) -> set[str]:
     """Extract all import statements from a Python file using AST"""
     imports = set()
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
 
         tree = ast.parse(content)
@@ -1214,6 +1217,7 @@ def extract_imports_from_file(file_path: Path) -> set[str]:
 
     return imports
 
+
 def build_dependency_graph() -> dict[Path, set[Path]]:
     """Build dependency graph by parsing import statements in all Python files"""
     deps = {}
@@ -1223,7 +1227,7 @@ def build_dependency_graph() -> dict[Path, set[Path]]:
     module_to_path = {}
     for file_path in all_files:
         rel_path = file_path.relative_to(PROJECT_ROOT)
-        module_name = '.'.join(rel_path.with_suffix('').parts)
+        module_name = ".".join(rel_path.with_suffix("").parts)
         module_to_path[module_name] = file_path
 
     # Parse imports for each file
@@ -1235,20 +1239,21 @@ def build_dependency_graph() -> dict[Path, set[Path]]:
             if not isinstance(import_name, str):
                 continue
             # Handle relative imports
-            if import_name.startswith('.'):
+            if import_name.startswith("."):
                 # Convert relative import to absolute
                 rel_path = file_path.relative_to(PROJECT_ROOT)
-                parts = list(rel_path.with_suffix('').parts)
-                dots = len(import_name) - len(import_name.lstrip('.'))
+                parts = list(rel_path.with_suffix("").parts)
+                dots = len(import_name) - len(import_name.lstrip("."))
                 if dots <= len(parts):
                     parts = parts[:-dots]
-                    import_name = '.'.join(parts + [import_name.lstrip('.')])
+                    import_name = ".".join(parts + [import_name.lstrip(".")])
 
             # Find the corresponding file
             if import_name in module_to_path:
                 deps[file_path].add(module_to_path[import_name])
 
     return deps
+
 
 def analyze_all_dependencies() -> tuple[dict[Path, set[Path]], dict[Path, set[Path]]]:
     """Analyze dependencies between all Python files with performance optimization"""
@@ -1263,15 +1268,15 @@ def analyze_all_dependencies() -> tuple[dict[Path, set[Path]], dict[Path, set[Pa
     # Try to load cached dependencies
     if cache_file.exists():
         try:
-            import json
             import pickle
-            with open(cache_file, 'rb') as f:
+
+            with open(cache_file, "rb") as f:
                 cache_data = pickle.load(f)
 
             # Check if cache is still valid (based on file modification times)
             if _is_dependency_cache_valid(cache_data):
                 print("📦 Using cached dependency analysis (performance optimized)")
-                return cache_data.get('deps', {}), cache_data.get('reverse_deps', {})
+                return cache_data.get("deps", {}), cache_data.get("reverse_deps", {})
 
         except (OSError, PermissionError, pickle.PickleError):
             pass
@@ -1289,18 +1294,15 @@ def analyze_all_dependencies() -> tuple[dict[Path, set[Path]], dict[Path, set[Pa
     # Cache the results
     try:
         import pickle
-        cache_data = {
-            'deps': deps,
-            'reverse_deps': reverse_deps,
-            'timestamp': time.time(),
-            'file_timestamps': _get_file_timestamps()
-        }
-        with open(cache_file, 'wb') as f:
+
+        cache_data = {"deps": deps, "reverse_deps": reverse_deps, "timestamp": time.time(), "file_timestamps": _get_file_timestamps()}
+        with open(cache_file, "wb") as f:
             pickle.dump(cache_data, f)
     except (OSError, PermissionError, pickle.PickleError) as e:
         print(f"⚠️  Failed to cache dependencies: {e}")
 
     return deps, reverse_deps
+
 
 def get_reverse_dependencies(deps: dict[Path, set[Path]]) -> dict[Path, set[Path]]:
     """Get reverse dependencies (who imports this file)"""
@@ -1314,8 +1316,8 @@ def get_reverse_dependencies(deps: dict[Path, set[Path]]) -> dict[Path, set[Path
 
     return reverse_deps
 
-def get_affected_files(modified_files: list[Path], deps: dict[Path, set[Path]],
-                      reverse_deps: dict[Path, set[Path]], max_depth: int = 1) -> set[Path]:
+
+def get_affected_files(modified_files: list[Path], deps: dict[Path, set[Path]], reverse_deps: dict[Path, set[Path]], max_depth: int = 1) -> set[Path]:
     """Get all files affected by the modified files (limited recursive dependency tracking)"""
     affected = set(modified_files)
     to_process = [(f, 0) for f in modified_files]  # (file, depth)
@@ -1339,25 +1341,28 @@ def get_affected_files(modified_files: list[Path], deps: dict[Path, set[Path]],
 
     return affected
 
-def print_simple_dependency_tree(deps: dict[Path, set[Path]],
-                                focus_files: Optional[set[Path]] = None,
-                                max_depth: int = 2,
-                                executed_tests: Optional[set[Path]] = None,
-                                target_tests: Optional[set[Path]] = None,
-                                failed_tests: Optional[set[Path]] = None,
-                                passed_tests: Optional[set[Path]] = None,
-                                reverse_deps: Optional[dict[Path, set[Path]]] = None,
-                                modified_files: Optional[set[Path]] = None,
-                                affected_files: Optional[set[Path]] = None) -> None:
+
+def print_simple_dependency_tree(
+    deps: dict[Path, set[Path]],
+    focus_files: Optional[set[Path]] = None,
+    max_depth: int = 2,
+    executed_tests: Optional[set[Path]] = None,
+    target_tests: Optional[set[Path]] = None,
+    failed_tests: Optional[set[Path]] = None,
+    passed_tests: Optional[set[Path]] = None,
+    reverse_deps: Optional[dict[Path, set[Path]]] = None,
+    modified_files: Optional[set[Path]] = None,
+    affected_files: Optional[set[Path]] = None,
+) -> None:
     """Print dependency tree with test modules as root and general modules as children (multi-level, branch lines)"""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("🌳 TEST-ROOTED DEPENDENCY TREE (with branches)")
-    print("="*80)
+    print("=" * 80)
     print(f"📋 의존성을 최대 {max_depth}단계까지 나무 형태로 출력합니다.")
-    print("-"*80)
+    print("-" * 80)
     print("  🟢 Success  🔴 Failed  🔵 Modified  🟡 Included  ⚪ Untested")
     print("  (일반 모듈도 해당 테스트의 성공/실패 상태를 반영)")
-    print("-"*80)
+    print("-" * 80)
 
     if executed_tests is None:
         executed_tests = set()
@@ -1385,30 +1390,35 @@ def print_simple_dependency_tree(deps: dict[Path, set[Path]],
         title = f"ALL TEST MODULES ({len(files_to_show)} files)"
 
     print(f"🎯 {title}")
-    print("-"*80)
+    print("-" * 80)
 
     for idx, file_path in enumerate(files_to_show):
         if file_path in deps:
-            is_last = (idx == len(files_to_show) - 1)
+            is_last = idx == len(files_to_show) - 1
             # 각 테스트 모듈별로 visited 집합 분리
-            _print_branch_tree_node(file_path, deps, max_depth, 0, set(),
-                                  executed_tests, target_tests, failed_tests, passed_tests,
-                                  prefix="", is_last=is_last, reverse_deps=reverse_deps,
-                                  modified_files=modified_files, affected_files=affected_files)
+            _print_branch_tree_node(file_path, deps, max_depth, 0, set(), executed_tests, target_tests, failed_tests, passed_tests, prefix="", is_last=is_last, reverse_deps=reverse_deps, modified_files=modified_files, affected_files=affected_files)
 
-    print("-"*80)
+    print("-" * 80)
     print(f"📊 Summary: {len(files_to_show)} test modules (max depth: {max_depth})")
-    print("="*80)
+    print("=" * 80)
 
 
-def _print_branch_tree_node(node: Path, deps: dict[Path, set[Path]],
-                           max_depth: int, current_depth: int, visited: set[Path],
-                           executed_tests: set[Path], target_tests: set[Path],
-                           failed_tests: set[Path], passed_tests: set[Path],
-                           prefix: str = "", is_last: bool = True,
-                           reverse_deps: Optional[dict[Path, set[Path]]] = None,
-                           modified_files: Optional[set[Path]] = None,
-                           affected_files: Optional[set[Path]] = None) -> None:
+def _print_branch_tree_node(
+    node: Path,
+    deps: dict[Path, set[Path]],
+    max_depth: int,
+    current_depth: int,
+    visited: set[Path],
+    executed_tests: set[Path],
+    target_tests: set[Path],
+    failed_tests: set[Path],
+    passed_tests: set[Path],
+    prefix: str = "",
+    is_last: bool = True,
+    reverse_deps: Optional[dict[Path, set[Path]]] = None,
+    modified_files: Optional[set[Path]] = None,
+    affected_files: Optional[set[Path]] = None,
+) -> None:
     """Print a tree node with branches (─, └─, ├─, │ 등) - 일반 모듈도 테스트 상태 반영"""
     node = node.resolve()
     if current_depth > max_depth or node in visited:
@@ -1417,8 +1427,7 @@ def _print_branch_tree_node(node: Path, deps: dict[Path, set[Path]],
     visited.add(node)
 
     # Get status emoji (일반 모듈도 테스트 상태 반영)
-    status = get_status_emoji(node, executed_tests, target_tests, failed_tests, passed_tests,
-                             deps, reverse_deps, modified_files, affected_files)
+    status = get_status_emoji(node, executed_tests, target_tests, failed_tests, passed_tests, deps, reverse_deps, modified_files, affected_files)
 
     # Handle invalid paths
     try:
@@ -1436,11 +1445,9 @@ def _print_branch_tree_node(node: Path, deps: dict[Path, set[Path]],
     dependencies = sorted([dep.resolve() for dep in deps.get(node, set())], key=lambda x: str(x))
     unvisited_deps = [dep for dep in dependencies if dep not in visited]
     for i, dep in enumerate(unvisited_deps):
-        is_last_dep = (i == len(unvisited_deps) - 1)
+        is_last_dep = i == len(unvisited_deps) - 1
         child_prefix = prefix + ("    " if is_last else "│   ")
-        _print_branch_tree_node(dep, deps, max_depth, current_depth + 1, visited.copy(),
-                               executed_tests, target_tests, failed_tests, passed_tests,
-                               child_prefix, is_last_dep, reverse_deps, modified_files, affected_files)
+        _print_branch_tree_node(dep, deps, max_depth, current_depth + 1, visited.copy(), executed_tests, target_tests, failed_tests, passed_tests, child_prefix, is_last_dep, reverse_deps, modified_files, affected_files)
 
 
 def get_test_targets_with_dependencies(modified_files: list[Path]) -> list[Path]:
@@ -1477,7 +1484,8 @@ def get_test_targets_with_dependencies(modified_files: list[Path]) -> list[Path]
         if lastfailed_file.exists():
             try:
                 import json
-                with open(lastfailed_file, 'r') as f:
+
+                with open(lastfailed_file, "r") as f:
                     failed_data = json.load(f)
                 for test_key in failed_data.keys():
                     if test_key.startswith("tests/") and "::" in test_key:
@@ -1510,11 +1518,7 @@ def get_test_targets_with_dependencies(modified_files: list[Path]) -> list[Path]
             test_targets.append(file_path)
         else:
             # For non-test files, find corresponding test file
-            possible_test_names = [
-                f"test_{file_path.stem}.py",
-                f"test_{file_path.name}",
-                f"test_{file_path.stem.replace('feed_maker_util_', 'feed_maker_util_')}.py"
-            ]
+            possible_test_names = [f"test_{file_path.stem}.py", f"test_{file_path.name}", f"test_{file_path.stem.replace('feed_maker_util_', 'feed_maker_util_')}.py"]
             for test_name in possible_test_names:
                 test_path = TEST_DIR / test_name
                 if is_test_module(test_path) and test_path.exists():
@@ -1553,11 +1557,7 @@ def get_test_targets_with_dependencies(modified_files: list[Path]) -> list[Path]
             modified_test_files.add(modified_file)
         else:
             # 수정된 일반 파일에 대한 테스트 찾기
-            possible_test_names = [
-                f"test_{modified_file.stem}.py",
-                f"test_{modified_file.name}",
-                f"test_{modified_file.stem.replace('feed_maker_util_', 'feed_maker_util_')}.py"
-            ]
+            possible_test_names = [f"test_{modified_file.stem}.py", f"test_{modified_file.name}", f"test_{modified_file.stem.replace('feed_maker_util_', 'feed_maker_util_')}.py"]
             for test_name in possible_test_names:
                 test_path = TEST_DIR / test_name
                 if is_test_module(test_path) and test_path.exists():
@@ -1579,43 +1579,53 @@ def get_test_targets_with_dependencies(modified_files: list[Path]) -> list[Path]
     return unique_targets
 
 
-def print_global_dependency_tree(deps: dict[Path, set[Path]], max_depth: int = 10,
-                                 executed_tests: Optional[set[Path]] = None, target_tests: Optional[set[Path]] = None,
-                                 failed_tests: Optional[set[Path]] = None, passed_tests: Optional[set[Path]] = None,
-                                 reverse_deps: Optional[dict[Path, set[Path]]] = None,
-                                 modified_files: Optional[set[Path]] = None,
-                                 affected_files: Optional[set[Path]] = None,
-                                 all_mode: bool = False):
+def print_global_dependency_tree(
+    deps: dict[Path, set[Path]],
+    max_depth: int = 10,
+    executed_tests: Optional[set[Path]] = None,
+    target_tests: Optional[set[Path]] = None,
+    failed_tests: Optional[set[Path]] = None,
+    passed_tests: Optional[set[Path]] = None,
+    reverse_deps: Optional[dict[Path, set[Path]]] = None,
+    modified_files: Optional[set[Path]] = None,
+    affected_files: Optional[set[Path]] = None,
+    all_mode: bool = False,
+):
     """테스트 파일을 루트로 하여 전체 import chain을 트리로 출력"""
     test_modules = [f for f in deps.keys() if is_test_module(f)]
     print("\n=== GLOBAL DEPENDENCY TREE ===")
     for idx, test_file in enumerate(sorted(test_modules, key=str)):
-        status = get_status_emoji(test_file, executed_tests, target_tests, failed_tests, passed_tests,
-                                 deps, reverse_deps, modified_files, affected_files, all_mode=all_mode)
+        status = get_status_emoji(test_file, executed_tests, target_tests, failed_tests, passed_tests, deps, reverse_deps, modified_files, affected_files, all_mode=all_mode)
         print(f"{status} {test_file.name}")
-        _print_global_branch_tree_node(test_file, deps, max_depth, 1, set([test_file]), "    ",
-                                      executed_tests, target_tests, failed_tests, passed_tests,
-                                      reverse_deps, modified_files, affected_files, all_mode=all_mode)
+        _print_global_branch_tree_node(test_file, deps, max_depth, 1, set([test_file]), "    ", executed_tests, target_tests, failed_tests, passed_tests, reverse_deps, modified_files, affected_files, all_mode=all_mode)
 
-def _print_global_branch_tree_node(node: Path, deps: dict[Path, set[Path]], max_depth: int, current_depth: int, visited: set[Path], prefix: str,
-                                  executed_tests: Optional[set[Path]] = None, target_tests: Optional[set[Path]] = None,
-                                  failed_tests: Optional[set[Path]] = None, passed_tests: Optional[set[Path]] = None,
-                                  reverse_deps: Optional[dict[Path, set[Path]]] = None,
-                                  modified_files: Optional[set[Path]] = None,
-                                  affected_files: Optional[set[Path]] = None,
-                                  all_mode: bool = False):
+
+def _print_global_branch_tree_node(
+    node: Path,
+    deps: dict[Path, set[Path]],
+    max_depth: int,
+    current_depth: int,
+    visited: set[Path],
+    prefix: str,
+    executed_tests: Optional[set[Path]] = None,
+    target_tests: Optional[set[Path]] = None,
+    failed_tests: Optional[set[Path]] = None,
+    passed_tests: Optional[set[Path]] = None,
+    reverse_deps: Optional[dict[Path, set[Path]]] = None,
+    modified_files: Optional[set[Path]] = None,
+    affected_files: Optional[set[Path]] = None,
+    all_mode: bool = False,
+):
     if current_depth > max_depth:
         return
     for dep in sorted(deps.get(node, set()), key=str):
         if dep in visited:
             continue
-        status = get_status_emoji(dep, executed_tests, target_tests, failed_tests, passed_tests,
-                                 deps, reverse_deps, modified_files, affected_files, all_mode=all_mode)
+        status = get_status_emoji(dep, executed_tests, target_tests, failed_tests, passed_tests, deps, reverse_deps, modified_files, affected_files, all_mode=all_mode)
         print(f"{prefix}└─ {status} {dep.name}")
         visited.add(dep)
-        _print_global_branch_tree_node(dep, deps, max_depth, current_depth + 1, visited, prefix + "    ",
-                                      executed_tests, target_tests, failed_tests, passed_tests,
-                                      reverse_deps, modified_files, affected_files, all_mode=all_mode)
+        _print_global_branch_tree_node(dep, deps, max_depth, current_depth + 1, visited, prefix + "    ", executed_tests, target_tests, failed_tests, passed_tests, reverse_deps, modified_files, affected_files, all_mode=all_mode)
+
 
 def main() -> bool:
     """Main function"""
@@ -1623,12 +1633,9 @@ def main() -> bool:
     os.chdir(TEST_DIR)
 
     parser = argparse.ArgumentParser(description="Test runner with dependency analysis")
-    parser.add_argument("-a", "--all", action="store_true",
-                       help="Run all tests in dependency order (default: run changed modules + previously failed tests)")
-    parser.add_argument("-f", "--file", type=str,
-                       help="Run a specific test file (e.g., test_feed_maker_util_path_util.py)")
-    parser.add_argument("-p", "--profile", type=str, metavar="TEST_MODULE",
-                       help="Profile a specific test module using detailed cProfile analysis (e.g., test_crawler.py)")
+    parser.add_argument("-a", "--all", action="store_true", help="Run all tests in dependency order (default: run changed modules + previously failed tests)")
+    parser.add_argument("-f", "--file", type=str, help="Run a specific test file (e.g., test_feed_maker_util_path_util.py)")
+    parser.add_argument("-p", "--profile", type=str, metavar="TEST_MODULE", help="Profile a specific test module using detailed cProfile analysis (e.g., test_crawler.py)")
     args = parser.parse_args()
 
     # Setup test environment first, before any imports that might depend on environment variables
@@ -1686,17 +1693,15 @@ def main() -> bool:
             target_tests = set()
 
     # === Global dependency tree 출력 (한 번만) ===
-    print_global_dependency_tree(deps, max_depth=10, executed_tests=executed_tests, target_tests=target_tests,
-                                 failed_tests=failed_tests, passed_tests=passed_tests, reverse_deps=reverse_deps,
-                                 modified_files=modified_files, affected_files=affected_files, all_mode=args.all)
+    print_global_dependency_tree(deps, max_depth=10, executed_tests=executed_tests, target_tests=target_tests, failed_tests=failed_tests, passed_tests=passed_tests, reverse_deps=reverse_deps, modified_files=modified_files, affected_files=affected_files, all_mode=args.all)
 
     success = False
 
     if args.profile:
         # Profile the specified test module
         test_module = args.profile
-        if not test_module.endswith('.py'):
-            test_module += '.py'
+        if not test_module.endswith(".py"):
+            test_module += ".py"
 
         test_path = TEST_DIR / test_module
         if not test_path.exists():
@@ -1704,7 +1709,7 @@ def main() -> bool:
             print(f"   경로: {test_path}")
             return False
 
-        print(f"\n🔬 DETAILED PROFILING MODE")
+        print("\n🔬 DETAILED PROFILING MODE")
         print("=" * 80)
         print(f"대상 모듈: {test_module}")
         print("Python cProfile을 사용한 정밀한 성능 분석을 수행합니다.")
@@ -1712,7 +1717,7 @@ def main() -> bool:
 
         success, analysis = run_test_with_profiling(test_path)
 
-        if analysis.get('function_count', 0) > 0:
+        if analysis.get("function_count", 0) > 0:
             print_profiling_analysis(analysis)
         else:
             print("⚠️  프로파일링 데이터를 수집할 수 없었습니다.")
@@ -1773,9 +1778,9 @@ def main() -> bool:
 
     # Print final dependency tree with actual test results (간결하게)
     if executed_tests:
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("🎯 TEST RESULTS SUMMARY")
-        print("="*80)
+        print("=" * 80)
         print(f"✅ Passed: {actual_passed_count} tests")
         print(f"❌ Failed: {actual_failed_count} tests")
         print(f"📋 Total executed: {len(executed_tests)} tests")
@@ -1788,26 +1793,58 @@ def main() -> bool:
         # 실패한 테스트가 있을 때만 상세 트리 출력
         if failed_tests:
             print("\n🔴 FAILED TESTS DEPENDENCY TREE:")
-            print_simple_dependency_tree(deps, focus_files=failed_tests, max_depth=3,
-                                       target_tests=target_tests, reverse_deps=reverse_deps,
-                                       executed_tests=executed_tests, failed_tests=failed_tests, passed_tests=passed_tests,
-                                       modified_files=modified_files, affected_files=affected_files)
+            print_simple_dependency_tree(deps, focus_files=failed_tests, max_depth=3, target_tests=target_tests, reverse_deps=reverse_deps, executed_tests=executed_tests, failed_tests=failed_tests, passed_tests=passed_tests, modified_files=modified_files, affected_files=affected_files)
+
+    if success:
+        run_coverage_report()
 
     return success
 
 
+def run_coverage_report() -> None:
+    """테스트 실행 중 누적된 .coverage 데이터로 리포트를 생성한다."""
+    cov_file = _get_coverage_file()
+    if not cov_file.exists():
+        print("\n⚠️  .coverage 파일이 없어 커버리지 리포트를 건너뜁니다.")
+        return
+
+    try:
+        import coverage as _cov_mod  # noqa: F401
+    except ImportError:
+        print("\n⚠️  coverage 패키지가 없어 커버리지 리포트를 건너뜁니다.")
+        return
+
+    print("\n" + "=" * 80)
+    print("📊 COVERAGE REPORT")
+    print("=" * 80)
+
+    cov_dir = str(cov_file.parent)
+    result = subprocess.run([sys.executable, "-m", "coverage", "report", "--show-missing", "--skip-covered"], capture_output=True, text=True, cwd=cov_dir)
+    if result.stdout:
+        print(result.stdout)
+
+    html_result = subprocess.run([sys.executable, "-m", "coverage", "html"], capture_output=True, text=True, cwd=cov_dir)
+    if html_result.returncode == 0:
+        print("Coverage HTML written to dir htmlcov")
+    else:
+        print("⚠️  HTML 리포트 생성 중 오류가 발생했습니다.")
+        if html_result.stderr:
+            for line in html_result.stderr.splitlines()[-5:]:
+                print(f"  {line}")
+
+
 def _is_dependency_cache_valid(cache_data: dict[str, Any]) -> bool:
     """Check if cached dependency data is still valid"""
-    if 'timestamp' not in cache_data or 'file_timestamps' not in cache_data:
+    if "timestamp" not in cache_data or "file_timestamps" not in cache_data:
         return False
 
     # Cache is valid for 1 hour
-    if time.time() - cache_data['timestamp'] > 3600:
+    if time.time() - cache_data["timestamp"] > 3600:
         return False
 
     # Check if any Python files have been modified since cache creation
     current_timestamps = _get_file_timestamps()
-    cached_timestamps = cache_data['file_timestamps']
+    cached_timestamps = cache_data["file_timestamps"]
 
     for file_path, current_time in current_timestamps.items():
         if file_path not in cached_timestamps or cached_timestamps[file_path] != current_time:
