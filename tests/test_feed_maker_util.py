@@ -778,5 +778,43 @@ class TestFileManagerGetIncompleteImageListEdgeCases(unittest.TestCase):
                 FileManager.get_incomplete_image_list(html_file)
 
 
+class TestResolveExecutableRelativeExists(unittest.TestCase):
+    """Process._resolve_executable: relative path exists and is executable → covers L107"""
+
+    def test_relative_path_found(self) -> None:
+        import tempfile
+        import stat
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            script = Path(tmpdir) / "my_script.py"
+            script.write_text("#!/usr/bin/env python\nprint('ok')\n")
+            script.chmod(script.stat().st_mode | stat.S_IEXEC)
+
+            result = Process._resolve_executable("./my_script.py", Path(tmpdir))
+            self.assertIsNotNone(result)
+            self.assertTrue(result.endswith("my_script.py"))
+
+
+class TestEnvGetNoneValue(unittest.TestCase):
+    """Env.get: os.getenv returns None → covers L359"""
+
+    def test_env_get_raises_when_none(self) -> None:
+        from bin.feed_maker_util import Env, NotFoundEnvError
+
+        with patch.dict(os.environ, {}, clear=True):
+            with patch("os.getenv", return_value=None):
+                with self.assertRaises(NotFoundEnvError):
+                    Env.get("NONEXISTENT_VAR_XYZ")
+
+
+class TestURLGetDomainNoScheme(unittest.TestCase):
+    """URL.get_url_domain: L645 is unreachable (host_index = find()+3, always >= 0)"""
+
+    def test_no_scheme_returns_partial(self) -> None:
+        # find("://") returns -1, host_index = -1+3 = 2, always >= 0
+        result = URL.get_url_domain("just-a-string-without-scheme")
+        self.assertIsInstance(result, str)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -3,7 +3,6 @@
 
 from unittest.mock import patch, MagicMock
 
-import pytest
 
 from backend.auth import verify_facebook_token
 import unittest
@@ -42,6 +41,7 @@ class TestVerifyFacebookToken:
     def test_network_error(self):
         """네트워크 오류 시 False"""
         import requests
+
         with patch("backend.auth.http_requests.get", side_effect=requests.RequestException("timeout")):
             assert verify_facebook_token("token", "user@example.com") is False
 
@@ -243,7 +243,7 @@ class TestDeleteSession(unittest.TestCase):
 
 class TestCleanupExpiredSessions(unittest.TestCase):
     @patch("backend.auth.DB.session_ctx")
-    def test_cleanup(self, mock_session_ctx) -> None:
+    def test_cleanup_returns_deleted_count(self, mock_session_ctx) -> None:
         mock_session = MagicMock()
         mock_session.query.return_value.filter.return_value.delete.return_value = 5
         mock_session_ctx.return_value.__enter__ = MagicMock(return_value=mock_session)
@@ -253,6 +253,21 @@ class TestCleanupExpiredSessions(unittest.TestCase):
 
         count = cleanup_expired_sessions()
         self.assertEqual(count, 5)
+        # filter가 UserSession.expires_at 조건으로 호출되었는지 확인
+        mock_session.query.assert_called_once()
+        mock_session.query.return_value.filter.assert_called_once()
+
+    @patch("backend.auth.DB.session_ctx")
+    def test_cleanup_zero_expired(self, mock_session_ctx) -> None:
+        mock_session = MagicMock()
+        mock_session.query.return_value.filter.return_value.delete.return_value = 0
+        mock_session_ctx.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_session_ctx.return_value.__exit__ = MagicMock(return_value=None)
+
+        from backend.auth import cleanup_expired_sessions
+
+        count = cleanup_expired_sessions()
+        self.assertEqual(count, 0)
 
 
 class TestGetCurrentUser(unittest.TestCase):
@@ -344,7 +359,9 @@ class TestRequireAdmin(unittest.TestCase):
 
     @patch("backend.auth.Env.get")
     @patch("backend.auth.require_auth")
-    def test_empty_admin_list(self, mock_auth, mock_env) -> None:
+    def test_empty_admin_list_allows_all(self, mock_auth, mock_env) -> None:
+        """ADMIN_EMAILS 미설정 시 모든 인증된 사용자를 허용하는 의도적 동작.
+        보안 관점: 초기 설정 전이나 개발 환경에서 admin 제한 없이 운영하기 위함."""
         mock_user = MagicMock()
         mock_user.user_email = "anyone@example.com"
         mock_auth.return_value = mock_user
@@ -373,3 +390,16 @@ class TestSetAndClearSessionCookie(unittest.TestCase):
         clear_session_cookie(response)
         response.delete_cookie.assert_called_once()
 
+
+class TestGetCookieDomainSinglePartHost(unittest.TestCase):
+    """get_cookie_domain: single-part host that is not localhost/IP → covers L51"""
+
+    @patch("backend.auth.Env.get")
+    def test_single_part_non_localhost(self, mock_env) -> None:
+        # "intranet" hostname - single part, not localhost, not IP
+        mock_env.return_value = "https://intranet"
+        from backend.auth import get_cookie_domain
+
+        result = get_cookie_domain()
+        # len(parts) == 1, so falls through to return None at line 51
+        self.assertIsNone(result)

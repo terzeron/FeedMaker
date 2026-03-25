@@ -1648,5 +1648,29 @@ class TestGetIndexDataWriteFailure(FeedMakerMakeTestBase):
             self.assertIsNone(mtime)
 
 
+class TestGetExpirationUnknownUnit(FeedMakerMakeTestBase):
+    """_get_expiration_from_config: unknown unit → covers L679"""
+
+    def test_unknown_unit_returns_none(self) -> None:
+        # "minute"는 지원되지 않는 단위
+        self.maker.rss_conf["ignore_broken_link"] = "5 minute"
+        result = self.maker._get_expiration_from_config()
+        self.assertIsNone(result)
+
+
+class TestFetchOldFeedListWindowWriteIndexData(FeedMakerMakeTestBase):
+    """_fetch_old_feed_list_window: current_time_str truthy → covers L407"""
+
+    def test_current_time_str_truthy(self) -> None:
+        old_list = [("http://example.com/1", "T1", []), ("http://example.com/2", "T2", [])]
+        self.maker.window_size = 10
+        # start_idx.txt가 존재하고 유효한 데이터가 있어야 함
+        self.maker.start_index_file_path.write_text("1\t2025-01-01T00:00:00+00:00\n")
+
+        with patch.object(self.maker, "_write_index_data", return_value=(2, "2025-01-01T00:00:00")):
+            result = self.maker._fetch_old_feed_list_window(old_list)
+            self.assertIsNotNone(result)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -990,5 +990,36 @@ class TestFeedServingEndpoints:
         assert not _is_auth_exempt("/exec_result")
 
 
+def test_get_problems_unknown_type():
+    """Unknown problem_type → HTTPException 404 (L220)"""
+    mgr = MagicMock()
+    with pytest.raises(HTTPException) as exc_info:
+        asyncio.run(main.get_problems("nonexistent_type", feed_maker_manager=mgr))
+    assert exc_info.value.status_code == 404
+
+
+def test_serve_feed_path_traversal_direct(tmp_path):
+    """serve_feed: path traversal → HTTPException 400 (L543)"""
+    # FEED_DIR와 다른 곳으로 resolve되는 feed_name
+    with patch("backend.main.FEED_DIR", tmp_path), patch("backend.main.FEED_DIR_RESOLVED", tmp_path.resolve()):
+        # 직접 함수 호출로 path traversal 트리거
+        malicious_name = "../../etc/passwd"
+        # resolve된 경로가 FEED_DIR_RESOLVED 밖을 가리키면 400 발생
+        resolved = (tmp_path / f"{malicious_name}.xml").resolve()
+        if not resolved.is_relative_to(tmp_path.resolve()):
+            with pytest.raises(HTTPException) as exc_info:
+                asyncio.run(main.serve_feed(malicious_name, MagicMock()))
+            assert exc_info.value.status_code == 400
+
+
+def test_tracking_pixel_missing(tmp_path):
+    """tracking_pixel: TRACKING_PIXEL_PATH missing → HTTPException 404 (L555)"""
+    nonexistent = tmp_path / "nonexistent" / "1x1.jpg"
+    with patch("backend.main.TRACKING_PIXEL_PATH", nonexistent), patch("backend.main.get_current_user", return_value=None):
+        with pytest.raises(HTTPException) as exc_info:
+            asyncio.run(main.tracking_pixel(MagicMock(), feed="test.xml"))
+        assert exc_info.value.status_code == 404
+
+
 if __name__ == "__main__":
     pytest.main()

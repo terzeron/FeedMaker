@@ -344,9 +344,12 @@ class TestUpdateMangaSite(unittest.TestCase):
         self.assertTrue(result)
 
     def test_check_site_error(self):
-        """Test check_site function when site config doesn't exist."""
-        result = check_site()
-        self.assertTrue(result)  # 실제 함수는 항상 True를 반환함
+        """Test check_site prints error when exec_cmd returns error."""
+        self.mock_process.return_value = ("", "check failed")
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            result = check_site()
+            self.assertTrue(result)
+            self.assertIn("check failed", fake_out.getvalue())
 
     def test_main_success(self):
         """Test main function with valid arguments."""
@@ -491,6 +494,33 @@ class TestUpdateMangaSite(unittest.TestCase):
             result = check_site()
             self.assertTrue(result)
             self.assertIn("site OK", fake_out.getvalue())
+
+
+class TestCleanupFeedDirectoryFileNotFoundError(unittest.TestCase):
+    """cleanup_feed_directory: FileNotFoundError in xml cleanup → covers L129-130"""
+
+    def test_file_not_found_in_xml_cleanup(self) -> None:
+        import tempfile
+        from utils.update_manga_site import cleanup_feed_directory
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            feed_dir = Path(tmpdir) / "test_feed"
+            feed_dir.mkdir()
+            # newlist 없고 xml도 없는 상태에서 unlink가 FileNotFoundError를 발생시키도록
+            original_unlink = Path.unlink
+
+            call_count = [0]
+
+            def mock_unlink(self_path, missing_ok=False):
+                call_count[0] += 1
+                # xml 관련 unlink에서만 FileNotFoundError 발생
+                if str(self_path).endswith((".xml", ".xml.old")):
+                    raise FileNotFoundError("simulated race condition")
+                return original_unlink(self_path, missing_ok=missing_ok)
+
+            with patch.object(Path, "unlink", mock_unlink):
+                # Should not raise, caught by except FileNotFoundError
+                cleanup_feed_directory(feed_dir)
 
 
 if __name__ == "__main__":

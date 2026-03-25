@@ -11,7 +11,9 @@ import tempfile
 import logging.config
 from enum import Enum
 from pathlib import Path
+from html.parser import HTMLParser
 from typing import Any, Optional
+from urllib.parse import urljoin
 
 import urllib3
 import requests
@@ -23,6 +25,96 @@ from bin.headless_browser import HeadlessBrowser
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+
+
+class _LoginFormParser(HTMLParser):
+    """login_url 페이지의 HTML에서 <form> 내 hidden 필드, action URL, 입력 필드명을 추출한다."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.forms: list[dict[str, Any]] = []
+        self._current_form: Optional[dict[str, Any]] = None
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, Optional[str]]]) -> None:
+        attr_dict = dict(attrs)
+        if tag == "form":
+            self._current_form = {"action": attr_dict.get("action", ""), "method": attr_dict.get("method", "post").lower(), "hidden_fields": {}, "has_password_field": False, "password_field_name": "", "text_field_names": []}
+        elif tag == "input" and self._current_form is not None:
+            input_type = attr_dict.get("type", "text").lower()
+            name = attr_dict.get("name", "")
+            if input_type == "hidden":
+                value = attr_dict.get("value", "")
+                if name:
+                    self._current_form["hidden_fields"][name] = value
+            elif input_type == "password":
+                self._current_form["has_password_field"] = True
+                if name:
+                    self._current_form["password_field_name"] = name
+            elif input_type in ("text", "email", "tel") and name:
+                self._current_form["text_field_names"].append(name)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "form" and self._current_form is not None:
+            self.forms.append(self._current_form)
+            self._current_form = None
+
+
+class LoginManager:
+    """`.login.json` 기반 로그인 관리."""
+
+    LOGIN_CONFIG_FILE = ".login.json"
+    REQUIRED_FIELDS = ("login_url", "id", "password")
+
+    @staticmethod
+    def load_login_config(dir_path: Path) -> Optional[dict[str, str]]:
+        config_file = dir_path / LoginManager.LOGIN_CONFIG_FILE
+        if not config_file.is_file():
+            return None
+        try:
+            with config_file.open("r", encoding="utf-8") as f:
+                config = json.load(f)
+        except (json.JSONDecodeError, OSError) as e:
+            LOGGER.warning("Failed to read %s: %s", config_file, e)
+            return None
+        for field in LoginManager.REQUIRED_FIELDS:
+            if not config.get(field):
+                LOGGER.warning("Missing required field '%s' in %s", field, config_file)
+                return None
+        return config
+
+    @staticmethod
+    def parse_login_form(html: str, login_url: str) -> tuple[str, dict[str, str], str, str]:
+        """로그인 폼을 파싱하여 (post_url, hidden_fields, id_field_name, password_field_name)을 반환한다."""
+        parser = _LoginFormParser()
+        parser.feed(html)
+        # password 필드가 있는 form 우선 선택
+        target_form = None
+        for form in parser.forms:
+            if form["has_password_field"]:
+                target_form = form
+                break
+        if target_form is None and parser.forms:
+            target_form = parser.forms[0]
+        if target_form is None:
+            return login_url, {}, "", ""
+        action = target_form["action"]
+        if action:
+            post_url = urljoin(login_url, action)
+        else:
+            post_url = login_url
+        password_field_name = target_form.get("password_field_name", "")
+        text_fields = target_form.get("text_field_names", [])
+        id_field_name = text_fields[0] if text_fields else ""
+        return post_url, target_form["hidden_fields"], id_field_name, password_field_name
+
+    @staticmethod
+    def check_login_success(response: requests.Response) -> bool:
+        if response.cookies and len(response.cookies) > 0:
+            return True
+        if response.status_code in (200, 302):
+            LOGGER.warning("Login response has no cookies but status=%d, treating as success", response.status_code)
+            return True
+        return False
 
 
 class Method(Enum):
@@ -88,6 +180,49 @@ class RequestsClient:
                     if c_name and c_value:
                         self.cookies.update({c_name: c_value})
             # LOGGER.debug(f"self.cookies={self.cookies}")
+
+    def login(self, config: dict[str, str]) -> bool:
+        LOGGER.debug("# RequestsClient.login(login_url=%s)", config["login_url"])
+        login_url = config["login_url"]
+        try:
+            login_page_response = requests.get(login_url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
+        except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout) as e:
+            LOGGER.warning("Failed to access login page '%s': %s", login_url, e)
+            return False
+
+        if login_page_response.cookies:
+            self.write_cookies_to_file(login_page_response.cookies)
+
+        post_url, hidden_fields, detected_id_field, detected_pw_field = LoginManager.parse_login_form(login_page_response.text, login_url)
+        id_field = config.get("id_field") or detected_id_field
+        pw_field = config.get("password_field") or detected_pw_field
+        if not id_field or not pw_field:
+            LOGGER.warning("Cannot determine login form field names (id_field=%r, password_field=%r)", id_field, pw_field)
+            return False
+        post_data = {id_field: config["id"], pw_field: config["password"]}
+        post_data.update(hidden_fields)
+
+        self.read_cookies_from_file()
+        cookie_str = "; ".join([f"{name}={value}" for name, value in self.cookies.items()])
+        login_headers = dict(self.headers)
+        if cookie_str:
+            login_headers["Cookie"] = cookie_str
+
+        try:
+            login_response = requests.post(post_url, headers=login_headers, data=post_data, timeout=self.timeout, verify=self.verify_ssl, allow_redirects=True)
+        except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout) as e:
+            LOGGER.warning("Login POST failed for '%s': %s", post_url, e)
+            return False
+
+        if login_response.cookies:
+            self.write_cookies_to_file(login_response.cookies)
+
+        success = LoginManager.check_login_success(login_response)
+        if success:
+            LOGGER.info("Login successful for '%s'", login_url)
+        else:
+            LOGGER.warning("Login failed for '%s' (status=%d)", login_url, login_response.status_code)
+        return success
 
     def make_request(self, url: str, data: Any = None, download_file: Optional[Path] = None, allow_redirects: bool = True) -> tuple[str, str, dict[str, Any], Optional[int]]:
         LOGGER.debug(f"# make_request(url='{url}', allow_redirects={allow_redirects})")
@@ -275,8 +410,29 @@ class Crawler:
 
         return option_str
 
+    def _try_login(self) -> None:
+        config = LoginManager.load_login_config(self.dir_path)
+        if config is None:
+            return
+        # 쿠키 파일이 이미 존재하면 로그인 스킵
+        if self.render_js:
+            cookie_file = self.headless_browser._get_cookie_dir() / HeadlessBrowser.COOKIE_FILE
+        else:
+            cookie_file = self.requests_client._get_cookie_dir() / RequestsClient.COOKIE_FILE
+        if cookie_file.is_file():
+            LOGGER.debug("Cookie file exists, skipping login")
+            return
+        LOGGER.info("Attempting login via %s", config["login_url"])
+        if self.render_js:
+            success = self.headless_browser.login(config)
+        else:
+            success = self.requests_client.login(config)
+        if not success:
+            LOGGER.warning("Login failed, proceeding without login")
+
     def run(self, url: str, data: Any = None, download_file: Optional[Path] = None, allow_redirects: bool = True) -> tuple[str, str, Optional[dict[str, Any]]]:
         LOGGER.debug(f"# run(url={url}, data={data!r}, download_file={download_file}, allow_redirects={allow_redirects})")
+        self._try_login()
         error: str = ""
         headers: dict[str, Any] = {}
         for i in range(self.num_retries):

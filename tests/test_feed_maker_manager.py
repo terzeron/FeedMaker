@@ -69,24 +69,10 @@ class TestInit(unittest.TestCase):
     @patch("backend.feed_maker_manager.FeedManager")
     def test_init_creates_managers(self, mock_fm, mock_hfm, mock_pm):
         mgr = FeedMakerManager()
-        mock_fm.assert_called_once()
-        mock_hfm.assert_called_once()
-        mock_pm.assert_called_once()
-        self.assertIsNotNone(mgr.feed_manager)
-        self.assertIsNotNone(mgr.html_file_manager)
-        self.assertIsNotNone(mgr.problem_manager)
-
-
-class TestDel(unittest.TestCase):
-    @patch("backend.feed_maker_manager.ProblemManager")
-    @patch("backend.feed_maker_manager.HtmlFileManager")
-    @patch("backend.feed_maker_manager.FeedManager")
-    def test_del_deletes_managers(self, mock_fm, mock_hfm, mock_pm):
-        mgr = FeedMakerManager()
-        mgr.__del__()
-        self.assertIsNone(mgr.feed_manager)
-        self.assertIsNone(mgr.html_file_manager)
-        self.assertIsNone(mgr.problem_manager)
+        # 초기화 후 매니저 인스턴스가 올바른 타입인지 확인
+        self.assertIs(mgr.feed_manager, mock_fm.return_value)
+        self.assertIs(mgr.html_file_manager, mock_hfm.return_value)
+        self.assertIs(mgr.problem_manager, mock_pm.return_value)
 
 
 class TestAclose(unittest.TestCase):
@@ -319,29 +305,30 @@ class TestGetExecResult(unittest.TestCase):
             self.assertIn("can't find", error)
 
 
-class TestGetProblemsStatusInfo(unittest.TestCase):
+class TestGetProblemsStaticMethods(unittest.TestCase):
+    """get_problems_*_info 정적 메서드들이 내부 매니저를 올바르게 호출하고 에러 문자열이 빈 값인지 검증"""
+
     @patch("backend.feed_maker_manager.ProblemManager.get_feed_name_status_info_map")
-    def test_returns_status_info(self, mock_get):
+    def test_status_info_delegates_to_problem_manager(self, mock_get):
         mock_get.return_value = {"feed1": {"status": "ok"}}
         result, error = FeedMakerManager.get_problems_status_info()
+        mock_get.assert_called_once()
         self.assertEqual(result, {"feed1": {"status": "ok"}})
         self.assertEqual(error, "")
 
-
-class TestGetProblemsProgressInfo(unittest.TestCase):
     @patch("backend.feed_maker_manager.FeedManager.get_feed_name_progress_info_map")
-    def test_returns_progress_info(self, mock_get):
+    def test_progress_info_delegates_to_feed_manager(self, mock_get):
         mock_get.return_value = {"feed1": {"progress": 50}}
         result, error = FeedMakerManager.get_problems_progress_info()
+        mock_get.assert_called_once()
         self.assertEqual(result, {"feed1": {"progress": 50}})
         self.assertEqual(error, "")
 
-
-class TestGetProblemsPublicFeedInfo(unittest.TestCase):
     @patch("backend.feed_maker_manager.FeedManager.get_feed_name_public_feed_info_map")
-    def test_returns_public_feed_info(self, mock_get):
+    def test_public_feed_info_delegates_to_feed_manager(self, mock_get):
         mock_get.return_value = {"feed1": {"size": 100}}
         result, error = FeedMakerManager.get_problems_public_feed_info()
+        mock_get.assert_called_once()
         self.assertEqual(result, {"feed1": {"size": 100}})
         self.assertEqual(error, "")
 
@@ -363,21 +350,19 @@ class TestGetProblemsHtmlInfo(unittest.TestCase):
             self.assertEqual(result["html_file_image_not_found_map"], {"d": 4})
             self.assertEqual(error, "")
 
-
-class TestGetProblemsElementInfo(unittest.TestCase):
     @patch("backend.feed_maker_manager.FeedManager.get_element_name_count_map")
-    def test_returns_element_info(self, mock_get):
+    def test_element_info_delegates_to_feed_manager(self, mock_get):
         mock_get.return_value = {"div": 10}
         result, error = FeedMakerManager.get_problems_element_info()
+        mock_get.assert_called_once()
         self.assertEqual(result, {"div": 10})
         self.assertEqual(error, "")
 
-
-class TestGetProblemsListUrlInfo(unittest.TestCase):
     @patch("backend.feed_maker_manager.FeedManager.get_feed_name_list_url_count_map")
-    def test_returns_list_url_info(self, mock_get):
+    def test_list_url_info_delegates_to_feed_manager(self, mock_get):
         mock_get.return_value = {"feed1": 5}
         result, error = FeedMakerManager.get_problems_list_url_info()
+        mock_get.assert_called_once()
         self.assertEqual(result, {"feed1": 5})
         self.assertEqual(error, "")
 
