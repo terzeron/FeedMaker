@@ -262,6 +262,97 @@ class HeadlessBrowser:
                 cookie_file.unlink(missing_ok=True)
                 self._read_cookies_from_file(driver)
 
+    def login(self, config: dict[str, str]) -> bool:
+        LOGGER.debug("# HeadlessBrowser.login(login_url=%s)", config["login_url"])
+        login_url = config["login_url"]
+        driver = None
+        driver_created = False
+
+        try:
+            options = webdriver.ChromeOptions()
+            if not self.disable_headless:
+                options.add_argument("--headless")
+            options.add_argument("--window-size=1920,1080")
+            options.add_argument("--disable-web-security")
+            options.add_argument("--allow-running-insecure-content")
+            options.add_argument("--disable-gpu")
+            options.add_argument("--lang=ko_KR")
+            options.add_argument(f"--user-agent={self.headers['User-Agent']}")
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+            options.add_argument("--disable-extensions")
+            options.add_argument("--disable-plugins")
+            profile_dir = os.path.join(tempfile.gettempdir(), "chrome-profiles", str(uuid.uuid4()))
+            os.makedirs(profile_dir, exist_ok=True)
+            options.add_argument(f"--user-data-dir={profile_dir}")
+            options.add_argument("--remote-debugging-pipe")
+
+            driver = self._get_cached_driver(options)
+            if driver is None:
+                chrome_driver_path = which("chromedriver")
+                if not chrome_driver_path:
+                    raise FileNotFoundError("chromedriver not found in PATH")
+                driver = webdriver.Chrome(options=options)
+                driver.set_page_load_timeout(self.timeout)
+                self._set_cached_driver(driver, options)
+                driver_created = True
+            else:
+                driver.set_page_load_timeout(self.timeout)
+
+            driver.get(login_url)
+
+            # id_field/password_field가 config에 없으면 폼에서 자동 감지
+            id_field = config.get("id_field", "")
+            password_field = config.get("password_field", "")
+            try:
+                if id_field:
+                    wait: Any = WebDriverWait(driver, self.timeout)
+                    id_element = wait.until(expected_conditions.presence_of_element_located((By.NAME, id_field)))
+                else:
+                    wait = WebDriverWait(driver, self.timeout)
+                    id_element = wait.until(expected_conditions.presence_of_element_located((By.CSS_SELECTOR, "input[type='text'], input[type='email'], input[type='tel']")))
+                id_element.clear()
+                id_element.send_keys(config["id"])
+
+                if password_field:
+                    pw_element = driver.find_element(By.NAME, password_field)
+                else:
+                    pw_element = driver.find_element(By.CSS_SELECTOR, "input[type='password']")
+                pw_element.clear()
+                pw_element.send_keys(config["password"])
+            except (TimeoutException, WebDriverException) as e:
+                LOGGER.warning("Failed to find login form fields: %s", e)
+                return False
+
+            # submit
+            try:
+                submit_btn = driver.find_element(By.CSS_SELECTOR, "button[type='submit'], input[type='submit']")
+                submit_btn.click()
+            except WebDriverException:
+                from selenium.webdriver.common.keys import Keys
+
+                pw_element.send_keys(Keys.RETURN)
+
+            # 페이지 이동 대기
+            try:
+                wait2: Any = WebDriverWait(driver, self.timeout)
+                wait2.until(lambda d: d.current_url != login_url)
+            except TimeoutException:
+                pass
+
+            cookies = driver.get_cookies()
+            if cookies:
+                self._write_cookies_to_file(driver)
+                LOGGER.info("HeadlessBrowser login successful for '%s'", login_url)
+                return True
+
+            LOGGER.warning("HeadlessBrowser login failed for '%s' (no cookies after submit)", login_url)
+            return False
+
+        except (OSError, TypeError, ValueError, AttributeError, ImportError, RuntimeError, FileNotFoundError) as e:
+            LOGGER.warning("HeadlessBrowser login error: %s", e)
+            return False
+
     def make_request(self, url: str, download_file: Optional[Path] = None) -> str:
         LOGGER.debug(f"# make_request(url={url}, download_file={download_file})")
         is_ok, reason = URLSafety.check_url(url, allow_private=self.allow_private_ips, allowed_hosts_raw=self.allowed_hosts_raw)

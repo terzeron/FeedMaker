@@ -92,22 +92,22 @@ class TestCrawler(unittest.TestCase):
             self.assertTrue(m)
 
     @patch("bin.crawler.RequestsClient.make_request")
-    def test_crawler_without_options(self, mock_make_request: MagicMock) -> None:
+    def test_crawler_options_passed_to_client(self, mock_make_request: MagicMock) -> None:
+        """옵션(timeout, encoding, headers 등)이 Crawler에 올바르게 설정되는지 검증"""
         mock_make_request.return_value = MOCK_HTML_RESPONSE
 
-        crawler = Crawler()
+        headers = {"User-Agent": "TestBot", "Referer": "http://test.com"}
+        crawler = Crawler(num_retries=3, timeout=30, encoding="cp949", verify_ssl=False, headers=headers)
+        self.assertEqual(crawler.num_retries, 3)
+        self.assertEqual(crawler.requests_client.timeout, 30)
+        self.assertEqual(crawler.requests_client.encoding, "cp949")
+        self.assertFalse(crawler.requests_client.verify_ssl)
+        self.assertEqual(crawler.requests_client.headers["User-Agent"], "TestBot")
+
         url = "http://test.com/test.html"
         actual, _, _ = crawler.run(url)
-        self.assertIsNotNone(actual)
-
-    @patch("bin.crawler.RequestsClient.make_request")
-    def test_crawler_with_num_retries(self, mock_make_request: MagicMock) -> None:
-        mock_make_request.return_value = MOCK_HTML_RESPONSE
-
-        crawler = Crawler(num_retries=3)
-        url = "http://test.com/test.html"
-        actual, _, _ = crawler.run(url)
-        self.assertIsNotNone(actual)
+        self.assertIn("Test", actual)
+        mock_make_request.assert_called_once_with(url, download_file=None, data=None, allow_redirects=True)
 
     @patch("bin.headless_browser.HeadlessBrowser.make_request")
     def test_crawler_with_render_js(self, mock_make_request: MagicMock) -> None:
@@ -116,168 +116,40 @@ class TestCrawler(unittest.TestCase):
         crawler = Crawler(render_js=True)
         url = "http://test.com/test.html"
         actual, _, _ = crawler.run(url)
-        self.assertIsNotNone(actual)
+        self.assertIn("Test", actual)
+        mock_make_request.assert_called_once()
 
     @patch("bin.crawler.RequestsClient.make_request")
-    def test_crawler_with_method(self, mock_make_request: MagicMock) -> None:
+    def test_crawler_method_head_and_get(self, mock_make_request: MagicMock) -> None:
         mock_make_request.return_value = MOCK_HTML_RESPONSE
 
-        # Test HEAD method
         crawler = Crawler(method=Method.HEAD)
-        url = "http://test.com/test.html"
-        actual, _, _ = crawler.run(url)
-        self.assertIsNotNone(actual)
+        self.assertEqual(crawler.requests_client.method, Method.HEAD)
+        crawler.run("http://test.com/test.html")
 
-        # Test GET method
         crawler = Crawler(method=Method.GET)
-        actual, _, _ = crawler.run(url)
-        self.assertIsNotNone(actual)
-
-    @patch("bin.crawler.RequestsClient.make_request")
-    def test_crawler_with_headers(self, mock_make_request: MagicMock) -> None:
-        mock_make_request.return_value = MOCK_HTML_RESPONSE
-
-        headers = {"User-Agent": "TestBot", "Referer": "http://test.com"}
-        crawler = Crawler(headers=headers)
-        url = "http://test.com/test.html"
-        actual, _, _ = crawler.run(url)
-        self.assertIsNotNone(actual)
-
-    @patch("bin.crawler.RequestsClient.make_request")
-    def test_crawler_with_timeout(self, mock_make_request: MagicMock) -> None:
-        mock_make_request.return_value = MOCK_HTML_RESPONSE
-
-        crawler = Crawler(timeout=30)
-        url = "http://test.com/test.html"
-        actual, _, _ = crawler.run(url)
-        self.assertIsNotNone(actual)
-
-    @patch("bin.crawler.RequestsClient.make_request")
-    def test_crawler_with_encoding(self, mock_make_request: MagicMock) -> None:
-        mock_make_request.return_value = MOCK_HTML_RESPONSE
-
-        crawler = Crawler(encoding="cp949")
-        url = "http://test.com/test.html"
-        actual, _, _ = crawler.run(url)
-        self.assertIsNotNone(actual)
-
-    @patch("bin.crawler.RequestsClient.make_request")
-    def test_crawler_with_verify_ssl(self, mock_make_request: MagicMock) -> None:
-        mock_make_request.return_value = MOCK_HTML_RESPONSE
-
-        crawler = Crawler(verify_ssl=False)
-        url = "http://test.com/test.html"
-        actual, _, _ = crawler.run(url)
-        self.assertIsNotNone(actual)
-
-    @patch("bin.crawler.RequestsClient.make_request")
-    def test_run_https_with_unicode(self, mock_make_request: MagicMock) -> None:
-        mock_make_request.return_value = MOCK_UNICODE_HTML
-
-        crawler = Crawler()
-        url = "https://test.com/unicode.html"
-        actual, _, _ = crawler.run(url)
-        self.assertIsNotNone(actual)
+        self.assertEqual(crawler.requests_client.method, Method.GET)
+        crawler.run("http://test.com/test.html")
 
     @patch("bin.crawler.RequestsClient.make_request")
     @patch("time.sleep")  # Mock time.sleep to avoid 5-second delay
     def test_crawler_network_retry(self, mock_sleep: MagicMock, mock_make_request: MagicMock) -> None:
-        # Mock with side effect for retry logic
-        mock_make_request.side_effect = [
-            ("", "Network error", {}, 500),  # First call fails
-            ("<!DOCTYPE html><html><body>Success</body></html>", "", {}, 200),  # Second call succeeds
-        ]
+        mock_make_request.side_effect = [("", "Network error", {}, 500), ("<!DOCTYPE html><html><body>Success</body></html>", "", {}, 200)]
 
         crawler = Crawler(num_retries=2)
-        url = "http://test.com/test.html"
-        actual, _, _ = crawler.run(url)
-        self.assertIsNotNone(actual)
-
-    @patch("bin.crawler.RequestsClient.make_request")
-    def test_crawler_with_custom_headers(self, mock_make_request: MagicMock) -> None:
-        mock_make_request.return_value = MOCK_HTML_RESPONSE
-
-        custom_headers = {"X-Custom-Header": "test-value"}
-        crawler = Crawler(headers=custom_headers)
-        url = "http://test.com/test.html"
-        actual, _, _ = crawler.run(url)
-        self.assertIsNotNone(actual)
+        actual, _, _ = crawler.run("http://test.com/test.html")
+        self.assertIn("Success", actual)
+        self.assertEqual(mock_make_request.call_count, 2)
 
     @patch("bin.headless_browser.HeadlessBrowser.make_request")
     def test_crawler_with_headless_browser_options(self, mock_make_request: MagicMock) -> None:
         mock_make_request.return_value = MOCK_HEADLESS_HTML
 
         crawler = Crawler(render_js=True, simulate_scrolling=True, copy_images_from_canvas=True)
-        url = "http://test.com/test.html"
-        actual, _, _ = crawler.run(url)
-        self.assertIsNotNone(actual)
-
-    @patch("bin.crawler.RequestsClient.make_request")
-    def test_crawler_multiple_requests(self, mock_make_request: MagicMock) -> None:
-        mock_make_request.return_value = MOCK_HTML_RESPONSE
-
-        crawler = Crawler()
-        urls = ["http://test.com/page1.html", "http://test.com/page2.html", "http://test.com/page3.html"]
-
-        for url in urls:
-            actual, _, _ = crawler.run(url)
-            self.assertIsNotNone(actual)
-
-    @patch("bin.crawler.RequestsClient.make_request")
-    def test_user_agent_header(self, mock_make_request: MagicMock) -> None:
-        mock_make_request.return_value = ('<!DOCTYPE html><html><body><div id="user-agent">TestBot</div></body></html>', "", {}, 200)
-
-        headers = {"User-Agent": "TestBot"}
-        crawler = Crawler(headers=headers)
-        url = "http://test.com/echo_headers.html"
-        actual, _, _ = crawler.run(url)
-        self.assertIsNotNone(actual)
-
-    @patch("bin.crawler.RequestsClient.make_request")
-    def test_referer_header(self, mock_make_request: MagicMock) -> None:
-        mock_make_request.return_value = ('<!DOCTYPE html><html><body><div id="referer">http://test.com/referer</div></body></html>', "", {}, 200)
-
-        headers = {"Referer": "http://test.com/referer"}
-        crawler = Crawler(headers=headers)
-        url = "http://test.com/echo_headers.html"
-        actual, _, _ = crawler.run(url)
-        self.assertIsNotNone(actual)
-
-    @patch("bin.crawler.RequestsClient.make_request")
-    def test_encoding_utf8(self, mock_make_request: MagicMock) -> None:
-        mock_make_request.return_value = ('<!DOCTYPE html><html><body><div id="utf8">안녕하세요</div></body></html>', "", {}, 200)
-
-        crawler = Crawler(encoding="utf-8")
-        url = "http://test.com/utf8.html"
-        actual, _, _ = crawler.run(url)
-        self.assertIsNotNone(actual)
-
-    @patch("bin.crawler.RequestsClient.make_request")
-    def test_encoding_cp949(self, mock_make_request: MagicMock) -> None:
-        mock_make_request.return_value = ('<!DOCTYPE html><html><body><div id="cp949">안녕하세요</div></body></html>', "", {}, 200)
-
-        crawler = Crawler(encoding="cp949")
-        url = "http://test.com/cp949.html"
-        actual, _, _ = crawler.run(url)
-        self.assertIsNotNone(actual)
-
-    @patch("bin.crawler.RequestsClient.make_request")
-    def test_method_head(self, mock_make_request: MagicMock) -> None:
-        mock_make_request.return_value = MOCK_HTML_RESPONSE
-
-        crawler = Crawler(method=Method.HEAD)
-        url = "http://test.com/test.html"
-        actual, _, _ = crawler.run(url)
-        self.assertIsNotNone(actual)
-
-    @patch("bin.crawler.RequestsClient.make_request")
-    def test_method_get(self, mock_make_request: MagicMock) -> None:
-        mock_make_request.return_value = MOCK_HTML_RESPONSE
-
-        crawler = Crawler(method=Method.GET)
-        url = "http://test.com/test.html"
-        actual, _, _ = crawler.run(url)
-        self.assertIsNotNone(actual)
+        self.assertTrue(crawler.headless_browser.simulate_scrolling)
+        self.assertTrue(crawler.headless_browser.copy_images_from_canvas)
+        actual, _, _ = crawler.run("http://test.com/test.html")
+        self.assertIn("Test", actual)
 
 
 class TestRequestsClientBlockedURL(unittest.TestCase):
@@ -669,7 +541,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_url_arg(self, mock_crawler_cls: MagicMock) -> None:
-
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("response body", "", {})
 
@@ -682,7 +553,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_f_option(self, mock_crawler_cls: MagicMock) -> None:
-
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
 
@@ -696,7 +566,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_spider(self, mock_crawler_cls: MagicMock) -> None:
-
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
 
@@ -709,7 +578,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_render_js(self, mock_crawler_cls: MagicMock) -> None:
-
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
 
@@ -722,7 +590,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_verify_ssl_false(self, mock_crawler_cls: MagicMock) -> None:
-
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
 
@@ -735,7 +602,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_header(self, mock_crawler_cls: MagicMock) -> None:
-
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
 
@@ -749,7 +615,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_timeout_and_retry(self, mock_crawler_cls: MagicMock) -> None:
-
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
 
@@ -763,7 +628,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_encoding(self, mock_crawler_cls: MagicMock) -> None:
-
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
 
@@ -776,7 +640,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_download(self, mock_crawler_cls: MagicMock) -> None:
-
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
 
@@ -788,7 +651,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_user_agent_and_referer(self, mock_crawler_cls: MagicMock) -> None:
-
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
 
@@ -802,14 +664,12 @@ class TestCrawlerMain(unittest.TestCase):
         self.assertEqual(headers["Referer"], "http://ref.com")
 
     def test_main_no_args(self) -> None:
-
         with patch.object(_sys, "argv", ["crawler.py"]):
             with self.assertRaises(SystemExit) as cm:
                 main()
             self.assertEqual(cm.exception.code, -1)
 
     def test_main_h_option(self) -> None:
-
         with patch.object(_sys, "argv", ["crawler.py", "-h"]):
             with self.assertRaises(SystemExit) as cm:
                 main()
@@ -817,7 +677,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_copy_images_from_canvas(self, mock_crawler_cls: MagicMock) -> None:
-
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
 
@@ -830,7 +689,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_simulate_scrolling(self, mock_crawler_cls: MagicMock) -> None:
-
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
 
@@ -843,7 +701,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_disable_headless(self, mock_crawler_cls: MagicMock) -> None:
-
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
 
@@ -856,7 +713,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_with_blob_to_dataurl(self, mock_crawler_cls: MagicMock) -> None:
-
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("ok", "", {})
 
@@ -869,7 +725,6 @@ class TestCrawlerMain(unittest.TestCase):
 
     @patch("bin.crawler.Crawler")
     def test_main_error_response(self, mock_crawler_cls: MagicMock) -> None:
-
         mock_instance = mock_crawler_cls.return_value
         mock_instance.run.return_value = ("", "connection error", {})
 
@@ -879,7 +734,6 @@ class TestCrawlerMain(unittest.TestCase):
         self.assertEqual(result, 0)
 
     def test_main_invalid_option(self) -> None:
-
         with patch.object(_sys, "argv", ["crawler.py", "--invalid-option", "https://example.com"]):
             with self.assertRaises(SystemExit) as cm:
                 main()
@@ -944,7 +798,7 @@ class TestRequestsClientCookieWithExpiry(unittest.TestCase):
 
 
 class TestRequestsClientNoEncoding(unittest.TestCase):
-    """encoding not set → utf-8 fallback → covers L159"""
+    """encoding not set → utf-8 fallback → covers L159-161"""
 
     @patch("bin.crawler.Env.get", return_value="false")
     def setUp(self, mock_env):
@@ -963,6 +817,423 @@ class TestRequestsClientNoEncoding(unittest.TestCase):
         result, error, headers, status = self.client.make_request("http://example.com/page")
         self.assertEqual(status, 200)
         self.assertEqual(mock_resp.encoding, "utf-8")
+
+    @patch("bin.crawler.URLSafety.check_url", return_value=(True, ""))
+    @patch("requests.get")
+    def test_falsy_encoding_hits_else_branch(self, mock_get, mock_check):
+        """encoding이 falsy일 때 else 분기(L161) 커버"""
+        self.client.encoding = ""  # 직접 falsy로 설정
+
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.cookies = RequestsCookieJar()
+        mock_resp.text = "<html><head></head><body>ok</body></html>"
+        mock_resp.request = MagicMock(url="http://example.com/page")
+        mock_get.return_value = mock_resp
+
+        result, error, headers, status = self.client.make_request("http://example.com/page")
+        self.assertEqual(status, 200)
+        self.assertEqual(mock_resp.encoding, "utf-8")
+
+
+# ────────────────────────────────────────────────────────
+# Login feature tests
+# ────────────────────────────────────────────────────────
+import json
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+
+from bin.crawler import LoginManager
+
+
+def _find_free_port() -> int:
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+LOGIN_FORM_HTML = """<!DOCTYPE html><html><body>
+<form action="/do_login" method="post">
+<input type="hidden" name="csrf_token" value="abc123"/>
+<input type="hidden" name="redirect" value="/home"/>
+<input type="text" name="username"/>
+<input type="password" name="passwd"/>
+<button type="submit">Login</button>
+</form>
+</body></html>"""
+
+LOGIN_FORM_NO_HIDDEN_HTML = """<!DOCTYPE html><html><body>
+<form method="post">
+<input type="text" name="user"/>
+<input type="password" name="pass"/>
+<input type="submit" value="Login"/>
+</form>
+</body></html>"""
+
+LOGIN_FORM_RELATIVE_ACTION_HTML = """<!DOCTYPE html><html><body>
+<form action="../auth/submit" method="post">
+<input type="password" name="pw"/>
+</form>
+</body></html>"""
+
+NO_FORM_HTML = """<!DOCTYPE html><html><body><p>No form here</p></body></html>"""
+
+
+class _LoginTestHandler(BaseHTTPRequestHandler):
+    """로그인 테스트용 HTTP 핸들러."""
+
+    def log_message(self, format, *args):
+        pass  # suppress log output
+
+    def do_GET(self):
+        if self.path == "/login":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.end_headers()
+            self.wfile.write(LOGIN_FORM_HTML.encode())
+        elif self.path == "/protected":
+            cookie_header = self.headers.get("Cookie", "")
+            if "session_id=" in cookie_header:
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html")
+                self.end_headers()
+                self.wfile.write(b"<html><head></head><body>Protected Content</body></html>")
+            else:
+                self.send_response(403)
+                self.end_headers()
+                self.wfile.write(b"Forbidden")
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def do_POST(self):
+        if self.path == "/do_login":
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length).decode()
+            # 간단한 검증: username=testuser&passwd=testpass 포함 여부
+            if "username=testuser" in body and "passwd=testpass" in body:
+                self.send_response(200)
+                self.send_header("Set-Cookie", "session_id=valid_session_123; Path=/")
+                self.send_header("Content-Type", "text/html")
+                self.end_headers()
+                self.wfile.write(b"<html><body>Login OK</body></html>")
+            else:
+                self.send_response(401)
+                self.send_header("Content-Type", "text/html")
+                self.end_headers()
+                self.wfile.write(b"<html><body>Unauthorized</body></html>")
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+
+class TestLoginManagerLoadConfig(unittest.TestCase):
+    """LoginManager.load_login_config() - 실제 파일 I/O 테스트"""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+
+    def test_load_valid_config(self):
+        config_data = {"login_url": "http://example.com/login", "id": "user1", "password": "pass1", "id_field": "username", "password_field": "passwd"}
+        (self.tmp / ".login.json").write_text(json.dumps(config_data), encoding="utf-8")
+        result = LoginManager.load_login_config(self.tmp)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["id"], "user1")
+        self.assertEqual(result["login_url"], "http://example.com/login")
+
+    def test_load_no_file(self):
+        result = LoginManager.load_login_config(self.tmp)
+        self.assertIsNone(result)
+
+    def test_load_missing_required_field(self):
+        config_data = {"login_url": "http://example.com/login", "id": "user1"}
+        (self.tmp / ".login.json").write_text(json.dumps(config_data), encoding="utf-8")
+        result = LoginManager.load_login_config(self.tmp)
+        self.assertIsNone(result)
+
+    def test_load_invalid_json(self):
+        (self.tmp / ".login.json").write_text("not valid json {{{", encoding="utf-8")
+        result = LoginManager.load_login_config(self.tmp)
+        self.assertIsNone(result)
+
+    def test_load_empty_required_field(self):
+        config_data = {"login_url": "", "id": "user1", "password": "pass1"}
+        (self.tmp / ".login.json").write_text(json.dumps(config_data), encoding="utf-8")
+        result = LoginManager.load_login_config(self.tmp)
+        self.assertIsNone(result)
+
+    def test_load_without_optional_fields(self):
+        config_data = {"login_url": "http://example.com/login", "id": "user1", "password": "pass1"}
+        (self.tmp / ".login.json").write_text(json.dumps(config_data), encoding="utf-8")
+        result = LoginManager.load_login_config(self.tmp)
+        self.assertIsNotNone(result)
+        self.assertNotIn("id_field", result)
+
+    def tearDown(self):
+        login_file = self.tmp / ".login.json"
+        login_file.unlink(missing_ok=True)
+
+
+class TestLoginManagerParseForm(unittest.TestCase):
+    """LoginManager.parse_login_form() - 순수 함수 테스트, mock 없음"""
+
+    def test_parse_form_with_hidden_fields(self):
+        post_url, hidden, id_field, pw_field = LoginManager.parse_login_form(LOGIN_FORM_HTML, "http://example.com/login")
+        self.assertEqual(post_url, "http://example.com/do_login")
+        self.assertEqual(hidden["csrf_token"], "abc123")
+        self.assertEqual(hidden["redirect"], "/home")
+        self.assertEqual(id_field, "username")
+        self.assertEqual(pw_field, "passwd")
+
+    def test_parse_form_no_hidden_fields(self):
+        post_url, hidden, id_field, pw_field = LoginManager.parse_login_form(LOGIN_FORM_NO_HIDDEN_HTML, "http://example.com/login")
+        self.assertEqual(post_url, "http://example.com/login")
+        self.assertEqual(hidden, {})
+        self.assertEqual(id_field, "user")
+        self.assertEqual(pw_field, "pass")
+
+    def test_parse_form_relative_action(self):
+        post_url, hidden, id_field, pw_field = LoginManager.parse_login_form(LOGIN_FORM_RELATIVE_ACTION_HTML, "http://example.com/app/login")
+        self.assertEqual(post_url, "http://example.com/auth/submit")
+        self.assertEqual(pw_field, "pw")
+
+    def test_parse_no_form(self):
+        post_url, hidden, id_field, pw_field = LoginManager.parse_login_form(NO_FORM_HTML, "http://example.com/login")
+        self.assertEqual(post_url, "http://example.com/login")
+        self.assertEqual(hidden, {})
+        self.assertEqual(id_field, "")
+        self.assertEqual(pw_field, "")
+
+    def test_parse_multiple_forms_selects_password_form(self):
+        html = """<html><body>
+        <form action="/search"><input type="text" name="q"/></form>
+        <form action="/login"><input type="text" name="user"/><input type="password" name="pw"/></form>
+        </body></html>"""
+        post_url, hidden, id_field, pw_field = LoginManager.parse_login_form(html, "http://example.com/page")
+        self.assertEqual(post_url, "http://example.com/login")
+        self.assertEqual(id_field, "user")
+        self.assertEqual(pw_field, "pw")
+
+
+class TestLoginManagerCheckSuccess(unittest.TestCase):
+    """LoginManager.check_login_success() - 최소 mock (Response 객체)"""
+
+    def _make_response(self, status_code, cookies=None):
+        resp = MagicMock(spec=requests.Response)
+        resp.status_code = status_code
+        resp.cookies = RequestsCookieJar()
+        if cookies:
+            for k, v in cookies.items():
+                resp.cookies.set(k, v)
+        return resp
+
+    def test_success_with_cookies(self):
+        resp = self._make_response(200, {"session": "abc"})
+        self.assertTrue(LoginManager.check_login_success(resp))
+
+    def test_success_200_no_cookies(self):
+        resp = self._make_response(200)
+        self.assertTrue(LoginManager.check_login_success(resp))
+
+    def test_success_302_no_cookies(self):
+        resp = self._make_response(302)
+        self.assertTrue(LoginManager.check_login_success(resp))
+
+    def test_failure_401(self):
+        resp = self._make_response(401)
+        self.assertFalse(LoginManager.check_login_success(resp))
+
+    def test_failure_403(self):
+        resp = self._make_response(403)
+        self.assertFalse(LoginManager.check_login_success(resp))
+
+
+class TestRequestsClientLogin(unittest.TestCase):
+    """RequestsClient.login() - 실제 HTTP 서버 기반 통합 테스트"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.port = _find_free_port()
+        cls.server = HTTPServer(("127.0.0.1", cls.port), _LoginTestHandler)
+        cls.server_thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
+        cls.server_thread.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+
+    @patch("bin.crawler.Env.get", return_value="true")
+    def test_login_success(self, mock_env):
+        client = RequestsClient(dir_path=self.tmp)
+        config = {"login_url": f"http://127.0.0.1:{self.port}/login", "id": "testuser", "password": "testpass", "id_field": "username", "password_field": "passwd"}
+        result = client.login(config)
+        self.assertTrue(result)
+        # 쿠키 파일이 생성되었는지 확인
+        cookie_file = self.tmp / RequestsClient.COOKIE_FILE
+        self.assertTrue(cookie_file.is_file())
+        with cookie_file.open("r") as f:
+            cookies = json.load(f)
+        cookie_names = [c["name"] for c in cookies]
+        self.assertIn("session_id", cookie_names)
+
+    @patch("bin.crawler.Env.get", return_value="true")
+    def test_login_failure_wrong_credentials(self, mock_env):
+        client = RequestsClient(dir_path=self.tmp)
+        config = {"login_url": f"http://127.0.0.1:{self.port}/login", "id": "wronguser", "password": "wrongpass", "id_field": "username", "password_field": "passwd"}
+        result = client.login(config)
+        self.assertFalse(result)
+
+    @patch("bin.crawler.Env.get", return_value="true")
+    def test_login_connection_error(self, mock_env):
+        client = RequestsClient(dir_path=self.tmp)
+        config = {"login_url": "http://127.0.0.1:1/login", "id": "user", "password": "pass", "id_field": "u", "password_field": "p"}
+        result = client.login(config)
+        self.assertFalse(result)
+
+    def tearDown(self):
+        cookie_file = self.tmp / RequestsClient.COOKIE_FILE
+        cookie_file.unlink(missing_ok=True)
+
+
+class TestCrawlerTryLogin(unittest.TestCase):
+    """Crawler._try_login() 통합 테스트 - 실제 HTTP 서버"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.port = _find_free_port()
+        cls.server = HTTPServer(("127.0.0.1", cls.port), _LoginTestHandler)
+        cls.server_thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
+        cls.server_thread.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+
+    @patch("bin.crawler.Env.get", return_value="true")
+    def test_try_login_with_config(self, mock_env):
+        config_data = {"login_url": f"http://127.0.0.1:{self.port}/login", "id": "testuser", "password": "testpass", "id_field": "username", "password_field": "passwd"}
+        (self.tmp / ".login.json").write_text(json.dumps(config_data), encoding="utf-8")
+
+        crawler = Crawler(dir_path=self.tmp)
+        crawler._try_login()
+
+        # 쿠키가 저장되었는지 확인
+        cookie_file = self.tmp / RequestsClient.COOKIE_FILE
+        self.assertTrue(cookie_file.is_file())
+
+    @patch("bin.crawler.Env.get", return_value="true")
+    def test_try_login_no_config(self, mock_env):
+        crawler = Crawler(dir_path=self.tmp)
+        # .login.json 없으면 아무것도 안 함 (에러 없이)
+        crawler._try_login()
+
+    @patch("bin.crawler.Env.get", return_value="true")
+    def test_try_login_skips_if_cookie_exists(self, mock_env):
+        config_data = {"login_url": f"http://127.0.0.1:{self.port}/login", "id": "testuser", "password": "testpass", "id_field": "username", "password_field": "passwd"}
+        (self.tmp / ".login.json").write_text(json.dumps(config_data), encoding="utf-8")
+        # 쿠키 파일 미리 생성
+        (self.tmp / RequestsClient.COOKIE_FILE).write_text("[]", encoding="utf-8")
+
+        crawler = Crawler(dir_path=self.tmp)
+        # login()이 호출되지 않아야 함
+        with patch.object(crawler.requests_client, "login") as mock_login:
+            crawler._try_login()
+            mock_login.assert_not_called()
+
+    @patch("bin.crawler.Env.get", return_value="true")
+    def test_full_login_then_crawl(self, mock_env):
+        """로그인 후 보호된 페이지 크롤링 E2E"""
+        config_data = {"login_url": f"http://127.0.0.1:{self.port}/login", "id": "testuser", "password": "testpass", "id_field": "username", "password_field": "passwd"}
+        (self.tmp / ".login.json").write_text(json.dumps(config_data), encoding="utf-8")
+
+        crawler = Crawler(dir_path=self.tmp)
+        response, error, _ = crawler.run(f"http://127.0.0.1:{self.port}/protected")
+        self.assertIn("Protected Content", response)
+
+    def tearDown(self):
+        for f in self.tmp.iterdir():
+            f.unlink(missing_ok=True)
+
+
+class TestHeadlessBrowserLogin(unittest.TestCase):
+    """HeadlessBrowser.login() - selenium mock (불가피)"""
+
+    @patch("bin.headless_browser.Env.get", return_value="false")
+    def setUp(self, mock_env):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.browser = HeadlessBrowser(dir_path=self.tmp)
+
+    @patch("bin.headless_browser.which", return_value="/usr/bin/chromedriver")
+    @patch("bin.headless_browser.webdriver.Chrome")
+    def test_login_success(self, mock_chrome_cls, mock_which):
+        mock_driver = MagicMock()
+        mock_chrome_cls.return_value = mock_driver
+        mock_driver.current_url = "http://example.com/home"
+
+        mock_id_elem = MagicMock()
+        mock_pw_elem = MagicMock()
+
+        def find_element_side_effect(by, name):
+            if name == "username":
+                return mock_id_elem
+            elif name == "passwd":
+                return mock_pw_elem
+            raise Exception(f"Unexpected: {name}")
+
+        mock_driver.find_element.side_effect = find_element_side_effect
+
+        with patch("bin.headless_browser.WebDriverWait") as mock_wait_cls:
+            mock_wait = MagicMock()
+            mock_wait_cls.return_value = mock_wait
+            mock_wait.until.side_effect = [mock_id_elem, True]
+
+            mock_submit = MagicMock()
+            mock_driver.find_element.side_effect = None
+            mock_driver.find_element.return_value = mock_submit
+
+            mock_driver.get_cookies.return_value = [{"name": "session", "value": "abc"}]
+
+            config = {"login_url": "http://example.com/login", "id": "testuser", "password": "testpass", "id_field": "username", "password_field": "passwd"}
+            result = self.browser.login(config)
+            self.assertTrue(result)
+
+    @patch("bin.headless_browser.which", return_value="/usr/bin/chromedriver")
+    @patch("bin.headless_browser.webdriver.Chrome")
+    def test_login_no_cookies_after_submit(self, mock_chrome_cls, mock_which):
+        mock_driver = MagicMock()
+        mock_chrome_cls.return_value = mock_driver
+        mock_driver.current_url = "http://example.com/login"
+
+        mock_elem = MagicMock()
+
+        with patch("bin.headless_browser.WebDriverWait") as mock_wait_cls:
+            mock_wait = MagicMock()
+            mock_wait_cls.return_value = mock_wait
+            from selenium.common.exceptions import TimeoutException as _SelTE
+
+            mock_wait.until.side_effect = [mock_elem, _SelTE()]
+
+            mock_driver.find_element.return_value = mock_elem
+            mock_driver.get_cookies.return_value = []
+
+            config = {"login_url": "http://example.com/login", "id": "user", "password": "pass", "id_field": "username", "password_field": "passwd"}
+            result = self.browser.login(config)
+            self.assertFalse(result)
+
+    def test_login_no_chromedriver(self):
+        with patch("bin.headless_browser.which", return_value=None):
+            config = {"login_url": "http://example.com/login", "id": "user", "password": "pass", "id_field": "username", "password_field": "passwd"}
+            result = self.browser.login(config)
+            self.assertFalse(result)
 
 
 if __name__ == "__main__":

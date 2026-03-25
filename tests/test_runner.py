@@ -1802,24 +1802,31 @@ def main() -> bool:
 
 
 def run_coverage_report() -> None:
-    """테스트 실행 중 누적된 .coverage 데이터로 리포트를 생성한다."""
-    cov_file = _get_coverage_file()
-    if not cov_file.exists():
-        print("\n⚠️  .coverage 파일이 없어 커버리지 리포트를 건너뜁니다.")
-        return
-
+    """전체 테스트를 단일 프로세스로 실행하여 정확한 커버리지 리포트를 생성한다."""
     try:
         import coverage as _cov_mod  # noqa: F401
     except ImportError:
         print("\n⚠️  coverage 패키지가 없어 커버리지 리포트를 건너뜁니다.")
         return
 
+    print("\n📊 전체 커버리지 측정 중...")
+    cov_dir = str(PROJECT_ROOT)
+
+    # 단일 프로세스로 전체 테스트를 실행하여 정확한 커버리지를 수집
+    cov_result = subprocess.run([sys.executable, "-m", "pytest", "--tb=no", "-q", "--disable-warnings", "--cov=backend", "--cov=bin", "--cov=utils", "--cov-report=", str(TEST_DIR)], capture_output=True, text=True, cwd=cov_dir)
+
+    if cov_result.returncode not in (0, 1):
+        print("⚠️  커버리지 수집 중 오류가 발생했습니다.")
+        if cov_result.stderr:
+            for line in cov_result.stderr.splitlines()[-5:]:
+                print(f"  {line}")
+        return
+
     print("\n" + "=" * 80)
     print("📊 COVERAGE REPORT")
     print("=" * 80)
 
-    cov_dir = str(cov_file.parent)
-    result = subprocess.run([sys.executable, "-m", "coverage", "report", "--show-missing", "--skip-covered"], capture_output=True, text=True, cwd=cov_dir)
+    result = subprocess.run([sys.executable, "-m", "coverage", "report", "--show-missing"], capture_output=True, text=True, cwd=cov_dir)
     if result.stdout:
         print(result.stdout)
 

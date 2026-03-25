@@ -91,5 +91,25 @@ class TestRemoveHttpdAccessInfo(unittest.TestCase):
         mock_session.query.return_value.filter_by.assert_called_once_with(feed_name="my_feed")
 
 
+class TestRecordFeedAccessException(unittest.TestCase):
+    @patch("bin.access_log_manager.DB.session_ctx")
+    def test_exception_handler(self, mock_session_ctx: MagicMock) -> None:
+        mock_session_ctx.return_value.__enter__ = MagicMock(side_effect=RuntimeError("DB error"))
+        mock_session_ctx.return_value.__exit__ = MagicMock(return_value=False)
+
+        # Should not raise, just log
+        AccessLogManager.record_feed_access("fail_feed")
+
+
+class TestRecordItemViewException(unittest.TestCase):
+    @patch("bin.access_log_manager.DB.session_ctx")
+    def test_exception_handler(self, mock_session_ctx: MagicMock) -> None:
+        mock_session_ctx.return_value.__enter__ = MagicMock(side_effect=RuntimeError("DB error"))
+        mock_session_ctx.return_value.__exit__ = MagicMock(return_value=False)
+
+        # Should not raise, just log
+        AccessLogManager.record_item_view("fail_feed")
+
+
 if __name__ == "__main__":
     unittest.main()
