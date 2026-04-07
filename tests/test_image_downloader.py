@@ -61,10 +61,19 @@ class TestDownloadImageBase64(unittest.TestCase):
         mock_cache_path.is_file.return_value = False
         mock_cache_path.stat.return_value = MagicMock(st_size=0)
 
+        mock_webp_miss = MagicMock(spec=Path)
+        mock_webp_miss.is_file.return_value = False
+
         mock_converted = MagicMock(spec=Path)
         mock_converted.is_file.return_value = True
         mock_converted.suffix = ".webp"
-        mock_cache_path.with_suffix.return_value = mock_converted
+
+        def with_suffix_fn(s):
+            if s == ".webp":
+                return mock_webp_miss
+            return mock_converted
+
+        mock_cache_path.with_suffix.side_effect = with_suffix_fn
 
         mock_fm.get_cache_file_path.return_value = mock_cache_path
         mock_fm.get_cache_url.return_value = "http://img.example.com/feed/abc.webp"
@@ -94,6 +103,7 @@ class TestDownloadImageBase64(unittest.TestCase):
         mock_cache_path.stat.return_value = MagicMock(st_size=0)
 
         mock_webp_path = MagicMock(spec=Path)
+        mock_webp_path.is_file.return_value = False
         mock_webp_path.suffix = ".webp"
         mock_cache_path.with_suffix.return_value = mock_webp_path
 
@@ -126,6 +136,9 @@ class TestDownloadImageHTTP(unittest.TestCase):
         mock_cache_path = MagicMock(spec=Path)
         mock_cache_path.is_file.return_value = False
         mock_cache_path.stat.return_value = MagicMock(st_size=0)
+        mock_webp_miss = MagicMock(spec=Path)
+        mock_webp_miss.is_file.return_value = False
+        mock_cache_path.with_suffix.return_value = mock_webp_miss
 
         mock_converted = MagicMock(spec=Path)
         mock_converted.is_file.return_value = True
@@ -154,6 +167,9 @@ class TestDownloadImageHTTP(unittest.TestCase):
         mock_cache_path = MagicMock(spec=Path)
         mock_cache_path.is_file.return_value = False
         mock_cache_path.stat.return_value = MagicMock(st_size=0)
+        mock_webp_miss = MagicMock(spec=Path)
+        mock_webp_miss.is_file.return_value = False
+        mock_cache_path.with_suffix.return_value = mock_webp_miss
 
         mock_converted = MagicMock(spec=Path)
         mock_converted.is_file.return_value = True
@@ -182,6 +198,9 @@ class TestDownloadImageHTTP(unittest.TestCase):
         mock_cache_path = MagicMock(spec=Path)
         mock_cache_path.is_file.return_value = False
         mock_cache_path.stat.return_value = MagicMock(st_size=0)
+        mock_webp_miss = MagicMock(spec=Path)
+        mock_webp_miss.is_file.return_value = False
+        mock_cache_path.with_suffix.return_value = mock_webp_miss
 
         mock_fm.get_cache_file_path.return_value = mock_cache_path
 
@@ -574,6 +593,9 @@ class TestHTTPConvertFailFallthrough(unittest.TestCase):
         mock_cache_path = MagicMock(spec=Path)
         mock_cache_path.is_file.return_value = False
         mock_cache_path.stat.return_value = MagicMock(st_size=0)
+        mock_webp_miss = MagicMock(spec=Path)
+        mock_webp_miss.is_file.return_value = False
+        mock_cache_path.with_suffix.return_value = mock_webp_miss
         mock_fm.get_cache_file_path.return_value = mock_cache_path
 
         mock_convert.return_value = None  # conversion fails

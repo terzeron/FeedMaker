@@ -19,7 +19,7 @@ LOGGER = logging.getLogger(__name__)
 
 class ImageDownloader:
     BLOCKED_DOMAINS = ["egloos.com", "hanafos.com"]
-    
+
     @staticmethod
     def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str, quality: int = 75) -> tuple[Optional[Path], Optional[str]]:
         LOGGER.debug(f"Downloading image: {img_url[:30]}")
@@ -32,19 +32,23 @@ class ImageDownloader:
         cache_file_path = FileManager.get_cache_file_path(feed_img_dir_path, img_url)
         if cache_file_path.is_file() and cache_file_path.stat().st_size > 0:
             return cache_file_path, FileManager.get_cache_url(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX") + "/" + feed_img_dir_path.name, img_url, suffix=cache_file_path.suffix)
+        # 변환된 .webp 파일이 이미 존재하는지 확인
+        webp_cache_path = cache_file_path.with_suffix(".webp")
+        if webp_cache_path.is_file() and webp_cache_path.stat().st_size > 0:
+            return webp_cache_path, FileManager.get_cache_url(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX") + "/" + feed_img_dir_path.name, img_url, suffix=".webp")
 
         # 데이터 URI (base64) 처리
-        m = re.search(r'^data:image/(?P<ext>png|jpeg|jpg|webp);base64,(?P<data>.+)', img_url)
+        m = re.search(r"^data:image/(?P<ext>png|jpeg|jpg|webp);base64,(?P<data>.+)", img_url)
         if m:
             img_data = m.group("data")
-            ext = m.group('ext')
+            ext = m.group("ext")
             suffix = f".{ext}"
             temp_img_file_path = cache_file_path.with_suffix(suffix)
             with open(temp_img_file_path, "wb") as outfile:
                 outfile.write(b64decode(img_data))
 
             # If already WebP, don't re-encode; just use as-is
-            if ext.lower() == 'webp':
+            if ext.lower() == "webp":
                 return temp_img_file_path, FileManager.get_cache_url(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX") + "/" + feed_img_dir_path.name, img_url, suffix=temp_img_file_path.suffix)
 
             # Otherwise, convert to WebP for consistency
@@ -73,7 +77,6 @@ class ImageDownloader:
 
         return None, None
 
-
     @staticmethod
     def optimize_for_webtoon(img: Image.Image, max_width: int = 1600) -> Image.Image:
         oriented_img = ImageOps.exif_transpose(img)
@@ -86,7 +89,7 @@ class ImageDownloader:
             ratio = max_width / img.width
             new_height = int(img.height * ratio)
             img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
-        
+
         return img
 
     @staticmethod
@@ -118,25 +121,25 @@ class ImageDownloader:
         try:
             with Image.open(cache_file_path) as img:
                 # If already WEBP, avoid recompressing unless resizing is needed or naming needs suffix
-                if getattr(img, 'format', '').upper() == 'WEBP':
+                if getattr(img, "format", "").upper() == "WEBP":
                     optimized_img = ImageDownloader.optimize_for_webtoon(img)
-                    target_path = cache_file_path.with_suffix('.webp')
+                    target_path = cache_file_path.with_suffix(".webp")
                     try:
                         # If no resize needed and suffix already .webp, reuse file
-                        if optimized_img.size == img.size and cache_file_path.suffix == '.webp':
+                        if optimized_img.size == img.size and cache_file_path.suffix == ".webp":
                             return cache_file_path
                         # If no resize needed but suffix missing, just rename
-                        if optimized_img.size == img.size and cache_file_path.suffix != '.webp':
+                        if optimized_img.size == img.size and cache_file_path.suffix != ".webp":
                             if not target_path.exists():
                                 cache_file_path.rename(target_path)
                             else:
                                 # fallback to save if target exists
-                                optimized_img.convert('RGB').save(target_path, 'WEBP', quality=quality)
+                                optimized_img.convert("RGB").save(target_path, "WEBP", quality=quality)
                                 if cache_file_path != target_path:
                                     cache_file_path.unlink(missing_ok=True)
                             return target_path
                         # Resize or orientation fix needed → save as WEBP
-                        optimized_img.convert('RGB').save(target_path, 'WEBP', quality=quality)
+                        optimized_img.convert("RGB").save(target_path, "WEBP", quality=quality)
                         if cache_file_path != target_path:
                             cache_file_path.unlink(missing_ok=True)
                         return target_path
@@ -146,9 +149,9 @@ class ImageDownloader:
 
                 # Non-WEBP → convert to WEBP
                 optimized_img = ImageDownloader.optimize_for_webtoon(img)
-                new_cache_file_path = cache_file_path.with_suffix('.webp')
+                new_cache_file_path = cache_file_path.with_suffix(".webp")
                 try:
-                    optimized_img.convert('RGB').save(new_cache_file_path, 'WEBP', quality=quality)
+                    optimized_img.convert("RGB").save(new_cache_file_path, "WEBP", quality=quality)
                     if cache_file_path != new_cache_file_path:
                         cache_file_path.unlink(missing_ok=True)
                     return new_cache_file_path
