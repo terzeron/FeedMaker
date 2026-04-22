@@ -773,6 +773,59 @@ class TestRequestsClientResponseNone(unittest.TestCase):
         self.assertIsNone(status)
 
 
+class TestRequestsClientCookieMerge(unittest.TestCase):
+    """write_cookies_to_file merges new cookies with existing ones"""
+
+    @patch("bin.crawler.Env.get", return_value="false")
+    def setUp(self, mock_env):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.client = RequestsClient(dir_path=self.tmp)
+
+    def test_merge_preserves_existing_cookies(self):
+        jar1 = RequestsCookieJar()
+        jar1.set("NID_AUT", "aut_value")
+        jar1.set("NID_SES", "ses_value")
+        self.client.write_cookies_to_file(jar1)
+
+        jar2 = RequestsCookieJar()
+        jar2.set("NID_JST", "jst_value")
+        self.client.cookies = {}
+        self.client.write_cookies_to_file(jar2)
+
+        self.client.cookies = {}
+        self.client.read_cookies_from_file()
+        self.assertEqual(self.client.cookies["NID_AUT"], "aut_value")
+        self.assertEqual(self.client.cookies["NID_SES"], "ses_value")
+        self.assertEqual(self.client.cookies["NID_JST"], "jst_value")
+
+    def test_merge_updates_existing_cookie_value(self):
+        jar1 = RequestsCookieJar()
+        jar1.set("token", "old_value")
+        self.client.write_cookies_to_file(jar1)
+
+        jar2 = RequestsCookieJar()
+        jar2.set("token", "new_value")
+        self.client.cookies = {}
+        self.client.write_cookies_to_file(jar2)
+
+        self.client.cookies = {}
+        self.client.read_cookies_from_file()
+        self.assertEqual(self.client.cookies["token"], "new_value")
+
+    def test_merge_on_empty_file(self):
+        jar = RequestsCookieJar()
+        jar.set("only", "cookie")
+        self.client.write_cookies_to_file(jar)
+
+        self.client.cookies = {}
+        self.client.read_cookies_from_file()
+        self.assertEqual(self.client.cookies, {"only": "cookie"})
+
+    def tearDown(self):
+        cookie_file = self.tmp / RequestsClient.COOKIE_FILE
+        cookie_file.unlink(missing_ok=True)
+
+
 class TestRequestsClientCookieWithExpiry(unittest.TestCase):
     """read_cookies_from_file with expiry field → covers L83-84"""
 

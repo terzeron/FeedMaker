@@ -160,9 +160,10 @@ class RequestsClient:
         return self._cookie_dir
 
     def write_cookies_to_file(self, cookies: RequestsCookieJar) -> None:
-        cookie_data: list[dict[str, Any]] = []
+        self.read_cookies_from_file()
         for k, v in cookies.items():
-            cookie_data.append({"name": k, "value": v})
+            self.cookies[k] = v
+        cookie_data = [{"name": k, "value": v} for k, v in self.cookies.items()]
         cookie_file = self._get_cookie_dir() / RequestsClient.COOKIE_FILE
         with cookie_file.open("w", encoding="utf-8") as f:
             json.dump(cookie_data, f, indent=2, ensure_ascii=False)
