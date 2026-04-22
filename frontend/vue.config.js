@@ -85,7 +85,10 @@ module.exports = {
   devServer: {
     port: 8081,
     allowedHosts: "all",
-    https: true
+    https: true,
+    client: {
+      webSocketURL: 'auto://0.0.0.0:0/ws'
+    }
   },
   configureWebpack: {
     optimization: {
