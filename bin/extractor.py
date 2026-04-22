@@ -152,7 +152,7 @@ class Extractor:
         for attr in ["data-lazy-src", "lazy-src", "lazysrc", "data-src", "data-original", "o_src"] + ["src"]:
             if el.has_attr(attr):
                 src = str(el[attr])
-                if not re.search(r"(https?:)?//|data:image/png;", src):
+                if not re.search(r"(https?:)?//|data:image/", src):
                     src = URL.concatenate_url(url, src)
                 if src.startswith("//"):
                     src = "https:" + src
