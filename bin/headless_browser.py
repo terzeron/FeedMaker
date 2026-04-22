@@ -121,34 +121,84 @@ class HeadlessBrowser:
         }})();""" % (ID_OF_RENDERING_COMPLETION_IN_SCROLLING, ID_OF_RENDERING_COMPLETION_IN_SCROLLING, ID_OF_RENDERING_COMPLETION_IN_SCROLLING)
     SETTING_PLUGINS_SCRIPT = "Object.defineProperty(navigator, 'plugins', {get: function() {return[1, 2, 3, 4, 5];},});"
     SETTING_LANGUAGES_SCRIPT = "Object.defineProperty(navigator, 'languages', {get: function() {return ['ko-KR', 'ko']}})"
+    # Injected via CDP before page load to intercept URL.createObjectURL calls
+    BLOB_INTERCEPTOR_INIT_SCRIPT = """
+        (function() {
+            if (window._blobInterceptorInstalled) return;
+            window._blobInterceptorInstalled = true;
+            window._capturedImageDataURLs = [];
+            window._blobURLToDataURL = {};
+
+            const _origCreate = URL.createObjectURL;
+            URL.createObjectURL = function(obj) {
+                const blobUrl = _origCreate.call(URL, obj);
+                if (obj && obj.type && obj.type.startsWith('image/') &&
+                    !obj.type.includes('svg') && obj.size > 10240) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const dataURL = e.target.result;
+                        if (!window._capturedImageDataURLs.includes(dataURL)) {
+                            window._capturedImageDataURLs.push(dataURL);
+                        }
+                        window._blobURLToDataURL[blobUrl] = dataURL;
+                    };
+                    reader.readAsDataURL(obj);
+                }
+                return blobUrl;
+            };
+        })();
+    """
     CONVERTING_BLOB_TO_DATAURL_SCRIPT = (
         """
-        function readFileAsync(file, img) {
-            const reader = new FileReader();
-            const promise = new Promise((resolve) => {
-                reader.onload = ((img) => {
-                    return (e) => {
-                        resolve([e.target.result, img]);
-                    };
-                })(img);
-                reader.readAsDataURL(file);
-            });
-            return promise;
-        }
         (async function () {
+            // Wait for any pending FileReader callbacks from the interceptor
+            await new Promise(r => setTimeout(r, 2000));
+
+            // Replace blob: img srcs using the interceptor map (fast path)
             var images = document.getElementsByTagName("img");
             for (var i = 0; i < images.length; i++) {
-                if (images[i] && images[i].src && images[i].src.startsWith("blob:")) {
-                    const response = await fetch(images[i].src);
-                    const data = await response.arrayBuffer();
-                    var returnedBlob = new Blob([data], {type: 'image/png'});
-                    await readFileAsync(returnedBlob, images[i]).then(([dataURL, img]) => {
-                        if (img && img.src) {
-                            img.src = dataURL;
-                        }
-                    })
+                var src = images[i].src;
+                if (src && src.startsWith("blob:")) {
+                    if (window._blobURLToDataURL && window._blobURLToDataURL[src]) {
+                        images[i].src = window._blobURLToDataURL[src];
+                    } else {
+                        // Fallback: fetch and convert directly
+                        try {
+                            var response = await fetch(src);
+                            var data = await response.arrayBuffer();
+                            var blob = new Blob([data], {type: 'image/png'});
+                            var dataURL = await new Promise(function(resolve) {
+                                var reader = new FileReader();
+                                reader.onload = function(e) { resolve(e.target.result); };
+                                reader.readAsDataURL(blob);
+                            });
+                            images[i].src = dataURL;
+                        } catch(e) {}
+                    }
                 }
             }
+
+            // Inject any captured images not yet represented in the DOM
+            if (window._capturedImageDataURLs && window._capturedImageDataURLs.length > 0) {
+                var existingDataSrcs = new Set();
+                var allImgs = document.getElementsByTagName("img");
+                for (var j = 0; j < allImgs.length; j++) {
+                    if (allImgs[j].src && allImgs[j].src.startsWith("data:image/")) {
+                        existingDataSrcs.add(allImgs[j].src);
+                    }
+                }
+                var root = document.getElementById("root") || document.body;
+                for (var k = 0; k < window._capturedImageDataURLs.length; k++) {
+                    var captured = window._capturedImageDataURLs[k];
+                    if (!existingDataSrcs.has(captured)) {
+                        var img = document.createElement("img");
+                        img.src = captured;
+                        root.appendChild(img);
+                        existingDataSrcs.add(captured);
+                    }
+                }
+            }
+
             var div = document.createElement("DIV");
             document.body.appendChild(div);
             div.id = "%s";
@@ -414,6 +464,13 @@ class HeadlessBrowser:
                 except TimeoutException:
                     pass
                 self._write_cookies_to_file(driver)
+
+            if self.blob_to_dataurl:
+                LOGGER.debug("injecting blob interceptor via CDP before page load")
+                try:
+                    driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {"source": HeadlessBrowser.BLOB_INTERCEPTOR_INIT_SCRIPT})
+                except Exception as e:
+                    LOGGER.warning("Could not inject blob interceptor via CDP: %s", e)
 
             LOGGER.debug(f"getting the page '{url}'")
             try:

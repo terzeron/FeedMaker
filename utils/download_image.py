@@ -165,6 +165,8 @@ def main() -> int:
                     continue
                 if exclude_img_url_pattern and re.search(exclude_img_url_pattern, img_url):
                     continue
+                if img_url.startswith("data:image/svg"):
+                    continue
                 try:
                     _, new_url = ImageDownloader.download_image(crawler, feed_img_dir_path, img_url, quality=quality)
                     if new_url:
