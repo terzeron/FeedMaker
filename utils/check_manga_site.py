@@ -32,8 +32,8 @@ def read_config(site_conf_file_path: Path) -> dict[str, Any]:
 
 
 def clean_url(url: str, scheme: str = "https", path: str = "") -> str:
-    if re.search(r'^//', url):
-        new_url = re.sub(r'^//', scheme + '://', url) + path
+    if re.search(r"^//", url):
+        new_url = re.sub(r"^//", scheme + "://", url) + path
         return new_url
     return url
 
@@ -61,6 +61,15 @@ def get_location_recursively(url: str, config: dict[str, Any]) -> tuple[str, str
         del crawler
 
         if not new_url and response_size > 0:
+            # JS 리다이렉트 감지: HeadlessBrowser가 주입한 og:url 메타 태그에서 최종 URL 추출
+            m = re.search(r'<meta[^>]+property="og:url"[^>]+content="([^"]+)"', response)
+            if not m:
+                m = re.search(r'<meta[^>]+content="([^"]+)"[^>]+property="og:url"', response)
+            if m:
+                final_url = m.group(1)
+                if URL.get_url_domain(final_url) != URL.get_url_domain(url):
+                    print(f"new_url '{final_url}' from og:url meta tag (JS redirect)")
+                    return final_url, response
             return url, response
 
         if new_url and response_size == 0:
@@ -136,13 +145,13 @@ def get_url_pattern(url: str) -> tuple[str, str, int, str, str]:
     num: int = 0
     domain_postfix: str = ""
     post: str = ""
-    m1 = re.search(r'(?P<pre>(https?:)?//[\w\.\-]+\D)(?P<num>\d+)(?P<domain_postfix>[^/]+)(?P<post>.*)', url)
+    m1 = re.search(r"(?P<pre>(https?:)?//[\w\.\-]+\D)(?P<num>\d+)(?P<domain_postfix>[^/]+)(?P<post>.*)", url)
     if m1:
         pre = m1.group("pre")
         num = int(m1.group("num"))
         domain_postfix = m1.group("domain_postfix")
         post = m1.group("post")
-        new_pattern = pre + r'(\d+)' + domain_postfix + r'(?:' + post + r')?'
+        new_pattern = re.escape(pre) + r"(\d+)" + re.escape(domain_postfix) + r"(?:" + re.escape(post) + r")?"
         LOGGER.debug(f"type 1 pattern: {pre}, {domain_postfix}, {post}, {new_pattern}")
     return new_pattern, pre, num, domain_postfix, post
 
@@ -154,6 +163,33 @@ def print_new_url(url: str, new_url: str, new_number: int) -> None:
         print(f"no service from {url}")
         print(f"You can use a new url {new_url} from now on")
         print(f"New number: {new_number}")
+
+
+def get_domain_hint_from_cookies(url: str) -> str:
+    """쿠키 파일에서 현재 URL보다 높은 번호의 도메인을 탐색한다."""
+    cookie_file = Path.cwd() / "cookies.headlessbrowser.json"
+    if not cookie_file.exists():
+        return ""
+    try:
+        cookies = json.loads(cookie_file.read_text())
+    except (json.JSONDecodeError, OSError):
+        return ""
+    current_domain = URL.get_url_domain(url)
+    m = re.search(r"^(?P<pre>.*\D)(?P<num>\d+)(?P<post>\..+)$", current_domain)
+    if not m:
+        return ""
+    pre, num, post = m.group("pre"), int(m.group("num")), m.group("post")
+    best_num = num
+    best_domain = ""
+    for cookie in cookies:
+        domain = cookie.get("domain", "").lstrip(".")
+        m2 = re.search(r"^(?P<pre>.*\D)(?P<num>\d+)(?P<post>\..+)$", domain)
+        if m2 and m2.group("pre") == pre and m2.group("post") == post:
+            cookie_num = int(m2.group("num"))
+            if cookie_num > best_num:
+                best_num = cookie_num
+                best_domain = domain
+    return best_domain
 
 
 def main() -> int:
@@ -184,7 +220,13 @@ def main() -> int:
             if new_url:
                 print_new_url(url, new_url, new_number)
             else:
-                print("can't get new url from old url")
+                new_domain = get_domain_hint_from_cookies(url)
+                if new_domain:
+                    new_url = url.replace(URL.get_url_domain(url), new_domain)
+                    _, _, new_number, _, _ = get_url_pattern(new_url)
+                    print_new_url(url, new_url, new_number)
+                else:
+                    print("can't get new url from old url")
 
         return -1
 
