@@ -3,6 +3,22 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
+const {
+  createSuccess,
+  createFailure,
+  createGroupsResponse,
+  createFeedsResponse,
+  createProblemsResponse,
+  createExecResultResponse,
+  createSearchResponse,
+  createSearchSiteResponse,
+  createSiteNamesResponse,
+  createSiteConfigResponse,
+  createFeedInfoResponse,
+  createCheckRunningResponse,
+  createItemTitlesResponse,
+  createNewNameResponse
+} = require('./contracts');
 
 // 환경변수 로드
 dotenv.config({ path: path.join(__dirname, '../.env.development') });
@@ -701,6 +717,284 @@ const mockData = {
   }
 };
 
+const mockSearchSites = [
+  'naver_webtoon',
+  'kakao_webtoon',
+  'lezhin_webtoon',
+  'github_trending',
+  'stackoverflow'
+];
+
+const defaultSiteConfig = {
+  search_url_template: 'https://example.com/search?q={keyword}',
+  parser: 'default',
+  enabled: true
+};
+
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function getGroups() {
+  return mockData.groups.groups;
+}
+
+function getFeedsByGroup(groupName) {
+  return mockData.feeds[groupName] || [];
+}
+
+function findFeed(groupName, feedName) {
+  return (mockData.feeds[groupName] || []).find((feed) => feed.name === feedName);
+}
+
+function getFeedInfoKey(groupName, feedName) {
+  return `${groupName}/${feedName}`;
+}
+
+function getMockFeedInfo(groupName, feedName) {
+  return mockData.feed_info[getFeedInfoKey(groupName, feedName)] || null;
+}
+
+function normalizeFeedInfo(groupName, feedName) {
+  const info = getMockFeedInfo(groupName, feedName);
+  const feed = findFeed(groupName, feedName);
+
+  if (!info && !feed) {
+    return null;
+  }
+
+  const config = clone(info?.config || {
+    collection: {
+      list_url_list: [`https://example.com/${feedName}`]
+    },
+    extraction: {},
+    rss: {
+      title: feed?.title || feedName,
+      description: feed?.description || `${feedName} feed`,
+      link: `https://example.com/${feedName}.xml`
+    }
+  });
+
+  return {
+    feed_name: feedName,
+    feed_title: config.rss?.title || feed?.title || feedName,
+    group_name: groupName,
+    config,
+    config_modify_date: new Date().toISOString(),
+    collection_info: {
+      collect_date: info?.collection_info?.collect_date || null,
+      total_item_count: info?.collection_info?.total_item_count || 0
+    },
+    public_feed_info: {
+      public_feed_file_path: `/xml/${feedName}.xml`,
+      file_size:
+        info?.public_feed_info?.file_size ??
+        info?.public_feed_info?.size_of_result_file ??
+        0,
+      num_items:
+        info?.public_feed_info?.num_items ??
+        info?.public_feed_info?.num_items_in_result ??
+        0,
+      upload_date:
+        info?.public_feed_info?.upload_date ??
+        info?.public_feed_info?.last_upload_date ??
+        null
+    },
+    progress_info: {
+      current_index: info?.progress_info?.current_index || 0,
+      total_item_count: info?.progress_info?.total_item_count || 0,
+      unit_size_per_day: info?.progress_info?.unit_size_per_day || 0,
+      progress_ratio: info?.progress_info?.progress_ratio || 0,
+      due_date:
+        info?.progress_info?.due_date ??
+        info?.progress_info?.feed_completion_due_date ??
+        null
+    }
+  };
+}
+
+function getSiteConfig(groupName) {
+  const group = mockData.groups.groups.find((item) => item.name === groupName);
+  return {
+    group_name: groupName,
+    display_name: group?.description || groupName,
+    ...defaultSiteConfig
+  };
+}
+
+function toggleLeadingUnderscore(name) {
+  return String(name || '').startsWith('_') ? String(name).slice(1) : `_${name}`;
+}
+
+function renameGroup(oldName, newName) {
+  if (oldName === newName) {
+    return;
+  }
+
+  const group = mockData.groups.groups.find((item) => item.name === oldName);
+  if (group) {
+    group.name = newName;
+  }
+
+  if (mockData.feeds[oldName]) {
+    mockData.feeds[newName] = mockData.feeds[oldName];
+    delete mockData.feeds[oldName];
+  }
+
+  Object.keys(mockData.feed_info).forEach((key) => {
+    if (key.startsWith(`${oldName}/`)) {
+      const newKey = `${newName}/${key.slice(oldName.length + 1)}`;
+      mockData.feed_info[newKey] = mockData.feed_info[key];
+      delete mockData.feed_info[key];
+    }
+  });
+}
+
+function renameFeed(groupName, oldFeedName, newFeedName) {
+  if (oldFeedName === newFeedName) {
+    return;
+  }
+
+  const feeds = mockData.feeds[groupName] || [];
+  const feed = feeds.find((item) => item.name === oldFeedName);
+  if (feed) {
+    feed.name = newFeedName;
+  }
+
+  const oldKey = getFeedInfoKey(groupName, oldFeedName);
+  const newKey = getFeedInfoKey(groupName, newFeedName);
+  if (mockData.feed_info[oldKey]) {
+    mockData.feed_info[newKey] = mockData.feed_info[oldKey];
+    delete mockData.feed_info[oldKey];
+  }
+}
+
+function buildSearchResults(keyword) {
+  const normalizedKeyword = String(keyword || '').toLowerCase();
+
+  return Object.entries(mockData.feeds)
+    .flatMap(([groupName, feeds]) =>
+      feeds
+        .filter((feed) => {
+          if (!normalizedKeyword) {
+            return true;
+          }
+          return [groupName, feed.name, feed.title, feed.description]
+            .filter(Boolean)
+            .some((value) => String(value).toLowerCase().includes(normalizedKeyword));
+        })
+        .map((feed) => ({
+          group_name: groupName,
+          feed_name: feed.name,
+          feed_title: feed.title,
+          description: feed.description,
+        }))
+    )
+    .slice(0, 10);
+}
+
+function buildProblemResult(problemType) {
+  const feedInfos = Object.entries(mockData.feed_info).map(([key, info]) => {
+    const [groupName, feedName] = key.split('/');
+    const normalized = normalizeFeedInfo(groupName, feedName);
+    return {
+      group_name: groupName,
+      feed_name: feedName,
+      feed_title: normalized?.feed_title || feedName,
+      info: normalized
+    };
+  });
+
+  switch (problemType) {
+    case 'status_info':
+      return feedInfos.map(({ group_name, feed_name, feed_title, info }) => ({
+        group_name,
+        feed_name,
+        feed_title,
+        http_request: true,
+        public_html: true,
+        feedmaker: true,
+        update_date: info?.collection_info?.collect_date || null,
+        upload_date: info?.public_feed_info?.upload_date || null,
+        access_date: info?.public_feed_info?.upload_date || null,
+        view_date: info?.public_feed_info?.upload_date || null
+      }));
+    case 'progress_info':
+      return feedInfos.map(({ group_name, feed_name, feed_title, info }) => ({
+        group_name,
+        feed_name,
+        feed_title,
+        ...(info?.progress_info || {})
+      }));
+    case 'public_feed_info':
+      return feedInfos.map(({ group_name, feed_name, feed_title, info }) => ({
+        group_name,
+        feed_name,
+        feed_title,
+        file_size: info?.public_feed_info?.file_size || 0,
+        num_items: info?.public_feed_info?.num_items || 0,
+        upload_date: info?.public_feed_info?.upload_date || null
+      }));
+    case 'html_info':
+      return {
+        html_file_size_map: feedInfos.slice(0, 2).map(({ group_name, feed_name, feed_title }) => ({
+          feed_title,
+          feed_dir_path: `${group_name}/${feed_name}`,
+          file_path: `${group_name}/${feed_name}/html/sample.html`,
+          file_size: 4096
+        })),
+        html_file_with_many_image_tag_map: [],
+        html_file_without_image_tag_map: [],
+        html_file_image_not_found_map: []
+      };
+    case 'element_info':
+      return [
+        { element_name: 'title', count: 12 },
+        { element_name: 'content', count: 9 }
+      ];
+    case 'list_url_info':
+      return feedInfos.map(({ group_name, feed_name, feed_title, info }) => ({
+        group_name,
+        feed_name,
+        feed_title,
+        list_url_count: info?.config?.collection?.list_url_list?.length || 0
+      }));
+    default:
+      return [];
+  }
+}
+
+function buildExecResultMarkdown() {
+  const items = mockData.exec_result.exec_result || [];
+  if (items.length === 0) {
+    return '### No execution result available';
+  }
+
+  return items
+    .map((item) =>
+      [
+        `### ${item.group_name}/${item.feed_name}`,
+        `- status: ${item.status}`,
+        `- processed: ${item.items_processed}`,
+        `- success: ${item.items_success}`,
+        `- failed: ${item.items_failed}`,
+        `- log: ${item.log}`
+      ].join('\n')
+    )
+    .join('\n\n');
+}
+
+function buildSearchSiteHtml(siteName, keyword) {
+  return [
+    `<h3>${siteName}</h3>`,
+    `<p>Search keyword: ${keyword}</p>`,
+    `<ul>`,
+    `<li>${siteName} result 1</li>`,
+    `<li>${siteName} result 2</li>`,
+    `</ul>`
+  ].join('');
+}
+
 // 로깅 미들웨어
 app.use((req, res, next) => {
   console.log(`[Mock API] ${req.method} ${req.url}`);
@@ -709,209 +1003,211 @@ app.use((req, res, next) => {
 
 // OpenAPI 스펙에 따른 라우팅 처리
 
+app.post('/auth/login', (req, res) => {
+    res.json(createSuccess({ message: '로그인되었습니다.' }));
+});
+
+app.post('/auth/logout', (req, res) => {
+    res.json(createSuccess({ message: '로그아웃되었습니다.' }));
+});
+
+app.get('/auth/me', (req, res) => {
+    res.json({
+        is_authenticated: true,
+        email: 'mock@example.com',
+        name: 'Mock Admin',
+        profile_picture_url: null
+    });
+});
+
 // Get Exec Result
 app.get('/exec_result', (req, res) => {
-    const {  } = req.params;
-    res.json({ status: 'success', message: 'Get Exec Result - Mock response' })
+    res.json(createExecResultResponse(buildExecResultMarkdown()));
 });
 // Get Problems
 app.get('/problems/:problem_type', (req, res) => {
     const { problem_type } = req.params;
-    res.json(mockData.problems)
+    res.json(createProblemsResponse(buildProblemResult(problem_type)));
 });
 // Search
 app.get('/search/:keyword', (req, res) => {
     const { keyword } = req.params;
-    
-    const query = req.query.q || '';
-    const results = [];
-    
-    // 그룹에서 검색
-    mockData.groups.groups.forEach(group => {
-        if (group.name.toLowerCase().includes(query.toLowerCase()) || 
-            group.description.toLowerCase().includes(query.toLowerCase())) {
-            results.push({ type: 'group', data: group });
-        }
-    });
-    
-    // 피드에서 검색
-    Object.entries(mockData.feeds).forEach(([groupName, feeds]) => {
-        feeds.forEach(feed => {
-            if (feed.name.toLowerCase().includes(query.toLowerCase()) || 
-                feed.title.toLowerCase().includes(query.toLowerCase()) ||
-                feed.description.toLowerCase().includes(query.toLowerCase())) {
-                results.push({ type: 'feed', data: feed, group: groupName });
-            }
-        });
-    });
-    
-    res.json({ results: results.slice(0, 10) });
+    res.json(createSearchResponse(buildSearchResults(keyword)));
 });
 // Search Site
 app.get('/search_site/:keyword', (req, res) => {
     const { keyword } = req.params;
-    
-    const query = req.query.q || '';
-    const results = [];
-    
-    // 그룹에서 검색
-    mockData.groups.groups.forEach(group => {
-        if (group.name.toLowerCase().includes(query.toLowerCase()) || 
-            group.description.toLowerCase().includes(query.toLowerCase())) {
-            results.push({ type: 'group', data: group });
-        }
-    });
-    
-    // 피드에서 검색
-    Object.entries(mockData.feeds).forEach(([groupName, feeds]) => {
-        feeds.forEach(feed => {
-            if (feed.name.toLowerCase().includes(query.toLowerCase()) || 
-                feed.title.toLowerCase().includes(query.toLowerCase()) ||
-                feed.description.toLowerCase().includes(query.toLowerCase())) {
-                results.push({ type: 'feed', data: feed, group: groupName });
-            }
-        });
-    });
-    
-    res.json({ results: results.slice(0, 10) });
+    res.json(createSearchSiteResponse(buildSearchSiteHtml('default', keyword)));
+});
+
+app.get('/search_sites', (req, res) => {
+    res.json(createSiteNamesResponse(mockSearchSites));
+});
+
+app.get('/search_sites/:site_name/:keyword', (req, res) => {
+    const { site_name, keyword } = req.params;
+    res.json(createSearchSiteResponse(buildSearchSiteHtml(site_name, keyword)));
 });
 // Remove Public Feed
 app.delete('/public_feeds/:feed', (req, res) => {
+    res.json(createSuccess({ message: 'Public feed removed' }));
+});
+
+app.get('/public_feeds/:feed/item_titles', (req, res) => {
     const { feed } = req.params;
-    
-    res.json({ status: 'success', message: 'Public feed removed' });
+    const infoEntry = Object.values(mockData.feed_info).find((item) => item?.config?.collection?.feed_name === feed);
+    const title = infoEntry?.config?.rss?.title || feed;
+    res.json(createItemTitlesResponse([`${title} item 1`, `${title} item 2`, `${title} item 3`]));
 });
 // Get Site Config
 app.get('/groups/:group/site_config', (req, res) => {
     const { group } = req.params;
-    res.json(mockData.groups)
+    res.json(createSiteConfigResponse(getSiteConfig(group)));
 });
 // Save Site Config
 app.put('/groups/:group/site_config', (req, res) => {
-    const { group } = req.params;
-    
-    res.json({ status: 'success', message: 'Site config updated' });
+    res.json(createSuccess({ message: 'Site config updated' }));
 });
 // Toggle Group
 app.put('/groups/:group/toggle', (req, res) => {
     const { group } = req.params;
-    
-    const groupIndex = mockData.groups.groups.findIndex(g => g.name === req.params.group);
+    const groupIndex = mockData.groups.groups.findIndex((g) => g.name === group);
     if (groupIndex !== -1) {
-        mockData.groups.groups[groupIndex].status = !mockData.groups.groups[groupIndex].status;
-        res.json({ status: 'success', group: mockData.groups.groups[groupIndex] });
+        const newName = toggleLeadingUnderscore(group);
+        renameGroup(group, newName);
+        res.json(createNewNameResponse(newName));
     } else {
-        res.status(404).json({ status: 'error', message: 'Group not found' });
+        res.status(404).json(createFailure('Group not found'));
     }
 });
 // Remove Html File
 app.delete('/groups/:group/feeds/:feed/htmls/:file', (req, res) => {
-    const { group, feed, file } = req.params;
-    
-    res.json({ status: 'success', message: 'HTML file removed' });
+    res.json(createSuccess({ message: 'HTML file removed' }));
 });
 // Remove Html
 app.delete('/groups/:group/feeds/:feed/htmls', (req, res) => {
-    const { group, feed } = req.params;
-    
-    res.json({ status: 'success', message: 'HTML file removed' });
+    res.json(createSuccess({ message: 'HTML file removed' }));
 });
 // Run
 app.post('/groups/:group/feeds/:feed/run', (req, res) => {
-    const { group, feed } = req.params;
-    
-    const newGroup = req.body;
-    newGroup.name = newGroup.name || 'new_group_' + Date.now();
-    newGroup.num_feeds = 0;
-    newGroup.status = true;
-    newGroup.description = newGroup.description || '새로운 그룹';
-    
-    mockData.groups.groups.push(newGroup);
-    res.json({ status: 'success', group: newGroup });
+    res.json(createSuccess());
 });
 // Toggle Feed
 app.put('/groups/:group/feeds/:feed/toggle', (req, res) => {
     const { group, feed } = req.params;
-    
-    const groupIndex = mockData.groups.groups.findIndex(g => g.name === req.params.group);
-    if (groupIndex !== -1) {
-        mockData.groups.groups[groupIndex].status = !mockData.groups.groups[groupIndex].status;
-        res.json({ status: 'success', group: mockData.groups.groups[groupIndex] });
+    const feedItem = findFeed(group, feed);
+    if (feedItem) {
+        const newName = toggleLeadingUnderscore(feed);
+        renameFeed(group, feed, newName);
+        res.json(createNewNameResponse(newName));
     } else {
-        res.status(404).json({ status: 'error', message: 'Group not found' });
+        res.status(404).json(createFailure('Feed not found'));
     }
 });
 // Remove List
 app.delete('/groups/:group/feeds/:feed/list', (req, res) => {
-    const { group, feed } = req.params;
-    
-    res.json({ status: 'success', message: 'List removed' });
+    res.json(createSuccess({ message: 'List removed' }));
 });
 // Check Running
 app.get('/groups/:group/feeds/:feed/check_running', (req, res) => {
-    const { group, feed } = req.params;
-    res.json({ feeds: mockData.feeds[group] || [] })
+    res.json(createCheckRunningResponse(false));
 });
 // Get Feed Info
 app.get('/groups/:group/feeds/:feed', (req, res) => {
     const { group, feed } = req.params;
-    res.json({ feeds: mockData.feeds[group] || [] })
+    const feedInfo = normalizeFeedInfo(group, feed);
+    if (!feedInfo) {
+        res.status(404).json(createFailure('feed info not found'));
+        return;
+    }
+    res.json(createFeedInfoResponse(feedInfo));
 });
 // Post Feed Info
 app.post('/groups/:group/feeds/:feed', (req, res) => {
     const { group, feed } = req.params;
-    
-    const newGroup = req.body;
-    newGroup.name = newGroup.name || 'new_group_' + Date.now();
-    newGroup.num_feeds = 0;
-    newGroup.status = true;
-    newGroup.description = newGroup.description || '새로운 그룹';
-    
-    mockData.groups.groups.push(newGroup);
-    res.json({ status: 'success', group: newGroup });
+    const configuration = req.body?.configuration;
+    if (!configuration) {
+        res.json(createFailure("invalid configuration format (no 'configuration')"));
+        return;
+    }
+
+    if (!findFeed(group, feed)) {
+        if (!mockData.feeds[group]) {
+            mockData.feeds[group] = [];
+        }
+        mockData.feeds[group].push({
+            name: feed,
+            title: configuration?.rss?.title || feed,
+            status: true,
+            description: configuration?.rss?.description || `${feed} feed`
+        });
+    }
+
+    mockData.feed_info[getFeedInfoKey(group, feed)] = {
+        config: clone(configuration),
+        collection_info: {
+            collect_date: new Date().toISOString(),
+            total_item_count: 0
+        },
+        public_feed_info: {
+            file_size: 0,
+            num_items: 0,
+            upload_date: null
+        },
+        progress_info: {
+            current_index: 0,
+            total_item_count: 0,
+            unit_size_per_day: 0,
+            progress_ratio: 0,
+            due_date: null
+        }
+    };
+
+    res.json(createSuccess());
 });
 // Delete Feed Info
 app.delete('/groups/:group/feeds/:feed', (req, res) => {
     const { group, feed } = req.params;
-    
-    const feedIndex = mockData.feeds[req.params.group]?.findIndex(f => f.name === req.params.feed);
+    const feedIndex = mockData.feeds[group]?.findIndex((f) => f.name === feed);
     if (feedIndex !== -1) {
-        const deletedFeed = mockData.feeds[req.params.group].splice(feedIndex, 1)[0];
-        res.json({ status: 'success', message: 'Feed deleted', feed: deletedFeed });
+        mockData.feeds[group].splice(feedIndex, 1);
+        delete mockData.feed_info[getFeedInfoKey(group, feed)];
+        res.json(createSuccess());
     } else {
-        res.status(404).json({ status: 'error', message: 'Feed not found' });
+        res.status(404).json(createFailure('Feed not found'));
     }
 });
 // Get Feeds By Group
 app.get('/groups/:group/feeds', (req, res) => {
     const { group } = req.params;
-    res.json({ status: 'success', message: 'Get Feeds By Group - Mock response' })
+    res.json(createFeedsResponse(getFeedsByGroup(group)));
 });
 // Remove Group
 app.delete('/groups/:group', (req, res) => {
     const { group } = req.params;
     
-    const groupIndex = mockData.groups.groups.findIndex(g => g.name === req.params.group);
+    const groupIndex = mockData.groups.groups.findIndex((g) => g.name === group);
     if (groupIndex !== -1) {
-        const deletedGroup = mockData.groups.groups.splice(groupIndex, 1)[0];
-        delete mockData.feeds[req.params.group];
-        res.json({ status: 'success', message: 'Group deleted', group: deletedGroup });
+        mockData.groups.groups.splice(groupIndex, 1);
+        delete mockData.feeds[group];
+        Object.keys(mockData.feed_info).forEach((key) => {
+            if (key.startsWith(`${group}/`)) {
+                delete mockData.feed_info[key];
+            }
+        });
+        res.json(createSuccess({ feeds: true }));
     } else {
-        res.status(404).json({ status: 'error', message: 'Group not found' });
+        res.status(404).json(createFailure('Group not found'));
     }
 });
 // Get Groups
 app.get('/groups', (req, res) => {
-    const {  } = req.params;
-    res.json(mockData.groups)
+    res.json(createGroupsResponse(getGroups()));
 });
 
 // 404 핸들러
 app.use('*', (req, res) => {
-  res.status(404).json({ 
-    status: 'failure', 
-    message: `Endpoint ${req.method} ${req.originalUrl} not found` 
-  });
+  res.status(404).json(createFailure(`Endpoint ${req.method} ${req.originalUrl} not found`));
 });
 
 // 서버 시작
