@@ -38,6 +38,37 @@ const stubs = {
 
 const flushPromises = () => new Promise((r) => setTimeout(r));
 
+// backend GET /groups/:group/feeds/:feed 의 feed_info contract shape
+// bin/feed_manager.py FeedManager.get_feed_info() 와 동기화 필요
+const FEED_INFO_CONTRACT = {
+  config: {
+    rss: {
+      title: "Contract Feed",
+      link: "https://example.com/feed.xml",
+      description: "Contract",
+    },
+    collection: { list_url_list: ["https://example.com/list"] },
+    extraction: {},
+  },
+  collection_info: {
+    collect_date: "2024-01-01T00:00:00Z",
+    total_item_count: 10,
+  },
+  public_feed_info: {
+    public_feed_file_path: "/public/feed.xml",
+    file_size: 1024,
+    num_items: 10,
+    upload_date: "2024-01-01T00:00:00Z",
+  },
+  progress_info: {
+    current_index: 5,
+    total_item_count: 10,
+    unit_size_per_day: 1.0,
+    progress_ratio: 50.0,
+    due_date: "2024-02-01T00:00:00Z",
+  },
+};
+
 const createWrapper = (routeParams = {}) => {
   axios.get.mockResolvedValueOnce({ data: { status: "success", groups: [] } });
   const wrapper = mount(FeedManagement, {
@@ -1716,6 +1747,54 @@ describe("FeedManagement.vue", () => {
 
       expect(wrapper.vm.selectedGroupName).toBe("naver");
       expect(wrapper.vm.selectedFeedName).toBe("myfeed");
+    });
+  });
+
+  describe("GET /groups/:group/feeds/:feed — contract compliance", () => {
+    it("consumes all required feed_info fields from the backend contract", async () => {
+      axios.get.mockReset();
+      axios.get.mockResolvedValueOnce({
+        data: { status: "success", feed_info: FEED_INFO_CONTRACT },
+      });
+      axios.get.mockResolvedValue({
+        data: { status: "success", running_status: false },
+      });
+
+      const wrapper = mount(FeedManagement, {
+        global: {
+          stubs,
+          mocks: { $route: { params: { group: "g", feed: "f" } } },
+        },
+      });
+      await flushPromises();
+
+      // config 전체가 jsonData로 설정된다
+      expect(wrapper.vm.jsonData).toMatchObject(FEED_INFO_CONTRACT.config);
+
+      // collection_info 필드가 소비된다
+      expect(wrapper.vm.collectDate).toBe("2024-01-01");
+      expect(wrapper.vm.totalItemCount).toBe(
+        FEED_INFO_CONTRACT.collection_info.total_item_count,
+      );
+
+      // public_feed_info 필드가 소비된다
+      expect(wrapper.vm.numItemsInResult).toBe(
+        FEED_INFO_CONTRACT.public_feed_info.num_items,
+      );
+      expect(wrapper.vm.sizeOfResultFile).toBe(
+        FEED_INFO_CONTRACT.public_feed_info.file_size,
+      );
+
+      // progress_info 필드가 소비된다
+      expect(wrapper.vm.currentIndex).toBe(
+        FEED_INFO_CONTRACT.progress_info.current_index,
+      );
+      expect(wrapper.vm.progressRatio).toBe(
+        FEED_INFO_CONTRACT.progress_info.progress_ratio,
+      );
+      expect(wrapper.vm.unitSizePerDay).toBe(
+        FEED_INFO_CONTRACT.progress_info.unit_size_per_day,
+      );
     });
   });
 });
