@@ -509,5 +509,187 @@ class TestMainBlock(unittest.TestCase):
         self.assertEqual(cm.exception.code, -1)
 
 
+class TestGetLocationRecursivelyOgUrl(unittest.TestCase):
+    """get_location_recursively: og:url 메타 태그에서 JS 리다이렉트 감지 (lines 69-72)"""
+
+    @patch("utils.check_manga_site.Crawler")
+    def test_og_url_domain_change(self, mock_crawler_cls: MagicMock) -> None:
+        """og:url 도메인이 원본과 다를 때 final_url 반환"""
+        from utils.check_manga_site import get_location_recursively
+
+        original_url = "https://manga123.example.com/page"
+        og_url = "https://manga456.newdomain.com/page"
+        html = f'<html><head><meta property="og:url" content="{og_url}"/></head><body>content</body></html>'
+
+        mock_instance = MagicMock()
+        mock_instance.run.return_value = (html, "", {})
+        mock_crawler_cls.return_value = mock_instance
+
+        result_url, response = get_location_recursively(original_url, {})
+        self.assertEqual(result_url, og_url)
+        self.assertEqual(response, html)
+
+    @patch("utils.check_manga_site.Crawler")
+    def test_og_url_alternate_attribute_order(self, mock_crawler_cls: MagicMock) -> None:
+        """content 속성이 property보다 앞에 오는 og:url 포맷 감지"""
+        from utils.check_manga_site import get_location_recursively
+
+        original_url = "https://manga123.example.com/page"
+        og_url = "https://manga789.otherdomain.com/page"
+        html = f'<html><head><meta content="{og_url}" property="og:url"/></head><body>text</body></html>'
+
+        mock_instance = MagicMock()
+        mock_instance.run.return_value = (html, "", {})
+        mock_crawler_cls.return_value = mock_instance
+
+        result_url, response = get_location_recursively(original_url, {})
+        self.assertEqual(result_url, og_url)
+
+    @patch("utils.check_manga_site.Crawler")
+    def test_og_url_same_domain_not_returned(self, mock_crawler_cls: MagicMock) -> None:
+        """og:url 도메인이 원본과 같을 때 원본 URL 반환"""
+        from utils.check_manga_site import get_location_recursively
+
+        url = "https://manga123.example.com/page"
+        html = f'<html><head><meta property="og:url" content="{url}"/></head><body>content</body></html>'
+
+        mock_instance = MagicMock()
+        mock_instance.run.return_value = (html, "", {})
+        mock_crawler_cls.return_value = mock_instance
+
+        result_url, response = get_location_recursively(url, {})
+        self.assertEqual(result_url, url)
+
+
+class TestGetDomainHintFromCookies(unittest.TestCase):
+    """get_domain_hint_from_cookies (lines 173-192)"""
+
+    def test_no_cookie_file(self) -> None:
+        from utils.check_manga_site import get_domain_hint_from_cookies
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("pathlib.Path.cwd", return_value=Path(tmpdir)):
+                result = get_domain_hint_from_cookies("https://manga123.example.com/page")
+        self.assertEqual(result, "")
+
+    def test_invalid_json(self) -> None:
+        from utils.check_manga_site import get_domain_hint_from_cookies
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cookie_file = Path(tmpdir) / "cookies.headlessbrowser.json"
+            cookie_file.write_text("not valid json", encoding="utf-8")
+            with patch("pathlib.Path.cwd", return_value=Path(tmpdir)):
+                result = get_domain_hint_from_cookies("https://manga123.example.com/page")
+        self.assertEqual(result, "")
+
+    def test_no_numeric_domain(self) -> None:
+        """도메인에 숫자가 없으면 빈 문자열 반환"""
+        from utils.check_manga_site import get_domain_hint_from_cookies
+        import tempfile
+
+        cookies = [{"domain": "manga456.example.com"}]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cookie_file = Path(tmpdir) / "cookies.headlessbrowser.json"
+            cookie_file.write_text(json.dumps(cookies), encoding="utf-8")
+            with patch("pathlib.Path.cwd", return_value=Path(tmpdir)):
+                result = get_domain_hint_from_cookies("https://nonnumeric.example.com/page")
+        self.assertEqual(result, "")
+
+    def test_higher_number_domain_found(self) -> None:
+        """쿠키에 더 높은 번호의 도메인이 있으면 반환"""
+        from utils.check_manga_site import get_domain_hint_from_cookies
+        import tempfile
+
+        cookies = [{"domain": "manga100.example.com"}, {"domain": "manga789.example.com"}, {"domain": "manga456.example.com"}]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cookie_file = Path(tmpdir) / "cookies.headlessbrowser.json"
+            cookie_file.write_text(json.dumps(cookies), encoding="utf-8")
+            with patch("pathlib.Path.cwd", return_value=Path(tmpdir)):
+                result = get_domain_hint_from_cookies("https://manga123.example.com/page")
+        self.assertEqual(result, "manga789.example.com")
+
+    def test_no_higher_domain(self) -> None:
+        """모든 쿠키 도메인이 현재 번호 이하이면 빈 문자열 반환"""
+        from utils.check_manga_site import get_domain_hint_from_cookies
+        import tempfile
+
+        cookies = [{"domain": "manga50.example.com"}, {"domain": "manga100.example.com"}]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cookie_file = Path(tmpdir) / "cookies.headlessbrowser.json"
+            cookie_file.write_text(json.dumps(cookies), encoding="utf-8")
+            with patch("pathlib.Path.cwd", return_value=Path(tmpdir)):
+                result = get_domain_hint_from_cookies("https://manga123.example.com/page")
+        self.assertEqual(result, "")
+
+    def test_cookie_without_domain_key(self) -> None:
+        """domain 키가 없는 쿠키 항목은 무시"""
+        from utils.check_manga_site import get_domain_hint_from_cookies
+        import tempfile
+
+        cookies = [{"name": "session", "value": "abc"}]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cookie_file = Path(tmpdir) / "cookies.headlessbrowser.json"
+            cookie_file.write_text(json.dumps(cookies), encoding="utf-8")
+            with patch("pathlib.Path.cwd", return_value=Path(tmpdir)):
+                result = get_domain_hint_from_cookies("https://manga123.example.com/page")
+        self.assertEqual(result, "")
+
+
+class TestMainDomainHintFromCookies(unittest.TestCase):
+    """main(): get_domain_hint_from_cookies가 domain을 반환할 때 (lines 225-227)"""
+
+    @patch("utils.check_manga_site.get_domain_hint_from_cookies")
+    @patch("utils.check_manga_site.get_new_url")
+    @patch("utils.check_manga_site.get")
+    @patch("utils.check_manga_site.get_url_pattern")
+    @patch("utils.check_manga_site.read_config")
+    def test_main_uses_cookie_domain_hint(self, mock_read_config: MagicMock, mock_get_url_pattern: MagicMock, mock_get: MagicMock, mock_get_new_url: MagicMock, mock_get_domain_hint: MagicMock) -> None:
+        import tempfile
+        from utils.check_manga_site import main
+
+        url = "https://manga123.example.com/path"
+        mock_read_config.return_value = {"url": url, "keyword": "manga"}
+        mock_get_url_pattern.side_effect = [("pattern", "pre", 123, ".example.com", "/path"), ("pattern2", "pre", 789, ".example.com", "/path")]
+        mock_get.return_value = (False, "response body", "")
+        mock_get_new_url.return_value = ("", 0)
+        mock_get_domain_hint.return_value = "manga789.example.com"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "site_config.json"
+            config_path.write_text(json.dumps({"url": url, "keyword": "manga"}), encoding="utf-8")
+            with patch("pathlib.Path.cwd", return_value=Path(tmpdir)):
+                result = main()
+
+        self.assertEqual(result, -1)
+        mock_get_domain_hint.assert_called_once_with(url)
+
+    @patch("utils.check_manga_site.get_domain_hint_from_cookies")
+    @patch("utils.check_manga_site.get_new_url")
+    @patch("utils.check_manga_site.get")
+    @patch("utils.check_manga_site.get_url_pattern")
+    @patch("utils.check_manga_site.read_config")
+    def test_main_no_cookie_domain_hint(self, mock_read_config: MagicMock, mock_get_url_pattern: MagicMock, mock_get: MagicMock, mock_get_new_url: MagicMock, mock_get_domain_hint: MagicMock) -> None:
+        """get_domain_hint_from_cookies가 빈 문자열 반환 → 'can't get new url' 출력 (line 229)"""
+        import tempfile
+        from utils.check_manga_site import main
+
+        url = "https://manga123.example.com/path"
+        mock_read_config.return_value = {"url": url, "keyword": "manga"}
+        mock_get_url_pattern.return_value = ("pattern", "pre", 123, ".example.com", "/path")
+        mock_get.return_value = (False, "response body", "")
+        mock_get_new_url.return_value = ("", 0)
+        mock_get_domain_hint.return_value = ""
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "site_config.json"
+            config_path.write_text(json.dumps({"url": url, "keyword": "manga"}), encoding="utf-8")
+            with patch("pathlib.Path.cwd", return_value=Path(tmpdir)):
+                result = main()
+
+        self.assertEqual(result, -1)
+
+
 if __name__ == "__main__":
     unittest.main()

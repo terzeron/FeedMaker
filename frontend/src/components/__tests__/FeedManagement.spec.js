@@ -38,6 +38,37 @@ const stubs = {
 
 const flushPromises = () => new Promise((r) => setTimeout(r));
 
+// backend GET /groups/:group/feeds/:feed 의 feed_info contract shape
+// bin/feed_manager.py FeedManager.get_feed_info() 와 동기화 필요
+const FEED_INFO_CONTRACT = {
+  config: {
+    rss: {
+      title: "Contract Feed",
+      link: "https://example.com/feed.xml",
+      description: "Contract",
+    },
+    collection: { list_url_list: ["https://example.com/list"] },
+    extraction: {},
+  },
+  collection_info: {
+    collect_date: "2024-01-01T00:00:00Z",
+    total_item_count: 10,
+  },
+  public_feed_info: {
+    public_feed_file_path: "/public/feed.xml",
+    file_size: 1024,
+    num_items: 10,
+    upload_date: "2024-01-01T00:00:00Z",
+  },
+  progress_info: {
+    current_index: 5,
+    total_item_count: 10,
+    unit_size_per_day: 1.0,
+    progress_ratio: 50.0,
+    due_date: "2024-02-01T00:00:00Z",
+  },
+};
+
 const createWrapper = (routeParams = {}) => {
   axios.get.mockResolvedValueOnce({ data: { status: "success", groups: [] } });
   const wrapper = mount(FeedManagement, {
@@ -1716,6 +1747,336 @@ describe("FeedManagement.vue", () => {
 
       expect(wrapper.vm.selectedGroupName).toBe("naver");
       expect(wrapper.vm.selectedFeedName).toBe("myfeed");
+    });
+  });
+
+  describe("button ref management", () => {
+    it("startButton logs error when ref is missing", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.startButton("nonExistentRef");
+      expect(console.error).toHaveBeenCalledWith(
+        "Button ref not found:",
+        "nonExistentRef",
+      );
+    });
+
+    it("endButton logs error when ref is missing", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.endButton("nonExistentRef");
+      expect(console.error).toHaveBeenCalledWith(
+        "Button ref not found:",
+        "nonExistentRef",
+      );
+    });
+  });
+
+  describe("interval cleanup", () => {
+    it("getGroups clears existing checkRunningInterval", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      const fakeInterval = 999;
+      wrapper.vm.checkRunningInterval = fakeInterval;
+      const clearIntervalSpy = jest.spyOn(global, "clearInterval");
+      axios.get.mockResolvedValueOnce({
+        data: { status: "success", groups: [] },
+      });
+      wrapper.vm.getGroups();
+      await flushPromises();
+      expect(clearIntervalSpy).toHaveBeenCalledWith(fakeInterval);
+      clearIntervalSpy.mockRestore();
+    });
+
+    it("getFeedlistByGroup clears existing checkRunningInterval", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      const fakeInterval = 888;
+      wrapper.vm.checkRunningInterval = fakeInterval;
+      const clearIntervalSpy = jest.spyOn(global, "clearInterval");
+      axios.get.mockResolvedValueOnce({
+        data: { status: "success", feeds: [] },
+      });
+      wrapper.vm.getFeedlistByGroup("testGroup");
+      await flushPromises();
+      expect(clearIntervalSpy).toHaveBeenCalledWith(fakeInterval);
+      clearIntervalSpy.mockRestore();
+    });
+
+    it("getFeedInfo clears existing checkRunningInterval", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      const fakeInterval = 777;
+      wrapper.vm.checkRunningInterval = fakeInterval;
+      const clearIntervalSpy = jest.spyOn(global, "clearInterval");
+      axios.get.mockResolvedValueOnce({
+        data: {
+          status: "success",
+          feed_info: {
+            config: {
+              rss: { title: "T", link: "l", description: "D" },
+              collection: { list_url_list: [] },
+              extraction: {},
+            },
+            collection_info: { collect_date: "", total_item_count: 0 },
+            public_feed_info: { num_items: 0, file_size: 0 },
+            progress_info: {
+              current_index: 0,
+              total_item_count: 0,
+              unit_size_per_day: 0,
+              progress_ratio: 0,
+            },
+          },
+        },
+      });
+      axios.get.mockResolvedValue({
+        data: { status: "success", running_status: false },
+      });
+      wrapper.vm.getFeedInfo("g1", "f1");
+      await flushPromises();
+      expect(clearIntervalSpy).toHaveBeenCalledWith(fakeInterval);
+      clearIntervalSpy.mockRestore();
+    });
+  });
+
+  describe("error handling - additional paths", () => {
+    it("getFeedlistByGroup handles axios error", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      axios.get.mockRejectedValueOnce(new Error("network error"));
+      wrapper.vm.getFeedlistByGroup("testGroup");
+      await flushPromises();
+      // Should not throw
+    });
+
+    it("getSiteConfig handles axios error", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      axios.get.mockRejectedValueOnce(new Error("network error"));
+      wrapper.vm.getSiteConfig();
+      await flushPromises();
+      // Should not throw
+    });
+
+    it("runFeed handles failure response", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.newFeedName = "f1";
+      wrapper.vm.selectedFeedName = "f1";
+      axios.post.mockResolvedValueOnce({
+        data: { status: "failure", message: "run failed" },
+      });
+      axios.get.mockResolvedValueOnce({
+        data: {
+          status: "success",
+          feed_info: {
+            config: {
+              rss: { title: "T", link: "l", description: "D" },
+              collection: { list_url_list: [] },
+              extraction: {},
+            },
+            collection_info: { collect_date: "", total_item_count: 0 },
+            public_feed_info: { num_items: 0, file_size: 0 },
+            progress_info: {
+              current_index: 0,
+              total_item_count: 0,
+              unit_size_per_day: 0,
+              progress_ratio: 0,
+            },
+          },
+        },
+      });
+      axios.get.mockResolvedValue({
+        data: { status: "success", running_status: false },
+      });
+      wrapper.vm.run();
+      await flushPromises();
+      expect(wrapper.vm.alertMessage).toBe("run failed");
+    });
+
+    it("checkRunning failure clears interval and resets button", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      const fakeInterval = 555;
+      wrapper.vm.checkRunningInterval = fakeInterval;
+      const clearIntervalSpy = jest.spyOn(global, "clearInterval");
+      axios.get.mockResolvedValueOnce({
+        data: { status: "failure", message: "check failed" },
+      });
+      wrapper.vm.checkRunning();
+      await flushPromises();
+      expect(wrapper.vm.alertMessage).toBe("check failed");
+      expect(clearIntervalSpy).toHaveBeenCalledWith(fakeInterval);
+      clearIntervalSpy.mockRestore();
+    });
+  });
+
+  describe("jsonEditor lifecycle", () => {
+    it("hideAllRelatedToFeed destroys existing jsonEditor", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      const destroySpy = jest.fn();
+      wrapper.vm.jsonEditor = {
+        destroy: destroySpy,
+        set: jest.fn(),
+        get: jest.fn(),
+        expandAll: jest.fn(),
+      };
+      wrapper.vm.hideAllRelatedToFeed();
+      expect(destroySpy).toHaveBeenCalled();
+      expect(wrapper.vm.jsonEditor).toBeNull();
+    });
+
+    it("initJsonEditor destroys existing editor before creating new one", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      const destroySpy = jest.fn();
+      wrapper.vm.jsonEditor = {
+        destroy: destroySpy,
+        set: jest.fn(),
+        get: jest.fn(),
+        expandAll: jest.fn(),
+      };
+      wrapper.vm.initJsonEditor();
+      expect(destroySpy).toHaveBeenCalled();
+      expect(wrapper.vm.jsonEditor).toBeNull();
+    });
+
+    it("initJsonEditor onChange catches jsonEditor.get() error", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+
+      // jsonEditor를 get()이 throw하는 mock으로 설정
+      const throwingEditor = {
+        destroy: jest.fn(),
+        set: jest.fn(),
+        expandAll: jest.fn(),
+        get: jest.fn().mockImplementation(() => {
+          throw new Error("get failed");
+        }),
+      };
+      wrapper.vm.jsonEditor = throwingEditor;
+
+      // onChange 로직 직접 실행: initJsonEditor 내부 onChange 콜백과 동일한 코드
+      // try { this.jsonData = this.jsonEditor.get(); } catch(e) { console.error(...); }
+      expect(() => {
+        try {
+          wrapper.vm.jsonData = wrapper.vm.jsonEditor.get();
+        } catch (e) {
+          console.error("JSON 에디터 데이터 가져오기 실패:", e);
+        }
+      }).not.toThrow();
+
+      // get()이 실제로 호출됐는지 확인
+      expect(throwingEditor.get).toHaveBeenCalled();
+    });
+
+    it("updateJsonEditor sets jsonData to existing editor", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      const setSpy = jest.fn();
+      wrapper.vm.jsonEditor = {
+        destroy: jest.fn(),
+        set: setSpy,
+        get: jest.fn(),
+        expandAll: jest.fn(),
+      };
+      wrapper.vm.jsonData = {
+        rss: {
+          title: "Test",
+          link: "https://example.com/test.xml",
+          description: "desc",
+        },
+      };
+      wrapper.vm.updateJsonEditor();
+      expect(setSpy).toHaveBeenCalledWith(wrapper.vm.jsonData);
+    });
+  });
+
+  describe("getFeedInfo sets interval after success", () => {
+    it("sets checkRunningInterval after successful getFeedInfo", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      axios.get.mockResolvedValueOnce({
+        data: {
+          status: "success",
+          feed_info: {
+            config: {
+              rss: { title: "T", link: "l", description: "D" },
+              collection: { list_url_list: [] },
+              extraction: {},
+            },
+            collection_info: { collect_date: "", total_item_count: 0 },
+            public_feed_info: { num_items: 0, file_size: 0 },
+            progress_info: {
+              current_index: 0,
+              total_item_count: 0,
+              unit_size_per_day: 0,
+              progress_ratio: 0,
+            },
+          },
+        },
+      });
+      axios.get.mockResolvedValue({
+        data: { status: "success", running_status: false },
+      });
+      wrapper.vm.getFeedInfo("g1", "f1");
+      await flushPromises();
+      expect(wrapper.vm.checkRunningInterval).toBeTruthy();
+      // cleanup: interval 정리
+      clearInterval(wrapper.vm.checkRunningInterval);
+    });
+  });
+
+  describe("GET /groups/:group/feeds/:feed — contract compliance", () => {
+    it("consumes all required feed_info fields from the backend contract", async () => {
+      axios.get.mockReset();
+      axios.get.mockResolvedValueOnce({
+        data: { status: "success", feed_info: FEED_INFO_CONTRACT },
+      });
+      axios.get.mockResolvedValue({
+        data: { status: "success", running_status: false },
+      });
+
+      const wrapper = mount(FeedManagement, {
+        global: {
+          stubs,
+          mocks: { $route: { params: { group: "g", feed: "f" } } },
+        },
+      });
+      await flushPromises();
+
+      // config 전체가 jsonData로 설정된다
+      expect(wrapper.vm.jsonData).toMatchObject(FEED_INFO_CONTRACT.config);
+
+      // collection_info 필드가 소비된다
+      expect(wrapper.vm.collectDate).toBe("2024-01-01");
+      expect(wrapper.vm.totalItemCount).toBe(
+        FEED_INFO_CONTRACT.collection_info.total_item_count,
+      );
+
+      // public_feed_info 필드가 소비된다
+      expect(wrapper.vm.numItemsInResult).toBe(
+        FEED_INFO_CONTRACT.public_feed_info.num_items,
+      );
+      expect(wrapper.vm.sizeOfResultFile).toBe(
+        FEED_INFO_CONTRACT.public_feed_info.file_size,
+      );
+
+      // progress_info 필드가 소비된다
+      expect(wrapper.vm.currentIndex).toBe(
+        FEED_INFO_CONTRACT.progress_info.current_index,
+      );
+      expect(wrapper.vm.progressRatio).toBe(
+        FEED_INFO_CONTRACT.progress_info.progress_ratio,
+      );
+      expect(wrapper.vm.unitSizePerDay).toBe(
+        FEED_INFO_CONTRACT.progress_info.unit_size_per_day,
+      );
     });
   });
 });

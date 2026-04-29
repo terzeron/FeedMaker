@@ -34,8 +34,9 @@ class ProcessTest(unittest.TestCase):
         actual = Process._replace_script_path(cmd, Path.cwd())
         self.assertIsNone(actual)
         # Test with an absolute path and arguments
+        # resolve() follows symlinks, so expected must match the real path on this system
         cmd = "/usr/bin/tail -5"
-        expected = "/usr/bin/tail"
+        expected = str(Path("/usr/bin/tail").resolve())
         actual = Process._replace_script_path(cmd, Path.cwd())
         self.assertEqual(expected, actual)
         # Test with a relative path to an existing file

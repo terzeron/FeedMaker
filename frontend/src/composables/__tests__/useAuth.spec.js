@@ -193,4 +193,34 @@ describe("composables/useAuth", () => {
       expect(userName.value).toBeNull();
     });
   });
+
+  describe("GET /auth/me — contract compliance", () => {
+    it("reads is_authenticated, name from the full authenticated response shape", async () => {
+      // backend /auth/me 인증 응답의 완전한 shape: {is_authenticated, email, name, profile_picture_url}
+      // backend/main.py get_me() 와 동기화 필요
+      axios.get.mockResolvedValueOnce({
+        data: {
+          is_authenticated: true,
+          email: "user@example.com",
+          name: "Contract User",
+          profile_picture_url: "https://example.com/pic.jpg",
+        },
+      });
+      const { checkAuth, isAuthorized, userName } = useAuth();
+      await checkAuth();
+      expect(isAuthorized.value).toBe(true);
+      expect(userName.value).toBe("Contract User");
+    });
+
+    it("handles unauthenticated response shape {is_authenticated: false} only", async () => {
+      // backend /auth/me 비인증 응답의 완전한 shape: {is_authenticated}
+      axios.get.mockResolvedValueOnce({
+        data: { is_authenticated: false },
+      });
+      const { checkAuth, isAuthorized, userName } = useAuth();
+      await checkAuth();
+      expect(isAuthorized.value).toBe(false);
+      expect(userName.value).toBeNull();
+    });
+  });
 });

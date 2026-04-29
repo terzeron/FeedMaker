@@ -335,7 +335,6 @@ class HeadlessBrowser:
             profile_dir = os.path.join(tempfile.gettempdir(), "chrome-profiles", str(uuid.uuid4()))
             os.makedirs(profile_dir, exist_ok=True)
             options.add_argument(f"--user-data-dir={profile_dir}")
-            options.add_argument("--remote-debugging-pipe")
 
             driver = self._get_cached_driver(options)
             if driver is None:
@@ -430,8 +429,6 @@ class HeadlessBrowser:
             profile_dir = os.path.join(tempfile.gettempdir(), "chrome-profiles", str(uuid.uuid4()))
             os.makedirs(profile_dir, exist_ok=True)
             options.add_argument(f"--user-data-dir={profile_dir}")
-            # remote debugging: port 충돌 피하려면 pipe 사용
-            options.add_argument("--remote-debugging-pipe")
 
             # Try to reuse cached driver first
             driver = self._get_cached_driver(options)

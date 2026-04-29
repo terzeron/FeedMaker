@@ -221,7 +221,19 @@ class DummyFeedMakerManager:
 
     # feed info
     def get_feed_info_by_name(self, group_name, feed_name):
-        return ({"feed": {"name": feed_name}}, None)
+        return (
+            {
+                "feed_name": feed_name,
+                "feed_title": "Test Feed",
+                "group_name": group_name,
+                "config": {},
+                "config_modify_date": None,
+                "collection_info": {"collect_date": None, "total_item_count": 0},
+                "public_feed_info": {"public_feed_file_path": None, "file_size": 0, "num_items": 0, "upload_date": None},
+                "progress_info": {"current_index": 0, "total_item_count": 0, "unit_size_per_day": 0.0, "progress_ratio": 0.0, "due_date": None},
+            },
+            None,
+        )
 
     # save config
     def save_config_file(self, group_name, feed_name, post_data):
@@ -400,7 +412,13 @@ def test_get_feed_info_success():
     mgr = DummyFeedMakerManager()
     r = asyncio.run(main.get_feed_info("g", "f", feed_maker_manager=mgr))
     assert r["status"] == "success"
-    assert r["feed_info"]["feed"]["name"] == "f"
+    fi = r["feed_info"]
+    assert fi["feed_name"] == "f"
+    assert fi["group_name"] == "g"
+    assert "config" in fi
+    assert "collection_info" in fi
+    assert "public_feed_info" in fi
+    assert "progress_info" in fi
 
 
 # --- get_feed_info failure ---
@@ -411,6 +429,64 @@ def test_get_feed_info_failure():
     r = asyncio.run(main.get_feed_info("g", "f", feed_maker_manager=mgr))
     assert r["status"] == "failure"
     assert r["message"] == "feed info error"
+
+
+# --- contract: GET /groups/{group}/feeds/{feed} ---
+
+# Source of truth: bin/feed_manager.py FeedManager.get_feed_info()
+_FEED_INFO_SHAPE: dict = {
+    "feed_name": str,
+    "feed_title": (str, type(None)),
+    "group_name": str,
+    "config": dict,
+    "config_modify_date": (str, type(None)),
+    "collection_info": {"collect_date": (str, type(None)), "total_item_count": (int, type(None))},
+    "public_feed_info": {"public_feed_file_path": (str, type(None)), "file_size": (int, type(None)), "num_items": (int, type(None)), "upload_date": (str, type(None))},
+    "progress_info": {"current_index": (int, type(None)), "total_item_count": (int, type(None)), "unit_size_per_day": (float, int, type(None)), "progress_ratio": (float, int, type(None)), "due_date": (str, type(None))},
+}
+
+
+def _check_shape(obj: dict, shape: dict) -> None:
+    for key, expected in shape.items():
+        assert key in obj, f"contract violation: missing key '{key}'"
+        if isinstance(expected, dict):
+            assert isinstance(obj[key], dict), f"contract violation: '{key}' must be dict"
+            _check_shape(obj[key], expected)
+        else:
+            assert isinstance(obj[key], expected), f"contract violation: '{key}' expected {expected}, got {type(obj[key])}"
+
+
+def test_get_feed_info_response_contract():
+    """GET /groups/{group}/feeds/{feed} 응답 shape를 고정한다."""
+    mgr = DummyFeedMakerManager()
+    r = asyncio.run(main.get_feed_info("g", "f", feed_maker_manager=mgr))
+    assert r["status"] == "success"
+    _check_shape(r["feed_info"], _FEED_INFO_SHAPE)
+
+
+# --- contract: GET /auth/me ---
+
+
+def test_auth_me_contract_authenticated():
+    """GET /auth/me 인증 응답은 정확히 {is_authenticated, email, name, profile_picture_url}을 포함한다."""
+    req = types.SimpleNamespace()
+    session = types.SimpleNamespace(user_email="user@example.com", user_name="User", profile_picture_url="https://example.com/pic.jpg")
+    with patch("backend.main.get_current_user", return_value=session):
+        r = asyncio.run(main.get_me(request=req))
+    assert set(r.keys()) == {"is_authenticated", "email", "name", "profile_picture_url"}
+    assert r["is_authenticated"] is True
+    assert isinstance(r["email"], str)
+    assert isinstance(r["name"], str)
+    assert r["profile_picture_url"] is None or isinstance(r["profile_picture_url"], str)
+
+
+def test_auth_me_contract_unauthenticated():
+    """GET /auth/me 비인증 응답은 정확히 {is_authenticated}만 반환한다."""
+    req = types.SimpleNamespace()
+    with patch("backend.main.get_current_user", return_value=None):
+        r = asyncio.run(main.get_me(request=req))
+    assert set(r.keys()) == {"is_authenticated"}
+    assert r["is_authenticated"] is False
 
 
 # --- post_feed_info success ---
@@ -868,7 +944,19 @@ class DummyFeedMakerManagerEndpoints:
         return True
 
     def get_feed_info_by_name(self, group_name, feed_name):
-        return ({"feed": {"name": feed_name}}, None)
+        return (
+            {
+                "feed_name": feed_name,
+                "feed_title": "Test Feed",
+                "group_name": group_name,
+                "config": {},
+                "config_modify_date": None,
+                "collection_info": {"collect_date": None, "total_item_count": 0},
+                "public_feed_info": {"public_feed_file_path": None, "file_size": 0, "num_items": 0, "upload_date": None},
+                "progress_info": {"current_index": 0, "total_item_count": 0, "unit_size_per_day": 0.0, "progress_ratio": 0.0, "due_date": None},
+            },
+            None,
+        )
 
 
 def test_exec_and_search_and_problems_endpoints():

@@ -368,4 +368,27 @@ describe("Login.vue", () => {
     // auth check fails → treated as not authenticated
     expect(wrapper.text()).not.toContain("님으로 로그인하였습니다");
   });
+
+  it("redirects to /result when already authenticated and login is called", async () => {
+    const pushMock = jest.fn();
+    jest.spyOn(require("vue-router"), "useRouter").mockReturnValue({
+      push: pushMock,
+    });
+
+    // 마운트 시 not authenticated
+    axios.get.mockResolvedValueOnce({ data: { is_authenticated: false } });
+
+    const wrapper = mount(Login, { global: { stubs } });
+    await flushPromises();
+
+    // authStore.state.isAuthenticated를 true로 설정
+    authStore.state.isAuthenticated = true;
+
+    // 로그인 버튼 클릭
+    const btns = wrapper.findAll("button");
+    await btns[0].trigger("click");
+    await flushPromises();
+
+    expect(pushMock).toHaveBeenCalledWith("/result");
+  });
 });
