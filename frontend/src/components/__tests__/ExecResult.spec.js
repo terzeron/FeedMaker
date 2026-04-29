@@ -109,4 +109,77 @@ describe("ExecResult.vue", () => {
     expect(pushMock).toHaveBeenCalledWith("/login");
     console.error.mockRestore();
   });
+
+  it("renderedMarkdown returns empty string when source is empty", async () => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    axios.get
+      .mockResolvedValueOnce({ data: { is_authenticated: true } })
+      .mockResolvedValueOnce({ data: { exec_result: "some text" } });
+
+    const wrapper = mount(ExecResult, {
+      global: {
+        stubs: { "router-link": true, "router-view": true },
+      },
+    });
+
+    await flushPromises();
+    // source.value를 빈 문자열로 설정
+    wrapper.vm.source = "";
+    // renderedMarkdown computed가 "" 반환하는지 확인
+    expect(wrapper.vm.renderedMarkdown).toBe("");
+    console.error.mockRestore();
+  });
+
+  it("renderedMarkdown returns source when md is null", async () => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    axios.get
+      .mockResolvedValueOnce({ data: { is_authenticated: true } })
+      .mockResolvedValueOnce({ data: { exec_result: "raw text" } });
+
+    const wrapper = mount(ExecResult, {
+      global: {
+        stubs: { "router-link": true, "router-view": true },
+      },
+    });
+
+    await flushPromises();
+    // md를 null로 설정하고 source에 텍스트가 있을 때 raw text 반환 확인
+    wrapper.vm.md = null;
+    wrapper.vm.source = "raw text fallback";
+    expect(wrapper.vm.renderedMarkdown).toBe("raw text fallback");
+    console.error.mockRestore();
+  });
+
+  it("renderedMarkdown returns source when md.render throws", async () => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    axios.get
+      .mockResolvedValueOnce({ data: { is_authenticated: true } })
+      .mockResolvedValueOnce({ data: { exec_result: "## Test" } });
+
+    const wrapper = mount(ExecResult, {
+      global: {
+        stubs: { "router-link": true, "router-view": true },
+      },
+    });
+
+    await flushPromises();
+
+    // MarkdownIt mock의 render 메서드를 throw하도록 오버라이드
+    const MarkdownIt = require("markdown-it").default;
+    const instances = MarkdownIt.mock ? MarkdownIt.mock.instances : null;
+    // mock 클래스의 prototype render를 spy로 throw하게 설정
+    const renderSpy = jest
+      .spyOn(MarkdownIt.prototype, "render")
+      .mockImplementation(() => {
+        throw new Error("render failed");
+      });
+
+    wrapper.vm.source = "error source";
+    const result = wrapper.vm.renderedMarkdown;
+    // catch 블록에서 source.value || "" 반환
+    expect(result).toBe("error source");
+
+    renderSpy.mockRestore();
+    console.error.mockRestore();
+  });
 });

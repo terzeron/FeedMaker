@@ -628,5 +628,144 @@ class TestMainBlock(unittest.TestCase):
             self.assertEqual(cm.exception.code, -1)
 
 
+class TestReplaceImgTagRemoveNotFound(unittest.TestCase):
+    """replace_img_tag: remove_not_found_images=True 경로 (lines 68-74)"""
+
+    @patch("utils.download_image.ImageDownloader.download_image", return_value=(None, None))
+    def test_falsy_new_img_url_with_remove_not_found_returns_empty(self, _mock_dl):
+        """download_image가 (None, None)을 반환하고 remove_not_found_images=True → '' 반환 (line 69)"""
+        from utils.download_image import replace_img_tag
+
+        mock_match = MagicMock()
+        mock_match.group.side_effect = lambda key: {"img_url": "https://example.com/img.jpg", 0: "<img src='https://example.com/img.jpg'/>"}[key]
+        crawler = MagicMock()
+        result = replace_img_tag(mock_match, crawler=crawler, feed_img_dir_path=Path("/tmp"), quality=75, remove_not_found_images=True)
+        self.assertEqual(result, "")
+
+    @patch("utils.download_image.ImageDownloader.download_image", side_effect=OSError("disk full"))
+    def test_os_error_with_remove_not_found_returns_empty(self, _mock_dl):
+        """download_image가 OSError 발생하고 remove_not_found_images=True → '' 반환 (line 74)"""
+        from utils.download_image import replace_img_tag
+
+        mock_match = MagicMock()
+        mock_match.group.side_effect = lambda key: {"img_url": "https://example.com/img.jpg", 0: "<img src='https://example.com/img.jpg'/>"}[key]
+        crawler = MagicMock()
+        result = replace_img_tag(mock_match, crawler=crawler, feed_img_dir_path=Path("/tmp"), quality=75, remove_not_found_images=True)
+        self.assertEqual(result, "")
+
+
+class TestKeepImgMetaOnly(unittest.TestCase):
+    """main()의 keep_img_meta_only 경로 미커버 분기 테스트 (lines 163-188)"""
+
+    def setUp(self) -> None:
+        self.work_dir = Env.get("FM_WORK_DIR") + "/naver/one_second"
+        self.img_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
+        self._patcher_is_dir = patch("pathlib.Path.is_dir", return_value=True)
+        self._patcher_mkdir = patch("pathlib.Path.mkdir")
+        mock_cfg = MagicMock()
+        mock_cfg.get_extraction_configs.return_value = {"user_agent": "", "exclude_ad_images": False}
+        self._patcher_config = patch("utils.download_image.Config", return_value=mock_cfg)
+        self._patcher_is_dir.start()
+        self._patcher_mkdir.start()
+        self._patcher_config.start()
+
+    def tearDown(self) -> None:
+        self._patcher_config.stop()
+        self._patcher_mkdir.stop()
+        self._patcher_is_dir.stop()
+
+    def _run(self, argv: list, stdin_data: str, mock_dl_config=None):
+        with patch("utils.image_downloader.ImageDownloader.download_image") as mock_dl, patch("sys.argv", argv), patch("sys.stdin", new=io.StringIO(stdin_data)), patch("sys.stdout", new_callable=io.StringIO) as out:
+            if mock_dl_config is not None:
+                mock_dl_config(mock_dl)
+            ret = utils.download_image.main()
+        return ret, out.getvalue()
+
+    def test_exclude_ad_images_cross_origin_skipped(self) -> None:
+        """--keep-img-meta-only + exclude_ad_images=True + cross-origin 이미지 → 이미지 출력 없음 (line 163-165)"""
+        page_url = "https://comic.naver.com/page"
+        argv = ["download_image.py", "--keep-img-meta-only", "-f", self.work_dir, page_url]
+        stdin_data = "<img src='https://ws-fe.amazon-adsystem.com/banner.jpg'/>"
+
+        mock_cfg = MagicMock()
+        mock_cfg.get_extraction_configs.return_value = {"user_agent": "", "exclude_ad_images": True}
+
+        with patch("utils.image_downloader.ImageDownloader.download_image") as mock_dl, patch("sys.argv", argv), patch("sys.stdin", new=io.StringIO(stdin_data)), patch("sys.stdout", new_callable=io.StringIO) as out, patch("utils.download_image.Config", return_value=mock_cfg):
+            ret = utils.download_image.main()
+
+        self.assertEqual(ret, 0)
+        self.assertEqual(out.getvalue(), "")
+        mock_dl.assert_not_called()
+
+    def test_exclude_img_url_pattern_skipped(self) -> None:
+        """--keep-img-meta-only + --exclude-img-url-pattern + 패턴 매칭 URL → 이미지 출력 없음 (line 166-167)"""
+        page_url = "https://example.com/page"
+        argv = ["download_image.py", "--keep-img-meta-only", "--exclude-img-url-pattern", r"ads\.", "-f", self.work_dir, page_url]
+        stdin_data = "<img src='https://ads.example.com/banner.jpg'/>"
+
+        def configure(mock_dl):
+            mock_dl.return_value = (None, None)
+
+        ret, output = self._run(argv, stdin_data, mock_dl_config=configure)
+        self.assertEqual(ret, 0)
+        self.assertEqual(output, "")
+
+    def test_data_image_svg_skipped(self) -> None:
+        """--keep-img-meta-only + data:image/svg src → 이미지 출력 없음 (line 168-169)"""
+        page_url = "https://example.com/page"
+        argv = ["download_image.py", "--keep-img-meta-only", "-f", self.work_dir, page_url]
+        stdin_data = "<img src='data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\"/>' />"
+
+        def configure(mock_dl):
+            mock_dl.return_value = (None, None)
+
+        ret, output = self._run(argv, stdin_data, mock_dl_config=configure)
+        self.assertEqual(ret, 0)
+        self.assertEqual(output, "")
+
+    def test_download_success_with_width_preserved(self) -> None:
+        """--keep-img-meta-only + download 성공 + width 속성 → width 보존하며 출력 (lines 177-178)"""
+        page_url = "https://example.com/page"
+        argv = ["download_image.py", "--keep-img-meta-only", "-f", self.work_dir, page_url]
+        new_url = f"{self.img_prefix}/one_second/abc.webp"
+        stdin_data = "<img src='https://example.com/img.jpg' width='100%'/>"
+
+        def configure(mock_dl):
+            mock_dl.return_value = (True, new_url)
+
+        ret, output = self._run(argv, stdin_data, mock_dl_config=configure)
+        self.assertEqual(ret, 0)
+        self.assertIn(new_url, output)
+        self.assertIn("width='100%'", output)
+
+    def test_download_failure_none_none_without_remove_not_found(self) -> None:
+        """--keep-img-meta-only + download 실패(None,None) + remove_not_found=False → not_found.png 출력 (lines 183-184)"""
+        page_url = "https://example.com/page"
+        argv = ["download_image.py", "--keep-img-meta-only", "-f", self.work_dir, page_url]
+        stdin_data = "<img src='https://example.com/broken.jpg'/>"
+
+        def configure(mock_dl):
+            mock_dl.return_value = (None, None)
+
+        ret, output = self._run(argv, stdin_data, mock_dl_config=configure)
+        self.assertEqual(ret, 0)
+        self.assertIn("not_found.png", output)
+        self.assertIn("not exist or size 0", output)
+
+    def test_download_os_error_without_remove_not_found(self) -> None:
+        """--keep-img-meta-only + download OSError + remove_not_found=False → error placeholder 출력 (lines 185-188)"""
+        page_url = "https://example.com/page"
+        argv = ["download_image.py", "--keep-img-meta-only", "-f", self.work_dir, page_url]
+        stdin_data = "<img src='https://example.com/broken.jpg'/>"
+
+        def configure(mock_dl):
+            mock_dl.side_effect = OSError("connection refused")
+
+        ret, output = self._run(argv, stdin_data, mock_dl_config=configure)
+        self.assertEqual(ret, 0)
+        self.assertIn("not_found.png", output)
+        self.assertIn("error occurred", output)
+
+
 if __name__ == "__main__":
     unittest.main()
