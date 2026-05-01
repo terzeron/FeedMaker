@@ -3,6 +3,7 @@
 
 import atexit
 import os
+import signal
 import json
 import shutil
 import tempfile
@@ -14,7 +15,7 @@ from typing import Optional, Any
 from shutil import which
 
 from selenium import webdriver
-from selenium.common.exceptions import InvalidCookieDomainException, TimeoutException, WebDriverException, NoAlertPresentException
+from selenium.common.exceptions import InvalidCookieDomainException, SessionNotCreatedException, TimeoutException, WebDriverException, NoAlertPresentException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.common.by import By
@@ -544,6 +545,10 @@ class HeadlessBrowser:
 
             return response
 
+        except SessionNotCreatedException as e:
+            LOGGER.warning(f"Chrome session not created (Chrome exited): {e}")
+            self._cleanup_cached_driver()
+            return ""
         except (OSError, TypeError, ValueError, AttributeError, ImportError, RuntimeError) as e:
             LOGGER.error(f"Unexpected error in make_request: {e}")
             return ""

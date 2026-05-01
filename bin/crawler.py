@@ -441,6 +441,9 @@ class Crawler:
                 response = self.headless_browser.make_request(url, download_file=download_file)
                 if response:
                     return response, "", None
+                if i < self.num_retries - 1:
+                    LOGGER.debug(f"wait for seconds and retry (#{i})")
+                    time.sleep(5)
             else:
                 try:
                     response, error, headers, status_code = self.requests_client.make_request(url, download_file=download_file, data=data, allow_redirects=allow_redirects)
