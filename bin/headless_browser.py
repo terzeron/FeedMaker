@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
 
+import atexit
 import os
 import json
+import shutil
 import tempfile
 import uuid
 import threading
@@ -32,6 +34,7 @@ class HeadlessBrowser:
 
     # Thread-local driver cache for reuse (thread-safe for parallel searches)
     _thread_local = threading.local()
+    _all_profile_dirs: set[str] = set()
 
     GETTING_METADATA_SCRIPT = """
         var metas = document.getElementsByTagName("meta");
@@ -221,8 +224,12 @@ class HeadlessBrowser:
         self._cookie_dir: Optional[Path] = None
         self.allow_private_ips = Env.get("FM_CRAWLER_ALLOW_PRIVATE_IPS", "false").strip().lower() in ("1", "true", "yes", "on")
         self.allowed_hosts_raw = Env.get("FM_CRAWLER_ALLOWED_HOSTS", "")
+        self._profile_dir: str = os.path.join(tempfile.gettempdir(), "chrome-profiles", str(uuid.uuid4()))
+        os.makedirs(self._profile_dir, exist_ok=True)
+        HeadlessBrowser._all_profile_dirs.add(self._profile_dir)
 
     def __del__(self) -> None:
+        self._cleanup_cached_driver()
         del self.headers
 
     def _get_cookie_dir(self) -> Path:
@@ -282,7 +289,7 @@ class HeadlessBrowser:
         if cache:
             try:
                 cache.quit()
-            except (WebDriverException, OSError):
+            except Exception:
                 pass
             cls._thread_local._driver_cache = None
             cls._thread_local._driver_options_hash = None
@@ -291,6 +298,9 @@ class HeadlessBrowser:
     def cleanup_all_drivers(cls) -> None:
         """Clean up all cached drivers (for use in tearDown)"""
         cls._cleanup_cached_driver()
+        for d in list(cls._all_profile_dirs):
+            shutil.rmtree(d, ignore_errors=True)
+        cls._all_profile_dirs.clear()
 
     def _write_cookies_to_file(self, driver: webdriver.Chrome) -> None:
         cookies = driver.get_cookies()
@@ -332,9 +342,7 @@ class HeadlessBrowser:
             options.add_argument("--disable-dev-shm-usage")
             options.add_argument("--disable-extensions")
             options.add_argument("--disable-plugins")
-            profile_dir = os.path.join(tempfile.gettempdir(), "chrome-profiles", str(uuid.uuid4()))
-            os.makedirs(profile_dir, exist_ok=True)
-            options.add_argument(f"--user-data-dir={profile_dir}")
+            options.add_argument(f"--user-data-dir={self._profile_dir}")
 
             driver = self._get_cached_driver(options)
             if driver is None:
@@ -426,9 +434,7 @@ class HeadlessBrowser:
             options.add_argument("--disable-dev-shm-usage")
             options.add_argument("--disable-extensions")
             options.add_argument("--disable-plugins")
-            profile_dir = os.path.join(tempfile.gettempdir(), "chrome-profiles", str(uuid.uuid4()))
-            os.makedirs(profile_dir, exist_ok=True)
-            options.add_argument(f"--user-data-dir={profile_dir}")
+            options.add_argument(f"--user-data-dir={self._profile_dir}")
 
             # Try to reuse cached driver first
             driver = self._get_cached_driver(options)
@@ -580,3 +586,12 @@ class HeadlessBrowser:
                         pass
 
         return ""  # Fallback return (should never be reached)
+
+
+def _handle_sigterm(signum: int, frame: object) -> None:
+    HeadlessBrowser.cleanup_all_drivers()
+    sys.exit(0)
+
+
+signal.signal(signal.SIGTERM, _handle_sigterm)
+atexit.register(HeadlessBrowser.cleanup_all_drivers)
