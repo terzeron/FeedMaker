@@ -359,9 +359,8 @@ class TestRequireAdmin(unittest.TestCase):
 
     @patch("backend.auth.Env.get")
     @patch("backend.auth.require_auth")
-    def test_empty_admin_list_allows_all(self, mock_auth, mock_env) -> None:
-        """ADMIN_EMAILS 미설정 시 모든 인증된 사용자를 허용하는 의도적 동작.
-        보안 관점: 초기 설정 전이나 개발 환경에서 admin 제한 없이 운영하기 위함."""
+    def test_empty_admin_list_denies_all(self, mock_auth, mock_env) -> None:
+        """ADMIN_EMAILS 미설정 시 모든 사용자를 거부 — admin list 없으면 아무도 admin이 아님."""
         mock_user = MagicMock()
         mock_user.user_email = "anyone@example.com"
         mock_auth.return_value = mock_user
@@ -369,8 +368,9 @@ class TestRequireAdmin(unittest.TestCase):
 
         from backend.auth import require_admin
 
-        result = require_admin(MagicMock())
-        self.assertEqual(result, mock_user)
+        with self.assertRaises(HTTPException) as ctx:
+            require_admin(MagicMock())
+        self.assertEqual(ctx.exception.status_code, 403)
 
 
 class TestSetAndClearSessionCookie(unittest.TestCase):

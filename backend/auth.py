@@ -182,7 +182,7 @@ def require_admin(request: Request) -> UserSession:
     """Dependency that requires admin privileges"""
     user_session = require_auth(request)
     admin_emails = _get_admin_email_set()
-    if admin_emails and user_session.user_email not in admin_emails:
+    if not admin_emails or user_session.user_email not in admin_emails:
         raise HTTPException(status_code=403, detail="Not authorized")
     return user_session
 

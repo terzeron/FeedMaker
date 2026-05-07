@@ -152,7 +152,7 @@ class RequestsClient:
         else:
             import hashlib
 
-            dir_hash = hashlib.md5(str(self.dir_path).encode()).hexdigest()[:12]
+            dir_hash = hashlib.md5(str(self.dir_path).encode(), usedforsecurity=False).hexdigest()[:12]
             fallback = Path(tempfile.gettempdir()) / "fm_cookies" / dir_hash
             fallback.mkdir(parents=True, exist_ok=True)
             LOGGER.info("Cookie dir '%s' not writable, using fallback '%s'", self.dir_path, fallback)

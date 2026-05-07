@@ -26,15 +26,15 @@ from bs4 import Tag
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 # noinspection PyPep8
-header_str = '''<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+header_str = """<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no"/>
 <style>img { max-width: 100%; margin-top: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; } table { border-width: thin; border-style: dashed; }</style>
 
-'''
+"""
 
-T = TypeVar('T', bound=Union[Hashable, dict[str, Any], list[Any]])
-K = TypeVar('K', bound=Hashable)
-V = TypeVar('V')
+T = TypeVar("T", bound=Union[Hashable, dict[str, Any], list[Any]])
+K = TypeVar("K", bound=Hashable)
+V = TypeVar("V")
 
 
 class Data:
@@ -238,8 +238,7 @@ class Datetime:
 
 class HTMLExtractor:
     @staticmethod
-    def get_first_token_from_path(path_str: Optional[str]) -> tuple[
-        Optional[str], Optional[str], Optional[int], Optional[str], bool]:
+    def get_first_token_from_path(path_str: Optional[str]) -> tuple[Optional[str], Optional[str], Optional[int], Optional[str], bool]:
         if not path_str:
             return None, None, None, None, False
         is_anywhere: bool = False
@@ -256,7 +255,8 @@ class HTMLExtractor:
                 break
 
         # 해당 토큰에 대해 정규식 매칭 시도
-        pattern = re.compile(r'''
+        pattern = re.compile(
+            r"""
             (
               (?P<name>\w+)
               (?:\[
@@ -265,7 +265,9 @@ class HTMLExtractor:
             |
               \*\[@id=\"(?P<id>\w+)\"]
             )
-        ''', re.VERBOSE)
+        """,
+            re.VERBOSE,
+        )
         m = pattern.match(valid_token)
         if m:
             name = m.group("name")
@@ -470,7 +472,7 @@ class Config:
         else:
             config_file_path = feed_dir_path / Config.DEFAULT_CONF_FILE
         if config_file_path.is_file():
-            with config_file_path.open('r', encoding="utf-8") as infile:
+            with config_file_path.open("r", encoding="utf-8") as infile:
                 data = json.load(infile)
                 if "configuration" in data:
                     self.conf = data.get("configuration", {})
@@ -548,21 +550,18 @@ class Config:
                     "simulate_scrolling": Config._get_bool_config_value(collection_conf, "simulate_scrolling", False),
                     "disable_headless": Config._get_bool_config_value(collection_conf, "disable_headless", False),
                     "blob_to_dataurl": Config._get_bool_config_value(collection_conf, "blob_to_dataurl", False),
-
                     "item_capture_script": Config._get_str_config_value(collection_conf, "item_capture_script", "./capture_item_link_title.py"),
                     "sort_field_pattern": Config._get_str_config_value(collection_conf, "sort_field_pattern"),
                     "user_agent": Config._get_str_config_value(collection_conf, "user_agent"),
                     "encoding": Config._get_str_config_value(collection_conf, "encoding", "utf-8"),
                     "referer": Config._get_str_config_value(collection_conf, "referer"),
-
                     "timeout": Config._get_int_config_value(collection_conf, "timeout", 60),
                     "unit_size_per_day": Config._get_float_config_value(collection_conf, "unit_size_per_day", 1),
                     "num_retries": Config._get_int_config_value(collection_conf, "num_retries", 1),
                     "window_size": Config._get_int_config_value(collection_conf, "window_size", 5),
-
                     "list_url_list": Config._get_list_config_value(collection_conf, "list_url_list", []),
                     "post_process_script_list": Config._get_list_config_value(collection_conf, "post_process_script_list", []),
-                    "headers": Config._get_dict_config_value(collection_conf, "headers", {})
+                    "headers": Config._get_dict_config_value(collection_conf, "headers", {}),
                 }
                 return conf
 
@@ -582,21 +581,17 @@ class Config:
                     "simulate_scrolling": Config._get_bool_config_value(extraction_conf, "simulate_scrolling"),
                     "disable_headless": Config._get_bool_config_value(extraction_conf, "disable_headless", False),
                     "blob_to_dataurl": Config._get_bool_config_value(extraction_conf, "blob_to_dataurl", False),
-
                     "user_agent": Config._get_str_config_value(extraction_conf, "user_agent"),
                     "encoding": Config._get_str_config_value(extraction_conf, "encoding", "utf-8"),
                     "referer": Config._get_str_config_value(extraction_conf, "referer"),
-
                     "threshold_to_remove_html_with_incomplete_image": Config._get_int_config_value(extraction_conf, "threshold_to_remove_html_with_incomplete_image", 0),
                     "timeout": Config._get_int_config_value(extraction_conf, "timeout", 60),
                     "num_retries": Config._get_int_config_value(extraction_conf, "num_retries", 1),
-
                     "element_id_list": Config._get_list_config_value(extraction_conf, "element_id_list", []),
                     "element_class_list": Config._get_list_config_value(extraction_conf, "element_class_list", []),
                     "element_path_list": Config._get_list_config_value(extraction_conf, "element_path_list", []),
                     "post_process_script_list": Config._get_list_config_value(extraction_conf, "post_process_script_list", []),
                     "headers": Config._get_dict_config_value(extraction_conf, "headers", {}),
-
                     "exclude_ad_images": Config._get_bool_config_value(extraction_conf, "exclude_ad_images", False),
                 }
                 return conf
@@ -615,7 +610,7 @@ class Config:
                     "rss_copyright": Config._get_str_config_value(rss_conf, "copyright"),
                     "rss_link": Config._get_str_config_value(rss_conf, "link"),
                     "rss_language": Config._get_str_config_value(rss_conf, "language"),
-                    "rss_url_prefix_for_guid": Config._get_str_config_value(rss_conf, "url_prefix_for_guid")
+                    "rss_url_prefix_for_guid": Config._get_str_config_value(rss_conf, "url_prefix_for_guid"),
                 }
                 return conf
 
@@ -640,7 +635,7 @@ class URL:
         if host_index >= 0:
             first_slash_index = url[host_index:].find("/")
             if first_slash_index >= 0:
-                return url[host_index:(host_index + first_slash_index)]
+                return url[host_index : (host_index + first_slash_index)]
             return url[host_index:]
         return ""
 
@@ -650,9 +645,9 @@ class URL:
         scheme_separator = "://"
         host_index = url.find(scheme_separator) + len(scheme_separator)
         if host_index >= 0:
-            first_slash_index = url[host_index:].find('/')
+            first_slash_index = url[host_index:].find("/")
             if first_slash_index >= 0:
-                return url[(host_index + first_slash_index):]
+                return url[(host_index + first_slash_index) :]
         return ""
 
     # http://naver.com/api/items?page_no=3 => http://naver.com/api/
@@ -661,15 +656,15 @@ class URL:
         scheme_separator = "://"
         host_index = url.find(scheme_separator) + len(scheme_separator)
         if host_index >= 0:
-            last_slash_index = url.rfind('/', host_index)
+            last_slash_index = url.rfind("/", host_index)
             if last_slash_index >= 0:
-                return url[:(last_slash_index + 1)]
+                return url[: (last_slash_index + 1)]
         return ""
 
     # http://naver.com/api/items?page_no=3 => http://naver.com/api/items
     @staticmethod
     def get_url_except_query(url: str) -> str:
-        query_index = url.find('?')
+        query_index = url.find("?")
         if query_index >= 0:
             return url[:query_index]
         return url
@@ -686,13 +681,13 @@ class URL:
 
     @staticmethod
     def get_short_md5_name(content: str) -> str:
-        return hashlib.md5(content.encode()).hexdigest()[:7]
+        return hashlib.md5(content.encode(), usedforsecurity=False).hexdigest()[:7]
 
     @staticmethod
     def encode(url: str) -> Any:
         parsed = urlparse(url)
         quoted_path = quote(parsed.path)
-        quoted_query = quote(parsed.query, safe='=')
+        quoted_query = quote(parsed.query, safe="=")
         parsed = parsed._replace(path=quoted_path, query=quoted_query)
         return urlunparse(parsed)
 
@@ -700,7 +695,7 @@ class URL:
     def encode_suffix(url: str) -> str:
         parsed_url = urlsplit(url)
         prefix = f"{parsed_url.scheme}://{parsed_url.netloc}/"
-        url_suffix = url[len(prefix):]
+        url_suffix = url[len(prefix) :]
         encoded_suffix = base64.b64encode(url_suffix.encode("utf-8")).decode("utf-8")
         return prefix + encoded_suffix
 
@@ -757,7 +752,7 @@ class FileManager:
                         result.append(FileManager.IMAGE_NOT_FOUND_IMAGE)
                     escaped_image_url_prefix: str = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX").replace("https", "https?")
                     escaped_image_url_prefix = escaped_image_url_prefix.replace(".", "\\.")
-                    m = re.search(r'<img src=[\"\']%s/[^/]+/(?P<img>\S+)[\"\']' % escaped_image_url_prefix, line)
+                    m = re.search(r"<img src=[\"\']%s/[^/]+/(?P<img>\S+)[\"\']" % escaped_image_url_prefix, line)
                     if m:
                         # 실제로 다운로드되어 있는지 확인
                         img_file_name = m.group("img")
@@ -858,5 +853,7 @@ class PathUtil:
             return os.path.relpath(abs_path_str, PathUtil._public_feed_dir_path_str)
 
         return path_str
+
+
 # Modified
 # Another modification

@@ -12,7 +12,7 @@ from backend.auth import set_session_cookie, clear_session_cookie, SESSION_COOKI
 import asyncio
 import types
 import backend.main as main
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 import sys
 import unittest
@@ -100,6 +100,41 @@ def test_unauthenticated_request_rejected():
 
         response = client.delete("/groups/test_group")
         assert response.status_code == 401
+
+
+def test_unauthenticated_exec_result_rejected():
+    """인증 없이 /exec_result 접근 시 401 반환"""
+    with patch("backend.main.get_current_user", return_value=None):
+        response = client.get("/exec_result")
+        assert response.status_code == 401
+
+
+def test_unauthenticated_problems_rejected():
+    """인증 없이 /problems/{type} 접근 시 401 반환"""
+    with patch("backend.main.get_current_user", return_value=None):
+        for problem_type in ["progress_info", "public_feed_info", "html_info", "element_info", "list_url_info", "status_info"]:
+            response = client.get(f"/problems/{problem_type}")
+            assert response.status_code == 401, f"/problems/{problem_type} should return 401"
+
+
+def test_unauthenticated_search_rejected():
+    """인증 없이 /search/{keyword} 접근 시 401 반환"""
+    with patch("backend.main.get_current_user", return_value=None):
+        response = client.get("/search/testkeyword")
+        assert response.status_code == 401
+
+
+def test_login_rate_limit_enforced():
+    """로그인 엔드포인트 rate limit: 분당 10회 초과 시 429 반환"""
+    from backend.main import limiter
+
+    limiter.reset()
+    with patch("backend.main.verify_facebook_token", return_value=False):
+        for _ in range(10):
+            client.post("/auth/login", json={"email": "t@t.com", "name": "T", "access_token": "x"})
+        response = client.post("/auth/login", json={"email": "t@t.com", "name": "T", "access_token": "x"})
+        assert response.status_code == 429
+    limiter.reset()
 
 
 def test_auth_endpoints_exempt():
@@ -748,18 +783,20 @@ class TestBackendLogin(unittest.TestCase):
     def test_login_success(self):
         with patch.object(bmain, "verify_facebook_token", return_value=True), patch.object(bmain, "Env") as mock_env, patch.object(bmain, "create_session", return_value="session123") as mock_create, patch.object(bmain, "set_session_cookie"):
             mock_env.get.return_value = "user@example.com"
-            request = bmain.LoginRequest(email="user@example.com", name="User", access_token="tok", profile_picture_url="https://example.com/pic.jpg")
-            response = asyncio.run(bmain.login(request))
+            http_req = MagicMock(spec=Request)
+            body = bmain.LoginRequest(email="user@example.com", name="User", access_token="tok", profile_picture_url="https://example.com/pic.jpg")
+            response = asyncio.run(bmain.login(http_req, body))
             self.assertEqual(response.status_code, 200)
             mock_create.assert_called_once_with("user@example.com", "User", "tok", "https://example.com/pic.jpg")
 
     def test_login_create_session_exception(self):
         with patch.object(bmain, "verify_facebook_token", return_value=True), patch.object(bmain, "Env") as mock_env, patch.object(bmain, "create_session", side_effect=RuntimeError("db error")):
             mock_env.get.return_value = "user@example.com"
-            request = bmain.LoginRequest(email="user@example.com", name="User", access_token="tok")
+            http_req = MagicMock(spec=Request)
+            body = bmain.LoginRequest(email="user@example.com", name="User", access_token="tok")
 
             with self.assertRaises(HTTPException) as ctx:
-                asyncio.run(bmain.login(request))
+                asyncio.run(bmain.login(http_req, body))
             self.assertEqual(ctx.exception.status_code, 500)
 
 
@@ -827,12 +864,14 @@ class TestBackendFailureEndpoints(unittest.TestCase):
 
     def test_toggle_group_failure(self):
         mgr = self._make_failing_manager()
-        r = asyncio.run(bmain.toggle_group("g", feed_maker_manager=mgr))
+        req = MagicMock()
+        r = asyncio.run(bmain.toggle_group("g", request=req, feed_maker_manager=mgr))
         self.assertEqual(r["status"], "failure")
 
     def test_toggle_feed_failure(self):
         mgr = self._make_failing_manager()
-        r = asyncio.run(bmain.toggle_feed("g", "f", feed_maker_manager=mgr))
+        req = MagicMock()
+        r = asyncio.run(bmain.toggle_feed("g", "f", request=req, feed_maker_manager=mgr))
         self.assertEqual(r["status"], "failure")
 
     def test_run_feed_failure(self):
@@ -990,8 +1029,9 @@ def test_group_and_feed_mutations_unit():
     req = types.SimpleNamespace(json=_json)
     assert (asyncio.run(main.save_site_config("g", request=req, feed_maker_manager=mgr)))["status"] == "success"
 
-    assert (asyncio.run(main.toggle_group("g", feed_maker_manager=mgr)))["status"] == "success"
-    assert (asyncio.run(main.toggle_feed("g", "f", feed_maker_manager=mgr)))["status"] == "success"
+    req_toggle = MagicMock()
+    assert (asyncio.run(main.toggle_group("g", request=req_toggle, feed_maker_manager=mgr)))["status"] == "success"
+    assert (asyncio.run(main.toggle_feed("g", "f", request=req_toggle, feed_maker_manager=mgr)))["status"] == "success"
 
     assert (asyncio.run(main.extract_titles_from_public_feed("f", feed_maker_manager=mgr)))["status"] == "success"
     assert (asyncio.run(main.remove_public_feed("f", request=req, feed_maker_manager=mgr)))["status"] == "success"

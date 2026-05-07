@@ -5,6 +5,7 @@ import atexit
 import os
 import json
 import shutil
+import signal
 import tempfile
 import uuid
 import threading
@@ -240,7 +241,7 @@ class HeadlessBrowser:
         else:
             import hashlib
 
-            dir_hash = hashlib.md5(str(self.dir_path).encode()).hexdigest()[:12]
+            dir_hash = hashlib.md5(str(self.dir_path).encode(), usedforsecurity=False).hexdigest()[:12]
             fallback = Path(tempfile.gettempdir()) / "fm_cookies" / dir_hash
             fallback.mkdir(parents=True, exist_ok=True)
             LOGGER.info("Cookie dir '%s' not writable, using fallback '%s'", self.dir_path, fallback)
@@ -254,7 +255,7 @@ class HeadlessBrowser:
 
         # Create a string representation of the key options
         options_str = f"{options.arguments}"
-        return hashlib.md5(options_str.encode()).hexdigest()
+        return hashlib.md5(options_str.encode(), usedforsecurity=False).hexdigest()
 
     @classmethod
     def _get_cached_driver(cls, options: "webdriver.ChromeOptions") -> Optional[webdriver.Chrome]:

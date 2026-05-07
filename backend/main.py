@@ -17,6 +17,9 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from backend.feed_maker_manager import FeedMakerManager
 from backend.auth import create_session, delete_session, get_current_user, set_session_cookie, clear_session_cookie, verify_facebook_token, require_admin
@@ -26,6 +29,8 @@ from bin.db import DB
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger(__name__)
+
+limiter = Limiter(key_func=get_remote_address)
 
 
 @asynccontextmanager
@@ -39,6 +44,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 frontend_url = Env.get("FM_FRONTEND_URL")
 origins = [frontend_url, "https://127.0.0.1:8081", "https://localhost:8081", "https://127.0.0.1:8082", "https://localhost:8082"]
@@ -106,29 +113,30 @@ class LoginRequest(BaseModel):
 
 # Authentication endpoints
 @app.post("/auth/login")
-async def login(request: LoginRequest) -> JSONResponse:
+@limiter.limit("10/minute")
+async def login(request: Request, body: LoginRequest) -> JSONResponse:
     """
     로그인 엔드포인트
     - Facebook 로그인 성공 후 호출
     - 서버에 세션 생성하고 httpOnly 쿠키 설정
     - 허용된 이메일만 로그인 가능
     """
-    LOGGER.info("POST /auth/login -> login(%s)", request.email)
+    LOGGER.info("POST /auth/login -> login(%s)", body.email)
 
     # Facebook 토큰 검증
-    if not verify_facebook_token(request.access_token, request.email):
-        LOGGER.warning("Facebook token verification failed for %s", request.email)
+    if not verify_facebook_token(body.access_token, body.email):
+        LOGGER.warning("Facebook token verification failed for %s", body.email)
         raise HTTPException(status_code=401, detail="Facebook 토큰 검증에 실패했습니다.")
 
     # 허용된 이메일 목록 확인
     login_allowed_email_list = Env.get("FM_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST", "").split(",")
-    if request.email not in login_allowed_email_list:
-        LOGGER.warning("Unauthorized login attempt from %s", request.email)
+    if body.email not in login_allowed_email_list:
+        LOGGER.warning("Unauthorized login attempt from %s", body.email)
         raise HTTPException(status_code=403, detail="이메일이 허용되지 않았습니다.")
 
     # 세션 생성
     try:
-        session_id = create_session(request.email, request.name, request.access_token, request.profile_picture_url)
+        session_id = create_session(body.email, body.name, body.access_token, body.profile_picture_url)
 
         response = JSONResponse(content={"status": "success", "message": "로그인되었습니다."})
 
@@ -137,7 +145,7 @@ async def login(request: LoginRequest) -> JSONResponse:
 
         return response
     except Exception as e:
-        LOGGER.error("Login failed for %s: %s", request.email, e)
+        LOGGER.error("Login failed for %s: %s", body.email, e)
         raise HTTPException(status_code=500, detail="로그인 중 오류가 발생했습니다.")
 
 
@@ -349,8 +357,9 @@ async def save_site_config(group_name: str, request: Request, feed_maker_manager
 
 
 @app.put("/groups/{group_name}/toggle")
-async def toggle_group(group_name: str, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+async def toggle_group(group_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("PUT /groups/%s/toggle -> toggle_group(%s)", group_name, group_name)
+    require_admin(request)
     response_object: dict[str, Any] = {}
     result, error = feed_maker_manager.toggle_group(group_name)
     if result or not error:
@@ -397,8 +406,9 @@ def run_feed(group_name: str, feed_name: str, request: Request, feed_maker_manag
 
 
 @app.put("/groups/{group_name}/feeds/{feed_name}/toggle")
-async def toggle_feed(group_name: str, feed_name: str, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+async def toggle_feed(group_name: str, feed_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("/groups/%s/feeds/%s/toggle -> toggle_feed(%s, %s)", group_name, feed_name, group_name, feed_name)
+    require_admin(request)
     response_object: dict[str, Any] = {}
     result, error = feed_maker_manager.toggle_feed(feed_name)
     if result or not error:
@@ -558,4 +568,6 @@ async def tracking_pixel(background_tasks: BackgroundTasks, feed: str, item: str
 
 if __name__ == "__main__":  # pragma: no cover
     LOGGER.debug("# main()")
-    uvicorn.run(app, host="0.0.0.0", port=8010)
+    _host = Env.get("FM_BACKEND_HOST", "127.0.0.1")
+    _port = int(Env.get("FM_BACKEND_PORT", "8010"))
+    uvicorn.run(app, host=_host, port=_port)
