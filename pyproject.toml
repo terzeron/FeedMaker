@@ -35,7 +35,7 @@ dependencies = [
     "uvicorn>=0.37.0",
     "feedparser>=6.0.12",
     "termcolor>=3.1.0",
-    "gitpython>=3.1.47",
+    "gitpython>=3.1.49",
     "defusedxml>=0.7.1",
     "pdftext>=0.6.3",
 ]
