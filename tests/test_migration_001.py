@@ -48,7 +48,8 @@ def _load_migration():
 
 def _make_session_ctx(engine):
     """DB.session_ctx の代替 — SQLite engine を使った contextmanager を返す."""
-    Session = sessionmaker(bind=engine, autoflush=False)
+    Session = sessionmaker(autoflush=False, bind=None)
+    Session.configure(bind=engine)
 
     @contextmanager
     def _ctx(**kwargs):

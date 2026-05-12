@@ -5,7 +5,7 @@ Run once on existing databases after deploying the code that removes this column
 from the UserSession model. Idempotent — safe to re-run.
 
 Usage:
-    uv run python -m bin.migrations.001_remove_facebook_access_token
+    uv run python bin/migrations/001_remove_facebook_access_token.py
 """
 
 import logging
