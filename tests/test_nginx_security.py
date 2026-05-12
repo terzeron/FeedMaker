@@ -81,6 +81,16 @@ class TestNginxSecurityHeaders:
         csp = _extract_header_value(self.conf, "Content-Security-Policy")
         assert "https://connect.facebook.net" in csp
 
+    def test_csp_allows_api_connect(self):
+        """백엔드 API 요청 허용: connect-src에 api-fm.terzeron.com 포함"""
+        csp = _extract_header_value(self.conf, "Content-Security-Policy")
+        assert "https://api-fm.terzeron.com" in csp
+
+    def test_csp_allows_bootstrap_cdn_style(self):
+        """Bootstrap CDN 허용: style-src에 cdn.jsdelivr.net 포함"""
+        csp = _extract_header_value(self.conf, "Content-Security-Policy")
+        assert "https://cdn.jsdelivr.net" in csp
+
     def test_csp_no_unsafe_eval(self):
         """eval() 차단 확인: unsafe-eval 없음"""
         csp = _extract_header_value(self.conf, "Content-Security-Policy")
