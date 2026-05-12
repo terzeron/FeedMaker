@@ -78,13 +78,17 @@ def generate_session_id() -> str:
     return secrets.token_urlsafe(48)
 
 
-def create_session(user_email: str, user_name: str, access_token: Optional[str] = None, profile_picture_url: Optional[str] = None) -> str:
+def create_session(user_email: str, user_name: str, profile_picture_url: Optional[str] = None) -> str:
     """Create a new session in the database and return session ID"""
     session_id = generate_session_id()
     expires_at = datetime.now(timezone.utc) + timedelta(days=SESSION_EXPIRY_DAYS)
 
     with DB.session_ctx() as session:
-        user_session = UserSession(session_id=session_id, user_email=user_email, user_name=user_name, facebook_access_token=access_token, profile_picture_url=profile_picture_url, expires_at=expires_at)
+        # Invalidate all existing sessions for this user (session fixation defense)
+        deleted = session.query(UserSession).filter(UserSession.user_email == user_email).delete()
+        if deleted:
+            LOGGER.info("Invalidated %d existing session(s) for %s before re-login", deleted, user_email)
+        user_session = UserSession(session_id=session_id, user_email=user_email, user_name=user_name, profile_picture_url=profile_picture_url, expires_at=expires_at)
         session.add(user_session)
 
     LOGGER.info(f"Created session for user {user_email}")
@@ -141,8 +145,7 @@ def delete_session(session_id: str) -> bool:
 
 def cleanup_expired_sessions() -> int:
     """Clean up expired sessions from database"""
-    # DB가 timezone-naive로 저장하므로 비교도 timezone-naive로 수행
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = datetime.now(timezone.utc)
     with DB.session_ctx() as session:
         count = session.query(UserSession).filter(UserSession.expires_at < now).delete()
         LOGGER.info(f"Cleaned up {count} expired sessions")

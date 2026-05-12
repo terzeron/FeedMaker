@@ -1,6 +1,7 @@
 import { mount } from "@vue/test-utils";
 import ExecResult from "../ExecResult.vue";
 import axios from "axios";
+import DOMPurify from "dompurify";
 
 jest.mock("axios");
 
@@ -181,5 +182,132 @@ describe("ExecResult.vue", () => {
 
     renderSpy.mockRestore();
     console.error.mockRestore();
+  });
+
+  it("DOMPurify whitelist blocks script tags from exec_result", async () => {
+    // 서버가 XSS 페이로드를 exec_result로 반환하는 시나리오
+    axios.get
+      .mockResolvedValueOnce({ data: { is_authenticated: true } })
+      .mockResolvedValueOnce({
+        data: { exec_result: "<script>alert(1)</script><b>정상 텍스트</b>" },
+      });
+
+    const wrapper = mount(ExecResult, {
+      global: { stubs: { "router-link": true, "router-view": true } },
+    });
+    await flushPromises();
+
+    const rendered = wrapper.html();
+    expect(rendered).not.toContain("<script>");
+    expect(rendered).not.toContain("alert(1)");
+  });
+
+  it("DOMPurify whitelist blocks event handler attributes", async () => {
+    // onerror, onclick 등 이벤트 핸들러 차단
+    const raw =
+      '<img src="x" onerror="alert(1)"><a href="#" onclick="evil()">link</a>';
+    const clean = DOMPurify.sanitize(raw, {
+      ALLOWED_TAGS: [
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "p",
+        "div",
+        "blockquote",
+        "pre",
+        "code",
+        "ul",
+        "ol",
+        "li",
+        "table",
+        "thead",
+        "tbody",
+        "tr",
+        "th",
+        "td",
+        "a",
+        "strong",
+        "em",
+        "b",
+        "i",
+        "del",
+        "ins",
+        "span",
+        "br",
+        "hr",
+        "img",
+      ],
+      ALLOWED_ATTR: [
+        "href",
+        "src",
+        "alt",
+        "title",
+        "class",
+        "id",
+        "target",
+        "rel",
+      ],
+    });
+    expect(clean).not.toContain("onerror");
+    expect(clean).not.toContain("onclick");
+    expect(clean).toContain("<img");
+    expect(clean).toContain("link");
+  });
+
+  it("DOMPurify whitelist preserves safe markdown tags", () => {
+    const raw =
+      "<h1>제목</h1><p>본문</p><a href='https://example.com'>링크</a><code>code</code>";
+    const clean = DOMPurify.sanitize(raw, {
+      ALLOWED_TAGS: [
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "p",
+        "div",
+        "blockquote",
+        "pre",
+        "code",
+        "ul",
+        "ol",
+        "li",
+        "table",
+        "thead",
+        "tbody",
+        "tr",
+        "th",
+        "td",
+        "a",
+        "strong",
+        "em",
+        "b",
+        "i",
+        "del",
+        "ins",
+        "span",
+        "br",
+        "hr",
+        "img",
+      ],
+      ALLOWED_ATTR: [
+        "href",
+        "src",
+        "alt",
+        "title",
+        "class",
+        "id",
+        "target",
+        "rel",
+      ],
+    });
+    expect(clean).toContain("<h1>");
+    expect(clean).toContain("<p>");
+    expect(clean).toContain("https://example.com");
+    expect(clean).toContain("<code>");
   });
 });

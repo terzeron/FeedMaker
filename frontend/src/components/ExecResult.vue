@@ -86,7 +86,15 @@ const renderedMarkdown = computed(() => {
     if (!md) {
       return source.value;
     }
-    return DOMPurify.sanitize(md.render(source.value));
+    return DOMPurify.sanitize(md.render(source.value), {
+      ALLOWED_TAGS: [
+        "h1", "h2", "h3", "h4", "h5", "h6",
+        "p", "div", "blockquote", "pre", "code",
+        "ul", "ol", "li", "table", "thead", "tbody", "tr", "th", "td",
+        "a", "strong", "em", "b", "i", "del", "ins", "span", "br", "hr", "img",
+      ],
+      ALLOWED_ATTR: ["href", "src", "alt", "title", "class", "id", "target", "rel"],
+    });
   } catch (err) {
     console.error("Markdown rendering error:", err);
     return source.value || "";

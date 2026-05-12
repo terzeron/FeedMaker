@@ -124,6 +124,22 @@ def test_unauthenticated_search_rejected():
         assert response.status_code == 401
 
 
+def test_cors_origins_excludes_none():
+    """FM_FRONTEND_URL 미설정 시 None이 CORS origins에 포함되지 않는다"""
+    import backend.main as bm
+
+    assert None not in bm.origins
+    for origin in bm.origins:
+        assert isinstance(origin, str) and origin, f"CORS origin must be a non-empty string, got {origin!r}"
+
+
+def test_cors_origins_excludes_empty_string():
+    """빈 문자열이 CORS origins에 포함되지 않는다"""
+    import backend.main as bm
+
+    assert "" not in bm.origins
+
+
 def test_login_rate_limit_enforced():
     """로그인 엔드포인트 rate limit: 분당 10회 초과 시 429 반환"""
     from backend.main import limiter
@@ -157,6 +173,69 @@ def test_login_rejects_unallowed_email():
     with patch("backend.main.verify_facebook_token", return_value=True), patch("backend.main.Env.get", return_value="allowed@example.com"):
         response = client.post("/auth/login", json={"email": "notallowed@example.com", "name": "Test", "access_token": "valid_token"})
         assert response.status_code == 403
+
+
+def test_failed_login_logs_client_ip():
+    """실패한 로그인 경고 로그에 클라이언트 IP가 포함된다"""
+    import logging
+
+    with patch("backend.main.verify_facebook_token", return_value=False):
+        with patch.object(logging.getLogger("backend.main"), "warning") as mock_warn:
+            client.post("/auth/login", json={"email": "test@example.com", "name": "Test", "access_token": "fake"})
+            args = mock_warn.call_args[0]
+            # ProxyHeadersMiddleware가 request.client.host를 설정하므로 어떤 IP든 포함돼야 한다
+            assert any(isinstance(a, str) and ("." in a or a == "unknown") for a in args), f"IP not found in warning log args: {args}"
+
+
+def test_untrusted_x_forwarded_for_not_used_for_ip():
+    """신뢰되지 않은 출처의 X-Forwarded-For는 IP 로그에 반영되지 않는다"""
+    import logging
+
+    with patch("backend.main.verify_facebook_token", return_value=False):
+        with patch.object(logging.getLogger("backend.main"), "warning") as mock_warn:
+            # TestClient는 신뢰된 프록시(127.0.0.1)가 아니므로 헤더가 무시된다
+            client.post("/auth/login", json={"email": "test@example.com", "name": "Test", "access_token": "fake"}, headers={"X-Forwarded-For": "9.8.7.6"})
+            args = mock_warn.call_args[0]
+            # 스푸핑된 9.8.7.6이 로그에 사용되지 않아야 한다
+            assert "9.8.7.6" not in str(args), f"Spoofed IP should not appear in log: {args}"
+
+
+def test_login_rejects_invalid_email_format():
+    """이메일 형식이 잘못된 경우 422 Unprocessable Entity 반환"""
+    response = client.post("/auth/login", json={"email": "not-an-email", "name": "Test", "access_token": "tok"})
+    assert response.status_code == 422
+
+
+def test_login_rejects_email_missing_domain():
+    """도메인 없는 이메일 형식이 잘못된 경우 422 반환"""
+    response = client.post("/auth/login", json={"email": "user@", "name": "Test", "access_token": "tok"})
+    assert response.status_code == 422
+
+
+def test_login_accepts_valid_email_format():
+    """올바른 이메일 형식은 422가 아닌 다른 응답(401/403 등)을 반환"""
+    with patch("backend.main.verify_facebook_token", return_value=False):
+        response = client.post("/auth/login", json={"email": "valid@example.com", "name": "Test", "access_token": "tok"})
+        assert response.status_code != 422
+
+
+def test_login_rejects_javascript_picture_url():
+    """profile_picture_url에 javascript: 스킴은 422 반환"""
+    response = client.post("/auth/login", json={"email": "test@example.com", "name": "T", "access_token": "tok", "profile_picture_url": "javascript:alert(1)"})
+    assert response.status_code == 422
+
+
+def test_login_rejects_data_uri_picture_url():
+    """profile_picture_url에 data: 스킴은 422 반환"""
+    response = client.post("/auth/login", json={"email": "test@example.com", "name": "T", "access_token": "tok", "profile_picture_url": "data:text/html,<script>x</script>"})
+    assert response.status_code == 422
+
+
+def test_login_accepts_https_picture_url():
+    """profile_picture_url에 https: 스킴은 허용 (422 아님)"""
+    with patch("backend.main.verify_facebook_token", return_value=False):
+        response = client.post("/auth/login", json={"email": "test@example.com", "name": "T", "access_token": "tok", "profile_picture_url": "https://example.com/pic.jpg"})
+        assert response.status_code != 422
 
 
 def test_path_traversal_returns_400():
@@ -787,7 +866,7 @@ class TestBackendLogin(unittest.TestCase):
             body = bmain.LoginRequest(email="user@example.com", name="User", access_token="tok", profile_picture_url="https://example.com/pic.jpg")
             response = asyncio.run(bmain.login(http_req, body))
             self.assertEqual(response.status_code, 200)
-            mock_create.assert_called_once_with("user@example.com", "User", "tok", "https://example.com/pic.jpg")
+            mock_create.assert_called_once_with("user@example.com", "User", "https://example.com/pic.jpg")
 
     def test_login_create_session_exception(self):
         with patch.object(bmain, "verify_facebook_token", return_value=True), patch.object(bmain, "Env") as mock_env, patch.object(bmain, "create_session", side_effect=RuntimeError("db error")):

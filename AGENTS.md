@@ -7,6 +7,7 @@ This file provides guidance to AI coding assistants (Claude, Codex, Gemini, etc.
 **FeedMaker** is a web application for creating RSS feeds by crawling websites. It automates the process of extracting content from web pages and generating RSS feeds with comprehensive error handling and monitoring capabilities.
 
 ### Key Features
+
 - Web crawling with both regular HTTP and headless browser support
 - HTML content extraction using CSS selectors
 - RSS feed generation and management
@@ -17,26 +18,31 @@ This file provides guidance to AI coding assistants (Claude, Codex, Gemini, etc.
 ## Technology Stack
 
 ### Backend
-- **Python 3.x** - Core language
+
+- **Python 3.12** - Core language
 - **FastAPI** - REST API framework
 - **MySQL/MariaDB** - Primary database
 - **Selenium** - Headless browser automation
 - **BeautifulSoup/lxml** - HTML parsing
 
 ### Frontend
-- **Vue.js 2.x** - JavaScript framework
+
+- **Vue 3** - JavaScript framework
 - **Bootstrap** - UI styling
 - **Axios** - HTTP client
 
 ### Infrastructure
+
 - **Docker** - Containerization
 - **Git** - Version control for feeds and code
 - **pytest** - Testing framework
+- **uv** - Python package and environment manager
 
 ## Getting Started
 
 ### Prerequisites
-- Python 3.x with pip
+
+- Python 3.12 (via uv)
 - Node.js and npm (for frontend)
 - MySQL/MariaDB database
 - Docker (optional, for containerized deployment)
@@ -44,21 +50,18 @@ This file provides guidance to AI coding assistants (Claude, Codex, Gemini, etc.
 ### Initial Setup
 
 1. **Initialize database**:
+
    ```bash
    python -c "from bin.db import DB; DB.create_all_tables()"
    ```
 
 2. **Install frontend dependencies**:
+
    ```bash
    cd frontend && npm install
    ```
 
-3. **Configure environment variables** (if available):
-   ```bash
-   . bin/setup.sh
-   ```
-
-4. **Load problem manager data**:
+3. **Load problem manager data**:
    ```bash
    python -c "from bin.problem_manager import ProblemManager; pm = ProblemManager(); pm.load_all()"
    ```
@@ -69,7 +72,7 @@ This file provides guidance to AI coding assistants (Claude, Codex, Gemini, etc.
 
 ```bash
 # Run backend server
-python backend/main.py
+uvicorn backend.main:app --reload
 
 # Run feed generation
 python bin/run.py [options]
@@ -96,35 +99,27 @@ npm run lint
 ### Testing
 
 ```bash
-cd tests
-
 # Run all tests
-python -m pytest
+uv run pytest tests/
 
 # Run specific test module
-python -m pytest test_<module_name>.py
+uv run pytest tests/test_<module_name>.py
 
 # Run with verbose output
-python -m pytest -v
+uv run pytest tests/ -v
 
 # Run with coverage
-python -m pytest --cov=bin --cov=backend --cov=utils
+uv run pytest tests/ --cov=bin --cov=backend --cov=utils
 ```
 
 ### Code Quality
 
 ```bash
 # Type checking
-mypy bin/ backend/ utils/
+uv run mypy --show-error-codes
 
 # Linting
-pylint bin/ backend/ utils/
-
-# Code formatting
-black bin/ backend/ utils/ tests/
-
-# Import sorting
-isort bin/ backend/ utils/ tests/
+uv run ruff check .
 ```
 
 ### Docker Build & Deploy
@@ -168,12 +163,14 @@ isort bin/ backend/ utils/ tests/
 ### Core Components
 
 #### 1. Backend API (`backend/`)
+
 - **`main.py`** - FastAPI application entry point
 - **`feed_maker_manager.py`** - Feed management operations
 - **Database integration** via `bin/db.py` and `bin/models.py`
 - RESTful endpoints for feed CRUD operations
 
 #### 2. Frontend Web UI (`frontend/`)
+
 - **Vue.js 2.x SPA** with component-based architecture
 - **Key components**:
   - Feed management and configuration
@@ -183,6 +180,7 @@ isort bin/ backend/ utils/ tests/
 - **Styling** with Bootstrap
 
 #### 3. Feed Processing Engine (`bin/`)
+
 - **`run.py`** (FeedMakerRunner) - Main orchestrator for feed generation
 - **`crawler.py`** - HTTP requests and content fetching
 - **`extractor.py`** - HTML parsing and content extraction
@@ -191,6 +189,7 @@ isort bin/ backend/ utils/ tests/
 - **Data managers** - Feeds, problems, HTML files, access logs
 
 #### 4. Utilities (`utils/`)
+
 - Image processing and conversion
 - Site-specific search utilities
 - Manga-specific helpers
@@ -290,6 +289,7 @@ Each feed has a JSON configuration file with three main sections:
 ### Environment Variables
 
 Configuration uses `FM_*` prefixed environment variables:
+
 - Database connection settings
 - API keys and credentials
 - File paths and directories
@@ -410,47 +410,3 @@ Configuration uses `FM_*` prefixed environment variables:
 - Project repository: Check README.md for latest updates
 - API documentation: Available at `/docs` when backend is running
 - Test resources: `tests/resources/` contains sample configs and data
-
-<!-- gitnexus:start -->
-# GitNexus — Code Intelligence
-
-This project is indexed by GitNexus as **FeedMaker** (5416 symbols, 10070 relationships, 114 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
-
-> If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
-
-## Always Do
-
-- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
-- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
-- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
-
-## Never Do
-
-- NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
-- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
-- NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
-
-## Resources
-
-| Resource | Use for |
-|----------|---------|
-| `gitnexus://repo/FeedMaker/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/FeedMaker/clusters` | All functional areas |
-| `gitnexus://repo/FeedMaker/processes` | All execution flows |
-| `gitnexus://repo/FeedMaker/process/{name}` | Step-by-step execution trace |
-
-## CLI
-
-| Task | Read this skill file |
-|------|---------------------|
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
-
-<!-- gitnexus:end -->

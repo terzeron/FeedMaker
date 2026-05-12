@@ -1077,6 +1077,30 @@ class TestMakeHtmlFilePostProcessScript(FeedMakerMakeTestBase):
 
         self.maker.extraction_conf["post_process_script_list"] = []
 
+    def test_post_process_cmd_quotes_item_url(self) -> None:
+        """item_url에 싱글쿼트가 포함돼도 exec_cmd에 전달되는 명령이 올바르게 인용된다."""
+        import shlex as _shlex
+
+        malicious_url = "http://example.com/foo' --inject 'bar"
+        big_content = header_str + "\n" + "E" * 500
+        self.maker.extraction_conf["post_process_script_list"] = ["my_script.py"]
+        captured_cmds: list[str] = []
+
+        def capture_exec_cmd(cmd: str, **kwargs):
+            captured_cmds.append(cmd)
+            return (big_content, None)
+
+        with patch("bin.feed_maker.Crawler") as mock_crawler_cls, patch("bin.feed_maker.Extractor.extract_content", return_value=big_content), patch("bin.feed_maker_util.Process.exec_cmd", side_effect=capture_exec_cmd), patch("shutil.which", return_value=None):
+            mock_crawler_cls.get_option_str.return_value = ""
+            inst = mock_crawler_cls.return_value
+            inst.run.return_value = ("<html>raw</html>", None, None)
+            self.maker._make_html_file(malicious_url, "Inject")
+
+        self.assertTrue(captured_cmds, "exec_cmd should have been called")
+        argv = _shlex.split(captured_cmds[0])
+        self.assertNotIn("--inject", argv)
+        self.maker.extraction_conf["post_process_script_list"] = []
+
 
 class TestMakeHtmlFilePostProcessFails(FeedMakerMakeTestBase):
     """post_process_script fails -> returns False."""

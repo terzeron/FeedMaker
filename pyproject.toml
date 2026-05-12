@@ -39,6 +39,7 @@ dependencies = [
     "defusedxml>=0.7.1",
     "pdftext>=0.6.3",
     "slowapi>=0.1.9",
+    "pydantic[email]>=2.12.5",
 ]
 
 [tool.ruff]

@@ -206,7 +206,12 @@ export default {
                 const textContent = rawHtml
                   .replace(/<[^>]*>/g, "")
                   .trim();
-                this.siteResults[index].html = textContent ? DOMPurify.sanitize(rawHtml) : "";
+                this.siteResults[index].html = textContent
+                  ? DOMPurify.sanitize(rawHtml, {
+                      ALLOWED_TAGS: ["a", "b", "i", "em", "strong", "span", "div", "p", "br", "ul", "ol", "li", "img"],
+                      ALLOWED_ATTR: ["href", "src", "alt", "title", "class", "target", "rel"],
+                    })
+                  : "";
               } else {
                 this.siteResults[index].status = "error";
                 this.siteResults[index].error =

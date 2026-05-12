@@ -2,6 +2,7 @@ import { mount } from "@vue/test-utils";
 import Search from "../Search.vue";
 import MyButton from "../MyButton.vue";
 import axios from "axios";
+import DOMPurify from "dompurify";
 
 jest.mock("axios");
 axios.isCancel = jest.fn(() => false);
@@ -252,6 +253,58 @@ describe("Search.vue", () => {
     });
     // mounted is a no-op but should be covered
     expect(wrapper.exists()).toBe(true);
+  });
+
+  it("blocks script tags via DOMPurify whitelist", async () => {
+    // 공격자가 제어하는 서버가 XSS 페이로드를 search_result로 반환하는 시나리오
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", site_names: ["evil"] },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: {
+        status: "success",
+        search_result:
+          '<a href="ok">링크</a><script>alert(1)</script><img src="x" onerror="alert(2)">',
+      },
+    });
+
+    const wrapper = mount(Search, {
+      global: { stubs, components: { MyButton } },
+    });
+    await wrapper.setData({ searchKeyword: "test" });
+    await wrapper.vm.search();
+    await flushPromises();
+
+    const html = wrapper.vm.siteResults[0]?.html || "";
+    expect(html).not.toContain("<script>");
+    expect(html).not.toContain("onerror");
+    expect(html).toContain("링크"); // 정상 텍스트는 보존
+  });
+
+  it("allows safe tags through DOMPurify whitelist", () => {
+    const raw =
+      '<div><a href="https://example.com">제목</a><b>굵게</b><img src="x.jpg" alt="img"></div>';
+    const clean = DOMPurify.sanitize(raw, {
+      ALLOWED_TAGS: [
+        "a",
+        "b",
+        "i",
+        "em",
+        "strong",
+        "span",
+        "div",
+        "p",
+        "br",
+        "ul",
+        "ol",
+        "li",
+        "img",
+      ],
+      ALLOWED_ATTR: ["href", "src", "alt", "title", "class", "target", "rel"],
+    });
+    expect(clean).toContain('<a href="https://example.com">');
+    expect(clean).toContain("<b>굵게</b>");
+    expect(clean).toContain('<img src="x.jpg"');
   });
 
   it("ignores cancel error in per-site catch", async () => {

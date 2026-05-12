@@ -12,10 +12,11 @@ from types import TracebackType
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from starlette.responses import Response
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from fastapi import BackgroundTasks, FastAPI, Request, Depends, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, field_validator
 import uvicorn
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -47,8 +48,12 @@ app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# X-Forwarded-For를 신뢰할 프록시 IP 목록 (기본: 127.0.0.1 = 동일 호스트 nginx)
+_trusted_proxy_ips = Env.get("FM_TRUSTED_PROXY_IPS", "127.0.0.1")
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=_trusted_proxy_ips)
+
 frontend_url = Env.get("FM_FRONTEND_URL")
-origins = [frontend_url, "https://127.0.0.1:8081", "https://localhost:8081", "https://127.0.0.1:8082", "https://localhost:8082"]
+origins = [o for o in [frontend_url, "https://127.0.0.1:8081", "https://localhost:8081", "https://127.0.0.1:8082", "https://localhost:8082"] if o]
 
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=True, allow_methods=["GET", "POST", "PUT", "DELETE"], allow_headers=["Content-Type", "Authorization"])
 
@@ -105,10 +110,20 @@ sys.excepthook = handle_exception
 
 # Pydantic models for authentication requests
 class LoginRequest(BaseModel):
-    email: str
+    email: EmailStr
     name: str
     access_token: str
     profile_picture_url: Optional[str] = None
+
+    @field_validator("profile_picture_url")
+    @classmethod
+    def validate_picture_url_scheme(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        lower = v.lower().lstrip()
+        if lower.startswith("javascript:") or lower.startswith("data:"):
+            raise ValueError("profile_picture_url scheme not allowed")
+        return v
 
 
 # Authentication endpoints
@@ -121,22 +136,23 @@ async def login(request: Request, body: LoginRequest) -> JSONResponse:
     - 서버에 세션 생성하고 httpOnly 쿠키 설정
     - 허용된 이메일만 로그인 가능
     """
-    LOGGER.info("POST /auth/login -> login(%s)", body.email)
+    client_ip = request.client.host if request.client else "unknown"
+    LOGGER.info("POST /auth/login -> login(%s) from %s", body.email, client_ip)
 
     # Facebook 토큰 검증
     if not verify_facebook_token(body.access_token, body.email):
-        LOGGER.warning("Facebook token verification failed for %s", body.email)
+        LOGGER.warning("Facebook token verification failed for %s from %s", body.email, client_ip)
         raise HTTPException(status_code=401, detail="Facebook 토큰 검증에 실패했습니다.")
 
     # 허용된 이메일 목록 확인
     login_allowed_email_list = Env.get("FM_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST", "").split(",")
     if body.email not in login_allowed_email_list:
-        LOGGER.warning("Unauthorized login attempt from %s", body.email)
+        LOGGER.warning("Unauthorized login attempt for %s from %s", body.email, client_ip)
         raise HTTPException(status_code=403, detail="이메일이 허용되지 않았습니다.")
 
     # 세션 생성
     try:
-        session_id = create_session(body.email, body.name, body.access_token, body.profile_picture_url)
+        session_id = create_session(body.email, body.name, body.profile_picture_url)
 
         response = JSONResponse(content={"status": "success", "message": "로그인되었습니다."})
 

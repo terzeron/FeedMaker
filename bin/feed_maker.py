@@ -2,6 +2,7 @@
 
 
 import re
+import shlex
 import time
 import logging.config
 from pathlib import Path
@@ -267,7 +268,7 @@ class FeedMaker:
                     if program_fullpath and program_fullpath.startswith(("/usr", "/bin", "/sbin")):
                         post_process_cmd = f"{post_process_script}"
                     else:
-                        post_process_cmd = f"{post_process_script} -f '{self.feed_dir_path}' '{item_url}'"
+                        post_process_cmd = f"{post_process_script} -f {shlex.quote(str(self.feed_dir_path))} {shlex.quote(item_url)}"
                     LOGGER.debug(f"cmd={post_process_cmd}")
                     result, error_msg = Process.exec_cmd(post_process_cmd, dir_path=self.feed_dir_path, input_data=content)
                     LOGGER.debug(f"cmd={post_process_cmd}")

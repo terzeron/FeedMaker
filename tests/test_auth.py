@@ -130,10 +130,43 @@ class TestCreateSession(unittest.TestCase):
 
         from backend.auth import create_session
 
-        session_id = create_session("user@example.com", "User", "token123")
+        session_id = create_session("user@example.com", "User")
         self.assertIsInstance(session_id, str)
         self.assertGreater(len(session_id), 0)
         mock_session.add.assert_called_once()
+
+    @patch("backend.auth.DB.session_ctx")
+    def test_facebook_token_not_stored(self, mock_session_ctx) -> None:
+        """Facebook access token은 DB에 저장되지 않아야 한다"""
+        mock_session = MagicMock()
+        mock_session_ctx.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_session_ctx.return_value.__exit__ = MagicMock(return_value=None)
+
+        from backend.auth import create_session
+
+        create_session("user@example.com", "User")
+        stored_obj = mock_session.add.call_args[0][0]
+        self.assertFalse(hasattr(stored_obj, "facebook_access_token"))
+
+    def test_usersession_model_has_no_token_column(self) -> None:
+        """UserSession 모델에 facebook_access_token 컬럼이 없어야 한다"""
+        from bin.models import UserSession
+
+        columns = {c.key for c in UserSession.__table__.columns}
+        self.assertNotIn("facebook_access_token", columns)
+
+    @patch("backend.auth.DB.session_ctx")
+    def test_existing_sessions_invalidated_on_login(self, mock_session_ctx) -> None:
+        """재로그인 시 동일 이메일의 기존 세션이 모두 삭제된다 (session fixation 방어)"""
+        mock_session = MagicMock()
+        mock_session_ctx.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_session_ctx.return_value.__exit__ = MagicMock(return_value=None)
+        mock_session.query.return_value.filter.return_value.delete.return_value = 2
+
+        from backend.auth import create_session
+
+        create_session("user@example.com", "User")
+        mock_session.query.return_value.filter.return_value.delete.assert_called_once()
 
 
 class TestGetSession(unittest.TestCase):
@@ -253,7 +286,6 @@ class TestCleanupExpiredSessions(unittest.TestCase):
 
         count = cleanup_expired_sessions()
         self.assertEqual(count, 5)
-        # filter가 UserSession.expires_at 조건으로 호출되었는지 확인
         mock_session.query.assert_called_once()
         mock_session.query.return_value.filter.assert_called_once()
 
@@ -268,6 +300,38 @@ class TestCleanupExpiredSessions(unittest.TestCase):
 
         count = cleanup_expired_sessions()
         self.assertEqual(count, 0)
+
+    @patch("backend.auth.DB.session_ctx")
+    def test_cleanup_uses_timezone_aware_now(self, mock_session_ctx) -> None:
+        """cleanup_expired_sessions가 timezone-aware datetime으로 필터한다.
+
+        get_session()과 동일한 방식(UTC-aware)으로 처리해야 한다.
+        """
+        mock_session = MagicMock()
+        mock_session.query.return_value.filter.return_value.delete.return_value = 0
+        mock_session_ctx.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_session_ctx.return_value.__exit__ = MagicMock(return_value=None)
+
+        from backend.auth import cleanup_expired_sessions
+        import backend.auth as auth_module
+
+        captured: list[datetime] = []
+        original_now = datetime.now
+
+        def capturing_now(tz=None):
+            result = original_now(tz)
+            if tz is not None:
+                captured.append(result)
+            return result
+
+        with patch.object(auth_module, "datetime", wraps=auth_module.datetime) as mock_dt:
+            mock_dt.now.side_effect = capturing_now
+            cleanup_expired_sessions()
+
+        self.assertTrue(mock_dt.now.called, "datetime.now must be called")
+        call_args = mock_dt.now.call_args
+        tz_arg = call_args.args[0] if call_args.args else call_args.kwargs.get("tz") or call_args.kwargs.get("timezone")
+        self.assertIsNotNone(tz_arg, "cleanup_expired_sessions must pass a timezone to datetime.now")
 
 
 class TestGetCurrentUser(unittest.TestCase):
@@ -380,8 +444,10 @@ class TestSetAndClearSessionCookie(unittest.TestCase):
         response = MagicMock()
         set_session_cookie(response, "test_session_id")
         response.set_cookie.assert_called_once()
-        call_kwargs = response.set_cookie.call_args
-        self.assertEqual(call_kwargs.kwargs.get("key") or call_kwargs[1].get("key", call_kwargs[0][0] if call_kwargs[0] else None), "session_id")
+        kwargs = response.set_cookie.call_args.kwargs
+        self.assertEqual(kwargs["key"], "session_id")
+        self.assertTrue(kwargs.get("httponly"), "httponly must be True")
+        self.assertTrue(kwargs.get("secure"), "secure must be True")
 
     def test_clear_session_cookie(self) -> None:
         from backend.auth import clear_session_cookie
