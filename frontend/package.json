@@ -23,7 +23,7 @@
     "@fortawesome/vue-fontawesome": "^3.0.8",
     "@popperjs/core": "^2.11.8",
     "@vue/cli-plugin-router": "^5.0.8",
-    "@vueuse/core": "^13.4.0",
+    "@vueuse/core": "^14.3.0",
     "axios": "^1.15.2",
     "bootstrap": "^5.3.8",
     "bootstrap-vue-next": "^0.30.3",
