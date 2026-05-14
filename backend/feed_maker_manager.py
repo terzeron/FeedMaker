@@ -4,6 +4,8 @@
 
 import re
 import shutil
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 import json
 import logging.config
@@ -14,12 +16,11 @@ import defusedxml.ElementTree as ET
 from git import Repo
 
 from bin.run import FeedMakerRunner
-from bin.feed_maker_util import PathUtil, Env
+from bin.feed_maker_util import Config, Env, PathUtil, URL
 from bin.feed_manager import FeedManager
 from bin.access_log_manager import AccessLogManager
 from bin.html_file_manager import HtmlFileManager
 from bin.problem_manager import ProblemManager
-from bin.feed_maker_util import Config
 from utils.search_manga_site import SearchManager
 
 
@@ -264,26 +265,58 @@ class FeedMakerManager:
             return False, str(e)
         return True, ""
 
-    def extract_titles_from_public_feed(self, feed_name: str) -> tuple[list[str] | str, str]:
+    def extract_titles_from_public_feed(self, feed_name: str) -> tuple[list[dict[str, str]] | str, str]:
         LOGGER.debug("# extract_titles_from_public_feed(feed_name='%s')", feed_name)
         _validate_name(feed_name, "feed_name")
         public_feed_file_path = FeedManager.public_feed_dir_path / f"{feed_name}.xml"
         if not public_feed_file_path.exists():
             return ("FILE_NOT_FOUND", f"피드 파일이 존재하지 않습니다: {public_feed_file_path}")
 
+        # HTML 디렉토리 탐색 (수집 시각 조회용)
+        html_dir: Optional[Path] = None
+        for group_dir in self.work_dir_path.iterdir():
+            if group_dir.is_dir() and not group_dir.name.startswith("."):
+                candidate = group_dir / feed_name / "html"
+                if candidate.is_dir():
+                    html_dir = candidate
+                    break
+
         try:
             tree = ET.parse(public_feed_file_path)
             root = tree.getroot()
-            titles: list[str] = []
+            items: list[dict[str, str]] = []
             for item in root.findall(".//item"):
                 title = item.findtext("title")
-                if title:
-                    titles.append(title)
+                if not title:
+                    continue
 
-            if not titles:
+                # pubDate(빌드 시각)를 기본값으로
+                earliest: Optional[datetime] = None
+                pub_date_str = item.findtext("pubDate")
+                if pub_date_str:
+                    try:
+                        earliest = parsedate_to_datetime(pub_date_str)
+                    except Exception:
+                        pass
+
+                # HTML 파일 mtime(수집 시각)이 더 이르면 우선 사용
+                if html_dir:
+                    link = item.findtext("link") or ""
+                    if link:
+                        md5 = URL.get_short_md5_name(URL.get_url_path(link))
+                        html_file = html_dir / f"{md5}.html"
+                        if html_file.is_file():
+                            mtime = datetime.fromtimestamp(html_file.stat().st_mtime, tz=timezone.utc)
+                            if earliest is None or mtime < earliest:
+                                earliest = mtime
+
+                date_str = earliest.strftime("%Y-%m-%d %H:%M") if earliest else ""
+                items.append({"title": title, "date": date_str})
+
+            if not items:
                 return "NO_ITEMS", "피드 파일에 아이템이 없습니다."
 
-            return titles, ""
+            return items, ""
         except (ET.ParseError, ET.DTDForbidden, ET.EntitiesForbidden, ET.ExternalReferenceForbidden) as e:
             LOGGER.error("Failed to parse RSS file: %s", e)
             return "PARSE_ERROR", f"RSS 파일 파싱에 실패했습니다: {e}"

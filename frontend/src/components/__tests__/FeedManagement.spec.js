@@ -942,11 +942,20 @@ describe("FeedManagement.vue", () => {
       await flushPromises();
       wrapper.vm.selectedFeedName = "f1";
       axios.get.mockResolvedValueOnce({
-        data: { status: "success", item_titles: ["Title 1", "Title 2"] },
+        data: {
+          status: "success",
+          item_titles: [
+            { title: "Title 1", date: "2024-01-01 00:00" },
+            { title: "Title 2", date: "2024-01-02 00:00" },
+          ],
+        },
       });
       wrapper.vm.getItemsOfRss();
       await flushPromises();
-      expect(wrapper.vm.itemsOfRss).toEqual(["Title 1", "Title 2"]);
+      expect(wrapper.vm.itemsOfRss).toEqual([
+        { title: "Title 1", date: "2024-01-01 00:00" },
+        { title: "Title 2", date: "2024-01-02 00:00" },
+      ]);
       expect(wrapper.vm.showViewItemsOfRssList).toBe(true);
     });
 

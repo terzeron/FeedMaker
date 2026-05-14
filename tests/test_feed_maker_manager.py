@@ -613,15 +613,20 @@ class TestExtractTitlesFromPublicFeed(unittest.TestCase):
             mgr = _make_manager(tmp_path)
             xml_content = """<?xml version="1.0"?>
 <rss><channel>
-  <item><title>Title1</title></item>
-  <item><title>Title2</title></item>
+  <item><title>Title1</title><pubDate>Mon, 01 Jan 2024 00:00:00 +0000</pubDate></item>
+  <item><title>Title2</title><pubDate>Tue, 02 Jan 2024 00:00:00 +0000</pubDate></item>
 </channel></rss>"""
             (tmp_path / "feed1.xml").write_text(xml_content)
 
             with patch("backend.feed_maker_manager.FeedManager.public_feed_dir_path", tmp_path):
                 result, error = mgr.extract_titles_from_public_feed("feed1")
 
-            self.assertEqual(result, ["Title1", "Title2"])
+            self.assertIsInstance(result, list)
+            self.assertEqual(len(result), 2)
+            self.assertEqual(result[0]["title"], "Title1")
+            self.assertEqual(result[0]["date"], "2024-01-01 00:00")
+            self.assertEqual(result[1]["title"], "Title2")
+            self.assertEqual(result[1]["date"], "2024-01-02 00:00")
             self.assertEqual(error, "")
 
     def test_no_items(self):
@@ -663,7 +668,46 @@ class TestExtractTitlesFromPublicFeed(unittest.TestCase):
             with patch("backend.feed_maker_manager.FeedManager.public_feed_dir_path", tmp_path):
                 result, error = mgr.extract_titles_from_public_feed("mixed")
 
-            self.assertEqual(result, ["Has Title"])
+            self.assertIsInstance(result, list)
+            self.assertEqual(len(result), 1)
+            self.assertEqual(result[0]["title"], "Has Title")
+            self.assertEqual(result[0]["date"], "")  # pubDate 없음
+
+    def test_html_mtime_used_when_earlier_than_pubdate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            mgr = _make_manager(tmp_path)
+            link = "https://example.com/webtoon/123"
+            xml_content = f"""<?xml version="1.0"?>
+<rss><channel>
+  <item>
+    <title>Episode 1</title>
+    <link>{link}</link>
+    <pubDate>Mon, 01 Jan 2024 12:00:00 +0000</pubDate>
+  </item>
+</channel></rss>"""
+            (tmp_path / "myfeed.xml").write_text(xml_content)
+
+            # HTML 파일을 pubDate보다 이른 mtime으로 생성
+            from bin.feed_maker_util import URL
+
+            html_dir = tmp_path / "group1" / "myfeed" / "html"
+            html_dir.mkdir(parents=True)
+            md5 = URL.get_short_md5_name(URL.get_url_path(link))
+            html_file = html_dir / f"{md5}.html"
+            html_file.write_text("<html/>")
+            import os
+            import time
+
+            earlier_mtime = time.mktime(time.strptime("2023-06-15 09:00:00", "%Y-%m-%d %H:%M:%S"))
+            os.utime(html_file, (earlier_mtime, earlier_mtime))
+
+            with patch("backend.feed_maker_manager.FeedManager.public_feed_dir_path", tmp_path):
+                result, error = mgr.extract_titles_from_public_feed("myfeed")
+
+            self.assertIsInstance(result, list)
+            self.assertEqual(result[0]["title"], "Episode 1")
+            self.assertTrue(result[0]["date"].startswith("2023-06-15"))
 
 
 class TestGetFeedsByGroup(unittest.TestCase):
@@ -1511,7 +1555,9 @@ class TestDefusedXmlSecurity:
             result, error = git_manager.extract_titles_from_public_feed("normal")
 
         assert isinstance(result, list)
-        assert result == ["정상 제목", "Normal Title"]
+        assert len(result) == 2
+        assert result[0]["title"] == "정상 제목"
+        assert result[1]["title"] == "Normal Title"
         assert error == ""
 
 

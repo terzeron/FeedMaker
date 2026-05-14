@@ -354,13 +354,14 @@
               >
                 <BThead head-variant="secondary" table-variant="light">
                   <BTr>
-                    <BTh colspan="4" class="text-center">RSS 아이템 제목</BTh>
+                    <BTh>RSS 아이템 제목</BTh>
+                    <BTh class="text-nowrap">수집일시</BTh>
                   </BTr>
                 </BThead>
                 <BTbody>
-                  <!-- list of titles of rss -->
-                  <BTr v-for="(title, index) in itemsOfRss" :key="index">
-                    <BTd>{{ title }}</BTd>
+                  <BTr v-for="(item, index) in itemsOfRss" :key="index">
+                    <BTd>{{ item.title }}</BTd>
+                    <BTd class="text-nowrap text-muted small">{{ item.date }}</BTd>
                   </BTr>
                 </BTbody>
               </BTableSimple>
