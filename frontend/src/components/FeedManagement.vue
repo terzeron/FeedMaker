@@ -372,7 +372,7 @@
         </BRow>
 
         <!-- Alert component -->
-        <BRow v-if="showAlert">
+        <BRow v-if="showAlert" class="m-0">
           <BCol>
             <BAlert
               :variant="alertVariant"
