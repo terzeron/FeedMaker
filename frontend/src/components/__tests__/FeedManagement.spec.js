@@ -945,16 +945,16 @@ describe("FeedManagement.vue", () => {
         data: {
           status: "success",
           item_titles: [
-            { title: "Title 1", date: "2024-01-01 00:00" },
-            { title: "Title 2", date: "2024-01-02 00:00" },
+            { title: "Title 1", date: "24-01-01" },
+            { title: "Title 2", date: "24-01-02" },
           ],
         },
       });
       wrapper.vm.getItemsOfRss();
       await flushPromises();
       expect(wrapper.vm.itemsOfRss).toEqual([
-        { title: "Title 1", date: "2024-01-01 00:00" },
-        { title: "Title 2", date: "2024-01-02 00:00" },
+        { title: "Title 1", date: "24-01-01" },
+        { title: "Title 2", date: "24-01-02" },
       ]);
       expect(wrapper.vm.showViewItemsOfRssList).toBe(true);
     });

@@ -1063,7 +1063,7 @@ class DummyFeedMakerManagerEndpoints:
         return None
 
     def extract_titles_from_public_feed(self, feed_name):
-        return ([{"title": "t1", "date": "2024-01-01 00:00"}, {"title": "t2", "date": "2024-01-02 00:00"}], None)
+        return ([{"title": "t1", "date": "24-01-01"}, {"title": "t2", "date": "24-01-02"}], None)
 
     # site config
     def get_site_config(self, group_name):

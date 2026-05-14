@@ -20,27 +20,29 @@
       </BCol>
     </BRow>
 
-    <BCol md="12" lg="6">
-      <div class="d-flex p-1">
-        <BFormInput
-          v-model="searchKeyword"
-          class="m-0"
-          placeholder="키워드"
-          @keyup.enter="search"
-        >
-          {{ searchKeyword }}
-        </BFormInput>
-        <my-button
-          ref="searchButton"
-          label="검색"
-          @click="search"
-          :initial-icon="['fas', 'search']"
-          :show-initial-icon="true"
-          variant="dark"
-          class="ms-2 text-nowrap"
-        />
-      </div>
-    </BCol>
+    <BRow>
+      <BCol md="12" lg="6">
+        <div class="d-flex p-1">
+          <BFormInput
+            v-model="searchKeyword"
+            class="m-0"
+            placeholder="키워드"
+            @keyup.enter="search"
+          >
+            {{ searchKeyword }}
+          </BFormInput>
+          <my-button
+            ref="searchButton"
+            label="검색"
+            @click="search"
+            :initial-icon="['fas', 'search']"
+            :show-initial-icon="true"
+            variant="dark"
+            class="ms-2 text-nowrap"
+          />
+        </div>
+      </BCol>
+    </BRow>
 
     <!-- Search Results -->
     <BRow>
@@ -355,13 +357,13 @@
                 <BThead head-variant="secondary" table-variant="light">
                   <BTr>
                     <BTh>RSS 아이템 제목</BTh>
-                    <BTh class="text-nowrap">수집일시</BTh>
+                    <BTh style="width: 1%; white-space: nowrap;">수집일시</BTh>
                   </BTr>
                 </BThead>
                 <BTbody>
                   <BTr v-for="(item, index) in itemsOfRss" :key="index">
                     <BTd>{{ item.title }}</BTd>
-                    <BTd class="text-nowrap text-muted small">{{ item.date }}</BTd>
+                    <BTd style="width: 1%; white-space: nowrap;" class="text-muted small">{{ item.date }}</BTd>
                   </BTr>
                 </BTbody>
               </BTableSimple>

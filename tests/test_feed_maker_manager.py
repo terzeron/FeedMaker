@@ -624,9 +624,9 @@ class TestExtractTitlesFromPublicFeed(unittest.TestCase):
             self.assertIsInstance(result, list)
             self.assertEqual(len(result), 2)
             self.assertEqual(result[0]["title"], "Title1")
-            self.assertEqual(result[0]["date"], "2024-01-01 00:00")
+            self.assertEqual(result[0]["date"], "24-01-01")
             self.assertEqual(result[1]["title"], "Title2")
-            self.assertEqual(result[1]["date"], "2024-01-02 00:00")
+            self.assertEqual(result[1]["date"], "24-01-02")
             self.assertEqual(error, "")
 
     def test_no_items(self):
@@ -707,7 +707,7 @@ class TestExtractTitlesFromPublicFeed(unittest.TestCase):
 
             self.assertIsInstance(result, list)
             self.assertEqual(result[0]["title"], "Episode 1")
-            self.assertTrue(result[0]["date"].startswith("2023-06-15"))
+            self.assertTrue(result[0]["date"].startswith("23-06-15"))
 
 
 class TestGetFeedsByGroup(unittest.TestCase):

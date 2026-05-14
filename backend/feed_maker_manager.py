@@ -310,7 +310,7 @@ class FeedMakerManager:
                             if earliest is None or mtime < earliest:
                                 earliest = mtime
 
-                date_str = earliest.strftime("%Y-%m-%d %H:%M") if earliest else ""
+                date_str = earliest.strftime("%y-%m-%d") if earliest else ""
                 items.append({"title": title, "date": date_str})
 
             if not items:

@@ -13,8 +13,8 @@
   overflow-y: hidden !important;
   box-shadow: none !important;
   max-width: 100% !important;
-  margin: 1px !important;
-  padding: 1px !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 .table {
