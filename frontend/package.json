@@ -15,7 +15,7 @@
     "test:e2e:headed": "npx playwright test --headed"
   },
   "dependencies": {
-    "@babel/plugin-transform-modules-commonjs": "^7.27.1",
+    "@babel/plugin-transform-modules-commonjs": "^7.28.6",
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
     "@fortawesome/free-brands-svg-icons": "^6.7.2",
     "@fortawesome/free-regular-svg-icons": "^6.7.2",
