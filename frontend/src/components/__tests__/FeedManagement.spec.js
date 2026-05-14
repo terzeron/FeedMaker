@@ -2089,6 +2089,38 @@ describe("FeedManagement.vue", () => {
     });
   });
 
+  describe("progress bar rendering", () => {
+    const setupProgressWrapper = async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.showFeedInfo = true;
+      wrapper.vm.currentIndex = 30;
+      wrapper.vm.totalItemCount = 100;
+      wrapper.vm.progressRatio = 30;
+      wrapper.vm.unitSizePerDay = 5;
+      await wrapper.vm.$nextTick();
+      return wrapper;
+    };
+
+    it("progress overlay div does not use overflow:visible", async () => {
+      const wrapper = await setupProgressWrapper();
+      expect(wrapper.html()).not.toContain("overflow: visible");
+    });
+
+    it("progress overlay div uses inset:0 to contain within progress bar", async () => {
+      const wrapper = await setupProgressWrapper();
+      expect(wrapper.html()).toContain("inset: 0");
+    });
+
+    it("progress overlay div renders progress text", async () => {
+      const wrapper = await setupProgressWrapper();
+      const html = wrapper.html();
+      expect(html).toContain("30");
+      expect(html).toContain("100");
+      expect(html).toContain("5");
+    });
+  });
+
   describe("destructive button variants", () => {
     const variantStubs = {
       ...stubs,

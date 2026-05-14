@@ -183,21 +183,24 @@
                         :max="totalItemCount"
                         show-progress
                         height="1.5rem"
+                        style="position: relative; overflow: hidden;"
                       >
-                        <BProgressBar :value="currentIndex" variant="warning">
-                          <div
-                            style="
-                              position: absolute;
-                              width: 100%;
-                              color: black;
-                              text-align: left;
-                              overflow: visible;
-                            "
-                          >
-                            {{ currentIndex }} / {{ totalItemCount }} =
-                            {{ progressRatio }} %, {{ unitSizePerDay }}/일
-                          </div>
-                        </BProgressBar>
+                        <BProgressBar :value="currentIndex" variant="warning" />
+                        <div
+                          style="
+                            position: absolute;
+                            inset: 0;
+                            color: black;
+                            text-align: left;
+                            overflow: hidden;
+                            display: flex;
+                            align-items: center;
+                            padding: 0 4px;
+                          "
+                        >
+                          {{ currentIndex }} / {{ totalItemCount }} =
+                          {{ progressRatio }} %, {{ unitSizePerDay }}/일
+                        </div>
                       </BProgress>
                     </BTd>
                     <BTd>{{ feedCompletionDueDate }}</BTd>
