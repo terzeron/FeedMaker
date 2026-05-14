@@ -2079,4 +2079,59 @@ describe("FeedManagement.vue", () => {
       );
     });
   });
+
+  describe("destructive button variants", () => {
+    const variantStubs = {
+      ...stubs,
+      MyButton: {
+        props: ["label", "variant"],
+        template:
+          '<button :class="variant ? `btn-${variant}` : ``">{{ label }}</button>',
+      },
+    };
+
+    const createWrapperWithVariantStub = () => {
+      axios.get.mockResolvedValueOnce({
+        data: { status: "success", groups: [] },
+      });
+      const wrapper = mount(FeedManagement, {
+        global: {
+          stubs: variantStubs,
+          mocks: { $route: { params: {} } },
+        },
+      });
+      wrapper.vm.jsonData = { rss: { title: "", link: "", description: "" } };
+      wrapper.vm.showRemovelistButton = true;
+      wrapper.vm.showRemoveHtmlButton = true;
+      wrapper.vm.showRemoveFeedButton = true;
+      return wrapper;
+    };
+
+    it("목록 삭제 버튼은 warning variant를 가진다", async () => {
+      const wrapper = createWrapperWithVariantStub();
+      await wrapper.vm.$nextTick();
+      const buttons = wrapper.findAll("button");
+      const target = buttons.find((b) => b.text() === "목록 삭제");
+      expect(target).toBeDefined();
+      expect(target.classes()).toContain("btn-warning");
+    });
+
+    it("HTML 삭제 버튼은 warning variant를 가진다", async () => {
+      const wrapper = createWrapperWithVariantStub();
+      await wrapper.vm.$nextTick();
+      const buttons = wrapper.findAll("button");
+      const target = buttons.find((b) => b.text() === "HTML 삭제");
+      expect(target).toBeDefined();
+      expect(target.classes()).toContain("btn-warning");
+    });
+
+    it("피드 삭제 버튼은 danger variant를 가진다", async () => {
+      const wrapper = createWrapperWithVariantStub();
+      await wrapper.vm.$nextTick();
+      const buttons = wrapper.findAll("button");
+      const target = buttons.find((b) => b.text() === "피드 삭제");
+      expect(target).toBeDefined();
+      expect(target.classes()).toContain("btn-danger");
+    });
+  });
 });

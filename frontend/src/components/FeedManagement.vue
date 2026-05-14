@@ -276,6 +276,7 @@
               @click="removelist"
               :initial-icon="['fas', 'eraser']"
               :show-initial-icon="true"
+              variant="warning"
               v-if="showRemovelistButton"
             />
             <my-button
@@ -284,6 +285,7 @@
               @click="removeHtml"
               :initial-icon="['fas', 'eraser']"
               :show-initial-icon="true"
+              variant="warning"
               v-if="showRemoveHtmlButton"
             />
             <my-button
@@ -452,20 +454,20 @@
 }
 
 /* 활성 상태 버튼 스타일 (활성화된 피드/그룹) */
-.button_list button:not(.active):not(.bg-secondary) {
+.button_list button:not(.active):not(.bg-secondary):not(.btn-warning):not(.btn-danger) {
   background-color: #198754 !important;
   border-color: #146c43 !important;
   color: white !important;
   font-weight: 500 !important;
 }
 
-.button_list button:not(.active):not(.bg-secondary):hover {
+.button_list button:not(.active):not(.bg-secondary):not(.btn-warning):not(.btn-danger):hover {
   background-color: #146c43 !important;
   border-color: #0f5132 !important;
 }
 
 /* 활성 버튼 호버 효과 */
-.button_list button:not(.active):not(.bg-secondary):hover {
+.button_list button:not(.active):not(.bg-secondary):not(.btn-warning):not(.btn-danger):hover {
   transform: translateY(-1px) !important;
   box-shadow: 0 2px 4px rgba(25, 135, 84, 0.3) !important;
 }
