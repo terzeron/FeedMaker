@@ -84,10 +84,6 @@ def create_session(user_email: str, user_name: str, profile_picture_url: Optiona
     expires_at = datetime.now(timezone.utc) + timedelta(days=SESSION_EXPIRY_DAYS)
 
     with DB.session_ctx() as session:
-        # Invalidate all existing sessions for this user (session fixation defense)
-        deleted = session.query(UserSession).filter(UserSession.user_email == user_email).delete()
-        if deleted:
-            LOGGER.info("Invalidated %d existing session(s) for %s before re-login", deleted, user_email)
         user_session = UserSession(session_id=session_id, user_email=user_email, user_name=user_name, profile_picture_url=profile_picture_url, expires_at=expires_at)
         session.add(user_session)
 
@@ -120,8 +116,10 @@ def get_session(session_id: str) -> Optional[UserSession]:
             session.delete(user_session)
             return None
 
-        # Update last accessed time
-        user_session.last_accessed_at = datetime.now(timezone.utc)
+        # Sliding session: extend expiry on every access
+        now = datetime.now(timezone.utc)
+        user_session.last_accessed_at = now
+        user_session.expires_at = now + timedelta(days=SESSION_EXPIRY_DAYS)
         LOGGER.info(f"get_session: Valid session found for {user_session.user_email}")
 
         return user_session

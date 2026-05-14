@@ -23,7 +23,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from backend.feed_maker_manager import FeedMakerManager
-from backend.auth import create_session, delete_session, get_current_user, set_session_cookie, clear_session_cookie, verify_facebook_token, require_admin
+from backend.auth import SESSION_COOKIE_NAME, clear_session_cookie, create_session, delete_session, get_current_user, require_admin, set_session_cookie, verify_facebook_token
 from bin.feed_maker_util import Env
 from bin.access_log_manager import AccessLogManager
 from bin.db import DB
@@ -85,6 +85,11 @@ async def auth_middleware(request: Request, call_next: Any) -> Response:
         user_session = get_current_user(request)
         if not user_session:
             return JSONResponse(status_code=401, content={"detail": "Not authenticated"})
+        response = await call_next(request)
+        session_id = request.cookies.get(SESSION_COOKIE_NAME)
+        if session_id:
+            set_session_cookie(response, session_id)
+        return response
     response = await call_next(request)
     return response
 

@@ -894,6 +894,38 @@ class TestBackendMiddleware(unittest.TestCase):
         response = asyncio.run(bmain.auth_middleware(mock_request, mock_call_next))
         self.assertEqual(response, mock_response)
 
+    def test_authenticated_request_renews_cookie(self):
+        """인증된 요청에서 응답에 세션 쿠키가 갱신된다"""
+        mock_request = MagicMock()
+        mock_request.method = "GET"
+        mock_request.url.path = "/some/protected/path"
+        mock_request.cookies.get.return_value = "existing-session-id"
+
+        mock_response = MagicMock()
+
+        async def mock_call_next(req):
+            return mock_response
+
+        mock_user = MagicMock()
+        with patch("backend.main.get_current_user", return_value=mock_user), patch("backend.main.set_session_cookie") as mock_set_cookie:
+            response = asyncio.run(bmain.auth_middleware(mock_request, mock_call_next))
+            mock_set_cookie.assert_called_once_with(mock_response, "existing-session-id")
+        self.assertEqual(response, mock_response)
+
+    def test_unauthenticated_request_returns_401(self):
+        """미인증 요청은 401을 반환하고 쿠키를 갱신하지 않는다"""
+        mock_request = MagicMock()
+        mock_request.method = "GET"
+        mock_request.url.path = "/some/protected/path"
+
+        async def mock_call_next(req):
+            return MagicMock()
+
+        with patch("backend.main.get_current_user", return_value=None), patch("backend.main.set_session_cookie") as mock_set_cookie:
+            response = asyncio.run(bmain.auth_middleware(mock_request, mock_call_next))
+            mock_set_cookie.assert_not_called()
+        self.assertEqual(response.status_code, 401)
+
 
 class TestBackendExcepthook(unittest.TestCase):
     """handle_exception: line 85"""

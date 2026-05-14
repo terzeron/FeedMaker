@@ -156,17 +156,16 @@ class TestCreateSession(unittest.TestCase):
         self.assertNotIn("facebook_access_token", columns)
 
     @patch("backend.auth.DB.session_ctx")
-    def test_existing_sessions_invalidated_on_login(self, mock_session_ctx) -> None:
-        """재로그인 시 동일 이메일의 기존 세션이 모두 삭제된다 (session fixation 방어)"""
+    def test_existing_sessions_preserved_on_login(self, mock_session_ctx) -> None:
+        """재로그인 시 동일 계정의 다른 장치 세션은 삭제되지 않는다"""
         mock_session = MagicMock()
         mock_session_ctx.return_value.__enter__ = MagicMock(return_value=mock_session)
         mock_session_ctx.return_value.__exit__ = MagicMock(return_value=None)
-        mock_session.query.return_value.filter.return_value.delete.return_value = 2
 
         from backend.auth import create_session
 
         create_session("user@example.com", "User")
-        mock_session.query.return_value.filter.return_value.delete.assert_called_once()
+        mock_session.query.return_value.filter.return_value.delete.assert_not_called()
 
 
 class TestGetSession(unittest.TestCase):
@@ -220,6 +219,27 @@ class TestGetSession(unittest.TestCase):
         result = get_session("valid_session_id")
         self.assertIsNotNone(result)
         self.assertEqual(result.user_email, "user@example.com")
+
+    @patch("backend.auth.DB.session_ctx")
+    def test_sliding_session_extends_expires_at(self, mock_session_ctx) -> None:
+        """유효한 세션 접근 시 expires_at이 SESSION_EXPIRY_DAYS만큼 연장된다"""
+        mock_user_session = MagicMock()
+        original_expires = datetime.now(timezone.utc) + timedelta(days=5)
+        mock_user_session.expires_at = original_expires
+        mock_user_session.user_email = "user@example.com"
+        mock_session = MagicMock()
+        mock_session.query.return_value.filter.return_value.first.return_value = mock_user_session
+        mock_session_ctx.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_session_ctx.return_value.__exit__ = MagicMock(return_value=None)
+
+        from backend.auth import SESSION_EXPIRY_DAYS, get_session
+
+        get_session("valid_session_id")
+
+        new_expires = mock_user_session.expires_at
+        self.assertGreater(new_expires, original_expires)
+        min_expected = datetime.now(timezone.utc) + timedelta(days=SESSION_EXPIRY_DAYS - 1)
+        self.assertGreater(new_expires, min_expected)
 
     @patch("backend.auth.DB.session_ctx")
     def test_timezone_naive_session(self, mock_session_ctx) -> None:
