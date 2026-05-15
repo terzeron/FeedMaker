@@ -23,6 +23,7 @@ PROJECT_ROOT = SCRIPT_PATH.parent.parent if SCRIPT_PATH.parent.name == "tests" e
 PYTHON_DIRS = [PROJECT_ROOT / d for d in ["bin", "utils", "backend", "tests"]]
 TEST_DIR = PROJECT_ROOT / "tests"
 TMP_DIR = PROJECT_ROOT / "tmp"
+COVERAGE_SHARDS_DIR = PROJECT_ROOT / ".coverage_out"
 XML_DIR = TMP_DIR / "xml"
 WORK_DIR = TMP_DIR / "work"
 LOGS_DIR = WORK_DIR / "logs"
@@ -365,28 +366,82 @@ def _get_coverage_file() -> Path:
     return PROJECT_ROOT / ".coverage"
 
 
-def _clear_coverage_data() -> None:
-    """이전 커버리지 데이터를 초기화한다."""
+def _clear_combined_coverage_data() -> None:
+    """결합된 coverage 데이터만 초기화한다."""
     for candidate in [PROJECT_ROOT / ".coverage", TEST_DIR / ".coverage"]:
         if candidate.exists():
             candidate.unlink()
 
 
+def _ensure_coverage_shards_dir() -> None:
+    COVERAGE_SHARDS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _coverage_shard_path(test_path: Path) -> Path:
+    rel = test_path.resolve().relative_to(PROJECT_ROOT.resolve())
+    slug = rel.as_posix().replace("/", "__")
+    return COVERAGE_SHARDS_DIR / f".coverage.{slug}"
+
+
+def _clear_coverage_shard(test_path: Path) -> None:
+    shard = _coverage_shard_path(test_path)
+    if shard.exists():
+        shard.unlink()
+
+
+def _clear_all_coverage_data() -> None:
+    """모든 coverage 데이터(shard + combined)를 초기화한다."""
+    _clear_combined_coverage_data()
+    if COVERAGE_SHARDS_DIR.exists():
+        import shutil
+
+        shutil.rmtree(COVERAGE_SHARDS_DIR)
+
+
+def _pytest_with_coverage_args(test_path: Path, *, verbose: bool = False) -> tuple[list[str], dict[str, str]]:
+    absolute_path = test_path.resolve()
+    shard_path = _coverage_shard_path(absolute_path)
+    _ensure_coverage_shards_dir()
+    _clear_coverage_shard(absolute_path)
+    _clear_combined_coverage_data()
+
+    cmd = [
+        sys.executable,
+        "-m",
+        "pytest",
+    ]
+    if verbose:
+        cmd.append("-v")
+    else:
+        cmd.extend(["--tb=no", "--disable-warnings"])
+    cmd.extend(
+        [
+            "--cov=backend",
+            "--cov=bin",
+            "--cov=utils",
+            "--cov-report=",
+            str(absolute_path),
+        ]
+    )
+    env = os.environ.copy()
+    env["COVERAGE_FILE"] = str(shard_path)
+    return cmd, env
+
+
 def run_test_modules_sequentially(test_targets: list[Path]) -> tuple[bool, int, int, list[Path]]:
     """Run test modules sequentially and return (success, passed_count, failed_count, failed_files)"""
-    _clear_coverage_data()
+    _ensure_coverage_shards_dir()
     passed_count = 0
     failed_count = 0
     failed_files = []
 
     for idx, t in enumerate(test_targets, 1):
         print(f"--- [{idx}/{len(test_targets)}] Running: {t} ---")
-        # Use absolute path to avoid issues with working directory changes
-        absolute_path = t.resolve()
 
         # Measure execution time
         start_time = time.time()
-        result = subprocess.run([sys.executable, "-m", "pytest", "--tb=no", "--disable-warnings", "--cov=backend", "--cov=bin", "--cov=utils", "--cov-append", "--cov-report=", str(absolute_path)], capture_output=True, text=True, check=False)
+        cmd, env = _pytest_with_coverage_args(t)
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False, env=env)
         end_time = time.time()
         execution_time = end_time - start_time
 
@@ -441,8 +496,8 @@ def run_specific_test_file(test_file: str) -> bool:
 
     # Measure execution time
     start_time = time.time()
-    _clear_coverage_data()
-    result = subprocess.run([sys.executable, "-m", "pytest", str(test_path), "-v", "--cov=backend", "--cov=bin", "--cov=utils", "--cov-report="], check=False)
+    cmd, env = _pytest_with_coverage_args(test_path, verbose=True)
+    result = subprocess.run(cmd, check=False, env=env)
     end_time = time.time()
     execution_time = end_time - start_time
 
@@ -510,14 +565,15 @@ def run_all_tests() -> tuple[bool, list[Path]]:
         print("No tests to run")
         return True, []
 
-    _clear_coverage_data()
+    _clear_all_coverage_data()
     total_start = time.time()
     failed_files = []
 
     for idx, t in enumerate(ordered_tests, 1):
         print(f"--- [{idx}/{len(ordered_tests)}] Running: {t.name} ---")
         start = time.time()
-        result = subprocess.run([sys.executable, "-m", "pytest", "--tb=no", "--disable-warnings", "--cov=backend", "--cov=bin", "--cov=utils", "--cov-append", "--cov-report=", str(t)], capture_output=True, text=True, check=False)
+        cmd, env = _pytest_with_coverage_args(t)
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False, env=env)
         end = time.time()
 
         # Filter output to remove session start info and show only test results
@@ -1802,25 +1858,32 @@ def main() -> bool:
 
 
 def run_coverage_report() -> None:
-    """전체 테스트를 단일 프로세스로 실행하여 정확한 커버리지 리포트를 생성한다."""
+    """저장된 coverage shard 또는 기존 combined coverage로 리포트를 생성한다."""
     try:
         import coverage as _cov_mod  # noqa: F401
     except ImportError:
         print("\n⚠️  coverage 패키지가 없어 커버리지 리포트를 건너뜁니다.")
         return
 
-    print("\n📊 전체 커버리지 측정 중...")
     cov_dir = str(PROJECT_ROOT)
+    coverage_file = _get_coverage_file()
+    has_shards = COVERAGE_SHARDS_DIR.exists() and any(COVERAGE_SHARDS_DIR.iterdir())
 
-    # 단일 프로세스로 전체 테스트를 실행하여 정확한 커버리지를 수집
-    cov_result = subprocess.run([sys.executable, "-m", "pytest", "--tb=no", "-q", "--disable-warnings", "--cov=backend", "--cov=bin", "--cov=utils", "--cov-report=", str(TEST_DIR)], capture_output=True, text=True, cwd=cov_dir)
-
-    if cov_result.returncode not in (0, 1):
-        print("⚠️  커버리지 수집 중 오류가 발생했습니다.")
-        if cov_result.stderr:
-            for line in cov_result.stderr.splitlines()[-5:]:
-                print(f"  {line}")
+    if has_shards:
+        print("\n📊 수집된 coverage shard를 결합하는 중...")
+        _clear_combined_coverage_data()
+        combine_result = subprocess.run([sys.executable, "-m", "coverage", "combine", str(COVERAGE_SHARDS_DIR)], capture_output=True, text=True, cwd=cov_dir)
+        if combine_result.returncode != 0:
+            print("⚠️  coverage shard 결합 중 오류가 발생했습니다.")
+            if combine_result.stderr:
+                for line in combine_result.stderr.splitlines()[-5:]:
+                    print(f"  {line}")
+            return
+    elif not coverage_file.exists():
+        print("\n⚪ coverage shard도 없고 기존 .coverage도 없어 리포트를 건너뜁니다.")
         return
+    else:
+        print("\n📊 기존 coverage 데이터를 사용해 리포트를 생성합니다...")
 
     print("\n" + "=" * 80)
     print("📊 COVERAGE REPORT")
