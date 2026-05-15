@@ -14,10 +14,12 @@ import unittest
 import logging.config
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
 
 from tests.common_test_util import start_mysql_container
 from bin.db import DB
 from bin.models import SampleTable, FeedInfo, GroupInfo, UserSession
+from backend import auth
 
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -711,6 +713,96 @@ class TestStatusInfoQueryAllFieldCombinations(unittest.TestCase):
         self.assertIsNotNone(set_entry["update_date"])
         self.assertIsNotNone(set_entry["upload_date"])
         self.assertEqual(set_entry["file_path"], "/xml/test.xml")
+
+
+class TestAuthMySQLIntegration(unittest.TestCase):
+    """backend.auth session lifecycle를 실제 MySQL로 검증"""
+
+    mysql_container = None
+    db_config = None
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls._ctx = start_mysql_container()
+        cls.mysql_container = cls._ctx.__enter__()
+        cls.db_config = {
+            "drivername": "mysql+pymysql",
+            "user": cls.mysql_container.username,
+            "password": cls.mysql_container.password,
+            "host": "localhost",
+            "port": int(cls.mysql_container.get_exposed_port(3306)),
+            "database": cls.mysql_container.dbname,
+        }
+        DB.init(cls.db_config)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        DB.dispose_all()
+        cls._ctx.__exit__(None, None, None)
+
+    def setUp(self) -> None:
+        DB.create_all_tables(self.db_config)
+        self._original_session_ctx = DB.session_ctx
+        self._db_patch = patch("backend.auth.DB.session_ctx", side_effect=lambda *args, **kwargs: self._original_session_ctx(db_config=self.db_config))
+        self._db_patch.start()
+
+    def tearDown(self) -> None:
+        self._db_patch.stop()
+        DB.drop_all_tables(self.db_config)
+
+    @patch("backend.auth.generate_session_id", return_value="session_integration_123")
+    def test_create_session_and_get_session_extend_expiry(self, mock_session_id) -> None:
+        session_id = auth.create_session("user@example.com", "Test User", "https://example.com/profile.png")
+        self.assertEqual(session_id, "session_integration_123")
+
+        with DB.session_ctx(db_config=self.db_config) as session:
+            created = session.query(UserSession).filter_by(session_id=session_id).first()
+            self.assertIsNotNone(created)
+            self.assertEqual(created.user_email, "user@example.com")
+            original_expires_at = created.expires_at
+
+        result = auth.get_session(session_id)
+        self.assertIsNotNone(result)
+        self.assertEqual(result.user_name, "Test User")
+        self.assertEqual(result.profile_picture_url, "https://example.com/profile.png")
+
+        with DB.session_ctx(db_config=self.db_config) as session:
+            updated = session.query(UserSession).filter_by(session_id=session_id).first()
+            self.assertIsNotNone(updated)
+            updated_expires_at = updated.expires_at
+            original_aware = original_expires_at.replace(tzinfo=timezone.utc) if original_expires_at.tzinfo is None else original_expires_at
+            updated_aware = updated_expires_at.replace(tzinfo=timezone.utc) if updated_expires_at.tzinfo is None else updated_expires_at
+            self.assertGreaterEqual(updated_aware, original_aware)
+            self.assertIsNotNone(updated.last_accessed_at)
+
+    def test_get_session_deletes_expired_session(self) -> None:
+        expired_time = datetime.now(timezone.utc) - timedelta(hours=1)
+        with DB.session_ctx(db_config=self.db_config) as session:
+            session.add(UserSession(session_id="expired_integration_session", user_email="expired@example.com", user_name="Expired User", expires_at=expired_time, last_accessed_at=expired_time))
+
+        result = auth.get_session("expired_integration_session")
+        self.assertIsNone(result)
+
+        with DB.session_ctx(db_config=self.db_config) as session:
+            deleted = session.query(UserSession).filter_by(session_id="expired_integration_session").first()
+            self.assertIsNone(deleted)
+
+    def test_delete_session_and_cleanup_expired_sessions(self) -> None:
+        now = datetime.now(timezone.utc)
+        with DB.session_ctx(db_config=self.db_config) as session:
+            session.add(UserSession(session_id="active_to_delete", user_email="active@example.com", user_name="Active User", expires_at=now + timedelta(days=1), last_accessed_at=now))
+            session.add(UserSession(session_id="expired_to_cleanup", user_email="expired@example.com", user_name="Expired User", expires_at=now - timedelta(days=1), last_accessed_at=now - timedelta(days=2)))
+
+        self.assertTrue(auth.delete_session("active_to_delete"))
+        self.assertFalse(auth.delete_session("active_to_delete"))
+
+        cleaned = auth.cleanup_expired_sessions()
+        self.assertEqual(cleaned, 1)
+
+        with DB.session_ctx(db_config=self.db_config) as session:
+            remaining = {row.session_id for row in session.query(UserSession).all()}
+            self.assertNotIn("active_to_delete", remaining)
+            self.assertNotIn("expired_to_cleanup", remaining)
 
 
 if __name__ == "__main__":
