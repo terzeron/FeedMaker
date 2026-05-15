@@ -5,9 +5,9 @@ module.exports = {
   testMatch: ["<rootDir>/src/**/*.spec.js"],
   transform: {
     "^.+\\.vue$": "@vue/vue3-jest",
-    "^.+\\.[jt]sx?$": "babel-jest",
+    "^.+\\.m?[jt]sx?$": "babel-jest",
   },
-  transformIgnorePatterns: ["/node_modules/"],
+  transformIgnorePatterns: ["/node_modules/(?!perfect-debounce/)"],
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
     "\\.(css|less|scss)$": "<rootDir>/test/__mocks__/styleMock.js",
