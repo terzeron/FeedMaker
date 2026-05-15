@@ -1070,6 +1070,16 @@ class TestLoginManagerParseForm(unittest.TestCase):
         self.assertEqual(id_field, "user")
         self.assertEqual(pw_field, "pw")
 
+    def test_parse_multiple_forms_without_password_selects_first_form(self):
+        html = """<html><body>
+        <form action="/first"><input type="text" name="q"/></form>
+        <form action="/second"><input type="text" name="user"/></form>
+        </body></html>"""
+        post_url, hidden, id_field, pw_field = LoginManager.parse_login_form(html, "http://example.com/page")
+        self.assertEqual(post_url, "http://example.com/first")
+        self.assertEqual(id_field, "q")
+        self.assertEqual(pw_field, "")
+
 
 class TestLoginManagerCheckSuccess(unittest.TestCase):
     """LoginManager.check_login_success() - 최소 mock (Response 객체)"""
@@ -1154,6 +1164,44 @@ class TestRequestsClientLogin(unittest.TestCase):
         cookie_file.unlink(missing_ok=True)
 
 
+class TestRequestsClientLoginMocked(unittest.TestCase):
+    @patch("bin.crawler.Env.get", return_value="false")
+    def setUp(self, mock_env):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.client = RequestsClient(dir_path=self.tmp)
+
+    @patch("requests.post")
+    @patch("requests.get")
+    def test_login_returns_false_when_fields_cannot_be_determined(self, mock_get, mock_post):
+        mock_resp = MagicMock()
+        mock_resp.text = "<html><body><form></form></body></html>"
+        mock_resp.cookies = RequestsCookieJar()
+        mock_get.return_value = mock_resp
+
+        result = self.client.login({"login_url": "http://example.com/login", "id": "user", "password": "pass"})
+        self.assertFalse(result)
+        mock_post.assert_not_called()
+
+    @patch("requests.post", side_effect=requests.exceptions.ConnectionError("boom"))
+    @patch("requests.get")
+    def test_login_post_uses_cookie_header_and_handles_exception(self, mock_get, mock_post):
+        login_page_resp = MagicMock()
+        login_page_resp.text = LOGIN_FORM_HTML
+        login_page_resp.cookies = RequestsCookieJar()
+        login_page_resp.cookies.set("pre_session", "abc")
+        mock_get.return_value = login_page_resp
+
+        with patch.object(self.client, "write_cookies_to_file") as mock_write, patch.object(self.client, "read_cookies_from_file") as mock_read:
+            self.client.cookies = {"saved": "cookie"}
+            result = self.client.login({"login_url": "http://example.com/login", "id": "user", "password": "pass", "id_field": "username", "password_field": "passwd"})
+
+        self.assertFalse(result)
+        mock_write.assert_called_once_with(login_page_resp.cookies)
+        mock_post.assert_called_once()
+        self.assertIn("Cookie", mock_post.call_args.kwargs["headers"])
+        self.assertIn("saved=cookie", mock_post.call_args.kwargs["headers"]["Cookie"])
+
+
 class TestCrawlerTryLogin(unittest.TestCase):
     """Crawler._try_login() 통합 테스트 - 실제 HTTP 서버"""
 
@@ -1201,6 +1249,16 @@ class TestCrawlerTryLogin(unittest.TestCase):
         with patch.object(crawler.requests_client, "login") as mock_login:
             crawler._try_login()
             mock_login.assert_not_called()
+
+    @patch("bin.crawler.Env.get", return_value="true")
+    def test_try_login_with_render_js_failure_logs_warning(self, mock_env):
+        config_data = {"login_url": f"http://127.0.0.1:{self.port}/login", "id": "testuser", "password": "testpass", "id_field": "username", "password_field": "passwd"}
+        (self.tmp / ".login.json").write_text(json.dumps(config_data), encoding="utf-8")
+
+        crawler = Crawler(dir_path=self.tmp, render_js=True)
+        with patch.object(crawler.headless_browser, "_get_cookie_dir", return_value=self.tmp), patch.object(crawler.headless_browser, "login", return_value=False) as mock_login:
+            crawler._try_login()
+            mock_login.assert_called_once()
 
     @patch("bin.crawler.Env.get", return_value="true")
     def test_full_login_then_crawl(self, mock_env):
