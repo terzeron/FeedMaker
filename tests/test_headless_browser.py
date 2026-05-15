@@ -4,6 +4,7 @@
 import logging
 import os
 import shutil
+import signal
 import unittest
 from pathlib import Path
 from typing import Optional
@@ -13,7 +14,7 @@ from bin.headless_browser import HeadlessBrowser
 import json
 import tempfile
 from unittest.mock import PropertyMock
-from selenium.common.exceptions import TimeoutException, WebDriverException
+from selenium.common.exceptions import SessionNotCreatedException, TimeoutException, WebDriverException
 from selenium.common.exceptions import InvalidCookieDomainException
 from selenium.common.exceptions import NoAlertPresentException
 
@@ -1303,6 +1304,285 @@ class TestHeadlessBrowserCoverageGaps(unittest.TestCase):
         browser._read_cookies_from_file(mock_driver)
         # First call raises, file gets deleted, second call finds no file → no error
         self.assertFalse(cookie_file.exists())
+
+
+class TestHeadlessBrowserLoginAndSignals(unittest.TestCase):
+    def _make_browser(self, **kwargs):
+        with patch("bin.headless_browser.Env") as mock_env:
+            mock_env.get.side_effect = lambda k, d="": {"FM_CRAWLER_ALLOW_PRIVATE_IPS": "false", "FM_CRAWLER_ALLOWED_HOSTS": ""}.get(k, d)
+            defaults = dict(dir_path=Path(tempfile.gettempdir()), timeout=5)
+            defaults.update(kwargs)
+            return HeadlessBrowser(**defaults)
+
+    @patch("bin.headless_browser.which", return_value="/usr/bin/chromedriver")
+    @patch("bin.headless_browser.webdriver.Chrome")
+    @patch("bin.headless_browser.WebDriverWait")
+    def test_login_success_with_named_fields(self, mock_wait_cls, mock_chrome, mock_which):
+        browser = self._make_browser(headers={"User-Agent": "test-agent"})
+
+        mock_driver = MagicMock()
+        mock_driver.get_cookies.return_value = [{"name": "sid", "value": "abc"}]
+        mock_driver.current_url = "https://example.com/home"
+        mock_chrome.return_value = mock_driver
+
+        id_element = MagicMock()
+        pw_element = MagicMock()
+        submit_element = MagicMock()
+
+        mock_wait = MagicMock()
+        mock_wait.until.side_effect = [id_element, True]
+        mock_wait_cls.return_value = mock_wait
+
+        def find_element(by, value):
+            if value == "password":
+                return pw_element
+            if value == "button[type='submit'], input[type='submit']":
+                return submit_element
+            raise AssertionError(f"unexpected selector: {by} {value}")
+
+        mock_driver.find_element.side_effect = find_element
+
+        config = {
+            "login_url": "https://example.com/login",
+            "id": "tester",
+            "password": "secret",
+            "id_field": "username",
+            "password_field": "password",
+        }
+
+        with patch.object(browser, "_write_cookies_to_file") as mock_write:
+            self.assertTrue(browser.login(config))
+
+        id_element.clear.assert_called_once()
+        id_element.send_keys.assert_called_once_with("tester")
+        pw_element.clear.assert_called_once()
+        pw_element.send_keys.assert_called_once_with("secret")
+        submit_element.click.assert_called_once()
+        mock_write.assert_called_once_with(mock_driver)
+
+    @patch("bin.headless_browser.WebDriverWait")
+    def test_login_reuses_cached_driver(self, mock_wait_cls):
+        browser = self._make_browser()
+
+        mock_driver = MagicMock()
+        mock_driver.get_cookies.return_value = [{"name": "sid", "value": "abc"}]
+        mock_driver.current_url = "https://example.com/home"
+
+        id_element = MagicMock()
+        pw_element = MagicMock()
+        submit_element = MagicMock()
+
+        mock_wait = MagicMock()
+        mock_wait.until.side_effect = [id_element, True]
+        mock_wait_cls.return_value = mock_wait
+
+        def find_element(by, value):
+            if value == "input[type='password']":
+                return pw_element
+            if value == "button[type='submit'], input[type='submit']":
+                return submit_element
+            raise AssertionError(f"unexpected selector: {by} {value}")
+
+        mock_driver.find_element.side_effect = find_element
+
+        with patch.object(HeadlessBrowser, "_get_cached_driver", return_value=mock_driver), patch.object(HeadlessBrowser, "_set_cached_driver") as mock_set_cached, patch.object(browser, "_write_cookies_to_file"):
+            result = browser.login({"login_url": "https://example.com/login", "id": "tester", "password": "secret"})
+
+        self.assertTrue(result)
+        mock_driver.set_page_load_timeout.assert_called_once_with(browser.timeout)
+        mock_set_cached.assert_not_called()
+
+    @patch("bin.headless_browser.which", return_value="/usr/bin/chromedriver")
+    @patch("bin.headless_browser.webdriver.Chrome")
+    @patch("bin.headless_browser.WebDriverWait")
+    def test_login_success_with_auto_detect_and_return_submit(self, mock_wait_cls, mock_chrome, mock_which):
+        browser = self._make_browser()
+
+        mock_driver = MagicMock()
+        mock_driver.get_cookies.return_value = [{"name": "sid", "value": "abc"}]
+        mock_driver.current_url = "https://example.com/home"
+        mock_chrome.return_value = mock_driver
+
+        id_element = MagicMock()
+        pw_element = MagicMock()
+        submit_error = WebDriverException("click fail")
+
+        mock_wait = MagicMock()
+        mock_wait.until.side_effect = [id_element, TimeoutException("stay on same page")]
+        mock_wait_cls.return_value = mock_wait
+
+        def find_element(by, value):
+            if value == "input[type='password']":
+                return pw_element
+            if value == "button[type='submit'], input[type='submit']":
+                raise submit_error
+            raise AssertionError(f"unexpected selector: {by} {value}")
+
+        mock_driver.find_element.side_effect = find_element
+
+        with patch.object(browser, "_write_cookies_to_file") as mock_write:
+            result = browser.login({"login_url": "https://example.com/login", "id": "tester", "password": "secret"})
+
+        self.assertTrue(result)
+        id_element.send_keys.assert_called_once_with("tester")
+        self.assertEqual(pw_element.send_keys.call_count, 2)
+        self.assertEqual(pw_element.send_keys.call_args_list[0].args[0], "secret")
+        mock_write.assert_called_once_with(mock_driver)
+
+    @patch("bin.headless_browser.which", return_value="/usr/bin/chromedriver")
+    @patch("bin.headless_browser.webdriver.Chrome")
+    @patch("bin.headless_browser.WebDriverWait")
+    def test_login_returns_false_when_form_fields_missing(self, mock_wait_cls, mock_chrome, mock_which):
+        browser = self._make_browser()
+        mock_chrome.return_value = MagicMock()
+
+        mock_wait = MagicMock()
+        mock_wait.until.side_effect = TimeoutException("missing id field")
+        mock_wait_cls.return_value = mock_wait
+
+        result = browser.login({"login_url": "https://example.com/login", "id": "tester", "password": "secret"})
+        self.assertFalse(result)
+
+    @patch("bin.headless_browser.which", return_value="/usr/bin/chromedriver")
+    @patch("bin.headless_browser.webdriver.Chrome")
+    @patch("bin.headless_browser.WebDriverWait")
+    def test_login_returns_false_when_no_cookies_after_submit(self, mock_wait_cls, mock_chrome, mock_which):
+        browser = self._make_browser()
+
+        mock_driver = MagicMock()
+        mock_driver.get_cookies.return_value = []
+        mock_driver.current_url = "https://example.com/home"
+        mock_chrome.return_value = mock_driver
+
+        id_element = MagicMock()
+        pw_element = MagicMock()
+        submit_element = MagicMock()
+
+        mock_wait = MagicMock()
+        mock_wait.until.side_effect = [id_element, True]
+        mock_wait_cls.return_value = mock_wait
+
+        def find_element(by, value):
+            if value == "input[type='password']":
+                return pw_element
+            if value == "button[type='submit'], input[type='submit']":
+                return submit_element
+            raise AssertionError(f"unexpected selector: {by} {value}")
+
+        mock_driver.find_element.side_effect = find_element
+
+        result = browser.login({"login_url": "https://example.com/login", "id": "tester", "password": "secret"})
+        self.assertFalse(result)
+
+    @patch("bin.headless_browser.which", return_value=None)
+    def test_login_returns_false_when_driver_missing(self, mock_which):
+        browser = self._make_browser()
+        result = browser.login({"login_url": "https://example.com/login", "id": "tester", "password": "secret"})
+        self.assertFalse(result)
+
+    @patch("bin.headless_browser.which", return_value="/usr/bin/chromedriver")
+    @patch("bin.headless_browser.webdriver.Chrome", side_effect=RuntimeError("chrome failed"))
+    def test_login_returns_false_on_runtime_error(self, mock_chrome, mock_which):
+        browser = self._make_browser()
+        result = browser.login({"login_url": "https://example.com/login", "id": "tester", "password": "secret"})
+        self.assertFalse(result)
+
+    @patch("bin.headless_browser.URLSafety")
+    @patch("bin.headless_browser.webdriver")
+    @patch("bin.headless_browser.which", return_value="/usr/bin/chromedriver")
+    @patch("bin.headless_browser.WebDriverWait")
+    def test_blob_inject_cdp_failure_is_ignored(self, mock_wait, mock_which, mock_wd, mock_safety):
+        mock_safety.check_url.return_value = (True, "")
+        browser = self._make_browser(blob_to_dataurl=True)
+
+        mock_driver = MagicMock()
+        mock_driver.get_cookies.return_value = []
+        mock_driver.page_source = "<html>ok</html>"
+        mock_driver.current_url = "about:blank"
+        mock_driver.execute_cdp_cmd.side_effect = RuntimeError("cdp unavailable")
+        mock_wd.Chrome.return_value = mock_driver
+        mock_wd.ChromeOptions.return_value = MagicMock()
+
+        wait_instance = MagicMock()
+        wait_instance.until.return_value = None
+        mock_wait.return_value = wait_instance
+
+        result = browser.make_request("https://example.com")
+        self.assertEqual(result, "<html>ok</html>")
+
+    @patch("bin.headless_browser.URLSafety")
+    @patch("bin.headless_browser.webdriver")
+    @patch("bin.headless_browser.which", return_value="/usr/bin/chromedriver")
+    def test_session_not_created_exception_returns_empty(self, mock_which, mock_wd, mock_safety):
+        mock_safety.check_url.return_value = (True, "")
+        browser = self._make_browser()
+
+        mock_wd.ChromeOptions.return_value = MagicMock()
+        mock_wd.Chrome.side_effect = SessionNotCreatedException("chrome exited")
+
+        with patch.object(HeadlessBrowser, "_cleanup_cached_driver") as mock_cleanup:
+            result = browser.make_request("https://example.com")
+
+        self.assertEqual(result, "")
+        mock_cleanup.assert_called_once()
+
+    @patch("bin.headless_browser.sys.exit", side_effect=SystemExit(0))
+    @patch("bin.headless_browser.HeadlessBrowser.cleanup_all_drivers")
+    def test_handle_sigterm_cleans_up_and_exits(self, mock_cleanup, mock_exit):
+        from bin.headless_browser import _handle_sigterm
+
+        with self.assertRaises(SystemExit):
+            _handle_sigterm(signal.SIGTERM, object())
+
+        mock_cleanup.assert_called_once()
+        mock_exit.assert_called_once_with(0)
+
+    @patch("bin.headless_browser.URLSafety.check_url", return_value=(True, ""))
+    @patch("bin.headless_browser.webdriver.ChromeOptions")
+    def test_make_request_cached_alert_quit_exception_branch(self, mock_options, mock_check):
+        browser = self._make_browser()
+        mock_options.return_value = MagicMock(arguments=[])
+
+        mock_driver = MagicMock()
+        mock_driver.page_source = "<html>ok</html>"
+        mock_driver.switch_to.alert.dismiss.side_effect = ConnectionRefusedError("dead")
+        mock_driver.quit.side_effect = Exception("quit fails")
+        HeadlessBrowser._thread_local._driver_cache = mock_driver
+
+        with patch.object(HeadlessBrowser, "_get_cached_driver", return_value=mock_driver), patch.object(browser, "_write_cookies_to_file"), patch("bin.headless_browser.WebDriverWait") as mock_wait:
+            mock_wait.return_value.until.return_value = None
+            result = browser.make_request("https://example.com")
+
+        self.assertEqual(result, "<html>ok</html>")
+        HeadlessBrowser._thread_local._driver_cache = None
+        HeadlessBrowser._thread_local._driver_options_hash = None
+
+    @patch("bin.headless_browser.URLSafety.check_url", return_value=(True, ""))
+    @patch("bin.headless_browser.webdriver.ChromeOptions")
+    def test_make_request_cached_storage_quit_exception_branch(self, mock_options, mock_check):
+        browser = self._make_browser()
+        mock_options.return_value = MagicMock(arguments=[])
+
+        mock_driver = MagicMock()
+        mock_driver.page_source = "<html>ok</html>"
+        mock_driver.switch_to.alert.dismiss.side_effect = NoAlertPresentException("no alert")
+        mock_driver.quit.side_effect = Exception("quit fails")
+
+        def execute_side_effect(script, *args):
+            if "localStorage.clear" in script or "sessionStorage.clear" in script:
+                raise ConnectionRefusedError("storage dead")
+            return None
+
+        mock_driver.execute_script.side_effect = execute_side_effect
+        HeadlessBrowser._thread_local._driver_cache = mock_driver
+
+        with patch.object(HeadlessBrowser, "_get_cached_driver", return_value=mock_driver), patch.object(browser, "_write_cookies_to_file"), patch("bin.headless_browser.WebDriverWait") as mock_wait:
+            mock_wait.return_value.until.return_value = None
+            result = browser.make_request("https://example.com")
+
+        self.assertEqual(result, "<html>ok</html>")
+        HeadlessBrowser._thread_local._driver_cache = None
+        HeadlessBrowser._thread_local._driver_options_hash = None
 
 
 if __name__ == "__main__":

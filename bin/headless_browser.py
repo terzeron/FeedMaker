@@ -7,6 +7,7 @@ import signal
 import json
 import shutil
 import signal
+import sys
 import tempfile
 import uuid
 import threading

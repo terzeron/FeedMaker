@@ -109,7 +109,7 @@ class TestCrawler(unittest.TestCase):
         self.assertIn("Test", actual)
         mock_make_request.assert_called_once_with(url, download_file=None, data=None, allow_redirects=True)
 
-    @patch("bin.headless_browser.HeadlessBrowser.make_request")
+    @patch("bin.crawler.HeadlessBrowser.make_request")
     def test_crawler_with_render_js(self, mock_make_request: MagicMock) -> None:
         mock_make_request.return_value = MOCK_HEADLESS_HTML
 
@@ -141,7 +141,7 @@ class TestCrawler(unittest.TestCase):
         self.assertIn("Success", actual)
         self.assertEqual(mock_make_request.call_count, 2)
 
-    @patch("bin.headless_browser.HeadlessBrowser.make_request")
+    @patch("bin.crawler.HeadlessBrowser.make_request")
     def test_crawler_with_headless_browser_options(self, mock_make_request: MagicMock) -> None:
         mock_make_request.return_value = MOCK_HEADLESS_HTML
 
