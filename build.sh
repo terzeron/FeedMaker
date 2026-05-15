@@ -11,16 +11,16 @@ GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
 build_backend() {
     echo "=== Building backend ==="
-    docker build -f backend/Dockerfile --build-arg FM_BACKEND_PORT="$FM_BACKEND_PORT" -t terzeron/fm_backend . && \
+    docker build -q -f backend/Dockerfile --build-arg FM_BACKEND_PORT="$FM_BACKEND_PORT" -t terzeron/fm_backend . > /dev/null && \
     docker tag terzeron/fm_backend:latest registry.terzeron.com/terzeron/fm_backend:latest && \
-    docker push registry.terzeron.com/terzeron/fm_backend:latest
+    docker push -q registry.terzeron.com/terzeron/fm_backend:latest
 }
 
 build_frontend() {
     echo "=== Building frontend ==="
-    docker build -f frontend/Dockerfile --build-arg GIT_COMMIT="$GIT_COMMIT" -t terzeron/fm_frontend . && \
+    docker build -q -f frontend/Dockerfile --build-arg GIT_COMMIT="$GIT_COMMIT" -t terzeron/fm_frontend . > /dev/null && \
     docker tag terzeron/fm_frontend:latest registry.terzeron.com/terzeron/fm_frontend:latest && \
-    docker push registry.terzeron.com/terzeron/fm_frontend:latest
+    docker push -q registry.terzeron.com/terzeron/fm_frontend:latest
 }
 
 rollout_backend() {
