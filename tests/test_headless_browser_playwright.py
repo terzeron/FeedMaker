@@ -370,6 +370,41 @@ class TestHeadlessBrowserPlaywright(unittest.TestCase):
         page5.evaluate.side_effect = [None, None, None, PlaywrightError("clear failed"), PlaywrightError("clear failed")]
         self.assertEqual(browser5.make_request("https://example.com"), "<html>ok</html>")
 
+    def test_wait_until_default_is_domcontentloaded(self):
+        browser = self._make_browser()
+        self.assertEqual(browser.wait_until, "domcontentloaded")
+
+    def test_wait_until_custom_value_stored(self):
+        browser = self._make_browser(wait_until="load")
+        self.assertEqual(browser.wait_until, "load")
+
+    @patch("bin.headless_browser_playwright.URLSafety.check_url", return_value=(True, ""))
+    @patch("bin.headless_browser_playwright.sync_playwright")
+    def test_wait_until_passed_to_goto(self, mock_sync_playwright, mock_check):
+        browser = self._make_browser(wait_until="domcontentloaded")
+        mock_sync, _mp, _mc, mock_page = self._build_session_mocks()
+        mock_sync_playwright.return_value = mock_sync
+
+        browser.make_request("https://example.com")
+
+        goto_calls = mock_page.goto.call_args_list
+        # about:blank 제외, 실제 URL goto 호출에 wait_until이 전달됐는지 확인
+        url_goto_calls = [c for c in goto_calls if c.args and c.args[0] != "about:blank"]
+        self.assertTrue(all(c.kwargs.get("wait_until") == "domcontentloaded" for c in url_goto_calls))
+
+    @patch("bin.headless_browser_playwright.URLSafety.check_url", return_value=(True, ""))
+    @patch("bin.headless_browser_playwright.sync_playwright")
+    def test_wait_until_load_passed_to_goto(self, mock_sync_playwright, mock_check):
+        browser = self._make_browser(wait_until="load")
+        mock_sync, _mp, _mc, mock_page = self._build_session_mocks()
+        mock_sync_playwright.return_value = mock_sync
+
+        browser.make_request("https://example.com")
+
+        goto_calls = mock_page.goto.call_args_list
+        url_goto_calls = [c for c in goto_calls if c.args and c.args[0] != "about:blank"]
+        self.assertTrue(all(c.kwargs.get("wait_until") == "load" for c in url_goto_calls))
+
     @patch("bin.headless_browser_playwright.HeadlessBrowser.cleanup_all_sessions")
     def test_cleanup_all_drivers_alias(self, mock_cleanup):
         HeadlessBrowser.cleanup_all_drivers()

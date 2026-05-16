@@ -77,6 +77,24 @@ class TestCrawler(unittest.TestCase):
         expected = " --render-js=true --copy-images-from-canvas=false --simulate-scrolling=true --user-agent='Firefox' --referer='https://abc.com' --encoding='cp949' --header='Content-Type: application/json; Transfer-Encoding: chunked' --timeout=20"
         self.assertEqual(expected, actual)
 
+    def test_get_option_str_with_wait_until(self) -> None:
+        options = {"render_js": True, "wait_until": "domcontentloaded"}
+        actual = Crawler.get_option_str(options)
+        self.assertIn("--wait-until=domcontentloaded", actual)
+
+    def test_get_option_str_without_wait_until(self) -> None:
+        options = {"render_js": True}
+        actual = Crawler.get_option_str(options)
+        self.assertNotIn("--wait-until", actual)
+
+    def test_crawler_wait_until_default(self) -> None:
+        crawler = Crawler()
+        self.assertEqual(crawler.wait_until, "domcontentloaded")
+
+    def test_crawler_wait_until_custom(self) -> None:
+        crawler = Crawler(wait_until="load")
+        self.assertEqual(crawler.wait_until, "load")
+
     @patch("bin.crawler.RequestsClient.make_request")
     def test_crawler_basic(self, mock_make_request: MagicMock) -> None:
         mock_make_request.return_value = MOCK_BASIC_HTML
@@ -738,6 +756,30 @@ class TestCrawlerMain(unittest.TestCase):
             with self.assertRaises(SystemExit) as cm:
                 main()
             self.assertEqual(cm.exception.code, -1)
+
+    @patch("bin.crawler.Crawler")
+    def test_main_with_wait_until(self, mock_crawler_cls: MagicMock) -> None:
+        mock_instance = mock_crawler_cls.return_value
+        mock_instance.run.return_value = ("ok", "", {})
+
+        with patch.object(_sys, "argv", ["crawler.py", "--wait-until=domcontentloaded", "https://example.com"]):
+            result = main()
+
+        self.assertEqual(result, 0)
+        call_kwargs = mock_crawler_cls.call_args
+        self.assertEqual(call_kwargs.kwargs.get("wait_until") or call_kwargs[1].get("wait_until"), "domcontentloaded")
+
+    @patch("bin.crawler.Crawler")
+    def test_main_wait_until_default(self, mock_crawler_cls: MagicMock) -> None:
+        mock_instance = mock_crawler_cls.return_value
+        mock_instance.run.return_value = ("ok", "", {})
+
+        with patch.object(_sys, "argv", ["crawler.py", "https://example.com"]):
+            result = main()
+
+        self.assertEqual(result, 0)
+        call_kwargs = mock_crawler_cls.call_args
+        self.assertEqual(call_kwargs.kwargs.get("wait_until") or call_kwargs[1].get("wait_until"), "domcontentloaded")
 
 
 class TestRequestsClientReadTimeoutOnMainRequest(unittest.TestCase):

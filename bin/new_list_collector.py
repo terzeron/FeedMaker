@@ -32,7 +32,7 @@ class NewlistCollector:
         result_list: list[tuple[str, str, list[str]]] = []
         for line in result.rstrip().split("\n"):
             line = line.rstrip()
-            if re.search(r'^#', line) or re.search(r'^\s*$', line):
+            if re.search(r"^#", line) or re.search(r"^\s*$", line):
                 continue
             try:
                 link, title, *metadata = line.split("\t")
@@ -53,7 +53,21 @@ class NewlistCollector:
         headers: dict[str, str] = conf.get("headers", {})
         if "referer" in conf:
             headers["Referer"] = conf.get("referer", "")
-        crawler = Crawler(dir_path=self.feed_dir_path, render_js=conf.get("render_js", False), method=Method.GET, headers=headers, timeout=conf.get("timeout", 60), num_retries=conf.get("num_retries", 1), encoding=conf.get("encoding", "utf-8"), verify_ssl=conf.get("verify_ssl", True), copy_images_from_canvas=conf.get("copy_images_from_canvas", False), simulate_scrolling=conf.get("simulate_scrolling", False), disable_headless=conf.get("disable_headless", False), blob_to_dataurl=conf.get("blob_to_dataurl", False))
+        crawler = Crawler(
+            dir_path=self.feed_dir_path,
+            render_js=conf.get("render_js", False),
+            method=Method.GET,
+            headers=headers,
+            timeout=conf.get("timeout", 60),
+            num_retries=conf.get("num_retries", 1),
+            encoding=conf.get("encoding", "utf-8"),
+            verify_ssl=conf.get("verify_ssl", True),
+            copy_images_from_canvas=conf.get("copy_images_from_canvas", False),
+            simulate_scrolling=conf.get("simulate_scrolling", False),
+            disable_headless=conf.get("disable_headless", False),
+            blob_to_dataurl=conf.get("blob_to_dataurl", False),
+            wait_until=conf.get("wait_until", "domcontentloaded"),
+        )
         option_str = Crawler.get_option_str(self.collection_conf)
         for url in conf.get("list_url_list", []):
             crawler_cmd = f"crawler.py -f '{self.feed_dir_path}' {option_str} '{url}'"
@@ -97,7 +111,7 @@ class NewlistCollector:
 
     def _save_new_list_to_file(self, new_list: list[tuple[str, str, list[str]]]) -> None:
         try:
-            with open(self.new_list_file_path, 'w', encoding='utf-8') as out_file:
+            with open(self.new_list_file_path, "w", encoding="utf-8") as out_file:
                 for link, title, metadata in new_list:
                     fields = [link, title] + (metadata if metadata else [""])
                     out_file.write("\t".join(fields) + "\n")
