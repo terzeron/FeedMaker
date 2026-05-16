@@ -405,24 +405,12 @@ def _pytest_with_coverage_args(test_path: Path, *, verbose: bool = False) -> tup
     _clear_coverage_shard(absolute_path)
     _clear_combined_coverage_data()
 
-    cmd = [
-        sys.executable,
-        "-m",
-        "pytest",
-    ]
+    cmd = [sys.executable, "-m", "pytest"]
     if verbose:
         cmd.append("-v")
     else:
         cmd.extend(["--tb=no", "--disable-warnings"])
-    cmd.extend(
-        [
-            "--cov=backend",
-            "--cov=bin",
-            "--cov=utils",
-            "--cov-report=",
-            str(absolute_path),
-        ]
-    )
+    cmd.extend(["--cov=backend", "--cov=bin", "--cov=utils", "--cov-report=", str(absolute_path)])
     env = os.environ.copy()
     env["COVERAGE_FILE"] = str(shard_path)
     return cmd, env
@@ -1870,9 +1858,16 @@ def run_coverage_report() -> None:
     has_shards = COVERAGE_SHARDS_DIR.exists() and any(COVERAGE_SHARDS_DIR.iterdir())
 
     if has_shards:
+        import shutil
+        import tempfile
+
         print("\n📊 수집된 coverage shard를 결합하는 중...")
         _clear_combined_coverage_data()
-        combine_result = subprocess.run([sys.executable, "-m", "coverage", "combine", str(COVERAGE_SHARDS_DIR)], capture_output=True, text=True, cwd=cov_dir)
+        # shard를 임시 디렉토리에 복사한 뒤 combine — 원본 shard는 보존됨
+        with tempfile.TemporaryDirectory() as tmpdir:
+            for shard in COVERAGE_SHARDS_DIR.glob(".coverage.*"):
+                shutil.copy2(shard, tmpdir)
+            combine_result = subprocess.run([sys.executable, "-m", "coverage", "combine", tmpdir], capture_output=True, text=True, cwd=cov_dir)
         if combine_result.returncode != 0:
             print("⚠️  coverage shard 결합 중 오류가 발생했습니다.")
             if combine_result.stderr:

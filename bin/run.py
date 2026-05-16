@@ -9,7 +9,8 @@ import getopt
 from pathlib import Path
 from typing import Any, Optional
 from filelock import FileLock, Timeout
-from bin.feed_maker_util import Config, Process, PathUtil, FileManager, NotFoundConfigItemError, Env
+from bin.feed_maker_util import Config, PathUtil, FileManager, NotFoundConfigItemError, Env
+from bin.headless_browser_playwright import HeadlessBrowser
 from bin.notification import Notification
 from bin.feed_maker import FeedMaker
 from bin.problem_manager import ProblemManager
@@ -216,7 +217,7 @@ def main() -> int:
 
     if options.get("do_make_all_feeds", False):
         result = runner.make_all_feeds(options)
-        Process.kill_process_group(r"chromedriver")
+        HeadlessBrowser.cleanup_all_sessions()
         problem_manager.load_all()
     else:
         config = Config(feed_dir_path=feed_dir_path)

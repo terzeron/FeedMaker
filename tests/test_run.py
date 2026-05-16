@@ -631,12 +631,13 @@ class TestMainMakeAllFeeds(unittest.TestCase):
         mock_pm = MagicMock()
         mock_pm_cls.return_value = mock_pm
 
-        with patch("bin.run.Process.kill_process_group"):
+        with patch("bin.run.HeadlessBrowser.cleanup_all_sessions") as mock_cleanup:
             result = main()
 
         self.assertEqual(result, 0)
         mock_runner.make_all_feeds.assert_called_once()
         mock_pm.load_all.assert_called_once()
+        mock_cleanup.assert_called_once()
 
 
 class TestMainMakeAllFeedsFails(unittest.TestCase):
@@ -657,10 +658,11 @@ class TestMainMakeAllFeedsFails(unittest.TestCase):
         mock_pm = MagicMock()
         mock_pm_cls.return_value = mock_pm
 
-        with patch("bin.run.Process.kill_process_group"):
+        with patch("bin.run.HeadlessBrowser.cleanup_all_sessions") as mock_cleanup:
             result = main()
 
         self.assertEqual(result, -1)
+        mock_cleanup.assert_called_once()
 
 
 class TestMainSingleFeedDefault(unittest.TestCase):
@@ -969,13 +971,7 @@ class TestFeedMakerRunnerIntegration(unittest.TestCase):
 
     def test_make_single_feed(self) -> None:
         # Mock all external dependencies
-        with (
-            patch("bin.feed_maker.Process.exec_cmd", return_value=("mock_result", None)),
-            patch("bin.feed_maker_util.Process.exec_cmd", return_value=("mock_result", None)),
-            patch("bin.run.Process.exec_cmd", return_value=("mock_result", None)),
-            patch("bin.feed_maker.NewlistCollector") as mock_collector,
-            patch("bin.feed_maker.Crawler") as mock_crawler,
-        ):
+        with patch("bin.feed_maker.Process.exec_cmd", return_value=("mock_result", None)), patch("bin.feed_maker_util.Process.exec_cmd", return_value=("mock_result", None)), patch("bin.feed_maker.NewlistCollector") as mock_collector, patch("bin.feed_maker.Crawler") as mock_crawler:
             mock_instance = mock_collector.return_value
             mock_instance.collect.return_value = [("https://comic.naver.com/webtoon/detail?titleId=725586&no=136", "136화")]
             mock_crawler_instance = mock_crawler.return_value
@@ -998,7 +994,6 @@ class TestFeedMakerRunnerIntegration(unittest.TestCase):
         with (
             patch("bin.feed_maker.Process.exec_cmd", return_value=("mock_result", "")),
             patch("bin.feed_maker_util.Process.exec_cmd", return_value=("mock_result", "")),
-            patch("bin.run.Process.exec_cmd", return_value=("mock_result", "")),
             patch("bin.feed_maker.NewlistCollector") as mock_collector,
             patch("bin.feed_maker.Crawler") as mock_crawler,
             patch("bin.feed_maker.Extractor") as mock_extractor,
