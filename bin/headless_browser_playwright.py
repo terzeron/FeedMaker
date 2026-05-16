@@ -10,6 +10,7 @@ import signal
 import sys
 import tempfile
 import threading
+import time
 from pathlib import Path
 from typing import Any, Optional
 
@@ -79,52 +80,10 @@ class HeadlessBrowser:
         """
         % ID_OF_RENDERING_COMPLETION_IN_CONVERTING_CANVAS
     )
-    SIMULATING_SCROLLING_SCRIPT = """
-        async () => {
-            function sleep(ms) {
-                return new Promise(resolve => setTimeout(resolve, ms));
-            }
-
-            await sleep(1000);
-
-            const scrollStartTime = Date.now();
-            const maxScrollMs = 20000;
-            let bottom = document.body.scrollHeight;
-            for (let i = 0; i < bottom; i += 349) {
-                if (Date.now() - scrollStartTime > maxScrollMs) break;
-                window.scrollTo(0, i);
-                await sleep(200);
-                bottom = document.body.scrollHeight;
-            }
-
-            const scrollUpStartTime = Date.now();
-            const maxScrollUpMs = 20000;
-            for (let i = bottom; i >= 0; i -= 683) {
-                if (Date.now() - scrollUpStartTime > maxScrollUpMs) break;
-                window.scrollTo(0, i);
-                await sleep(200);
-            }
-
-            const maxWaitTime = 10000;
-            const startTime = Date.now();
-            while (Date.now() - startTime < maxWaitTime) {
-                if (document.getElementById("%s")) {
-                    break;
-                }
-                await sleep(500);
-            }
-
-            await sleep(1000);
-
-            if (!document.getElementById("%s")) {
-                const div = document.createElement("div");
-                div.id = "%s";
-                document.body.appendChild(div);
-            }
-
-            return "done";
-        }
-    """ % (ID_OF_RENDERING_COMPLETION_IN_SCROLLING, ID_OF_RENDERING_COMPLETION_IN_SCROLLING, ID_OF_RENDERING_COMPLETION_IN_SCROLLING)
+    _SCROLL_DOWN_STEP = 349  # px per scroll-down step
+    _SCROLL_UP_STEP = 683  # px per scroll-up step
+    _SCROLL_STEP_MS = 200  # ms between steps
+    _MAX_SCROLL_SECS = 20  # max seconds per direction
     SETTING_PLUGINS_SCRIPT = "Object.defineProperty(navigator, 'plugins', {get: function() {return[1, 2, 3, 4, 5];},});"
     SETTING_LANGUAGES_SCRIPT = "Object.defineProperty(navigator, 'languages', {get: function() {return ['ko-KR', 'ko']}})"
     BLOB_INTERCEPTOR_INIT_SCRIPT = """
@@ -416,12 +375,40 @@ class HeadlessBrowser:
             LOGGER.warning("Timeout waiting for completion marker: %s", marker_id)
 
     def _run_scrolling_script(self, page: Page) -> None:
-        original_timeout_ms = self.timeout * 1000
+        marker_id = self.ID_OF_RENDERING_COMPLETION_IN_SCROLLING
         try:
-            page.set_default_timeout(60000)
-            page.evaluate(self.SIMULATING_SCROLLING_SCRIPT)
+            page.wait_for_timeout(1000)
+
+            start = time.monotonic()
+            pos = 0
+            try:
+                bottom = int(page.evaluate("document.body.scrollHeight") or 0)
+            except (TypeError, ValueError):
+                bottom = 0
+
+            while pos < bottom and time.monotonic() - start < self._MAX_SCROLL_SECS:
+                page.evaluate(f"window.scrollTo(0, {pos})")
+                page.wait_for_timeout(self._SCROLL_STEP_MS)
+                pos += self._SCROLL_DOWN_STEP
+                try:
+                    bottom = int(page.evaluate("document.body.scrollHeight") or 0)
+                except (TypeError, ValueError):
+                    break
+
+            start = time.monotonic()
+            while pos >= 0 and time.monotonic() - start < self._MAX_SCROLL_SECS:
+                page.evaluate(f"window.scrollTo(0, {pos})")
+                page.wait_for_timeout(self._SCROLL_STEP_MS)
+                pos -= self._SCROLL_UP_STEP
+
+            page.wait_for_timeout(1000)
+        except (PlaywrightError, PlaywrightTimeoutError) as e:
+            LOGGER.warning("Scrolling interrupted: %s", e)
         finally:
-            page.set_default_timeout(original_timeout_ms)
+            try:
+                page.evaluate(f'if (!document.getElementById("{marker_id}")) {{ const d = document.createElement("div"); d.id = "{marker_id}"; document.body.appendChild(d); }}')
+            except Exception:
+                pass
 
     def login(self, config: dict[str, str]) -> bool:
         LOGGER.debug("# HeadlessBrowserPlaywright.login(login_url=%s)", config["login_url"])

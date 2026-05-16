@@ -216,12 +216,13 @@ class TestHeadlessBrowserPlaywright(unittest.TestCase):
         self.assertTrue(any(call.args[0] == browser.SETTING_LANGUAGES_SCRIPT for call in mock_page.evaluate.call_args_list))
         self.assertTrue(any(call.args[0] == browser.GETTING_METADATA_SCRIPT for call in mock_page.evaluate.call_args_list))
         self.assertTrue(any(call.args[0] == browser.CONVERTING_CANVAS_TO_IMAGES_SCRIPT for call in mock_page.evaluate.call_args_list))
-        self.assertTrue(any(call.args[0] == browser.SIMULATING_SCROLLING_SCRIPT for call in mock_page.evaluate.call_args_list))
         self.assertTrue(any(call.args[0] == browser.CONVERTING_BLOB_TO_DATAURL_SCRIPT for call in mock_page.evaluate.call_args_list))
+        # scroll now runs as Python loop: verify wait_for_timeout was called for step sleeps
+        self.assertGreater(mock_page.wait_for_timeout.call_count, 0)
+        # scroll creates completion marker via evaluate instead of via SIMULATING_SCROLLING_SCRIPT
+        self.assertTrue(any(browser.ID_OF_RENDERING_COMPLETION_IN_SCROLLING in str(call.args[0]) for call in mock_page.evaluate.call_args_list))
         self.assertEqual(mock_page.wait_for_selector.call_count, 5)
         mock_context.add_init_script.assert_called_once_with(browser.BLOB_INTERCEPTOR_INIT_SCRIPT)
-        self.assertTrue(any(call.args[0] == 60000 for call in mock_page.set_default_timeout.call_args_list))
-        self.assertEqual(mock_page.set_default_timeout.call_args_list[-1].args[0], browser.timeout * 1000)
 
     @patch("bin.headless_browser_playwright.sync_playwright")
     def test_launch_session_and_register_handlers(self, mock_sync_playwright):
