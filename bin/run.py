@@ -73,7 +73,13 @@ class FeedMakerRunner:
                 # make_feed.py 실행하여 feed 파일 생성
                 LOGGER.info("* making feed file '%s'", PathUtil.short_path(rss_file_path))
                 feed_maker = FeedMaker(feed_dir_path=feed_dir_path, do_collect_by_force=force_collection_opt, do_collect_only=collect_only_opt, rss_file_path=rss_file_path, window_size=window_size)
-                result = feed_maker.make()
+                try:
+                    result = feed_maker.make()
+                finally:
+                    # 피드 단위로 Chromium 세션을 재활용 — 같은 피드그룹 안에서 자원이 누적되어
+                    # N번째 피드부터 page.evaluate/page.goto가 무한 대기에 빠지는 현상을 차단.
+                    # user_data_dir은 보존되어 로그인 상태/쿠키는 유지됨.
+                    HeadlessBrowser.recycle_session()
 
                 # 불필요한 파일 삭제
                 FileManager.remove_temporary_files(feed_dir_path)

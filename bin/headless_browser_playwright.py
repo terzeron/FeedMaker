@@ -83,7 +83,7 @@ class HeadlessBrowser:
     _SCROLL_DOWN_STEP = 349  # px per scroll-down step
     _SCROLL_UP_STEP = 683  # px per scroll-up step
     _SCROLL_STEP_MS = 200  # ms between steps
-    _MAX_SCROLL_SECS = 20  # max seconds per direction
+    _MAX_SCROLL_SECS = 5  # max seconds per direction; keeps DOM small on infinite-scroll pages
     SETTING_PLUGINS_SCRIPT = "Object.defineProperty(navigator, 'plugins', {get: function() {return[1, 2, 3, 4, 5];},});"
     SETTING_LANGUAGES_SCRIPT = "Object.defineProperty(navigator, 'languages', {get: function() {return ['ko-KR', 'ko']}})"
     BLOB_INTERCEPTOR_INIT_SCRIPT = """
@@ -271,6 +271,12 @@ class HeadlessBrowser:
         cls._cleanup_cached_session()
 
     @classmethod
+    def recycle_session(cls) -> None:
+        # Chromium 인스턴스만 종료한다. user_data_dir(쿠키, localStorage)은 보존되어
+        # 다음 launch_persistent_context 호출 시 로그인 상태가 유지된다.
+        cls._cleanup_cached_session()
+
+    @classmethod
     def cleanup_all_sessions(cls) -> None:
         cls._cleanup_cached_session()
         for d in list(cls._all_profile_dirs):
@@ -376,8 +382,12 @@ class HeadlessBrowser:
 
     def _run_scrolling_script(self, page: Page) -> None:
         marker_id = self.ID_OF_RENDERING_COMPLETION_IN_SCROLLING
+        # Use a wrapper that explicitly returns null so Playwright never waits
+        # on a Promise — xtoon and similar sites override window.scrollTo with
+        # an async function, which would cause page.evaluate() to hang forever.
+        _SCROLL_JS = "(function(y) {{ window.scrollTo(0, y); return null; }})({pos})"
         try:
-            page.wait_for_timeout(1000)
+            time.sleep(1)
 
             start = time.monotonic()
             pos = 0
@@ -387,8 +397,8 @@ class HeadlessBrowser:
                 bottom = 0
 
             while pos < bottom and time.monotonic() - start < self._MAX_SCROLL_SECS:
-                page.evaluate(f"window.scrollTo(0, {pos})")
-                page.wait_for_timeout(self._SCROLL_STEP_MS)
+                page.evaluate(_SCROLL_JS.format(pos=pos))
+                time.sleep(self._SCROLL_STEP_MS / 1000)
                 pos += self._SCROLL_DOWN_STEP
                 try:
                     bottom = int(page.evaluate("document.body.scrollHeight") or 0)
@@ -398,11 +408,11 @@ class HeadlessBrowser:
             if pos > 0:
                 start = time.monotonic()
                 while pos >= 0 and time.monotonic() - start < self._MAX_SCROLL_SECS:
-                    page.evaluate(f"window.scrollTo(0, {pos})")
-                    page.wait_for_timeout(self._SCROLL_STEP_MS)
+                    page.evaluate(_SCROLL_JS.format(pos=pos))
+                    time.sleep(self._SCROLL_STEP_MS / 1000)
                     pos -= self._SCROLL_UP_STEP
 
-            page.wait_for_timeout(1000)
+            time.sleep(1)
         except (PlaywrightError, PlaywrightTimeoutError) as e:
             LOGGER.warning("Scrolling interrupted: %s", e)
         finally:
@@ -537,7 +547,9 @@ class HeadlessBrowser:
                     self._wait_for_marker(page, waiting_div_id)
 
             LOGGER.debug("getting inner html")
-            return page.content()
+            # page.content() has no timeout; use evaluate() which respects set_default_timeout
+            html = page.evaluate("document.documentElement.outerHTML")
+            return f"<!DOCTYPE html>{html}" if html else ""
 
         except (OSError, TypeError, ValueError, AttributeError, ImportError, RuntimeError) as e:
             LOGGER.error("Unexpected error in make_request: %s", e)

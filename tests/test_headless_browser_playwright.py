@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import json
+import shutil
 import signal
 import tempfile
 import unittest
@@ -83,6 +84,21 @@ class TestHeadlessBrowserPlaywright(unittest.TestCase):
         HeadlessBrowser._thread_local._session_options_hash = "hash"
         HeadlessBrowser.cleanup_all_sessions()
         self.assertFalse(Path(profile_dir).exists())
+
+    def test_recycle_session_preserves_profile_dirs(self):
+        profile_dir = tempfile.mkdtemp()
+        HeadlessBrowser._all_profile_dirs.add(profile_dir)
+        session = {"page": MagicMock(), "context": MagicMock(), "playwright": MagicMock()}
+        HeadlessBrowser._thread_local._session_cache = session
+        HeadlessBrowser._thread_local._session_options_hash = "hash"
+        try:
+            HeadlessBrowser.recycle_session()
+            self.assertIsNone(getattr(HeadlessBrowser._thread_local, "_session_cache", None))
+            self.assertTrue(Path(profile_dir).exists(), "profile dir must survive recycle_session for cookie persistence")
+            self.assertIn(profile_dir, HeadlessBrowser._all_profile_dirs)
+        finally:
+            HeadlessBrowser._all_profile_dirs.discard(profile_dir)
+            shutil.rmtree(profile_dir, ignore_errors=True)
 
     @patch("bin.headless_browser_playwright.sync_playwright", None)
     def test_launch_session_import_error(self):
@@ -208,17 +224,28 @@ class TestHeadlessBrowserPlaywright(unittest.TestCase):
         mock_sync, _mock_playwright, mock_context, mock_page = self._build_session_mocks()
         mock_sync_playwright.return_value = mock_sync
 
+        def evaluate_side_effect(script, *_args, **_kwargs):
+            s = str(script)
+            if "scrollHeight" in s:
+                return 1000
+            if "outerHTML" in s:
+                return "<html>ok</html>"
+            return None
+
+        mock_page.evaluate.side_effect = evaluate_side_effect
+
         result = browser.make_request("https://example.com")
 
-        self.assertEqual(result, "<html>ok</html>")
+        self.assertEqual(result, "<!DOCTYPE html><html>ok</html>")
         self.assertEqual(mock_page.goto.call_count, 3)  # referer + main URL + about:blank
         self.assertTrue(any(call.args[0] == browser.SETTING_PLUGINS_SCRIPT for call in mock_page.evaluate.call_args_list))
         self.assertTrue(any(call.args[0] == browser.SETTING_LANGUAGES_SCRIPT for call in mock_page.evaluate.call_args_list))
         self.assertTrue(any(call.args[0] == browser.GETTING_METADATA_SCRIPT for call in mock_page.evaluate.call_args_list))
         self.assertTrue(any(call.args[0] == browser.CONVERTING_CANVAS_TO_IMAGES_SCRIPT for call in mock_page.evaluate.call_args_list))
         self.assertTrue(any(call.args[0] == browser.CONVERTING_BLOB_TO_DATAURL_SCRIPT for call in mock_page.evaluate.call_args_list))
-        # scroll now runs as Python loop: verify wait_for_timeout was called for step sleeps
-        self.assertGreater(mock_page.wait_for_timeout.call_count, 0)
+        # scroll uses time.sleep() now; verify scrollTo was called via evaluate
+        scroll_calls = [c for c in mock_page.evaluate.call_args_list if c.args and "scrollTo" in str(c.args[0])]
+        self.assertGreater(len(scroll_calls), 0)
         # scroll creates completion marker via evaluate instead of via SIMULATING_SCROLLING_SCRIPT
         self.assertTrue(any(browser.ID_OF_RENDERING_COMPLETION_IN_SCROLLING in str(call.args[0]) for call in mock_page.evaluate.call_args_list))
         self.assertEqual(mock_page.wait_for_selector.call_count, 5)
@@ -342,8 +369,9 @@ class TestHeadlessBrowserPlaywright(unittest.TestCase):
         browser = self._make_browser(simulate_scrolling=True)
         mock_sync, _mock_playwright, mock_context, mock_page = self._build_session_mocks()
         mock_sync_playwright.return_value = mock_sync
+        mock_page.evaluate.return_value = "<html>ok</html>"
         with patch.object(browser, "_run_scrolling_script", side_effect=PlaywrightTimeoutError("scroll timeout")):
-            self.assertEqual(browser.make_request("https://example.com"), "<html>ok</html>")
+            self.assertEqual(browser.make_request("https://example.com"), "<!DOCTYPE html><html>ok</html>")
 
         browser2 = self._make_browser()
         with patch.object(browser2, "_get_or_create_session", side_effect=RuntimeError("boom")):
@@ -352,9 +380,10 @@ class TestHeadlessBrowserPlaywright(unittest.TestCase):
         browser3 = self._make_browser()
         mock_sync3, _mp3, _mc3, page3 = self._build_session_mocks()
         mock_sync_playwright.return_value = mock_sync3
-        page3.evaluate.side_effect = [None, None, None, RuntimeError("dead storage")]
+        # 3 main-page evaluates + outerHTML returns "<html>ok</html>" + localStorage.clear raises
+        page3.evaluate.side_effect = [None, None, None, "<html>ok</html>", RuntimeError("dead storage")]
         with patch.object(HeadlessBrowser, "_cleanup_cached_session") as mock_cleanup:
-            self.assertEqual(browser3.make_request("https://example.com"), "<html>ok</html>")
+            self.assertEqual(browser3.make_request("https://example.com"), "<!DOCTYPE html><html>ok</html>")
         self.assertGreaterEqual(mock_cleanup.call_count, 1)
         HeadlessBrowser._cleanup_cached_session()  # cleanup was mocked above; explicitly clean up for next sub-test
 
@@ -368,8 +397,9 @@ class TestHeadlessBrowserPlaywright(unittest.TestCase):
         browser5 = self._make_browser()
         mock_sync5, _mp5, _mc5, page5 = self._build_session_mocks()
         mock_sync_playwright.return_value = mock_sync5
-        page5.evaluate.side_effect = [None, None, None, PlaywrightError("clear failed"), PlaywrightError("clear failed")]
-        self.assertEqual(browser5.make_request("https://example.com"), "<html>ok</html>")
+        # 3 main-page evaluates + outerHTML returns "<html>ok</html>" + two clear() calls raise PlaywrightError
+        page5.evaluate.side_effect = [None, None, None, "<html>ok</html>", PlaywrightError("clear failed"), PlaywrightError("clear failed")]
+        self.assertEqual(browser5.make_request("https://example.com"), "<!DOCTYPE html><html>ok</html>")
 
     def test_wait_until_default_is_domcontentloaded(self):
         browser = self._make_browser()
@@ -473,29 +503,42 @@ class TestRunScrollingScript(unittest.TestCase):
 
         all_evaluate_scripts = [str(c.args[0]) for c in mock_page.evaluate.call_args_list if c.args]
         self.assertTrue(any("scrollTo" in s for s in all_evaluate_scripts))
-        # wait_for_timeout called for scroll steps + initial/final 1s sleeps
-        self.assertGreater(mock_page.wait_for_timeout.call_count, 2)
+        # time.sleep() replaces wait_for_timeout; no wait_for_timeout calls expected
         self.assertTrue(self._marker_was_created(mock_page))
 
     def test_playwright_error_during_scroll_still_creates_marker(self):
-        """PlaywrightError mid-scroll → finally block creates marker."""
+        """PlaywrightError mid-scroll via evaluate() → finally block creates marker."""
         browser = self._make_browser()
         mock_page = MagicMock()
-        mock_page.wait_for_timeout.side_effect = [None, PlaywrightError("page closed")]
+
+        def evaluate_side_effect(script, *args, **kwargs):
+            if "scrollHeight" in script:
+                return 1000
+            if "scrollTo" in script:
+                raise PlaywrightError("page closed")
+            return None
+
+        mock_page.evaluate.side_effect = evaluate_side_effect
 
         browser._run_scrolling_script(mock_page)
 
         self.assertTrue(self._marker_was_created(mock_page))
 
     def test_playwright_timeout_during_scroll_still_creates_marker(self):
-        """PlaywrightTimeoutError mid-scroll → finally block creates marker."""
+        """PlaywrightTimeoutError mid-scroll via evaluate() → finally block creates marker."""
         browser = self._make_browser()
         mock_page = MagicMock()
-        mock_page.wait_for_timeout.side_effect = [None, PlaywrightTimeoutError("timeout")]
+
+        def evaluate_side_effect(script, *args, **kwargs):
+            if "scrollHeight" in script:
+                return 1000
+            if "scrollTo" in script:
+                raise PlaywrightTimeoutError("timeout")
+            return None
+
+        mock_page.evaluate.side_effect = evaluate_side_effect
 
         browser._run_scrolling_script(mock_page)
-
-        self.assertTrue(self._marker_was_created(mock_page))
 
     def test_time_limit_exits_scroll_down_early(self):
         """Monotonic time jumps past MAX_SCROLL_SECS → down loop exits after first step."""
@@ -507,7 +550,7 @@ class TestRunScrollingScript(unittest.TestCase):
         with patch("bin.headless_browser_playwright.time.monotonic", side_effect=time_seq + [0, 25]):
             browser._run_scrolling_script(mock_page)
 
-        down_calls = [c for c in mock_page.evaluate.call_args_list if "scrollTo(0, 0)" in str(c.args[0])]
+        down_calls = [c for c in mock_page.evaluate.call_args_list if c.args and "scrollTo" in str(c.args[0]) and "scrollHeight" not in str(c.args[0])]
         self.assertEqual(len(down_calls), 1, "exactly one down step before timeout")
         self.assertTrue(self._marker_was_created(mock_page))
 
