@@ -395,11 +395,12 @@ class HeadlessBrowser:
                 except (TypeError, ValueError):
                     break
 
-            start = time.monotonic()
-            while pos >= 0 and time.monotonic() - start < self._MAX_SCROLL_SECS:
-                page.evaluate(f"window.scrollTo(0, {pos})")
-                page.wait_for_timeout(self._SCROLL_STEP_MS)
-                pos -= self._SCROLL_UP_STEP
+            if pos > 0:
+                start = time.monotonic()
+                while pos >= 0 and time.monotonic() - start < self._MAX_SCROLL_SECS:
+                    page.evaluate(f"window.scrollTo(0, {pos})")
+                    page.wait_for_timeout(self._SCROLL_STEP_MS)
+                    pos -= self._SCROLL_UP_STEP
 
             page.wait_for_timeout(1000)
         except (PlaywrightError, PlaywrightTimeoutError) as e:

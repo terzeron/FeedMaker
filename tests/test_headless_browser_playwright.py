@@ -423,5 +423,104 @@ class TestHeadlessBrowserPlaywright(unittest.TestCase):
         mock_exit.assert_called_once_with(0)
 
 
+class TestRunScrollingScript(unittest.TestCase):
+    """_run_scrolling_script: Python-controlled scroll loop"""
+
+    def setUp(self):
+        HeadlessBrowser.cleanup_all_sessions()
+
+    def _make_browser(self, **kwargs):
+        with patch("bin.headless_browser_playwright.Env") as mock_env:
+            mock_env.get.side_effect = lambda k, d="": {"FM_CRAWLER_ALLOW_PRIVATE_IPS": "false", "FM_CRAWLER_ALLOWED_HOSTS": ""}.get(k, d)
+            defaults = dict(dir_path=Path(tempfile.gettempdir()), simulate_scrolling=True, timeout=5)
+            defaults.update(kwargs)
+            return HeadlessBrowser(**defaults)
+
+    def _make_page(self, scroll_height=0):
+        """Return a mock page whose evaluate() returns scroll_height for scrollHeight queries."""
+        mock_page = MagicMock()
+
+        def evaluate_side_effect(script, *args, **kwargs):
+            if "scrollHeight" in script:
+                return scroll_height
+            return None
+
+        mock_page.evaluate.side_effect = evaluate_side_effect
+        mock_page.wait_for_timeout.return_value = None
+        return mock_page
+
+    def _marker_was_created(self, mock_page):
+        marker_id = HeadlessBrowser.ID_OF_RENDERING_COMPLETION_IN_SCROLLING
+        return any(marker_id in str(call.args[0]) for call in mock_page.evaluate.call_args_list if call.args)
+
+    def test_zero_height_skips_scroll_creates_marker(self):
+        """scrollHeight=0 → skip down loop, skip up loop, create marker."""
+        browser = self._make_browser()
+        mock_page = self._make_page(scroll_height=0)
+
+        browser._run_scrolling_script(mock_page)
+
+        scroll_calls = [c for c in mock_page.evaluate.call_args_list if "scrollTo" in str(c.args[0])]
+        self.assertEqual(len(scroll_calls), 0, "no scrollTo expected when page height is 0")
+        self.assertTrue(self._marker_was_created(mock_page))
+
+    def test_finite_height_scrolls_down_and_up(self):
+        """scrollHeight=700 → at least one down step and one up step."""
+        browser = self._make_browser()
+        mock_page = self._make_page(scroll_height=700)
+
+        browser._run_scrolling_script(mock_page)
+
+        all_evaluate_scripts = [str(c.args[0]) for c in mock_page.evaluate.call_args_list if c.args]
+        self.assertTrue(any("scrollTo" in s for s in all_evaluate_scripts))
+        # wait_for_timeout called for scroll steps + initial/final 1s sleeps
+        self.assertGreater(mock_page.wait_for_timeout.call_count, 2)
+        self.assertTrue(self._marker_was_created(mock_page))
+
+    def test_playwright_error_during_scroll_still_creates_marker(self):
+        """PlaywrightError mid-scroll → finally block creates marker."""
+        browser = self._make_browser()
+        mock_page = MagicMock()
+        mock_page.wait_for_timeout.side_effect = [None, PlaywrightError("page closed")]
+
+        browser._run_scrolling_script(mock_page)
+
+        self.assertTrue(self._marker_was_created(mock_page))
+
+    def test_playwright_timeout_during_scroll_still_creates_marker(self):
+        """PlaywrightTimeoutError mid-scroll → finally block creates marker."""
+        browser = self._make_browser()
+        mock_page = MagicMock()
+        mock_page.wait_for_timeout.side_effect = [None, PlaywrightTimeoutError("timeout")]
+
+        browser._run_scrolling_script(mock_page)
+
+        self.assertTrue(self._marker_was_created(mock_page))
+
+    def test_time_limit_exits_scroll_down_early(self):
+        """Monotonic time jumps past MAX_SCROLL_SECS → down loop exits after first step."""
+        browser = self._make_browser()
+        mock_page = self._make_page(scroll_height=100_000)
+
+        # Simulate: start=0, first check still OK (0<20), second check already over (25>20)
+        time_seq = [0, 0, 25]
+        with patch("bin.headless_browser_playwright.time.monotonic", side_effect=time_seq + [0, 25]):
+            browser._run_scrolling_script(mock_page)
+
+        down_calls = [c for c in mock_page.evaluate.call_args_list if "scrollTo(0, 0)" in str(c.args[0])]
+        self.assertEqual(len(down_calls), 1, "exactly one down step before timeout")
+        self.assertTrue(self._marker_was_created(mock_page))
+
+    def test_marker_creation_failure_is_swallowed(self):
+        """evaluate() in finally raises → no exception escapes _run_scrolling_script."""
+        browser = self._make_browser()
+        mock_page = MagicMock()
+        mock_page.evaluate.side_effect = PlaywrightError("dead page")
+        mock_page.wait_for_timeout.return_value = None
+
+        # Must not raise
+        browser._run_scrolling_script(mock_page)
+
+
 if __name__ == "__main__":
     unittest.main()
