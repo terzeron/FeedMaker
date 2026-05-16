@@ -198,8 +198,10 @@ class HeadlessBrowser:
         HeadlessBrowser._all_profile_dirs.add(self._profile_dir)
 
     def __del__(self) -> None:
-        self._cleanup_cached_session()
-        del self.headers
+        # GC가 Playwright sync API의 메시지 dispatch 도중에 __del__을 호출하면
+        # context.close()가 reentrancy로 deadlock된다 (asyncio 루프 안에서 sync 호출).
+        # 명시적 정리는 cleanup_all_sessions() / recycle_session()에 위임한다.
+        pass
 
     def _get_cookie_dir(self) -> Path:
         if self._cookie_dir is not None:
