@@ -83,7 +83,7 @@ class HeadlessBrowser:
     _SCROLL_DOWN_STEP = 349  # px per scroll-down step
     _SCROLL_UP_STEP = 683  # px per scroll-up step
     _SCROLL_STEP_MS = 200  # ms between steps
-    _MAX_SCROLL_SECS = 20  # max seconds per direction
+    _MAX_SCROLL_SECS = 5  # max seconds per direction; keeps DOM small on infinite-scroll pages
     SETTING_PLUGINS_SCRIPT = "Object.defineProperty(navigator, 'plugins', {get: function() {return[1, 2, 3, 4, 5];},});"
     SETTING_LANGUAGES_SCRIPT = "Object.defineProperty(navigator, 'languages', {get: function() {return ['ko-KR', 'ko']}})"
     BLOB_INTERCEPTOR_INIT_SCRIPT = """
@@ -268,6 +268,12 @@ class HeadlessBrowser:
 
     @classmethod
     def _cleanup_cached_driver(cls) -> None:
+        cls._cleanup_cached_session()
+
+    @classmethod
+    def recycle_session(cls) -> None:
+        # Chromium 인스턴스만 종료한다. user_data_dir(쿠키, localStorage)은 보존되어
+        # 다음 launch_persistent_context 호출 시 로그인 상태가 유지된다.
         cls._cleanup_cached_session()
 
     @classmethod
@@ -541,7 +547,9 @@ class HeadlessBrowser:
                     self._wait_for_marker(page, waiting_div_id)
 
             LOGGER.debug("getting inner html")
-            return page.content()
+            # page.content() has no timeout; use evaluate() which respects set_default_timeout
+            html = page.evaluate("document.documentElement.outerHTML")
+            return f"<!DOCTYPE html>{html}" if html else ""
 
         except (OSError, TypeError, ValueError, AttributeError, ImportError, RuntimeError) as e:
             LOGGER.error("Unexpected error in make_request: %s", e)

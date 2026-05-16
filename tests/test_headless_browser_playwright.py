@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import json
+import shutil
 import signal
 import tempfile
 import unittest
@@ -83,6 +84,21 @@ class TestHeadlessBrowserPlaywright(unittest.TestCase):
         HeadlessBrowser._thread_local._session_options_hash = "hash"
         HeadlessBrowser.cleanup_all_sessions()
         self.assertFalse(Path(profile_dir).exists())
+
+    def test_recycle_session_preserves_profile_dirs(self):
+        profile_dir = tempfile.mkdtemp()
+        HeadlessBrowser._all_profile_dirs.add(profile_dir)
+        session = {"page": MagicMock(), "context": MagicMock(), "playwright": MagicMock()}
+        HeadlessBrowser._thread_local._session_cache = session
+        HeadlessBrowser._thread_local._session_options_hash = "hash"
+        try:
+            HeadlessBrowser.recycle_session()
+            self.assertIsNone(getattr(HeadlessBrowser._thread_local, "_session_cache", None))
+            self.assertTrue(Path(profile_dir).exists(), "profile dir must survive recycle_session for cookie persistence")
+            self.assertIn(profile_dir, HeadlessBrowser._all_profile_dirs)
+        finally:
+            HeadlessBrowser._all_profile_dirs.discard(profile_dir)
+            shutil.rmtree(profile_dir, ignore_errors=True)
 
     @patch("bin.headless_browser_playwright.sync_playwright", None)
     def test_launch_session_import_error(self):
@@ -208,9 +224,19 @@ class TestHeadlessBrowserPlaywright(unittest.TestCase):
         mock_sync, _mock_playwright, mock_context, mock_page = self._build_session_mocks()
         mock_sync_playwright.return_value = mock_sync
 
+        def evaluate_side_effect(script, *_args, **_kwargs):
+            s = str(script)
+            if "scrollHeight" in s:
+                return 1000
+            if "outerHTML" in s:
+                return "<html>ok</html>"
+            return None
+
+        mock_page.evaluate.side_effect = evaluate_side_effect
+
         result = browser.make_request("https://example.com")
 
-        self.assertEqual(result, "<html>ok</html>")
+        self.assertEqual(result, "<!DOCTYPE html><html>ok</html>")
         self.assertEqual(mock_page.goto.call_count, 3)  # referer + main URL + about:blank
         self.assertTrue(any(call.args[0] == browser.SETTING_PLUGINS_SCRIPT for call in mock_page.evaluate.call_args_list))
         self.assertTrue(any(call.args[0] == browser.SETTING_LANGUAGES_SCRIPT for call in mock_page.evaluate.call_args_list))
@@ -343,8 +369,9 @@ class TestHeadlessBrowserPlaywright(unittest.TestCase):
         browser = self._make_browser(simulate_scrolling=True)
         mock_sync, _mock_playwright, mock_context, mock_page = self._build_session_mocks()
         mock_sync_playwright.return_value = mock_sync
+        mock_page.evaluate.return_value = "<html>ok</html>"
         with patch.object(browser, "_run_scrolling_script", side_effect=PlaywrightTimeoutError("scroll timeout")):
-            self.assertEqual(browser.make_request("https://example.com"), "<html>ok</html>")
+            self.assertEqual(browser.make_request("https://example.com"), "<!DOCTYPE html><html>ok</html>")
 
         browser2 = self._make_browser()
         with patch.object(browser2, "_get_or_create_session", side_effect=RuntimeError("boom")):
@@ -353,9 +380,10 @@ class TestHeadlessBrowserPlaywright(unittest.TestCase):
         browser3 = self._make_browser()
         mock_sync3, _mp3, _mc3, page3 = self._build_session_mocks()
         mock_sync_playwright.return_value = mock_sync3
-        page3.evaluate.side_effect = [None, None, None, RuntimeError("dead storage")]
+        # 3 main-page evaluates + outerHTML returns "<html>ok</html>" + localStorage.clear raises
+        page3.evaluate.side_effect = [None, None, None, "<html>ok</html>", RuntimeError("dead storage")]
         with patch.object(HeadlessBrowser, "_cleanup_cached_session") as mock_cleanup:
-            self.assertEqual(browser3.make_request("https://example.com"), "<html>ok</html>")
+            self.assertEqual(browser3.make_request("https://example.com"), "<!DOCTYPE html><html>ok</html>")
         self.assertGreaterEqual(mock_cleanup.call_count, 1)
         HeadlessBrowser._cleanup_cached_session()  # cleanup was mocked above; explicitly clean up for next sub-test
 
@@ -369,8 +397,9 @@ class TestHeadlessBrowserPlaywright(unittest.TestCase):
         browser5 = self._make_browser()
         mock_sync5, _mp5, _mc5, page5 = self._build_session_mocks()
         mock_sync_playwright.return_value = mock_sync5
-        page5.evaluate.side_effect = [None, None, None, PlaywrightError("clear failed"), PlaywrightError("clear failed")]
-        self.assertEqual(browser5.make_request("https://example.com"), "<html>ok</html>")
+        # 3 main-page evaluates + outerHTML returns "<html>ok</html>" + two clear() calls raise PlaywrightError
+        page5.evaluate.side_effect = [None, None, None, "<html>ok</html>", PlaywrightError("clear failed"), PlaywrightError("clear failed")]
+        self.assertEqual(browser5.make_request("https://example.com"), "<!DOCTYPE html><html>ok</html>")
 
     def test_wait_until_default_is_domcontentloaded(self):
         browser = self._make_browser()
