@@ -87,8 +87,11 @@ class HeadlessBrowser:
 
             await sleep(1000);
 
+            const scrollStartTime = Date.now();
+            const maxScrollMs = 20000;
             let bottom = document.body.scrollHeight;
             for (let i = 0; i < bottom; i += 349) {
+                if (Date.now() - scrollStartTime > maxScrollMs) break;
                 window.scrollTo(0, i);
                 await sleep(200);
                 bottom = document.body.scrollHeight;
