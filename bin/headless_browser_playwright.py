@@ -202,8 +202,18 @@ class HeadlessBrowser:
         % ID_OF_RENDERING_COMPLETION_IN_CONVERTING_BLOB
     )
 
-    def __init__(self, *, dir_path: Path = Path.cwd(), headers: Optional[dict[str, str]] = None, copy_images_from_canvas: bool = False, simulate_scrolling: bool = False, disable_headless: bool = False, blob_to_dataurl: bool = False, timeout: int = 60) -> None:
-        LOGGER.debug("# HeadlessBrowserPlaywright(dir_path=%s, headers=%r, copy_images_from_canvas=%s, simulate_scrolling=%s, disable_headless=%s, blob_to_dataurl=%s, timeout=%d)", PathUtil.short_path(dir_path), headers, copy_images_from_canvas, simulate_scrolling, disable_headless, blob_to_dataurl, timeout)
+    def __init__(self, *, dir_path: Path = Path.cwd(), headers: Optional[dict[str, str]] = None, copy_images_from_canvas: bool = False, simulate_scrolling: bool = False, disable_headless: bool = False, blob_to_dataurl: bool = False, timeout: int = 60, wait_until: str = "domcontentloaded") -> None:
+        LOGGER.debug(
+            "# HeadlessBrowserPlaywright(dir_path=%s, headers=%r, copy_images_from_canvas=%s, simulate_scrolling=%s, disable_headless=%s, blob_to_dataurl=%s, timeout=%d, wait_until=%s)",
+            PathUtil.short_path(dir_path),
+            headers,
+            copy_images_from_canvas,
+            simulate_scrolling,
+            disable_headless,
+            blob_to_dataurl,
+            timeout,
+            wait_until,
+        )
         self.dir_path: Path = dir_path
         self.headers: dict[str, str] = headers if headers is not None else {}
         if "User-Agent" not in self.headers:
@@ -213,6 +223,7 @@ class HeadlessBrowser:
         self.disable_headless: bool = disable_headless
         self.blob_to_dataurl: bool = blob_to_dataurl
         self.timeout: int = timeout
+        self.wait_until: str = wait_until
         self._cookie_dir: Optional[Path] = None
         self.allow_private_ips = Env.get("FM_CRAWLER_ALLOW_PRIVATE_IPS", "false").strip().lower() in ("1", "true", "yes", "on")
         self.allowed_hosts_raw = Env.get("FM_CRAWLER_ALLOWED_HOSTS", "")
@@ -415,7 +426,7 @@ class HeadlessBrowser:
             page: Page = session["page"]
             context: BrowserContext = session["context"]
 
-            page.goto(login_url, wait_until="load", timeout=self.timeout * 1000)
+            page.goto(login_url, wait_until=self.wait_until, timeout=self.timeout * 1000)  # type: ignore[arg-type]
 
             id_field = config.get("id_field", "")
             password_field = config.get("password_field", "")
@@ -482,13 +493,13 @@ class HeadlessBrowser:
                     LOGGER.warning("Blocked referer URL: %s (%s)", referer, reason)
                     return ""
                 LOGGER.debug("visiting referer page '%s'", referer)
-                page.goto(referer, wait_until="load", timeout=self.timeout * 1000)
+                page.goto(referer, wait_until=self.wait_until, timeout=self.timeout * 1000)  # type: ignore[arg-type]
                 self._wait_for_cloudflare(page)
                 self._write_cookies_to_file(context)
 
             LOGGER.debug("getting the page '%s'", url)
             try:
-                page.goto(url, wait_until="load", timeout=self.timeout * 1000)
+                page.goto(url, wait_until=self.wait_until, timeout=self.timeout * 1000)  # type: ignore[arg-type]
             except PlaywrightTimeoutError as e:
                 LOGGER.warning("<!-- Warning: can't can't read data from '%s' for timeout -->", url)
                 LOGGER.warning("<!-- %r -->", e)

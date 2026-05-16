@@ -242,6 +242,7 @@ class FeedMaker:
                 simulate_scrolling=conf.get("simulate_scrolling", False),
                 disable_headless=conf.get("disable_headless", False),
                 blob_to_dataurl=conf.get("blob_to_dataurl", False),
+                wait_until=conf.get("wait_until", "domcontentloaded"),
             )
             option_str = Crawler.get_option_str(conf)
             crawler_cmd = f"crawler.py -f '{self.feed_dir_path}' {option_str} '{item_url}'"

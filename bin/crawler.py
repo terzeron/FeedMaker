@@ -322,9 +322,10 @@ class Crawler:
         simulate_scrolling: bool = False,
         disable_headless: bool = False,
         blob_to_dataurl: bool = False,
+        wait_until: str = "domcontentloaded",
     ) -> None:
         LOGGER.debug(
-            "# Crawler(dir_path=%s, render_js=%s, method=%s, headers=%r, timeout=%d, num_retries=%d, encoding=%s, verify_ssl=%s, copy_images_from_canvas=%s, simulate_scrolling=%s, disable_headless=%s, blob_to_dataurl=%s)",
+            "# Crawler(dir_path=%s, render_js=%s, method=%s, headers=%r, timeout=%d, num_retries=%d, encoding=%s, verify_ssl=%s, copy_images_from_canvas=%s, simulate_scrolling=%s, disable_headless=%s, blob_to_dataurl=%s, wait_until=%s)",
             PathUtil.short_path(dir_path),
             render_js,
             method,
@@ -337,6 +338,7 @@ class Crawler:
             simulate_scrolling,
             disable_headless,
             blob_to_dataurl,
+            wait_until,
         )
         self.dir_path = dir_path
         self.render_js = render_js
@@ -351,9 +353,10 @@ class Crawler:
         self.simulate_scrolling = simulate_scrolling
         self.disable_headless = disable_headless
         self.blob_to_dataurl = blob_to_dataurl
+        self.wait_until = wait_until
         if self.render_js:
             # headless browser
-            self.headless_browser = HeadlessBrowser(dir_path=self.dir_path, headers=self.headers, copy_images_from_canvas=copy_images_from_canvas, simulate_scrolling=simulate_scrolling, disable_headless=disable_headless, blob_to_dataurl=blob_to_dataurl, timeout=timeout)
+            self.headless_browser = HeadlessBrowser(dir_path=self.dir_path, headers=self.headers, copy_images_from_canvas=copy_images_from_canvas, simulate_scrolling=simulate_scrolling, disable_headless=disable_headless, blob_to_dataurl=blob_to_dataurl, timeout=timeout, wait_until=wait_until)
         else:
             self.requests_client = RequestsClient(dir_path=self.dir_path, method=method, headers=self.headers, timeout=timeout, encoding=encoding, verify_ssl=verify_ssl)
 
@@ -388,6 +391,8 @@ class Crawler:
         if "disable_headless" in options:
             disable_headless = "true" if options["disable_headless"] else "false"
             option_str += f" --disable-headless={disable_headless}"
+        if "wait_until" in options and options["wait_until"]:
+            option_str += f" --wait-until={options['wait_until']}"
         if "user_agent" in options and options["user_agent"]:
             user_agent = options["user_agent"]
             option_str += f" --user-agent='{user_agent}'"
@@ -499,13 +504,14 @@ def main() -> int:
     simulate_scrolling: bool = False
     disable_headless: bool = False
     blob_to_dataurl: bool = False
+    wait_until: str = "domcontentloaded"
 
     if len(sys.argv) == 1:
         print_usage()
         sys.exit(-1)
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hf:", ["spider", "render-js=", "verify-ssl=", "copy-images-from-canvas=", "simulate-scrolling=", "disable-headless=", "blob-to-dataurl=", "download=", "encoding=", "user-agent=", "referer=", "header=", "timeout=", "retry="])
+        opts, args = getopt.getopt(sys.argv[1:], "hf:", ["spider", "render-js=", "verify-ssl=", "copy-images-from-canvas=", "simulate-scrolling=", "disable-headless=", "blob-to-dataurl=", "wait-until=", "download=", "encoding=", "user-agent=", "referer=", "header=", "timeout=", "retry="])
     except getopt.GetoptError:
         print_usage()
         sys.exit(-1)
@@ -534,6 +540,8 @@ def main() -> int:
             disable_headless = a == "true"
         elif o == "--blob-to-dataurl":
             blob_to_dataurl = a == "true"
+        elif o == "--wait-until":
+            wait_until = a
         elif o == "--header":
             m = re.search(r"^(?P<key>[^:]+)\s*:\s*(?P<value>.+)\s*$", a)
             if m:
@@ -564,6 +572,7 @@ def main() -> int:
         simulate_scrolling=simulate_scrolling,
         disable_headless=disable_headless,
         blob_to_dataurl=blob_to_dataurl,
+        wait_until=wait_until,
     )
     response, error, _ = crawler.run(url, download_file=download_file)
     if not response:

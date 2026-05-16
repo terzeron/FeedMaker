@@ -21,29 +21,15 @@ class ConfigTest(unittest.TestCase):
                     "verify_ssl": True,
                     "encoding": "utf-8",
                     "unit_size_per_day": 1.5,
-                    "list_url_list": [
-                        "https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=1",
-                        "https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=2"
-                    ],
+                    "list_url_list": ["https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=1", "https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=2"],
                     "item_capture_script": "./capture_item_link_title.py",
                     "ignore_old_list": False,
                     "sort_field_pattern": None,
                     "post_process_script_list": ["shuf"],
-                    "headers": {}
+                    "headers": {},
                 },
-                "extraction": {
-                    "timeout": 30,
-                    "render_js": False,
-                    "user_agent": True,
-                    "element_id_list": ["ct", "content"],
-                    "element_class_list": ["se_doc_viewer", "content_view"],
-                    "element_path_list": [],
-                    "post_process_script_list": ["post_process_script_for_navercast.py"],
-                    "headers": {}
-                },
-                "rss": {
-                    "title": "네이버캐스트 모바일"
-                }
+                "extraction": {"timeout": 30, "render_js": False, "user_agent": True, "element_id_list": ["ct", "content"], "element_class_list": ["se_doc_viewer", "content_view"], "element_path_list": [], "post_process_script_list": ["post_process_script_for_navercast.py"], "headers": {}},
+                "rss": {"title": "네이버캐스트 모바일"},
             }
         }
         conf_path = Path(__file__).parent / Config.DEFAULT_CONF_FILE
@@ -150,8 +136,7 @@ class ConfigTest(unittest.TestCase):
     def test_get_config_value_list(self) -> None:
         collection_conf = self.config.conf.get("collection", {})
         actual = self.config._get_list_config_value(collection_conf, "list_url_list", [])
-        expected = ["https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=1",
-                    "https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=2"]
+        expected = ["https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=1", "https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=2"]
         self.assertEqual(expected, actual)
 
         actual2 = self.config._get_dict_config_value(collection_conf, "headers", {})
@@ -178,13 +163,15 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(1.5, actual)
 
         actual = configs["list_url_list"]
-        expected = ["https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=1",
-                    "https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=2"]
+        expected = ["https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=1", "https://terms.naver.com/list.naver?cid=58737&categoryId=58737&page=2"]
         self.assertEqual(expected, actual)
 
         actual = configs["post_process_script_list"]
-        expected = ['shuf']
+        expected = ["shuf"]
         self.assertEqual(expected, actual)
+
+        actual = configs["wait_until"]
+        self.assertEqual("domcontentloaded", actual)
 
     def test_get_extraction_configs(self) -> None:
         configs = self.config.get_extraction_configs()
@@ -218,6 +205,9 @@ class ConfigTest(unittest.TestCase):
 
         actual = configs["exclude_ad_images"]
         self.assertFalse(actual)
+
+        actual = configs["wait_until"]
+        self.assertEqual("domcontentloaded", actual)
 
     def test_get_rss_configs(self) -> None:
         # 1. ignore_broken_link가 설정에 없을 때
