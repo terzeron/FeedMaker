@@ -97,7 +97,10 @@ class HeadlessBrowser:
                 bottom = document.body.scrollHeight;
             }
 
+            const scrollUpStartTime = Date.now();
+            const maxScrollUpMs = 20000;
             for (let i = bottom; i >= 0; i -= 683) {
+                if (Date.now() - scrollUpStartTime > maxScrollUpMs) break;
                 window.scrollTo(0, i);
                 await sleep(200);
             }
