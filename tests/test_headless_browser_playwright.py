@@ -85,6 +85,14 @@ class TestHeadlessBrowserPlaywright(unittest.TestCase):
         HeadlessBrowser.cleanup_all_sessions()
         self.assertFalse(Path(profile_dir).exists())
 
+    def test_del_does_not_touch_playwright(self):
+        # __del__가 Playwright API를 호출하면 GC 타이밍에 따라 sync 루프 안에서
+        # context.close()가 호출되어 deadlock된다. 명시적 cleanup만 사용해야 한다.
+        browser = self._make_browser()
+        with patch.object(HeadlessBrowser, "_cleanup_cached_session") as mock_cleanup:
+            browser.__del__()
+            mock_cleanup.assert_not_called()
+
     def test_recycle_session_preserves_profile_dirs(self):
         profile_dir = tempfile.mkdtemp()
         HeadlessBrowser._all_profile_dirs.add(profile_dir)
