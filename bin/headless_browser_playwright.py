@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import atexit
+import hashlib
 import json
 import logging.config
 import os
@@ -9,7 +10,6 @@ import signal
 import sys
 import tempfile
 import threading
-import uuid
 from pathlib import Path
 from typing import Any, Optional
 
@@ -216,7 +216,8 @@ class HeadlessBrowser:
         self._cookie_dir: Optional[Path] = None
         self.allow_private_ips = Env.get("FM_CRAWLER_ALLOW_PRIVATE_IPS", "false").strip().lower() in ("1", "true", "yes", "on")
         self.allowed_hosts_raw = Env.get("FM_CRAWLER_ALLOWED_HOSTS", "")
-        self._profile_dir: str = os.path.join(tempfile.gettempdir(), "playwright-profiles", str(uuid.uuid4()))
+        group_hash = hashlib.sha256(str(dir_path.parent).encode(), usedforsecurity=False).hexdigest()[:16]
+        self._profile_dir: str = os.path.join(tempfile.gettempdir(), "playwright-profiles", group_hash)
         os.makedirs(self._profile_dir, exist_ok=True)
         HeadlessBrowser._all_profile_dirs.add(self._profile_dir)
 
@@ -230,8 +231,6 @@ class HeadlessBrowser:
         if os.access(self.dir_path, os.W_OK):
             self._cookie_dir = self.dir_path
         else:
-            import hashlib
-
             dir_hash = hashlib.md5(str(self.dir_path).encode(), usedforsecurity=False).hexdigest()[:12]
             fallback = Path(tempfile.gettempdir()) / "fm_cookies" / dir_hash
             fallback.mkdir(parents=True, exist_ok=True)
@@ -241,20 +240,11 @@ class HeadlessBrowser:
 
     @classmethod
     def _get_options_hash(cls, options: dict[str, Any]) -> str:
-        import hashlib
-
         options_str = json.dumps(options, sort_keys=True, ensure_ascii=False)
         return hashlib.md5(options_str.encode(), usedforsecurity=False).hexdigest()
 
     def _build_session_options(self) -> dict[str, Any]:
-        return {
-            "headless": not self.disable_headless,
-            "user_agent": self.headers["User-Agent"],
-            "blob_to_dataurl": self.blob_to_dataurl,
-            "copy_images_from_canvas": self.copy_images_from_canvas,
-            "simulate_scrolling": self.simulate_scrolling,
-            "profile_dir": self._profile_dir,
-        }
+        return {"headless": not self.disable_headless, "user_agent": self.headers["User-Agent"], "blob_to_dataurl": self.blob_to_dataurl, "copy_images_from_canvas": self.copy_images_from_canvas, "simulate_scrolling": self.simulate_scrolling, "group_key": str(self.dir_path.parent)}
 
     @classmethod
     def _get_cached_session(cls, options: dict[str, Any]) -> Optional[dict[str, Any]]:
@@ -287,7 +277,12 @@ class HeadlessBrowser:
             try:
                 cache["context"].close()
             except Exception:
-                pass
+                try:
+                    browser = cache["context"].browser
+                    if browser:
+                        browser.close()
+                except Exception:
+                    pass
             try:
                 cache["playwright"].stop()
             except Exception:
@@ -322,15 +317,7 @@ class HeadlessBrowser:
             user_agent=self.headers["User-Agent"],
             locale="ko-KR",
             ignore_https_errors=True,
-            args=[
-                "--disable-web-security",
-                "--allow-running-insecure-content",
-                "--disable-gpu",
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-extensions",
-                "--disable-plugins",
-            ],
+            args=["--disable-web-security", "--allow-running-insecure-content", "--disable-gpu", "--no-sandbox", "--disable-dev-shm-usage", "--disable-extensions", "--disable-plugins"],
         )
         context.set_default_timeout(self.timeout * 1000)
         context.set_default_navigation_timeout(self.timeout * 1000)
@@ -540,11 +527,7 @@ class HeadlessBrowser:
                 LOGGER.debug("converting blob to dataurl")
                 page.evaluate(self.CONVERTING_BLOB_TO_DATAURL_SCRIPT)
 
-            for option, waiting_div_id in (
-                (self.copy_images_from_canvas, self.ID_OF_RENDERING_COMPLETION_IN_CONVERTING_CANVAS),
-                (self.simulate_scrolling, self.ID_OF_RENDERING_COMPLETION_IN_SCROLLING),
-                (self.blob_to_dataurl, self.ID_OF_RENDERING_COMPLETION_IN_CONVERTING_BLOB),
-            ):
+            for option, waiting_div_id in ((self.copy_images_from_canvas, self.ID_OF_RENDERING_COMPLETION_IN_CONVERTING_CANVAS), (self.simulate_scrolling, self.ID_OF_RENDERING_COMPLETION_IN_SCROLLING), (self.blob_to_dataurl, self.ID_OF_RENDERING_COMPLETION_IN_CONVERTING_BLOB)):
                 if option:
                     self._wait_for_marker(page, waiting_div_id)
 
@@ -556,6 +539,7 @@ class HeadlessBrowser:
             return ""
         finally:
             if session is not None:
+                session_valid = True
                 try:
                     session["page"].evaluate("window.localStorage.clear();")
                     session["page"].evaluate("window.sessionStorage.clear();")
@@ -564,6 +548,12 @@ class HeadlessBrowser:
                 except Exception:
                     LOGGER.warning("Cached Playwright session is no longer responsive, invalidating cache")
                     self._cleanup_cached_session()
+                    session_valid = False
+                if session_valid:
+                    try:
+                        session["page"].goto("about:blank", wait_until="commit", timeout=5000)
+                    except Exception:
+                        pass
 
 
 def _handle_sigterm(signum: int, frame: object) -> None:

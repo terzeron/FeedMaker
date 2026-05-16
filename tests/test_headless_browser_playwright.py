@@ -211,7 +211,7 @@ class TestHeadlessBrowserPlaywright(unittest.TestCase):
         result = browser.make_request("https://example.com")
 
         self.assertEqual(result, "<html>ok</html>")
-        self.assertEqual(mock_page.goto.call_count, 2)
+        self.assertEqual(mock_page.goto.call_count, 3)  # referer + main URL + about:blank
         self.assertTrue(any(call.args[0] == browser.SETTING_PLUGINS_SCRIPT for call in mock_page.evaluate.call_args_list))
         self.assertTrue(any(call.args[0] == browser.SETTING_LANGUAGES_SCRIPT for call in mock_page.evaluate.call_args_list))
         self.assertTrue(any(call.args[0] == browser.GETTING_METADATA_SCRIPT for call in mock_page.evaluate.call_args_list))
@@ -355,12 +355,14 @@ class TestHeadlessBrowserPlaywright(unittest.TestCase):
         with patch.object(HeadlessBrowser, "_cleanup_cached_session") as mock_cleanup:
             self.assertEqual(browser3.make_request("https://example.com"), "<html>ok</html>")
         self.assertGreaterEqual(mock_cleanup.call_count, 1)
+        HeadlessBrowser._cleanup_cached_session()  # cleanup was mocked above; explicitly clean up for next sub-test
 
         browser4 = self._make_browser()
         mock_sync4, _mp4, _mc4, page4 = self._build_session_mocks()
         mock_sync_playwright.return_value = mock_sync4
         page4.goto.side_effect = RuntimeError("weird failure")
         self.assertEqual(browser4.make_request("https://example.com"), "")
+        HeadlessBrowser._cleanup_cached_session()  # page4.goto always raises; clean up stale session
 
         browser5 = self._make_browser()
         mock_sync5, _mp5, _mc5, page5 = self._build_session_mocks()
