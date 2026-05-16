@@ -222,6 +222,46 @@ class TestFeedMakerRunnerMakeSingleFeed(unittest.TestCase):
             call_kwargs = mock_fm_cls.call_args[1]
             self.assertEqual(call_kwargs["window_size"], 10)
 
+    @patch("bin.run.HeadlessBrowser")
+    @patch("bin.run.FileManager")
+    @patch("bin.run.FeedMaker")
+    @patch("bin.run.FileLock")
+    def test_recycle_session_called_after_feed_make(self, mock_filelock, mock_fm_cls, mock_file_mgr, mock_headless):
+        # 같은 피드그룹의 다음 피드가 fresh Chromium 인스턴스로 시작하도록
+        # feed_maker.make() 직후 recycle_session()이 호출되어야 한다.
+        runner = self._make_runner()
+        feed_dir = Path("/tmp/fm_work/group/feed")
+
+        mock_fm_cls.return_value.make.return_value = True
+        mock_filelock.return_value.__enter__ = MagicMock()
+        mock_filelock.return_value.__exit__ = MagicMock(return_value=False)
+
+        with patch.object(Path, "is_file", return_value=False):
+            result = runner.make_single_feed(feed_dir, options={})
+
+        self.assertTrue(result)
+        mock_headless.recycle_session.assert_called_once()
+
+    @patch("bin.run.HeadlessBrowser")
+    @patch("bin.run.FileManager")
+    @patch("bin.run.FeedMaker")
+    @patch("bin.run.FileLock")
+    def test_recycle_session_called_even_when_make_raises(self, mock_filelock, mock_fm_cls, mock_file_mgr, mock_headless):
+        # feed_maker.make()가 예외를 던져도 finally를 통해 recycle_session이 호출되어
+        # 다음 피드가 깨진 Chromium 세션을 물려받지 않도록 보장해야 한다.
+        runner = self._make_runner()
+        feed_dir = Path("/tmp/fm_work/group/feed")
+
+        mock_fm_cls.return_value.make.side_effect = RuntimeError("simulated feed failure")
+        mock_filelock.return_value.__enter__ = MagicMock()
+        mock_filelock.return_value.__exit__ = MagicMock(return_value=False)
+
+        with patch.object(Path, "is_file", return_value=False):
+            with self.assertRaises(RuntimeError):
+                runner.make_single_feed(feed_dir, options={})
+
+        mock_headless.recycle_session.assert_called_once()
+
 
 class TestFeedMakerRunnerMakeAllFeeds(unittest.TestCase):
     """make_all_feeds: iterates directories, handles errors"""

@@ -572,6 +572,25 @@ class TestRunScrollingScript(unittest.TestCase):
         # Must not raise
         browser._run_scrolling_script(mock_page)
 
+    def test_scroll_payload_explicitly_returns_null(self):
+        # xtoon처럼 window.scrollTo가 async 함수로 오버라이드된 사이트에서
+        # page.evaluate가 Promise를 받아 무한 대기하지 않도록, 스크롤 페이로드는
+        # 명시적으로 null을 리턴해야 한다 (Promise hang 방지의 핵심 invariant).
+        browser = self._make_browser()
+        mock_page = self._make_page(scroll_height=700)
+
+        browser._run_scrolling_script(mock_page)
+
+        scroll_payloads = [str(c.args[0]) for c in mock_page.evaluate.call_args_list if c.args and "scrollTo" in str(c.args[0]) and "scrollHeight" not in str(c.args[0])]
+        self.assertGreater(len(scroll_payloads), 0, "expected at least one scroll payload")
+        for payload in scroll_payloads:
+            self.assertIn("return null", payload, "scroll payload must explicitly return null so Playwright never awaits a Promise")
+
+    def test_scroll_loop_bounded_by_max_scroll_secs(self):
+        # 무한 스크롤 페이지에서 DOM이 폭증하지 않도록 한 방향 스크롤이
+        # _MAX_SCROLL_SECS를 초과하면 즉시 중단되어야 한다.
+        self.assertLessEqual(HeadlessBrowser._MAX_SCROLL_SECS, 10, "_MAX_SCROLL_SECS should stay small to avoid huge DOM accumulation on infinite-scroll pages")
+
 
 if __name__ == "__main__":
     unittest.main()
