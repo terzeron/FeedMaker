@@ -376,8 +376,12 @@ class HeadlessBrowser:
 
     def _run_scrolling_script(self, page: Page) -> None:
         marker_id = self.ID_OF_RENDERING_COMPLETION_IN_SCROLLING
+        # Use a wrapper that explicitly returns null so Playwright never waits
+        # on a Promise — xtoon and similar sites override window.scrollTo with
+        # an async function, which would cause page.evaluate() to hang forever.
+        _SCROLL_JS = "(function(y) {{ window.scrollTo(0, y); return null; }})({pos})"
         try:
-            page.wait_for_timeout(1000)
+            time.sleep(1)
 
             start = time.monotonic()
             pos = 0
@@ -387,8 +391,8 @@ class HeadlessBrowser:
                 bottom = 0
 
             while pos < bottom and time.monotonic() - start < self._MAX_SCROLL_SECS:
-                page.evaluate(f"window.scrollTo(0, {pos})")
-                page.wait_for_timeout(self._SCROLL_STEP_MS)
+                page.evaluate(_SCROLL_JS.format(pos=pos))
+                time.sleep(self._SCROLL_STEP_MS / 1000)
                 pos += self._SCROLL_DOWN_STEP
                 try:
                     bottom = int(page.evaluate("document.body.scrollHeight") or 0)
@@ -398,11 +402,11 @@ class HeadlessBrowser:
             if pos > 0:
                 start = time.monotonic()
                 while pos >= 0 and time.monotonic() - start < self._MAX_SCROLL_SECS:
-                    page.evaluate(f"window.scrollTo(0, {pos})")
-                    page.wait_for_timeout(self._SCROLL_STEP_MS)
+                    page.evaluate(_SCROLL_JS.format(pos=pos))
+                    time.sleep(self._SCROLL_STEP_MS / 1000)
                     pos -= self._SCROLL_UP_STEP
 
-            page.wait_for_timeout(1000)
+            time.sleep(1)
         except (PlaywrightError, PlaywrightTimeoutError) as e:
             LOGGER.warning("Scrolling interrupted: %s", e)
         finally:

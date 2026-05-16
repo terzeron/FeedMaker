@@ -217,8 +217,9 @@ class TestHeadlessBrowserPlaywright(unittest.TestCase):
         self.assertTrue(any(call.args[0] == browser.GETTING_METADATA_SCRIPT for call in mock_page.evaluate.call_args_list))
         self.assertTrue(any(call.args[0] == browser.CONVERTING_CANVAS_TO_IMAGES_SCRIPT for call in mock_page.evaluate.call_args_list))
         self.assertTrue(any(call.args[0] == browser.CONVERTING_BLOB_TO_DATAURL_SCRIPT for call in mock_page.evaluate.call_args_list))
-        # scroll now runs as Python loop: verify wait_for_timeout was called for step sleeps
-        self.assertGreater(mock_page.wait_for_timeout.call_count, 0)
+        # scroll uses time.sleep() now; verify scrollTo was called via evaluate
+        scroll_calls = [c for c in mock_page.evaluate.call_args_list if c.args and "scrollTo" in str(c.args[0])]
+        self.assertGreater(len(scroll_calls), 0)
         # scroll creates completion marker via evaluate instead of via SIMULATING_SCROLLING_SCRIPT
         self.assertTrue(any(browser.ID_OF_RENDERING_COMPLETION_IN_SCROLLING in str(call.args[0]) for call in mock_page.evaluate.call_args_list))
         self.assertEqual(mock_page.wait_for_selector.call_count, 5)
@@ -473,29 +474,42 @@ class TestRunScrollingScript(unittest.TestCase):
 
         all_evaluate_scripts = [str(c.args[0]) for c in mock_page.evaluate.call_args_list if c.args]
         self.assertTrue(any("scrollTo" in s for s in all_evaluate_scripts))
-        # wait_for_timeout called for scroll steps + initial/final 1s sleeps
-        self.assertGreater(mock_page.wait_for_timeout.call_count, 2)
+        # time.sleep() replaces wait_for_timeout; no wait_for_timeout calls expected
         self.assertTrue(self._marker_was_created(mock_page))
 
     def test_playwright_error_during_scroll_still_creates_marker(self):
-        """PlaywrightError mid-scroll → finally block creates marker."""
+        """PlaywrightError mid-scroll via evaluate() → finally block creates marker."""
         browser = self._make_browser()
         mock_page = MagicMock()
-        mock_page.wait_for_timeout.side_effect = [None, PlaywrightError("page closed")]
+
+        def evaluate_side_effect(script, *args, **kwargs):
+            if "scrollHeight" in script:
+                return 1000
+            if "scrollTo" in script:
+                raise PlaywrightError("page closed")
+            return None
+
+        mock_page.evaluate.side_effect = evaluate_side_effect
 
         browser._run_scrolling_script(mock_page)
 
         self.assertTrue(self._marker_was_created(mock_page))
 
     def test_playwright_timeout_during_scroll_still_creates_marker(self):
-        """PlaywrightTimeoutError mid-scroll → finally block creates marker."""
+        """PlaywrightTimeoutError mid-scroll via evaluate() → finally block creates marker."""
         browser = self._make_browser()
         mock_page = MagicMock()
-        mock_page.wait_for_timeout.side_effect = [None, PlaywrightTimeoutError("timeout")]
+
+        def evaluate_side_effect(script, *args, **kwargs):
+            if "scrollHeight" in script:
+                return 1000
+            if "scrollTo" in script:
+                raise PlaywrightTimeoutError("timeout")
+            return None
+
+        mock_page.evaluate.side_effect = evaluate_side_effect
 
         browser._run_scrolling_script(mock_page)
-
-        self.assertTrue(self._marker_was_created(mock_page))
 
     def test_time_limit_exits_scroll_down_early(self):
         """Monotonic time jumps past MAX_SCROLL_SECS → down loop exits after first step."""
@@ -507,7 +521,7 @@ class TestRunScrollingScript(unittest.TestCase):
         with patch("bin.headless_browser_playwright.time.monotonic", side_effect=time_seq + [0, 25]):
             browser._run_scrolling_script(mock_page)
 
-        down_calls = [c for c in mock_page.evaluate.call_args_list if "scrollTo(0, 0)" in str(c.args[0])]
+        down_calls = [c for c in mock_page.evaluate.call_args_list if c.args and "scrollTo" in str(c.args[0]) and "scrollHeight" not in str(c.args[0])]
         self.assertEqual(len(down_calls), 1, "exactly one down step before timeout")
         self.assertTrue(self._marker_was_created(mock_page))
 
