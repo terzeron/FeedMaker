@@ -20,7 +20,7 @@ LOGGER = logging.getLogger()
 
 
 class FeedMakerRunner:
-    def __init__(self, html_archiving_period: int, list_archiving_period: int):
+    def __init__(self, html_archiving_period: int, list_archiving_period: int) -> None:
         LOGGER.debug(f"# FeedMakerRunner(html_archiving_period={html_archiving_period}, list_archiving_period={list_archiving_period})")
         self.html_archiving_period = html_archiving_period
         self.list_archiving_period = list_archiving_period
