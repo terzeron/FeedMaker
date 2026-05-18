@@ -38,9 +38,9 @@ class _LoginFormParser(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list[tuple[str, Optional[str]]]) -> None:
         attr_dict = dict(attrs)
         if tag == "form":
-            self._current_form = {"action": attr_dict.get("action", ""), "method": attr_dict.get("method", "post").lower(), "hidden_fields": {}, "has_password_field": False, "password_field_name": "", "text_field_names": []}
+            self._current_form = {"action": attr_dict.get("action") or "", "method": (attr_dict.get("method") or "post").lower(), "hidden_fields": {}, "has_password_field": False, "password_field_name": "", "text_field_names": []}
         elif tag == "input" and self._current_form is not None:
-            input_type = attr_dict.get("type", "text").lower()
+            input_type = (attr_dict.get("type") or "text").lower()
             name = attr_dict.get("name", "")
             if input_type == "hidden":
                 value = attr_dict.get("value", "")
@@ -72,7 +72,7 @@ class LoginManager:
             return None
         try:
             with config_file.open("r", encoding="utf-8") as f:
-                config = json.load(f)
+                config: dict[str, str] = json.load(f)
         except (json.JSONDecodeError, OSError) as e:
             LOGGER.warning("Failed to read %s: %s", config_file, e)
             return None

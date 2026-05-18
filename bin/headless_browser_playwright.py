@@ -360,7 +360,7 @@ class HeadlessBrowser:
                 cookie.setdefault("path", "/")
                 normalized_cookies.append(cookie)
             if normalized_cookies:
-                context.add_cookies(normalized_cookies)
+                context.add_cookies(normalized_cookies)  # type: ignore[arg-type]
         except Exception:
             cookie_file.unlink(missing_ok=True)
             self._read_cookies_from_file(context)

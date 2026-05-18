@@ -392,7 +392,7 @@ class URLSafety:
 
     @staticmethod
     def _is_global_ip(ip: ipaddress._BaseAddress) -> bool:
-        return ip.is_global
+        return bool(ip.is_global)
 
     @staticmethod
     def check_url(url: str, *, allow_private: bool, allowed_hosts_raw: str = "") -> tuple[bool, str]:

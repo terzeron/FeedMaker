@@ -46,7 +46,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
 # X-Forwarded-For를 신뢰할 프록시 IP 목록 (기본: 127.0.0.1 = 동일 호스트 nginx)
 _trusted_proxy_ips = Env.get("FM_TRUSTED_PROXY_IPS", "127.0.0.1")
