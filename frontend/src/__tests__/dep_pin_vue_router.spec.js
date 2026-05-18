@@ -96,9 +96,12 @@ describe("vue-router: router.push() variants", () => {
   });
 });
 
-describe("vue-router: beforeEach guard signature", () => {
-  test("beforeEach receives (to, from, next) and calling next() proceeds", async () => {
-    // router/index.js:93 -- router.beforeEach(async (to, from, next) => { ... next() })
+describe("vue-router: beforeEach guard (return-value form)", () => {
+  // router/index.js uses the return-value form, not the deprecated `next()`
+  // callback. These tests pin that contract.
+
+  test("guard returning a route location object triggers redirect", async () => {
+    // router/index.js -- `return { path: "/login", query: { redirect: to.fullPath } }`
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
@@ -113,22 +116,57 @@ describe("vue-router: beforeEach guard signature", () => {
     });
 
     const calls = [];
-    router.beforeEach(async (to, from, next) => {
-      calls.push({ toPath: to.path, fromPath: from.path });
-      // production reads `to.matched` and `to.meta.requiresAuth`
+    router.beforeEach(async (to) => {
+      calls.push({ toPath: to.path });
       const requiresAuth = to.matched.some((r) => r.meta.requiresAuth);
       if (requiresAuth) {
-        next({ path: "/login", query: { redirect: to.fullPath } });
-      } else {
-        next();
+        return { path: "/login", query: { redirect: to.fullPath } };
       }
+      // returning undefined (implicit) allows the navigation
     });
 
     await router.push("/private");
-    // The guard redirected; check final landing.
     expect(router.currentRoute.value.path).toBe("/login");
     expect(router.currentRoute.value.query.redirect).toBe("/private");
     expect(calls.length).toBeGreaterThanOrEqual(1);
+  });
+
+  test("guard returning undefined allows the navigation", async () => {
+    // router/index.js -- `if (!requiresAuth) return;`  (implicit undefined)
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: "/", component: { template: "<div/>" } },
+        { path: "/public", component: { template: "<div/>" } },
+      ],
+    });
+
+    router.beforeEach(async () => {
+      // intentionally returning nothing
+    });
+
+    await router.push("/public");
+    expect(router.currentRoute.value.path).toBe("/public");
+  });
+
+  test("guard returning false aborts the navigation", async () => {
+    // Not used in production today, but pinning the contract guards future
+    // uses (e.g. blocking dangerous routes) without a regression.
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: "/", component: { template: "<div/>" } },
+        { path: "/blocked", component: { template: "<div/>" } },
+      ],
+    });
+
+    router.beforeEach((to) => {
+      if (to.path === "/blocked") return false;
+    });
+
+    await router.push("/blocked").catch(() => {});
+    // Navigation aborted -> currentRoute did not advance to /blocked.
+    expect(router.currentRoute.value.path).not.toBe("/blocked");
   });
 });
 

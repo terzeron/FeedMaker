@@ -90,32 +90,26 @@ const checkAuthStatus = async () => {
   }
 };
 
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to) => {
   const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
+  if (!requiresAuth) return;
 
-  if (requiresAuth) {
-    // 서버에 인증 상태 확인 (클라이언트 검증 우회 방지)
-    const isAuthenticated = await checkAuthStatus();
+  // 서버에 인증 상태 확인 (클라이언트 검증 우회 방지)
+  const isAuthenticated = await checkAuthStatus();
+  if (isAuthenticated) return;
 
-    if (isAuthenticated) {
-      next();
-    } else {
-      console.warn(`Unauthorized access attempt to ${to.path}`);
+  console.warn(`Unauthorized access attempt to ${to.path}`);
 
-      // 기존 localStorage 데이터 정리 (보안 취약점 제거)
-      localStorage.removeItem("is_authorized");
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("name");
-      localStorage.removeItem("session_expiry");
+  // 기존 localStorage 데이터 정리 (보안 취약점 제거)
+  localStorage.removeItem("is_authorized");
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("name");
+  localStorage.removeItem("session_expiry");
 
-      next({
-        path: "/login",
-        query: { redirect: to.fullPath },
-      });
-    }
-  } else {
-    next();
-  }
+  return {
+    path: "/login",
+    query: { redirect: to.fullPath },
+  };
 });
 
 export default router;

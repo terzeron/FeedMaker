@@ -1051,7 +1051,7 @@
 import axios from "axios";
 import { getApiUrlPath } from "../utils/api";
 import _ from "lodash";
-import moment from "moment";
+import dayjs from "dayjs";
 
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faTrashAlt } from "@fortawesome/free-regular-svg-icons";
@@ -1358,7 +1358,7 @@ export default {
       if (!date) {
         return "";
       }
-      let d = moment(date);
+      let d = dayjs(date);
       if (!d.isValid()) {
         return "";
       }
