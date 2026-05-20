@@ -69,6 +69,10 @@ filterwarnings = [
     "ignore::DeprecationWarning:bs4.*",
 ]
 
+[tool.test_runner]
+python_dirs = ["bin", "utils", "backend", "tests"]
+coverage_targets = ["backend", "bin", "utils"]
+
 [tool.mypy]
 python_version = "3.12"
 warn_incomplete_stub = true
