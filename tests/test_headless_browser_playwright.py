@@ -256,7 +256,10 @@ class TestHeadlessBrowserPlaywright(unittest.TestCase):
         self.assertGreater(len(scroll_calls), 0)
         # scroll creates completion marker via evaluate instead of via SIMULATING_SCROLLING_SCRIPT
         self.assertTrue(any(browser.ID_OF_RENDERING_COMPLETION_IN_SCROLLING in str(call.args[0]) for call in mock_page.evaluate.call_args_list))
-        self.assertEqual(mock_page.wait_for_selector.call_count, 5)
+        # 2 _wait_for_cloudflare invocations (referer + main) each iterate over
+        # _CLOUDFLARE_CHALLENGE_SELECTORS, plus 3 completion-marker waits.
+        cf_selectors = len(browser._CLOUDFLARE_CHALLENGE_SELECTORS)
+        self.assertEqual(mock_page.wait_for_selector.call_count, 2 * cf_selectors + 3)
         mock_context.add_init_script.assert_called_once_with(browser.BLOB_INTERCEPTOR_INIT_SCRIPT)
 
     @patch("bin.headless_browser_playwright.sync_playwright")

@@ -60,6 +60,7 @@ class NewlistCollector:
             headers=headers,
             timeout=conf.get("timeout", 60),
             num_retries=conf.get("num_retries", 1),
+            retry_sleep=conf.get("retry_sleep", 5),
             encoding=conf.get("encoding", "utf-8"),
             verify_ssl=conf.get("verify_ssl", True),
             copy_images_from_canvas=conf.get("copy_images_from_canvas", False),
