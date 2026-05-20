@@ -369,11 +369,14 @@ class HeadlessBrowser:
     def _quote_attr(value: str) -> str:
         return value.replace("\\", "\\\\").replace('"', '\\"')
 
+    _CLOUDFLARE_CHALLENGE_SELECTORS: tuple[str, ...] = ("#cf-content", 'iframe[src*="challenges.cloudflare.com"]', '[data-translate="checking_browser"]')
+
     def _wait_for_cloudflare(self, page: Page) -> None:
-        try:
-            page.wait_for_selector("#cf-content", state="hidden", timeout=self.timeout * 1000)
-        except PlaywrightTimeoutError:
-            pass
+        for selector in self._CLOUDFLARE_CHALLENGE_SELECTORS:
+            try:
+                page.wait_for_selector(selector, state="hidden", timeout=self.timeout * 1000)
+            except PlaywrightTimeoutError:
+                pass
 
     def _wait_for_marker(self, page: Page, marker_id: str) -> None:
         try:

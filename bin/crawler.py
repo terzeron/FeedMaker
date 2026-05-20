@@ -316,6 +316,7 @@ class Crawler:
         headers: Optional[dict[str, str]] = None,
         timeout: int = 60,
         num_retries: int = 1,
+        retry_sleep: int = 5,
         encoding: str = "utf-8",
         verify_ssl: bool = True,
         copy_images_from_canvas: bool = False,
@@ -325,13 +326,14 @@ class Crawler:
         wait_until: str = "domcontentloaded",
     ) -> None:
         LOGGER.debug(
-            "# Crawler(dir_path=%s, render_js=%s, method=%s, headers=%r, timeout=%d, num_retries=%d, encoding=%s, verify_ssl=%s, copy_images_from_canvas=%s, simulate_scrolling=%s, disable_headless=%s, blob_to_dataurl=%s, wait_until=%s)",
+            "# Crawler(dir_path=%s, render_js=%s, method=%s, headers=%r, timeout=%d, num_retries=%d, retry_sleep=%d, encoding=%s, verify_ssl=%s, copy_images_from_canvas=%s, simulate_scrolling=%s, disable_headless=%s, blob_to_dataurl=%s, wait_until=%s)",
             PathUtil.short_path(dir_path),
             render_js,
             method,
             headers,
             timeout,
             num_retries,
+            retry_sleep,
             encoding,
             verify_ssl,
             copy_images_from_canvas,
@@ -347,6 +349,7 @@ class Crawler:
         self.headers["User-Agent"] = self.headers.get("User-Agent", DEFAULT_USER_AGENT)
         self.timeout = timeout
         self.num_retries = num_retries
+        self.retry_sleep = retry_sleep
         self.encoding = encoding
         self.verify_ssl = verify_ssl
         self.copy_images_from_canvas = copy_images_from_canvas
@@ -413,6 +416,10 @@ class Crawler:
         if "timeout" in options:
             timeout = options["timeout"] or "60"
             option_str += f" --timeout={timeout}"
+        if "num_retries" in options and options["num_retries"]:
+            option_str += f" --retry={options['num_retries']}"
+        if "retry_sleep" in options and options["retry_sleep"]:
+            option_str += f" --retry-sleep={options['retry_sleep']}"
 
         return option_str
 
@@ -448,7 +455,7 @@ class Crawler:
                     return response, "", None
                 if i < self.num_retries - 1:
                     LOGGER.debug(f"wait for seconds and retry (#{i})")
-                    time.sleep(5)
+                    time.sleep(self.retry_sleep)
             else:
                 try:
                     response, error, headers, status_code = self.requests_client.make_request(url, download_file=download_file, data=data, allow_redirects=allow_redirects)
@@ -466,7 +473,7 @@ class Crawler:
                     #   410 Gone
                     break
                 LOGGER.debug(f"wait for seconds and retry (#{i})")
-                time.sleep(5)
+                time.sleep(self.retry_sleep)
 
         return "", error, headers
 
@@ -487,6 +494,7 @@ def print_usage() -> None:
     print("\t--user-agent=<user agent string>")
     print("\t--referer=<referer>")
     print("\t--retry=<# of retries>")
+    print("\t--retry-sleep=<seconds between retries>")
 
 
 def main() -> int:
@@ -496,6 +504,7 @@ def main() -> int:
     headers = {"Accept-Encoding": "gzip, deflate", "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36", "Accept": "*/*", "Connection": "Keep-Alive"}
     timeout = 60
     num_retries = 1
+    retry_sleep = 5
     render_js = False
     download_file = None
     encoding: str = "utf-8"
@@ -511,7 +520,7 @@ def main() -> int:
         sys.exit(-1)
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hf:", ["spider", "render-js=", "verify-ssl=", "copy-images-from-canvas=", "simulate-scrolling=", "disable-headless=", "blob-to-dataurl=", "wait-until=", "download=", "encoding=", "user-agent=", "referer=", "header=", "timeout=", "retry="])
+        opts, args = getopt.getopt(sys.argv[1:], "hf:", ["spider", "render-js=", "verify-ssl=", "copy-images-from-canvas=", "simulate-scrolling=", "disable-headless=", "blob-to-dataurl=", "wait-until=", "download=", "encoding=", "user-agent=", "referer=", "header=", "timeout=", "retry=", "retry-sleep="])
     except getopt.GetoptError:
         print_usage()
         sys.exit(-1)
@@ -552,6 +561,8 @@ def main() -> int:
             timeout = int(a)
         elif o == "--retry":
             num_retries = int(a)
+        elif o == "--retry-sleep":
+            retry_sleep = int(a)
         elif o == "--download":
             download_file = Path(a)
         elif o == "--encoding":
@@ -566,6 +577,7 @@ def main() -> int:
         headers=headers,
         timeout=timeout,
         num_retries=num_retries,
+        retry_sleep=retry_sleep,
         encoding=encoding,
         verify_ssl=verify_ssl,
         copy_images_from_canvas=copy_images_from_canvas,
