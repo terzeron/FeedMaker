@@ -158,6 +158,19 @@ wheels = [
 ]
 
 [[package]]
+name = "cloakbrowser"
+version = "0.3.29"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "playwright" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3e/f6/b68e898a0af9e8883bea17dafbb8938a18911864d29cf38a9299e870582d/cloakbrowser-0.3.29.tar.gz", hash = "sha256:ffe4d894bfee137afa9b581696c6f1f923292b3d57cc559b935b4b4c94ce95d2", size = 5362355, upload-time = "2026-05-20T06:28:21.228Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/15/eb/7e3bb88d32640d59b79f7ffc04744963dde7fd0419c96b5d55d14c67ae55/cloakbrowser-0.3.29-py3-none-any.whl", hash = "sha256:302da1e05361d49337172b9c192c377ee2ae3151b2311a9112358d3cfb0f93d5", size = 74830, upload-time = "2026-05-20T06:28:19.017Z" },
+]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 source = { registry = "https://pypi.org/simple" }
@@ -328,6 +341,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "beautifulsoup4" },
+    { name = "cloakbrowser" },
     { name = "defusedxml" },
     { name = "fastapi" },
     { name = "feedparser" },
@@ -376,6 +390,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.13.4" },
+    { name = "cloakbrowser", specifier = ">=0.3.29" },
     { name = "defusedxml", specifier = ">=0.7.1" },
     { name = "fastapi", specifier = ">=0.118.2" },
     { name = "feedparser", specifier = ">=6.0.12" },

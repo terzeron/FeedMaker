@@ -20,7 +20,7 @@ import requests
 from requests.cookies import RequestsCookieJar
 
 from bin.feed_maker_util import PathUtil, Env, URLSafety
-from bin.headless_browser_playwright import HeadlessBrowser
+from bin.headless_browser_cloak import HeadlessBrowser
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()

@@ -41,6 +41,7 @@ dependencies = [
     "pdftext>=0.6.3",
     "slowapi>=0.1.9",
     "pydantic[email]>=2.13.4",
+    "cloakbrowser>=0.3.29",
 ]
 
 [tool.ruff]
