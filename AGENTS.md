@@ -414,7 +414,7 @@ Configuration uses `FM_*` prefixed environment variables:
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **FeedMaker** (6182 symbols, 11654 relationships, 125 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **FeedMaker** (6207 symbols, 11707 relationships, 125 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

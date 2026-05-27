@@ -570,14 +570,15 @@ class FeedManager:
         LOGGER.debug("# get_groups()")
 
         with DB.session_ctx() as s:
-            # 모든 그룹 이름을 가져와서 중복 제거
-            group_names = [row.group_name for row in s.query(FeedInfo.group_name).where(FeedInfo.group_name != "").distinct().all()]
+            # 모든 그룹 이름을 가져와서 중복 제거. '.'으로 시작하는 그룹(.venv,
+            # .pytest_cache 등 캐시/도구 디렉터리)은 피드가 아니므로 제외한다.
+            group_names = [row.group_name for row in s.query(FeedInfo.group_name).where(FeedInfo.group_name != "", ~FeedInfo.group_name.startswith(".")).distinct().all()]
             result: list[GroupInfo] = []
             for group_name in sorted(group_names):
-                # 각 그룹별 피드 수 계산
-                count = s.query(FeedInfo).filter_by(group_name=group_name).count()
+                # 각 그룹별 피드 수 계산 ('.'으로 시작하는 피드는 제외)
+                count = s.query(FeedInfo).filter_by(group_name=group_name).filter(~FeedInfo.feed_name.startswith(".")).count()
                 # 그룹의 active 상태 확인 (그룹 내 모든 피드가 active인지 확인)
-                active_count = s.query(FeedInfo).filter_by(group_name=group_name, is_active=True).count()
+                active_count = s.query(FeedInfo).filter_by(group_name=group_name, is_active=True).filter(~FeedInfo.feed_name.startswith(".")).count()
                 is_active = active_count > 0  # 그룹에 active 피드가 하나라도 있으면 active
                 result.append(GroupInfo(name=group_name, num_feeds=count, is_active=is_active))
             return result
@@ -587,7 +588,8 @@ class FeedManager:
         LOGGER.debug("# get_feeds_by_group(group_name='%s')", group_name)
 
         with DB.session_ctx() as s:
-            rows = s.query(FeedInfo).where(FeedInfo.group_name == group_name).order_by(FeedInfo.feed_name).all()
+            # '.'으로 시작하는 피드(.ruff_cache, .playwright-mcp 등)는 제외한다.
+            rows = s.query(FeedInfo).where(FeedInfo.group_name == group_name, ~FeedInfo.feed_name.startswith(".")).order_by(FeedInfo.feed_name).all()
             return [GroupFeedInfo(name=row.feed_name, title=row.feed_title if row.feed_title else row.feed_name, group_name=row.group_name, is_active=row.is_active) for row in rows]
 
     @classmethod
