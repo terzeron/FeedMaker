@@ -117,4 +117,12 @@ describe("composables/useApiCall", () => {
       expect.objectContaining({ method: "GET", params: {} }),
     );
   });
+
+  it("rethrows and resets loading when the request itself rejects", async () => {
+    axios.mockRejectedValueOnce(new Error("network down"));
+    const { get, loading, error } = useApiCall();
+    await expect(get("/down")).rejects.toThrow("network down");
+    expect(error.value).toBe("network down");
+    expect(loading.value).toBe(false);
+  });
 });
