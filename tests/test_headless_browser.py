@@ -545,6 +545,63 @@ class TestMakeRequest(unittest.TestCase):
     @patch("bin.headless_browser.which", return_value="/usr/bin/chromedriver")
     @patch("bin.headless_browser.webdriver.Chrome")
     @patch("bin.headless_browser.WebDriverWait")
+    def test_restores_saved_cookies_on_new_driver(self, mock_wait, mock_chrome_cls, mock_which, mock_check, mock_env):
+        from bin.headless_browser import HeadlessBrowser
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cookie_file = Path(tmpdir) / HeadlessBrowser.COOKIE_FILE
+            with cookie_file.open("w") as f:
+                json.dump([{"name": "sid", "value": "abc", "domain": ".example.com"}], f)
+
+            mock_driver = MagicMock()
+            mock_driver.page_source = "<html>OK</html>"
+            mock_driver.current_url = "about:blank"
+            mock_driver.get_cookies.return_value = []
+            mock_chrome_cls.return_value = mock_driver
+            mock_wait.return_value = MagicMock()
+
+            b = HeadlessBrowser(dir_path=Path(tmpdir))
+            result = b.make_request("http://example.com/page")
+
+            self.assertEqual(result, "<html>OK</html>")
+            # the saved cookie is injected onto the freshly created driver
+            mock_driver.add_cookie.assert_called_once()
+            self.assertEqual(mock_driver.add_cookie.call_args[0][0]["name"], "sid")
+            # the page is loaded twice: once to establish the cookie domain, then
+            # again as the authenticated reload
+            get_urls = [c[0][0] for c in mock_driver.get.call_args_list]
+            self.assertEqual(get_urls.count("http://example.com/page"), 2)
+
+    @patch("bin.headless_browser.Env.get", return_value="false")
+    @patch("bin.headless_browser.URLSafety.check_url", return_value=(True, ""))
+    @patch("bin.headless_browser.which", return_value="/usr/bin/chromedriver")
+    @patch("bin.headless_browser.webdriver.Chrome")
+    @patch("bin.headless_browser.WebDriverWait")
+    def test_no_cookie_restore_when_file_absent(self, mock_wait, mock_chrome_cls, mock_which, mock_check, mock_env):
+        from bin.headless_browser import HeadlessBrowser
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_driver = MagicMock()
+            mock_driver.page_source = "<html>OK</html>"
+            mock_driver.current_url = "about:blank"
+            mock_driver.get_cookies.return_value = []
+            mock_chrome_cls.return_value = mock_driver
+            mock_wait.return_value = MagicMock()
+
+            b = HeadlessBrowser(dir_path=Path(tmpdir))
+            result = b.make_request("http://example.com/page")
+
+            self.assertEqual(result, "<html>OK</html>")
+            mock_driver.add_cookie.assert_not_called()
+            # no saved cookies → no extra navigation to establish the cookie domain
+            get_urls = [c[0][0] for c in mock_driver.get.call_args_list]
+            self.assertEqual(get_urls, ["http://example.com/page"])
+
+    @patch("bin.headless_browser.Env.get", return_value="false")
+    @patch("bin.headless_browser.URLSafety.check_url", return_value=(True, ""))
+    @patch("bin.headless_browser.which", return_value="/usr/bin/chromedriver")
+    @patch("bin.headless_browser.webdriver.Chrome")
+    @patch("bin.headless_browser.WebDriverWait")
     def test_copy_images_from_canvas(self, mock_wait, mock_chrome_cls, mock_which, mock_check, mock_env):
         from bin.headless_browser import HeadlessBrowser
 
@@ -1342,13 +1399,7 @@ class TestHeadlessBrowserLoginAndSignals(unittest.TestCase):
 
         mock_driver.find_element.side_effect = find_element
 
-        config = {
-            "login_url": "https://example.com/login",
-            "id": "tester",
-            "password": "secret",
-            "id_field": "username",
-            "password_field": "password",
-        }
+        config = {"login_url": "https://example.com/login", "id": "tester", "password": "secret", "id_field": "username", "password_field": "password"}
 
         with patch.object(browser, "_write_cookies_to_file") as mock_write:
             self.assertTrue(browser.login(config))
