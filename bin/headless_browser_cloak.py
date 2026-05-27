@@ -299,6 +299,7 @@ class HeadlessBrowser:
         context = _cloak_launch_persistent_context(user_data_dir=self._profile_dir, headless=not self.disable_headless, viewport={"width": 1920, "height": 1080}, user_agent=self.headers["User-Agent"], locale="ko-KR", timezone="Asia/Seoul", humanize=True, ignore_https_errors=True)
         context.set_default_timeout(self.timeout * 1000)
         context.set_default_navigation_timeout(self.timeout * 1000)
+        self._read_cookies_from_file(context)
         context.on("page", self._register_dialog_handlers)
         if self.blob_to_dataurl:
             context.add_init_script(self.BLOB_INTERCEPTOR_INIT_SCRIPT)
