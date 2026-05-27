@@ -32,12 +32,7 @@ class FeedManager:
             rows = s.query(FeedInfo).filter(FeedInfo.url_list_count > 1).all()
             for row in rows:
                 feed_name: str = row.feed_name
-                feed_name_list_url_count_map[feed_name] = {
-                    "feed_name": feed_name,
-                    "feed_title": row.feed_title,
-                    "group_name": row.group_name,
-                    "count": row.url_list_count
-                }
+                feed_name_list_url_count_map[feed_name] = {"feed_name": feed_name, "feed_title": row.feed_title, "group_name": row.group_name, "count": row.url_list_count}
 
         return feed_name_list_url_count_map
 
@@ -49,10 +44,7 @@ class FeedManager:
         with DB.session_ctx() as s:
             for row in s.query(ElementNameCount).all():
                 element_name = row.element_name
-                element_name_count_map[element_name] = {
-                    "element_name": element_name,
-                    "count": row.count
-                }
+                element_name_count_map[element_name] = {"element_name": element_name, "count": row.count}
 
         return element_name_count_map
 
@@ -63,11 +55,7 @@ class FeedManager:
         if do_remove_file:
             (feed_dir_path / Config.DEFAULT_CONF_FILE).unlink(missing_ok=True)
         with DB.session_ctx() as s:
-            s.query(FeedInfo).filter_by(feed_name=feed_name).update({
-                FeedInfo.is_active: False,
-                FeedInfo.config: "",
-                FeedInfo.config_modify_date: None
-            })
+            s.query(FeedInfo).filter_by(feed_name=feed_name).update({FeedInfo.is_active: False, FeedInfo.config: "", FeedInfo.config_modify_date: None})
         LOGGER.info("* The removing of config info of feed '%s' is done.", feed_name)
 
     @classmethod
@@ -190,10 +178,7 @@ class FeedManager:
         if do_remove_file:
             (feed_dir_path / f"{feed_name}.xml").unlink(missing_ok=True)
         with DB.session_ctx() as s:
-            s.query(FeedInfo).filter_by(feed_name=feed_name).update({
-                FeedInfo.feedmaker: False,
-                FeedInfo.rss_update_date: None
-            })
+            s.query(FeedInfo).filter_by(feed_name=feed_name).update({FeedInfo.feedmaker: False, FeedInfo.rss_update_date: None})
         LOGGER.info("* The removing of rss info of feed '%s' is done.", feed_name)
 
     @classmethod
@@ -269,14 +254,7 @@ class FeedManager:
             rows = s.query(FeedInfo).where(FeedInfo.public_html).all()
             for row in rows:
                 feed_name = row.feed_name
-                feed_name_public_feed_info_map[feed_name] = {
-                    "feed_name": feed_name,
-                    "feed_title": row.feed_title,
-                    "group_name": row.group_name,
-                    "file_size": row.file_size,
-                    "num_items": row.num_items,
-                    "upload_date": row.upload_date
-                }
+                feed_name_public_feed_info_map[feed_name] = {"feed_name": feed_name, "feed_title": row.feed_title, "group_name": row.group_name, "file_size": row.file_size, "num_items": row.num_items, "upload_date": row.upload_date}
 
         return feed_name_public_feed_info_map
 
@@ -286,13 +264,7 @@ class FeedManager:
         if do_remove_file:
             public_feed_file_path.unlink(missing_ok=True)
         with DB.session_ctx() as s:
-            s.query(FeedInfo).filter_by(feed_name=feed_name).update({
-                FeedInfo.public_html: False,
-                FeedInfo.public_feed_file_path: "",
-                FeedInfo.file_size: 0,
-                FeedInfo.num_items: 0,
-                FeedInfo.upload_date: None
-            })
+            s.query(FeedInfo).filter_by(feed_name=feed_name).update({FeedInfo.public_html: False, FeedInfo.public_feed_file_path: "", FeedInfo.file_size: 0, FeedInfo.num_items: 0, FeedInfo.upload_date: None})
             LOGGER.info("* The removing of public feed info of feed '%s' is done.", feed_name)
 
     def remove_public_feed_by_feed_name(self, feed_name: str, do_remove_file: bool = False) -> None:
@@ -323,14 +295,7 @@ class FeedManager:
                 feed.num_items = num_items
                 feed.upload_date = upload_date
         else:
-            s.add(FeedInfo(
-                feed_name=feed_name,
-                public_html=True,
-                public_feed_file_path=str(public_feed_file_path),
-                file_size=file_size,
-                num_items=num_items,
-                upload_date=upload_date
-            ))
+            s.add(FeedInfo(feed_name=feed_name, public_html=True, public_feed_file_path=str(public_feed_file_path), file_size=file_size, num_items=num_items, upload_date=upload_date))
 
         return num_items
 
@@ -368,16 +333,7 @@ class FeedManager:
                 feed_name = row.feed_name
                 unit_size_per_day: float = row.unit_size_per_day or 0.0
                 progress_ratio: float = row.progress_ratio or 0.0
-                feed_name_progress_info_map[feed_name] = {
-                    "feed_name": feed_name,
-                    "feed_title": row.feed_title,
-                    "group_name": row.group_name,
-                    "current_index": row.current_index,
-                    "total_item_count": row.total_item_count,
-                    "unit_size_per_day": unit_size_per_day,
-                    "progress_ratio": progress_ratio,
-                    "due_date": row.due_date
-                }
+                feed_name_progress_info_map[feed_name] = {"feed_name": feed_name, "feed_title": row.feed_title, "group_name": row.group_name, "current_index": row.current_index, "total_item_count": row.total_item_count, "unit_size_per_day": unit_size_per_day, "progress_ratio": progress_ratio, "due_date": row.due_date}
 
         return feed_name_progress_info_map
 
@@ -388,14 +344,7 @@ class FeedManager:
         if do_remove_file:
             (feed_dir_path / "start_idx.txt").unlink(missing_ok=True)
         with DB.session_ctx() as s:
-            s.query(FeedInfo).filter_by(feed_name=feed_name).update({
-                FeedInfo.is_completed: False,
-                FeedInfo.current_index: 0,
-                FeedInfo.total_item_count: 0,
-                FeedInfo.unit_size_per_day: 0,
-                FeedInfo.progress_ratio: 0.0,
-                FeedInfo.due_date: None
-            })
+            s.query(FeedInfo).filter_by(feed_name=feed_name).update({FeedInfo.is_completed: False, FeedInfo.current_index: 0, FeedInfo.total_item_count: 0, FeedInfo.unit_size_per_day: 0, FeedInfo.progress_ratio: 0.0, FeedInfo.due_date: None})
         LOGGER.info("* The removing of progress info of feed '%s' is done.", feed_name)
 
     @classmethod
@@ -419,7 +368,8 @@ class FeedManager:
         if conf_file_path.is_file():
             try:
                 import json
-                with conf_file_path.open('r', encoding='utf-8') as f:
+
+                with conf_file_path.open("r", encoding="utf-8") as f:
                     conf_data = json.load(f)
                 if "configuration" in conf_data and "collection" in conf_data["configuration"]:
                     is_completed = conf_data["configuration"]["collection"].get("is_completed", False)
@@ -448,9 +398,9 @@ class FeedManager:
             current_index = 0
             file_path = feed_dir_path / "start_idx.txt"
             if file_path.is_file():
-                with file_path.open('r', encoding="utf-8") as infile:
+                with file_path.open("r", encoding="utf-8") as infile:
                     line = infile.readline()
-                current_index = int(line.split('\t')[0])
+                current_index = int(line.split("\t")[0])
 
             # determine total_item_count & collect_date
             url_list: list[str] = []
@@ -462,9 +412,9 @@ class FeedManager:
                         temp_dt = datetime.fromtimestamp(st.st_mtime, timezone.utc)
                         if not collect_date or collect_date < temp_dt:
                             collect_date = temp_dt
-                        with list_file_path.open('r', encoding="utf-8") as infile:
+                        with list_file_path.open("r", encoding="utf-8") as infile:
                             for line in infile:
-                                url = line.split('\t')[0]
+                                url = line.split("\t")[0]
                                 url_list.append(url)
             total_item_count = len(list(set(url_list)))
 
@@ -526,13 +476,9 @@ class FeedManager:
         with DB.session_ctx() as s:
             conditions = []
             for keyword in keywords:
-                escaped = keyword.replace('%', r'\%').replace('_', r'\_')
+                escaped = keyword.replace("%", r"\%").replace("_", r"\_")
                 pat = f"%{escaped}%"
-                conditions.append(
-                    FeedInfo.feed_name.like(pat, escape='\\') |
-                    FeedInfo.feed_title.like(pat, escape='\\') |
-                    FeedInfo.group_name.like(pat, escape='\\')
-                )
+                conditions.append(FeedInfo.feed_name.like(pat, escape="\\") | FeedInfo.feed_title.like(pat, escape="\\") | FeedInfo.group_name.like(pat, escape="\\"))
             combined = or_(*conditions)
             rows = s.query(FeedInfo).where(combined & (FeedInfo.group_name != "")).order_by(FeedInfo.group_name, FeedInfo.feed_name).all()
             return [{"feed_name": row.feed_name, "feed_title": row.feed_title if row.feed_title else row.feed_name, "group_name": row.group_name, "is_active": row.is_active} for row in rows]
@@ -567,9 +513,7 @@ class FeedManager:
         LOGGER.debug("# get_feed_info(group_name='%s', feed_name='%s')", group_name, feed_name)
 
         with DB.session_ctx() as s:
-            feed = s.query(FeedInfo).where(FeedInfo.feed_name == feed_name,
-                                           FeedInfo.group_name == group_name,
-                                           FeedInfo.config.isnot(None)).first()
+            feed = s.query(FeedInfo).where(FeedInfo.feed_name == feed_name, FeedInfo.group_name == group_name, FeedInfo.config.isnot(None)).first()
 
         if not feed:
             return {}
@@ -585,61 +529,33 @@ class FeedManager:
             "group_name": feed.group_name,
             "config": config_data,
             "config_modify_date": feed.config_modify_date,
-            "collection_info": {
-                "collect_date": feed.collect_date,
-                "total_item_count": feed.total_item_count,
-            },
-            "public_feed_info": {
-                "public_feed_file_path": feed.public_feed_file_path,
-                "file_size": feed.file_size,
-                "num_items": feed.num_items,
-                "upload_date": feed.upload_date,
-            },
-            "progress_info": {
-                "current_index": feed.current_index,
-                "total_item_count": feed.total_item_count,
-                "unit_size_per_day": feed.unit_size_per_day,
-                "progress_ratio": feed.progress_ratio,
-                "due_date": feed.due_date,
-            },
+            "collection_info": {"collect_date": feed.collect_date, "total_item_count": feed.total_item_count},
+            "public_feed_info": {"public_feed_file_path": feed.public_feed_file_path, "file_size": feed.file_size, "num_items": feed.num_items, "upload_date": feed.upload_date},
+            "progress_info": {"current_index": feed.current_index, "total_item_count": feed.total_item_count, "unit_size_per_day": feed.unit_size_per_day, "progress_ratio": feed.progress_ratio, "due_date": feed.due_date},
         }
 
     @classmethod
-    def toggle_feed(cls, feed_name: str) -> bool:
-        LOGGER.debug("# toggle_feed(feed_name='%s')", feed_name)
+    def toggle_feed(cls, group_name: str, feed_name: str, is_active: bool) -> bool:
+        # feed_name/group_name(PK)은 항상 canonical로 유지하고 is_active만 갱신한다.
+        # 비활성 표기는 파일시스템 디렉터리의 '_' 접두사로만 처리한다(FeedMakerManager 참조).
+        LOGGER.debug("# toggle_feed(group_name='%s', feed_name='%s', is_active=%r)", group_name, feed_name, is_active)
         with DB.session_ctx() as s:
-            row = s.query(FeedInfo).where(FeedInfo.feed_name == feed_name).first()
-            if row:
-                feed_name_str = row.feed_name
-                if feed_name_str.startswith("_"):
-                    new_feed_name = feed_name_str[1:]
-                    is_active = True
-                else:
-                    new_feed_name = "_" + feed_name_str
-                    is_active = False
-                s.query(FeedInfo).filter_by(feed_name=feed_name).update({
-                    FeedInfo.feed_name: new_feed_name,
-                    FeedInfo.is_active: is_active
-                })
+            row = s.query(FeedInfo).filter_by(feed_name=feed_name, group_name=group_name).first()
+            if not row:
+                return False
+            row.is_active = is_active
         return True
 
     @classmethod
-    def toggle_group(cls, group_name: str) -> bool:
-        LOGGER.debug("# toggle_group(group_name='%s')", group_name)
+    def toggle_group(cls, group_name: str, is_active: bool) -> bool:
+        # group_name(PK)은 canonical로 유지하고 그룹 내 모든 피드의 is_active를 갱신한다.
+        LOGGER.debug("# toggle_group(group_name='%s', is_active=%r)", group_name, is_active)
         with DB.session_ctx() as s:
-            row = s.query(FeedInfo).where(FeedInfo.group_name == group_name).first()
-            if row:
-                group_name_str = row.group_name
-                if group_name_str.startswith("_"):
-                    new_group_name = group_name_str[1:]
-                    is_active = True
-                else:
-                    new_group_name = "_" + group_name_str
-                    is_active = False
-                s.query(FeedInfo).filter_by(group_name=group_name).update({
-                    FeedInfo.group_name: new_group_name,
-                    FeedInfo.is_active: is_active
-                })
+            rows = s.query(FeedInfo).filter_by(group_name=group_name).all()
+            if not rows:
+                return False
+            for row in rows:
+                row.is_active = is_active
         return True
 
     def load_all(self, max_num_feeds: Optional[int] = None, max_num_public_feeds: Optional[int] = None) -> None:

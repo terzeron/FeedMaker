@@ -1093,42 +1093,109 @@ class TestRemoveGroup(unittest.TestCase):
 
 class TestToggleFeed(unittest.TestCase):
     @patch("backend.feed_maker_manager.FeedManager.toggle_feed")
-    def test_toggle_success(self, mock_toggle):
-        mock_toggle.return_value = True
-        result, error = FeedMakerManager.toggle_feed("feed1")
-        self.assertEqual(result, "feed1")
-        self.assertEqual(error, "")
+    def test_active_to_inactive_renames_dir_and_syncs_db(self, mock_db_toggle):
+        mock_db_toggle.return_value = True
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            mgr = _make_manager(tmp_path)
+            (tmp_path / "group1" / "feed1").mkdir(parents=True)
+
+            result, error = mgr.toggle_feed("group1", "feed1")
+
+            self.assertEqual(result, "feed1")
+            self.assertEqual(error, "")
+            # 디렉터리에 '_' 접두사가 붙고 canonical 디렉터리는 사라진다
+            self.assertFalse((tmp_path / "group1" / "feed1").exists())
+            self.assertTrue((tmp_path / "group1" / "_feed1").is_dir())
+            # DB는 canonical 이름 유지 + is_active=False로 동기화
+            mock_db_toggle.assert_called_once_with("group1", "feed1", False)
 
     @patch("backend.feed_maker_manager.FeedManager.toggle_feed")
-    def test_toggle_failure(self, mock_toggle):
-        mock_toggle.return_value = False
-        result, error = FeedMakerManager.toggle_feed("feed1")
-        self.assertEqual(result, "")
-        self.assertIn("can't toggle", error)
+    def test_inactive_to_active_strips_prefix_and_syncs_db(self, mock_db_toggle):
+        mock_db_toggle.return_value = True
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            mgr = _make_manager(tmp_path)
+            (tmp_path / "group1" / "_feed1").mkdir(parents=True)
+
+            result, error = mgr.toggle_feed("group1", "feed1")
+
+            self.assertEqual(result, "feed1")
+            self.assertEqual(error, "")
+            self.assertTrue((tmp_path / "group1" / "feed1").is_dir())
+            self.assertFalse((tmp_path / "group1" / "_feed1").exists())
+            mock_db_toggle.assert_called_once_with("group1", "feed1", True)
+
+    @patch("backend.feed_maker_manager.FeedManager.toggle_feed")
+    def test_missing_dir_returns_error(self, mock_db_toggle):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            mgr = _make_manager(tmp_path)
+            (tmp_path / "group1").mkdir(parents=True)
+
+            result, error = mgr.toggle_feed("group1", "feed1")
+
+            self.assertEqual(result, "")
+            self.assertIn("can't find feed directory", error)
+            mock_db_toggle.assert_not_called()
 
     def test_invalid_name_raises(self):
-        with self.assertRaises(ValueError):
-            FeedMakerManager.toggle_feed("../evil")
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = _make_manager(Path(tmp))
+            with self.assertRaises(ValueError):
+                mgr.toggle_feed("group1", "../evil")
 
 
 class TestToggleGroup(unittest.TestCase):
     @patch("backend.feed_maker_manager.FeedManager.toggle_group")
-    def test_toggle_success(self, mock_toggle):
-        mock_toggle.return_value = True
-        result, error = FeedMakerManager.toggle_group("group1")
-        self.assertEqual(result, "group1")
-        self.assertEqual(error, "")
+    def test_active_to_inactive_renames_dir_and_syncs_db(self, mock_db_toggle):
+        mock_db_toggle.return_value = True
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            mgr = _make_manager(tmp_path)
+            (tmp_path / "group1" / "feed1").mkdir(parents=True)
+
+            result, error = mgr.toggle_group("group1")
+
+            self.assertEqual(result, "group1")
+            self.assertEqual(error, "")
+            self.assertTrue((tmp_path / "_group1").is_dir())
+            self.assertFalse((tmp_path / "group1").exists())
+            mock_db_toggle.assert_called_once_with("group1", False)
 
     @patch("backend.feed_maker_manager.FeedManager.toggle_group")
-    def test_toggle_failure(self, mock_toggle):
-        mock_toggle.return_value = False
-        result, error = FeedMakerManager.toggle_group("group1")
-        self.assertEqual(result, "")
-        self.assertIn("can't toggle", error)
+    def test_inactive_to_active_strips_prefix_and_syncs_db(self, mock_db_toggle):
+        mock_db_toggle.return_value = True
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            mgr = _make_manager(tmp_path)
+            (tmp_path / "_group1" / "feed1").mkdir(parents=True)
+
+            result, error = mgr.toggle_group("group1")
+
+            self.assertEqual(result, "group1")
+            self.assertEqual(error, "")
+            self.assertTrue((tmp_path / "group1").is_dir())
+            self.assertFalse((tmp_path / "_group1").exists())
+            mock_db_toggle.assert_called_once_with("group1", True)
+
+    @patch("backend.feed_maker_manager.FeedManager.toggle_group")
+    def test_missing_dir_returns_error(self, mock_db_toggle):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            mgr = _make_manager(tmp_path)
+
+            result, error = mgr.toggle_group("group1")
+
+            self.assertEqual(result, "")
+            self.assertIn("can't find group directory", error)
+            mock_db_toggle.assert_not_called()
 
     def test_invalid_name_raises(self):
-        with self.assertRaises(ValueError):
-            FeedMakerManager.toggle_group("../evil")
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = _make_manager(Path(tmp))
+            with self.assertRaises(ValueError):
+                mgr.toggle_group("../evil")
 
 
 class TestCheckRunning(unittest.TestCase):

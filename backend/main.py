@@ -431,7 +431,7 @@ async def toggle_feed(group_name: str, feed_name: str, request: Request, feed_ma
     LOGGER.info("/groups/%s/feeds/%s/toggle -> toggle_feed(%s, %s)", group_name, feed_name, group_name, feed_name)
     require_admin(request)
     response_object: dict[str, Any] = {}
-    result, error = feed_maker_manager.toggle_feed(feed_name)
+    result, error = feed_maker_manager.toggle_feed(group_name, feed_name)
     if result or not error:
         response_object["new_name"] = result
         response_object["status"] = "success"
