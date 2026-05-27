@@ -6,10 +6,11 @@ import unittest
 import shutil
 import logging.config
 from pathlib import Path
+from typing import Optional
 from unittest.mock import patch, MagicMock
 
 from bin.feed_maker_util import Datetime, Config
-from bin.feed_manager import FeedManager
+from bin.feed_manager import FeedManager, FeedUrlCountInfo, ElementCountInfo, PublicFeedInfo, FeedProgressInfo, SearchResultFeedInfo, GroupInfo, GroupFeedInfo, SingleFeedInfo
 from bin.db import DB
 from bin.models import FeedInfo
 import json
@@ -68,7 +69,7 @@ class TestFeedManager(unittest.TestCase):
         del self.mock_db_config
 
     def test_get_feed_name_list_url_count_map(self) -> None:
-        result = FeedManager.get_feed_name_list_url_count_map()
+        result: dict[str, FeedUrlCountInfo] = FeedManager.get_feed_name_list_url_count_map()
         for _, list_url_count in result.items():
             self.assertIn("feed_name", list_url_count)
             self.assertIn("feed_title", list_url_count)
@@ -76,7 +77,7 @@ class TestFeedManager(unittest.TestCase):
             self.assertIn("count", list_url_count)
 
     def test_get_element_name_count_map(self) -> None:
-        result = FeedManager.get_element_name_count_map()
+        result: dict[str, ElementCountInfo] = FeedManager.get_element_name_count_map()
         for _, count in result.items():
             self.assertIn("element_name", count)
             self.assertIn("count", count)
@@ -223,7 +224,7 @@ class TestFeedManager(unittest.TestCase):
             self.assertIsNotNone(row.rss_update_date)
 
     def test_get_feed_name_public_feed_info_map(self) -> None:
-        result = FeedManager.get_feed_name_public_feed_info_map()
+        result: dict[str, PublicFeedInfo] = FeedManager.get_feed_name_public_feed_info_map()
         for _, public_feed_info in result.items():
             self.assertIn("feed_name", public_feed_info)
             self.assertIn("feed_title", public_feed_info)
@@ -299,7 +300,7 @@ class TestFeedManager(unittest.TestCase):
                 self.assertGreaterEqual(row.num_items, 0)
 
     def test_get_feed_name_progress_info_map(self) -> None:
-        result = FeedManager.get_feed_name_progress_info_map()
+        result: dict[str, FeedProgressInfo] = FeedManager.get_feed_name_progress_info_map()
         for _, progress_info in result.items():
             self.assertIn("feed_name", progress_info)
             self.assertIn("feed_title", progress_info)
@@ -407,11 +408,11 @@ class TestFeedManager(unittest.TestCase):
                     self.assertIsNotNone(row.due_date)
 
     def test_search_empty_keywords(self) -> None:
-        result = FeedManager.search([])
+        result: list[SearchResultFeedInfo] = FeedManager.search([])
         self.assertEqual(result, [])
 
     def test_search_blank_keywords(self) -> None:
-        result = FeedManager.search(["", " ", "  "])
+        result: list[SearchResultFeedInfo] = FeedManager.search(["", " ", "  "])
         self.assertEqual(result, [])
 
     def test_search_single_keyword(self) -> None:
@@ -424,7 +425,7 @@ class TestFeedManager(unittest.TestCase):
         self.mock_query.order_by.return_value = self.mock_query
         self.mock_query.all.return_value = [mock_row]
 
-        result = FeedManager.search(["piece"])
+        result: list[SearchResultFeedInfo] = FeedManager.search(["piece"])
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["feed_name"], "one_piece")
 
@@ -438,7 +439,7 @@ class TestFeedManager(unittest.TestCase):
         self.mock_query.order_by.return_value = self.mock_query
         self.mock_query.all.return_value = [mock_row]
 
-        result = FeedManager.search(["one", "piece"])
+        result: list[SearchResultFeedInfo] = FeedManager.search(["one", "piece"])
         # 단일 쿼리이므로 중복 없이 1건만 반환
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["feed_name"], "one_piece")
@@ -453,7 +454,7 @@ class TestFeedManager(unittest.TestCase):
         self.mock_query.order_by.return_value = self.mock_query
         self.mock_query.all.return_value = [mock_row]
 
-        result = FeedManager.search(["manga", "", " "])
+        result: list[SearchResultFeedInfo] = FeedManager.search(["manga", "", " "])
         # 빈 키워드가 필터링되어 "manga"만으로 검색
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["feed_name"], "manga_feed")
@@ -516,7 +517,7 @@ class TestGetFeedNameListUrlCountMap(FeedManagerTestBase):
         row2 = self._make_feed_row(feed_name="feed_b", feed_title="Feed B", group_name="grp2", url_list_count=3)
         self.mock_query.all.return_value = [row1, row2]
 
-        result = FeedManager.get_feed_name_list_url_count_map()
+        result: dict[str, FeedUrlCountInfo] = FeedManager.get_feed_name_list_url_count_map()
 
         self.assertEqual(len(result), 2)
         self.assertIn("feed_a", result)
@@ -528,7 +529,7 @@ class TestGetFeedNameListUrlCountMap(FeedManagerTestBase):
 
     def test_returns_empty_when_no_rows(self) -> None:
         self.mock_query.all.return_value = []
-        result = FeedManager.get_feed_name_list_url_count_map()
+        result: dict[str, FeedUrlCountInfo] = FeedManager.get_feed_name_list_url_count_map()
         self.assertEqual(result, {})
 
 
@@ -542,7 +543,7 @@ class TestGetElementNameCountMap(FeedManagerTestBase):
         row2.count = 5
         self.mock_query.all.return_value = [row1, row2]
 
-        result = FeedManager.get_element_name_count_map()
+        result: dict[str, ElementCountInfo] = FeedManager.get_element_name_count_map()
 
         self.assertEqual(len(result), 2)
         self.assertIn("c.list_url_list", result)
@@ -551,7 +552,7 @@ class TestGetElementNameCountMap(FeedManagerTestBase):
 
     def test_returns_empty_when_no_rows(self) -> None:
         self.mock_query.all.return_value = []
-        result = FeedManager.get_element_name_count_map()
+        result: dict[str, ElementCountInfo] = FeedManager.get_element_name_count_map()
         self.assertEqual(result, {})
 
 
@@ -1028,7 +1029,7 @@ class TestGetFeedNamePublicFeedInfoMap(FeedManagerTestBase):
         row = self._make_feed_row(feed_name="pub_feed", feed_title="Public", group_name="g", file_size=1024, num_items=5, upload_date=datetime(2024, 1, 1, tzinfo=timezone.utc))
         self.mock_query.all.return_value = [row]
 
-        result = FeedManager.get_feed_name_public_feed_info_map()
+        result: dict[str, PublicFeedInfo] = FeedManager.get_feed_name_public_feed_info_map()
 
         self.assertEqual(len(result), 1)
         self.assertIn("pub_feed", result)
@@ -1037,7 +1038,7 @@ class TestGetFeedNamePublicFeedInfoMap(FeedManagerTestBase):
 
     def test_returns_empty_when_no_rows(self) -> None:
         self.mock_query.all.return_value = []
-        result = FeedManager.get_feed_name_public_feed_info_map()
+        result: dict[str, PublicFeedInfo] = FeedManager.get_feed_name_public_feed_info_map()
         self.assertEqual(result, {})
 
 
@@ -1146,7 +1147,7 @@ class TestGetFeedNameProgressInfoMap(FeedManagerTestBase):
         row = self._make_feed_row(feed_name="prog_feed", feed_title="Progress", group_name="g", is_completed=True, current_index=10, total_item_count=100, unit_size_per_day=5.0, progress_ratio=14.0, due_date=datetime(2025, 1, 1, tzinfo=timezone.utc))
         self.mock_query.all.return_value = [row]
 
-        result = FeedManager.get_feed_name_progress_info_map()
+        result: dict[str, FeedProgressInfo] = FeedManager.get_feed_name_progress_info_map()
 
         self.assertEqual(len(result), 1)
         self.assertIn("prog_feed", result)
@@ -1158,14 +1159,14 @@ class TestGetFeedNameProgressInfoMap(FeedManagerTestBase):
         row = self._make_feed_row(feed_name="f", feed_title="T", group_name="g", unit_size_per_day=None, progress_ratio=None, current_index=0, total_item_count=0, due_date=None)
         self.mock_query.all.return_value = [row]
 
-        result = FeedManager.get_feed_name_progress_info_map()
+        result: dict[str, FeedProgressInfo] = FeedManager.get_feed_name_progress_info_map()
 
         self.assertEqual(result["f"]["unit_size_per_day"], 0.0)
         self.assertEqual(result["f"]["progress_ratio"], 0.0)
 
     def test_returns_empty_when_no_rows(self) -> None:
         self.mock_query.all.return_value = []
-        result = FeedManager.get_feed_name_progress_info_map()
+        result: dict[str, FeedProgressInfo] = FeedManager.get_feed_name_progress_info_map()
         self.assertEqual(result, {})
 
 
@@ -1431,7 +1432,7 @@ class TestSearch(FeedManagerTestBase):
         row = self._make_feed_row(feed_name="abc", feed_title="ABC", group_name="g", is_active=True)
         self.mock_query.all.return_value = [row]
 
-        result = FeedManager.search(["abc", "", " "])
+        result: list[SearchResultFeedInfo] = FeedManager.search(["abc", "", " "])
 
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["feed_name"], "abc")
@@ -1440,7 +1441,7 @@ class TestSearch(FeedManagerTestBase):
         row = self._make_feed_row(feed_name="one_piece", feed_title="One Piece", group_name="manga", is_active=True)
         self.mock_query.all.return_value = [row]
 
-        result = FeedManager.search(["piece"])
+        result: list[SearchResultFeedInfo] = FeedManager.search(["piece"])
 
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["feed_name"], "one_piece")
@@ -1452,7 +1453,7 @@ class TestSearch(FeedManagerTestBase):
         row = self._make_feed_row(feed_name="no_title", feed_title="", group_name="g", is_active=True)
         self.mock_query.all.return_value = [row]
 
-        result = FeedManager.search(["no_title"])
+        result: list[SearchResultFeedInfo] = FeedManager.search(["no_title"])
 
         self.assertEqual(result[0]["feed_title"], "no_title")
 
@@ -1460,7 +1461,7 @@ class TestSearch(FeedManagerTestBase):
         row = self._make_feed_row(feed_name="no_title", feed_title=None, group_name="g", is_active=True)
         self.mock_query.all.return_value = [row]
 
-        result = FeedManager.search(["no_title"])
+        result: list[SearchResultFeedInfo] = FeedManager.search(["no_title"])
 
         self.assertEqual(result[0]["feed_title"], "no_title")
 
@@ -1468,7 +1469,7 @@ class TestSearch(FeedManagerTestBase):
         row = self._make_feed_row(feed_name="feed_abc", feed_title="ABC", group_name="g", is_active=True)
         self.mock_query.all.return_value = [row]
 
-        result = FeedManager.search(["abc", "feed"])
+        result: list[SearchResultFeedInfo] = FeedManager.search(["abc", "feed"])
 
         self.assertEqual(len(result), 1)
 
@@ -1480,8 +1481,6 @@ class TestGetGroups(FeedManagerTestBase):
         row_b.group_name = "beta"
         row_a = MagicMock()
         row_a.group_name = "alpha"
-
-        call_count = [0]
 
         def query_side_effect(*args, **kwargs):
             return self.mock_query
@@ -1495,7 +1494,7 @@ class TestGetGroups(FeedManagerTestBase):
         # count calls
         self.mock_query.count.side_effect = [3, 2, 1, 1]
 
-        result = FeedManager.get_groups()
+        result: list[GroupInfo] = FeedManager.get_groups()
 
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]["name"], "alpha")
@@ -1505,7 +1504,7 @@ class TestGetGroups(FeedManagerTestBase):
         self.mock_query.distinct.return_value = self.mock_query
         self.mock_query.all.return_value = []
 
-        result = FeedManager.get_groups()
+        result: list[GroupInfo] = FeedManager.get_groups()
 
         self.assertEqual(result, [])
 
@@ -1517,7 +1516,7 @@ class TestGetGroups(FeedManagerTestBase):
         # first count = total, second = active
         self.mock_query.count.side_effect = [5, 3]
 
-        result = FeedManager.get_groups()
+        result: list[GroupInfo] = FeedManager.get_groups()
 
         self.assertTrue(result[0]["is_active"])
 
@@ -1528,7 +1527,7 @@ class TestGetGroups(FeedManagerTestBase):
         self.mock_query.all.return_value = [row]
         self.mock_query.count.side_effect = [5, 0]
 
-        result = FeedManager.get_groups()
+        result: list[GroupInfo] = FeedManager.get_groups()
 
         self.assertFalse(result[0]["is_active"])
 
@@ -1538,7 +1537,7 @@ class TestGetFeedsByGroup(FeedManagerTestBase):
         row = self._make_feed_row(feed_name="feed1", feed_title="Feed 1", group_name="grp", is_active=True)
         self.mock_query.all.return_value = [row]
 
-        result = FeedManager.get_feeds_by_group("grp")
+        result: list[GroupFeedInfo] = FeedManager.get_feeds_by_group("grp")
 
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["name"], "feed1")
@@ -1550,7 +1549,7 @@ class TestGetFeedsByGroup(FeedManagerTestBase):
         row = self._make_feed_row(feed_name="feed_x", feed_title="", group_name="g", is_active=True)
         self.mock_query.all.return_value = [row]
 
-        result = FeedManager.get_feeds_by_group("g")
+        result: list[GroupFeedInfo] = FeedManager.get_feeds_by_group("g")
 
         self.assertEqual(result[0]["title"], "feed_x")
 
@@ -1558,13 +1557,13 @@ class TestGetFeedsByGroup(FeedManagerTestBase):
         row = self._make_feed_row(feed_name="feed_x", feed_title=None, group_name="g", is_active=True)
         self.mock_query.all.return_value = [row]
 
-        result = FeedManager.get_feeds_by_group("g")
+        result: list[GroupFeedInfo] = FeedManager.get_feeds_by_group("g")
 
         self.assertEqual(result[0]["title"], "feed_x")
 
     def test_returns_empty(self) -> None:
         self.mock_query.all.return_value = []
-        result = FeedManager.get_feeds_by_group("no_group")
+        result: list[GroupFeedInfo] = FeedManager.get_feeds_by_group("no_group")
         self.assertEqual(result, [])
 
 
@@ -1572,9 +1571,9 @@ class TestGetFeedInfo(FeedManagerTestBase):
     def test_feed_not_found(self) -> None:
         self.mock_query.first.return_value = None
 
-        result = FeedManager.get_feed_info("grp", "nonexistent")
+        result: Optional[SingleFeedInfo] = FeedManager.get_feed_info("grp", "nonexistent")
 
-        self.assertEqual(result, {})
+        self.assertIsNone(result)
 
     def test_feed_with_config(self) -> None:
         config_data = {"rss": {"title": "T"}, "collection": {}}
@@ -1597,7 +1596,7 @@ class TestGetFeedInfo(FeedManagerTestBase):
         )
         self.mock_query.first.return_value = feed
 
-        result = FeedManager.get_feed_info("grp", "feed1")
+        result: Optional[SingleFeedInfo] = FeedManager.get_feed_info("grp", "feed1")
 
         self.assertEqual(result["feed_name"], "feed1")
         self.assertEqual(result["config"], config_data)
@@ -1610,7 +1609,7 @@ class TestGetFeedInfo(FeedManagerTestBase):
         feed = self._make_feed_row(feed_name="feed1", feed_title="F", group_name="g", config="")
         self.mock_query.first.return_value = feed
 
-        result = FeedManager.get_feed_info("g", "feed1")
+        result: Optional[SingleFeedInfo] = FeedManager.get_feed_info("g", "feed1")
 
         self.assertEqual(result["config"], {})
 

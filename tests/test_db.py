@@ -105,7 +105,7 @@ class TestDataSourceInit(unittest.TestCase):
         ds = _DataSource(URL.create("sqlite", database=":memory:"))
         # Actually connect to the SQLite engine to trigger the event with a real connection
         # SQLite raw connection does not support cursor() as context manager -> hits TypeError path
-        with ds._engine.connect() as conn:
+        with ds._engine.connect():
             pass  # _set_utc fired on connect, hitting lines 56-60
         ds.dispose()
 
@@ -144,7 +144,7 @@ class TestDataSourceSession(unittest.TestCase):
     def test_session_isolation_level(self) -> None:
         """isolation_level parameter -> line 79"""
         ds = self._make_ds()
-        with ds.session(isolation_level="SERIALIZABLE") as sess:
+        with ds.session(isolation_level="SERIALIZABLE"):
             # If we got here without error, isolation_level was set (line 79 executed)
             pass
         ds.dispose()
@@ -153,7 +153,7 @@ class TestDataSourceSession(unittest.TestCase):
         """Exception in session -> rollback -> line 83-85"""
         ds = self._make_ds()
         with self.assertRaises(ValueError):
-            with ds.session() as sess:
+            with ds.session():
                 raise ValueError("test error")
         ds.dispose()
 

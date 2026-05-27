@@ -17,7 +17,7 @@ from git import Repo
 
 from bin.run import FeedMakerRunner
 from bin.feed_maker_util import Config, Env, PathUtil, URL
-from bin.feed_manager import FeedManager
+from bin.feed_manager import FeedManager, FeedUrlCountInfo, ElementCountInfo, PublicFeedInfo, SearchResultFeedInfo, FeedProgressInfo, GroupInfo, GroupFeedInfo, SingleFeedInfo
 from bin.access_log_manager import AccessLogManager
 from bin.html_file_manager import HtmlFileManager
 from bin.problem_manager import ProblemManager
@@ -144,12 +144,12 @@ class FeedMakerManager:
         return feed_name_status_info, ""
 
     @staticmethod
-    def get_problems_progress_info() -> tuple[dict[str, dict[str, Any]], str]:
+    def get_problems_progress_info() -> tuple[dict[str, FeedProgressInfo], str]:
         LOGGER.debug("# get_problems_progress_info()")
         return FeedManager.get_feed_name_progress_info_map(), ""
 
     @staticmethod
-    def get_problems_public_feed_info() -> tuple[dict[str, dict[str, Any]], str]:
+    def get_problems_public_feed_info() -> tuple[dict[str, PublicFeedInfo], str]:
         LOGGER.debug("# get_problems_public_feed_info()")
         return FeedManager.get_feed_name_public_feed_info_map(), ""
 
@@ -163,12 +163,12 @@ class FeedMakerManager:
         }, ""
 
     @staticmethod
-    def get_problems_element_info() -> tuple[dict[str, Any], str]:
+    def get_problems_element_info() -> tuple[dict[str, ElementCountInfo], str]:
         LOGGER.debug("# get_problems_element_info()")
         return FeedManager.get_element_name_count_map(), ""
 
     @staticmethod
-    def get_problems_list_url_info() -> tuple[dict[str, Any], str]:
+    def get_problems_list_url_info() -> tuple[dict[str, FeedUrlCountInfo], str]:
         LOGGER.debug("# get_problems_list_url_info()")
         return FeedManager.get_feed_name_list_url_count_map(), ""
 
@@ -181,10 +181,10 @@ class FeedMakerManager:
         return keyword in config_item
 
     @staticmethod
-    def search(keywords: str) -> tuple[list[dict[str, Any]], str]:
+    def search(keywords: str) -> tuple[list[SearchResultFeedInfo], str]:
         LOGGER.debug("# search(keywords='%s')", keywords)
         keyword_list = keywords.split(" ")
-        result = FeedManager.search(keyword_list)
+        result: list[SearchResultFeedInfo] = FeedManager.search(keyword_list)
         if result:
             return result, ""
         return [], f"can't search feed or group matching '{keywords}'"
@@ -221,9 +221,9 @@ class FeedMakerManager:
         return 0
 
     @staticmethod
-    def get_groups() -> tuple[list[dict[str, Any]], str]:
+    def get_groups() -> tuple[list[GroupInfo], str]:
         LOGGER.debug("# get_groups()")
-        result = FeedManager.get_groups()
+        result: list[GroupInfo] = FeedManager.get_groups()
         if result:
             return result, ""
         return [], "no group list"
@@ -322,24 +322,24 @@ class FeedMakerManager:
             return "PARSE_ERROR", f"RSS 파일 파싱에 실패했습니다: {e}"
 
     @staticmethod
-    def get_feeds_by_group(group_name: str) -> tuple[list[dict[str, str]], str]:
+    def get_feeds_by_group(group_name: str) -> tuple[list[GroupFeedInfo], str]:
         LOGGER.debug("# get_feeds_by_group(group_name='%s')", group_name)
         _validate_name(group_name, "group_name")
-        result = FeedManager.get_feeds_by_group(group_name)
+        result: list[GroupFeedInfo] = FeedManager.get_feeds_by_group(group_name)
         if result:
             result.sort(key=lambda obj: obj["title"])
             return result, ""
         return [], f"no feed list in group '{group_name}'"
 
     @staticmethod
-    def get_feed_info_by_name(group_name: str, feed_name: str) -> tuple[dict[str, Any], str]:
+    def get_feed_info_by_name(group_name: str, feed_name: str) -> tuple[Optional[SingleFeedInfo], str]:
         LOGGER.debug("# get_feed_info_by_name(group_name='%s', feed_name='%s')", group_name, feed_name)
         _validate_name(group_name, "group_name")
         _validate_name(feed_name, "feed_name")
-        feed_info = FeedManager.get_feed_info(group_name, feed_name)
+        feed_info: Optional[SingleFeedInfo] = FeedManager.get_feed_info(group_name, feed_name)
         if feed_info:
             return feed_info, ""
-        return {}, f"can't get feed info of '{group_name}/{feed_name}'"
+        return None, f"can't get feed info of '{group_name}/{feed_name}'"
 
     def save_config_file(self, group_name: str, feed_name: str, post_data: dict[str, Any]) -> tuple[bool, str]:
         LOGGER.debug("# save_config_file(group_name='%s', feed_name='%s', post_data=%r)", group_name, feed_name, post_data)

@@ -164,9 +164,7 @@ def generate_mock_response(endpoint: dict[str, Any], mock_data: dict[str, Any]) 
         elif "/exec-result" in path:
             return "res.json(mockData.exec_result)"
         elif "/feed-info" in path and len(path_params) >= 2:
-            group_param = path_params[0]
-            feed_param = path_params[1]
-            return f"res.json({{ feed_info: mockData.feed_info[`${{groupParam}}/${{feedParam}}`] || {{}} }})"
+            return "res.json({ feed_info: mockData.feed_info[`${groupParam}/${feedParam}`] || {} })"
         elif "/search" in path:
             query = "req.query.q || ''"
             return f"""

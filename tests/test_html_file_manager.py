@@ -12,7 +12,7 @@ from types import SimpleNamespace
 
 from bin.feed_maker_util import header_str, Env, PathUtil
 from bin.feed_maker import FeedMaker
-from bin.html_file_manager import HtmlFileManager
+from bin.html_file_manager import HtmlFileManager, HtmlFileDetail
 from bin.db import DB
 from bin.models import HtmlFileInfo
 import logging
@@ -68,7 +68,7 @@ class TestHtmlFileManager(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     def test_get_html_file_size_map(self) -> None:
-        result = self.hfm.get_html_file_size_map(self.test_feed_name)
+        result: dict[str, HtmlFileDetail] = self.hfm.get_html_file_size_map(self.test_feed_name)
         for _, html_file_info in result.items():
             self.assertIn("file_name", html_file_info)
             self.assertIn("file_path", html_file_info)
@@ -77,7 +77,7 @@ class TestHtmlFileManager(unittest.TestCase):
             self.assertIn("update_date", html_file_info)
 
     def test_get_html_file_with_many_image_tag_map(self) -> None:
-        result = self.hfm.get_html_file_with_many_image_tag_map()
+        result: dict[str, HtmlFileDetail] = self.hfm.get_html_file_with_many_image_tag_map()
         for _, html_file_info in result.items():
             self.assertIn("file_name", html_file_info)
             self.assertIn("file_path", html_file_info)
@@ -85,7 +85,7 @@ class TestHtmlFileManager(unittest.TestCase):
             self.assertIn("count", html_file_info)
 
     def test_get_html_file_without_image_tag_map(self) -> None:
-        result = self.hfm.get_html_file_without_image_tag_map()
+        result: dict[str, HtmlFileDetail] = self.hfm.get_html_file_without_image_tag_map()
         for _, html_file_info in result.items():
             self.assertIn("file_name", html_file_info)
             self.assertIn("file_path", html_file_info)
@@ -93,7 +93,7 @@ class TestHtmlFileManager(unittest.TestCase):
             self.assertIn("count", html_file_info)
 
     def test_get_html_file_image_not_found_map(self) -> None:
-        result = self.hfm.get_html_file_image_not_found_map()
+        result: dict[str, HtmlFileDetail] = self.hfm.get_html_file_image_not_found_map()
         for _, html_file_info in result.items():
             self.assertIn("file_name", html_file_info)
             self.assertIn("file_path", html_file_info)
@@ -369,7 +369,7 @@ class TestHtmlFileManagerExtended(unittest.TestCase):
         self.mock_query.order_by.return_value = self.mock_query
         self.mock_query.all.return_value = [mock_row]
 
-        result = HtmlFileManager.get_html_file_size_map("test_feed")
+        result: dict[str, HtmlFileDetail] = HtmlFileManager.get_html_file_size_map("test_feed")
         self.assertIn("feed/html/abc.html", result)
         entry = result["feed/html/abc.html"]
         self.assertEqual(100, entry["size"])
@@ -385,7 +385,7 @@ class TestHtmlFileManagerExtended(unittest.TestCase):
         self.mock_query.order_by.return_value = self.mock_query
         self.mock_query.all.return_value = [mock_row]
 
-        result = HtmlFileManager.get_html_file_with_many_image_tag_map()
+        result: dict[str, HtmlFileDetail] = HtmlFileManager.get_html_file_with_many_image_tag_map()
         self.assertIn("f/html/x.html", result)
         self.assertEqual(3, result["f/html/x.html"]["count"])
         self.assertEqual("FT", result["f/html/x.html"]["feed_title"])
@@ -399,7 +399,7 @@ class TestHtmlFileManagerExtended(unittest.TestCase):
         self.mock_query.order_by.return_value = self.mock_query
         self.mock_query.all.return_value = [mock_row]
 
-        result = HtmlFileManager.get_html_file_without_image_tag_map()
+        result: dict[str, HtmlFileDetail] = HtmlFileManager.get_html_file_without_image_tag_map()
         self.assertIn("f/html/y.html", result)
         self.assertEqual(2, result["f/html/y.html"]["count"])
         self.assertEqual("NoImg", result["f/html/y.html"]["feed_title"])
@@ -413,7 +413,7 @@ class TestHtmlFileManagerExtended(unittest.TestCase):
         self.mock_query.order_by.return_value = self.mock_query
         self.mock_query.all.return_value = [mock_row]
 
-        result = HtmlFileManager.get_html_file_image_not_found_map()
+        result: dict[str, HtmlFileDetail] = HtmlFileManager.get_html_file_image_not_found_map()
         self.assertIn("f/html/z.html", result)
         self.assertEqual(5, result["f/html/z.html"]["count"])
         self.assertEqual("NF", result["f/html/z.html"]["feed_title"])

@@ -6,17 +6,27 @@ import logging.config
 from pathlib import Path
 from datetime import datetime, timezone
 from itertools import islice
-from typing import Any, Optional
+from typing import Any, Optional, TypedDict, NotRequired
 
 from bin.models import HtmlFileInfo
 from bin.feed_maker import FeedMaker
 from bin.feed_maker_util import PathUtil, Env
 from bin.db import DB, Session
-from bin.feed_manager import FeedManager
+from bin.feed_manager import FeedManager, SingleFeedInfo
 
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
+
+
+class HtmlFileDetail(TypedDict):
+    file_name: str
+    file_path: str
+    feed_title: str
+    feed_dir_path: str
+    update_date: Optional[datetime]
+    count: NotRequired[int]
+    size: NotRequired[int]
 
 
 class HtmlFileManager:
@@ -36,7 +46,7 @@ class HtmlFileManager:
                 group_name = parts[0]
                 feed_name = parts[1]
                 # Get feed info from FeedManager
-                feed_info = FeedManager.get_feed_info(group_name, feed_name)
+                feed_info: Optional[SingleFeedInfo] = FeedManager.get_feed_info(group_name, feed_name)
                 LOGGER.debug("Feed info for %s/%s: %s", group_name, feed_name, feed_info)
                 if feed_info and "feed_title" in feed_info:
                     return str(feed_info["feed_title"])
@@ -47,9 +57,9 @@ class HtmlFileManager:
             return ""
 
     @staticmethod
-    def get_html_file_size_map(feed_name: str = "") -> dict[str, dict[str, Any]]:
+    def get_html_file_size_map(feed_name: str = "") -> dict[str, HtmlFileDetail]:
         LOGGER.debug("# get_html_file_size_map()")
-        html_file_size_map = {}
+        html_file_size_map: dict[str, HtmlFileDetail] = {}
 
         with DB.session_ctx() as s:
             rows = s.query(HtmlFileInfo).where(HtmlFileInfo.size < FeedMaker.get_size_of_template_with_image_tag(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"), feed_name)).order_by(HtmlFileInfo.update_date).all()
@@ -60,14 +70,14 @@ class HtmlFileManager:
                 size = row.size
                 update_date = row.update_date
                 feed_title = HtmlFileManager._get_feed_title_from_path(feed_dir_path)
-                html_file_size_map[file_name] = {"file_name": file_name, "file_path": file_path, "feed_dir_path": feed_dir_path, "size": size, "update_date": update_date, "feed_title": feed_title}
+                html_file_size_map[file_name] = HtmlFileDetail(file_name=file_name, file_path=file_path, feed_title=feed_title, feed_dir_path=feed_dir_path, update_date=update_date, size=size)
 
         return html_file_size_map
 
     @staticmethod
-    def get_html_file_with_many_image_tag_map() -> dict[str, dict[str, Any]]:
+    def get_html_file_with_many_image_tag_map() -> dict[str, HtmlFileDetail]:
         LOGGER.debug("# get_html_file_with_many_image_tag_map()")
-        html_file_with_many_image_tag_map = {}
+        html_file_with_many_image_tag_map: dict[str, HtmlFileDetail] = {}
 
         with DB.session_ctx() as s:
             rows = s.query(HtmlFileInfo).where(HtmlFileInfo.count_with_many_image_tag > 1).order_by(HtmlFileInfo.update_date).all()
@@ -78,14 +88,14 @@ class HtmlFileManager:
                 count = row.count_with_many_image_tag
                 update_date = row.update_date
                 feed_title = HtmlFileManager._get_feed_title_from_path(feed_dir_path)
-                html_file_with_many_image_tag_map[file_name] = {"file_name": file_name, "file_path": file_path, "feed_dir_path": feed_dir_path, "count": count, "update_date": update_date, "feed_title": feed_title}
+                html_file_with_many_image_tag_map[file_name] = HtmlFileDetail(file_name=file_name, file_path=file_path, feed_title=feed_title, feed_dir_path=feed_dir_path, update_date=update_date, count=count)
 
         return html_file_with_many_image_tag_map
 
     @staticmethod
-    def get_html_file_without_image_tag_map() -> dict[str, dict[str, Any]]:
+    def get_html_file_without_image_tag_map() -> dict[str, HtmlFileDetail]:
         LOGGER.debug("# get_html_file_without_image_tag_map()")
-        html_file_without_image_tag_map = {}
+        html_file_without_image_tag_map: dict[str, HtmlFileDetail] = {}
 
         with DB.session_ctx() as s:
             rows = s.query(HtmlFileInfo).where(HtmlFileInfo.count_without_image_tag > 0).order_by(HtmlFileInfo.update_date).all()
@@ -96,14 +106,14 @@ class HtmlFileManager:
                 count = row.count_without_image_tag
                 update_date = row.update_date
                 feed_title = HtmlFileManager._get_feed_title_from_path(feed_dir_path)
-                html_file_without_image_tag_map[file_name] = {"file_name": file_name, "file_path": file_path, "feed_dir_path": feed_dir_path, "count": count, "update_date": update_date, "feed_title": feed_title}
+                html_file_without_image_tag_map[file_name] = HtmlFileDetail(file_name=file_name, file_path=file_path, feed_title=feed_title, feed_dir_path=feed_dir_path, update_date=update_date, count=count)
 
         return html_file_without_image_tag_map
 
     @staticmethod
-    def get_html_file_image_not_found_map() -> dict[str, dict[str, Any]]:
+    def get_html_file_image_not_found_map() -> dict[str, HtmlFileDetail]:
         LOGGER.debug("# get_html_file_image_not_found_map()")
-        html_file_image_not_found_map = {}
+        html_file_image_not_found_map: dict[str, HtmlFileDetail] = {}
 
         with DB.session_ctx() as s:
             rows = s.query(HtmlFileInfo).where(HtmlFileInfo.count_with_image_not_found > 0).order_by(HtmlFileInfo.update_date).all()
@@ -114,7 +124,7 @@ class HtmlFileManager:
                 count = row.count_with_image_not_found
                 update_date = row.update_date
                 feed_title = HtmlFileManager._get_feed_title_from_path(feed_dir_path)
-                html_file_image_not_found_map[file_name] = {"file_name": file_name, "file_path": file_path, "feed_dir_path": feed_dir_path, "count": count, "update_date": update_date, "feed_title": feed_title}
+                html_file_image_not_found_map[file_name] = HtmlFileDetail(file_name=file_name, file_path=file_path, feed_title=feed_title, feed_dir_path=feed_dir_path, update_date=update_date, count=count)
 
         return html_file_image_not_found_map
 

@@ -12,7 +12,6 @@ import os
 import shutil
 import tempfile
 import unittest
-from pathlib import Path
 
 
 def _can_import(name: str) -> bool:

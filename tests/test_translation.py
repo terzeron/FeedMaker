@@ -45,33 +45,28 @@ class TranslationTest(unittest.TestCase):
 
     def test_chunk_by_items_empty_list(self) -> None:
         """빈 리스트 처리 테스트"""
-        translator = Translation()
         chunks = TranslationService.chunk_by_items([], max_items=3)
         self.assertEqual([], chunks)
 
     def test_chunk_by_items_single_item(self) -> None:
         """단일 아이템 처리 테스트"""
-        translator = Translation()
         chunks = TranslationService.chunk_by_items(["single"], max_items=5)
         self.assertEqual([["single"]], chunks)
 
     def test_chunk_by_items_exact_multiple(self) -> None:
         """max_items의 정확한 배수인 경우 테스트"""
-        translator = Translation()
         items = ["a", "b", "c", "d", "e", "f"]
         chunks = TranslationService.chunk_by_items(items, max_items=3)
         self.assertEqual([["a", "b", "c"], ["d", "e", "f"]], chunks)
 
     def test_chunk_by_items_none_values(self) -> None:
         """None 값 처리 테스트"""
-        translator = Translation()
         items = ["a", None, "c", None, "e"]
         chunks = TranslationService.chunk_by_items(items, max_items=2)
         self.assertEqual([["a", None], ["c", None], ["e"]], chunks)
 
     def test_chunk_by_items_large_max_items(self) -> None:
         """max_items가 리스트 크기보다 큰 경우 테스트"""
-        translator = Translation()
         items = ["a", "b", "c"]
         chunks = TranslationService.chunk_by_items(items, max_items=10)
         self.assertEqual([["a", "b", "c"]], chunks)

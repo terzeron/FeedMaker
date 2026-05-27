@@ -6,7 +6,6 @@ import unittest
 import logging.config
 from pathlib import Path
 from bs4 import BeautifulSoup
-from bs4.element import Tag, PageElement, NavigableString
 from typing import Any
 
 from bin.feed_maker_util import HTMLExtractor

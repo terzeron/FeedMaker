@@ -635,7 +635,7 @@ class TestCreateMergedChunks(unittest.TestCase):
 
     def test_single_image(self):
         mock_img = self._make_mock_img(100, 200)
-        with patch("utils.download_merge_split.Image.open", return_value=mock_img), patch("utils.download_merge_split._save_merged_chunk", return_value=Path("/fake/chunk_1.jpeg")) as mock_save:
+        with patch("utils.download_merge_split.Image.open", return_value=mock_img), patch("utils.download_merge_split._save_merged_chunk", return_value=Path("/fake/chunk_1.jpeg")):
             result = create_merged_chunks([Path("/fake/img1.jpg")], Path("/fake/img_dir"), "http://test.com/page")
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0][0], Path("/fake/chunk_1.jpeg"))
@@ -814,7 +814,7 @@ class TestPrintImageFiles(unittest.TestCase):
     """print_image_files: normal and flipped order"""
 
     def test_normal_order(self):
-        with patch("utils.download_merge_split.FileManager.get_cache_file_path") as mock_path, patch("utils.download_merge_split.FileManager.get_cache_url", return_value="http://img/url") as mock_url, patch.object(Path, "is_file", return_value=True), patch("builtins.print") as mock_print:
+        with patch("utils.download_merge_split.FileManager.get_cache_file_path") as mock_path, patch("utils.download_merge_split.FileManager.get_cache_url", return_value="http://img/url"), patch.object(Path, "is_file", return_value=True), patch("builtins.print") as mock_print:
             mock_path.return_value = Path("/fake/split.jpg")
             print_image_files(num_units=2, feed_img_dir_path=Path("/fake"), img_url_prefix="http://prefix", img_url="http://img.jpg", img_file_path=None, postfix="1", do_flip_right_to_left=False)
         self.assertEqual(mock_print.call_count, 2)
@@ -1233,7 +1233,7 @@ class TestDownloadMergeSplitPrintUsage(unittest.TestCase):
 
         work_dir = Env.get("FM_WORK_DIR") + "/naver/one_second"
         argv = ["download_merge_split.py", "-f", work_dir, "https://example.com/page"]
-        with patch("sys.argv", argv), patch("sys.stdout", new_callable=io.StringIO) as out:
+        with patch("sys.argv", argv), patch("sys.stdout", new_callable=io.StringIO):
             ret = main()
             self.assertEqual(ret, 0)
             mock_split.assert_called_once()

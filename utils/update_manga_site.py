@@ -58,8 +58,7 @@ def update_url_pattern(url: str, new_number: int) -> str:
 
 def update_list_url_pattern(list_url: str, new_number: int) -> str:
     """Update list URL pattern with new number."""
-    m = re.search(LIST_URL_PATTERN, list_url)
-    if m:
+    if m := re.search(LIST_URL_PATTERN, list_url):
         return m.group("pre") + str(new_number) + m.group("post")
     return list_url
 

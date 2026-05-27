@@ -338,7 +338,6 @@ class HeadlessBrowser:
         LOGGER.debug("# HeadlessBrowser.login(login_url=%s)", config["login_url"])
         login_url = config["login_url"]
         driver = None
-        driver_created = False
 
         try:
             options = webdriver.ChromeOptions()
@@ -364,7 +363,6 @@ class HeadlessBrowser:
                 driver = webdriver.Chrome(options=options)
                 driver.set_page_load_timeout(self.timeout)
                 self._set_cached_driver(driver, options)
-                driver_created = True
             else:
                 driver.set_page_load_timeout(self.timeout)
 

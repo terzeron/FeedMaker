@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import sys
-import os
 
 # Simulate the capture script behavior for testing
 if len(sys.argv) > 1 and sys.argv[1] == '-n':

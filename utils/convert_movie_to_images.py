@@ -17,8 +17,7 @@ def main() -> int:
     img_url_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX") + "/thegoodmovie"
 
     for line in IO.read_stdin_as_line_list():
-        m = re.search(r"<video src='[^']*videoPath=(rtmp://[^&]*)[^']*'>", line)
-        if m:
+        if m := re.search(r"<video src='[^']*videoPath=(rtmp://[^&]*)[^']*'>", line):
             movie_url = m.group(1)
             image_file_path = img_dir_path / f"{id_str}_0001.jpg"
             if not image_file_path.is_file():

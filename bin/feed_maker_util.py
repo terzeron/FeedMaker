@@ -756,8 +756,7 @@ class FileManager:
                         result.append(FileManager.IMAGE_NOT_FOUND_IMAGE)
                     escaped_image_url_prefix: str = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX").replace("https", "https?")
                     escaped_image_url_prefix = escaped_image_url_prefix.replace(".", "\\.")
-                    m = re.search(r"<img src=[\"\']%s/[^/]+/(?P<img>\S+)[\"\']" % escaped_image_url_prefix, line)
-                    if m:
+                    if m := re.search(r"<img src=[\"\']%s/[^/]+/(?P<img>\S+)[\"\']" % escaped_image_url_prefix, line):
                         # 실제로 다운로드되어 있는지 확인
                         img_file_name = m.group("img")
                         img_file_path = FileManager.IMAGE_DIR_PATH / feed_name / img_file_name

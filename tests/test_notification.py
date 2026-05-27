@@ -37,7 +37,6 @@ class NotificationTest(unittest.TestCase):
 
 
 def _make_env_side_effect(env_map: dict[str, str]):
-    from bin.feed_maker_util import NotFoundEnvError
 
     def side_effect(var: str, default_value: str = "") -> str:
         if var in env_map:

@@ -18,6 +18,10 @@ from requests.cookies import RequestsCookieJar
 import sys as _sys
 from bin.crawler import main
 from pathlib import Path as _Path
+import json
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from bin.crawler import LoginManager
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -934,12 +938,6 @@ class TestRequestsClientNoEncoding(unittest.TestCase):
 # ────────────────────────────────────────────────────────
 # Login feature tests
 # ────────────────────────────────────────────────────────
-import json
-import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
-
-
-from bin.crawler import LoginManager
 
 
 def _find_free_port() -> int:
@@ -1233,7 +1231,7 @@ class TestRequestsClientLoginMocked(unittest.TestCase):
         login_page_resp.cookies.set("pre_session", "abc")
         mock_get.return_value = login_page_resp
 
-        with patch.object(self.client, "write_cookies_to_file") as mock_write, patch.object(self.client, "read_cookies_from_file") as mock_read:
+        with patch.object(self.client, "write_cookies_to_file") as mock_write, patch.object(self.client, "read_cookies_from_file"):
             self.client.cookies = {"saved": "cookie"}
             result = self.client.login({"login_url": "http://example.com/login", "id": "user", "password": "pass", "id_field": "username", "password_field": "passwd"})
 

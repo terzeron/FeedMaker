@@ -945,7 +945,7 @@ class OptimizedTestFeedMakerRunner(FeedMakerRunner):
         # 모든 실제 작업을 mock으로 대체
         with patch("bin.feed_maker.FeedMaker.make", return_value=True) as mock_make:
             # FeedMaker 인스턴스 생성은 하지만 실제 make() 호출은 mock
-            feed_maker = FeedMaker(feed_dir_path=feed_dir_path, do_collect_by_force=options.get("force_collection_opt", False), do_collect_only=options.get("collect_only_opt", False), rss_file_path=rss_file_path, window_size=options.get("window_size", FeedMaker.DEFAULT_WINDOW_SIZE))
+            FeedMaker(feed_dir_path=feed_dir_path, do_collect_by_force=options.get("force_collection_opt", False), do_collect_only=options.get("collect_only_opt", False), rss_file_path=rss_file_path, window_size=options.get("window_size", FeedMaker.DEFAULT_WINDOW_SIZE))
             result = mock_make.return_value
 
         # 테스트 환경에서 항상 정리 로그를 남기도록 보장
@@ -1018,7 +1018,7 @@ class TestFeedMakerRunnerIntegration(unittest.TestCase):
             mock_crawler_instance.run.return_value = ("mock_html_content", None, None)
 
             options = {"force_collection_opt": "-c"}
-            with patch.object(LOGGER, "warning") as mock_warning:
+            with patch.object(LOGGER, "warning"):
                 with patch.object(LOGGER, "info") as mock_info:
                     actual = self.runner.make_single_feed(self.feed_dir_paths[0], options)
                     self.assertTrue(actual)

@@ -6,23 +6,17 @@ from pathlib import Path
 from typing import Optional
 import logging.config
 
-from utils.search_manga_site import (
-    EleventoonSite, FunbeSite, JoatoonSite, Method, SearchManager, Site,
-    ToonkorSite, TorrentQqSite, TorrentRjSite, TorrentSeeSite, TorrentTipSite,
-    XtoonSite
-)
+from utils.search_manga_site import EleventoonSite, FunbeSite, JoatoonSite, Method, SearchManager, Site, ToonkorSite, TorrentQqSite, TorrentRjSite, TorrentSeeSite, TorrentTipSite, XtoonSite
 import tempfile
 import unittest
 from unittest.mock import patch, MagicMock
-from utils.search_manga_site import Site, WfwfSite, WtwtSite, XtoonSite, JoatoonSite, FunbeSite, ToonkorSite, EleventoonSite, BlacktoonSite, TorrentJokSite, TorrentQqSite, TorrentRjSite, TorrentZotaSite, TorrentTopSite, TorrentSeeSite, TorrentTipSite, MzgtoonSite, SearchManager, Method
+from utils.search_manga_site import WfwfSite, WtwtSite, BlacktoonSite, TorrentJokSite, TorrentZotaSite, TorrentTopSite, MzgtoonSite
 from bin.feed_maker_util import NotFoundConfigFileError
-from bs4 import BeautifulSoup
-import io
-import io
 import io
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
+
 
 def test_search_manga_site() -> None:
     """Test function for search_manga_site module"""
@@ -37,13 +31,7 @@ def test_search_manga_site() -> None:
             test_dir = Path("/tmp/test_work_dir/test_site")
             test_dir.mkdir(parents=True, exist_ok=True)
 
-            test_config = {
-                "url": "https://tests.com",
-                "encoding": "utf-8",
-                "render_js": False,
-                "num_retries": 1,
-                "referer": "https://tests.com"
-            }
+            test_config = {"url": "https://tests.com", "encoding": "utf-8", "render_js": False, "num_retries": 1, "referer": "https://tests.com"}
 
             with (test_dir / "site_config.json").open("w", encoding="utf-8") as f:
                 json.dump(test_config, f)
@@ -76,13 +64,7 @@ def test_search_manga_site() -> None:
             test_dir = Path("/tmp/test_work_dir/test_site")
             test_dir.mkdir(parents=True, exist_ok=True)
 
-            test_config = {
-                "url": "https://tests.com",
-                "encoding": "utf-8",
-                "render_js": False,
-                "num_retries": 1,
-                "referer": "https://tests.com"
-            }
+            test_config = {"url": "https://tests.com", "encoding": "utf-8", "render_js": False, "num_retries": 1, "referer": "https://tests.com"}
 
             with (test_dir / "site_config.json").open("w", encoding="utf-8") as f:
                 json.dump(test_config, f)
@@ -122,13 +104,7 @@ def test_search_manga_site() -> None:
             test_dir = Path("/tmp/test_work_dir/test_site")
             test_dir.mkdir(parents=True, exist_ok=True)
 
-            test_config = {
-                "url": "https://tests.com",
-                "encoding": "utf-8",
-                "render_js": False,
-                "num_retries": 1,
-                "referer": "https://tests.com"
-            }
+            test_config = {"url": "https://tests.com", "encoding": "utf-8", "render_js": False, "num_retries": 1, "referer": "https://tests.com"}
 
             with (test_dir / "site_config.json").open("w", encoding="utf-8") as f:
                 json.dump(test_config, f)
@@ -163,9 +139,9 @@ def test_search_manga_site() -> None:
             assert "/test2" in result, "Expected '/test2' in result"
 
             # style, class, id 속성이 제거되었는지 확인
-            assert 'style=' not in result, "Expected style attributes to be removed"
-            assert 'class=' not in result, "Expected class attributes to be removed"
-            assert 'id=' not in result, "Expected id attributes to be removed"
+            assert "style=" not in result, "Expected style attributes to be removed"
+            assert "class=" not in result, "Expected class attributes to be removed"
+            assert "id=" not in result, "Expected id attributes to be removed"
 
             LOGGER.info("✓ HTML extraction test successful")
 
@@ -207,13 +183,7 @@ def test_search_manga_site() -> None:
             test_dir = Path("/tmp/test_work_dir/test_site")
             test_dir.mkdir(parents=True, exist_ok=True)
 
-            test_config = {
-                "url": "https://tests.com",
-                "encoding": "utf-8",
-                "render_js": False,
-                "num_retries": 1,
-                "referer": "https://tests.com"
-            }
+            test_config = {"url": "https://tests.com", "encoding": "utf-8", "render_js": False, "num_retries": 1, "referer": "https://tests.com"}
 
             with (test_dir / "site_config.json").open("w", encoding="utf-8") as f:
                 json.dump(test_config, f)
@@ -251,29 +221,13 @@ def test_search_manga_site() -> None:
             test_dir = Path("/tmp/test_work_dir/test_site")
             test_dir.mkdir(parents=True, exist_ok=True)
 
-            test_config = {
-                "url": "https://tests.com",
-                "encoding": "utf-8",
-                "render_js": False,
-                "num_retries": 1,
-                "referer": "https://tests.com"
-            }
+            test_config = {"url": "https://tests.com", "encoding": "utf-8", "render_js": False, "num_retries": 1, "referer": "https://tests.com"}
 
             with (test_dir / "site_config.json").open("w", encoding="utf-8") as f:
                 json.dump(test_config, f)
 
             # 활성화된 사이트 클래스들
-            site_classes = [
-                EleventoonSite,
-                FunbeSite,
-                JoatoonSite,
-                ToonkorSite,
-                XtoonSite,
-                TorrentQqSite,
-                TorrentRjSite,
-                TorrentSeeSite,
-                TorrentTipSite,
-            ]
+            site_classes = [EleventoonSite, FunbeSite, JoatoonSite, ToonkorSite, XtoonSite, TorrentQqSite, TorrentRjSite, TorrentSeeSite, TorrentTipSite]
 
             for site_class in site_classes:
                 try:
@@ -287,19 +241,19 @@ def test_search_manga_site() -> None:
                     assert site.headers["Referer"] == "https://tests.com"
 
                     # 2. extraction_attrs 설정 확인
-                    assert hasattr(site, 'extraction_attrs')
+                    assert hasattr(site, "extraction_attrs")
                     assert isinstance(site.extraction_attrs, dict)
 
                     # 3. URL postfix 설정 테스트
                     test_keyword = "테스트"
                     site.set_url_postfix_with_keyword(test_keyword)
-                    assert hasattr(site, 'url_postfix')
+                    assert hasattr(site, "url_postfix")
                     assert isinstance(site.url_postfix, str)
 
                     # 4. payload 설정 테스트 (해당하는 경우)
-                    if hasattr(site, 'method') and site.method == Method.POST:
+                    if hasattr(site, "method") and site.method == Method.POST:
                         site.set_payload(test_keyword)
-                        assert hasattr(site, 'payload')
+                        assert hasattr(site, "payload")
 
                     # 5. HTML 추출 테스트
                     test_html = f"""
@@ -338,13 +292,7 @@ def test_search_manga_site() -> None:
             test_dir = Path("/tmp/test_work_dir/test_site")
             test_dir.mkdir(parents=True, exist_ok=True)
 
-            test_config = {
-                "url": "https://tests.com",
-                "encoding": "utf-8",
-                "render_js": False,
-                "num_retries": 1,
-                "referer": "https://tests.com"
-            }
+            test_config = {"url": "https://tests.com", "encoding": "utf-8", "render_js": False, "num_retries": 1, "referer": "https://tests.com"}
 
             with (test_dir / "site_config.json").open("w", encoding="utf-8") as f:
                 json.dump(test_config, f)
@@ -709,7 +657,6 @@ class TestExtractSubContent(SiteTestBase):
 
     # --- fallback regex for svg removal ---
     def test_svg_removal_fallback(self):
-        html = '<div><svg><path d="M0 0"/></svg>Text</div>'
         with patch("utils.search_manga_site.BeautifulSoup") as MockBS:
             # First call for initial parse, second for SVG removal raises
             call_count = [0]
@@ -1176,7 +1123,7 @@ class TestSearchManager(SiteTestBase):
         self._create_site_config("torrentqq")
         self._create_site_config("funbe")
         sm = SearchManager()
-        with patch.object(Site, "search", return_value="data") as mock_search:
+        with patch.object(Site, "search", return_value="data"):
             sm.search_sites("", "kw", do_include_torrent_sites=False)
             # Torrent sites should not have been searched via worker threads
             # We verify indirectly: torrent results shouldn't appear unless explicitly included
@@ -1420,8 +1367,6 @@ class TestSearchMangaSiteMain(unittest.TestCase):
 
     @patch("utils.search_manga_site.SearchManager")
     def test_main_keyword_no_site(self, mock_sm_cls):
-        import io
-
         mock_sm = MagicMock()
         mock_sm.search_sites.return_value = "<div>result</div>"
         mock_sm_cls.return_value = mock_sm
@@ -1437,14 +1382,12 @@ class TestSearchMangaSiteMain(unittest.TestCase):
 
     @patch("utils.search_manga_site.SearchManager")
     def test_main_with_site_name(self, mock_sm_cls):
-        import io
-
         mock_sm = MagicMock()
         mock_sm.search_sites.return_value = "<div>site result</div>"
         mock_sm_cls.return_value = mock_sm
 
         argv = ["search_manga_site.py", "-s", "funbe", "keyword_test"]
-        with patch("sys.argv", argv), patch("sys.stdout", new_callable=io.StringIO) as out:
+        with patch("sys.argv", argv), patch("sys.stdout", new_callable=io.StringIO):
             from utils.search_manga_site import main
 
             ret = main()
@@ -1453,8 +1396,6 @@ class TestSearchMangaSiteMain(unittest.TestCase):
 
     @patch("utils.search_manga_site.SearchManager")
     def test_main_with_torrent_option(self, mock_sm_cls):
-        import io
-
         mock_sm = MagicMock()
         mock_sm.search_sites.return_value = ""
         mock_sm_cls.return_value = mock_sm

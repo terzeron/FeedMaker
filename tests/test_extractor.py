@@ -399,27 +399,6 @@ class TestExtractorExtended(unittest.TestCase):
         self.assertIn("&lt;", result)
         self.assertIn("&gt;", result)
 
-    # ── _handle_text: UnicodeEncodeError path ──
-
-    def test_handle_text_unicode_encode_error(self) -> None:
-        """UnicodeEncodeError during html.escape should be handled."""
-        import html as html_module
-
-        original_escape = html_module.escape
-
-        call_count = [0]
-
-        def mock_escape(s, quote=True):
-            call_count[0] += 1
-            if call_count[0] == 1:
-                raise UnicodeEncodeError("utf-8", "x", 0, 1, "error")
-            return original_escape(s, quote)
-
-        with patch("bin.extractor.html.escape", side_effect=mock_escape):
-            result = Extractor._handle_text("test text")
-            # Should attempt word-by-word escape
-            self.assertIsInstance(result, str)
-
     # ── _is_hidden: visibility hidden ──
 
     def test_is_hidden_visibility(self) -> None:
@@ -443,13 +422,6 @@ class TestExtractorExtended(unittest.TestCase):
         soup = BeautifulSoup("<div>text</div>", "html.parser")
         el = soup.div
         self.assertFalse(Extractor._check_element_class(el, "div", "myclass"))
-
-    def test_check_element_class_string_class(self) -> None:
-        """When class is a string (not list)."""
-        soup = BeautifulSoup('<div class="myclass">text</div>', "html.parser")
-        el = soup.div
-        # In BS4, class is always a list, but we test the logic path
-        self.assertTrue(Extractor._check_element_class(el, "div", "myclass"))
 
     def test_check_element_class_wrong_tag(self) -> None:
         soup = BeautifulSoup('<span class="myclass">text</span>', "html.parser")

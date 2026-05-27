@@ -100,16 +100,16 @@ class TestProblemManager(unittest.TestCase):
 
         with (
             patch("bin.feed_manager.FeedManager.remove_config_info") as mock_remove_config,
-            patch("bin.feed_manager.FeedManager.remove_rss_info") as mock_remove_rss,
-            patch("bin.feed_manager.FeedManager.remove_progress_info") as mock_remove_progress,
+            patch("bin.feed_manager.FeedManager.remove_rss_info"),
+            patch("bin.feed_manager.FeedManager.remove_progress_info"),
             patch("bin.access_log_manager.AccessLogManager.remove_httpd_access_info") as mock_remove_access,
-            patch("bin.html_file_manager.HtmlFileManager.remove_html_file_in_path_from_info") as mock_remove_html,
+            patch("bin.html_file_manager.HtmlFileManager.remove_html_file_in_path_from_info"),
             patch("bin.feed_manager.FeedManager.add_config_info") as mock_add_config,
-            patch("bin.feed_manager.FeedManager.add_rss_info") as mock_add_rss,
-            patch("bin.feed_manager.FeedManager.add_progress_info") as mock_add_progress,
+            patch("bin.feed_manager.FeedManager.add_rss_info"),
+            patch("bin.feed_manager.FeedManager.add_progress_info"),
             patch("bin.html_file_manager.HtmlFileManager.add_html_file") as mock_add_html,
-            patch.object(self.pm.feed_manager, "remove_public_feed_by_feed_name") as mock_remove_public,
-            patch.object(self.pm.feed_manager, "add_public_feed_by_feed_name") as mock_add_public,
+            patch.object(self.pm.feed_manager, "remove_public_feed_by_feed_name"),
+            patch.object(self.pm.feed_manager, "add_public_feed_by_feed_name"),
         ):
             self.pm.update_feed_info(self.test_feed_dir_path, new_feed_dir_path)
 
