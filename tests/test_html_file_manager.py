@@ -26,22 +26,16 @@ LOGGER = logging.getLogger()
 class TestHtmlFileManager(unittest.TestCase):
     def setUp(self) -> None:
         # Mock DB config
-        self.mock_db_config = {
-            'host': 'localhost',
-            'port': 3306,
-            'user': 'test',
-            'password': 'test',
-            'database': 'test'
-        }
+        self.mock_db_config = {"host": "localhost", "port": 3306, "user": "test", "password": "test", "database": "test"}
         # Mock DB session
         self.mock_session = MagicMock()
         self.mock_query = MagicMock()
         self.mock_session.query.return_value = self.mock_query
         # Patch DB methods
-        self.patcher_init = patch('bin.db.DB.init', return_value=None)
-        self.patcher_create = patch('bin.db.DB.create_all_tables', return_value=None)
-        self.patcher_drop = patch('bin.db.DB.drop_all_tables', return_value=None)
-        self.patcher_session = patch('bin.db.DB.session_ctx')
+        self.patcher_init = patch("bin.db.DB.init", return_value=None)
+        self.patcher_create = patch("bin.db.DB.create_all_tables", return_value=None)
+        self.patcher_drop = patch("bin.db.DB.drop_all_tables", return_value=None)
+        self.patcher_session = patch("bin.db.DB.session_ctx")
         self.mock_session_ctx = self.patcher_session.start()
         self.mock_session_ctx.return_value.__enter__.return_value = self.mock_session
         self.mock_session_ctx.return_value.__exit__.return_value = None
@@ -119,31 +113,30 @@ class TestHtmlFileManager(unittest.TestCase):
         many_image_tag_html_path = html_dir_path / with_many_tags_file
         with many_image_tag_html_path.open("w", encoding="utf-8") as f:
             f.write(header_str)
-            f.write('''
+            f.write("""
 <div>
 <a href='https://torrentmode28.com/ani/2340'><i></i><span>이전</span></a>
 <a href='https://torrentmode28.com/ani/2338'><i></i><span>다음</span></a>
 <a href='https://torrentmode28.com/ani'><i></i><span>목록</span></a>
 </div>
-            ''')
+            """)
             f.write(FeedMaker.get_image_tag_str(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"), self.test_rss_file_name, "https://torrentsee154.com/topic/264741") + "\n")
             f.write(FeedMaker.get_image_tag_str(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"), self.test_rss_file_name, "https://torrentsee154.com/topic/264741") + "\n")
             f.write(FeedMaker.get_image_tag_str(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"), self.test_rss_file_name, "https://torrentsee154.com/topic/264741") + "\n")
-
 
         # html file without image tag: dc938b8.html
         without_tags_file = "dc938b8.html"
         no_image_tag_html_path = html_dir_path / without_tags_file
         with no_image_tag_html_path.open("w", encoding="utf-8") as f:
             f.write(header_str)
-            f.write('''
+            f.write("""
 <p>찐:종합게임동아리</p>
 <p>트라우마로 인해 일부러 게임을 피하며 살아온 '김 진'.
 진이는 신입생 환영회에서 만난 '정진아'의 제안으로 우연히 동아리에 들어가게 되는데...
 알고 보니 동아리의 정체는 전력을 다해 게임을 즐기는 종합게임동아리였다!
 게임에 항상 진심인 승부욕 강한 여섯 청춘들의 즐거운 동아리 활동!!</p>
 <p><img src='https://image-comic.pstatic.net/webtoon/771018/thumbnail/thumbnail_IMAG21_3762818380117075513.jpg'></p>
-            ''')
+            """)
 
         # html file with image-not-found.png: 7c9aa6d.html
         with_not_found_file = "7c9aa6d.html"
@@ -151,11 +144,14 @@ class TestHtmlFileManager(unittest.TestCase):
 
         with image_not_found_html_path.open("w", encoding="utf-8") as f:
             f.write(header_str)
-            f.write('''
+            f.write(
+                """
 <img src='%s/image-not-found.png' alt='not exist or size 0'/>
 <img src='%s/image-not-found.png' alt='not exist or size 0'/>
 <img src='%s/image-not-found.png' alt='not exist or size 0'/>
-            ''' % (Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"), Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"), Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")))
+            """
+                % (Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"), Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"), Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"))
+            )
             f.write(FeedMaker.get_image_tag_str(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"), self.test_rss_file_name, "https://torrentsee154.com/topic/264741"))
 
     def test_add_and_remove_html_file_info(self) -> None:
@@ -179,7 +175,7 @@ class TestHtmlFileManager(unittest.TestCase):
         self.mock_query.all.side_effect = all_side_effect
 
         # Mock DB.session_ctx to always return the same mock session
-        with patch('bin.db.DB.session_ctx') as mock_ctx:
+        with patch("bin.db.DB.session_ctx") as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = self.mock_session
             mock_ctx.return_value.__exit__.return_value = None
 
@@ -190,27 +186,21 @@ class TestHtmlFileManager(unittest.TestCase):
             self.mock_query.where.return_value = self.mock_query
 
             with DB.session_ctx() as s:
-                rows11 = s.query(HtmlFileInfo).where(HtmlFileInfo.feed_dir_path == str(self.test_feed_dir_path),
-                                                     HtmlFileInfo.file_path.is_not(None),
-                                                     HtmlFileInfo.update_date.is_not(None)).all()
+                rows11 = s.query(HtmlFileInfo).where(HtmlFileInfo.feed_dir_path == str(self.test_feed_dir_path), HtmlFileInfo.file_path.is_not(None), HtmlFileInfo.update_date.is_not(None)).all()
                 assert rows11 is not None
 
             # HtmlFileManager 인스턴스 메서드 호출로 변경
             self.hfm.add_html_file(self.test_feed_dir_path)
 
             with DB.session_ctx() as s:
-                rows12 = s.query(HtmlFileInfo).where(HtmlFileInfo.feed_dir_path == str(self.test_feed_dir_path),
-                                                     HtmlFileInfo.file_path.is_not(None),
-                                                     HtmlFileInfo.update_date.is_not(None)).all()
+                rows12 = s.query(HtmlFileInfo).where(HtmlFileInfo.feed_dir_path == str(self.test_feed_dir_path), HtmlFileInfo.file_path.is_not(None), HtmlFileInfo.update_date.is_not(None)).all()
                 assert rows12 is not None
                 self.assertEqual(len(rows11) + 1, len(rows12))
 
             self.hfm.remove_html_file_in_path_from_info("feed_dir_path", self.test_feed_dir_path)
 
             with DB.session_ctx() as s:
-                rows13 = s.query(HtmlFileInfo).where(HtmlFileInfo.feed_dir_path == str(self.test_feed_dir_path),
-                                                     HtmlFileInfo.file_path.is_not(None),
-                                                     HtmlFileInfo.update_date.is_not(None)).all()
+                rows13 = s.query(HtmlFileInfo).where(HtmlFileInfo.feed_dir_path == str(self.test_feed_dir_path), HtmlFileInfo.file_path.is_not(None), HtmlFileInfo.update_date.is_not(None)).all()
                 assert rows13 is not None
                 self.assertEqual(len(rows11), len(rows13))
 
@@ -223,7 +213,7 @@ class TestHtmlFileManager(unittest.TestCase):
         self.mock_query.first.return_value = mock_row
 
         # Mock DB.session_ctx to always return the same mock session
-        with patch('bin.db.DB.session_ctx') as mock_ctx:
+        with patch("bin.db.DB.session_ctx") as mock_ctx:
             mock_ctx.return_value.__enter__.return_value = self.mock_session
             mock_ctx.return_value.__exit__.return_value = None
 
@@ -258,6 +248,7 @@ class TestHtmlFileManager(unittest.TestCase):
             # mtime 설정
             import os
             import time
+
             now = time.time()
             os.utime(new1, (now, now))
             os.utime(upd1, (now, now))
@@ -267,10 +258,7 @@ class TestHtmlFileManager(unittest.TestCase):
             to_delete_path = PathUtil.short_path(html_dir / "to_delete.html")
 
             # HtmlFileInfo.file_path, update_date를 갖는 네임스페이스로 all() 결과 구성
-            db_rows = [
-                SimpleNamespace(file_path=existing_upd_path, update_date=None),
-                SimpleNamespace(file_path=to_delete_path, update_date=None),
-            ]
+            db_rows = [SimpleNamespace(file_path=existing_upd_path, update_date=None), SimpleNamespace(file_path=to_delete_path, update_date=None)]
 
             # session.query(...).all()가 위 목록을 반환하도록 설정
             self.mock_session.query.return_value = self.mock_query
@@ -541,6 +529,34 @@ class TestHtmlFileManagerExtended(unittest.TestCase):
             mappings = args[0][1]
             self.assertEqual(1, len(mappings))
             self.assertIn("new1.html", mappings[0]["file_name"])
+
+    def test_load_all_html_files_skips_underscore_dirs(self) -> None:
+        """비활성('_' 접두사) 그룹/피드의 html 파일은 DB에 적재되지 않아야 한다."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            # 활성 피드
+            active_html = tmp_path / "grp" / "active_feed" / "html"
+            active_html.mkdir(parents=True, exist_ok=True)
+            (active_html / "keep.html").write_text("<p>keep</p>")
+            # 비활성 피드(같은 그룹)
+            inactive_feed_html = tmp_path / "grp" / "_inactive_feed" / "html"
+            inactive_feed_html.mkdir(parents=True, exist_ok=True)
+            (inactive_feed_html / "skip1.html").write_text("<p>skip</p>")
+            # 비활성 그룹
+            inactive_group_html = tmp_path / "_inactive_grp" / "some_feed" / "html"
+            inactive_group_html.mkdir(parents=True, exist_ok=True)
+            (inactive_group_html / "skip2.html").write_text("<p>skip</p>")
+
+            self.mock_query.all.return_value = []
+            self.mock_query.filter.return_value = self.mock_query
+
+            self.hfm.work_dir_path = tmp_path
+            self.hfm.load_all_html_files(max_num_feeds=20)
+
+            self.mock_session.bulk_insert_mappings.assert_called_once()
+            mappings = self.mock_session.bulk_insert_mappings.call_args[0][1]
+            self.assertEqual(1, len(mappings))
+            self.assertIn("keep.html", mappings[0]["file_name"])
 
     def test_load_all_html_files_deleted_file(self) -> None:
         """File in DB but not on filesystem should be deleted."""

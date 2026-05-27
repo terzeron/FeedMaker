@@ -200,11 +200,13 @@ class HtmlFileManager:
             file_system_paths = set()
 
             for group_path in islice(self.work_dir_path.iterdir(), max_num_feeds):
-                if not group_path.is_dir():
+                if not group_path.is_dir() or group_path.name.startswith("_"):
+                    # 비활성 그룹('_' 접두사)은 건너뛴다(_add_html_file과 동일 규칙)
                     continue
 
                 for feed_dir_path in group_path.iterdir():
-                    if not feed_dir_path.is_dir():
+                    if not feed_dir_path.is_dir() or feed_dir_path.name.startswith("_"):
+                        # 비활성 피드('_' 접두사)는 건너뛴다
                         continue
 
                     for path in feed_dir_path.glob("html/*.html"):

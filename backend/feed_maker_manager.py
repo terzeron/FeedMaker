@@ -494,21 +494,52 @@ class FeedMakerManager:
             self.html_file_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path, do_remove_file=True)
         return True, ""
 
-    @staticmethod
-    def toggle_feed(feed_name: str) -> tuple[str, str]:
-        LOGGER.debug("# toggle_feed(feed_name='%s')", feed_name)
-        _validate_name(feed_name, "feed_name")
-        if FeedManager.toggle_feed(feed_name):
-            return feed_name, ""
-        return "", f"can't toggle feed '{feed_name}'"
-
-    @staticmethod
-    def toggle_group(group_name: str) -> tuple[str, str]:
-        LOGGER.debug(f"# toggle_group({group_name})")
+    def toggle_feed(self, group_name: str, feed_name: str) -> tuple[str, str]:
+        # 비활성화는 파일시스템 디렉터리에 '_' 접두사를 붙이고(크롤러가 건너뜀),
+        # DB는 canonical 이름을 유지한 채 is_active만 동기화한다.
+        LOGGER.debug("# toggle_feed(group_name='%s', feed_name='%s')", group_name, feed_name)
         _validate_name(group_name, "group_name")
-        if FeedManager.toggle_group(group_name):
-            return group_name, ""
-        return "", f"can't toggle group '{group_name}'"
+        _validate_name(feed_name, "feed_name")
+        group_dir_path = self.work_dir_path / group_name
+        active_dir_path = group_dir_path / feed_name
+        inactive_dir_path = group_dir_path / ("_" + feed_name)
+
+        if active_dir_path.is_dir():
+            _, error = self._git_mv(active_dir_path, inactive_dir_path)
+            new_is_active = False
+        elif inactive_dir_path.is_dir():
+            _, error = self._git_mv(inactive_dir_path, active_dir_path)
+            new_is_active = True
+        else:
+            return "", f"can't find feed directory '{PathUtil.short_path(active_dir_path)}'"
+
+        if error:
+            return "", error
+
+        FeedManager.toggle_feed(group_name, feed_name, new_is_active)
+        return feed_name, ""
+
+    def toggle_group(self, group_name: str) -> tuple[str, str]:
+        # 그룹 디렉터리에 '_' 접두사를 붙이고 그룹 내 모든 피드의 is_active를 동기화한다.
+        LOGGER.debug("# toggle_group(group_name='%s')", group_name)
+        _validate_name(group_name, "group_name")
+        active_dir_path = self.work_dir_path / group_name
+        inactive_dir_path = self.work_dir_path / ("_" + group_name)
+
+        if active_dir_path.is_dir():
+            _, error = self._git_mv(active_dir_path, inactive_dir_path)
+            new_is_active = False
+        elif inactive_dir_path.is_dir():
+            _, error = self._git_mv(inactive_dir_path, active_dir_path)
+            new_is_active = True
+        else:
+            return "", f"can't find group directory '{PathUtil.short_path(active_dir_path)}'"
+
+        if error:
+            return "", error
+
+        FeedManager.toggle_group(group_name, new_is_active)
+        return group_name, ""
 
     @staticmethod
     def check_running(group_name: str, feed_name: str) -> Optional[bool]:

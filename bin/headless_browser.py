@@ -324,6 +324,16 @@ class HeadlessBrowser:
                 cookie_file.unlink(missing_ok=True)
                 self._read_cookies_from_file(driver)
 
+    def _has_saved_cookies(self) -> bool:
+        cookie_file = self._get_cookie_dir() / HeadlessBrowser.COOKIE_FILE
+        if not cookie_file.is_file():
+            return False
+        try:
+            with cookie_file.open("r", encoding="utf-8") as f:
+                return bool(json.load(f))
+        except (json.JSONDecodeError, OSError):
+            return False
+
     def login(self, config: dict[str, str]) -> bool:
         LOGGER.debug("# HeadlessBrowser.login(login_url=%s)", config["login_url"])
         login_url = config["login_url"]
@@ -451,6 +461,19 @@ class HeadlessBrowser:
                 LOGGER.debug("Reusing cached Chrome driver")
                 # Reset timeout for cached driver
                 driver.set_page_load_timeout(self.timeout)
+
+            # A freshly created driver starts from a profile dir that the previous
+            # process wiped on exit (atexit cleanup_all_drivers), so restore saved
+            # cookies from file. Selenium's add_cookie() only accepts cookies for the
+            # currently loaded domain, so load the target URL first to establish the
+            # domain and inject the cookies; the navigation below then reloads the
+            # page with the authenticated session.
+            if driver_created and self._has_saved_cookies():
+                try:
+                    driver.get(url)
+                    self._read_cookies_from_file(driver)
+                except (TimeoutException, WebDriverException) as e:
+                    LOGGER.warning("Failed to restore cookies before page load: %s", e)
 
             referer = self.headers.get("Referer", "")
             if referer:
