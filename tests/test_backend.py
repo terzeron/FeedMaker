@@ -1076,8 +1076,8 @@ class DummyFeedMakerManagerEndpoints:
     def toggle_group(self, group_name):
         return (f"_{group_name}", None)
 
-    def toggle_feed(self, feed_name):
-        return (f"_{feed_name}", None)
+    def toggle_feed(self, group_name, feed_name):
+        return (feed_name, None)
 
     # html operations
     def remove_html_file(self, group_name, feed_name, html_file_name):

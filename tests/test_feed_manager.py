@@ -1616,67 +1616,70 @@ class TestGetFeedInfo(FeedManagerTestBase):
 
 
 class TestToggleFeed(FeedManagerTestBase):
-    def test_toggle_active_to_inactive(self) -> None:
-        row = self._make_feed_row(feed_name="my_feed")
+    def test_sets_is_active_false_without_renaming_pk(self) -> None:
+        # 회귀 가드: feed_name(PK)을 절대 변경하지 않고 is_active만 바꾼다
+        row = self._make_feed_row(feed_name="my_feed", group_name="my_group", is_active=True)
         self.mock_query.first.return_value = row
 
-        result = FeedManager.toggle_feed("my_feed")
+        result = FeedManager.toggle_feed("my_group", "my_feed", False)
 
         self.assertTrue(result)
-        self.mock_query.update.assert_called_once()
-        update_args = self.mock_query.update.call_args[0][0]
-        self.assertEqual(update_args[FeedInfo.feed_name], "_my_feed")
-        self.assertFalse(update_args[FeedInfo.is_active])
+        self.assertEqual(row.feed_name, "my_feed")
+        self.assertFalse(row.is_active)
+        # (feed_name, group_name) 복합키로 정확히 한 행만 스코핑
+        self.mock_query.filter_by.assert_called_once_with(feed_name="my_feed", group_name="my_group")
+        self.mock_query.update.assert_not_called()
 
-    def test_toggle_inactive_to_active(self) -> None:
-        row = self._make_feed_row(feed_name="_my_feed")
+    def test_sets_is_active_true_without_renaming_pk(self) -> None:
+        row = self._make_feed_row(feed_name="my_feed", group_name="my_group", is_active=False)
         self.mock_query.first.return_value = row
 
-        result = FeedManager.toggle_feed("_my_feed")
+        result = FeedManager.toggle_feed("my_group", "my_feed", True)
 
         self.assertTrue(result)
-        update_args = self.mock_query.update.call_args[0][0]
-        self.assertEqual(update_args[FeedInfo.feed_name], "my_feed")
-        self.assertTrue(update_args[FeedInfo.is_active])
+        self.assertEqual(row.feed_name, "my_feed")
+        self.assertTrue(row.is_active)
 
-    def test_toggle_nonexistent_feed(self) -> None:
+    def test_toggle_nonexistent_feed_returns_false(self) -> None:
         self.mock_query.first.return_value = None
 
-        result = FeedManager.toggle_feed("nonexistent")
+        result = FeedManager.toggle_feed("my_group", "nonexistent", False)
 
-        self.assertTrue(result)
+        self.assertFalse(result)
         self.mock_query.update.assert_not_called()
 
 
 class TestToggleGroup(FeedManagerTestBase):
-    def test_toggle_active_to_inactive(self) -> None:
-        row = self._make_feed_row(group_name="my_group")
-        self.mock_query.first.return_value = row
+    def test_sets_all_feeds_is_active_false_without_renaming_pk(self) -> None:
+        row1 = self._make_feed_row(feed_name="f1", group_name="my_group", is_active=True)
+        row2 = self._make_feed_row(feed_name="f2", group_name="my_group", is_active=True)
+        self.mock_query.all.return_value = [row1, row2]
 
-        result = FeedManager.toggle_group("my_group")
-
-        self.assertTrue(result)
-        update_args = self.mock_query.update.call_args[0][0]
-        self.assertEqual(update_args[FeedInfo.group_name], "_my_group")
-        self.assertFalse(update_args[FeedInfo.is_active])
-
-    def test_toggle_inactive_to_active(self) -> None:
-        row = self._make_feed_row(group_name="_my_group")
-        self.mock_query.first.return_value = row
-
-        result = FeedManager.toggle_group("_my_group")
+        result = FeedManager.toggle_group("my_group", False)
 
         self.assertTrue(result)
-        update_args = self.mock_query.update.call_args[0][0]
-        self.assertEqual(update_args[FeedInfo.group_name], "my_group")
-        self.assertTrue(update_args[FeedInfo.is_active])
+        self.assertEqual(row1.group_name, "my_group")
+        self.assertEqual(row2.group_name, "my_group")
+        self.assertFalse(row1.is_active)
+        self.assertFalse(row2.is_active)
+        self.mock_query.filter_by.assert_called_once_with(group_name="my_group")
+        self.mock_query.update.assert_not_called()
 
-    def test_toggle_nonexistent_group(self) -> None:
-        self.mock_query.first.return_value = None
+    def test_sets_all_feeds_is_active_true(self) -> None:
+        row1 = self._make_feed_row(feed_name="f1", group_name="my_group", is_active=False)
+        self.mock_query.all.return_value = [row1]
 
-        result = FeedManager.toggle_group("nonexistent")
+        result = FeedManager.toggle_group("my_group", True)
 
         self.assertTrue(result)
+        self.assertTrue(row1.is_active)
+
+    def test_toggle_nonexistent_group_returns_false(self) -> None:
+        self.mock_query.all.return_value = []
+
+        result = FeedManager.toggle_group("nonexistent", True)
+
+        self.assertFalse(result)
         self.mock_query.update.assert_not_called()
 
 
