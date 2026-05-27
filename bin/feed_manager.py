@@ -19,6 +19,32 @@ logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
+# 파일시스템 스캔 시 피드로 취급하지 않는 디렉터리.
+# 파이썬/개발 도구가 자동 생성하는 캐시, VCS 메타, 테스트용 디렉터리가
+# feed_info 테이블에 피드로 적재되면 안 된다.
+NON_FEED_DIR_NAMES = frozenset({".git", "test", ".mypy_cache", ".ruff_cache", ".pytest_cache", "__pycache__"})
+
+
+def normalize_feed_identity(group_name: str, feed_name: str) -> Optional[tuple[str, str, bool]]:
+    """파일시스템 디렉터리명을 DB의 canonical 식별자로 정규화한다.
+
+    반환값:
+      - 캐시/VCS/테스트 디렉터리이면 None (feed_info에 기록하지 않음).
+      - 그 외에는 (group_name, feed_name, is_active) 튜플.
+        '_' 접두사가 하나라도 있으면 비활성 피드로 보고 접두사를 모두 제거한
+        canonical 이름과 is_active=False를 돌려준다. 접두사가 없으면 이름을
+        그대로 두고 is_active=True.
+
+    DB의 feed_name/group_name(PK)은 항상 '_' 없는 canonical을 유지하고, 비활성
+    표기는 파일시스템 '_' 접두사 + is_active 필드로만 관리한다
+    (FeedManager.toggle_feed 참조).
+    """
+    if group_name in NON_FEED_DIR_NAMES or feed_name in NON_FEED_DIR_NAMES:
+        return None
+    is_active = not (group_name.startswith("_") or feed_name.startswith("_"))
+    return group_name.lstrip("_"), feed_name.lstrip("_"), is_active
+
+
 class FeedUrlCountInfo(TypedDict):
     feed_name: str
     feed_title: str
@@ -155,18 +181,11 @@ class FeedManager:
         unit_size_per_day: float = 0.0
         config_modify_date: datetime = datetime.now(timezone.utc)
 
-        if group_name in (".mypy_cache", ".git", "test") or feed_name in (".mypy_cache", ".git", "test"):
+        normalized = normalize_feed_identity(group_name, feed_name)
+        if normalized is None:
             return
-        if group_name.startswith("_") or feed_name.startswith("_"):
-            # disabled feed
-            is_active = False
-            if group_name.startswith("_"):
-                group_name = group_name[1:]
-            if feed_name.startswith("_"):
-                feed_name = feed_name[1:]
-        else:
-            # active feed
-            is_active = True
+        group_name, feed_name, is_active = normalized
+        if is_active:
             conf_json_file_path = feed_dir_path / Config.DEFAULT_CONF_FILE
             if feed_dir_path.is_dir() and conf_json_file_path.is_file():
                 st = feed_dir_path.stat()
@@ -273,18 +292,11 @@ class FeedManager:
         feedmaker = False
         rss_update_date: Optional[datetime] = None
 
-        if group_name in (".mypy_cache", ".git", "test") or feed_name in (".mypy_cache", ".git", "test"):
+        normalized = normalize_feed_identity(group_name, feed_name)
+        if normalized is None:
             return
-        if group_name.startswith("_") or feed_name.startswith("_"):
-            # disabled feed
-            is_active = False
-            if group_name.startswith("_"):
-                group_name = group_name[1:]
-            if feed_name.startswith("_"):
-                feed_name = feed_name[1:]
-        else:
-            # active feed
-            is_active = True
+        group_name, feed_name, is_active = normalized
+        if is_active:
             rss_file_path = feed_dir_path / f"{feed_name}.xml"
             if rss_file_path.is_file():
                 feedmaker = True
@@ -435,6 +447,11 @@ class FeedManager:
         feed_name = feed_dir_path.name
         group_name = feed_dir_path.parent.name
 
+        normalized = normalize_feed_identity(group_name, feed_name)
+        if normalized is None:
+            return 0
+        group_name, feed_name, is_active = normalized
+
         is_completed: bool = False
         current_index: int = 0
         total_item_count: int = 0
@@ -454,20 +471,6 @@ class FeedManager:
                     is_completed = conf_data["configuration"]["collection"].get("is_completed", False)
             except (OSError, IOError, json.JSONDecodeError, KeyError, TypeError, RuntimeError) as e:
                 LOGGER.warning("Failed to read is_completed from config file: %s", e)
-
-        if group_name in (".mypy_cache", ".git", "test") or feed_name in (".mypy_cache", ".git", "test"):
-            return 0
-
-        if group_name.startswith("_") or feed_name.startswith("_"):
-            # disabled feed
-            is_active = False
-            if group_name.startswith("_"):
-                group_name = group_name[1:]
-            if feed_name.startswith("_"):
-                feed_name = feed_name[1:]
-        else:
-            # active feed
-            is_active = True
 
         row = s.query(FeedInfo).where(FeedInfo.feed_name == feed_name, FeedInfo.is_completed).first()
         if row is not None:
@@ -637,10 +640,26 @@ class FeedManager:
                 row.is_active = is_active
         return True
 
+    @classmethod
+    def remove_noncanonical_feed_info(cls) -> int:
+        """canonical 규칙을 위반하는 feed_info row를 제거한다.
+
+        정상 경로(toggle_feed/loader)는 '_' 없는 canonical 이름만 기록하므로,
+        feed_name 또는 group_name이 '_'로 시작하는 row는 과거 단일 strip 버그나
+        디렉터리 리네임으로 남은 스테일 데이터다. 파일시스템과 DB(is_active)가
+        따로 관리되며 생긴 drift를 전체 적재 후 일괄 정리한다.
+        """
+        with DB.session_ctx() as s:
+            deleted = s.query(FeedInfo).filter(or_(FeedInfo.feed_name.startswith("_", autoescape=True), FeedInfo.group_name.startswith("_", autoescape=True))).delete(synchronize_session=False)
+        if deleted:
+            LOGGER.info("* Removed %d non-canonical feed_info row(s).", deleted)
+        return deleted
+
     def load_all(self, max_num_feeds: Optional[int] = None, max_num_public_feeds: Optional[int] = None) -> None:
         LOGGER.debug("* start loading information")
         self.load_all_config_files(max_num_feeds)
         self.load_all_rss_files(max_num_feeds)
         self.load_all_public_feed_files(max_num_public_feeds)
         self.load_all_progress_info_from_files(max_num_feeds)
+        FeedManager.remove_noncanonical_feed_info()
         LOGGER.debug("* finish loading information")

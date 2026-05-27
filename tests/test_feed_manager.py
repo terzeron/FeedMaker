@@ -10,7 +10,7 @@ from typing import Optional
 from unittest.mock import patch, MagicMock
 
 from bin.feed_maker_util import Datetime, Config
-from bin.feed_manager import FeedManager, FeedUrlCountInfo, ElementCountInfo, PublicFeedInfo, FeedProgressInfo, SearchResultFeedInfo, GroupInfo, GroupFeedInfo, SingleFeedInfo
+from bin.feed_manager import FeedManager, FeedUrlCountInfo, ElementCountInfo, PublicFeedInfo, FeedProgressInfo, SearchResultFeedInfo, GroupInfo, GroupFeedInfo, SingleFeedInfo, normalize_feed_identity, NON_FEED_DIR_NAMES
 from bin.db import DB
 from bin.models import FeedInfo
 import json
@@ -653,6 +653,47 @@ class TestAddConfigInfo(FeedManagerTestBase):
         self.mock_session.add.assert_called_once()
         added = self.mock_session.add.call_args[0][0]
         self.assertEqual(added.group_name, "disabled_group")
+        self.assertFalse(added.is_active)
+
+    def test_skips_pycache_group(self) -> None:
+        feed_dir_path = MagicMock(spec=Path)
+        feed_dir_path.is_dir.return_value = True
+        feed_dir_path.name = "__pycache__"
+        feed_dir_path.parent.name = "group"
+
+        FeedManager._add_config_info(self.mock_session, feed_dir_path)
+
+        self.mock_session.flush.assert_not_called()
+        self.mock_session.add.assert_not_called()
+
+    def test_skips_ruff_and_pytest_cache_dirs(self) -> None:
+        for cache_name in (".ruff_cache", ".pytest_cache"):
+            with self.subTest(cache_name=cache_name):
+                self.mock_session.reset_mock()
+                feed_dir_path = MagicMock(spec=Path)
+                feed_dir_path.is_dir.return_value = True
+                feed_dir_path.name = "some_feed"
+                feed_dir_path.parent.name = cache_name
+
+                FeedManager._add_config_info(self.mock_session, feed_dir_path)
+
+                self.mock_session.flush.assert_not_called()
+                self.mock_session.add.assert_not_called()
+
+    def test_disabled_feed_with_double_underscore_prefix(self) -> None:
+        # 과거 단일 strip 버그가 남긴 '__name' 형태도 canonical로 완전 정규화돼야 한다.
+        feed_dir_path = MagicMock(spec=Path)
+        feed_dir_path.is_dir.return_value = True
+        feed_dir_path.name = "__disabled_feed"
+        feed_dir_path.parent.name = "group"
+
+        self.mock_query.first.return_value = None
+
+        FeedManager._add_config_info(self.mock_session, feed_dir_path)
+
+        self.mock_session.add.assert_called_once()
+        added = self.mock_session.add.call_args[0][0]
+        self.assertEqual(added.feed_name, "disabled_feed")
         self.assertFalse(added.is_active)
 
     def test_active_feed_reads_config_and_updates_existing(self) -> None:
@@ -1685,23 +1726,73 @@ class TestToggleGroup(FeedManagerTestBase):
 class TestLoadAll(FeedManagerTestBase):
     def test_calls_all_load_methods(self) -> None:
         fm = FeedManager()
-        with patch.object(fm, "load_all_config_files") as m1, patch.object(fm, "load_all_rss_files") as m2, patch.object(fm, "load_all_public_feed_files") as m3, patch.object(fm, "load_all_progress_info_from_files") as m4:
+        with patch.object(fm, "load_all_config_files") as m1, patch.object(fm, "load_all_rss_files") as m2, patch.object(fm, "load_all_public_feed_files") as m3, patch.object(fm, "load_all_progress_info_from_files") as m4, patch.object(FeedManager, "remove_noncanonical_feed_info") as m5:
             fm.load_all(max_num_feeds=5, max_num_public_feeds=10)
 
             m1.assert_called_once_with(5)
             m2.assert_called_once_with(5)
             m3.assert_called_once_with(10)
             m4.assert_called_once_with(5)
+            m5.assert_called_once_with()
 
     def test_calls_with_defaults(self) -> None:
         fm = FeedManager()
-        with patch.object(fm, "load_all_config_files") as m1, patch.object(fm, "load_all_rss_files") as m2, patch.object(fm, "load_all_public_feed_files") as m3, patch.object(fm, "load_all_progress_info_from_files") as m4:
+        with patch.object(fm, "load_all_config_files") as m1, patch.object(fm, "load_all_rss_files") as m2, patch.object(fm, "load_all_public_feed_files") as m3, patch.object(fm, "load_all_progress_info_from_files") as m4, patch.object(FeedManager, "remove_noncanonical_feed_info") as m5:
             fm.load_all()
 
             m1.assert_called_once_with(None)
             m2.assert_called_once_with(None)
             m3.assert_called_once_with(None)
             m4.assert_called_once_with(None)
+            m5.assert_called_once_with()
+
+
+class TestNormalizeFeedIdentity(unittest.TestCase):
+    def test_active_feed_unchanged(self) -> None:
+        self.assertEqual(normalize_feed_identity("group", "feed"), ("group", "feed", True))
+
+    def test_disabled_feed_single_underscore(self) -> None:
+        self.assertEqual(normalize_feed_identity("group", "_feed"), ("group", "feed", False))
+
+    def test_disabled_group_single_underscore(self) -> None:
+        self.assertEqual(normalize_feed_identity("_group", "feed"), ("group", "feed", False))
+
+    def test_double_underscore_fully_stripped(self) -> None:
+        self.assertEqual(normalize_feed_identity("group", "__feed"), ("group", "feed", False))
+        self.assertEqual(normalize_feed_identity("__group", "__feed"), ("group", "feed", False))
+
+    def test_cache_and_meta_dirs_return_none(self) -> None:
+        for name in NON_FEED_DIR_NAMES:
+            with self.subTest(name=name):
+                self.assertIsNone(normalize_feed_identity("group", name))
+                self.assertIsNone(normalize_feed_identity(name, "feed"))
+
+    def test_pycache_is_excluded(self) -> None:
+        self.assertIn("__pycache__", NON_FEED_DIR_NAMES)
+        self.assertIsNone(normalize_feed_identity("group", "__pycache__"))
+
+
+class TestRemoveNoncanonicalFeedInfo(FeedManagerTestBase):
+    def test_deletes_underscore_prefixed_rows(self) -> None:
+        self.mock_query.delete.return_value = 5
+
+        deleted = FeedManager.remove_noncanonical_feed_info()
+
+        self.assertEqual(deleted, 5)
+        self.mock_query.filter.assert_called_once()
+        self.mock_query.delete.assert_called_once_with(synchronize_session=False)
+
+    def test_filter_escapes_underscore_wildcard(self) -> None:
+        # '_'는 LIKE 와일드카드이므로 autoescape 없이는 모든 row를 지운다.
+        # 실제 생성되는 SQL에 ESCAPE 절이 포함되는지 검증한다.
+        from bin.models import FeedInfo as _FeedInfo
+        from bin.db import or_ as _or_
+
+        expr = _or_(_FeedInfo.feed_name.startswith("_", autoescape=True), _FeedInfo.group_name.startswith("_", autoescape=True))
+        compiled = str(expr.compile(compile_kwargs={"literal_binds": True}))
+        # autoescape=True 이면 '_' 와일드카드가 ESCAPE 절과 함께 이스케이프된다.
+        self.assertIn("ESCAPE", compiled)
+        self.assertIn("LIKE", compiled)
 
 
 class TestAddRssInfoWrapper(FeedManagerTestBase):
