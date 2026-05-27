@@ -238,4 +238,73 @@ describe("FacebookAuth.vue", () => {
 
     expect(wrapper.vm.isSdkLoaded).toBe(true);
   });
+
+  it("rejects with timeout when fbAsyncInit is set but FB never loads", async () => {
+    jest.useFakeTimers();
+    // fbAsyncInit already set, but window.FB never becomes available
+    window.fbAsyncInit = jest.fn();
+
+    const wrapper = mount(FacebookAuth, {
+      props: { appId: "real_app_id_123" },
+    });
+
+    // onMounted → loadFacebookSDK registers the 2000ms timeout synchronously;
+    // advance past it, flushing the rejection through onMounted's catch
+    await jest.advanceTimersByTimeAsync(2100);
+    jest.useRealTimers();
+
+    expect(wrapper.vm.sdkLoadError).toBe("Facebook SDK initialization timeout");
+    expect(wrapper.emitted("auth-error")).toBeTruthy();
+  });
+
+  it("injects the SDK script and initializes when fbAsyncInit fires", async () => {
+    // insertBefore needs a <script> sibling; clear any leftover SDK script
+    document.getElementById("facebook-jssdk")?.remove();
+    if (document.getElementsByTagName("script").length === 0) {
+      document.head.appendChild(document.createElement("script"));
+    }
+
+    const wrapper = mount(FacebookAuth, {
+      props: { appId: "real_app_id_123" },
+    });
+    await new Promise((r) => setTimeout(r));
+
+    const injected = document.getElementById("facebook-jssdk");
+    expect(injected).toBeTruthy();
+    expect(injected.src).toContain("connect.facebook.net");
+
+    // simulate the real SDK finishing load and invoking fbAsyncInit
+    window.FB = { init: jest.fn() };
+    window.fbAsyncInit();
+    await new Promise((r) => setTimeout(r));
+
+    expect(window.FB.init).toHaveBeenCalled();
+    expect(wrapper.vm.isSdkLoaded).toBe(true);
+    expect(wrapper.emitted("auth-initialized")).toBeTruthy();
+  });
+
+  it("sets sdkLoadError when the injected SDK script fails to load", async () => {
+    document.getElementById("facebook-jssdk")?.remove();
+    if (document.getElementsByTagName("script").length === 0) {
+      document.head.appendChild(document.createElement("script"));
+    }
+
+    const wrapper = mount(FacebookAuth, {
+      props: { appId: "real_app_id_123" },
+    });
+    await new Promise((r) => setTimeout(r));
+
+    const injected = document.getElementById("facebook-jssdk");
+    expect(injected).toBeTruthy();
+
+    // simulate the browser failing to load the SDK script
+    injected.onerror(new Error("network"));
+    await new Promise((r) => setTimeout(r));
+
+    // onerror rejects with the original error; onMounted's catch surfaces it
+    // (the transient "Failed to load Facebook SDK" is overwritten by error.message)
+    expect(wrapper.emitted("auth-error")).toBeTruthy();
+    expect(wrapper.emitted("auth-error")[0][0]).toBe("network");
+    expect(wrapper.vm.sdkLoadError).toBe("network");
+  });
 });

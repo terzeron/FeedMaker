@@ -186,6 +186,28 @@ describe("Search.vue", () => {
     expect(wrapper.vm.siteResults[0].error).toBe("검색 실패");
   });
 
+  it("falls back to default error message when site search has no message", async () => {
+    // 1st call: site names
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", site_names: ["funbe"] },
+    });
+    // 2nd call: non-success WITHOUT message → `|| "검색 실패"` 폴백 분기
+    axios.get.mockResolvedValueOnce({
+      data: { status: "error" },
+    });
+
+    const wrapper = mount(Search, {
+      global: { stubs, components: { MyButton } },
+    });
+
+    await wrapper.setData({ searchKeyword: "키워드" });
+    await wrapper.vm.search();
+    await flushPromises();
+
+    expect(wrapper.vm.siteResults[0].status).toBe("error");
+    expect(wrapper.vm.siteResults[0].error).toBe("검색 실패");
+  });
+
   it("returns early when site names response is not success", async () => {
     axios.get.mockResolvedValueOnce({
       data: { status: "failure" },

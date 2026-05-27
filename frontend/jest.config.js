@@ -15,7 +15,7 @@ module.exports = {
   testEnvironmentOptions: {
     customExportConditions: ["node", "node-addons"],
   },
-  collectCoverage: true,
+  // 기본 `npm test`는 커버리지 미수집(속도 우선). 커버리지는 `npm run test:coverage`(--coverage)로 수집.
   collectCoverageFrom: [
     "<rootDir>/src/**/*.{js,vue}",
     "!<rootDir>/src/main.js",
