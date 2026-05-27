@@ -5,14 +5,18 @@
 import unittest
 import shutil
 import logging.config
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional
 from unittest.mock import patch, MagicMock
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
 from bin.feed_maker_util import Datetime, Config
 from bin.feed_manager import FeedManager, FeedUrlCountInfo, ElementCountInfo, PublicFeedInfo, FeedProgressInfo, SearchResultFeedInfo, GroupInfo, GroupFeedInfo, SingleFeedInfo, normalize_feed_identity, NON_FEED_DIR_NAMES
 from bin.db import DB
-from bin.models import FeedInfo
+from bin.models import FeedInfo, Base
 import json
 from datetime import datetime, timezone
 from unittest.mock import PropertyMock
@@ -1606,6 +1610,70 @@ class TestGetFeedsByGroup(FeedManagerTestBase):
         self.mock_query.all.return_value = []
         result: list[GroupFeedInfo] = FeedManager.get_feeds_by_group("no_group")
         self.assertEqual(result, [])
+
+
+class TestDotPrefixFilteringRealDB(unittest.TestCase):
+    """'.'으로 시작하는 그룹/피드가 조회에서 제외되는지 실제 SQLite로 검증한다.
+
+    상위 mock 기반 테스트는 세션을 mock하므로 WHERE 절의 실제 필터링을 검증하지
+    못한다(mock은 필터 인자를 무시하고 설정된 반환값만 돌려준다). 여기서는
+    in-memory SQLite로 실제 SQL을 실행해 get_groups / get_feeds_by_group이
+    점(.) 접두 그룹/피드를 걸러내는지 확인한다.
+    """
+
+    def setUp(self) -> None:
+        self.engine = create_engine("sqlite://")
+        Base.metadata.create_all(self.engine)
+        self.SessionLocal = sessionmaker(bind=self.engine)
+        self.session = self.SessionLocal()
+        self.session.add_all(
+            [
+                # news: 정상 피드 2개(active/inactive) + 점 피드 2개
+                FeedInfo(feed_name="feedA", feed_title="Feed A", group_name="news", is_active=True),
+                FeedInfo(feed_name="feedB", feed_title="Feed B", group_name="news", is_active=False),
+                FeedInfo(feed_name=".ruff_cache", feed_title="", group_name="news", is_active=True),
+                FeedInfo(feed_name=".playwright-mcp", feed_title="", group_name="news", is_active=True),
+                # blog: 정상 피드는 inactive 1개, active인 건 점 피드뿐
+                FeedInfo(feed_name="feedC", feed_title="Feed C", group_name="blog", is_active=False),
+                FeedInfo(feed_name=".cache", feed_title="", group_name="blog", is_active=True),
+                # 점 접두 그룹 자체
+                FeedInfo(feed_name="x", feed_title="X", group_name=".pytest_cache", is_active=True),
+                FeedInfo(feed_name="y", feed_title="Y", group_name=".venv", is_active=True),
+            ]
+        )
+        self.session.commit()
+
+        @contextmanager
+        def fake_ctx(*_args, **_kwargs):
+            yield self.session
+
+        self.patcher = patch("bin.feed_manager.DB.session_ctx", fake_ctx)
+        self.patcher.start()
+
+    def tearDown(self) -> None:
+        self.patcher.stop()
+        self.session.close()
+        self.engine.dispose()
+
+    def test_get_groups_excludes_dot_prefixed_groups(self) -> None:
+        names = [g["name"] for g in FeedManager.get_groups()]
+        self.assertEqual(names, ["blog", "news"])
+
+    def test_get_groups_num_feeds_excludes_dot_prefixed_feeds(self) -> None:
+        groups = {g["name"]: g for g in FeedManager.get_groups()}
+        self.assertEqual(groups["news"]["num_feeds"], 2)  # feedA, feedB only
+        self.assertEqual(groups["blog"]["num_feeds"], 1)  # feedC only
+
+    def test_get_groups_is_active_ignores_dot_prefixed_feeds(self) -> None:
+        groups = {g["name"]: g for g in FeedManager.get_groups()}
+        # news는 feedA가 active라 active
+        self.assertTrue(groups["news"]["is_active"])
+        # blog는 active인 게 .cache(점 피드)뿐이므로 제외되어 inactive
+        self.assertFalse(groups["blog"]["is_active"])
+
+    def test_get_feeds_by_group_excludes_dot_prefixed_feeds(self) -> None:
+        names = [f["name"] for f in FeedManager.get_feeds_by_group("news")]
+        self.assertEqual(names, ["feedA", "feedB"])
 
 
 class TestGetFeedInfo(FeedManagerTestBase):
