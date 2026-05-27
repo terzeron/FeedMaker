@@ -6,11 +6,9 @@ import unittest
 from unittest.mock import patch, call, MagicMock
 import logging.config
 from pathlib import Path
-import os
 
 from bin.feed_maker_util import Config
 from bin.new_list_collector import NewlistCollector
-from unittest.mock import patch, MagicMock
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()

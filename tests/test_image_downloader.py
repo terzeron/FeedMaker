@@ -3,6 +3,7 @@
 
 
 import unittest
+import tempfile
 from unittest.mock import patch, MagicMock, mock_open
 from pathlib import Path
 from base64 import b64encode
@@ -783,7 +784,6 @@ class TestNonWebpSamePath(unittest.TestCase):
 
 # --- Merged from test_image_optimization.py ---
 
-import tempfile
 
 
 def create_test_image(width: int, height: int, format: str = "PNG") -> Path:

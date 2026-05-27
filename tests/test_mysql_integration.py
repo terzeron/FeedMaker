@@ -221,14 +221,14 @@ class TestMySQLIntegration(unittest.TestCase):
 
         # Query feeds with access_date (simulating AccessLogManager behavior)
         with DB.session_ctx(db_config=self.db_config) as session:
-            accessed_feeds = session.query(FeedInfo).filter(FeedInfo.http_request == True, FeedInfo.access_date.isnot(None)).all()
+            accessed_feeds = session.query(FeedInfo).filter(FeedInfo.http_request.is_(True), FeedInfo.access_date.isnot(None)).all()
             self.assertEqual(len(accessed_feeds), 1)
             self.assertEqual(accessed_feeds[0].feed_name, "comic/naver/test_feed1")
             LOGGER.info("Verified query for accessed feeds")
 
         # Query feeds with view_date
         with DB.session_ctx(db_config=self.db_config) as session:
-            viewed_feeds = session.query(FeedInfo).filter(FeedInfo.http_request == True, FeedInfo.view_date.isnot(None)).all()
+            viewed_feeds = session.query(FeedInfo).filter(FeedInfo.http_request.is_(True), FeedInfo.view_date.isnot(None)).all()
             self.assertEqual(len(viewed_feeds), 1)
             self.assertEqual(viewed_feeds[0].feed_name, "comic/daum/test_feed2")
             LOGGER.info("Verified query for viewed feeds")
@@ -725,14 +725,7 @@ class TestAuthMySQLIntegration(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls._ctx = start_mysql_container()
         cls.mysql_container = cls._ctx.__enter__()
-        cls.db_config = {
-            "drivername": "mysql+pymysql",
-            "user": cls.mysql_container.username,
-            "password": cls.mysql_container.password,
-            "host": "localhost",
-            "port": int(cls.mysql_container.get_exposed_port(3306)),
-            "database": cls.mysql_container.dbname,
-        }
+        cls.db_config = {"drivername": "mysql+pymysql", "user": cls.mysql_container.username, "password": cls.mysql_container.password, "host": "localhost", "port": int(cls.mysql_container.get_exposed_port(3306)), "database": cls.mysql_container.dbname}
         DB.init(cls.db_config)
 
     @classmethod

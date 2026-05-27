@@ -1,4 +1,4 @@
-from typing import Any, Optional, Dict, List, Union
+from typing import Any, Optional, List, Union
 
 class Mail:
     def __init__(self, **kwargs: Any) -> None: ...

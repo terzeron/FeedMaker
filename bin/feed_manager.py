@@ -7,7 +7,7 @@ import logging.config
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from itertools import islice
-from typing import Any, Optional
+from typing import Any, Optional, TypedDict
 
 from bin.feed_maker_util import PathUtil, Env
 from bin.db import DB, Session, or_
@@ -19,40 +19,121 @@ logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
+class FeedUrlCountInfo(TypedDict):
+    feed_name: str
+    feed_title: str
+    group_name: str
+    count: int
+
+
+class ElementCountInfo(TypedDict):
+    element_name: str
+    count: int
+
+
+class FeedProgressInfo(TypedDict):
+    feed_name: str
+    feed_title: str
+    group_name: str
+    current_index: int
+    total_item_count: int
+    unit_size_per_day: float
+    progress_ratio: float
+    due_date: Optional[datetime]
+
+
+class PublicFeedInfo(TypedDict):
+    feed_name: str
+    feed_title: str
+    group_name: str
+    file_size: int
+    num_items: int
+    upload_date: Optional[datetime]
+
+
+class SearchResultFeedInfo(TypedDict):
+    feed_name: str
+    feed_title: str
+    group_name: str
+    is_active: bool
+
+
+class GroupFeedInfo(TypedDict):
+    name: str
+    title: str
+    group_name: str
+    is_active: bool
+
+
+class GroupInfo(TypedDict):
+    name: str
+    num_feeds: int
+    is_active: int
+
+
+class CollectionDetail(TypedDict):
+    collect_date: Optional[datetime]
+    total_item_count: int
+
+
+class PublicFeedDetail(TypedDict):
+    public_feed_file_path: str
+    file_size: int
+    num_items: int
+    upload_date: Optional[datetime]
+
+
+class ProgressDetail(TypedDict):
+    current_index: int
+    total_item_count: int
+    unit_size_per_day: float
+    progress_ratio: float
+    due_date: Optional[datetime]
+
+
+class SingleFeedInfo(TypedDict):
+    feed_name: str
+    feed_title: str
+    group_name: str
+    config: dict[str, Any]
+    config_modify_date: Optional[datetime]
+    collection_info: CollectionDetail
+    public_feed_info: PublicFeedDetail
+    progress_info: ProgressDetail
+
+
 class FeedManager:
     work_dir_path = Path(Env.get("FM_WORK_DIR"))
     public_feed_dir_path = Path(Env.get("WEB_SERVICE_FEED_DIR_PREFIX"))
 
     @classmethod
-    def get_feed_name_list_url_count_map(cls) -> dict[str, dict[str, Any]]:
+    def get_feed_name_list_url_count_map(cls) -> dict[str, FeedUrlCountInfo]:
         LOGGER.debug("# get_feed_name_list_url_count_map()")
-        feed_name_list_url_count_map: dict[str, dict[str, Any]] = {}
+        feed_name_list_url_count_map: dict[str, FeedUrlCountInfo] = {}
 
         with DB.session_ctx() as s:
             rows = s.query(FeedInfo).filter(FeedInfo.url_list_count > 1).all()
             for row in rows:
-                feed_name: str = row.feed_name
-                feed_name_list_url_count_map[feed_name] = {
-                    "feed_name": feed_name,
-                    "feed_title": row.feed_title,
-                    "group_name": row.group_name,
-                    "count": row.url_list_count
-                }
+                feed_name_list_url_count_map[row.feed_name] = FeedUrlCountInfo(
+                    feed_name=row.feed_name,
+                    feed_title=row.feed_title,
+                    group_name=row.group_name,
+                    count=row.url_list_count
+                )
 
         return feed_name_list_url_count_map
 
     @classmethod
-    def get_element_name_count_map(cls) -> dict[str, dict[str, Any]]:
+    def get_element_name_count_map(cls) -> dict[str, ElementCountInfo]:
         LOGGER.debug("# get_element_name_count_map()")
-        element_name_count_map: dict[str, dict[str, Any]] = {}
+        element_name_count_map: dict[str, ElementCountInfo] = {}
 
         with DB.session_ctx() as s:
             for row in s.query(ElementNameCount).all():
-                element_name = row.element_name
-                element_name_count_map[element_name] = {
-                    "element_name": element_name,
-                    "count": row.count
-                }
+                element_name_count_map[row.element_name] = ElementCountInfo(
+                    element_name=row.element_name,
+                    count=row.count
+                )
 
         return element_name_count_map
 
@@ -261,22 +342,21 @@ class FeedManager:
         LOGGER.info("* The loading of all rss files is done. %d items / %s sec", num_items, (end_ts - start_ts))
 
     @classmethod
-    def get_feed_name_public_feed_info_map(cls) -> dict[str, dict[str, Any]]:
+    def get_feed_name_public_feed_info_map(cls) -> dict[str, PublicFeedInfo]:
         LOGGER.debug("# get_feed_name_public_feed_info_map()")
-        feed_name_public_feed_info_map: dict[str, dict[str, Any]] = {}
+        feed_name_public_feed_info_map: dict[str, PublicFeedInfo] = {}
 
         with DB.session_ctx() as s:
             rows = s.query(FeedInfo).where(FeedInfo.public_html).all()
             for row in rows:
-                feed_name = row.feed_name
-                feed_name_public_feed_info_map[feed_name] = {
-                    "feed_name": feed_name,
-                    "feed_title": row.feed_title,
-                    "group_name": row.group_name,
-                    "file_size": row.file_size,
-                    "num_items": row.num_items,
-                    "upload_date": row.upload_date
-                }
+                feed_name_public_feed_info_map[row.feed_name] = PublicFeedInfo(
+                    feed_name=row.feed_name,
+                    feed_title=row.feed_title,
+                    group_name=row.group_name,
+                    file_size=row.file_size,
+                    num_items=row.num_items,
+                    upload_date=row.upload_date
+                )
 
         return feed_name_public_feed_info_map
 
@@ -358,26 +438,23 @@ class FeedManager:
         LOGGER.info("* The loading of all public feed files is done. %d items / %s sec", num_items, (end_ts - start_ts))
 
     @classmethod
-    def get_feed_name_progress_info_map(cls) -> dict[str, dict[str, Any]]:
+    def get_feed_name_progress_info_map(cls) -> dict[str, FeedProgressInfo]:
         LOGGER.debug("# get_feed_name_progress_info_map()")
-        feed_name_progress_info_map: dict[str, dict[str, Any]] = {}
+        feed_name_progress_info_map: dict[str, FeedProgressInfo] = {}
 
         with DB.session_ctx() as s:
             rows = s.query(FeedInfo).where(FeedInfo.is_completed, FeedInfo.is_active).all()
             for row in rows:
-                feed_name = row.feed_name
-                unit_size_per_day: float = row.unit_size_per_day or 0.0
-                progress_ratio: float = row.progress_ratio or 0.0
-                feed_name_progress_info_map[feed_name] = {
-                    "feed_name": feed_name,
-                    "feed_title": row.feed_title,
-                    "group_name": row.group_name,
-                    "current_index": row.current_index,
-                    "total_item_count": row.total_item_count,
-                    "unit_size_per_day": unit_size_per_day,
-                    "progress_ratio": progress_ratio,
-                    "due_date": row.due_date
-                }
+                feed_name_progress_info_map[row.feed_name] = FeedProgressInfo(
+                    feed_name=row.feed_name,
+                    feed_title=row.feed_title,
+                    group_name=row.group_name,
+                    current_index=row.current_index,
+                    total_item_count=row.total_item_count,
+                    unit_size_per_day=row.unit_size_per_day or 0.0,
+                    progress_ratio=row.progress_ratio or 0.0,
+                    due_date=row.due_date
+                )
 
         return feed_name_progress_info_map
 
@@ -515,7 +592,7 @@ class FeedManager:
         LOGGER.info("* The loading of all progress info from files is done. %d items / %s sec", num_items, (end_ts - start_ts))
 
     @classmethod
-    def search(cls, keywords: list[str]) -> list[dict[str, Any]]:
+    def search(cls, keywords: list[str]) -> list[SearchResultFeedInfo]:
         if not keywords:
             return []
 
@@ -535,35 +612,35 @@ class FeedManager:
                 )
             combined = or_(*conditions)
             rows = s.query(FeedInfo).where(combined & (FeedInfo.group_name != "")).order_by(FeedInfo.group_name, FeedInfo.feed_name).all()
-            return [{"feed_name": row.feed_name, "feed_title": row.feed_title if row.feed_title else row.feed_name, "group_name": row.group_name, "is_active": row.is_active} for row in rows]
+            return [SearchResultFeedInfo(feed_name=row.feed_name, feed_title=row.feed_title if row.feed_title else row.feed_name, group_name=row.group_name, is_active=row.is_active) for row in rows]
 
     @classmethod
-    def get_groups(cls) -> list[dict[str, Any]]:
+    def get_groups(cls) -> list[GroupInfo]:
         LOGGER.debug("# get_groups()")
 
         with DB.session_ctx() as s:
             # 모든 그룹 이름을 가져와서 중복 제거
             group_names = [row.group_name for row in s.query(FeedInfo.group_name).where(FeedInfo.group_name != "").distinct().all()]
-            result: list[dict[str, Any]] = []
+            result: list[GroupInfo] = []
             for group_name in sorted(group_names):
                 # 각 그룹별 피드 수 계산
                 count = s.query(FeedInfo).filter_by(group_name=group_name).count()
                 # 그룹의 active 상태 확인 (그룹 내 모든 피드가 active인지 확인)
                 active_count = s.query(FeedInfo).filter_by(group_name=group_name, is_active=True).count()
                 is_active = active_count > 0  # 그룹에 active 피드가 하나라도 있으면 active
-                result.append({"name": group_name, "num_feeds": count, "is_active": is_active})
+                result.append(GroupInfo(name=group_name, num_feeds=count, is_active=is_active))
             return result
 
     @classmethod
-    def get_feeds_by_group(cls, group_name: str) -> list[dict[str, Any]]:
+    def get_feeds_by_group(cls, group_name: str) -> list[GroupFeedInfo]:
         LOGGER.debug("# get_feeds_by_group(group_name='%s')", group_name)
 
         with DB.session_ctx() as s:
             rows = s.query(FeedInfo).where(FeedInfo.group_name == group_name).order_by(FeedInfo.feed_name).all()
-            return [{"name": row.feed_name, "title": row.feed_title if row.feed_title else row.feed_name, "group_name": row.group_name, "is_active": row.is_active} for row in rows]
+            return [GroupFeedInfo(name=row.feed_name, title=row.feed_title if row.feed_title else row.feed_name, group_name=row.group_name, is_active=row.is_active) for row in rows]
 
     @classmethod
-    def get_feed_info(cls, group_name: str, feed_name: str) -> dict[str, Any]:
+    def get_feed_info(cls, group_name: str, feed_name: str) -> Optional[SingleFeedInfo]:
         LOGGER.debug("# get_feed_info(group_name='%s', feed_name='%s')", group_name, feed_name)
 
         with DB.session_ctx() as s:
@@ -572,37 +649,37 @@ class FeedManager:
                                            FeedInfo.config.isnot(None)).first()
 
         if not feed:
-            return {}
+            return None
 
         if feed.config:
             config_data = json.loads(str(feed.config))
         else:
             config_data = {}
 
-        return {
-            "feed_name": feed.feed_name,
-            "feed_title": feed.feed_title,
-            "group_name": feed.group_name,
-            "config": config_data,
-            "config_modify_date": feed.config_modify_date,
-            "collection_info": {
-                "collect_date": feed.collect_date,
-                "total_item_count": feed.total_item_count,
-            },
-            "public_feed_info": {
-                "public_feed_file_path": feed.public_feed_file_path,
-                "file_size": feed.file_size,
-                "num_items": feed.num_items,
-                "upload_date": feed.upload_date,
-            },
-            "progress_info": {
-                "current_index": feed.current_index,
-                "total_item_count": feed.total_item_count,
-                "unit_size_per_day": feed.unit_size_per_day,
-                "progress_ratio": feed.progress_ratio,
-                "due_date": feed.due_date,
-            },
-        }
+        return SingleFeedInfo(
+            feed_name=feed.feed_name,
+            feed_title=feed.feed_title,
+            group_name=feed.group_name,
+            config=config_data,
+            config_modify_date=feed.config_modify_date,
+            collection_info=CollectionDetail(
+                collect_date=feed.collect_date,
+                total_item_count=feed.total_item_count,
+            ),
+            public_feed_info=PublicFeedDetail(
+                public_feed_file_path=feed.public_feed_file_path,
+                file_size=feed.file_size,
+                num_items=feed.num_items,
+                upload_date=feed.upload_date
+            ),
+            progress_info=ProgressDetail(
+                current_index=feed.current_index,
+                total_item_count=feed.total_item_count,
+                unit_size_per_day=feed.unit_size_per_day,
+                progress_ratio=feed.progress_ratio,
+                due_date=feed.due_date
+            )
+        )
 
     @classmethod
     def toggle_feed(cls, feed_name: str) -> bool:

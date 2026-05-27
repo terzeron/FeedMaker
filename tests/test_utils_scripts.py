@@ -133,7 +133,7 @@ class TestConvertPdfToImage(unittest.TestCase):
             mock_fm.get_cache_file_path.return_value = Path("/tmp/img/test/cache")
             mock_fm.get_cache_url.return_value = "http://img/test/cache"
 
-            with patch("sys.argv", ["prog", pdf_path]), patch("sys.stdin", io.StringIO("")), patch("pathlib.Path.mkdir"), patch("pathlib.Path.unlink"), patch("builtins.print") as mock_print:
+            with patch("sys.argv", ["prog", pdf_path]), patch("sys.stdin", io.StringIO("")), patch("pathlib.Path.mkdir"), patch("pathlib.Path.unlink"), patch("builtins.print"):
                 from utils.convert_pdf_to_image import main
 
                 ret = main()
@@ -168,7 +168,7 @@ class TestConvertPdfToText(unittest.TestCase):
             mock_env_get.return_value = "/tmp"
             mock_pdf_cls.return_value = ["Page 1 text\nMore text"]
 
-            with patch("sys.argv", ["prog", pdf_path]), patch("sys.stdin", io.StringIO("")), patch("pathlib.Path.unlink"), patch("builtins.print") as mock_print:
+            with patch("sys.argv", ["prog", pdf_path]), patch("sys.stdin", io.StringIO("")), patch("pathlib.Path.unlink"), patch("builtins.print"):
                 from utils.convert_pdf_to_text import main
 
                 ret = main()
@@ -355,7 +355,7 @@ class TestConvertMovieToImagesExtended(unittest.TestCase):
             patch("pathlib.Path.is_file", return_value=False),
             patch("subprocess.run", side_effect=subprocess.CalledProcessError(1, "extract", stderr=b"")),
             patch("pathlib.Path.iterdir", return_value=iter([])),
-            patch("sys.stdout", new_callable=io.StringIO) as out,
+            patch("sys.stdout", new_callable=io.StringIO),
         ):
             from utils.convert_movie_to_images import main
 

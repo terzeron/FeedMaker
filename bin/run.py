@@ -185,21 +185,22 @@ def determine_options() -> tuple[dict[str, Any], list[str]]:
 
     optlist, args = getopt.getopt(sys.argv[1:], "ahrcln:w:")
     for o, a in optlist:
-        if o == "-a":
-            do_make_all_feeds = True
-        elif o == "-h":
-            print_usage()
-            sys.exit(0)
-        elif o == "-r":
-            do_remove_all_files = True
-        elif o == "-c":
-            force_collection_opt = "-c"
-        elif o == "-l":
-            collect_only_opt = "-l"
-        elif o == "-n":
-            num_feeds = int(a)
-        elif o == "-w":
-            window_size = int(a)
+        match o:
+            case "-a":
+                do_make_all_feeds = True
+            case "-h":
+                print_usage()
+                sys.exit(0)
+            case "-r":
+                do_remove_all_files = True
+            case "-c":
+                force_collection_opt = "-c"
+            case "-l":
+                collect_only_opt = "-l"
+            case "-n":
+                num_feeds = int(a)
+            case "-w":
+                window_size = int(a)
 
     options = {"do_make_all_feeds": do_make_all_feeds, "do_remove_all_files": do_remove_all_files, "force_collection_opt": force_collection_opt, "collect_only_opt": collect_only_opt, "num_feeds": num_feeds, "window_size": window_size}
     return options, args

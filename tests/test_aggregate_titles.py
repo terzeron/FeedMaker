@@ -143,7 +143,7 @@ class TestAggregateTitlesMain(unittest.TestCase):
             self.assertEqual(result, 0)
             intermediate = Path(file_prefix + ".intermediate")
             content = intermediate.read_text(encoding="utf-8")
-            lines = [l for l in content.strip().split("\n") if l]
+            lines = [ln for ln in content.strip().split("\n") if ln]
             # "Title One" appears twice but should be deduplicated
             self.assertEqual(len(lines), 2)
 
@@ -207,9 +207,7 @@ class TestDefect4LoggerFormatString(unittest.TestCase):
         mock_exec.return_value = ("https://example.com/%20encoded%2Fpath", "")
 
         with tempfile.TemporaryDirectory() as tmp:
-            intermediate = Path(tmp) / "test.intermediate"
             temp_output = Path(tmp) / "test.temp"
-            output_file = Path(tmp) / "test.output"
             temp_output.touch()
 
             with patch("sys.argv", ["prog", "-t", "0.5", str(Path(tmp) / "test")]):

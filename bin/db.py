@@ -35,6 +35,14 @@ class EngineOptions(TypedDict, total=False):
     isolation_level: Literal['SERIALIZABLE', 'REPEATABLE READ', 'READ COMMITTED', 'READ UNCOMMITTED', 'AUTOCOMMIT']
 
 
+class DBConfig(TypedDict, total=False):
+    user: str
+    password: str
+    host: str
+    port: int
+    database: str
+
+
 class _DataSource:
     def __init__(self, url: URL, **engine_opts: Any) -> None:
         self._engine: Engine = create_engine(
@@ -97,14 +105,14 @@ class _DataSource:
 class DB:
     _sources: dict[str, _DataSource] = {}
     _lock = RLock()
-    _db_config: dict[str, Any] = {}
+    _db_config: DBConfig = {}
 
     @classmethod
-    def init(cls, db_config: Optional[dict[str, Any]] = None) -> None:
+    def init(cls, db_config: Optional[DBConfig] = None) -> None:
         cls._db_config = db_config or {}
 
     @staticmethod
-    def _env_url(db_config: Optional[dict[str, Any]]) -> URL:
+    def _env_url(db_config: Optional[DBConfig]) -> URL:
         if not db_config:
             db_config = {}
         return URL.create(
@@ -139,23 +147,23 @@ class DB:
 
     @classmethod
     @contextmanager
-    def session_ctx(cls, *, db_config: Optional[dict[str, Any]] = None, autoflush: Optional[bool] = None, isolation_level: Optional[Literal['SERIALIZABLE', 'REPEATABLE READ', 'READ COMMITTED', 'READ UNCOMMITTED', 'AUTOCOMMIT']] = None, **engine_opts: EngineOptions) -> Iterator[Session]:
-        actual_config: dict[str, Any] = db_config or cls._db_config
+    def session_ctx(cls, *, db_config: Optional[DBConfig] = None, autoflush: Optional[bool] = None, isolation_level: Optional[Literal['SERIALIZABLE', 'REPEATABLE READ', 'READ COMMITTED', 'READ UNCOMMITTED', 'AUTOCOMMIT']] = None, **engine_opts: EngineOptions) -> Iterator[Session]:
+        actual_config: DBConfig = db_config or cls._db_config
         ds = cls._source(cls._env_url(actual_config), **engine_opts)
         with ds.session(autoflush=autoflush, isolation_level=isolation_level) as sess:
             yield sess
 
     @classmethod
-    def create_all_tables(cls, db_config: Optional[dict[str, Any]] = None, **engine_opts: Any) -> None:
+    def create_all_tables(cls, db_config: Optional[DBConfig] = None, **engine_opts: Any) -> None:
         LOGGER.debug("# create_all_tables()")
-        actual_config: dict[str, Any] = db_config or cls._db_config
+        actual_config: DBConfig = db_config or cls._db_config
         ds = cls._source(cls._env_url(actual_config), **engine_opts)
         Base.metadata.create_all(ds.engine, checkfirst=True)
 
     @classmethod
-    def drop_all_tables(cls, db_config: Optional[dict[str, Any]] = None, **engine_opts: Any) -> None:
+    def drop_all_tables(cls, db_config: Optional[DBConfig] = None, **engine_opts: Any) -> None:
         LOGGER.debug("# drop_all_tables()")
-        actual_config: dict[str, Any] = db_config or cls._db_config
+        actual_config: DBConfig = db_config or cls._db_config
         ds = cls._source(cls._env_url(actual_config), **engine_opts)
         Base.metadata.drop_all(ds.engine, checkfirst=True)
 

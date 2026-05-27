@@ -27,6 +27,10 @@ LOGGER = logging.getLogger()
 DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
 
+Headers = dict[str, str]
+Cookies = dict[str, str]
+
+
 class _LoginFormParser(HTMLParser):
     """login_url 페이지의 HTML에서 <form> 내 hidden 필드, action URL, 입력 필드명을 추출한다."""
 
@@ -87,16 +91,11 @@ class LoginManager:
         """로그인 폼을 파싱하여 (post_url, hidden_fields, id_field_name, password_field_name)을 반환한다."""
         parser = _LoginFormParser()
         parser.feed(html)
-        # password 필드가 있는 form 우선 선택
-        target_form = None
-        for form in parser.forms:
-            if form["has_password_field"]:
-                target_form = form
-                break
-        if target_form is None and parser.forms:
-            target_form = parser.forms[0]
-        if target_form is None:
+        if not parser.forms:
             return login_url, {}, "", ""
+        # password 필드 있는 form 우선, 없으면 첫 form으로 fallback
+        target_form = next((f for f in parser.forms if f["has_password_field"]), parser.forms[0])
+
         action = target_form["action"]
         if action:
             post_url = urljoin(login_url, action)
@@ -126,13 +125,13 @@ class Method(Enum):
 class RequestsClient:
     COOKIE_FILE = "cookies.requestsclient.json"
 
-    def __init__(self, *, dir_path: Path = Path.cwd(), render_js: bool = False, method: Method = Method.GET, headers: Optional[dict[str, str]] = None, timeout: int = 60, encoding: str = "utf-8", verify_ssl: bool = True) -> None:
+    def __init__(self, *, dir_path: Path = Path.cwd(), render_js: bool = False, method: Method = Method.GET, headers: Optional[Headers] = None, timeout: int = 60, encoding: str = "utf-8", verify_ssl: bool = True) -> None:
         LOGGER.debug("# RequestsClient(dir_path=%s, render_js=%s, method=%s, headers=%r, timeout=%d, encoding=%s, verify_ssl=%s)", PathUtil.short_path(dir_path), render_js, method, headers, timeout, encoding, verify_ssl)
         self.dir_path: Path = dir_path
         self.method: Method = method
         self.timeout: int = timeout
-        self.headers: dict[str, str] = headers if headers is not None else {}
-        self.cookies: dict[str, str] = {}
+        self.headers: Headers = headers if headers is not None else {}
+        self.cookies: Cookies = {}
         self.encoding: str = encoding or "utf-8"
         self.verify_ssl: bool = verify_ssl
         self._cookie_dir: Optional[Path] = None
@@ -225,7 +224,7 @@ class RequestsClient:
             LOGGER.warning("Login failed for '%s' (status=%d)", login_url, login_response.status_code)
         return success
 
-    def make_request(self, url: str, data: Any = None, download_file: Optional[Path] = None, allow_redirects: bool = True) -> tuple[str, str, dict[str, Any], Optional[int]]:
+    def make_request(self, url: str, data: Any = None, download_file: Optional[Path] = None, allow_redirects: bool = True) -> tuple[str, str, Headers, Optional[int]]:
         LOGGER.debug(f"# make_request(url='{url}', allow_redirects={allow_redirects})")
         is_ok, reason = URLSafety.check_url(url, allow_private=self.allow_private_ips, allowed_hosts_raw=self.allowed_hosts_raw)
         if not is_ok:
@@ -256,16 +255,17 @@ class RequestsClient:
         self.read_cookies_from_file()
         response = None
         try:
-            if self.method == Method.GET:
-                cookie_str = "; ".join([f"{name}={value}" for name, value in self.cookies.items()])
-                self.headers["Cookie"] = cookie_str
-                # LOGGER.debug(f"self.headers={self.headers}")
-                response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, allow_redirects=allow_redirects)
-            elif self.method == Method.POST:
-                response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, data=data)
-            elif self.method == Method.HEAD:
-                response = requests.head(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
-                return str(response.status_code), "", dict(response.headers), response.status_code
+            match self.method:
+                case Method.GET:
+                    cookie_str = "; ".join([f"{name}={value}" for name, value in self.cookies.items()])
+                    self.headers["Cookie"] = cookie_str
+                    # LOGGER.debug(f"self.headers={self.headers}")
+                    response = requests.get(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, allow_redirects=allow_redirects)
+                case Method.POST:
+                    response = requests.post(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl, data=data)
+                case Method.HEAD:
+                    response = requests.head(url, headers=self.headers, timeout=self.timeout, verify=self.verify_ssl)
+                    return str(response.status_code), "", dict(response.headers), response.status_code
         except requests.exceptions.ConnectionError as e:
             LOGGER.warning(f"<!-- Warning: can't connect to '{url}' for temporary network error -->")
             LOGGER.warning("<!-- %r -->", e)
@@ -313,7 +313,7 @@ class Crawler:
         dir_path: Path = Path.cwd(),
         render_js: bool = False,
         method: Method = Method.GET,
-        headers: Optional[dict[str, str]] = None,
+        headers: Optional[Headers] = None,
         timeout: int = 60,
         num_retries: int = 1,
         retry_sleep: int = 5,
@@ -345,7 +345,7 @@ class Crawler:
         self.dir_path = dir_path
         self.render_js = render_js
         self.method = method
-        self.headers: dict[str, str] = headers if headers is not None else {}
+        self.headers: Headers = headers if headers is not None else {}
         self.headers["User-Agent"] = self.headers.get("User-Agent", DEFAULT_USER_AGENT)
         self.timeout = timeout
         self.num_retries = num_retries
@@ -443,11 +443,11 @@ class Crawler:
         if not success:
             LOGGER.warning("Login failed, proceeding without login")
 
-    def run(self, url: str, data: Any = None, download_file: Optional[Path] = None, allow_redirects: bool = True) -> tuple[str, str, Optional[dict[str, Any]]]:
+    def run(self, url: str, data: Any = None, download_file: Optional[Path] = None, allow_redirects: bool = True) -> tuple[str, str, Optional[Headers]]:
         LOGGER.debug(f"# run(url={url}, data={data!r}, download_file={download_file}, allow_redirects={allow_redirects})")
         self._try_login()
         error: str = ""
-        headers: dict[str, Any] = {}
+        headers: Headers = {}
         for i in range(self.num_retries):
             if self.render_js:
                 response = self.headless_browser.make_request(url, download_file=download_file)
@@ -526,47 +526,47 @@ def main() -> int:
         sys.exit(-1)
 
     for o, a in opts:
-        if o == "-h":
-            print_usage()
-            sys.exit(0)
-        elif o == "-f":
-            feed_dir_path = Path(a)
-        elif o == "--spider":
-            method = Method.HEAD
-        elif o == "--user-agent":
-            headers["User-Agent"] = a
-        elif o == "--referer":
-            headers["Referer"] = a
-        elif o == "--render-js":
-            render_js = a == "true"
-        elif o == "--verify-ssl":
-            verify_ssl = a == "true"
-        elif o == "--copy-images-from-canvas":
-            copy_images_from_canvas = a == "true"
-        elif o == "--simulate-scrolling":
-            simulate_scrolling = a == "true"
-        elif o == "--disable-headless":
-            disable_headless = a == "true"
-        elif o == "--blob-to-dataurl":
-            blob_to_dataurl = a == "true"
-        elif o == "--wait-until":
-            wait_until = a
-        elif o == "--header":
-            m = re.search(r"^(?P<key>[^:]+)\s*:\s*(?P<value>.+)\s*$", a)
-            if m:
-                key = m.group("key")
-                value = m.group("value")
-                headers[key] = value
-        elif o == "--timeout":
-            timeout = int(a)
-        elif o == "--retry":
-            num_retries = int(a)
-        elif o == "--retry-sleep":
-            retry_sleep = int(a)
-        elif o == "--download":
-            download_file = Path(a)
-        elif o == "--encoding":
-            encoding = a
+        match o:
+            case "-h":
+                print_usage()
+                sys.exit(0)
+            case "-f":
+                feed_dir_path = Path(a)
+            case "--spider":
+                method = Method.HEAD
+            case "--user-agent":
+                headers["User-Agent"] = a
+            case "--referer":
+                headers["Referer"] = a
+            case "--render-js":
+                render_js = a == "true"
+            case "--verify-ssl":
+                verify_ssl = a == "true"
+            case "--copy-images-from-canvas":
+                copy_images_from_canvas = a == "true"
+            case "--simulate-scrolling":
+                simulate_scrolling = a == "true"
+            case "--disable-headless":
+                disable_headless = a == "true"
+            case "--blob-to-dataurl":
+                blob_to_dataurl = a == "true"
+            case "--wait-until":
+                wait_until = a
+            case "--header":
+                if m := re.search(r"^(?P<key>[^:]+)\s*:\s*(?P<value>.+)\s*$", a):
+                    key = m.group("key")
+                    value = m.group("value")
+                    headers[key] = value
+            case "--timeout":
+                timeout = int(a)
+            case "--retry":
+                num_retries = int(a)
+            case "--retry-sleep":
+                retry_sleep = int(a)
+            case "--download":
+                download_file = Path(a)
+            case "--encoding":
+                encoding = a
 
     url = args[0]
 

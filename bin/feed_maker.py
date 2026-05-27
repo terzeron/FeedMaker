@@ -325,8 +325,7 @@ class FeedMaker:
         if self.start_index_file_path.is_file():
             with self.start_index_file_path.open("r", encoding="utf-8") as in_file:
                 line = in_file.readline()
-                m = re.search(r"(?P<start_index>\d+)\t(?P<mtime>\S+)", line)
-                if m:
+                if m := re.search(r"(?P<start_index>\d+)\t(?P<mtime>\S+)", line):
                     start_index = int(m.group("start_index"))
                     mtime_str = m.group("mtime")
                     end_index = start_index + self.window_size
@@ -371,8 +370,7 @@ class FeedMaker:
 
         for i, item in enumerate(old_feed_list):
             link, title, _ = item
-            m = re.search(sort_field_pattern, link + "\t" + title)
-            if m:
+            if m := re.search(sort_field_pattern, link + "\t" + title):
                 sort_field = m.group(1)
                 with suppress(IndexError):
                     if m.group(2):
@@ -666,17 +664,18 @@ class FeedMaker:
         value = int(match.group(1))
         unit = match.group(2).lower()
 
-        if unit == "month":
-            # months are tricky, dateutil.relativedelta is better but trying to avoid new dependency.
-            # A month is approximately 30.44 days
-            return now + timedelta(days=value * 30.44)
-        elif unit == "week":
-            return now + timedelta(weeks=value)
-        elif unit == "day":
-            return now + timedelta(days=value)
-        elif unit == "hour":
-            return now + timedelta(hours=value)
-        elif unit == "second":
-            return now + timedelta(seconds=value)
+        match unit:
+            case "month":
+                # months are tricky, dateutil.relativedelta is better but trying to avoid new dependency.
+                # A month is approximately 30.44 days
+                return now + timedelta(days=value * 30.44)
+            case "week":
+                return now + timedelta(weeks=value)
+            case "day":
+                return now + timedelta(days=value)
+            case "hour":
+                return now + timedelta(hours=value)
+            case "second":
+                return now + timedelta(seconds=value)
 
         return None

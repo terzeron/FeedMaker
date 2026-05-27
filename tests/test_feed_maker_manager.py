@@ -742,9 +742,9 @@ class TestGetFeedInfoByName(unittest.TestCase):
 
     @patch("backend.feed_maker_manager.FeedManager.get_feed_info")
     def test_not_found(self, mock_get):
-        mock_get.return_value = {}
+        mock_get.return_value = None
         result, error = FeedMakerManager.get_feed_info_by_name("group1", "feed1")
-        self.assertEqual(result, {})
+        self.assertIsNone(result)
         self.assertIn("can't get feed info", error)
 
     def test_invalid_group_raises(self):

@@ -32,7 +32,10 @@ class _RepoFixture:
 
     def __init__(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
-        self.path = Path(self._tmp.name)
+        # macOS: /var/folders/... is a symlink to /private/var/folders/...
+        # GitPython resolves working_tree_dir, so we must too — otherwise
+        # index.move() rejects absolute paths that don't share the resolved prefix.
+        self.path = Path(self._tmp.name).resolve()
         self.repo = Repo.init(self.path)
         # GitPython needs a configured author for commits.
         with self.repo.config_writer() as cw:
