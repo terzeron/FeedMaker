@@ -305,6 +305,7 @@ class HeadlessBrowser:
         )
         context.set_default_timeout(self.timeout * 1000)
         context.set_default_navigation_timeout(self.timeout * 1000)
+        self._read_cookies_from_file(context)
         context.on("page", self._register_dialog_handlers)
         if self.blob_to_dataurl:
             context.add_init_script(self.BLOB_INTERCEPTOR_INIT_SCRIPT)
