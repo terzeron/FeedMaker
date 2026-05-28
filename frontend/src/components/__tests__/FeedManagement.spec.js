@@ -2,14 +2,20 @@ import { mount } from "@vue/test-utils";
 import FeedManagement from "../FeedManagement.vue";
 import axios from "axios";
 
-jest.mock("axios");
-jest.mock("jsoneditor", () => {
-  return jest.fn().mockImplementation(() => ({
-    set: jest.fn(),
-    get: jest.fn().mockReturnValue({}),
-    expandAll: jest.fn(),
-    destroy: jest.fn(),
-  }));
+const jsonEditorMock = vi.hoisted(() =>
+  vi.fn(function JSONEditorMock() {
+    this.set = vi.fn();
+    this.get = vi.fn().mockReturnValue({});
+    this.expandAll = vi.fn();
+    this.destroy = vi.fn();
+  })
+);
+
+vi.mock("axios");
+vi.mock("jsoneditor", () => {
+  return {
+    default: jsonEditorMock,
+  };
 });
 
 const stubs = {
@@ -84,9 +90,9 @@ const createWrapper = (routeParams = {}) => {
 
 describe("FeedManagement.vue", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.spyOn(console, "log").mockImplementation(() => {});
-    jest.spyOn(console, "error").mockImplementation(() => {});
+    vi.clearAllMocks();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -259,7 +265,7 @@ describe("FeedManagement.vue", () => {
     it("opens confirm modal with message and action", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      const action = jest.fn();
+      const action = vi.fn();
       wrapper.vm.openConfirmModal("Are you sure?", action);
       expect(wrapper.vm.showConfirmModal).toBe(true);
       expect(wrapper.vm.confirmMessage).toBe("Are you sure?");
@@ -269,7 +275,7 @@ describe("FeedManagement.vue", () => {
     it("handleConfirmOk executes pending action", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      const action = jest.fn();
+      const action = vi.fn();
       wrapper.vm.openConfirmModal("Confirm?", action);
       wrapper.vm.handleConfirmOk();
       expect(action).toHaveBeenCalled();
@@ -289,7 +295,7 @@ describe("FeedManagement.vue", () => {
     it("handleConfirmCancel closes modal", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      const action = jest.fn();
+      const action = vi.fn();
       wrapper.vm.openConfirmModal("Confirm?", action);
       wrapper.vm.handleConfirmCancel();
       expect(wrapper.vm.showConfirmModal).toBe(false);
@@ -816,7 +822,7 @@ describe("FeedManagement.vue", () => {
       const wrapper = createWrapper();
       await flushPromises();
       wrapper.vm.newFeedName = "test_feed";
-      const openSpy = jest.spyOn(window, "open").mockImplementation(() => {});
+      const openSpy = vi.spyOn(window, "open").mockImplementation(() => {});
       wrapper.vm.viewRss();
       expect(openSpy).toHaveBeenCalledWith(
         "https://terzeron.com/test_feed.xml",
@@ -828,7 +834,7 @@ describe("FeedManagement.vue", () => {
       const wrapper = createWrapper();
       await flushPromises();
       wrapper.vm.newFeedName = "test_feed";
-      const openSpy = jest.spyOn(window, "open").mockImplementation(() => {});
+      const openSpy = vi.spyOn(window, "open").mockImplementation(() => {});
       wrapper.vm.registerToInoreader();
       expect(openSpy).toHaveBeenCalledWith(
         expect.stringContaining("inoreader.com"),
@@ -840,7 +846,7 @@ describe("FeedManagement.vue", () => {
       const wrapper = createWrapper();
       await flushPromises();
       wrapper.vm.newFeedName = "test_feed";
-      const openSpy = jest.spyOn(window, "open").mockImplementation(() => {});
+      const openSpy = vi.spyOn(window, "open").mockImplementation(() => {});
       wrapper.vm.registerToFeedly();
       expect(openSpy).toHaveBeenCalledWith(
         expect.stringContaining("feedly.com"),
@@ -1145,7 +1151,7 @@ describe("FeedManagement.vue", () => {
     it("destroys jsonEditor on unmount", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      const destroySpy = jest.fn();
+      const destroySpy = vi.fn();
       wrapper.vm.jsonEditor = { destroy: destroySpy };
       wrapper.unmount();
       expect(destroySpy).toHaveBeenCalled();
@@ -1156,7 +1162,7 @@ describe("FeedManagement.vue", () => {
       await flushPromises();
       const intervalId = setInterval(() => {}, 10000);
       wrapper.vm.checkRunningInterval = intervalId;
-      wrapper.vm.jsonEditor = { destroy: jest.fn() };
+      wrapper.vm.jsonEditor = { destroy: vi.fn() };
       wrapper.unmount();
       // After unmount, interval should be cleared (no error)
     });
@@ -1179,7 +1185,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.toggleStatus("feed");
       expect(wrapper.vm.showConfirmModal).toBe(true);
 
-      axios.put = jest.fn().mockResolvedValueOnce({
+      axios.put = vi.fn().mockResolvedValueOnce({
         data: { status: "success", new_name: "f1_new" },
       });
       axios.get.mockResolvedValueOnce({
@@ -1197,7 +1203,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.toggleStatus("group");
       expect(wrapper.vm.showConfirmModal).toBe(true);
 
-      axios.put = jest.fn().mockResolvedValueOnce({
+      axios.put = vi.fn().mockResolvedValueOnce({
         data: { status: "success", new_name: "g1_new" },
       });
       axios.get.mockResolvedValueOnce({
@@ -1218,7 +1224,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.removeFeed();
       expect(wrapper.vm.showConfirmModal).toBe(true);
 
-      axios.delete = jest
+      axios.delete = vi
         .fn()
         .mockResolvedValueOnce({ data: { status: "success" } });
       axios.get.mockResolvedValueOnce({
@@ -1238,7 +1244,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.removeGroup();
       expect(wrapper.vm.showConfirmModal).toBe(true);
 
-      axios.delete = jest
+      axios.delete = vi
         .fn()
         .mockResolvedValueOnce({ data: { status: "success" } });
       axios.get.mockResolvedValueOnce({
@@ -1299,7 +1305,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.selectedFeedName = "f1";
       wrapper.vm.removelist();
 
-      axios.delete = jest
+      axios.delete = vi
         .fn()
         .mockResolvedValueOnce({ data: { status: "success" } });
       wrapper.vm.handleConfirmOk();
@@ -1314,7 +1320,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.selectedFeedName = "f1";
       wrapper.vm.removeHtml();
 
-      axios.delete = jest
+      axios.delete = vi
         .fn()
         .mockResolvedValueOnce({ data: { status: "success" } });
       wrapper.vm.handleConfirmOk();
@@ -1383,7 +1389,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.saveSiteConfig();
       expect(wrapper.vm.showConfirmModal).toBe(true);
 
-      axios.put = jest
+      axios.put = vi
         .fn()
         .mockResolvedValueOnce({ data: { status: "success" } });
       wrapper.vm.handleConfirmOk();
@@ -1398,7 +1404,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.jsonData = { key: "value" };
       wrapper.vm.saveSiteConfig();
 
-      axios.put = jest.fn().mockResolvedValueOnce({
+      axios.put = vi.fn().mockResolvedValueOnce({
         data: { status: "failure", message: "Config save failed" },
       });
       wrapper.vm.handleConfirmOk();
@@ -1413,7 +1419,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.jsonData = { key: "value" };
       wrapper.vm.saveSiteConfig();
 
-      axios.put = jest.fn().mockRejectedValueOnce(new Error("network"));
+      axios.put = vi.fn().mockRejectedValueOnce(new Error("network"));
       wrapper.vm.handleConfirmOk();
       await flushPromises();
       // Should not throw
@@ -1428,7 +1434,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.selectedFeedName = "f1";
       wrapper.vm.toggleStatus("feed");
 
-      axios.put = jest.fn().mockResolvedValueOnce({
+      axios.put = vi.fn().mockResolvedValueOnce({
         data: { status: "failure", message: "Toggle failed" },
       });
       wrapper.vm.handleConfirmOk();
@@ -1443,7 +1449,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.selectedFeedName = "f1";
       wrapper.vm.toggleStatus("feed");
 
-      axios.put = jest.fn().mockRejectedValueOnce(new Error("network"));
+      axios.put = vi.fn().mockRejectedValueOnce(new Error("network"));
       wrapper.vm.handleConfirmOk();
       await flushPromises();
       // Should not throw
@@ -1455,7 +1461,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.selectedGroupName = "g1";
       wrapper.vm.toggleStatus("group");
 
-      axios.put = jest.fn().mockRejectedValueOnce(new Error("network"));
+      axios.put = vi.fn().mockRejectedValueOnce(new Error("network"));
       wrapper.vm.handleConfirmOk();
       await flushPromises();
       // Should not throw
@@ -1470,7 +1476,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.selectedFeedName = "f1";
       wrapper.vm.removeFeed();
 
-      axios.delete = jest.fn().mockResolvedValueOnce({
+      axios.delete = vi.fn().mockResolvedValueOnce({
         data: { status: "failure", message: "Delete failed" },
       });
       wrapper.vm.handleConfirmOk();
@@ -1485,7 +1491,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.selectedFeedName = "f1";
       wrapper.vm.removeFeed();
 
-      axios.delete = jest.fn().mockRejectedValueOnce(new Error("network"));
+      axios.delete = vi.fn().mockRejectedValueOnce(new Error("network"));
       wrapper.vm.handleConfirmOk();
       await flushPromises();
       // Should not throw
@@ -1497,7 +1503,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.selectedGroupName = "g1";
       wrapper.vm.removeGroup();
 
-      axios.delete = jest.fn().mockResolvedValueOnce({
+      axios.delete = vi.fn().mockResolvedValueOnce({
         data: { status: "failure", message: "Group delete failed" },
       });
       axios.get.mockResolvedValueOnce({
@@ -1514,7 +1520,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.selectedGroupName = "g1";
       wrapper.vm.removeGroup();
 
-      axios.delete = jest.fn().mockRejectedValueOnce(new Error("network"));
+      axios.delete = vi.fn().mockRejectedValueOnce(new Error("network"));
       wrapper.vm.handleConfirmOk();
       await flushPromises();
       // Should not throw
@@ -1600,7 +1606,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.selectedFeedName = "f1";
       wrapper.vm.removelist();
 
-      axios.delete = jest.fn().mockResolvedValueOnce({
+      axios.delete = vi.fn().mockResolvedValueOnce({
         data: { status: "failure", message: "List delete failed" },
       });
       wrapper.vm.handleConfirmOk();
@@ -1615,7 +1621,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.selectedFeedName = "f1";
       wrapper.vm.removelist();
 
-      axios.delete = jest.fn().mockRejectedValueOnce(new Error("network"));
+      axios.delete = vi.fn().mockRejectedValueOnce(new Error("network"));
       wrapper.vm.handleConfirmOk();
       await flushPromises();
       // Should not throw
@@ -1628,7 +1634,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.selectedFeedName = "f1";
       wrapper.vm.removeHtml();
 
-      axios.delete = jest.fn().mockResolvedValueOnce({
+      axios.delete = vi.fn().mockResolvedValueOnce({
         data: { status: "failure", message: "Html delete failed" },
       });
       wrapper.vm.handleConfirmOk();
@@ -1643,7 +1649,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.selectedFeedName = "f1";
       wrapper.vm.removeHtml();
 
-      axios.delete = jest.fn().mockRejectedValueOnce(new Error("network"));
+      axios.delete = vi.fn().mockRejectedValueOnce(new Error("network"));
       wrapper.vm.handleConfirmOk();
       await flushPromises();
       // Should not throw
@@ -1658,7 +1664,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.selectedFeedName = "f1";
       wrapper.vm.removelist();
 
-      axios.delete = jest
+      axios.delete = vi
         .fn()
         .mockResolvedValueOnce({ data: { status: "success" } });
       wrapper.vm.handleConfirmOk();
@@ -1675,7 +1681,7 @@ describe("FeedManagement.vue", () => {
       const wrapper = createWrapper();
       await flushPromises();
       wrapper.vm.newFeedName = "test_feed";
-      const openSpy = jest.spyOn(window, "open").mockImplementation(() => {});
+      const openSpy = vi.spyOn(window, "open").mockImplementation(() => {});
       wrapper.vm.registerToInoreader();
       expect(openSpy).toHaveBeenCalledWith(
         expect.stringContaining("inoreader.com"),
@@ -1687,7 +1693,7 @@ describe("FeedManagement.vue", () => {
       const wrapper = createWrapper();
       await flushPromises();
       wrapper.vm.newFeedName = "test_feed";
-      const openSpy = jest.spyOn(window, "open").mockImplementation(() => {});
+      const openSpy = vi.spyOn(window, "open").mockImplementation(() => {});
       wrapper.vm.registerToFeedly();
       expect(openSpy).toHaveBeenCalledWith(
         expect.stringContaining("feedly.com"),
@@ -1703,7 +1709,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.selectedGroupName = "g1";
       wrapper.vm.selectedFeedName = "f1";
 
-      axios.put = jest.fn().mockResolvedValueOnce({
+      axios.put = vi.fn().mockResolvedValueOnce({
         data: { status: "success", new_name: "g1_renamed" },
       });
       // getGroups call after toggle
@@ -1787,7 +1793,7 @@ describe("FeedManagement.vue", () => {
       await flushPromises();
       const fakeInterval = 999;
       wrapper.vm.checkRunningInterval = fakeInterval;
-      const clearIntervalSpy = jest.spyOn(global, "clearInterval");
+      const clearIntervalSpy = vi.spyOn(global, "clearInterval");
       axios.get.mockResolvedValueOnce({
         data: { status: "success", groups: [] },
       });
@@ -1802,7 +1808,7 @@ describe("FeedManagement.vue", () => {
       await flushPromises();
       const fakeInterval = 888;
       wrapper.vm.checkRunningInterval = fakeInterval;
-      const clearIntervalSpy = jest.spyOn(global, "clearInterval");
+      const clearIntervalSpy = vi.spyOn(global, "clearInterval");
       axios.get.mockResolvedValueOnce({
         data: { status: "success", feeds: [] },
       });
@@ -1817,7 +1823,7 @@ describe("FeedManagement.vue", () => {
       await flushPromises();
       const fakeInterval = 777;
       wrapper.vm.checkRunningInterval = fakeInterval;
-      const clearIntervalSpy = jest.spyOn(global, "clearInterval");
+      const clearIntervalSpy = vi.spyOn(global, "clearInterval");
       axios.get.mockResolvedValueOnce({
         data: {
           status: "success",
@@ -1912,7 +1918,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.selectedFeedName = "f1";
       const fakeInterval = 555;
       wrapper.vm.checkRunningInterval = fakeInterval;
-      const clearIntervalSpy = jest.spyOn(global, "clearInterval");
+      const clearIntervalSpy = vi.spyOn(global, "clearInterval");
       axios.get.mockResolvedValueOnce({
         data: { status: "failure", message: "check failed" },
       });
@@ -1928,12 +1934,12 @@ describe("FeedManagement.vue", () => {
     it("hideAllRelatedToFeed destroys existing jsonEditor", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      const destroySpy = jest.fn();
+      const destroySpy = vi.fn();
       wrapper.vm.jsonEditor = {
         destroy: destroySpy,
-        set: jest.fn(),
-        get: jest.fn(),
-        expandAll: jest.fn(),
+        set: vi.fn(),
+        get: vi.fn(),
+        expandAll: vi.fn(),
       };
       wrapper.vm.hideAllRelatedToFeed();
       expect(destroySpy).toHaveBeenCalled();
@@ -1943,12 +1949,12 @@ describe("FeedManagement.vue", () => {
     it("initJsonEditor destroys existing editor before creating new one", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      const destroySpy = jest.fn();
+      const destroySpy = vi.fn();
       wrapper.vm.jsonEditor = {
         destroy: destroySpy,
-        set: jest.fn(),
-        get: jest.fn(),
-        expandAll: jest.fn(),
+        set: vi.fn(),
+        get: vi.fn(),
+        expandAll: vi.fn(),
       };
       wrapper.vm.initJsonEditor();
       expect(destroySpy).toHaveBeenCalled();
@@ -1961,10 +1967,10 @@ describe("FeedManagement.vue", () => {
 
       // jsonEditor를 get()이 throw하는 mock으로 설정
       const throwingEditor = {
-        destroy: jest.fn(),
-        set: jest.fn(),
-        expandAll: jest.fn(),
-        get: jest.fn().mockImplementation(() => {
+        destroy: vi.fn(),
+        set: vi.fn(),
+        expandAll: vi.fn(),
+        get: vi.fn().mockImplementation(() => {
           throw new Error("get failed");
         }),
       };
@@ -1987,12 +1993,12 @@ describe("FeedManagement.vue", () => {
     it("updateJsonEditor sets jsonData to existing editor", async () => {
       const wrapper = createWrapper();
       await flushPromises();
-      const setSpy = jest.fn();
+      const setSpy = vi.fn();
       wrapper.vm.jsonEditor = {
-        destroy: jest.fn(),
+        destroy: vi.fn(),
         set: setSpy,
-        get: jest.fn(),
-        expandAll: jest.fn(),
+        get: vi.fn(),
+        expandAll: vi.fn(),
       };
       wrapper.vm.jsonData = {
         rss: {

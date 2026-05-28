@@ -504,7 +504,7 @@ import {
   faPen,
   faEye,
 } from "@fortawesome/free-solid-svg-icons";
-import MyButton from "./MyButton";
+import MyButton from "./MyButton.vue";
 import JSONEditor from "jsoneditor";
 import "jsoneditor/dist/jsoneditor.css";
 

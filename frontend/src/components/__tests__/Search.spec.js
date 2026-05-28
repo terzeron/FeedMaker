@@ -4,8 +4,8 @@ import MyButton from "../MyButton.vue";
 import axios from "axios";
 import DOMPurify from "dompurify";
 
-jest.mock("axios");
-axios.isCancel = jest.fn(() => false);
+vi.mock("axios");
+axios.isCancel = vi.fn(() => false);
 
 const stubs = {
   "font-awesome-icon": true,
@@ -22,11 +22,16 @@ const stubs = {
 };
 
 const flushPromises = () => new Promise((r) => setTimeout(r));
+const nativeAbortController = global.AbortController;
 
 describe("Search.vue", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    axios.isCancel = jest.fn(() => false);
+    vi.clearAllMocks();
+    axios.isCancel = vi.fn(() => false);
+  });
+
+  afterEach(() => {
+    global.AbortController = nativeAbortController;
   });
 
   it("performs per-site search and renders results", async () => {
@@ -85,11 +90,11 @@ describe("Search.vue", () => {
   });
 
   it("aborts previous search when new search starts", async () => {
-    const abortSpy = jest.fn();
-    global.AbortController = jest.fn(() => ({
-      signal: { aborted: false },
-      abort: abortSpy,
-    }));
+    const abortSpy = vi.fn();
+    global.AbortController = vi.fn(function MockAbortController() {
+      this.signal = { aborted: false };
+      this.abort = abortSpy;
+    });
 
     // First search: site names (will be aborted)
     let resolveFirst;
@@ -147,7 +152,7 @@ describe("Search.vue", () => {
   });
 
   it("handles top-level search error (non-cancel)", async () => {
-    jest.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
     // site names call rejects with a non-cancel error
     axios.get.mockRejectedValueOnce(new Error("Network Error"));
 
@@ -226,7 +231,7 @@ describe("Search.vue", () => {
 
   it("ignores cancel error in top-level catch", async () => {
     // Make isCancel return true for cancel errors
-    axios.isCancel = jest.fn((err) => err && err.__CANCEL__);
+    axios.isCancel = vi.fn((err) => err && err.__CANCEL__);
     const cancelError = { __CANCEL__: true, message: "canceled" };
     axios.get.mockRejectedValueOnce(cancelError);
 
@@ -330,7 +335,7 @@ describe("Search.vue", () => {
   });
 
   it("ignores cancel error in per-site catch", async () => {
-    axios.isCancel = jest.fn((err) => err && err.__CANCEL__);
+    axios.isCancel = vi.fn((err) => err && err.__CANCEL__);
     // 1st call: site names success
     axios.get.mockResolvedValueOnce({
       data: { status: "success", site_names: ["funbe"] },

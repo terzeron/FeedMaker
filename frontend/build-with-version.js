@@ -15,9 +15,9 @@ try {
   console.log(`Setting GIT_COMMIT=${commitHash}`);
   process.env.GIT_COMMIT = commitHash;
   
-  // Vue CLI 빌드 실행
-  console.log('Starting Vue CLI build...');
-  execSync('npx vue-cli-service build', { 
+  // Vite 빌드 실행
+  console.log('Starting Vite build...');
+  execSync('npx vite build', {
     stdio: 'inherit',
     env: { ...process.env, GIT_COMMIT: commitHash }
   });

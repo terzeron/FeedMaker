@@ -1,9 +1,9 @@
 import { mount } from '@vue/test-utils';
 import AuthCallback from '../AuthCallback.vue';
 
-jest.mock('vue-router', () => ({
+vi.mock('vue-router', () => ({
   useRoute: () => ({ query: { access_token: 'abc' } }),
-  useRouter: () => ({ push: jest.fn() })
+  useRouter: () => ({ push: vi.fn() })
 }));
 
 describe('AuthCallback.vue', () => {

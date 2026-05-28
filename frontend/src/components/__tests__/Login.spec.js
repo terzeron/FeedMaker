@@ -3,10 +3,12 @@ import Login from "../Login.vue";
 import axios from "axios";
 import { authStore } from "../../stores/authStore";
 
-jest.mock("axios");
+const routerPushMock = vi.hoisted(() => vi.fn());
 
-jest.mock("vue-router", () => ({
-  useRouter: () => ({ push: jest.fn() }),
+vi.mock("axios");
+
+vi.mock("vue-router", () => ({
+  useRouter: () => ({ push: routerPushMock }),
 }));
 
 const FacebookAuthStub = {
@@ -37,10 +39,11 @@ describe("Login.vue", () => {
   let errorSpy;
 
   beforeEach(() => {
+    routerPushMock.mockReset();
     axios.get.mockReset();
     axios.post.mockReset();
     authStore.clear();
-    errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -197,7 +200,7 @@ describe("Login.vue", () => {
         logout: () => Promise.resolve(),
         getProfile: () => Promise.resolve({ name: "T", email: "t@e.com" }),
         isInitialized: () => false,
-        retryLoadSDK: jest.fn().mockResolvedValue(undefined),
+        retryLoadSDK: vi.fn().mockResolvedValue(undefined),
       },
     };
     axios.get.mockResolvedValueOnce({ data: { is_authenticated: false } });
@@ -301,11 +304,6 @@ describe("Login.vue", () => {
   });
 
   it("redirects to /result when already authenticated on login click", async () => {
-    const pushMock = jest.fn();
-    jest.spyOn(require("vue-router"), "useRouter").mockReturnValue({
-      push: pushMock,
-    });
-
     axios.get.mockResolvedValueOnce({
       data: { is_authenticated: true, name: "Tester" },
     });
@@ -324,7 +322,7 @@ describe("Login.vue", () => {
   });
 
   it("calls retrySdk on retry button click", async () => {
-    const retryMock = jest.fn().mockResolvedValue(undefined);
+    const retryMock = vi.fn().mockResolvedValue(undefined);
     const FailingStub = {
       name: "FacebookAuth",
       template: "<div></div>",
@@ -370,11 +368,6 @@ describe("Login.vue", () => {
   });
 
   it("redirects to /result when already authenticated and login is called", async () => {
-    const pushMock = jest.fn();
-    jest.spyOn(require("vue-router"), "useRouter").mockReturnValue({
-      push: pushMock,
-    });
-
     // 마운트 시 not authenticated
     axios.get.mockResolvedValueOnce({ data: { is_authenticated: false } });
 
@@ -389,6 +382,6 @@ describe("Login.vue", () => {
     await btns[0].trigger("click");
     await flushPromises();
 
-    expect(pushMock).toHaveBeenCalledWith("/result");
+    expect(routerPushMock).toHaveBeenCalledWith("/result");
   });
 });

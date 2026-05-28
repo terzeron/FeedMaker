@@ -1,5 +1,6 @@
 import { mount } from "@vue/test-utils";
 import App from "../App.vue";
+import { authStore } from "../stores/authStore";
 
 describe("App.vue", () => {
   it("renders navbar and links", () => {
@@ -22,7 +23,6 @@ describe("App.vue", () => {
   });
 
   it("renders profile image when profilePictureUrl is set", async () => {
-    const { authStore } = require("../stores/authStore");
     authStore.state.profilePictureUrl = "https://example.com/photo.jpg";
 
     const wrapper = mount(App, {

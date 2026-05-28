@@ -6,7 +6,7 @@ import Problems from "@/components/Problems.vue";
 import FeedManagement from "@/components/FeedManagement.vue";
 import Search from "@/components/Search.vue";
 import Login from "@/components/Login.vue";
-import AuthCallback from "../components/AuthCallback";
+import AuthCallback from "../components/AuthCallback.vue";
 import { getApiUrlPath } from "../utils/api";
 
 const routes = [

@@ -2,11 +2,11 @@ import { useNotification } from "@/composables/useNotification";
 
 describe("composables/useNotification", () => {
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   describe("showNotification", () => {
@@ -16,7 +16,7 @@ describe("composables/useNotification", () => {
       expect(notification.value.show).toBe(true);
       expect(notification.value.message).toBe("hello");
       expect(notification.value.type).toBe("info");
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
       expect(notification.value.show).toBe(false);
     });
 
@@ -24,7 +24,7 @@ describe("composables/useNotification", () => {
       const { notification, showNotification } = useNotification();
       showNotification("persistent", "info", 0);
       expect(notification.value.show).toBe(true);
-      jest.advanceTimersByTime(10000);
+      vi.advanceTimersByTime(10000);
       expect(notification.value.show).toBe(true);
     });
   });
@@ -92,7 +92,7 @@ describe("composables/useNotification", () => {
 
   describe("alert and confirm", () => {
     it("alert delegates to window.alert", () => {
-      const alertSpy = jest.spyOn(window, "alert").mockImplementation(() => {});
+      const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
       const { alert } = useNotification();
       alert("message");
       expect(alertSpy).toHaveBeenCalledWith("message");
@@ -100,7 +100,7 @@ describe("composables/useNotification", () => {
     });
 
     it("confirm delegates to window.confirm", () => {
-      const confirmSpy = jest.spyOn(window, "confirm").mockReturnValue(true);
+      const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
       const { confirm } = useNotification();
       expect(confirm("question")).toBe(true);
       expect(confirmSpy).toHaveBeenCalledWith("question");
@@ -108,7 +108,7 @@ describe("composables/useNotification", () => {
     });
 
     it("confirm returns false when user cancels", () => {
-      const confirmSpy = jest.spyOn(window, "confirm").mockReturnValue(false);
+      const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
       const { confirm } = useNotification();
       expect(confirm("question")).toBe(false);
       confirmSpy.mockRestore();
@@ -121,7 +121,7 @@ describe("composables/useNotification", () => {
       showNotification("negative", "info", -1);
       expect(notification.value.show).toBe(true);
       expect(notification.value.duration).toBe(-1);
-      jest.advanceTimersByTime(10000);
+      vi.advanceTimersByTime(10000);
       expect(notification.value.show).toBe(true);
     });
 
@@ -131,7 +131,7 @@ describe("composables/useNotification", () => {
       expect(notification.value.show).toBe(true);
       expect(notification.value.type).toBe("info");
       expect(notification.value.duration).toBe(3000);
-      jest.advanceTimersByTime(3000);
+      vi.advanceTimersByTime(3000);
       expect(notification.value.show).toBe(false);
     });
   });

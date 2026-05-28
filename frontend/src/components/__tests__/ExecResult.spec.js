@@ -3,13 +3,15 @@ import ExecResult from "../ExecResult.vue";
 import axios from "axios";
 import DOMPurify from "dompurify";
 
-jest.mock("axios");
+const routerPushMock = vi.hoisted(() => vi.fn());
 
-jest.mock("vue-router", () => ({
-  useRouter: () => ({ push: jest.fn() }),
+vi.mock("axios");
+
+vi.mock("vue-router", () => ({
+  useRouter: () => ({ push: routerPushMock }),
 }));
 
-jest.mock("markdown-it", () => ({
+vi.mock("markdown-it", () => ({
   __esModule: true,
   default: class MarkdownItMock {
     render(src) {
@@ -21,6 +23,10 @@ jest.mock("markdown-it", () => ({
 const flushPromises = () => new Promise((r) => setTimeout(r));
 
 describe("ExecResult.vue", () => {
+  beforeEach(() => {
+    routerPushMock.mockReset();
+  });
+
   it("renders markdown when authenticated", async () => {
     axios.get
       .mockResolvedValueOnce({ data: { is_authenticated: true } }) // auth/me
@@ -71,11 +77,6 @@ describe("ExecResult.vue", () => {
   });
 
   it("redirects to /login when not authenticated", async () => {
-    const pushMock = jest.fn();
-    jest.spyOn(require("vue-router"), "useRouter").mockReturnValue({
-      push: pushMock,
-    });
-
     axios.get.mockResolvedValueOnce({
       data: { is_authenticated: false },
     });
@@ -87,15 +88,11 @@ describe("ExecResult.vue", () => {
     });
 
     await flushPromises();
-    expect(pushMock).toHaveBeenCalledWith("/login");
+    expect(routerPushMock).toHaveBeenCalledWith("/login");
   });
 
   it("handles checkAuthStatus error gracefully", async () => {
-    jest.spyOn(console, "error").mockImplementation(() => {});
-    const pushMock = jest.fn();
-    jest.spyOn(require("vue-router"), "useRouter").mockReturnValue({
-      push: pushMock,
-    });
+    vi.spyOn(console, "error").mockImplementation(() => {});
 
     axios.get.mockRejectedValueOnce(new Error("Network error"));
 
@@ -107,12 +104,12 @@ describe("ExecResult.vue", () => {
 
     await flushPromises();
     // auth check fails → not authenticated → redirect
-    expect(pushMock).toHaveBeenCalledWith("/login");
+    expect(routerPushMock).toHaveBeenCalledWith("/login");
     console.error.mockRestore();
   });
 
   it("renderedMarkdown returns empty string when source is empty", async () => {
-    jest.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
     axios.get
       .mockResolvedValueOnce({ data: { is_authenticated: true } })
       .mockResolvedValueOnce({ data: { exec_result: "some text" } });
@@ -132,7 +129,7 @@ describe("ExecResult.vue", () => {
   });
 
   it("renderedMarkdown returns source when md is null", async () => {
-    jest.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
     axios.get
       .mockResolvedValueOnce({ data: { is_authenticated: true } })
       .mockResolvedValueOnce({ data: { exec_result: "raw text" } });
@@ -152,7 +149,7 @@ describe("ExecResult.vue", () => {
   });
 
   it("renderedMarkdown returns source when md.render throws", async () => {
-    jest.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
     axios.get
       .mockResolvedValueOnce({ data: { is_authenticated: true } })
       .mockResolvedValueOnce({ data: { exec_result: "## Test" } });
@@ -166,10 +163,10 @@ describe("ExecResult.vue", () => {
     await flushPromises();
 
     // MarkdownIt mock의 render 메서드를 throw하도록 오버라이드
-    const MarkdownIt = require("markdown-it").default;
+    const { default: MarkdownIt } = await import("markdown-it");
     const instances = MarkdownIt.mock ? MarkdownIt.mock.instances : null;
     // mock 클래스의 prototype render를 spy로 throw하게 설정
-    const renderSpy = jest
+    const renderSpy = vi
       .spyOn(MarkdownIt.prototype, "render")
       .mockImplementation(() => {
         throw new Error("render failed");

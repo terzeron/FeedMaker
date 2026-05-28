@@ -2,7 +2,7 @@ import { mount } from "@vue/test-utils";
 import Problems from "../Problems.vue";
 import axios from "axios";
 
-jest.mock("axios");
+vi.mock("axios");
 
 const stubs = {
   "router-link": { template: "<a><slot /></a>" },
@@ -22,7 +22,7 @@ describe("Problems.vue", () => {
 
   beforeEach(() => {
     axios.get.mockReset();
-    warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -852,7 +852,7 @@ describe("Problems.vue", () => {
     expect(wrapper.vm.showConfirmModal).toBe(true);
 
     // Confirm the action
-    axios.delete = jest
+    axios.delete = vi
       .fn()
       .mockResolvedValueOnce({ data: { status: "success" } });
     wrapper.vm.handleConfirmOk();
@@ -893,7 +893,7 @@ describe("Problems.vue", () => {
   });
 
   it("handles API errors (catch branches) for each problem type", async () => {
-    jest.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
     axios.get.mockRejectedValueOnce(new Error("network"));
     axios.get.mockRejectedValueOnce(new Error("network"));
     axios.get.mockRejectedValueOnce(new Error("network"));
@@ -1207,7 +1207,7 @@ describe("Problems.vue", () => {
     wrapper.vm.publicFeedInfoDeleteClicked({ item });
     expect(wrapper.vm.showConfirmModal).toBe(true);
 
-    axios.delete = jest
+    axios.delete = vi
       .fn()
       .mockResolvedValueOnce({ data: { status: "success" } });
     wrapper.vm.handleConfirmOk();
@@ -1256,7 +1256,7 @@ describe("Problems.vue", () => {
     wrapper.vm.htmlFileSizeDeleteClicked({ item });
     expect(wrapper.vm.showConfirmModal).toBe(true);
 
-    axios.delete = jest
+    axios.delete = vi
       .fn()
       .mockResolvedValueOnce({ data: { status: "success" } });
     wrapper.vm.handleConfirmOk();
@@ -1301,7 +1301,7 @@ describe("Problems.vue", () => {
     wrapper.vm.imageWithoutImageTagDeleteClicked({ item });
     expect(wrapper.vm.showConfirmModal).toBe(true);
 
-    axios.delete = jest
+    axios.delete = vi
       .fn()
       .mockResolvedValueOnce({ data: { status: "success" } });
     wrapper.vm.handleConfirmOk();
@@ -1345,7 +1345,7 @@ describe("Problems.vue", () => {
     const item = wrapper.vm.htmlFileWithManyImageTaglist[0];
     wrapper.vm.imageWithManyImageTagDeleteClicked({ item });
 
-    axios.delete = jest
+    axios.delete = vi
       .fn()
       .mockResolvedValueOnce({ data: { status: "success" } });
     wrapper.vm.handleConfirmOk();
@@ -1389,7 +1389,7 @@ describe("Problems.vue", () => {
     const item = wrapper.vm.htmlFileWithImageNotFoundlist[0];
     wrapper.vm.imageNotFoundDeleteClicked({ item });
 
-    axios.delete = jest
+    axios.delete = vi
       .fn()
       .mockResolvedValueOnce({ data: { status: "success" } });
     wrapper.vm.handleConfirmOk();
@@ -1862,8 +1862,8 @@ describe("Problems.vue", () => {
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
-    jest.spyOn(window, "alert").mockImplementation(() => {});
-    axios.delete = jest
+    vi.spyOn(window, "alert").mockImplementation(() => {});
+    axios.delete = vi
       .fn()
       .mockResolvedValueOnce({ data: { status: "failure", message: "error" } });
     wrapper.vm.removePublicFeed("test_feed");
@@ -1906,8 +1906,8 @@ describe("Problems.vue", () => {
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
-    jest.spyOn(window, "alert").mockImplementation(() => {});
-    axios.delete = jest.fn().mockRejectedValueOnce(new Error("network error"));
+    vi.spyOn(window, "alert").mockImplementation(() => {});
+    axios.delete = vi.fn().mockRejectedValueOnce(new Error("network error"));
     wrapper.vm.removePublicFeed("test_feed");
     await flushPromises();
     expect(window.alert).toHaveBeenCalledWith(
@@ -2119,7 +2119,7 @@ describe("Problems.vue", () => {
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
-    const action = jest.fn();
+    const action = vi.fn();
     wrapper.vm.openConfirmModal("Test?", action);
     expect(wrapper.vm.showConfirmModal).toBe(true);
 
@@ -2238,10 +2238,10 @@ describe("Problems.vue", () => {
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
-    jest.spyOn(window, "alert").mockImplementation(() => {});
+    vi.spyOn(window, "alert").mockImplementation(() => {});
 
     // Test failure response
-    axios.delete = jest
+    axios.delete = vi
       .fn()
       .mockResolvedValueOnce({ data: { status: "failure", message: "fail" } });
     wrapper.vm.removeHtmlFile("g/f/html/test.html");
@@ -2251,7 +2251,7 @@ describe("Problems.vue", () => {
     );
 
     // Test network error
-    axios.delete = jest.fn().mockRejectedValueOnce(new Error("network"));
+    axios.delete = vi.fn().mockRejectedValueOnce(new Error("network"));
     wrapper.vm.removeHtmlFile("g/f/html/test.html");
     await flushPromises();
     expect(window.alert).toHaveBeenCalledWith(
@@ -2266,7 +2266,7 @@ describe("Problems.vue", () => {
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
-    axios.delete = jest
+    axios.delete = vi
       .fn()
       .mockResolvedValueOnce({ data: { status: "success" } });
     const result = wrapper.vm.removeHtmlFile("g/f/html/test.html");
@@ -2325,7 +2325,7 @@ describe("Problems.vue", () => {
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
-    axios.delete = jest
+    axios.delete = vi
       .fn()
       .mockResolvedValueOnce({ data: { status: "success" } });
     wrapper.vm.removePublicFeed("test_feed");
@@ -2568,7 +2568,7 @@ describe("Problems.vue", () => {
   });
 
   it("getProblems handles failure responses", async () => {
-    jest.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
     // All APIs return failure
     axios.get.mockResolvedValue({
       data: { status: "failure", message: "error" },

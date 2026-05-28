@@ -17,7 +17,7 @@ module.exports = defineConfig({
     },
   ],
   webServer: {
-    command: "npx vue-cli-service serve --port 8082 --mode development",
+    command: "npx vite --host 0.0.0.0 --port 8082 --mode development",
     port: 8082,
     reuseExistingServer: true,
     timeout: 60000,

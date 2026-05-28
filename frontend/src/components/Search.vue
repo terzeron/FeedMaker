@@ -122,7 +122,7 @@ import { getApiUrlPath } from "../utils/api";
 
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
-import MyButton from "./MyButton";
+import MyButton from "./MyButton.vue";
 
 library.add(faSearch);
 

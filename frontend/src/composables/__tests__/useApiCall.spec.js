@@ -1,7 +1,7 @@
 import { useApiCall } from "@/composables/useApiCall";
 import axios from "axios";
 
-jest.mock("axios");
+vi.mock("axios");
 
 describe("composables/useApiCall", () => {
   let consoleErrorSpy;
@@ -10,7 +10,7 @@ describe("composables/useApiCall", () => {
     axios.mockReset?.();
     axios.get?.mockReset?.();
     // 테스트 중 console.error 출력 억제
-    consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
