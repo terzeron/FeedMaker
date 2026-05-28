@@ -1,9 +1,9 @@
 import { useAuth } from "@/composables/useAuth";
 import axios from "axios";
 
-const mockPush = jest.fn();
-jest.mock("axios");
-jest.mock("vue-router", () => ({
+const mockPush = vi.hoisted(() => vi.fn());
+vi.mock("axios");
+vi.mock("vue-router", () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
@@ -37,7 +37,7 @@ describe("composables/useAuth", () => {
 
     it("handles API error gracefully", async () => {
       axios.get.mockRejectedValueOnce(new Error("Network Error"));
-      const consoleErrorSpy = jest
+      const consoleErrorSpy = vi
         .spyOn(console, "error")
         .mockImplementation(() => {});
       const { checkAuth, isAuthorized, userName } = useAuth();
@@ -82,7 +82,7 @@ describe("composables/useAuth", () => {
 
     it("clears state even when API fails", async () => {
       axios.post.mockRejectedValueOnce(new Error("Logout failed"));
-      const consoleErrorSpy = jest
+      const consoleErrorSpy = vi
         .spyOn(console, "error")
         .mockImplementation(() => {});
       const { logout, isAuthorized, userName } = useAuth();
@@ -118,7 +118,7 @@ describe("composables/useAuth", () => {
 
   describe("deprecated functions", () => {
     it("clearSessionData clears state and localStorage", () => {
-      const consoleWarnSpy = jest
+      const consoleWarnSpy = vi
         .spyOn(console, "warn")
         .mockImplementation(() => {});
       localStorage.setItem("access_token", "token");
@@ -138,7 +138,7 @@ describe("composables/useAuth", () => {
     });
 
     it("checkSessionExpiry returns true and warns", () => {
-      const consoleWarnSpy = jest
+      const consoleWarnSpy = vi
         .spyOn(console, "warn")
         .mockImplementation(() => {});
       const { checkSessionExpiry } = useAuth();
@@ -150,7 +150,7 @@ describe("composables/useAuth", () => {
     });
 
     it("setAuth warns about deprecation", () => {
-      const consoleWarnSpy = jest
+      const consoleWarnSpy = vi
         .spyOn(console, "warn")
         .mockImplementation(() => {});
       const { setAuth } = useAuth();

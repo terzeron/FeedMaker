@@ -5,7 +5,7 @@ describe("utils/api", () => {
   let consoleSpy;
 
   beforeEach(() => {
-    consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {

@@ -7,8 +7,8 @@ describe("FacebookAuth.vue", () => {
   beforeEach(() => {
     delete window.FB;
     delete window.fbAsyncInit;
-    warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
-    errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -61,11 +61,11 @@ describe("FacebookAuth.vue", () => {
 
   it("loads SDK and emits auth-initialized when FB already exists", async () => {
     window.FB = {
-      init: jest.fn(),
-      login: jest.fn(),
-      logout: jest.fn(),
-      getLoginStatus: jest.fn(),
-      api: jest.fn(),
+      init: vi.fn(),
+      login: vi.fn(),
+      logout: vi.fn(),
+      getLoginStatus: vi.fn(),
+      api: vi.fn(),
     };
     const wrapper = mount(FacebookAuth, {
       props: { appId: "real_app_id_123" },
@@ -78,8 +78,8 @@ describe("FacebookAuth.vue", () => {
 
   it("login resolves with accessToken on connected status", async () => {
     window.FB = {
-      init: jest.fn(),
-      login: jest.fn((cb) =>
+      init: vi.fn(),
+      login: vi.fn((cb) =>
         cb({ authResponse: { accessToken: "tok123" }, status: "connected" }),
       ),
     };
@@ -94,8 +94,8 @@ describe("FacebookAuth.vue", () => {
 
   it("login rejects when user cancels", async () => {
     window.FB = {
-      init: jest.fn(),
-      login: jest.fn((cb) => cb({ authResponse: null })),
+      init: vi.fn(),
+      login: vi.fn((cb) => cb({ authResponse: null })),
     };
     const wrapper = mount(FacebookAuth, {
       props: { appId: "real_app_id_123" },
@@ -107,8 +107,8 @@ describe("FacebookAuth.vue", () => {
 
   it("login rejects on non-connected status", async () => {
     window.FB = {
-      init: jest.fn(),
-      login: jest.fn((cb) =>
+      init: vi.fn(),
+      login: vi.fn((cb) =>
         cb({ authResponse: { accessToken: "t" }, status: "not_authorized" }),
       ),
     };
@@ -121,10 +121,10 @@ describe("FacebookAuth.vue", () => {
   });
 
   it("logout calls FB.getLoginStatus and FB.logout when connected", async () => {
-    const logoutFn = jest.fn((cb) => cb({}));
+    const logoutFn = vi.fn((cb) => cb({}));
     window.FB = {
-      init: jest.fn(),
-      getLoginStatus: jest.fn((cb) => cb({ status: "connected" })),
+      init: vi.fn(),
+      getLoginStatus: vi.fn((cb) => cb({ status: "connected" })),
       logout: logoutFn,
     };
     const wrapper = mount(FacebookAuth, {
@@ -138,9 +138,9 @@ describe("FacebookAuth.vue", () => {
 
   it("logout resolves without calling FB.logout when not connected", async () => {
     window.FB = {
-      init: jest.fn(),
-      getLoginStatus: jest.fn((cb) => cb({ status: "unknown" })),
-      logout: jest.fn(),
+      init: vi.fn(),
+      getLoginStatus: vi.fn((cb) => cb({ status: "unknown" })),
+      logout: vi.fn(),
     };
     const wrapper = mount(FacebookAuth, {
       props: { appId: "real_app_id_123" },
@@ -153,8 +153,8 @@ describe("FacebookAuth.vue", () => {
 
   it("getProfile resolves with user data", async () => {
     window.FB = {
-      init: jest.fn(),
-      api: jest.fn((path, opts, cb) =>
+      init: vi.fn(),
+      api: vi.fn((path, opts, cb) =>
         cb({ id: "1", name: "Test", email: "t@e.com" }),
       ),
     };
@@ -169,8 +169,8 @@ describe("FacebookAuth.vue", () => {
 
   it("getProfile rejects on error response", async () => {
     window.FB = {
-      init: jest.fn(),
-      api: jest.fn((path, opts, cb) =>
+      init: vi.fn(),
+      api: vi.fn((path, opts, cb) =>
         cb({ error: { message: "permission denied" } }),
       ),
     };
@@ -223,10 +223,10 @@ describe("FacebookAuth.vue", () => {
 
   it("waits for fbAsyncInit and resolves when FB becomes available", async () => {
     // Simulate fbAsyncInit already set, then FB becomes available
-    window.fbAsyncInit = jest.fn();
+    window.fbAsyncInit = vi.fn();
     // FB will be set after a short delay
     setTimeout(() => {
-      window.FB = { init: jest.fn() };
+      window.FB = { init: vi.fn() };
     }, 100);
 
     const wrapper = mount(FacebookAuth, {
@@ -240,9 +240,9 @@ describe("FacebookAuth.vue", () => {
   });
 
   it("rejects with timeout when fbAsyncInit is set but FB never loads", async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     // fbAsyncInit already set, but window.FB never becomes available
-    window.fbAsyncInit = jest.fn();
+    window.fbAsyncInit = vi.fn();
 
     const wrapper = mount(FacebookAuth, {
       props: { appId: "real_app_id_123" },
@@ -250,8 +250,8 @@ describe("FacebookAuth.vue", () => {
 
     // onMounted → loadFacebookSDK registers the 2000ms timeout synchronously;
     // advance past it, flushing the rejection through onMounted's catch
-    await jest.advanceTimersByTimeAsync(2100);
-    jest.useRealTimers();
+    await vi.advanceTimersByTimeAsync(2100);
+    vi.useRealTimers();
 
     expect(wrapper.vm.sdkLoadError).toBe("Facebook SDK initialization timeout");
     expect(wrapper.emitted("auth-error")).toBeTruthy();
@@ -274,7 +274,7 @@ describe("FacebookAuth.vue", () => {
     expect(injected.src).toContain("connect.facebook.net");
 
     // simulate the real SDK finishing load and invoking fbAsyncInit
-    window.FB = { init: jest.fn() };
+    window.FB = { init: vi.fn() };
     window.fbAsyncInit();
     await new Promise((r) => setTimeout(r));
 

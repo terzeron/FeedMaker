@@ -26,7 +26,7 @@
  * without flaky CI.
  */
 
-import axios from "axios";
+import axios, { CanceledError } from "axios";
 
 describe("axios: import surface", () => {
   test("default export exposes HTTP methods used in production", () => {
@@ -153,8 +153,6 @@ describe("axios: cancel / signal semantics", () => {
           config.signal.addEventListener("abort", () => {
             // Mimic axios's cancel behavior by throwing an error axios.isCancel
             // recognizes. The simplest way: import the public CanceledError.
-            // eslint-disable-next-line global-require
-            const { CanceledError } = require("axios");
             reject(new CanceledError("canceled"));
           });
         }),

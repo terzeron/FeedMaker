@@ -2,7 +2,7 @@ import router from "@/router";
 import axios from "axios";
 import { authStore } from "@/stores/authStore";
 
-jest.mock("axios");
+vi.mock("axios");
 
 describe("router guards", () => {
   let consoleWarnSpy;
@@ -11,7 +11,7 @@ describe("router guards", () => {
     axios.get.mockReset();
     authStore.clear();
     // 테스트 중 console.warn 출력 억제
-    consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
   afterEach(() => {

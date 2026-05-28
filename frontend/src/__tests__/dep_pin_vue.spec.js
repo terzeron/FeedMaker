@@ -5,13 +5,13 @@
  * -------
  * Pin the Vue 3 Composition API surface used across src/. A future Vue
  * upgrade that renames `ref`, changes the `reactive()` proxy semantics,
- * or drops `defineExpose` would break the components silently at runtime.
+ * or drops the compiler macro `defineExpose` would break components silently at runtime.
  *
  * Reference call sites:
  *   src/main.js                     createApp(App)
  *   src/components/Login.vue        ref(initial) / computed(() => ...) / onMounted(async () => ...)
  *   src/components/Search.vue       reactive({ ... }) + computed
- *   src/components/Problems.vue     ref + computed + defineExpose
+ *   src/components/MyButton.vue     ref + computed + defineExpose macro
  *   src/components/FeedManagement.vue ref + onMounted
  */
 
@@ -27,6 +27,7 @@ import {
   isRef,
   isReactive,
 } from "vue";
+import * as vueModule from "vue";
 
 describe("vue: import surface", () => {
   test("composition-api primitives are callable", () => {
@@ -40,13 +41,10 @@ describe("vue: import surface", () => {
     expect(typeof createApp).toBe("function");
   });
 
-  test("defineExpose exists on the module namespace", () => {
-    // <script setup> auto-imports defineExpose, but components also import it
-    // explicitly (Problems.vue:2 -- `import { ref, computed, defineExpose }`).
-    // The symbol must remain reachable on the named export surface.
-    // eslint-disable-next-line global-require
-    const vue = require("vue");
-    expect(vue).toHaveProperty("defineExpose");
+  test("defineExpose remains reachable for macro-aware tooling", () => {
+    // <script setup> compiler macros no longer need imports in production code,
+    // but Vue still exposes the symbol for macro-aware tooling compatibility.
+    expect(vueModule).toHaveProperty("defineExpose");
   });
 });
 

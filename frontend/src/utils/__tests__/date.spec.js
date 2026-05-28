@@ -9,12 +9,12 @@ describe("utils/date", () => {
   const fixed = new Date("2024-01-15T12:34:56Z");
 
   beforeAll(() => {
-    jest.useFakeTimers();
-    jest.setSystemTime(fixed);
+    vi.useFakeTimers();
+    vi.setSystemTime(fixed);
   });
 
   afterAll(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   describe("getShortDate", () => {
@@ -45,7 +45,7 @@ describe("utils/date", () => {
     });
 
     it("returns empty string when Date constructor throws", () => {
-      const consoleErrorSpy = jest
+      const consoleErrorSpy = vi
         .spyOn(console, "error")
         .mockImplementation(() => {});
       const originalDate = global.Date;
@@ -106,7 +106,7 @@ describe("utils/date", () => {
     });
 
     it("returns empty string when formatting throws", () => {
-      const consoleErrorSpy = jest
+      const consoleErrorSpy = vi
         .spyOn(console, "error")
         .mockImplementation(() => {});
       const originalDate = global.Date;
@@ -156,7 +156,7 @@ describe("utils/date", () => {
     });
 
     it("returns 0 when calculation throws", () => {
-      const consoleErrorSpy = jest
+      const consoleErrorSpy = vi
         .spyOn(console, "error")
         .mockImplementation(() => {});
       const originalDate = global.Date;

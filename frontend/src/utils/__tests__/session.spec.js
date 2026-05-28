@@ -12,8 +12,8 @@ describe('utils/session', () => {
     });
 
     it('handles storage error gracefully', () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-      const setItemSpy = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
         throw new Error('QuotaExceededError');
       });
       session.set('k', 'v');
@@ -35,8 +35,8 @@ describe('utils/session', () => {
     });
 
     it('returns default on parse error', () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-      const getItemSpy = jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const getItemSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
         throw new Error('SecurityError');
       });
       expect(session.get('k', 'default')).toBe('default');
@@ -54,8 +54,8 @@ describe('utils/session', () => {
     });
 
     it('handles remove error gracefully', () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-      const removeItemSpy = jest.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const removeItemSpy = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
         throw new Error('SecurityError');
       });
       session.remove('k');
@@ -75,8 +75,8 @@ describe('utils/session', () => {
     });
 
     it('handles clear error gracefully', () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-      const clearSpy = jest.spyOn(Storage.prototype, 'clear').mockImplementation(() => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const clearSpy = vi.spyOn(Storage.prototype, 'clear').mockImplementation(() => {
         throw new Error('SecurityError');
       });
       session.clear();

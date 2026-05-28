@@ -23,7 +23,7 @@
 </template>
 
 <script setup>
-import { ref, computed, defineExpose } from "vue";
+import { ref, computed } from "vue";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 
 const props = defineProps({
