@@ -10,6 +10,7 @@ from typing import Any
 from shutil import which
 from bin.feed_maker_util import Process, Data, PathUtil
 from bin.crawler import Crawler, Method
+from bin.headless_browser_cloak import HeadlessBrowser
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
@@ -81,6 +82,13 @@ class NewlistCollector:
             except UnicodeDecodeError as e:
                 LOGGER.error(e)
                 continue
+
+            # The item-capture subprocess launches its own cloakbrowser on the
+            # same deterministic per-parent profile dir. Release this process's
+            # cached browser session first so its still-held SingletonLock doesn't
+            # make the subprocess fail with "Failed to create a ProcessSingleton".
+            if conf.get("render_js", False):
+                HeadlessBrowser.recycle_session()
 
             capture_cmd = f"{self.collection_conf['item_capture_script']} -f '{self.feed_dir_path}'"
             LOGGER.debug("cmd=%s", capture_cmd)
