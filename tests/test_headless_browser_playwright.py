@@ -2,8 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import json
+import os
 import shutil
 import signal
+import socket
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -113,6 +116,52 @@ class TestHeadlessBrowserPlaywright(unittest.TestCase):
         browser = self._make_browser()
         with self.assertRaises(ImportError):
             browser._launch_session()
+
+    @staticmethod
+    def _dead_pid():
+        # A pid that is guaranteed dead: spawn a trivial process and reap it.
+        p = subprocess.Popen(["true"])
+        p.wait()
+        return p.pid
+
+    @patch("bin.headless_browser_playwright.sync_playwright")
+    def test_launch_session_clears_stale_singleton_lock(self, mock_sync_playwright):
+        # 비정상 종료로 남은 SingletonLock(소유 프로세스 죽음)은 launch 전에 제거되어야 한다.
+        base = Path(tempfile.mkdtemp())
+        browser = self._make_browser(dir_path=base / "feed")
+        mock_sync, _mp, _mc, _mpage = self._build_session_mocks()
+        mock_sync_playwright.return_value = mock_sync
+
+        profile_dir = Path(browser._profile_dir)
+        lock_path = profile_dir / "SingletonLock"
+        lock_path.symlink_to(f"{socket.gethostname()}-{self._dead_pid()}")
+        (profile_dir / "SingletonCookie").symlink_to("12345/678")
+        (profile_dir / "SingletonSocket").symlink_to("/tmp/ws-sock")
+        self.assertTrue(lock_path.is_symlink())
+
+        browser._launch_session()
+
+        self.assertFalse(lock_path.is_symlink(), "stale SingletonLock must be removed before launch")
+        self.assertFalse((profile_dir / "SingletonCookie").is_symlink())
+        self.assertFalse((profile_dir / "SingletonSocket").is_symlink())
+        shutil.rmtree(base, ignore_errors=True)
+
+    @patch("bin.headless_browser_playwright.sync_playwright")
+    def test_launch_session_preserves_live_singleton_lock(self, mock_sync_playwright):
+        # 살아있는 프로세스가 소유한 lock은 제거하면 안 된다 (정상 동시 사용 보호).
+        base = Path(tempfile.mkdtemp())
+        browser = self._make_browser(dir_path=base / "feed")
+        mock_sync, _mp, _mc, _mpage = self._build_session_mocks()
+        mock_sync_playwright.return_value = mock_sync
+
+        profile_dir = Path(browser._profile_dir)
+        lock_path = profile_dir / "SingletonLock"
+        lock_path.symlink_to(f"{socket.gethostname()}-{os.getpid()}")
+
+        browser._launch_session()
+
+        self.assertTrue(lock_path.is_symlink(), "live SingletonLock must NOT be removed")
+        shutil.rmtree(base, ignore_errors=True)
 
     @patch("bin.headless_browser_playwright.sync_playwright")
     def test_login_success(self, mock_sync_playwright):

@@ -7,6 +7,7 @@ import logging.config
 import os
 import shutil
 import signal
+import socket
 import sys
 import tempfile
 import threading
@@ -288,9 +289,63 @@ class HeadlessBrowser:
     def cleanup_all_drivers(cls) -> None:
         cls.cleanup_all_sessions()
 
+    @staticmethod
+    def _pid_alive(pid: int) -> bool:
+        if pid <= 0:
+            return False
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            # Process exists but is owned by another user.
+            return True
+        except OSError:
+            return False
+        return True
+
+    @classmethod
+    def _clear_stale_singleton_lock(cls, profile_dir: str) -> None:
+        # Chromium guards a persistent profile with a `SingletonLock` symlink named
+        # `<hostname>-<pid>`, removing it only on a clean exit. After an unclean exit
+        # (SIGKILL / OOM-kill / crash — our atexit + SIGTERM cleanup never runs) the
+        # lock survives, and the next launch on this deterministic profile dir fails
+        # with `Failed to create a ProcessSingleton` (symlink → EEXIST). Break the
+        # lock only when its owning process is gone, so a genuinely running instance
+        # on this host is left untouched (a real concurrent conflict still surfaces).
+        lock_path = os.path.join(profile_dir, "SingletonLock")
+        try:
+            target = os.readlink(lock_path)
+        except FileNotFoundError:
+            return
+        except OSError:
+            # Exists but is not a symlink — abnormal; treat it as stale.
+            target = None
+
+        if target is not None:
+            host, _, pid_str = target.rpartition("-")
+            try:
+                pid = int(pid_str)
+            except ValueError:
+                pid = -1
+            if host == socket.gethostname() and cls._pid_alive(pid):
+                return
+
+        for name in ("SingletonLock", "SingletonCookie", "SingletonSocket"):
+            try:
+                os.unlink(os.path.join(profile_dir, name))
+            except FileNotFoundError:
+                pass
+            except OSError as e:
+                LOGGER.warning("Could not remove stale singleton artifact '%s': %s", name, e)
+
     def _launch_session(self) -> dict[str, Any]:
         if _cloak_launch_persistent_context is None:
             raise ImportError("cloakbrowser is not installed; run `pip install cloakbrowser`")
+
+        # A previous run for this group may have died uncleanly and left a stale
+        # SingletonLock in the (deterministic) profile dir; clear it before launch.
+        self._clear_stale_singleton_lock(self._profile_dir)
 
         # cloakbrowser bundles a patched Chromium binary with source-level stealth
         # patches (canvas, WebGL, audio, TLS, navigator.webdriver, etc.). No JS
