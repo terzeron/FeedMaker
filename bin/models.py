@@ -101,3 +101,11 @@ class UserSession(Base):
     last_accessed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("CURRENT_TIMESTAMP"))
 
     __table_args__ = (Index("user_session_expires_at_idx", "expires_at"), Index("user_session_user_email_idx", "user_email"))
+
+
+# 모든 테이블을 utf8mb4로 생성한다. DB/서버 기본값(utf8mb3)은 4-byte 문자(이모지 등)에서
+# 'Incorrect string value(1366)'로 INSERT가 실패한다. metadata 전체에 단일 지점으로 적용하므로
+# 신규 모델도 자동 포함된다. 기존 utf8mb3_general_ci와 정렬 의미를 맞추려 general_ci 계열을 쓴다.
+for _table in Base.metadata.tables.values():
+    _table.dialect_options["mysql"]["charset"] = "utf8mb4"
+    _table.dialect_options["mysql"]["collate"] = "utf8mb4_general_ci"

@@ -304,6 +304,26 @@ class HeadlessBrowser:
             return False
         return True
 
+    @staticmethod
+    def _pid_owns_profile(pid: int, profile_dir: str) -> Optional[bool]:
+        # Confirm a live pid is really the Chromium that holds THIS profile: its
+        # argv carries `--user-data-dir=<profile_dir>`. After an unclean exit the
+        # kernel can recycle the dead browser's pid onto an unrelated process, and
+        # a bare liveness check then mistakes that for a live owner — keeping a
+        # stale SingletonLock forever so the next launch fails with EEXIST. Returns
+        # True (genuine owner), False (pid reused by an unrelated process), or None
+        # when ownership can't be determined (no procfs), so the caller can fall
+        # back to a conservative liveness-only decision off Linux.
+        try:
+            with open(f"/proc/{pid}/cmdline", "rb") as f:
+                cmdline = f.read()
+        except FileNotFoundError:
+            # procfs present but pid gone → not a live owner; no procfs at all → unknown.
+            return False if os.path.isdir("/proc") else None
+        except OSError:
+            return None
+        return profile_dir.encode() in cmdline
+
     @classmethod
     def _clear_stale_singleton_lock(cls, profile_dir: str) -> None:
         # Chromium guards a persistent profile with a `SingletonLock` symlink named
@@ -329,7 +349,13 @@ class HeadlessBrowser:
             except ValueError:
                 pid = -1
             if host == socket.gethostname() and cls._pid_alive(pid):
-                return
+                # Liveness alone isn't enough: a recycled pid (the owning Chromium
+                # died uncleanly and the kernel reassigned its pid) looks alive but
+                # isn't the owner. Preserve the lock only for the genuine owner, or
+                # when ownership can't be determined (off Linux) — never for a pid
+                # confirmed to belong to an unrelated process.
+                if cls._pid_owns_profile(pid, profile_dir) is not False:
+                    return
 
         for name in ("SingletonLock", "SingletonCookie", "SingletonSocket"):
             try:
