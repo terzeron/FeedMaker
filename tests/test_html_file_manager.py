@@ -7,7 +7,6 @@ import shutil
 import logging.config
 from pathlib import Path
 from unittest.mock import patch, MagicMock
-from unittest.mock import ANY
 from types import SimpleNamespace
 
 from bin.feed_maker_util import header_str, Env, PathUtil
@@ -15,12 +14,19 @@ from bin.feed_maker import FeedMaker
 from bin.html_file_manager import HtmlFileManager, HtmlFileDetail
 from bin.db import DB
 from bin.models import HtmlFileInfo
+from sqlalchemy.dialects import mysql
 import logging
 import tempfile
 from datetime import datetime, timezone
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
+
+
+def _compiled_upsert_sql(mock_session) -> str:
+    """load_all_html_files가 s.execute()로 보낸 upsert 문을 literal SQL 문자열로 컴파일한다."""
+    stmt = mock_session.execute.call_args[0][0]
+    return str(stmt.compile(dialect=mysql.dialect(), compile_kwargs={"literal_binds": True}))
 
 
 class TestHtmlFileManager(unittest.TestCase):
@@ -232,7 +238,7 @@ class TestHtmlFileManager(unittest.TestCase):
                 self.assertIsNotNone(row.file_path)
                 self.assertIsNotNone(row.update_date)
 
-    def test_load_all_html_files_calls_bulk_with_mapper(self) -> None:
+    def test_load_all_html_files_upserts_idempotently(self) -> None:
         # 파일 시스템 픽스처 준비: grp1/feedA/html/{new1.html, upd1.html}
         grp_path = self.hfm.work_dir_path / "grp1"
         feed_path = grp_path / "feedA"
@@ -271,9 +277,15 @@ class TestHtmlFileManager(unittest.TestCase):
             # 실행 (탐색 범위를 제한하지 않음: islice 전체 순회)
             self.hfm.load_all_html_files()
 
-            # bulk_insert_mappings/ bulk_update_mappings가 mapper를 첫 인자로 받는지 검증
-            self.mock_session.bulk_insert_mappings.assert_called_with(HtmlFileInfo.__mapper__, ANY)
-            self.mock_session.bulk_update_mappings.assert_called_with(HtmlFileInfo.__mapper__, ANY)
+            # new/updated는 단일 멱등 upsert(ON DUPLICATE KEY UPDATE)로 합쳐 실행되어야 한다.
+            # 평범한 INSERT는 동시 실행 시 Duplicate entry(1062)로 죽으므로 사용하지 않는다.
+            self.mock_session.bulk_insert_mappings.assert_not_called()
+            self.mock_session.bulk_update_mappings.assert_not_called()
+            self.mock_session.execute.assert_called_once()
+            sql = _compiled_upsert_sql(self.mock_session)
+            self.assertIn("ON DUPLICATE KEY UPDATE", sql.upper())
+            self.assertIn("new1.html", sql)  # 신규 파일
+            self.assertIn("upd1.html", sql)  # 변경 파일
 
             # 삭제는 synchronize_session=False로 호출되는지 검증
             delete_mock = self.mock_query.delete
@@ -524,11 +536,10 @@ class TestHtmlFileManagerExtended(unittest.TestCase):
             self.hfm.work_dir_path = tmp_path
             self.hfm.load_all_html_files(max_num_feeds=20)
 
-            self.mock_session.bulk_insert_mappings.assert_called_once()
-            args = self.mock_session.bulk_insert_mappings.call_args
-            mappings = args[0][1]
-            self.assertEqual(1, len(mappings))
-            self.assertIn("new1.html", mappings[0]["file_name"])
+            self.mock_session.execute.assert_called_once()
+            sql = _compiled_upsert_sql(self.mock_session)
+            self.assertIn("ON DUPLICATE KEY UPDATE", sql.upper())
+            self.assertIn("new1.html", sql)
 
     def test_load_all_html_files_skips_underscore_dirs(self) -> None:
         """비활성('_' 접두사) 그룹/피드의 html 파일은 DB에 적재되지 않아야 한다."""
@@ -553,10 +564,11 @@ class TestHtmlFileManagerExtended(unittest.TestCase):
             self.hfm.work_dir_path = tmp_path
             self.hfm.load_all_html_files(max_num_feeds=20)
 
-            self.mock_session.bulk_insert_mappings.assert_called_once()
-            mappings = self.mock_session.bulk_insert_mappings.call_args[0][1]
-            self.assertEqual(1, len(mappings))
-            self.assertIn("keep.html", mappings[0]["file_name"])
+            self.mock_session.execute.assert_called_once()
+            sql = _compiled_upsert_sql(self.mock_session)
+            self.assertIn("keep.html", sql)
+            self.assertNotIn("skip1.html", sql)
+            self.assertNotIn("skip2.html", sql)
 
     def test_load_all_html_files_deleted_file(self) -> None:
         """File in DB but not on filesystem should be deleted."""
@@ -614,8 +626,9 @@ class TestHtmlFileManagerExtended(unittest.TestCase):
             with patch.object(Path, "stat", new=patched_stat):
                 self.hfm.load_all_html_files(max_num_feeds=20)
 
-            # Should not insert the vanished file
+            # Should not upsert the vanished file (no new/updated rows -> no execute)
             self.mock_session.bulk_insert_mappings.assert_not_called()
+            self.mock_session.execute.assert_not_called()
 
     # ── _prepare_html_file_info ──
 

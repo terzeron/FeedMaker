@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from itertools import islice
 from typing import Any, Optional, TypedDict, NotRequired
 
+from sqlalchemy.dialects.mysql import insert as mysql_insert
+
 from bin.models import HtmlFileInfo
 from bin.feed_maker import FeedMaker
 from bin.feed_maker_util import PathUtil, Env
@@ -169,7 +171,8 @@ class HtmlFileManager:
                 file_path_str = PathUtil.short_path(path)
                 file_name = self.get_html_file_name(path)
                 feed_dir_path_str = PathUtil.short_path(feed_dir_path)
-                update_date = datetime.fromtimestamp(st.st_mtime, timezone.utc)
+                # load_all_html_files의 비교와 일치하도록 초 단위로 정규화한다(MySQL DATETIME 반올림 회피).
+                update_date = datetime.fromtimestamp(st.st_mtime, timezone.utc).replace(microsecond=0)
                 size = st.st_size
 
                 # if size < FeedMaker.get_size_of_template_with_image_tag(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"), feed_name):
@@ -214,7 +217,10 @@ class HtmlFileManager:
                         file_system_paths.add(file_path_str)
 
                         try:
-                            mtime = datetime.fromtimestamp(path.stat().st_mtime, timezone.utc)
+                            # MySQL DATETIME(소수점초 없음)은 저장 시 초 단위로 반올림한다.
+                            # naive UTC + 초 단위로 정규화해야 DB 값과 round-trip 비교가 일치한다
+                            # (그렇지 않으면 aware!=naive, 반올림 차이로 매 실행마다 전부 '변경'으로 오탐된다).
+                            mtime = datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).replace(tzinfo=None, microsecond=0)
                         except FileNotFoundError:
                             continue
 
@@ -227,10 +233,15 @@ class HtmlFileManager:
 
             deleted_files = set(db_files.keys()) - file_system_paths
 
-            if new_files:
-                s.bulk_insert_mappings(HtmlFileInfo.__mapper__, new_files)
-            if updated_files:
-                s.bulk_update_mappings(HtmlFileInfo.__mapper__, updated_files)
+            upsert_files = new_files + updated_files
+            if upsert_files:
+                # 동시 실행(예: run.py --make_all_feeds와 백엔드/크론이 겹칠 때)에서는 두 프로세스가
+                # commit 전 db_files를 각각 스냅샷해 같은 PK를 new_files로 만들 수 있다. 평범한 INSERT는
+                # 나중 프로세스에서 Duplicate entry(1062)로 죽는다. ON DUPLICATE KEY UPDATE로 멱등하게
+                # 처리해 race에 안전하게 만들고, new/updated를 한 번의 multi-row 문으로 합친다.
+                stmt = mysql_insert(HtmlFileInfo).values(upsert_files)
+                update_cols = {col.name: stmt.inserted[col.name] for col in HtmlFileInfo.__table__.columns if not col.primary_key}
+                s.execute(stmt.on_duplicate_key_update(**update_cols))
             if deleted_files:
                 s.query(HtmlFileInfo).filter(HtmlFileInfo.file_path.in_(deleted_files)).delete(synchronize_session=False)
 

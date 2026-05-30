@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import json
-import os
 import shutil
 import signal
 import socket
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -112,19 +112,50 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
 
     @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
     def test_launch_session_preserves_live_singleton_lock(self, mock_launch):
-        # 살아있는 프로세스가 소유한 lock은 제거하면 안 된다 (정상 동시 사용 보호).
+        # 이 profile dir를 실제로 점유한 살아있는 Chromium(= argv에 user-data-dir
+        # 포함)이 소유한 lock은 제거하면 안 된다 (정상 동시 사용 보호).
         base = Path(tempfile.mkdtemp())
         browser = self._make_browser(dir_path=base / "feed")
         mock_context, _ = self._build_session_mocks()
         mock_launch.return_value = mock_context
 
         profile_dir = Path(browser._profile_dir)
+        # argv에 profile dir가 들어간 살아있는 프로세스 = 진짜 소유자처럼 보인다.
+        proc = subprocess.Popen([sys.executable, "-c", "import sys, time; time.sleep(60)", str(profile_dir)])
+        self.addCleanup(proc.wait)
+        self.addCleanup(proc.kill)
+
         lock_path = profile_dir / "SingletonLock"
-        lock_path.symlink_to(f"{socket.gethostname()}-{os.getpid()}")
+        lock_path.symlink_to(f"{socket.gethostname()}-{proc.pid}")
 
         browser._launch_session()
 
-        self.assertTrue(lock_path.is_symlink(), "live SingletonLock must NOT be removed")
+        self.assertTrue(lock_path.is_symlink(), "live SingletonLock owned by this profile must NOT be removed")
+        shutil.rmtree(base, ignore_errors=True)
+
+    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    def test_launch_session_clears_lock_when_pid_reused(self, mock_launch):
+        # PID 재사용: unclean exit로 남은 lock이 가리키는 pid를 OS가 이 profile과
+        # 무관한 다른 살아있는 프로세스에 재할당한 경우. 단순 liveness 검사만으로는
+        # stale lock을 영원히 보존해 다음 launch가 EEXIST(ProcessSingleton)로 실패한다.
+        base = Path(tempfile.mkdtemp())
+        browser = self._make_browser(dir_path=base / "feed")
+        mock_context, _ = self._build_session_mocks()
+        mock_launch.return_value = mock_context
+
+        # 이 profile dir와 전혀 무관한 살아있는 프로세스 (argv에 profile dir 없음).
+        proc = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+        self.addCleanup(proc.wait)
+        self.addCleanup(proc.kill)
+
+        profile_dir = Path(browser._profile_dir)
+        lock_path = profile_dir / "SingletonLock"
+        lock_path.symlink_to(f"{socket.gethostname()}-{proc.pid}")
+        self.assertTrue(lock_path.is_symlink())
+
+        browser._launch_session()
+
+        self.assertFalse(lock_path.is_symlink(), "lock owned by a reused (unrelated) pid must be treated as stale")
         shutil.rmtree(base, ignore_errors=True)
 
     @patch("bin.headless_browser_cloak._cloak_launch_persistent_context", None)
