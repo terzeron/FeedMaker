@@ -2,6 +2,10 @@
 
 cd ~/k8s
 
+# DB credentials must be provided via environment (do NOT hardcode here).
+: "${MYSQL_PASSWORD:?set MYSQL_PASSWORD before running}"
+: "${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD before running}"
+
 
 kubectl create namespace feedmaker
 
@@ -15,9 +19,9 @@ helm install web bitnami/nginx -n feedmaker --version 18.3.5 --create-namespace 
 
 # deployments
 echo "installing mysql by helm"
-helm install fm-db bitnami/mysql -n feedmaker --create-namespace --version 9.19.1 --set auth.rootPassword=micro170762 --set auth.database=feedmaker --set auth.username=feedmaker --set auth.password=micro170433 --set volumePermissions.enabled=true --set primary.persistence.enabled=true --set primary.persistence.existingClaim=mysql-pvc --set primary.service.type=LoadBalancer --set primary.livenessProbe.timeoutSeconds=5 --set primary.terminationGracePeriodSeconds=60
+helm install fm-db bitnami/mysql -n feedmaker --create-namespace --version 9.19.1 --set auth.rootPassword="$MYSQL_ROOT_PASSWORD" --set auth.database=feedmaker --set auth.username=feedmaker --set auth.password="$MYSQL_PASSWORD" --set volumePermissions.enabled=true --set primary.persistence.enabled=true --set primary.persistence.existingClaim=mysql-pvc --set primary.service.type=LoadBalancer --set primary.livenessProbe.timeoutSeconds=5 --set primary.terminationGracePeriodSeconds=60
 echo "initializing"
-kubectl exec -i fm-db-mysql-0 -- mysql -u feedmaker feedmaker -pmicro170433 < ~/workspace/fm/init.sql
+kubectl exec -i fm-db-mysql-0 -- mysql -u feedmaker feedmaker -p"$MYSQL_PASSWORD" < ~/workspace/fm/init.sql
 
 echo "applying fm-configmap"
 kubectl apply -f fm-configmap.yml

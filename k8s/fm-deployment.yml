@@ -24,13 +24,8 @@ spec:
           ports:
             - containerPort: 8010
           env:
-            - name: MYSQL_DATABASE
-              value: feedmaker
-            - name: MYSQL_USER
-              value: feedmaker
-            - name: MYSQL_PASSWORD
-              value: micro170433
-
+            # --- topology constants (pod-specific; intentionally NOT sourced from .env,
+            #     whose values are host-local: FM_DB_HOST/paths differ in the pod) ---
             - name: FM_DB_HOST
               value: fm-db-mysql
             - name: FM_DB_PORT
@@ -41,22 +36,6 @@ spec:
               value: /fma
             - name: FM_LOG_DIR
               value: /logs
-            - name: FM_BACKEND_PORT
-              value: "8010"
-            - name: FM_FRONTEND_URL
-              value: https://fm.terzeron.com
-            - name: FM_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST
-              value: terzeron@gmail.com,choyoungil@gmail.com
-
-            - name: WEB_SERVICE_URL
-              value: https://terzeron.com
-            - name: WEB_SERVICE_FEED_URL_PREFIX
-              value: https://terzeron.com/xml
-            - name: WEB_SERVICE_IMAGE_URL_PREFIX
-              value: https://terzeron.com/xml/img
-            - name: WEB_SERVICE_PDF_URL_PREFIX
-              value: https://terzeron.com/xml/pdf
-
             - name: WEB_SERVICE_ROOT_DIR
               value: /
             - name: WEB_SERVICE_FEED_DIR_PREFIX
@@ -66,21 +45,90 @@ spec:
             - name: WEB_SERVICE_PDF_DIR_PREFIX
               value: /xml/pdf
 
-            - name: MSG_CHANNEL
-              value: email
-            - name: MSG_EMAIL_SENDER_ADDR
-              value: feedmaker@terzeron.com
-            - name: MSG_EMAIL_SENDER_NAME
-              value: FeedMaker
-            - name: MSG_EMAIL_RECIPIENT_LIST
-              value: 조영일,terzeron@gmail.com
-            - name: MSG_EMAIL_NHN_CLOUD_APPKEY
-              value: IVVy5NFvzRdekG0m
-            - name: MSG_EMAIL_NHN_CLOUD_SECRETKEY
-              value: kCHMoKSdKhL63VTc03pO5PrMDjbBuOcs
+            # --- DB password: bitnami-managed Secret (single source for the password) ---
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: fm-db-mysql
+                  key: mysql-password
 
-            - name: DEEPL_API_KEY
-              value: 0ead2103-e6eb-4478-ac30-3b295afc939b:fx
+            # --- portable config: generated from .env into the fm-config ConfigMap.
+            #     Regenerate with k8s/apply-config.sh after editing .env, then rollout. ---
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: fm-config
+                  key: MYSQL_DATABASE
+            - name: MYSQL_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: fm-config
+                  key: MYSQL_USER
+            - name: FM_BACKEND_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: fm-config
+                  key: FM_BACKEND_PORT
+            - name: FM_FRONTEND_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: fm-config
+                  key: FM_FRONTEND_URL
+            - name: FM_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST
+              valueFrom:
+                configMapKeyRef:
+                  name: fm-config
+                  key: FM_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST
+            - name: WEB_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: fm-config
+                  key: WEB_SERVICE_URL
+            - name: WEB_SERVICE_FEED_URL_PREFIX
+              valueFrom:
+                configMapKeyRef:
+                  name: fm-config
+                  key: WEB_SERVICE_FEED_URL_PREFIX
+            - name: WEB_SERVICE_IMAGE_URL_PREFIX
+              valueFrom:
+                configMapKeyRef:
+                  name: fm-config
+                  key: WEB_SERVICE_IMAGE_URL_PREFIX
+            - name: WEB_SERVICE_PDF_URL_PREFIX
+              valueFrom:
+                configMapKeyRef:
+                  name: fm-config
+                  key: WEB_SERVICE_PDF_URL_PREFIX
+            - name: MSG_CHANNEL
+              valueFrom:
+                configMapKeyRef:
+                  name: fm-config
+                  key: MSG_CHANNEL
+            - name: MSG_EMAIL_SENDER_ADDR
+              valueFrom:
+                configMapKeyRef:
+                  name: fm-config
+                  key: MSG_EMAIL_SENDER_ADDR
+            - name: MSG_EMAIL_SENDER_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: fm-config
+                  key: MSG_EMAIL_SENDER_NAME
+            - name: MSG_EMAIL_RECIPIENT_LIST
+              valueFrom:
+                configMapKeyRef:
+                  name: fm-config
+                  key: MSG_EMAIL_RECIPIENT_LIST
+            - name: MSG_SMTP_SERVER
+              valueFrom:
+                configMapKeyRef:
+                  name: fm-config
+                  key: MSG_SMTP_SERVER
+            - name: MSG_SMTP_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: fm-config
+                  key: MSG_SMTP_PORT
 
           volumeMounts:
             - name: public-html-xml-pvc
