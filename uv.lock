@@ -349,7 +349,6 @@ dependencies = [
     { name = "filelock" },
     { name = "gitpython" },
     { name = "lxml" },
-    { name = "mail1" },
     { name = "ordered-set" },
     { name = "pdf2image" },
     { name = "pdftext" },
@@ -399,7 +398,6 @@ requires-dist = [
     { name = "filelock", specifier = ">=3.29.0" },
     { name = "gitpython", specifier = ">=3.1.50" },
     { name = "lxml", specifier = ">=6.1.1" },
-    { name = "mail1", specifier = ">=4.1.0" },
     { name = "ordered-set", specifier = ">=4.1.0" },
     { name = "pdf2image", specifier = ">=1.17.0" },
     { name = "pdftext", specifier = ">=0.6.3" },
@@ -594,12 +592,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/1b/89/45198e9624762af2dfd2cb8782598477ceb29f6e59caab560388ae1f4ec1/lxml-6.1.1-cp312-cp312-win_amd64.whl", hash = "sha256:26e6eda8d38c1fcab1090dd196ee87cbd13788e531937610e2589085de074e77", size = 3997255, upload-time = "2026-05-18T19:17:56.781Z" },
     { url = "https://files.pythonhosted.org/packages/90/a9/7a54b6834088d9ae528a7b780584ba6a39a9457b0ac330479f20ffbc9449/lxml-6.1.1-cp312-cp312-win_arm64.whl", hash = "sha256:6540377fbd53fe1b629172288c464fb18db11ce1fa7dc15891da10aa9dcc3e7f", size = 3659610, upload-time = "2026-05-19T19:22:50.843Z" },
 ]
-
-[[package]]
-name = "mail1"
-version = "4.1.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/5e/4a/bdd36e28be4a2edda287fccb4468f3892e2ae82e9c24611a9df8e841b9bb/mail1-4.1.0.tar.gz", hash = "sha256:dbdcb637396a3a89813de02933da9e8cc1e9f4df8922749edd1292c478c88e1d", size = 7890, upload-time = "2020-05-07T15:03:02.725Z" }
 
 [[package]]
 name = "modulegraph"

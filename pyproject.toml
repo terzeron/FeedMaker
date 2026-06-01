@@ -18,7 +18,6 @@ dependencies = [
     "starlette>=1.0.1",
     "filelock>=3.29.0",
     "lxml>=6.1.1",
-    "mail1>=4.1.0",
     "ordered-set>=4.1.0",
     "pdf2image>=1.17.0",
     "pdftotext>=3.0.0",
@@ -99,7 +98,7 @@ disable_error_code = ["misc", "no-redef", "override", "assignment", "type-arg", 
 
 # 특정 모듈에 대한 타입 체크 완화
 [[tool.mypy.overrides]]
-module = ["PyRSS2Gen", "mail1", "selenium.*"]
+module = ["PyRSS2Gen", "selenium.*"]
 ignore_errors = true
 
 [tool.pylint."master"]

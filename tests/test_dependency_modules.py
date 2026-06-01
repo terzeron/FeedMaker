@@ -152,16 +152,7 @@ class TestFileLock(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# 4. mail1
-# ---------------------------------------------------------------------------
-class TestMail1(unittest.TestCase):
-    def test_import(self) -> None:
-        import mail1
-        self.assertTrue(hasattr(mail1, "send"))
-
-
-# ---------------------------------------------------------------------------
-# 5. OrderedSet
+# 4. OrderedSet
 # ---------------------------------------------------------------------------
 class TestOrderedSet(unittest.TestCase):
     def test_creation_and_order(self) -> None:
@@ -183,27 +174,29 @@ class TestOrderedSet(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# 6. pdf2image
+# 5. pdf2image
 # ---------------------------------------------------------------------------
 @unittest.skipUnless(_can_import("pdf2image"), "pdf2image not available")
 class TestPdf2Image(unittest.TestCase):
     def test_import_and_callable(self) -> None:
         from pdf2image import convert_from_path
+
         self.assertTrue(callable(convert_from_path))
 
 
 # ---------------------------------------------------------------------------
-# 7. pdftotext
+# 6. pdftotext
 # ---------------------------------------------------------------------------
 @unittest.skipUnless(_can_import("pdftotext"), "pdftotext not available")
 class TestPdftotext(unittest.TestCase):
     def test_import_and_pdf_class(self) -> None:
         import pdftotext
+
         self.assertTrue(hasattr(pdftotext, "PDF"))
 
 
 # ---------------------------------------------------------------------------
-# 8. Pillow
+# 7. Pillow
 # ---------------------------------------------------------------------------
 class TestPillow(unittest.TestCase):
     def setUp(self) -> None:
@@ -266,7 +259,7 @@ class TestPillow(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# 9. psutil
+# 8. psutil
 # ---------------------------------------------------------------------------
 class TestPsutil(unittest.TestCase):
     def test_process_iter(self) -> None:
@@ -290,17 +283,18 @@ class TestPsutil(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# 10. pyheif
+# 9. pyheif
 # ---------------------------------------------------------------------------
 @unittest.skipUnless(_can_import("pyheif"), "pyheif not available")
 class TestPyheif(unittest.TestCase):
     def test_import_and_read_callable(self) -> None:
         import pyheif
+
         self.assertTrue(callable(pyheif.read))
 
 
 # ---------------------------------------------------------------------------
-# 11. python-dateutil
+# 10. python-dateutil
 # ---------------------------------------------------------------------------
 class TestPythonDateutil(unittest.TestCase):
     def test_parser_parse(self) -> None:
@@ -320,38 +314,21 @@ class TestPythonDateutil(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# 12. PyRSS2Gen
+# 11. PyRSS2Gen
 # ---------------------------------------------------------------------------
 class TestPyRSS2Gen(unittest.TestCase):
     def test_rss_item(self) -> None:
         import datetime
         import PyRSS2Gen
 
-        item = PyRSS2Gen.RSSItem(
-            title="Test Item",
-            link="https://example.com",
-            description="desc",
-            pubDate=datetime.datetime(2024, 1, 1),
-        )
+        item = PyRSS2Gen.RSSItem(title="Test Item", link="https://example.com", description="desc", pubDate=datetime.datetime(2024, 1, 1))
         self.assertEqual(item.title, "Test Item")
 
     def test_rss2_write_xml(self) -> None:
         import datetime
         import PyRSS2Gen
 
-        rss = PyRSS2Gen.RSS2(
-            title="Test Feed",
-            link="https://example.com",
-            description="A test feed",
-            lastBuildDate=datetime.datetime(2024, 1, 1),
-            items=[
-                PyRSS2Gen.RSSItem(
-                    title="Item 1",
-                    link="https://example.com/1",
-                    description="desc1",
-                ),
-            ],
-        )
+        rss = PyRSS2Gen.RSS2(title="Test Feed", link="https://example.com", description="A test feed", lastBuildDate=datetime.datetime(2024, 1, 1), items=[PyRSS2Gen.RSSItem(title="Item 1", link="https://example.com/1", description="desc1")])
         buf = io.BytesIO()
         rss.write_xml(buf)
         xml_content = buf.getvalue()
@@ -360,7 +337,7 @@ class TestPyRSS2Gen(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# 13. Requests
+# 12. Requests
 # ---------------------------------------------------------------------------
 class TestRequests(unittest.TestCase):
     def test_get_post_callable(self) -> None:
@@ -386,7 +363,7 @@ class TestRequests(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# 14. resvg-py
+# 13. resvg-py
 # ---------------------------------------------------------------------------
 class TestResvgPy(unittest.TestCase):
     def test_svg_to_bytes(self) -> None:
@@ -400,7 +377,7 @@ class TestResvgPy(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# 15. Selenium
+# 14. Selenium
 # ---------------------------------------------------------------------------
 class TestSelenium(unittest.TestCase):
     def test_imports(self) -> None:
@@ -422,12 +399,7 @@ class TestSelenium(unittest.TestCase):
         self.assertIn("--headless", options.arguments)
 
     def test_exception_classes(self) -> None:
-        from selenium.common.exceptions import (
-            InvalidCookieDomainException,
-            NoAlertPresentException,
-            TimeoutException,
-            WebDriverException,
-        )
+        from selenium.common.exceptions import InvalidCookieDomainException, NoAlertPresentException, TimeoutException, WebDriverException
 
         self.assertTrue(issubclass(TimeoutException, WebDriverException))
         self.assertTrue(issubclass(InvalidCookieDomainException, WebDriverException))
@@ -435,7 +407,7 @@ class TestSelenium(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# 16. SQLAlchemy
+# 15. SQLAlchemy
 # ---------------------------------------------------------------------------
 class TestSQLAlchemy(unittest.TestCase):
     def test_engine_and_session(self) -> None:
@@ -452,10 +424,7 @@ class TestSQLAlchemy(unittest.TestCase):
     def test_url_create(self) -> None:
         from sqlalchemy import URL
 
-        url = URL.create(
-            drivername="sqlite",
-            database=":memory:",
-        )
+        url = URL.create(drivername="sqlite", database=":memory:")
         self.assertIn("sqlite", str(url))
 
     def test_declarative_model_and_crud(self) -> None:
@@ -535,7 +504,7 @@ class TestSQLAlchemy(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# 17. urllib3
+# 16. urllib3
 # ---------------------------------------------------------------------------
 class TestUrllib3(unittest.TestCase):
     def test_disable_warnings(self) -> None:
@@ -551,7 +520,7 @@ class TestUrllib3(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# 18. Uvicorn
+# 17. Uvicorn
 # ---------------------------------------------------------------------------
 class TestUvicorn(unittest.TestCase):
     def test_import_and_run_callable(self) -> None:
@@ -561,7 +530,7 @@ class TestUvicorn(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# 19. python-dotenv
+# 18. python-dotenv
 # ---------------------------------------------------------------------------
 class TestPythonDotenv(unittest.TestCase):
     def setUp(self) -> None:
@@ -595,11 +564,12 @@ class TestPythonDotenv(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# 20. lxml
+# 19. lxml
 # ---------------------------------------------------------------------------
 class TestLxml(unittest.TestCase):
     def test_import(self) -> None:
         import lxml
+
         self.assertIsNotNone(lxml)
 
     def test_bs4_lxml_parser(self) -> None:
@@ -611,24 +581,18 @@ class TestLxml(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# 21. PyMySQL
+# 20. PyMySQL
 # ---------------------------------------------------------------------------
 class TestPyMySQL(unittest.TestCase):
     def test_import(self) -> None:
         import pymysql
+
         self.assertIsNotNone(pymysql)
 
     def test_sqlalchemy_url_creation(self) -> None:
         from sqlalchemy import URL
 
-        url = URL.create(
-            drivername="mysql+pymysql",
-            username="user",
-            password="pass",
-            host="localhost",
-            port=3306,
-            database="testdb",
-        )
+        url = URL.create(drivername="mysql+pymysql", username="user", password="pass", host="localhost", port=3306, database="testdb")
         self.assertIn("pymysql", str(url))
         self.assertIn("localhost", str(url))
 

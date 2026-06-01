@@ -2,236 +2,160 @@
 # -*- coding: utf-8 -*-
 
 
+import smtplib
 import unittest
 import logging.config
 from pathlib import Path
 from dotenv import load_dotenv
 
-from bin.notification import Notification
 from unittest.mock import patch, MagicMock
-from bin.feed_maker_util import NotFoundEnvError
+from bin.notification import Notification
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
-
-class NotificationTest(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls) -> None:
-        load_dotenv(".env.tests.notification", override=True)
-
-    def test_send_msg(self) -> None:
-        msg = "This is a message from python unittest"
-        subject = "Notification test"
-        notification = Notification()
-        actual = notification.send_msg(msg, subject)
-        self.assertTrue(actual)
-
-    def test_send_email_by_nhn_cloud(self) -> None:
-        notification = Notification()
-
-        msg = "This is a mail by NHN Cloud from python unittest"
-        subject = "Email notification test (by NHN Cloud Email)"
-        actual = notification._send_email_by_nhn_cloud(msg, subject)
-        self.assertTrue(actual)
+_NOTIFICATION_ENV_FILE = ".env.tests.notification"
 
 
 def _make_env_side_effect(env_map: dict[str, str]):
-
+    # Mirror Env.get: return the mapped value, otherwise the supplied default
+    # (Env.get wraps os.getenv(var, default_value), so a missing var with the
+    # default "" yields "" rather than raising).
     def side_effect(var: str, default_value: str = "") -> str:
-        if var in env_map:
-            return env_map[var]
-        if default_value:
-            return default_value
-        raise NotFoundEnvError(f"can't get environment variable '{var}'")
+        return env_map.get(var, default_value)
 
     return side_effect
 
 
-ALL_ENV = {
-    "MSG_EMAIL_SENDER_ADDR": "sender@example.com",
-    "MSG_EMAIL_SENDER_NAME": "Test Sender",
-    "MSG_EMAIL_RECIPIENT_LIST": "Recipient1, rcpt1@example.com, Recipient2, rcpt2@example.com",
-    "MSG_EMAIL_NAVER_CLOUD_ACCESS_KEY": "naver_access_key",
-    "MSG_EMAIL_NAVER_CLOUD_SECRET_KEY": "naver_secret_key",
-    "MSG_EMAIL_NHN_CLOUD_APPKEY": "nhn_appkey",
-    "MSG_EMAIL_NHN_CLOUD_SECRETKEY": "nhn_secretkey",
-}
+ALL_ENV = {"MSG_EMAIL_SENDER_ADDR": "sender@example.com", "MSG_EMAIL_SENDER_NAME": "Test Sender", "MSG_EMAIL_RECIPIENT_LIST": "Recipient1, rcpt1@example.com, Recipient2, rcpt2@example.com", "MSG_SMTP_SERVER": "smtp.example.com", "MSG_SMTP_PORT": "25"}
+
+ENV_WITH_LOGIN = {**ALL_ENV, "MSG_SMTP_LOGIN_ID": "smtp_user", "MSG_SMTP_LOGIN_PASSWORD": "smtp_pass"}
 
 
 class TestNotificationInit(unittest.TestCase):
     @patch("bin.notification.Env.get")
     def test_init_with_all_env_vars(self, mock_env_get: MagicMock) -> None:
         mock_env_get.side_effect = _make_env_side_effect(ALL_ENV)
-        from bin.notification import Notification
-
         n = Notification()
         self.assertEqual(n.email_sender_address, "sender@example.com")
         self.assertEqual(n.email_sender_name, "Test Sender")
         self.assertEqual(len(n.email_recipient_list), 2)
         self.assertEqual(n.email_recipient_list[0], ("rcpt1@example.com", "Recipient1"))
-        self.assertEqual(n.naver_cloud_access_key, "naver_access_key")
-        self.assertEqual(n.nhn_cloud_appkey, "nhn_appkey")
-        # NHN cloud keys present -> send_msg should be _send_email_by_nhn_cloud
-        self.assertEqual(n.send_msg, n._send_email_by_nhn_cloud)
-
-    @patch("bin.notification.Env.get")
-    def test_init_missing_naver_cloud_keys(self, mock_env_get: MagicMock) -> None:
-        env_without_naver = {k: v for k, v in ALL_ENV.items() if "NAVER" not in k}
-        mock_env_get.side_effect = _make_env_side_effect(env_without_naver)
-        from bin.notification import Notification
-
-        n = Notification()
-        self.assertEqual(n.naver_cloud_access_key, "")
-        self.assertEqual(n.naver_cloud_secret_key, "")
-
-    @patch("bin.notification.Env.get")
-    def test_init_missing_nhn_cloud_keys(self, mock_env_get: MagicMock) -> None:
-        env_without_nhn = {k: v for k, v in ALL_ENV.items() if "NHN" not in k}
-        mock_env_get.side_effect = _make_env_side_effect(env_without_nhn)
-        from bin.notification import Notification
-
-        n = Notification()
-        self.assertEqual(n.nhn_cloud_appkey, "")
-        self.assertEqual(n.nhn_cloud_secretkey, "")
-        # Without NHN keys, send_msg stays as _send_email_by_smtp
+        self.assertEqual(n.email_recipient_list[1], ("rcpt2@example.com", "Recipient2"))
+        self.assertEqual(n.smtp_host, "smtp.example.com")
+        self.assertEqual(n.smtp_port, 25)
+        self.assertIsInstance(n.smtp_port, int)
+        # no auth configured by default
+        self.assertEqual(n.smtp_login_id, "")
+        self.assertEqual(n.smtp_login_password, "")
+        # smtp is the only send path
         self.assertEqual(n.send_msg, n._send_email_by_smtp)
 
-
-class TestMakeSignature(unittest.TestCase):
     @patch("bin.notification.Env.get")
-    def test_make_signature_returns_str_and_int(self, mock_env_get: MagicMock) -> None:
-        mock_env_get.side_effect = _make_env_side_effect(ALL_ENV)
-        from bin.notification import Notification
-
+    def test_init_port_defaults_to_25(self, mock_env_get: MagicMock) -> None:
+        env_without_port = {k: v for k, v in ALL_ENV.items() if k != "MSG_SMTP_PORT"}
+        mock_env_get.side_effect = _make_env_side_effect(env_without_port)
         n = Notification()
-        signature, timestamp = n._make_signature()
-        self.assertIsInstance(signature, str)
-        self.assertIsInstance(timestamp, int)
-        self.assertGreater(len(signature), 0)
-        self.assertGreater(timestamp, 0)
-
-
-class TestSendEmailByNaverCloud(unittest.TestCase):
-    def _create_notification(self, mock_env_get: MagicMock):
-        mock_env_get.side_effect = _make_env_side_effect(ALL_ENV)
-        from bin.notification import Notification
-
-        return Notification()
-
-    @patch("bin.notification.requests.post")
-    @patch("bin.notification.Env.get")
-    def test_success_200_with_count(self, mock_env_get: MagicMock, mock_post: MagicMock) -> None:
-        n = self._create_notification(mock_env_get)
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.content = b'{"count": 1}'
-        mock_post.return_value = mock_response
-        result = n._send_email_by_naver_cloud("test message", "subject")
-        self.assertTrue(result)
-
-    @patch("bin.notification.requests.post")
-    @patch("bin.notification.Env.get")
-    def test_success_201_with_count(self, mock_env_get: MagicMock, mock_post: MagicMock) -> None:
-        n = self._create_notification(mock_env_get)
-        mock_response = MagicMock()
-        mock_response.status_code = 201
-        mock_response.content = b'{"count": 2}'
-        mock_post.return_value = mock_response
-        result = n._send_email_by_naver_cloud("test message", "subject")
-        self.assertTrue(result)
-
-    @patch("bin.notification.requests.post")
-    @patch("bin.notification.Env.get")
-    def test_failure_400(self, mock_env_get: MagicMock, mock_post: MagicMock) -> None:
-        n = self._create_notification(mock_env_get)
-        mock_response = MagicMock()
-        mock_response.status_code = 400
-        mock_post.return_value = mock_response
-        result = n._send_email_by_naver_cloud("test message", "subject")
-        self.assertFalse(result)
-
-    @patch("bin.notification.requests.post")
-    @patch("bin.notification.Env.get")
-    def test_success_200_with_zero_count(self, mock_env_get: MagicMock, mock_post: MagicMock) -> None:
-        n = self._create_notification(mock_env_get)
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.content = b'{"count": 0}'
-        mock_post.return_value = mock_response
-        result = n._send_email_by_naver_cloud("test message", "subject")
-        self.assertFalse(result)
+        self.assertEqual(n.smtp_port, 25)
 
     @patch("bin.notification.Env.get")
-    def test_empty_msg(self, mock_env_get: MagicMock) -> None:
-        n = self._create_notification(mock_env_get)
-        result = n._send_email_by_naver_cloud("", "subject")
-        self.assertFalse(result)
-
-
-class TestSendEmailByNhnCloud(unittest.TestCase):
-    def _create_notification(self, mock_env_get: MagicMock):
-        mock_env_get.side_effect = _make_env_side_effect(ALL_ENV)
-        from bin.notification import Notification
-
-        return Notification()
-
-    @patch("bin.notification.requests.post")
-    @patch("bin.notification.Env.get")
-    def test_success_200(self, mock_env_get: MagicMock, mock_post: MagicMock) -> None:
-        n = self._create_notification(mock_env_get)
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_post.return_value = mock_response
-        result = n._send_email_by_nhn_cloud("test message", "subject")
-        self.assertTrue(result)
-
-    @patch("bin.notification.requests.post")
-    @patch("bin.notification.Env.get")
-    def test_failure_500(self, mock_env_get: MagicMock, mock_post: MagicMock) -> None:
-        n = self._create_notification(mock_env_get)
-        mock_response = MagicMock()
-        mock_response.status_code = 500
-        mock_post.return_value = mock_response
-        result = n._send_email_by_nhn_cloud("test message", "subject")
-        self.assertFalse(result)
+    def test_init_with_login_credentials(self, mock_env_get: MagicMock) -> None:
+        mock_env_get.side_effect = _make_env_side_effect(ENV_WITH_LOGIN)
+        n = Notification()
+        self.assertEqual(n.smtp_login_id, "smtp_user")
+        self.assertEqual(n.smtp_login_password, "smtp_pass")
 
     @patch("bin.notification.Env.get")
-    def test_empty_msg(self, mock_env_get: MagicMock) -> None:
-        n = self._create_notification(mock_env_get)
-        result = n._send_email_by_nhn_cloud("", "subject")
-        self.assertFalse(result)
+    def test_init_missing_smtp_server_is_empty(self, mock_env_get: MagicMock) -> None:
+        env_without_server = {k: v for k, v in ALL_ENV.items() if k != "MSG_SMTP_SERVER"}
+        mock_env_get.side_effect = _make_env_side_effect(env_without_server)
+        n = Notification()
+        self.assertEqual(n.smtp_host, "")
 
 
 class TestSendEmailBySmtp(unittest.TestCase):
-    def _create_notification(self, mock_env_get: MagicMock):
-        mock_env_get.side_effect = _make_env_side_effect(ALL_ENV)
-        from bin.notification import Notification
-
+    def _create_notification(self, mock_env_get: MagicMock, env: dict[str, str] = ALL_ENV) -> Notification:
+        mock_env_get.side_effect = _make_env_side_effect(env)
         return Notification()
 
-    @patch("bin.notification.mail1.send")
+    @patch("bin.notification.smtplib.SMTP")
     @patch("bin.notification.Env.get")
-    def test_success(self, mock_env_get: MagicMock, mock_send: MagicMock) -> None:
+    def test_success_no_auth(self, mock_env_get: MagicMock, mock_smtp_cls: MagicMock) -> None:
         n = self._create_notification(mock_env_get)
-        mock_send.return_value = None
+        smtp = mock_smtp_cls.return_value.__enter__.return_value
         result = n._send_email_by_smtp("test message", "subject")
         self.assertTrue(result)
-        mock_send.assert_called_once()
+        mock_smtp_cls.assert_called_once_with("smtp.example.com", 25, timeout=30)
+        smtp.send_message.assert_called_once()
+        # unauthenticated relay: no STARTTLS / login
+        smtp.starttls.assert_not_called()
+        smtp.login.assert_not_called()
+        # envelope sender and recipients passed explicitly
+        _, kwargs = smtp.send_message.call_args
+        self.assertEqual(kwargs["from_addr"], "sender@example.com")
+        self.assertEqual(kwargs["to_addrs"], ["rcpt1@example.com", "rcpt2@example.com"])
 
-    @patch("bin.notification.mail1.send")
+    @patch("bin.notification.smtplib.SMTP")
     @patch("bin.notification.Env.get")
-    def test_connection_refused(self, mock_env_get: MagicMock, mock_send: MagicMock) -> None:
+    def test_success_with_auth(self, mock_env_get: MagicMock, mock_smtp_cls: MagicMock) -> None:
+        n = self._create_notification(mock_env_get, ENV_WITH_LOGIN)
+        smtp = mock_smtp_cls.return_value.__enter__.return_value
+        result = n._send_email_by_smtp("test message", "subject")
+        self.assertTrue(result)
+        smtp.starttls.assert_called_once()
+        smtp.login.assert_called_once_with("smtp_user", "smtp_pass")
+        smtp.send_message.assert_called_once()
+
+    @patch("bin.notification.smtplib.SMTP")
+    @patch("bin.notification.Env.get")
+    def test_message_headers(self, mock_env_get: MagicMock, mock_smtp_cls: MagicMock) -> None:
         n = self._create_notification(mock_env_get)
-        mock_send.side_effect = ConnectionRefusedError("Connection refused")
+        smtp = mock_smtp_cls.return_value.__enter__.return_value
+        n._send_email_by_smtp("body text", "the subject")
+        sent_msg = smtp.send_message.call_args.args[0]
+        self.assertEqual(sent_msg["Subject"], "the subject")
+        self.assertEqual(sent_msg["From"], "Test Sender <sender@example.com>")
+        self.assertIn("rcpt1@example.com", sent_msg["To"])
+        self.assertEqual(sent_msg.get_content().strip(), "body text")
+
+    @patch("bin.notification.smtplib.SMTP")
+    @patch("bin.notification.Env.get")
+    def test_connection_refused(self, mock_env_get: MagicMock, mock_smtp_cls: MagicMock) -> None:
+        n = self._create_notification(mock_env_get)
+        mock_smtp_cls.side_effect = ConnectionRefusedError("Connection refused")
         result = n._send_email_by_smtp("test message", "subject")
         self.assertFalse(result)
 
+    @patch("bin.notification.smtplib.SMTP")
     @patch("bin.notification.Env.get")
-    def test_empty_msg(self, mock_env_get: MagicMock) -> None:
+    def test_smtp_exception(self, mock_env_get: MagicMock, mock_smtp_cls: MagicMock) -> None:
+        n = self._create_notification(mock_env_get)
+        smtp = mock_smtp_cls.return_value.__enter__.return_value
+        smtp.send_message.side_effect = smtplib.SMTPException("relay denied")
+        result = n._send_email_by_smtp("test message", "subject")
+        self.assertFalse(result)
+
+    @patch("bin.notification.smtplib.SMTP")
+    @patch("bin.notification.Env.get")
+    def test_empty_msg(self, mock_env_get: MagicMock, mock_smtp_cls: MagicMock) -> None:
         n = self._create_notification(mock_env_get)
         result = n._send_email_by_smtp("", "subject")
         self.assertFalse(result)
+        mock_smtp_cls.assert_not_called()
+
+
+@unittest.skipUnless(Path(_NOTIFICATION_ENV_FILE).is_file(), f"{_NOTIFICATION_ENV_FILE} not present")
+class TestSendMsgIntegration(unittest.TestCase):
+    """Real end-to-end send; runs only when an env file with live SMTP config exists."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        load_dotenv(_NOTIFICATION_ENV_FILE, override=True)
+
+    def test_send_msg(self) -> None:
+        notification = Notification()
+        actual = notification.send_msg("This is a message from python unittest", "Notification test")
+        self.assertTrue(actual)
 
 
 if __name__ == "__main__":
