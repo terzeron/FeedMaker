@@ -29,7 +29,10 @@ spec:
             - name: MYSQL_USER
               value: feedmaker
             - name: MYSQL_PASSWORD
-              value: micro170433
+              valueFrom:
+                secretKeyRef:
+                  name: fm-db-mysql
+                  key: mysql-password
 
             - name: FM_DB_HOST
               value: fm-db-mysql
