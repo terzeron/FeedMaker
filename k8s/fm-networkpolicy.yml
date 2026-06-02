@@ -1,0 +1,66 @@
+# NetworkPolicy for the feedmaker namespace (CIS k8s 5.3.2 / kubescape C-0260,C-0030).
+#
+# 설계 원칙:
+#   - fm-backend 는 크롤러라 임의의 외부 사이트로 egress 가 필요하다.
+#     따라서 egress 를 default-deny 하면 크롤이 깨진다 → egress 는 허용하고
+#     ingress 만 "정당한 출처"로 좁힌다 (가치의 대부분은 ingress 제한에 있다).
+#   - ingress 출처: traefik 게이트웨이(api-fm 라우트) + 같은 ns 의 fm-frontend(프록시).
+#   - fm-frontend ingress: traefik 게이트웨이뿐.
+#
+# 적용 전 주의: NetworkPolicy 는 CNI(여기선 calico/flannel)가 enforce 해야 효력이 있다.
+#   microk8s 는 'microk8s enable network-policy'(calico) 가 켜져 있어야 한다.
+#   flannel 단독이면 정책이 무시되므로 먼저 확인할 것.
+#
+# traefik 네임스페이스에 식별 라벨이 없다면 namespaceSelector 가 매칭되지 않는다.
+# 적용 전 확인:  kubectl get ns traefik --show-labels
+# 없으면:        kubectl label ns traefik kubernetes.io/metadata.name=traefik  (1.21+ 자동 부여됨)
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: fm-backend-policy
+  namespace: feedmaker
+spec:
+  podSelector:
+    matchLabels:
+      app: fm-backend-app
+  policyTypes:
+    - Ingress
+  ingress:
+    # traefik 게이트웨이(api-fm.terzeron.com → backend:8010)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: traefik
+      ports:
+        - protocol: TCP
+          port: 8010
+    # 같은 ns 의 frontend nginx 프록시(xml/pixel → backend:8010)
+    - from:
+        - podSelector:
+            matchLabels:
+              app: fm-frontend-app
+      ports:
+        - protocol: TCP
+          port: 8010
+  # egress 미지정 = 제한 없음 (크롤러 외부 접근 보존)
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: fm-frontend-policy
+  namespace: feedmaker
+spec:
+  podSelector:
+    matchLabels:
+      app: fm-frontend-app
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: traefik
+      ports:
+        - protocol: TCP
+          port: 8080
