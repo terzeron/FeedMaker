@@ -8,11 +8,34 @@ import socket
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, patch
 
 from bin.headless_browser_cloak import HeadlessBrowser, PlaywrightError, PlaywrightTimeoutError
+
+
+def _wait_for_proc_cmdline(pid: int, needle: str, timeout: float = 5.0) -> None:
+    """Block until a freshly spawned child's argv is visible in procfs.
+
+    subprocess.Popen returns the moment the child is forked, but /proc/<pid>/cmdline
+    stays empty until the child finishes execve and commits its new argv. A test that
+    reads cmdline inside that fork→exec window sees an empty buffer (~94% of the time
+    on a cold process under load), so the SingletonLock owner check misreads a live,
+    profile-owning process as "not the owner" and deletes its lock. Wait for the argv
+    to actually appear before exercising the lock logic so the test is deterministic.
+    """
+    deadline = time.monotonic() + timeout
+    needle_b = needle.encode()
+    while time.monotonic() < deadline:
+        try:
+            with open(f"/proc/{pid}/cmdline", "rb") as f:
+                if needle_b in f.read():
+                    return
+        except OSError:
+            pass
+        time.sleep(0.005)
 
 
 class TestHeadlessBrowserCloak(unittest.TestCase):
@@ -124,6 +147,10 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         proc = subprocess.Popen([sys.executable, "-c", "import sys, time; time.sleep(60)", str(profile_dir)])
         self.addCleanup(proc.wait)
         self.addCleanup(proc.kill)
+        # The owner check reads /proc/<pid>/cmdline; wait until execve has committed
+        # the argv (incl. profile_dir) so we test the live-owner steady state, not the
+        # fork→exec window where cmdline is still empty.
+        _wait_for_proc_cmdline(proc.pid, str(profile_dir))
 
         lock_path = profile_dir / "SingletonLock"
         lock_path.symlink_to(f"{socket.gethostname()}-{proc.pid}")
