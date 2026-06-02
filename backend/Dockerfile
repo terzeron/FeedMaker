@@ -8,6 +8,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     apt-get install -y --no-install-recommends \
     libpoppler-dev libpoppler-cpp-dev libheif-dev libcairo2-dev \
     build-essential git curl unzip gnupg ca-certificates chromium chromium-driver gosu && \
+    # base 패키지 보안 패치. chromium은 버전 핀 없이 debian 최신을 추적한다
+    # (시스템 chrome + 수동 chromedriver 정렬은 재빌드 타이밍으로 관리).
+    apt-get upgrade -y && \
     printf '#!/bin/sh\nexec /usr/lib/chromium/chrome_crashpad_handler.real "$@" --database=/tmp/crashpad 2>/dev/null || true\n' \
         > /usr/lib/chromium/chrome_crashpad_handler.wrapper && \
     mv /usr/lib/chromium/chrome_crashpad_handler /usr/lib/chromium/chrome_crashpad_handler.real && \
