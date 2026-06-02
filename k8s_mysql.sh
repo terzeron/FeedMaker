@@ -20,9 +20,11 @@ helm install mysql bitnami/mysql \
   --set auth.password=$MYSQL_PASSWORD \
   --set primary.persistence.enabled=true \
   --set primary.persistence.size=8Gi
-kubectl patch svc mysql -n feedmaker -p '{"spec":{"type":"LoadBalancer"}}'
+# DB는 ClusterIP로 유지 (외부 노출 금지). 외부 접근 필요 시 일시적으로 port-forward 사용:
+#   kubectl port-forward -n feedmaker svc/mysql 13306:3306
 kubectl get svc mysql -n feedmaker
-mysql -h $FM_DB_HOST -P $FM_DB_PORT -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "show databases"
+# 검증도 in-cluster로 (host에서 직접 접속하지 않음)
+kubectl exec -i -n feedmaker mysql-0 -- mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "show databases"
 
 # 초기 데이터 로딩
 echo "초기 데이터 로딩 중..."

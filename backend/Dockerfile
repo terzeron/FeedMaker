@@ -17,11 +17,13 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     build-essential git curl unzip gnupg ca-certificates && \
     apt-get upgrade -y
 
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    cp /root/.local/bin/uv /usr/local/bin/
+# uv: pinned official image (integrity-verified binary, no `curl | sh`) — SC-1
+COPY --from=ghcr.io/astral-sh/uv:0.11.18 /uv /usr/local/bin/uv
 
-# CartoonSplit (build-time clone; .git/test stripped)
+# CartoonSplit pinned to an explicit commit for reproducible builds — SC-2.
+# Bump deliberately: update the SHA after reviewing upstream changes.
 RUN git clone https://github.com/terzeron/CartoonSplit /app/CartoonSplit && \
+    git -C /app/CartoonSplit checkout 9360d6963cdff95967798b958c83ffa5a6079450 && \
     rm -rf /app/CartoonSplit/.git /app/CartoonSplit/test
 
 WORKDIR /app
