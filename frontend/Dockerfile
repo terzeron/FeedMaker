@@ -17,6 +17,10 @@ FROM nginxinc/nginx-unprivileged:1.25
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY frontend/default.conf /etc/nginx/conf.d
 
+# 명시적 비root 유저 (base 이미지가 uid 101 nginx 유저 제공)
+# HTTP health는 slim 이미지에 curl/wget이 없으므로 k8s httpGet probe로 처리한다.
+USER nginx
+
 EXPOSE 8080
 
 CMD ["nginx", "-g", "daemon off;"]
