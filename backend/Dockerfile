@@ -56,10 +56,16 @@ ENV FM_BACKEND_PORT=$FM_BACKEND_DEFAULT_PORT
 
 EXPOSE $FM_BACKEND_PORT
 
-# root로 전환하여 entrypoint에서 볼륨 권한 수정 후 앱 유저로 전환
+# root로 전환하여 / 에 entrypoint 배치
 USER root
 COPY backend/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+# 서버 응답 여부로 health 판정 (인증 라우트라 401도 "살아있음"으로 간주, -f 미사용)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -s -o /dev/null http://localhost:8010/auth/me || exit 1
+
+# 이미지 최종 USER는 비root (k8s securityContext runAsUser:1000 과 일치)
+USER $USER_NAME
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["uvicorn", "backend.main:app", "--workers", "1", "--host", "0.0.0.0", "--port", "8010", "--log-level", "debug", "--access-log", "--log-config", "/app/logging.conf"]

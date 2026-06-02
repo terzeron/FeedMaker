@@ -18,11 +18,31 @@ spec:
         runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: fm-backend
           image: registry.terzeron.com/terzeron/fm_backend:latest
+          # readOnlyRootFilesystem 미적용: 앱이 /app/run.log(rootfs)에 로깅하므로
+          # 켜면 로깅이 깨진다. logging.conf 경로 변경 후 별도 적용 예정.
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
           ports:
             - containerPort: 8010
+          readinessProbe:
+            tcpSocket:
+              port: 8010
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          livenessProbe:
+            tcpSocket:
+              port: 8010
+            initialDelaySeconds: 30
+            periodSeconds: 20
           env:
             # --- topology constants (pod-specific; intentionally NOT sourced from .env,
             #     whose values are host-local: FM_DB_HOST/paths differ in the pod) ---
@@ -135,6 +155,10 @@ spec:
               mountPath: /xml
             - name: fma-pvc
               mountPath: /fma
+            - name: tmp
+              mountPath: /tmp
+            - name: dshm
+              mountPath: /dev/shm
       volumes:
         - name: public-html-xml-pvc
           persistentVolumeClaim:
@@ -142,6 +166,12 @@ spec:
         - name: fma-pvc
           persistentVolumeClaim:
             claimName: fma-pvc
+        - name: tmp
+          emptyDir: {}
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
 
 ---
 apiVersion: apps/v1
@@ -163,11 +193,38 @@ spec:
         runAsNonRoot: true
         runAsUser: 101
         runAsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: fm-frontend
           image: registry.terzeron.com/terzeron/fm_frontend:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           ports:
             - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          volumeMounts:
+            # nginx-unprivileged: pid/temp 전부 /tmp 사용 → readOnlyRootFilesystem 호환
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
 
 ---
 apiVersion: v1
