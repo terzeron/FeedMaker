@@ -14,6 +14,8 @@ spec:
       labels:
         app: fm-backend-app
     spec:
+      # 앱이 k8s API를 호출하지 않으므로 SA 토큰 자동 마운트 차단 (CIS 5.1.6 / kubescape C-0034)
+      automountServiceAccountToken: false
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000
@@ -31,6 +33,15 @@ spec:
             capabilities:
               drop:
                 - ALL
+          # 시작값(실측 후 튜닝 필요). chromium 크롤은 메모리 스파이크가 크므로
+          # limit이 낮으면 크롤 중 OOM-kill 위험 — 넉넉히 잡음. (CIS / kubescape C-0270,C-0271)
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
           ports:
             - containerPort: 8010
           readinessProbe:
@@ -189,6 +200,7 @@ spec:
       labels:
         app: fm-frontend-app
     spec:
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 101
@@ -204,6 +216,13 @@ spec:
             capabilities:
               drop:
                 - ALL
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
           ports:
             - containerPort: 8080
           readinessProbe:
