@@ -46,7 +46,7 @@
     "@playwright/test": "^1.60.0",
     "@vitejs/plugin-basic-ssl": "^2.3.0",
     "@vitejs/plugin-vue": "^6.0.7",
-    "@vitest/coverage-v8": "^4.1.7",
+    "@vitest/coverage-v8": "^4.1.8",
     "@vue/test-utils": "^2.4.10",
     "cross-env": "^10.1.0",
     "eslint": "^9.39.4",
