@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM node:22.16.0 AS build
+FROM node:22.16.0@sha256:71bcbb3b215b3fa84b5b167585675072f4c270855e37a599803f1a58141a0716 AS build
 
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
@@ -12,7 +12,7 @@ RUN GIT_COMMIT=$GIT_COMMIT npm run build
 
 # non-root nginx: master/worker 모두 uid 101로 실행, pid/temp는 /tmp 사용.
 # 8080(>=1024) 바인딩이므로 privileged port가 필요 없어 root 없이 동작한다.
-FROM nginxinc/nginx-unprivileged:1.25
+FROM nginxinc/nginx-unprivileged:1.25@sha256:77e4b763b46ed8be6da1e8cc6386e3965411ea8e86f1c8f254a868d66657bddc
 
 # base OS 보안 패치 적용 (apt는 root 필요 → 작업 후 비root로 복귀)
 USER root
