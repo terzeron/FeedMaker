@@ -1621,5 +1621,27 @@ class TestUncoveredBranches(unittest.TestCase):
         self.assertEqual(untranslated, 1)
 
 
+class TestClaudePromptHardening(unittest.TestCase):
+    """prompt-injection 방어(시스템 프롬프트 + 출력 escape) 회귀 가드."""
+
+    def test_system_prompt_treats_input_as_data(self):
+        prompt = ClaudeTranslationService.SYSTEM_PROMPT.lower()
+        self.assertIn("opaque text", prompt)
+        self.assertTrue(("never" in prompt) or ("ignore" in prompt), "instruction-injection 무시 문구가 있어야 함")
+        self.assertIn("json array", prompt)
+
+    @patch("utils.translation.TranslationServiceFactory.create_services")
+    def test_translate_html_escapes_injected_output(self, mock_create):
+        """LLM 출력에 HTML 이 섞여도 NavigableString 치환으로 escape 되어 XSS 로 이어지지 않는다."""
+        mock_svc = MagicMock()
+        mock_svc.provider = TranslationProvider.DEEPL
+        mock_svc.translate_batch.return_value = {"Hello": "<script>alert(1)</script>"}
+        mock_create.return_value = [mock_svc]
+        with patch.object(Translation, "_load_translation_cache", return_value=({}, {})), patch.object(Translation, "_save_translation_cache"):
+            result, _ = translate_html("<p>Hello</p>")
+        self.assertNotIn("<script>alert(1)</script>", result)
+        self.assertIn("&lt;script&gt;", result)
+
+
 if __name__ == "__main__":
     unittest.main()
