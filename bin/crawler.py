@@ -192,7 +192,7 @@ class RequestsClient:
             piece = f"{name}={value}"
             extra = len(piece.encode("utf-8")) + (2 if i > 0 else 0)
             if total + extra > RequestsClient.MAX_COOKIE_HEADER_SIZE:
-                LOGGER.info("Trimming cookies: kept %d of %d (Cookie header capped at %d bytes)", len(kept), len(self.cookies), RequestsClient.MAX_COOKIE_HEADER_SIZE)
+                LOGGER.debug("Trimming cookies: kept %d of %d (Cookie header capped at %d bytes)", len(kept), len(self.cookies), RequestsClient.MAX_COOKIE_HEADER_SIZE)
                 break
             total += extra
             kept[name] = value
