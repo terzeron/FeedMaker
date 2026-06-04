@@ -3,6 +3,7 @@
 
 
 import sys
+import uuid
 import logging
 import logging.config
 from enum import Enum
@@ -23,7 +24,8 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from backend.feed_maker_manager import FeedMakerManager
-from backend.auth import SESSION_COOKIE_NAME, clear_session_cookie, create_session, delete_session, get_current_user, require_admin, set_session_cookie, verify_facebook_token
+from backend.auth import SESSION_COOKIE_NAME, clear_session_cookie, create_session, delete_session, get_current_user, is_login_locked, record_login_failure, require_admin, reset_login_failures, set_session_cookie, verify_facebook_token
+from backend.audit import audit_log, request_id_var
 from bin.feed_maker_util import Env
 from bin.access_log_manager import AccessLogManager
 from bin.db import DB
@@ -94,6 +96,23 @@ async def auth_middleware(request: Request, call_next: Any) -> Response:
     return response
 
 
+@app.middleware("http")
+async def request_id_middleware(request: Request, call_next: Any) -> Response:
+    """요청마다 상관(correlation) ID를 부여해 audit 로그 추적을 가능하게 한다.
+
+    auth_middleware보다 나중에 등록되어 가장 바깥에서 동작하므로,
+    인증/인가 audit 로그에도 request_id가 채워진다.
+    """
+    rid = request.headers.get("X-Request-ID") or uuid.uuid4().hex[:16]
+    token = request_id_var.set(rid)
+    try:
+        response: Response = await call_next(request)
+    finally:
+        request_id_var.reset(token)
+    response.headers["X-Request-ID"] = rid
+    return response
+
+
 @app.exception_handler(ValueError)
 async def value_error_handler(_request: Request, exc: ValueError) -> JSONResponse:
     LOGGER.warning("Invalid input: %s", exc)
@@ -144,14 +163,23 @@ async def login(request: Request, body: LoginRequest) -> JSONResponse:
     client_ip = request.client.host if request.client else "unknown"
     LOGGER.info("POST /auth/login -> login(%s) from %s", body.email, client_ip)
 
+    # Brute-force 방어: 반복 실패로 잠긴 (email, IP) 조합은 차단
+    if is_login_locked(body.email, client_ip):
+        audit_log("login_locked", email=body.email, outcome="locked", request=request)
+        raise HTTPException(status_code=429, detail="로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.")
+
     # Facebook 토큰 검증
     if not verify_facebook_token(body.access_token, body.email):
+        record_login_failure(body.email, client_ip)
+        audit_log("login_failed", email=body.email, outcome="invalid_token", request=request)
         LOGGER.warning("Facebook token verification failed for %s from %s", body.email, client_ip)
         raise HTTPException(status_code=401, detail="Facebook 토큰 검증에 실패했습니다.")
 
     # 허용된 이메일 목록 확인
     login_allowed_email_list = Env.get("FM_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST", "").split(",")
     if body.email not in login_allowed_email_list:
+        record_login_failure(body.email, client_ip)
+        audit_log("login_denied", email=body.email, outcome="not_allowed", request=request)
         LOGGER.warning("Unauthorized login attempt for %s from %s", body.email, client_ip)
         raise HTTPException(status_code=403, detail="이메일이 허용되지 않았습니다.")
 
@@ -164,6 +192,8 @@ async def login(request: Request, body: LoginRequest) -> JSONResponse:
         # httpOnly 쿠키 설정 (SameSite=Lax로 CSRF 방어)
         set_session_cookie(response, session_id)
 
+        reset_login_failures(body.email, client_ip)
+        audit_log("login_success", email=body.email, outcome="success", request=request)
         return response
     except Exception as e:
         LOGGER.error("Login failed for %s: %s", body.email, e)
@@ -179,9 +209,12 @@ async def logout(request: Request) -> JSONResponse:
     """
     LOGGER.info("POST /auth/logout -> logout()")
 
+    user_session = get_current_user(request)
+    email = user_session.user_email if user_session else "-"
     session_id = request.cookies.get("session_id")
     if session_id:
         delete_session(session_id)
+    audit_log("logout", email=email, outcome="success", request=request)
 
     response = JSONResponse(content={"status": "success", "message": "로그아웃되었습니다."})
 

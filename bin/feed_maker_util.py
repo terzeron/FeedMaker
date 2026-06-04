@@ -362,6 +362,16 @@ class Env:
         return value
 
 
+_SENSITIVE_HEADER_KEYS = {"authorization", "cookie", "set-cookie", "x-api-key", "x-auth-token", "proxy-authorization"}
+
+
+def redact_headers(headers: Optional[dict[str, str]]) -> dict[str, str]:
+    """로그 출력용으로 민감한 헤더(Authorization, Cookie 등) 값을 마스킹한 사본을 반환한다."""
+    if not headers:
+        return {}
+    return {k: ("***REDACTED***" if k.lower() in _SENSITIVE_HEADER_KEYS else v) for k, v in headers.items()}
+
+
 class URLSafety:
     _ALLOWED_SCHEMES = {"http", "https"}
 

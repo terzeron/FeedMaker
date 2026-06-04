@@ -19,7 +19,7 @@ import urllib3
 import requests
 from requests.cookies import RequestsCookieJar
 
-from bin.feed_maker_util import PathUtil, Env, URLSafety
+from bin.feed_maker_util import PathUtil, Env, URLSafety, redact_headers
 from bin.headless_browser_cloak import HeadlessBrowser
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -74,6 +74,14 @@ class LoginManager:
         config_file = dir_path / LoginManager.LOGIN_CONFIG_FILE
         if not config_file.is_file():
             return None
+        # 자격증명(id/password) 평문 파일이 group/other 에 노출돼 있으면 0o600 으로 좁힌다.
+        try:
+            mode = config_file.stat().st_mode
+            if mode & 0o077:
+                os.chmod(config_file, 0o600)
+                LOGGER.warning("Tightened permissions of credential file %s to 0600 (was %o)", config_file, mode & 0o777)
+        except OSError as e:
+            LOGGER.warning("Failed to check/adjust permissions of %s: %s", config_file, e)
         try:
             with config_file.open("r", encoding="utf-8") as f:
                 config: dict[str, str] = json.load(f)
@@ -132,7 +140,7 @@ class RequestsClient:
     MAX_COOKIE_HEADER_SIZE = 4096
 
     def __init__(self, *, dir_path: Path = Path.cwd(), render_js: bool = False, method: Method = Method.GET, headers: Optional[Headers] = None, timeout: int = 60, encoding: str = "utf-8", verify_ssl: bool = True) -> None:
-        LOGGER.debug("# RequestsClient(dir_path=%s, render_js=%s, method=%s, headers=%r, timeout=%d, encoding=%s, verify_ssl=%s)", PathUtil.short_path(dir_path), render_js, method, headers, timeout, encoding, verify_ssl)
+        LOGGER.debug("# RequestsClient(dir_path=%s, render_js=%s, method=%s, headers=%r, timeout=%d, encoding=%s, verify_ssl=%s)", PathUtil.short_path(dir_path), render_js, method, redact_headers(headers), timeout, encoding, verify_ssl)
         self.dir_path: Path = dir_path
         self.method: Method = method
         self.timeout: int = timeout
