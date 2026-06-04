@@ -34,7 +34,8 @@ RUN --mount=type=cache,target=/tmp/uv-cache \
     uv sync --locked --no-editable
 
 # ---------------------------------------------------------------------------
-# Stage 2: runtime — no compilers, no git
+# Stage 2: runtime — no compilers. git IS required: FeedMakerManager uses GitPython
+# (Repo/index.commit) to version feed configs, so the git executable must be present.
 # ---------------------------------------------------------------------------
 FROM python:3.12-slim@sha256:090ba77e2958f6af52a5341f788b50b032dd4ca28377d2893dcf1ecbdfdfe203
 
@@ -45,7 +46,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-    chromium chromium-driver gosu curl ca-certificates \
+    chromium chromium-driver gosu curl ca-certificates git \
     libpoppler-cpp2 libpoppler147 libheif1 \
     libcairo2 libcairo-gobject2 \
     libfontconfig1 libfreetype6 libjpeg62-turbo libpng16-16t64 && \
