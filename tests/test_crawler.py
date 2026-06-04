@@ -398,6 +398,32 @@ class TestRequestsClientCookieFiles(unittest.TestCase):
         self.client.read_cookies_from_file()
         self.assertEqual(self.client.cookies, {})
 
+    def test_write_cookies_caps_header_size(self):
+        # First persist an essential session cookie so it sits at the front.
+        session_jar = RequestsCookieJar()
+        session_jar.set("PHPSESSID", "sess123")
+        self.client.write_cookies_to_file(session_jar)
+
+        # Then flood with per-item tracking cookies that exceed the cap.
+        junk_jar = RequestsCookieJar()
+        for i in range(2000):
+            junk_jar.set(f"market-{i}", "1")
+        self.client.cookies = {}
+        self.client.write_cookies_to_file(junk_jar)
+
+        self.client.cookies = {}
+        self.client.read_cookies_from_file()
+        header = "; ".join(f"{k}={v}" for k, v in self.client.cookies.items())
+        self.assertLessEqual(len(header.encode("utf-8")), RequestsClient.MAX_COOKIE_HEADER_SIZE)
+        # Oldest (session) cookie survives; not all junk fits.
+        self.assertEqual(self.client.cookies["PHPSESSID"], "sess123")
+        self.assertLess(len(self.client.cookies), 2001)
+
+    def test_trim_cookies_keeps_all_when_under_cap(self):
+        self.client.cookies = {"a": "1", "b": "2", "c": "3"}
+        self.client._trim_cookies()
+        self.assertEqual(self.client.cookies, {"a": "1", "b": "2", "c": "3"})
+
     def tearDown(self):
         cookie_file = self.tmp / RequestsClient.COOKIE_FILE
         cookie_file.unlink(missing_ok=True)

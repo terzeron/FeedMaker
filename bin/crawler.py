@@ -124,6 +124,12 @@ class Method(Enum):
 
 class RequestsClient:
     COOKIE_FILE = "cookies.requestsclient.json"
+    # Cap the persisted/sent Cookie header so per-item tracking cookies (e.g.
+    # mmzone's "market-<id>=1") can't accumulate unbounded and push the header
+    # past the server's limit (Apache LimitRequestFieldSize ~8190B), which the
+    # server rejects with 400. Oldest cookies (typically session/login ones,
+    # set first) are kept; newest excess is dropped to fit the cap.
+    MAX_COOKIE_HEADER_SIZE = 4096
 
     def __init__(self, *, dir_path: Path = Path.cwd(), render_js: bool = False, method: Method = Method.GET, headers: Optional[Headers] = None, timeout: int = 60, encoding: str = "utf-8", verify_ssl: bool = True) -> None:
         LOGGER.debug("# RequestsClient(dir_path=%s, render_js=%s, method=%s, headers=%r, timeout=%d, encoding=%s, verify_ssl=%s)", PathUtil.short_path(dir_path), render_js, method, headers, timeout, encoding, verify_ssl)
@@ -162,10 +168,27 @@ class RequestsClient:
         self.read_cookies_from_file()
         for k, v in cookies.items():
             self.cookies[k] = v
+        self._trim_cookies()
         cookie_data = [{"name": k, "value": v} for k, v in self.cookies.items()]
         cookie_file = self._get_cookie_dir() / RequestsClient.COOKIE_FILE
         with cookie_file.open("w", encoding="utf-8") as f:
             json.dump(cookie_data, f, indent=2, ensure_ascii=False)
+
+    def _trim_cookies(self) -> None:
+        # Keep cookies in insertion order until the joined "name=value; ..."
+        # Cookie header would exceed MAX_COOKIE_HEADER_SIZE, then drop the rest.
+        # Session/login cookies are normally set first, so they survive.
+        total = 0
+        kept: Cookies = {}
+        for i, (name, value) in enumerate(self.cookies.items()):
+            piece = f"{name}={value}"
+            extra = len(piece.encode("utf-8")) + (2 if i > 0 else 0)
+            if total + extra > RequestsClient.MAX_COOKIE_HEADER_SIZE:
+                LOGGER.info("Trimming cookies: kept %d of %d (Cookie header capped at %d bytes)", len(kept), len(self.cookies), RequestsClient.MAX_COOKIE_HEADER_SIZE)
+                break
+            total += extra
+            kept[name] = value
+        self.cookies = kept
 
     def read_cookies_from_file(self) -> None:
         cookie_file = self._get_cookie_dir() / RequestsClient.COOKIE_FILE
