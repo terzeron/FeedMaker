@@ -1091,6 +1091,16 @@ class TestLoginManagerLoadConfig(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertNotIn("id_field", result)
 
+    def test_load_tightens_loose_permissions(self):
+        """A5: group/other 권한이 있는 자격증명 파일은 로드 시 0o600 으로 좁힌다."""
+        config_data = {"login_url": "http://example.com/login", "id": "user1", "password": "pass1"}
+        f = self.tmp / ".login.json"
+        f.write_text(json.dumps(config_data), encoding="utf-8")
+        f.chmod(0o644)
+        result = LoginManager.load_login_config(self.tmp)
+        self.assertIsNotNone(result)
+        self.assertEqual(f.stat().st_mode & 0o777, 0o600)
+
     def tearDown(self):
         login_file = self.tmp / ".login.json"
         login_file.unlink(missing_ok=True)

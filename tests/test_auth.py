@@ -477,6 +477,148 @@ class TestSetAndClearSessionCookie(unittest.TestCase):
         response.delete_cookie.assert_called_once()
 
 
+class TestRequireAdminRoleSeparation(unittest.TestCase):
+    """A4: FM_ADMIN_EMAIL_LIST로 '로그인 가능 != 관리자' 분리."""
+
+    @staticmethod
+    def _env_side(values):
+        def _get(key, default=""):
+            return values.get(key, default)
+
+        return _get
+
+    @patch("backend.auth.Env.get")
+    @patch("backend.auth.require_auth")
+    def test_login_allowed_but_not_admin(self, mock_auth, mock_env) -> None:
+        """로그인 허용 목록에는 있지만 admin 목록에 없으면 403."""
+        mock_user = MagicMock()
+        mock_user.user_email = "user@example.com"
+        mock_auth.return_value = mock_user
+        mock_env.side_effect = self._env_side({"FM_ADMIN_EMAIL_LIST": "admin@example.com", "FM_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST": "admin@example.com,user@example.com"})
+
+        from backend.auth import require_admin
+
+        with self.assertRaises(HTTPException) as ctx:
+            require_admin(MagicMock())
+        self.assertEqual(ctx.exception.status_code, 403)
+
+    @patch("backend.auth.Env.get")
+    @patch("backend.auth.require_auth")
+    def test_admin_in_admin_list(self, mock_auth, mock_env) -> None:
+        mock_user = MagicMock()
+        mock_user.user_email = "admin@example.com"
+        mock_auth.return_value = mock_user
+        mock_env.side_effect = self._env_side({"FM_ADMIN_EMAIL_LIST": "admin@example.com", "FM_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST": "admin@example.com,user@example.com"})
+
+        from backend.auth import require_admin
+
+        result = require_admin(MagicMock())
+        self.assertEqual(result, mock_user)
+
+    @patch("backend.auth.Env.get")
+    @patch("backend.auth.require_auth")
+    def test_fallback_to_login_list_when_admin_list_unset(self, mock_auth, mock_env) -> None:
+        """FM_ADMIN_EMAIL_LIST 미설정 시 로그인 허용 목록으로 폴백(하위 호환)."""
+        mock_user = MagicMock()
+        mock_user.user_email = "user@example.com"
+        mock_auth.return_value = mock_user
+        mock_env.side_effect = self._env_side({"FM_ADMIN_EMAIL_LIST": "", "FM_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST": "user@example.com"})
+
+        from backend.auth import require_admin
+
+        result = require_admin(MagicMock())
+        self.assertEqual(result, mock_user)
+
+
+class TestLoginLockout(unittest.TestCase):
+    """A3: 로그인 실패 기반 인메모리 계정 잠금."""
+
+    def setUp(self) -> None:
+        import backend.auth as auth_module
+
+        auth_module._login_failures.clear()
+
+    def test_locks_after_max_failures(self) -> None:
+        from backend.auth import LOGIN_MAX_FAILURES, is_login_locked, record_login_failure
+
+        email, ip = "victim@example.com", "1.2.3.4"
+        self.assertFalse(is_login_locked(email, ip))
+        for _ in range(LOGIN_MAX_FAILURES):
+            record_login_failure(email, ip)
+        self.assertTrue(is_login_locked(email, ip))
+
+    def test_reset_clears_lock(self) -> None:
+        from backend.auth import LOGIN_MAX_FAILURES, is_login_locked, record_login_failure, reset_login_failures
+
+        email, ip = "victim2@example.com", "1.2.3.4"
+        for _ in range(LOGIN_MAX_FAILURES):
+            record_login_failure(email, ip)
+        self.assertTrue(is_login_locked(email, ip))
+        reset_login_failures(email, ip)
+        self.assertFalse(is_login_locked(email, ip))
+
+    def test_below_threshold_not_locked(self) -> None:
+        from backend.auth import LOGIN_MAX_FAILURES, is_login_locked, record_login_failure
+
+        email, ip = "victim3@example.com", "1.2.3.4"
+        for _ in range(LOGIN_MAX_FAILURES - 1):
+            record_login_failure(email, ip)
+        self.assertFalse(is_login_locked(email, ip))
+
+    def test_expired_lock_auto_released(self) -> None:
+        """locked_until 이 과거면 자동 해제된다."""
+        import backend.auth as auth_module
+        from backend.auth import is_login_locked
+
+        key = auth_module._login_fail_key("victim4@example.com", "1.2.3.4")
+        auth_module._login_failures[key] = {"count": 99, "locked_until": datetime.now(timezone.utc) - timedelta(minutes=1)}
+        self.assertFalse(is_login_locked("victim4@example.com", "1.2.3.4"))
+
+
+class TestAuditLog(unittest.TestCase):
+    """A2: 구조화 audit 로그 출력."""
+
+    def test_emits_structured_json(self) -> None:
+        from backend.audit import audit_log
+
+        with self.assertLogs("audit", level="INFO") as cm:
+            audit_log("login_success", email="user@example.com", outcome="success")
+        joined = "\n".join(cm.output)
+        self.assertIn("AUDIT", joined)
+        self.assertIn("login_success", joined)
+        self.assertIn("user@example.com", joined)
+
+    def test_does_not_raise_on_magicmock_request(self) -> None:
+        """request가 직렬화 불가 객체여도 예외를 던지지 않는다."""
+        from backend.audit import audit_log
+
+        with self.assertLogs("audit", level="INFO"):
+            audit_log("admin_action", email="a@b.com", outcome="authorized", request=MagicMock())
+
+
+class TestRedactHeaders(unittest.TestCase):
+    """A1: 로그용 민감 헤더 마스킹."""
+
+    def test_masks_sensitive_headers(self) -> None:
+        from bin.feed_maker_util import redact_headers
+
+        result = redact_headers({"Authorization": "Bearer secret", "Cookie": "sid=abc", "User-Agent": "x"})
+        self.assertEqual(result["Authorization"], "***REDACTED***")
+        self.assertEqual(result["Cookie"], "***REDACTED***")
+        self.assertEqual(result["User-Agent"], "x")
+
+    def test_case_insensitive(self) -> None:
+        from bin.feed_maker_util import redact_headers
+
+        result = redact_headers({"authorization": "Bearer x"})
+        self.assertEqual(result["authorization"], "***REDACTED***")
+
+    def test_none_returns_empty(self) -> None:
+        from bin.feed_maker_util import redact_headers
+
+        self.assertEqual(redact_headers(None), {})
+
+
 class TestGetCookieDomainSinglePartHost(unittest.TestCase):
     """get_cookie_domain: single-part host that is not localhost/IP → covers L51"""
 

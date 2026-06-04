@@ -7,7 +7,7 @@
 # ---------------------------------------------------------------------------
 # Stage 1: builder — compiles the venv and clones CartoonSplit
 # ---------------------------------------------------------------------------
-FROM python:3.12-slim AS builder
+FROM python:3.12-slim@sha256:090ba77e2958f6af52a5341f788b50b032dd4ca28377d2893dcf1ecbdfdfe203 AS builder
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
@@ -17,8 +17,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     build-essential git curl unzip gnupg ca-certificates && \
     apt-get upgrade -y
 
-# uv: pinned official image (integrity-verified binary, no `curl | sh`) — SC-1
-COPY --from=ghcr.io/astral-sh/uv:0.11.18 /uv /usr/local/bin/uv
+# uv: pinned official image by digest (integrity-verified binary, no `curl | sh`) — SC-1
+COPY --from=ghcr.io/astral-sh/uv:0.11.18@sha256:78bc42400d77b0678ba95765305c826652ed5431f399257271dda681d0318f03 /uv /usr/local/bin/uv
 
 # CartoonSplit pinned to an explicit commit for reproducible builds — SC-2.
 # Bump deliberately: update the SHA after reviewing upstream changes.
@@ -36,7 +36,7 @@ RUN --mount=type=cache,target=/tmp/uv-cache \
 # ---------------------------------------------------------------------------
 # Stage 2: runtime — no compilers, no git
 # ---------------------------------------------------------------------------
-FROM python:3.12-slim
+FROM python:3.12-slim@sha256:090ba77e2958f6af52a5341f788b50b032dd4ca28377d2893dcf1ecbdfdfe203
 
 # Runtime-only: chromium engine + gosu + curl(HEALTHCHECK) + shared libs that the
 # compiled wheels (poppler/heif/cairo) link against. Package names resolved from the

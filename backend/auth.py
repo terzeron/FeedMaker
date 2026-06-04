@@ -3,8 +3,9 @@
 
 import secrets
 import logging
+import threading
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Any, Optional
 from urllib.parse import urlparse
 import requests as http_requests
 from fastapi import HTTPException, Request, Response
@@ -13,6 +14,7 @@ from fastapi.responses import JSONResponse
 from bin.db import DB
 from bin.models import UserSession
 from bin.feed_maker_util import Env
+from backend.audit import audit_log
 
 LOGGER = logging.getLogger(__name__)
 
@@ -174,9 +176,22 @@ def require_auth(request: Request) -> UserSession:
     return user_session
 
 
-def _get_admin_email_set() -> set[str]:
+def _get_login_allowed_email_set() -> set[str]:
     raw = Env.get("FM_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST", "")
     return {email.strip() for email in raw.split(",") if email.strip()}
+
+
+def _get_admin_email_set() -> set[str]:
+    """관리자 이메일 집합.
+
+    FM_ADMIN_EMAIL_LIST가 설정되면 그 목록만 관리자로 본다(role 분리: 로그인 가능 != 관리자).
+    미설정 시 하위 호환을 위해 로그인 허용 목록 전체를 관리자로 폴백한다(경고).
+    """
+    raw = Env.get("FM_ADMIN_EMAIL_LIST", "").strip()
+    if raw:
+        return {email.strip() for email in raw.split(",") if email.strip()}
+    LOGGER.warning("FM_ADMIN_EMAIL_LIST not set; falling back to login-allowed emails as admins (no role separation)")
+    return _get_login_allowed_email_set()
 
 
 def require_admin(request: Request) -> UserSession:
@@ -184,8 +199,57 @@ def require_admin(request: Request) -> UserSession:
     user_session = require_auth(request)
     admin_emails = _get_admin_email_set()
     if not admin_emails or user_session.user_email not in admin_emails:
+        audit_log("admin_denied", email=user_session.user_email, outcome="forbidden", request=request)
         raise HTTPException(status_code=403, detail="Not authorized")
+    audit_log("admin_action", email=user_session.user_email, outcome="authorized", request=request)
     return user_session
+
+
+# --- Brute-force 방어: 로그인 실패 기반 계정 잠금 (인메모리) ---
+LOGIN_MAX_FAILURES = 5
+LOGIN_LOCKOUT_MINUTES = 15
+_login_fail_lock = threading.Lock()
+# key -> {"count": int, "locked_until": Optional[datetime]}
+_login_failures: dict[str, dict[str, Any]] = {}
+
+
+def _login_fail_key(email: str, client_ip: str) -> str:
+    return f"{email.lower()}|{client_ip}"
+
+
+def is_login_locked(email: str, client_ip: str) -> bool:
+    """현재 잠금 상태면 True. 만료된 잠금은 자동 해제한다."""
+    key = _login_fail_key(email, client_ip)
+    now = datetime.now(timezone.utc)
+    with _login_fail_lock:
+        entry = _login_failures.get(key)
+        if not entry:
+            return False
+        locked_until = entry.get("locked_until")
+        if locked_until and locked_until > now:
+            return True
+        if locked_until and locked_until <= now:
+            _login_failures.pop(key, None)
+        return False
+
+
+def record_login_failure(email: str, client_ip: str) -> None:
+    """로그인 실패 1회 기록. 임계치 도달 시 잠금을 건다."""
+    key = _login_fail_key(email, client_ip)
+    now = datetime.now(timezone.utc)
+    with _login_fail_lock:
+        entry = _login_failures.get(key) or {"count": 0, "locked_until": None}
+        entry["count"] += 1
+        if entry["count"] >= LOGIN_MAX_FAILURES:
+            entry["locked_until"] = now + timedelta(minutes=LOGIN_LOCKOUT_MINUTES)
+        _login_failures[key] = entry
+
+
+def reset_login_failures(email: str, client_ip: str) -> None:
+    """로그인 성공 시 실패 카운터를 초기화한다."""
+    key = _login_fail_key(email, client_ip)
+    with _login_fail_lock:
+        _login_failures.pop(key, None)
 
 
 def set_session_cookie(response: Response, session_id: str) -> None:
