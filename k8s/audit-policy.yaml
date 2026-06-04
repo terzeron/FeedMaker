@@ -1,0 +1,28 @@
+# CP-4: kube-apiserver 감사(audit) 정책 — 최소 Metadata 레벨.
+# 적용: kube-apiserver 인자에 --audit-policy-file 로 이 파일 경로를 지정한다.
+# (cis-hardening-apply.sh 가 ${SNAP_DATA}/args/audit-policy.yaml 로 복사한다)
+apiVersion: audit.k8s.io/v1
+kind: Policy
+# 노이즈 큰 read-only/health 류는 기록하지 않는다.
+omitStages:
+  - RequestReceived
+rules:
+  # 민감 리소스(secret/configmap) 접근은 Metadata 로 남긴다(본문 비기록).
+  - level: Metadata
+    resources:
+      - group: ""
+        resources: ["secrets", "configmaps", "serviceaccounts/token"]
+  # 인증/인가 관련 변경(rolebinding 등)은 Metadata.
+  - level: Metadata
+    resources:
+      - group: "rbac.authorization.k8s.io"
+        resources:
+          ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
+  # 쓰기성 동작(create/update/patch/delete)은 Metadata 로 기록.
+  - level: Metadata
+    verbs: ["create", "update", "patch", "delete", "deletecollection"]
+  # 잡음 억제: 읽기 전용/조회는 기록하지 않음.
+  - level: None
+    verbs: ["get", "list", "watch"]
+  # 그 외 기본은 Metadata.
+  - level: Metadata
