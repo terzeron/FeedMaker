@@ -377,36 +377,6 @@ class TestResvgPy(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# 14. Selenium
-# ---------------------------------------------------------------------------
-class TestSelenium(unittest.TestCase):
-    def test_imports(self) -> None:
-        from selenium import webdriver
-        from selenium.webdriver.common.by import By
-        from selenium.webdriver.support import expected_conditions
-
-        self.assertTrue(hasattr(webdriver, "Chrome"))
-        self.assertTrue(hasattr(By, "ID"))
-        self.assertTrue(hasattr(By, "CSS_SELECTOR"))
-        self.assertTrue(callable(expected_conditions.presence_of_element_located))
-        self.assertTrue(callable(expected_conditions.invisibility_of_element_located))
-
-    def test_chrome_options(self) -> None:
-        from selenium.webdriver import ChromeOptions
-
-        options = ChromeOptions()
-        options.add_argument("--headless")
-        self.assertIn("--headless", options.arguments)
-
-    def test_exception_classes(self) -> None:
-        from selenium.common.exceptions import InvalidCookieDomainException, NoAlertPresentException, TimeoutException, WebDriverException
-
-        self.assertTrue(issubclass(TimeoutException, WebDriverException))
-        self.assertTrue(issubclass(InvalidCookieDomainException, WebDriverException))
-        self.assertTrue(issubclass(NoAlertPresentException, WebDriverException))
-
-
-# ---------------------------------------------------------------------------
 # 15. SQLAlchemy
 # ---------------------------------------------------------------------------
 class TestSQLAlchemy(unittest.TestCase):

@@ -12,7 +12,6 @@ from unittest.mock import patch, MagicMock
 import requests
 
 from bin.crawler import Crawler, Method, print_usage, RequestsClient
-from bin.headless_browser import HeadlessBrowser
 import tempfile
 from requests.cookies import RequestsCookieJar
 import sys as _sys
@@ -45,7 +44,7 @@ class TestCrawler(unittest.TestCase):
         cls.mock_remove = cls.patcher_remove.start()
         cls.mock_isfile = cls.patcher_isfile.start()
         # Clean up cookie files once at the beginning (실제 파일 접근 없음)
-        for cookie_file in (HeadlessBrowser.COOKIE_FILE, RequestsClient.COOKIE_FILE):
+        for cookie_file in (RequestsClient.COOKIE_FILE,):
             try:
                 if os.path.isfile(cookie_file):
                     os.remove(cookie_file)
@@ -1349,78 +1348,6 @@ class TestCrawlerTryLogin(unittest.TestCase):
     def tearDown(self):
         for f in self.tmp.iterdir():
             f.unlink(missing_ok=True)
-
-
-class TestHeadlessBrowserLogin(unittest.TestCase):
-    """HeadlessBrowser.login() - selenium mock (불가피)"""
-
-    @patch("bin.headless_browser.Env.get", return_value="false")
-    def setUp(self, mock_env):
-        self.tmp = Path(tempfile.mkdtemp())
-        self.browser = HeadlessBrowser(dir_path=self.tmp)
-
-    @patch("bin.headless_browser.which", return_value="/usr/bin/chromedriver")
-    @patch("bin.headless_browser.webdriver.Chrome")
-    def test_login_success(self, mock_chrome_cls, mock_which):
-        mock_driver = MagicMock()
-        mock_chrome_cls.return_value = mock_driver
-        mock_driver.current_url = "http://example.com/home"
-
-        mock_id_elem = MagicMock()
-        mock_pw_elem = MagicMock()
-
-        def find_element_side_effect(by, name):
-            if name == "username":
-                return mock_id_elem
-            elif name == "passwd":
-                return mock_pw_elem
-            raise Exception(f"Unexpected: {name}")
-
-        mock_driver.find_element.side_effect = find_element_side_effect
-
-        with patch("bin.headless_browser.WebDriverWait") as mock_wait_cls:
-            mock_wait = MagicMock()
-            mock_wait_cls.return_value = mock_wait
-            mock_wait.until.side_effect = [mock_id_elem, True]
-
-            mock_submit = MagicMock()
-            mock_driver.find_element.side_effect = None
-            mock_driver.find_element.return_value = mock_submit
-
-            mock_driver.get_cookies.return_value = [{"name": "session", "value": "abc"}]
-
-            config = {"login_url": "http://example.com/login", "id": "testuser", "password": "testpass", "id_field": "username", "password_field": "passwd"}
-            result = self.browser.login(config)
-            self.assertTrue(result)
-
-    @patch("bin.headless_browser.which", return_value="/usr/bin/chromedriver")
-    @patch("bin.headless_browser.webdriver.Chrome")
-    def test_login_no_cookies_after_submit(self, mock_chrome_cls, mock_which):
-        mock_driver = MagicMock()
-        mock_chrome_cls.return_value = mock_driver
-        mock_driver.current_url = "http://example.com/login"
-
-        mock_elem = MagicMock()
-
-        with patch("bin.headless_browser.WebDriverWait") as mock_wait_cls:
-            mock_wait = MagicMock()
-            mock_wait_cls.return_value = mock_wait
-            from selenium.common.exceptions import TimeoutException as _SelTE
-
-            mock_wait.until.side_effect = [mock_elem, _SelTE()]
-
-            mock_driver.find_element.return_value = mock_elem
-            mock_driver.get_cookies.return_value = []
-
-            config = {"login_url": "http://example.com/login", "id": "user", "password": "pass", "id_field": "username", "password_field": "passwd"}
-            result = self.browser.login(config)
-            self.assertFalse(result)
-
-    def test_login_no_chromedriver(self):
-        with patch("bin.headless_browser.which", return_value=None):
-            config = {"login_url": "http://example.com/login", "id": "user", "password": "pass", "id_field": "username", "password_field": "passwd"}
-            result = self.browser.login(config)
-            self.assertFalse(result)
 
 
 if __name__ == "__main__":
