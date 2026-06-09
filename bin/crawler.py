@@ -13,7 +13,7 @@ from enum import Enum
 from pathlib import Path
 from html.parser import HTMLParser
 from typing import Any, Optional
-from urllib.parse import urljoin
+from urllib.parse import urljoin, quote
 
 import urllib3
 import requests
@@ -29,6 +29,16 @@ DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKi
 
 Headers = dict[str, str]
 Cookies = dict[str, str]
+
+
+def to_latin1_safe_url(url: str) -> str:
+    """HTTP 헤더 값(예: Referer)은 latin-1로 인코딩 가능해야 한다.
+    한글 등 non-ASCII 문자가 포함된 URL은 percent-encode하여 안전하게 만든다."""
+    try:
+        url.encode("latin-1")
+        return url
+    except UnicodeEncodeError:
+        return quote(url, safe="%/:=&?~#+!$,;'@()*[]")
 
 
 class _LoginFormParser(HTMLParser):
@@ -264,6 +274,9 @@ class RequestsClient:
 
         referer = self.headers.get("Referer", "")
         if referer:
+            # non-ASCII(한글 등) URL은 latin-1 헤더 인코딩에서 실패하므로 percent-encode
+            referer = to_latin1_safe_url(referer)
+            self.headers["Referer"] = referer
             is_ok, reason = URLSafety.check_url(referer, allow_private=self.allow_private_ips, allowed_hosts_raw=self.allowed_hosts_raw)
             if not is_ok:
                 LOGGER.warning("Blocked referer URL: %s (%s)", referer, reason)
