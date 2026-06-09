@@ -237,6 +237,13 @@ class HeadlessBrowser:
             cls._cleanup_cached_session()
             return None
 
+        # A crashed page passes the cache["page"].url check below (url is read from
+        # local state, not the live renderer), so an explicit flag is the only reliable
+        # way to evict a poisoned session before it is handed out again.
+        if cache.get("crashed"):
+            cls._cleanup_cached_session()
+            return None
+
         try:
             cache["page"].url
             return cache
@@ -392,7 +399,14 @@ class HeadlessBrowser:
             context.add_init_script(self.BLOB_INTERCEPTOR_INIT_SCRIPT)
         page = context.pages[0] if context.pages else context.new_page()
         self._register_dialog_handlers(page)
-        return {"playwright": playwright, "context": context, "page": page}
+        session: dict[str, Any] = {"playwright": playwright, "context": context, "page": page, "crashed": False}
+        # A renderer crash (commonly OOM on image-heavy pages) does NOT close the page:
+        # is_closed() stays False and page.url keeps returning the stale URL, so the dead
+        # session silently survives the cache-validity checks and poisons every later
+        # request on it. Flag it here so the cache is invalidated and the next request
+        # launches a fresh browser instead of reusing the crashed one.
+        page.on("crash", lambda _page: session.__setitem__("crashed", True))
+        return session
 
     @staticmethod
     def _register_dialog_handlers(page: Page) -> None:
@@ -400,6 +414,14 @@ class HeadlessBrowser:
             page.on("dialog", lambda dialog: dialog.dismiss())
         except Exception:
             pass
+
+    @staticmethod
+    def _is_fatal_session_error(e: BaseException) -> bool:
+        # Distinguish errors that mean the page/renderer/browser is dead (so the whole
+        # session must be discarded) from a recoverable per-navigation failure. Reusing
+        # a session after one of these makes every subsequent request fail identically.
+        msg = str(e).lower()
+        return any(s in msg for s in ("crash", "target closed", "has been closed", "connection closed", "websocket"))
 
     def _get_or_create_session(self) -> tuple[dict[str, Any], bool]:
         options = self._build_session_options()
@@ -598,10 +620,16 @@ class HeadlessBrowser:
             except PlaywrightError as e:
                 LOGGER.warning("<!-- Warning: can't connect to '%s' for temporary network error -->", url)
                 LOGGER.warning("<!-- %r -->", e)
+                if session.get("crashed") or self._is_fatal_session_error(e):
+                    self._cleanup_cached_session()
+                    session = None
                 return ""
             except Exception as e:
                 LOGGER.warning("<!-- Warning: can't connect to '%s' for temporary network error -->", url)
                 LOGGER.warning("<!-- %r -->", e)
+                if session.get("crashed") or self._is_fatal_session_error(e):
+                    self._cleanup_cached_session()
+                    session = None
                 return ""
 
             self._wait_for_cloudflare(page)
@@ -642,13 +670,19 @@ class HeadlessBrowser:
             LOGGER.error("Unexpected error in make_request: %s", e)
             return ""
         finally:
-            if session is not None:
+            if session is not None and session.get("crashed"):
+                # The page crashed mid-request; the renderer is dead. Evict it now so the
+                # next request launches a fresh browser instead of reusing the corpse.
+                self._cleanup_cached_session()
+            elif session is not None:
                 session_valid = True
                 try:
                     session["page"].evaluate("window.localStorage.clear();")
                     session["page"].evaluate("window.sessionStorage.clear();")
-                except PlaywrightError:
-                    pass
+                except PlaywrightError as e:
+                    if self._is_fatal_session_error(e):
+                        self._cleanup_cached_session()
+                        session_valid = False
                 except Exception:
                     LOGGER.warning("Cached Playwright session is no longer responsive, invalidating cache")
                     self._cleanup_cached_session()

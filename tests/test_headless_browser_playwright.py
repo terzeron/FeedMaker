@@ -86,6 +86,20 @@ class TestHeadlessBrowserPlaywright(unittest.TestCase):
         type(session["page"]).url = PropertyMock(side_effect=RuntimeError("dead"))
         self.assertIsNone(HeadlessBrowser._get_cached_session(options))
 
+    def test_is_fatal_session_error(self):
+        for msg in ("Page.goto: Page crashed", "Target closed", "Target page, context or browser has been closed", "Connection closed", "WebSocket error"):
+            self.assertTrue(HeadlessBrowser._is_fatal_session_error(PlaywrightError(msg)), msg)
+        for msg in ("net::ERR_TIMED_OUT", "navigation timeout", "ERR_CONNECTION_REFUSED"):
+            self.assertFalse(HeadlessBrowser._is_fatal_session_error(PlaywrightError(msg)), msg)
+
+    def test_get_cached_session_evicts_crashed_session(self):
+        # A crashed page still reports a valid .url, so only the explicit flag evicts it.
+        options = {"headless": True, "profile_dir": "/tmp/crash"}
+        session = {"page": MagicMock(url="about:blank"), "context": MagicMock(), "playwright": MagicMock(), "crashed": True}
+        HeadlessBrowser._set_cached_session(session, options)
+        self.assertIsNone(HeadlessBrowser._get_cached_session(options))
+        self.assertIsNone(getattr(HeadlessBrowser._thread_local, "_session_cache", None))
+
     def test_cleanup_cached_session_tolerates_close_errors(self):
         session = {"page": MagicMock(), "context": MagicMock(), "playwright": MagicMock()}
         session["context"].close.side_effect = RuntimeError("close failed")
@@ -383,7 +397,10 @@ class TestHeadlessBrowserPlaywright(unittest.TestCase):
         mock_context.set_default_navigation_timeout.assert_called_once_with(browser.timeout * 1000)
         mock_context.on.assert_called_once()
         mock_context.add_init_script.assert_called_once_with(browser.BLOB_INTERCEPTOR_INIT_SCRIPT)
-        mock_page.on.assert_called_once()
+        # both a dialog handler and a crash handler are registered on the page
+        registered_events = {c.args[0] for c in mock_page.on.call_args_list if c.args}
+        self.assertEqual(registered_events, {"dialog", "crash"})
+        self.assertFalse(session["crashed"])
 
     def test_register_dialog_handlers_swallows_errors(self):
         page = MagicMock()
@@ -480,6 +497,22 @@ class TestHeadlessBrowserPlaywright(unittest.TestCase):
         mock_check.side_effect = [(True, "")]
         page3.goto.side_effect = PlaywrightError("network")
         self.assertEqual(browser3.make_request("https://example.com"), "")
+        HeadlessBrowser._cleanup_cached_session()  # non-fatal error leaves the session cached; clean up
+
+    @patch("bin.headless_browser_playwright.sync_playwright")
+    @patch("bin.headless_browser_playwright.URLSafety.check_url", return_value=(True, ""))
+    def test_make_request_crash_invalidates_session(self, mock_check, mock_sync_playwright):
+        # A renderer crash during goto must evict the cached session so the next request
+        # (or retry) launches a fresh browser instead of reusing the crashed one. Without
+        # this, the crashed page survives the cache checks and every later request fails.
+        browser = self._make_browser()
+        mock_sync, _mp, _mc, page = self._build_session_mocks()
+        mock_sync_playwright.return_value = mock_sync
+        page.goto.side_effect = PlaywrightError("Page.goto: Page crashed")
+        with patch.object(HeadlessBrowser, "_cleanup_cached_session") as mock_cleanup:
+            self.assertEqual(browser.make_request("https://example.com"), "")
+        self.assertGreaterEqual(mock_cleanup.call_count, 1)
+        HeadlessBrowser._cleanup_cached_session()  # cleanup was mocked above; clean up for real
 
     @patch("bin.headless_browser_playwright.sync_playwright")
     @patch("bin.headless_browser_playwright.URLSafety.check_url", return_value=(True, ""))

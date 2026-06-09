@@ -185,6 +185,36 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         self.assertFalse(lock_path.is_symlink(), "lock owned by a reused (unrelated) pid must be treated as stale")
         shutil.rmtree(base, ignore_errors=True)
 
+    @patch("bin.headless_browser_cloak.time.sleep")
+    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    def test_launch_session_retries_on_process_singleton_contention(self, mock_launch, mock_sleep):
+        # 같은 그룹의 다른 프로세스가 공유 프로파일을 점유 중이면 launch가 ProcessSingleton으로
+        # 실패한다. 즉시 죽지 말고 소유자가 끝날 때까지 대기 후 재시도해 성공해야 한다.
+        browser = self._make_browser()
+        mock_context, _ = self._build_session_mocks()
+        mock_launch.side_effect = [PlaywrightError("BrowserType.launch_persistent_context: Failed to create a ProcessSingleton for your profile directory."), mock_context]
+        with patch.object(HeadlessBrowser, "_clear_stale_singleton_lock") as mock_clear:
+            session = browser._launch_session()
+
+        self.assertIs(session["context"], mock_context)
+        self.assertEqual(mock_launch.call_count, 2)
+        # 매 시도 전 stale lock 정리를 호출한다(대기 중 소유자가 죽으면 lock을 깨기 위해).
+        self.assertEqual(mock_clear.call_count, 2)
+        mock_sleep.assert_called()  # 재시도 사이에 대기했다
+
+    @patch("bin.headless_browser_cloak.Env.get")
+    @patch("bin.headless_browser_cloak.time.sleep")
+    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    def test_launch_session_gives_up_on_persistent_contention(self, mock_launch, mock_sleep, mock_env_get):
+        # 대기 한도(0초)를 넘기면 재시도하지 않고 에러를 전파한다 → 상위 Layer B가 ""로 흡수.
+        mock_env_get.side_effect = lambda k, d="": "0" if k == "FM_CRAWLER_PROFILE_LAUNCH_WAIT" else d
+        browser = self._make_browser()
+        mock_launch.side_effect = PlaywrightError("Failed to create a ProcessSingleton for your profile directory.")
+        with patch.object(HeadlessBrowser, "_clear_stale_singleton_lock"):
+            with self.assertRaises(PlaywrightError):
+                browser._launch_session()
+        mock_sleep.assert_not_called()  # deadline이 이미 지나 대기 없이 즉시 포기
+
     @patch("bin.headless_browser_cloak._cloak_launch_persistent_context", None)
     def test_launch_session_import_error_when_cloak_unavailable(self):
         browser = self._make_browser()
@@ -217,6 +247,62 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
             self.assertNotIn("navigator, 'languages'", script)
             self.assertNotIn("navigator.plugins =", script)
             self.assertNotIn("navigator.languages =", script)
+
+    @patch("bin.headless_browser_cloak.URLSafety.check_url", return_value=(True, ""))
+    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    def test_make_request_returns_empty_on_renderer_crash_in_metadata_eval(self, mock_launch, _mock_check):
+        # 렌더러가 page.goto() 이후 page.evaluate() 도중 크래시하면 ("Target crashed")
+        # 예외가 전파되어 프로세스 전체를 죽이면 안 된다. goto 크래시와 동일하게 ""를 돌려줘
+        # 상위 num_retries 재시도가 동작하게 해야 한다.
+        browser = self._make_browser()
+        mock_context, mock_page = self._build_session_mocks()
+        mock_launch.return_value = mock_context
+        mock_page.evaluate.side_effect = PlaywrightError("Page.evaluate: Target crashed")
+
+        result = browser.make_request("https://example.com")
+
+        self.assertEqual(result, "")
+
+    @patch("bin.headless_browser_cloak.URLSafety.check_url", return_value=(True, ""))
+    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    def test_make_request_returns_empty_on_renderer_crash_in_cloudflare_wait(self, mock_launch, _mock_check):
+        # _wait_for_cloudflare()의 wait_for_selector가 렌더러 크래시로 TargetClosedError를
+        # 던지면 (PlaywrightTimeoutError가 아님) 역시 ""를 돌려줘야 한다.
+        browser = self._make_browser()
+        mock_context, mock_page = self._build_session_mocks()
+        mock_launch.return_value = mock_context
+        mock_page.wait_for_selector.side_effect = PlaywrightError("Target page, context or browser has been closed")
+
+        result = browser.make_request("https://example.com")
+
+        self.assertEqual(result, "")
+
+    @patch("bin.headless_browser_cloak.URLSafety.check_url", return_value=(True, ""))
+    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    def test_make_request_invalidates_dead_session_to_release_profile_lock(self, mock_launch, _mock_check):
+        # 렌더러 크래시로 세션이 죽으면, 같은 (공유) 프로파일 dir의 SingletonLock이 잡힌 채
+        # 남아 다음 launch가 ProcessSingleton 에러로 실패한다. make_request는 finally에서
+        # 죽은 세션을 감지해 _cleanup_cached_session()으로 context를 닫아 lock을 풀어야 한다.
+        browser = self._make_browser()
+        mock_context, mock_page = self._build_session_mocks()
+        mock_launch.return_value = mock_context
+
+        # 본문 evaluate(metadata)와 finally의 storage clear 모두 크래시로 실패시킨다.
+        mock_page.evaluate.side_effect = PlaywrightError("Page.evaluate: Target crashed")
+
+        # about:blank 리셋(=liveness probe)도 죽은 타깃이라 실패한다.
+        def goto_side_effect(target, **_kw):
+            if "about:blank" in str(target):
+                raise PlaywrightError("Target page, context or browser has been closed")
+            return None
+
+        mock_page.goto.side_effect = goto_side_effect
+
+        with patch.object(HeadlessBrowser, "_cleanup_cached_session") as mock_cleanup:
+            result = browser.make_request("https://example.com")
+
+        self.assertEqual(result, "")
+        mock_cleanup.assert_called()
 
     def test_cleanup_cached_session_does_not_require_playwright_stop(self):
         # cloakbrowser는 context.close() 안에서 자기가 만든 Playwright instance를 stop한다.
