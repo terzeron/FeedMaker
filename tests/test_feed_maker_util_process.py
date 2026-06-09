@@ -4,6 +4,7 @@
 
 import unittest
 import logging.config
+import tempfile
 from pathlib import Path
 from shutil import which
 import subprocess
@@ -72,6 +73,22 @@ class ProcessTest(unittest.TestCase):
         result, error = Process.exec_cmd(false_path, Path.cwd())
         self.assertEqual(result, "")
         self.assertIn("code", error.lower())
+
+    def test_exec_cmd_script_without_shebang(self) -> None:
+        # shebang이 없는 실행 스크립트는 shell=False에서 ENOEXEC(OSError: Exec format error)를 일으킨다.
+        # exec_cmd가 이 OSError를 잡아 예외를 전파하지 않고 ("", error)로 반환해야,
+        # 호출부가 정상 에러 경로로 실패를 인지할 수 있다.
+        with tempfile.TemporaryDirectory() as tmp:
+            script_path = Path(tmp) / "no_shebang.sh"
+            script_path.write_text("cat - | grep -v DROP\n", encoding="utf-8")
+            script_path.chmod(0o755)
+            try:
+                result, error = Process.exec_cmd(str(script_path), Path(tmp), input_data="keep\nDROP\n")
+            except OSError as e:
+                self.fail(f"exec_cmd should not raise OSError for a shebang-less script, but raised: {e!r}")
+        self.assertEqual(result, "")
+        self.assertNotEqual(error, "")
+        self.assertIn("error", error.lower())
 
     def test_exec_cmd_disallow_shell(self) -> None:
         result, error = Process.exec_cmd("sh -c 'echo hello'", Path.cwd())
