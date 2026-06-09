@@ -47,6 +47,14 @@ class HeadlessBrowser:
     _thread_local = threading.local()
     _all_profile_dirs: set[str] = set()
 
+    # The profile dir is shared per feed group (group_hash = hash of the parent dir),
+    # but Chromium permits only one live instance per user_data_dir. Concurrent feed
+    # processes of the same group therefore contend for it; the loser must wait for the
+    # owner to exit rather than crash. These bound that wait. Override the total wait
+    # with FM_CRAWLER_PROFILE_LAUNCH_WAIT (seconds).
+    PROFILE_LAUNCH_WAIT_SEC = 180
+    PROFILE_LAUNCH_RETRY_INTERVAL_SEC = 3
+
     GETTING_METADATA_SCRIPT = """
         var metas = document.getElementsByTagName("meta");
         var has_og_url_property = false;
@@ -369,15 +377,35 @@ class HeadlessBrowser:
         if _cloak_launch_persistent_context is None:
             raise ImportError("cloakbrowser is not installed; run `pip install cloakbrowser`")
 
-        # A previous run for this group may have died uncleanly and left a stale
-        # SingletonLock in the (deterministic) profile dir; clear it before launch.
-        self._clear_stale_singleton_lock(self._profile_dir)
-
         # cloakbrowser bundles a patched Chromium binary with source-level stealth
         # patches (canvas, WebGL, audio, TLS, navigator.webdriver, etc.). No JS
         # injection of navigator.plugins / navigator.languages — those are handled
         # at the binary level and any user-space override becomes a detection signal.
-        context = _cloak_launch_persistent_context(user_data_dir=self._profile_dir, headless=not self.disable_headless, viewport={"width": 1920, "height": 1080}, user_agent=self.headers["User-Agent"], locale="ko-KR", timezone="Asia/Seoul", humanize=True, ignore_https_errors=True)
+        #
+        # The profile dir is shared across a group's feeds, so a concurrent process
+        # may already hold this Chromium instance. Each iteration first clears any
+        # *stale* SingletonLock (owner died uncleanly), then attempts the launch; a
+        # ProcessSingleton failure means a *live* owner still holds it, so wait and
+        # retry until it exits or the bounded deadline passes. _clear_stale_singleton_lock
+        # never breaks a live owner's lock, so this can't corrupt a running profile.
+        wait_sec = int(Env.get("FM_CRAWLER_PROFILE_LAUNCH_WAIT", str(self.PROFILE_LAUNCH_WAIT_SEC)) or self.PROFILE_LAUNCH_WAIT_SEC)
+        # Per-process jitter (no random import) so concurrent waiters don't retry in lockstep.
+        interval = self.PROFILE_LAUNCH_RETRY_INTERVAL_SEC + (os.getpid() % 1000) / 1000.0
+        deadline = time.monotonic() + wait_sec
+        context = None
+        while True:
+            self._clear_stale_singleton_lock(self._profile_dir)
+            try:
+                context = _cloak_launch_persistent_context(user_data_dir=self._profile_dir, headless=not self.disable_headless, viewport={"width": 1920, "height": 1080}, user_agent=self.headers["User-Agent"], locale="ko-KR", timezone="Asia/Seoul", humanize=True, ignore_https_errors=True)
+                break
+            except PlaywrightError as e:
+                msg = str(e)
+                is_singleton_contention = "ProcessSingleton" in msg or "already in use" in msg or "SingletonLock" in msg
+                if is_singleton_contention and time.monotonic() < deadline:
+                    LOGGER.warning("profile '%s' is in use by another process; waiting %.1fs to retry launch (%.0fs left)", self._profile_dir, interval, deadline - time.monotonic())
+                    time.sleep(interval)
+                    continue
+                raise
         context.set_default_timeout(self.timeout * 1000)
         context.set_default_navigation_timeout(self.timeout * 1000)
         self._read_cookies_from_file(context)
@@ -634,6 +662,15 @@ class HeadlessBrowser:
             html = page.evaluate("document.documentElement.outerHTML")
             return f"<!DOCTYPE html>{html}" if html else ""
 
+        except (PlaywrightError, PlaywrightTimeoutError) as e:
+            # A renderer crash (TargetClosedError, "Target crashed") raised after
+            # page.goto() — e.g. in _wait_for_cloudflare or page.evaluate — would
+            # otherwise propagate and kill the whole run. Treat it like a goto crash:
+            # warn and return "" so the caller's num_retries logic can re-attempt with
+            # a fresh session (the cached one is invalidated in the finally block below).
+            LOGGER.warning("<!-- Warning: can't get result from web page '%s' for renderer crash or error -->", url)
+            LOGGER.warning("<!-- %r -->", e)
+            return ""
         except (OSError, TypeError, ValueError, AttributeError, ImportError, RuntimeError) as e:
             LOGGER.error("Unexpected error in make_request: %s", e)
             return ""
@@ -653,7 +690,14 @@ class HeadlessBrowser:
                     try:
                         session["page"].goto("about:blank", wait_until="commit", timeout=5000)
                     except Exception:
-                        pass
+                        # The about:blank reset doubles as a liveness probe: if it fails
+                        # the session is dead (renderer crashed / target closed). A dead
+                        # cloakbrowser session keeps its profile's SingletonLock held, so
+                        # the next launch for this (shared) profile dir aborts with
+                        # "Failed to create a ProcessSingleton". Tear it down here so
+                        # context.close() releases the lock before any retry relaunches.
+                        LOGGER.warning("Cloakbrowser session is dead, invalidating cache to release profile lock")
+                        self._cleanup_cached_session()
 
 
 def _handle_sigterm(signum: int, frame: object) -> None:
