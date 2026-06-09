@@ -305,6 +305,10 @@ class FeedMaker:
                     ret = False
 
             except (OSError, IOError, ImportError, TypeError, ValueError, AttributeError, RuntimeError) as e:
+                # 실패를 조용히 삼키지 않도록 항상 ERROR 레벨로 남긴다.
+                # (_add_failed_url은 ignore_broken_link 미설정 시 아무 로그도 남기지 않으므로
+                #  여기서 로그를 남기지 않으면 항목 누락이 완전히 보이지 않게 된다.)
+                LOGGER.error("Error: failed to make html file for '%s' (%s): %s", item_url, title, e)
                 self._add_failed_url(item_url, f"Unexpected error: {str(e)}")
                 return False
 

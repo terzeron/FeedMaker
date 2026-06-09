@@ -168,6 +168,12 @@ class Process:
             return "", f"Error with non-zero exit status, {e}"
         except subprocess.SubprocessError as e:
             return "", f"Error in execution of command, {e}"
+        except OSError as e:
+            # 실행 파일을 찾을 수 없거나(FileNotFoundError), 권한이 없거나,
+            # shebang이 없어 ENOEXEC(Exec format error)가 나는 경우 등.
+            # shell=False에서는 이런 OSError가 Popen에서 그대로 올라오므로
+            # 호출부가 정상 에러 경로로 인지할 수 있도록 문자열로 반환한다.
+            return "", f"Error executing command '{cmd}', {e}"
         return result or "", ""
 
     @staticmethod

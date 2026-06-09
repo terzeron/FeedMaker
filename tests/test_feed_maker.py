@@ -207,6 +207,20 @@ class TestFeedMaker(unittest.TestCase):
 
             self.assertTrue(assert_in_mock_logger("Old: https://comic.naver.com/webtoon/detail?titleId=725586&no=137\t137화\t", mock_info, True))
 
+    def test_make_html_file_logs_error_on_exception(self) -> None:
+        # 크롤 단계에서 예외(예: shebang 없는 post-process 스크립트의 OSError)가 발생하면
+        # 조용히 삼키지 않고 ERROR 로그를 남긴 뒤 False를 반환해야 한다.
+        # (이전에는 except가 _add_failed_url에만 의존했고, ignore_broken_link 미설정 시
+        #  아무 로그도 남기지 않아 항목 누락이 완전히 보이지 않았다.)
+        new_url = "https://comic.naver.com/webtoon/detail?titleId=725586&no=999"
+        with patch("bin.feed_maker.Crawler") as mock_crawler_cls:
+            mock_crawler_cls.return_value.run.side_effect = OSError(8, "Exec format error")
+            with patch.object(LOGGER, "error") as mock_error:
+                actual = self.maker._make_html_file(new_url, "999화")
+
+        self.assertFalse(actual)
+        self.assertTrue(assert_in_mock_logger("Error: failed to make html file for", mock_error, True))
+
     def test_get_index_data(self) -> None:
         dt1 = Datetime.get_current_time()
         actual = self.maker._get_index_data()
