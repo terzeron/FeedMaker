@@ -12,7 +12,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "beautifulsoup4>=4.13.4",
+    "beautifulsoup4>=4.15.0",
     "fastapi>=0.118.2",
     # security pin: PYSEC-2026-161 (Host header URL reconstruction), fixed in 1.0.1
     "starlette>=1.0.1",
