@@ -16,7 +16,7 @@ dependencies = [
     "fastapi>=0.118.2",
     # security pin: PYSEC-2026-161 (Host header URL reconstruction), fixed in 1.0.1
     "starlette>=1.3.0",
-    "filelock>=3.29.1",
+    "filelock>=3.29.3",
     "lxml>=6.1.1",
     "ordered-set>=4.1.0",
     "pdf2image>=1.17.0",
