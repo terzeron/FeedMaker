@@ -42,7 +42,7 @@ class HeadlessBrowser:
     ID_OF_RENDERING_COMPLETION_IN_SCROLLING = "rendering_completed_in_scrolling"
     ID_OF_RENDERING_COMPLETION_IN_CONVERTING_BLOB = "rendering_completed_in_converting_blob"
     COOKIE_FILE = "cookies.cloakbrowser.json"
-    DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
 
     _thread_local = threading.local()
     _all_profile_dirs: set[str] = set()
@@ -396,7 +396,13 @@ class HeadlessBrowser:
         while True:
             self._clear_stale_singleton_lock(self._profile_dir)
             try:
-                context = _cloak_launch_persistent_context(user_data_dir=self._profile_dir, headless=not self.disable_headless, viewport={"width": 1920, "height": 1080}, user_agent=self.headers["User-Agent"], locale="ko-KR", timezone="Asia/Seoul", humanize=True, ignore_https_errors=True)
+                # Do NOT override the user agent. cloakbrowser's patched Chromium sets the
+                # UA string AND the matching Sec-CH-UA client hints from the bundled binary
+                # version at the C++ level. Forcing a stale UA (e.g. an old Chrome/12x) here
+                # leaves the client hints reporting the real binary version — a UA/client-hint
+                # mismatch that Cloudflare flags as a bot, yielding a managed challenge that
+                # never auto-solves. Let cloakbrowser present its native, self-consistent UA.
+                context = _cloak_launch_persistent_context(user_data_dir=self._profile_dir, headless=not self.disable_headless, viewport={"width": 1920, "height": 1080}, locale="ko-KR", timezone="Asia/Seoul", humanize=True, ignore_https_errors=True)
                 break
             except PlaywrightError as e:
                 msg = str(e)
@@ -442,8 +448,20 @@ class HeadlessBrowser:
         self._set_cached_session(session, options)
         return session, True
 
+    # Cloudflare clearance/challenge cookies are bound to the exact fingerprint
+    # (UA, client hints, IP, TLS) and the moment they were minted. Persisting them
+    # and replaying a stale one on a later run makes Cloudflare reject the token and
+    # serve a managed challenge that never auto-solves — the very failure this guards
+    # against. A clean fingerprint passes the challenge fresh each run, so these are
+    # dropped before writing and re-minted live as needed.
+    _NON_PERSISTENT_COOKIE_PREFIXES: tuple[str, ...] = ("cf_clearance", "__cf_bm", "__cf_chl", "cf_chl", "__cfwaitingroom")
+
+    @classmethod
+    def _is_persistable_cookie(cls, name: str) -> bool:
+        return not any(name.startswith(prefix) for prefix in cls._NON_PERSISTENT_COOKIE_PREFIXES)
+
     def _write_cookies_to_file(self, context: BrowserContext) -> None:
-        cookies = context.cookies()
+        cookies = [c for c in context.cookies() if self._is_persistable_cookie(c.get("name", ""))]
         cookie_file = self._get_cookie_dir() / HeadlessBrowser.COOKIE_FILE
         with cookie_file.open("w", encoding="utf-8") as f:
             json.dump(cookies, f, indent=2, ensure_ascii=False)
@@ -475,14 +493,36 @@ class HeadlessBrowser:
     def _quote_attr(value: str) -> str:
         return value.replace("\\", "\\\\").replace('"', '\\"')
 
+    # Legacy "checking your browser" interstitial markup. The modern managed
+    # challenge / Turnstile instead exposes window._cf_chl_opt and a
+    # challenges.cloudflare.com iframe under a "Just a moment…"/"잠시만…" title.
     _CLOUDFLARE_CHALLENGE_SELECTORS: tuple[str, ...] = ("#cf-content", 'iframe[src*="challenges.cloudflare.com"]', '[data-translate="checking_browser"]')
+    # Predicate is true once no Cloudflare interstitial remains on the page.
+    _CLOUDFLARE_CLEARED_PREDICATE = """
+        () => {
+            if (window._cf_chl_opt) return false;
+            if (document.querySelector('iframe[src*="challenges.cloudflare.com"], #cf-content, [data-translate="checking_browser"]')) return false;
+            const t = document.title || "";
+            if (t.includes("Just a moment") || t.includes("잠시만")) return false;
+            // After an interactive Turnstile challenge clears, Cloudflare reloads to the
+            // origin; for a moment the challenge markers are gone but the real document
+            // has no body yet. Require a populated body so we wait for that reload to
+            // finish instead of capturing the empty transitional page (head-only HTML).
+            return !!(document.body && document.body.children.length > 0);
+        }
+    """
 
     def _wait_for_cloudflare(self, page: Page) -> None:
-        for selector in self._CLOUDFLARE_CHALLENGE_SELECTORS:
-            try:
-                page.wait_for_selector(selector, state="hidden", timeout=self.timeout * 1000)
-            except PlaywrightTimeoutError:
-                pass
+        # A Cloudflare challenge auto-solves only if we let its JS run to completion
+        # and reload to the real page; grabbing the HTML too early captures the
+        # interstitial instead. wait_for_selector(state="hidden") returned instantly
+        # when the markup didn't match these selectors, so the challenge HTML leaked
+        # through. Poll a predicate that is satisfied immediately when no challenge is
+        # present and otherwise blocks until the challenge clears (or times out).
+        try:
+            page.wait_for_function(self._CLOUDFLARE_CLEARED_PREDICATE, timeout=self.timeout * 1000)
+        except PlaywrightTimeoutError:
+            LOGGER.warning("Cloudflare challenge did not clear within %ds", self.timeout)
 
     def _wait_for_marker(self, page: Page, marker_id: str) -> None:
         try:

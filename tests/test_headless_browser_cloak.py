@@ -266,12 +266,12 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
     @patch("bin.headless_browser_cloak.URLSafety.check_url", return_value=(True, ""))
     @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
     def test_make_request_returns_empty_on_renderer_crash_in_cloudflare_wait(self, mock_launch, _mock_check):
-        # _wait_for_cloudflare()의 wait_for_selector가 렌더러 크래시로 TargetClosedError를
+        # _wait_for_cloudflare()의 wait_for_function이 렌더러 크래시로 TargetClosedError를
         # 던지면 (PlaywrightTimeoutError가 아님) 역시 ""를 돌려줘야 한다.
         browser = self._make_browser()
         mock_context, mock_page = self._build_session_mocks()
         mock_launch.return_value = mock_context
-        mock_page.wait_for_selector.side_effect = PlaywrightError("Target page, context or browser has been closed")
+        mock_page.wait_for_function.side_effect = PlaywrightError("Target page, context or browser has been closed")
 
         result = browser.make_request("https://example.com")
 
@@ -530,8 +530,10 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         scroll_calls = [c for c in mock_page.evaluate.call_args_list if c.args and "scrollTo" in str(c.args[0])]
         self.assertGreater(len(scroll_calls), 0)
         self.assertTrue(any(browser.ID_OF_RENDERING_COMPLETION_IN_SCROLLING in str(call.args[0]) for call in mock_page.evaluate.call_args_list))
-        cf_selectors = len(browser._CLOUDFLARE_CHALLENGE_SELECTORS)
-        self.assertEqual(mock_page.wait_for_selector.call_count, 2 * cf_selectors + 3)
+        # _wait_for_cloudflare now polls a single wait_for_function predicate per page
+        # (referer + main = 2); wait_for_selector is left to the 3 completion markers.
+        self.assertEqual(mock_page.wait_for_function.call_count, 2)
+        self.assertEqual(mock_page.wait_for_selector.call_count, 3)
         mock_context.add_init_script.assert_called_once_with(browser.BLOB_INTERCEPTOR_INIT_SCRIPT)
 
     @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
@@ -620,9 +622,42 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         self.assertEqual(browser._quote_attr('a"b\\c'), 'a\\"b\\\\c')
 
         page = MagicMock()
-        page.wait_for_selector.side_effect = PlaywrightTimeoutError("cf timeout")
+        # _wait_for_cloudflare polls wait_for_function; _wait_for_marker uses
+        # wait_for_selector. Both must swallow a timeout without raising.
+        page.wait_for_function.side_effect = PlaywrightTimeoutError("cf timeout")
+        page.wait_for_selector.side_effect = PlaywrightTimeoutError("marker timeout")
         browser._wait_for_cloudflare(page)
         browser._wait_for_marker(page, "marker")
+        page.wait_for_function.assert_called_once_with(browser._CLOUDFLARE_CLEARED_PREDICATE, timeout=browser.timeout * 1000)
+
+    def test_wait_for_cloudflare_predicate_detects_modern_challenge(self):
+        # The cleared-predicate must recognise the modern managed-challenge / Turnstile
+        # signals, not just the legacy selectors — otherwise it returns instantly and
+        # the interstitial HTML leaks through.
+        browser = self._make_browser()
+        predicate = browser._CLOUDFLARE_CLEARED_PREDICATE
+        self.assertIn("_cf_chl_opt", predicate)
+        self.assertIn("challenges.cloudflare.com", predicate)
+        self.assertIn("잠시만", predicate)
+        # Must also require a populated body, so the post-challenge reload finishes
+        # before capture instead of yielding head-only HTML (interactive Turnstile).
+        self.assertIn("document.body", predicate)
+        self.assertIn("children.length", predicate)
+
+        page = MagicMock()
+        browser._wait_for_cloudflare(page)
+        page.wait_for_function.assert_called_once_with(predicate, timeout=browser.timeout * 1000)
+
+    def test_write_cookies_drops_cloudflare_clearance_cookies(self):
+        # cf_clearance / __cf_bm / __cf_chl* are fingerprint- and time-bound; persisting
+        # and replaying a stale one re-triggers a challenge. They must never be written.
+        with tempfile.TemporaryDirectory() as tmpdir:
+            browser = self._make_browser(dir_path=Path(tmpdir))
+            mock_context = MagicMock()
+            mock_context.cookies.return_value = [{"name": "sid", "value": "keep", "domain": ".example.com"}, {"name": "cf_clearance", "value": "drop", "domain": ".example.com"}, {"name": "__cf_bm", "value": "drop", "domain": ".example.com"}, {"name": "__cf_chl_tk", "value": "drop", "domain": ".example.com"}]
+            browser._write_cookies_to_file(mock_context)
+            saved = json.loads((Path(tmpdir) / browser.COOKIE_FILE).read_text(encoding="utf-8"))
+            self.assertEqual({c["name"] for c in saved}, {"sid"})
 
     @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
     @patch("bin.headless_browser_cloak.URLSafety.check_url")
@@ -818,6 +853,77 @@ class TestRunScrollingScript(unittest.TestCase):
 
     def test_scroll_loop_bounded_by_max_scroll_secs(self):
         self.assertLessEqual(HeadlessBrowser._MAX_SCROLL_SECS, 10)
+
+
+class TestCloudflareClearedPredicate(unittest.TestCase):
+    """Evaluate _CLOUDFLARE_CLEARED_PREDICATE in a real browser against DOM
+    fixtures. The predicate decides whether a captured page is real content, a
+    Cloudflare interstitial, or the empty body that briefly exists while an
+    interactive Turnstile challenge reloads to the origin. That branching is JS,
+    so string inspection can't prove it — drive it through actual evaluation.
+    The DOM is built locally on about:blank via evaluate (no network, and no
+    set_content — cloakbrowser's patched Chromium stalls set_content's lifecycle
+    wait); only the cloakbrowser binary is required, so the suite is skipped where
+    it can't launch."""
+
+    @classmethod
+    def setUpClass(cls):
+        from bin import headless_browser_cloak as hb
+
+        if hb._cloak_launch_persistent_context is None:
+            raise unittest.SkipTest("cloakbrowser is not installed")
+        cls._tmp = tempfile.mkdtemp(prefix="cb-pred-test-")
+        try:
+            cls.ctx = hb._cloak_launch_persistent_context(user_data_dir=cls._tmp, headless=True, ignore_https_errors=True)
+            cls.page = cls.ctx.pages[0] if cls.ctx.pages else cls.ctx.new_page()
+            cls.page.goto("about:blank", wait_until="commit", timeout=10000)
+        except Exception as e:  # binary missing / sandbox refuses to launch
+            shutil.rmtree(cls._tmp, ignore_errors=True)
+            raise unittest.SkipTest(f"cannot launch cloakbrowser: {e}")
+        cls.predicate = HeadlessBrowser._CLOUDFLARE_CLEARED_PREDICATE
+
+    @classmethod
+    def tearDownClass(cls):
+        try:
+            cls.ctx.close()
+        except Exception:
+            pass
+        shutil.rmtree(cls._tmp, ignore_errors=True)
+
+    def _eval(self, body_html, *, title, challenge_opt=False):
+        self.page.evaluate(
+            """({body, title, chl}) => {
+                document.title = title;
+                document.body.innerHTML = body;
+                if (chl) { window._cf_chl_opt = {cType: 'managed'}; }
+                else { try { delete window._cf_chl_opt; } catch (e) { window._cf_chl_opt = undefined; } }
+            }""",
+            {"body": body_html, "title": title, "chl": challenge_opt},
+        )
+        return self.page.evaluate(self.predicate)
+
+    def test_real_page_with_body_passes(self):
+        self.assertTrue(self._eval("<div>real content</div>", title="픽 미 업!"))
+
+    def test_window_cf_chl_opt_blocks(self):
+        # The defining signal of a modern managed/Turnstile challenge.
+        self.assertFalse(self._eval("<div>real content</div>", title="픽 미 업!", challenge_opt=True))
+
+    def test_interstitial_title_blocks(self):
+        self.assertFalse(self._eval("<div>x</div>", title="잠시만 기다리십시오…"))
+        self.assertFalse(self._eval("<div>x</div>", title="Just a moment..."))
+
+    def test_challenge_iframe_blocks(self):
+        self.assertFalse(self._eval('<iframe src="https://challenges.cloudflare.com/cdn-cgi/challenge"></iframe>', title="픽 미 업!"))
+
+    def test_legacy_cf_content_blocks(self):
+        self.assertFalse(self._eval('<div id="cf-content">checking</div>', title="픽 미 업!"))
+
+    def test_empty_body_transient_blocks(self):
+        # The bug this guards against: post-challenge reload moment — challenge
+        # markers already gone and the real title set, but the body has no children
+        # yet. Capturing here yields head-only HTML, so the predicate must wait.
+        self.assertFalse(self._eval("", title="픽 미 업!"))
 
 
 if __name__ == "__main__":
