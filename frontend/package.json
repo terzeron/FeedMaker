@@ -24,7 +24,7 @@
     "@vueuse/core": "^14.3.0",
     "axios": "^1.17.0",
     "bootstrap": "^5.3.8",
-    "bootstrap-vue-next": "^0.45.4",
+    "bootstrap-vue-next": "^0.45.5",
     "commondir": "^1.0.1",
     "concurrency": "^0.1.4",
     "cors": "^2.8.5",
