@@ -1422,6 +1422,30 @@ class TestGitAddWithRepo:
         last_commit = repo.head.commit
         assert "add test_feed" in last_commit.message
 
+    def test_only_conf_json_is_tracked_not_generated_artifacts(self, git_manager, git_repo):
+        """_git_add는 conf.json만 추적해야 하고, .gitignore에 해당하는 생성
+        산출물(xml/html/log 등)은 디렉터리를 넘겨도 추적하지 않아야 한다.
+        (repo.index.add가 .gitignore를 무시하던 회귀 방지)"""
+        repo, tmp_path = git_repo
+        (tmp_path / ".gitignore").write_text("*.xml\n*.xml.old\nhtml/\n*.log\nnewlist/\n")
+        repo.index.add([".gitignore"])
+        repo.index.commit("add gitignore")
+
+        feed_dir = tmp_path / "test_group" / "test_feed"
+        (feed_dir / "html").mkdir(parents=True)
+        (feed_dir / "conf.json").write_text('{"key": "value"}')
+        (feed_dir / "test_feed.xml").write_text("<rss/>")
+        (feed_dir / "test_feed.xml.old").write_text("<rss/>")
+        (feed_dir / "html" / "abc.html").write_text("<html/>")
+        (feed_dir / "run.log").write_text("log")
+
+        result, error = git_manager._git_add(feed_dir)
+
+        assert error is None
+        assert "test_feed" in result
+        tracked = sorted(repo.git.ls_files("test_group").splitlines())
+        assert tracked == ["test_group/test_feed/conf.json"]
+
     def test_special_chars_in_feed_name_no_injection(self, git_manager, git_repo):
         """명령어 주입 시도가 안전하게 처리되는지 확인"""
         repo, tmp_path = git_repo
