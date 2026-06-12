@@ -62,6 +62,9 @@
     "not dead"
   ],
   "overrides": {
-    "glob": "^13.0.6"
+    "glob": "^13.0.6",
+    "@babel/plugin-bugfix-safari-rest-destructuring-rhs-array": {
+      "@babel/core": "$@babel/core"
+    }
   }
 }
