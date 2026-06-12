@@ -66,7 +66,10 @@ class FeedMakerManager:
         feed_name = feed_dir_path.name
         try:
             repo = self._get_repo()
-            rel_path = str(feed_dir_path.relative_to(self.work_dir_path))
+            # conf.json만 추적 대상이므로 디렉터리 전체가 아니라 conf.json만 스테이징한다.
+            # (repo.index.add는 .gitignore를 무시하므로 디렉터리를 넘기면 생성 산출물까지 추적됨)
+            conf_file_path = feed_dir_path / Config.DEFAULT_CONF_FILE
+            rel_path = str(conf_file_path.relative_to(self.work_dir_path))
             tracked = repo.git.ls_files(rel_path).strip()
             verb = "modify" if tracked else "add"
             repo.index.add([rel_path])
