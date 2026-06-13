@@ -536,6 +536,27 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         self.assertEqual(mock_page.wait_for_selector.call_count, 3)
         mock_context.add_init_script.assert_called_once_with(browser.BLOB_INTERCEPTOR_INIT_SCRIPT)
 
+    @patch("bin.headless_browser_cloak.URLSafety.check_url", return_value=(True, ""))
+    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    def test_make_request_returns_empty_when_cloudflare_unresolved(self, mock_launch, _mock_check):
+        # If the managed challenge never clears, make_request must return "" (not the
+        # interstitial HTML) so crawler.run() retries, discard the persisted clearance so a
+        # rejected token isn't replayed, and tear the session down so the retry starts fresh.
+        browser = self._make_browser()
+        mock_context, mock_page = self._build_session_mocks()
+        mock_launch.return_value = mock_context
+        mock_page.wait_for_function.side_effect = PlaywrightTimeoutError("challenge stuck")
+
+        with patch.object(browser, "_discard_persisted_cookies") as mock_discard:
+            result = browser.make_request("https://example.com")
+
+        self.assertEqual(result, "")
+        mock_discard.assert_called_once()
+        # outerHTML must not be captured from an unresolved challenge page.
+        self.assertFalse(any(c.args and "outerHTML" in str(c.args[0]) for c in mock_page.evaluate.call_args_list))
+        # The flagged session is torn down (context.close) so the retry relaunches fresh.
+        mock_context.close.assert_called_once()
+
     @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
     def test_launch_session_and_register_handlers(self, mock_launch):
         browser = self._make_browser(blob_to_dataurl=True)
@@ -626,9 +647,9 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         # wait_for_selector. Both must swallow a timeout without raising.
         page.wait_for_function.side_effect = PlaywrightTimeoutError("cf timeout")
         page.wait_for_selector.side_effect = PlaywrightTimeoutError("marker timeout")
-        browser._wait_for_cloudflare(page)
+        self.assertFalse(browser._wait_for_cloudflare(page))
         browser._wait_for_marker(page, "marker")
-        page.wait_for_function.assert_called_once_with(browser._CLOUDFLARE_CLEARED_PREDICATE, timeout=browser.timeout * 1000)
+        page.wait_for_function.assert_called_once_with(browser._CLOUDFLARE_CLEARED_PREDICATE, timeout=browser._CLOUDFLARE_CHALLENGE_TIMEOUT_SEC * 1000)
 
     def test_wait_for_cloudflare_predicate_detects_modern_challenge(self):
         # The cleared-predicate must recognise the modern managed-challenge / Turnstile
@@ -645,19 +666,20 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         self.assertIn("children.length", predicate)
 
         page = MagicMock()
-        browser._wait_for_cloudflare(page)
-        page.wait_for_function.assert_called_once_with(predicate, timeout=browser.timeout * 1000)
+        self.assertTrue(browser._wait_for_cloudflare(page))
+        page.wait_for_function.assert_called_once_with(predicate, timeout=browser._CLOUDFLARE_CHALLENGE_TIMEOUT_SEC * 1000)
 
-    def test_write_cookies_drops_cloudflare_clearance_cookies(self):
-        # cf_clearance / __cf_bm / __cf_chl* are fingerprint- and time-bound; persisting
-        # and replaying a stale one re-triggers a challenge. They must never be written.
+    def test_write_cookies_persists_clearance_drops_transient_cookies(self):
+        # cf_clearance is the multi-hour clearance token and is persisted so a later run can
+        # skip the managed challenge. __cf_bm / __cf_chl* are short-lived, challenge-bound
+        # cookies and must never be written (replaying them only re-triggers a challenge).
         with tempfile.TemporaryDirectory() as tmpdir:
             browser = self._make_browser(dir_path=Path(tmpdir))
             mock_context = MagicMock()
-            mock_context.cookies.return_value = [{"name": "sid", "value": "keep", "domain": ".example.com"}, {"name": "cf_clearance", "value": "drop", "domain": ".example.com"}, {"name": "__cf_bm", "value": "drop", "domain": ".example.com"}, {"name": "__cf_chl_tk", "value": "drop", "domain": ".example.com"}]
+            mock_context.cookies.return_value = [{"name": "sid", "value": "keep", "domain": ".example.com"}, {"name": "cf_clearance", "value": "keep", "domain": ".example.com"}, {"name": "__cf_bm", "value": "drop", "domain": ".example.com"}, {"name": "__cf_chl_tk", "value": "drop", "domain": ".example.com"}]
             browser._write_cookies_to_file(mock_context)
             saved = json.loads((Path(tmpdir) / browser.COOKIE_FILE).read_text(encoding="utf-8"))
-            self.assertEqual({c["name"] for c in saved}, {"sid"})
+            self.assertEqual({c["name"] for c in saved}, {"sid", "cf_clearance"})
 
     @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
     @patch("bin.headless_browser_cloak.URLSafety.check_url")

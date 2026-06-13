@@ -448,13 +448,15 @@ class HeadlessBrowser:
         self._set_cached_session(session, options)
         return session, True
 
-    # Cloudflare clearance/challenge cookies are bound to the exact fingerprint
-    # (UA, client hints, IP, TLS) and the moment they were minted. Persisting them
-    # and replaying a stale one on a later run makes Cloudflare reject the token and
-    # serve a managed challenge that never auto-solves — the very failure this guards
-    # against. A clean fingerprint passes the challenge fresh each run, so these are
-    # dropped before writing and re-minted live as needed.
-    _NON_PERSISTENT_COOKIE_PREFIXES: tuple[str, ...] = ("cf_clearance", "__cf_bm", "__cf_chl", "cf_chl", "__cfwaitingroom")
+    # __cf_bm (bot-management, ~30 min) and the __cf_chl*/cf_chl*/__cfwaitingroom challenge
+    # cookies are short-lived and bound to an in-flight challenge, so persisting them only
+    # replays junk. cf_clearance is different: it is the actual clearance token with a
+    # multi-hour TTL, so reusing a still-valid one lets a later run skip the managed
+    # challenge entirely — a big reliability win for back-to-back batch runs. We persist it;
+    # if Cloudflare later rejects a stale token the challenge simply re-runs, and
+    # make_request() discards the jar and retries on a fresh session when it fails to clear
+    # (see _discard_persisted_cookies and the _wait_for_cloudflare handling below).
+    _NON_PERSISTENT_COOKIE_PREFIXES: tuple[str, ...] = ("__cf_bm", "__cf_chl", "cf_chl", "__cfwaitingroom")
 
     @classmethod
     def _is_persistable_cookie(cls, name: str) -> bool:
@@ -465,6 +467,12 @@ class HeadlessBrowser:
         cookie_file = self._get_cookie_dir() / HeadlessBrowser.COOKIE_FILE
         with cookie_file.open("w", encoding="utf-8") as f:
             json.dump(cookies, f, indent=2, ensure_ascii=False)
+
+    def _discard_persisted_cookies(self) -> None:
+        # Drop the saved cookie jar so a stale/rejected Cloudflare clearance token isn't
+        # replayed on the next attempt or run; all cookies are re-minted on a clean pass.
+        cookie_file = self._get_cookie_dir() / HeadlessBrowser.COOKIE_FILE
+        cookie_file.unlink(missing_ok=True)
 
     def _read_cookies_from_file(self, context: BrowserContext) -> None:
         cookie_file = self._get_cookie_dir() / HeadlessBrowser.COOKIE_FILE
@@ -497,6 +505,10 @@ class HeadlessBrowser:
     # challenge / Turnstile instead exposes window._cf_chl_opt and a
     # challenges.cloudflare.com iframe under a "Just a moment…"/"잠시만…" title.
     _CLOUDFLARE_CHALLENGE_SELECTORS: tuple[str, ...] = ("#cf-content", 'iframe[src*="challenges.cloudflare.com"]', '[data-translate="checking_browser"]')
+    # How long to let a Cloudflare managed challenge run its JS and reload to the origin
+    # before giving up. Kept separate from (and larger than) the per-navigation timeout
+    # because an interactive Turnstile solve routinely needs longer than a plain page load.
+    _CLOUDFLARE_CHALLENGE_TIMEOUT_SEC: int = 90
     # Predicate is true once no Cloudflare interstitial remains on the page.
     _CLOUDFLARE_CLEARED_PREDICATE = """
         () => {
@@ -512,17 +524,22 @@ class HeadlessBrowser:
         }
     """
 
-    def _wait_for_cloudflare(self, page: Page) -> None:
+    def _wait_for_cloudflare(self, page: Page) -> bool:
         # A Cloudflare challenge auto-solves only if we let its JS run to completion
         # and reload to the real page; grabbing the HTML too early captures the
         # interstitial instead. wait_for_selector(state="hidden") returned instantly
         # when the markup didn't match these selectors, so the challenge HTML leaked
         # through. Poll a predicate that is satisfied immediately when no challenge is
         # present and otherwise blocks until the challenge clears (or times out).
+        # Returns True once cleared (or no challenge was present), False if it never
+        # cleared within the timeout — the caller uses this to retry instead of
+        # capturing the interstitial.
         try:
-            page.wait_for_function(self._CLOUDFLARE_CLEARED_PREDICATE, timeout=self.timeout * 1000)
+            page.wait_for_function(self._CLOUDFLARE_CLEARED_PREDICATE, timeout=self._CLOUDFLARE_CHALLENGE_TIMEOUT_SEC * 1000)
+            return True
         except PlaywrightTimeoutError:
-            LOGGER.warning("Cloudflare challenge did not clear within %ds", self.timeout)
+            LOGGER.warning("Cloudflare challenge did not clear within %ds", self._CLOUDFLARE_CHALLENGE_TIMEOUT_SEC)
+            return False
 
     def _wait_for_marker(self, page: Page, marker_id: str) -> None:
         try:
@@ -635,6 +652,7 @@ class HeadlessBrowser:
             return ""
 
         session: Optional[dict[str, Any]] = None
+        challenge_cleared: bool = True
 
         try:
             session, _ = self._get_or_create_session()
@@ -668,7 +686,18 @@ class HeadlessBrowser:
                 LOGGER.warning("<!-- %r -->", e)
                 return ""
 
-            self._wait_for_cloudflare(page)
+            if not self._wait_for_cloudflare(page):
+                # The challenge never cleared, so the page still holds Cloudflare's
+                # interstitial rather than the real content. Returning that HTML would make
+                # the caller treat a block page as a successful fetch and skip its retry —
+                # capture then extracts nothing. Discard the persisted clearance (so a
+                # rejected/stale token isn't replayed), mark the session for teardown in the
+                # finally block, and return "" so crawler.run()'s num_retries re-attempts on
+                # a fresh browser session.
+                challenge_cleared = False
+                self._discard_persisted_cookies()
+                LOGGER.warning("Cloudflare challenge unresolved for '%s'; returning empty to trigger retry", url)
+                return ""
 
             # navigator.plugins / navigator.languages spoofing is intentionally removed:
             # cloakbrowser sets these at the C++ binary level. A JS-level override here
@@ -715,7 +744,12 @@ class HeadlessBrowser:
             LOGGER.error("Unexpected error in make_request: %s", e)
             return ""
         finally:
-            if session is not None:
+            if session is not None and not challenge_cleared:
+                # An unresolved challenge means this browser is already flagged by
+                # Cloudflare; an immediate re-nav on the same session is unlikely to clear.
+                # Tear it down so crawler.run()'s retry relaunches a fresh session.
+                self._cleanup_cached_session()
+            elif session is not None:
                 session_valid = True
                 try:
                     session["page"].evaluate("window.localStorage.clear();")
