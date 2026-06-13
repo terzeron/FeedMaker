@@ -143,6 +143,19 @@ class TestSendEmailBySmtp(unittest.TestCase):
         self.assertFalse(result)
         mock_smtp_cls.assert_not_called()
 
+    @patch("bin.notification.smtplib.SMTP")
+    @patch("bin.notification.Env.get")
+    def test_missing_smtp_server_fails_cleanly(self, mock_env_get: MagicMock, mock_smtp_cls: MagicMock) -> None:
+        # Regression: when MSG_SMTP_SERVER is absent (smtp_host == "") the send must
+        # fail cleanly without ever constructing an SMTP connection. Previously this
+        # reached smtplib and surfaced the cryptic "please run connect() first".
+        env_without_server = {k: v for k, v in ALL_ENV.items() if k != "MSG_SMTP_SERVER"}
+        n = self._create_notification(mock_env_get, env_without_server)
+        self.assertEqual(n.smtp_host, "")
+        result = n._send_email_by_smtp("test message", "subject")
+        self.assertFalse(result)
+        mock_smtp_cls.assert_not_called()
+
 
 @unittest.skipUnless(Path(_NOTIFICATION_ENV_FILE).is_file(), f"{_NOTIFICATION_ENV_FILE} not present")
 class TestSendMsgIntegration(unittest.TestCase):
