@@ -19,11 +19,11 @@ Reference call sites (production code):
     utils/image_downloader.py:115  Image.frombytes(mode, size, data)
     utils/image_downloader.py:129  img.size == other.size
     utils/image_downloader.py:161  except UnidentifiedImageError
-    utils/download_merge_split.py:127 width, height = img.size
-    utils/download_merge_split.py:234 if img.mode != "RGB":
-    utils/download_merge_split.py:312 Image.new("RGB", (w, h), "white")
-    utils/download_merge_split.py:313 merged_image.paste(img1_copy, (0, 0))
-    utils/download_merge_split.py:236 img.save(path, format="WEBP", quality=...)
+    utils/merge_and_split.py:232 w, h = im.size
+    utils/merge_and_split.py:271 im.convert("RGB") (mode normalization)
+    utils/merge_and_split.py:134 Image.new("RGB", (w, h), "white")
+    utils/merge_and_split.py:135 merged.paste(top, (0, 0))
+    utils/merge_and_split.py:221 im.save(seg_path, format=out_format, **save_kwargs)
 """
 
 import io
@@ -43,7 +43,7 @@ class PILImportSurfaceTest(unittest.TestCase):
     """Pin the symbols image_downloader.py imports from PIL."""
 
     def test_image_module_exposes_image_class(self) -> None:
-        # download_merge_split.py:367 -- current_merged_image: Image.Image | None
+        # merge_and_split.py:267 -- buffer: Image.Image | None
         # image_downloader.py:81/450  -- type hints reference Image.Image
         self.assertTrue(isinstance(Image.Image, type))
 
@@ -62,7 +62,7 @@ class PILImportSurfaceTest(unittest.TestCase):
 
 
 class ImageNewCallShapeTest(unittest.TestCase):
-    """Pin Image.new("RGB", (w, h), "white") used in download_merge_split.py:312/423."""
+    """Pin Image.new("RGB", (w, h), "white") used in merge_and_split.py:134."""
 
     def test_image_new_with_three_positional_args(self) -> None:
         img = Image.new("RGB", (16, 8), "white")
@@ -82,7 +82,7 @@ class ImageInstanceShapeTest(unittest.TestCase):
         return Image.new("RGB", (20, 10), "white")
 
     def test_size_is_width_height_tuple(self) -> None:
-        # download_merge_split.py:127 -- width, height = img.size
+        # merge_and_split.py:232 -- w, h = im.size
         img = self._img()
         w, h = img.size
         self.assertEqual((w, h), (20, 10))
@@ -94,7 +94,7 @@ class ImageInstanceShapeTest(unittest.TestCase):
         self.assertEqual(img.height, 10)
 
     def test_mode_attribute_is_string(self) -> None:
-        # download_merge_split.py:234 -- if img.mode != "RGB":
+        # merge_and_split.py:271 -- im.convert("RGB") normalizes mode
         img = self._img()
         self.assertEqual(img.mode, "RGB")
 
@@ -124,7 +124,7 @@ class ImageResizeAndResamplingTest(unittest.TestCase):
 
 
 class ImageConvertCallShapeTest(unittest.TestCase):
-    """Pin img.convert("RGB") used in image_downloader.py and download_merge_split.py."""
+    """Pin img.convert("RGB") used in image_downloader.py and merge_and_split.py."""
 
     def test_convert_to_rgb_returns_new_image_with_that_mode(self) -> None:
         img = Image.new("RGBA", (4, 4), (255, 0, 0, 128))
@@ -143,7 +143,7 @@ class ImageSaveCallShapeTest(unittest.TestCase):
     """Pin save call shapes used in production."""
 
     def test_save_with_format_kwarg_and_quality(self) -> None:
-        # download_merge_split.py:236 -- img.save(path, format="WEBP", quality=quality)
+        # merge_and_split.py:221 -- im.save(path, format=out_format, **save_kwargs)
         img = Image.new("RGB", (8, 8), "white")
         with tempfile.TemporaryDirectory() as tmp:
             p = Path(tmp) / "out.webp"
@@ -159,7 +159,7 @@ class ImageSaveCallShapeTest(unittest.TestCase):
             self.assertTrue(p.is_file())
 
     def test_save_jpeg_with_quality(self) -> None:
-        # download_merge_split.py:317/454 -- save(path, format="JPEG", quality=75)
+        # merge_and_split.py:221 -- im.save(path, format="JPEG", **save_kwargs)
         img = Image.new("RGB", (8, 8), "white")
         with tempfile.TemporaryDirectory() as tmp:
             p = Path(tmp) / "out.jpg"
@@ -210,7 +210,7 @@ class ImageFromBytesCallShapeTest(unittest.TestCase):
 
 
 class ImagePasteCallShapeTest(unittest.TestCase):
-    """Pin merged_image.paste(other, (x, y)) used in download_merge_split.py."""
+    """Pin merged.paste(other, (x, y)) used in merge_and_split.py:135."""
 
     def test_paste_other_image_at_offset_changes_pixel(self) -> None:
         bg = Image.new("RGB", (4, 4), "white")

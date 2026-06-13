@@ -54,6 +54,9 @@ class Notification:
         if not self.email_recipient_list:
             LOGGER.error("can't send email by smtp, no recipients configured")
             return False
+        if not self.smtp_host:
+            LOGGER.error("can't send email by smtp, no smtp server configured (MSG_SMTP_SERVER)")
+            return False
         email_msg = self._build_message(msg, subject)
         recipient_addresses = [address for address, _ in self.email_recipient_list]
         try:

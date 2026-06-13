@@ -5,7 +5,7 @@
 # (HEALTHCHECK), and the *runtime* shared libs for poppler/heif/cairo native wheels.
 
 # ---------------------------------------------------------------------------
-# Stage 1: builder — compiles the venv and clones CartoonSplit
+# Stage 1: builder — compiles the venv
 # ---------------------------------------------------------------------------
 FROM python:3.12-slim@sha256:090ba77e2958f6af52a5341f788b50b032dd4ca28377d2893dcf1ecbdfdfe203 AS builder
 
@@ -19,12 +19,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 # uv: pinned official image by digest (integrity-verified binary, no `curl | sh`) — SC-1
 COPY --from=ghcr.io/astral-sh/uv:0.11.18@sha256:78bc42400d77b0678ba95765305c826652ed5431f399257271dda681d0318f03 /uv /usr/local/bin/uv
-
-# CartoonSplit pinned to an explicit commit for reproducible builds — SC-2.
-# Bump deliberately: update the SHA after reviewing upstream changes.
-RUN git clone https://github.com/terzeron/CartoonSplit /app/CartoonSplit && \
-    git -C /app/CartoonSplit checkout 9360d6963cdff95967798b958c83ffa5a6079450 && \
-    rm -rf /app/CartoonSplit/.git /app/CartoonSplit/test
 
 WORKDIR /app
 ENV UV_SYSTEM_PYTHON=1 UV_LINK_MODE=copy UV_PYTHON=python3.12
@@ -67,9 +61,8 @@ RUN useradd -l -u $USER_ID $USER_NAME && \
         /run/dbus /tmp/logs /app/logs && \
     chown -R $USER_NAME /app /fma /xml /home/$USER_NAME/.cache /home/$USER_NAME/.local /tmp/logs /app/logs
 
-# Bring the prebuilt venv and CartoonSplit from the builder (no toolchain copied).
+# Bring the prebuilt venv from the builder (no toolchain copied).
 COPY --from=builder --chown=$USER_NAME /app/.venv /app/.venv
-COPY --from=builder --chown=$USER_NAME /app/CartoonSplit /app/CartoonSplit
 
 WORKDIR /app
 COPY logging.conf /app
@@ -81,7 +74,6 @@ VOLUME /fma
 VOLUME /xml
 VOLUME /logs
 
-ENV CARTOON_SPLIT_HOME_DIR="/app/CartoonSplit"
 ENV PATH="/app/.venv/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/home/$USER_NAME/.local/bin:/app/bin:/app/utils"
 ENV PYTHONPATH="/app"
 ENV APP_USER=$USER_NAME
