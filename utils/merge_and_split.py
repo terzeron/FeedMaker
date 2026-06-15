@@ -46,6 +46,15 @@ SUPPORTED_COLOR_STRATEGIES = ("blackorwhite",)
 # 세그먼트 파일명에 붙이는 infix (기존 캐시 파일과 네임스페이스 분리)
 INFIX = "ms"
 
+# 세그먼트 인덱스 자릿수 (0-padding 고정폭, 파일명 사전순 정렬 보장)
+INDEX_WIDTH = 3
+
+
+def segment_postfix(index: int) -> str:
+    """세그먼트 파일명/URL에 공통으로 쓰는 postfix. 파일과 URL이 어긋나지 않도록 단일 소스로 관리."""
+    return f"{INFIX}{index:0{INDEX_WIDTH}d}"
+
+
 # WEBP 차원 한계
 WEBP_SIZE_LIMIT = 16383
 
@@ -216,7 +225,7 @@ def decide_cut(im: Image.Image, *, target: int, window: int, bandwidth: int, dif
 def save_segment(im: Image.Image, feed_img_dir_path: Path, page_url: str, index: int, quality: int, out_format: str) -> Path:
     """세그먼트를 지정 포맷으로 저장하고 경로를 반환."""
     suffix, _ = FORMAT_INFO[out_format]
-    seg_path = FileManager.get_cache_file_path(feed_img_dir_path, page_url, postfix=f"{INFIX}{index}", suffix=suffix)
+    seg_path = FileManager.get_cache_file_path(feed_img_dir_path, page_url, postfix=segment_postfix(index), suffix=suffix)
     save_kwargs = {"quality": quality} if out_format in ("JPEG", "WEBP") else {}
     im.save(seg_path, format=out_format, **save_kwargs)
     LOGGER.debug("saved segment %s (%dx%d, %s)", PathUtil.short_path(seg_path), im.width, im.height, out_format)
@@ -257,7 +266,7 @@ def merge_and_split_stream(
     def emit(segment: Image.Image, idx: int) -> int:
         save_segment(segment, feed_img_dir_path, page_url, idx, quality, out_format)
         segments.append((segment.width, segment.height))
-        seg_url = FileManager.get_cache_url(img_url_prefix, page_url, postfix=f"{INFIX}{idx}", suffix=suffix)
+        seg_url = FileManager.get_cache_url(img_url_prefix, page_url, postfix=segment_postfix(idx), suffix=suffix)
         if width_attr:
             print(f"<img src='{seg_url}' {width_attr}/>")
         else:
