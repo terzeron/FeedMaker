@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 from PIL import Image
 
-from utils.merge_and_split import resolve_local_image_path, parse_stdin_images, resolve_output_format, vstack_images, _build_background_mask, _scan_band_centers, decide_cut, save_segment, merge_and_split_stream, print_statistics, main, INFIX, DEFAULT_BANDWIDTH, FORMAT_INFO
+from utils.merge_and_split import resolve_local_image_path, parse_stdin_images, resolve_output_format, vstack_images, _build_background_mask, _scan_band_centers, decide_cut, save_segment, merge_and_split_stream, print_statistics, main, INFIX, INDEX_WIDTH, segment_postfix, DEFAULT_BANDWIDTH, FORMAT_INFO
 
 # blackorwhite 전략에서 검정/흰색은 모두 배경이므로, content는 중간 회색을 사용해야
 # 밴드(흰색/검정 균일 영역)가 분할점으로서 의미를 가진다.
@@ -241,11 +241,23 @@ class TestSaveSegment(unittest.TestCase):
             for fmt, expect_suffix in [("JPEG", ".jpg"), ("PNG", ".png"), ("WEBP", ".webp")]:
                 seg = save_segment(_solid(100, 100, (10, 20, 30)), dir_path, "https://example.com/page?id=1", 1, 75, fmt)
                 self.assertTrue(seg.is_file())
-                self.assertIn(f"_{INFIX}1", seg.name)
+                self.assertIn(f"_{segment_postfix(1)}", seg.name)
+                self.assertIn(f"_{INFIX}001", seg.name)
                 self.assertTrue(seg.name.endswith(expect_suffix))
                 with Image.open(seg) as im:
                     self.assertEqual(im.format, fmt)
                 seg.unlink()
+
+
+class TestSegmentPostfix(unittest.TestCase):
+    def test_zero_padded_to_fixed_width(self) -> None:
+        self.assertEqual(segment_postfix(1), f"{INFIX}001")
+        self.assertEqual(segment_postfix(77), f"{INFIX}077")
+        self.assertEqual(segment_postfix(100), f"{INFIX}100")
+
+    def test_numeric_part_has_fixed_digit_count(self) -> None:
+        for idx in (1, 9, 77, 999):
+            self.assertEqual(len(segment_postfix(idx)[len(INFIX) :]), INDEX_WIDTH)
 
 
 class TestMergeAndSplitStream(unittest.TestCase):
