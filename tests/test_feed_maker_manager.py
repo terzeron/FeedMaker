@@ -1309,6 +1309,72 @@ class TestDefect2RemoveFeedIsDir(unittest.TestCase):
             self.assertEqual(error, "")
 
 
+class TestRemoveFeedCompletely(unittest.TestCase):
+    """remove_feed_completely는 디렉터리 존재 여부와 무관하게 퍼블릭 피드/설정/요청 정보를 모두 정리한다."""
+
+    @patch("backend.feed_maker_manager.AccessLogManager.remove_httpd_access_info")
+    @patch("backend.feed_maker_manager.FeedManager.remove_progress_info")
+    @patch("backend.feed_maker_manager.FeedManager.remove_rss_info")
+    @patch("backend.feed_maker_manager.FeedManager.remove_config_info")
+    def test_orphan_without_directory_is_cleaned(self, mock_rc, mock_rr, mock_rp, mock_ra):
+        """디렉터리가 없는 고아(등록/요청만 남은) 피드도 정리하고 True를 반환한다."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            mgr = MagicMock(spec=FeedMakerManager)
+            mgr.work_dir_path = tmp_path
+            mgr._remove_public_img_pdf_feed_files = MagicMock()
+            mgr._git_rm = MagicMock(return_value=("ok", None))
+            mgr.feed_manager = MagicMock()
+            mgr.html_file_manager = MagicMock()
+            # 실제 헬퍼를 사용하도록 연결
+            mgr._remove_feed_artifacts = lambda fdp, fn: FeedMakerManager._remove_feed_artifacts(mgr, fdp, fn)
+            (tmp_path / "group1").mkdir()
+            # 피드 디렉터리는 생성하지 않음 (고아 상태)
+
+            result, error = FeedMakerManager.remove_feed_completely(mgr, "group1", "orphan")
+
+            self.assertTrue(result)
+            self.assertEqual(error, "")
+            # 디렉터리가 없으므로 git rm은 호출하지 않는다
+            mgr._git_rm.assert_not_called()
+            # 퍼블릭 피드/요청 정보 등 DB/파일 정리는 수행한다
+            mgr.feed_manager.remove_public_feed_by_feed_name.assert_called_once_with("orphan", do_remove_file=True)
+            mock_rc.assert_called_once()
+            mock_rr.assert_called_once()
+            mock_rp.assert_called_once()
+            mock_ra.assert_called_once()
+
+    @patch("backend.feed_maker_manager.AccessLogManager.remove_httpd_access_info")
+    @patch("backend.feed_maker_manager.FeedManager.remove_progress_info")
+    @patch("backend.feed_maker_manager.FeedManager.remove_rss_info")
+    @patch("backend.feed_maker_manager.FeedManager.remove_config_info")
+    def test_existing_feed_with_directory_is_cleaned(self, mock_rc, mock_rr, mock_rp, mock_ra):
+        """디렉터리가 있으면 git rm까지 수행한다."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            mgr = MagicMock(spec=FeedMakerManager)
+            mgr.work_dir_path = tmp_path
+            mgr._remove_public_img_pdf_feed_files = MagicMock()
+            mgr._git_rm = MagicMock(return_value=("ok", None))
+            mgr.feed_manager = MagicMock()
+            mgr.html_file_manager = MagicMock()
+            mgr._remove_feed_artifacts = lambda fdp, fn: FeedMakerManager._remove_feed_artifacts(mgr, fdp, fn)
+            (tmp_path / "group1" / "feed1").mkdir(parents=True)
+
+            result, error = FeedMakerManager.remove_feed_completely(mgr, "group1", "feed1")
+
+            self.assertTrue(result)
+            self.assertEqual(error, "")
+            mgr._git_rm.assert_called_once()
+
+    def test_invalid_name_raises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = MagicMock(spec=FeedMakerManager)
+            mgr.work_dir_path = Path(tmp)
+            with self.assertRaises(ValueError):
+                FeedMakerManager.remove_feed_completely(mgr, "../evil", "feed1")
+
+
 class TestDefect1RemoveGroupEdgeCases(unittest.TestCase):
     @patch("backend.feed_maker_manager.AccessLogManager.remove_httpd_access_info")
     @patch("backend.feed_maker_manager.FeedManager.remove_progress_info")

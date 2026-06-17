@@ -253,65 +253,33 @@ describe("Problems.vue", () => {
     expect(wrapper.vm.statusInfoSortDesc).toBe(false);
   });
 
-  it("showStatusInfoDeleteButton returns true when feed_title is empty and public_html is O", async () => {
-    axios.get.mockResolvedValueOnce({
-      data: {
-        status: "success",
-        result: [
-          {
-            feed_title: "",
-            feed_name: "x",
-            public_html: "O",
-            http_request: "",
-            update_date: "",
-            upload_date: "",
-            access_date: "",
-            view_date: "",
-          },
-        ],
-      },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: {
-        status: "success",
-        result: {
-          html_file_size_map: [],
-          html_file_with_many_image_tag_map: [],
-          html_file_without_image_tag_map: [],
-          html_file_image_not_found_map: [],
-        },
-      },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
-    });
-
+  it("showStatusInfoDeleteButton shows delete when any artifact exists", async () => {
     axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
     await flushPromises();
 
+    // 생성 O, 등록 X, 요청 X (dengeki2 케이스) -> 노출
     expect(
       wrapper.vm.showStatusInfoDeleteButton({
-        item: { feed_title: "", public_html: "O" },
+        item: { feedmaker: "O", public_html: "X", http_request: "X" },
       }),
     ).toBe(true);
+    // 등록만 O인 고아 피드 -> 노출
     expect(
       wrapper.vm.showStatusInfoDeleteButton({
-        item: { feed_title: "Some", public_html: "O" },
+        item: { feedmaker: "X", public_html: "O", http_request: "X" },
       }),
-    ).toBe(false);
+    ).toBe(true);
+    // 요청만 O인 고아 피드 -> 노출
     expect(
       wrapper.vm.showStatusInfoDeleteButton({
-        item: { feed_title: "", public_html: "" },
+        item: { feedmaker: "X", public_html: "X", http_request: "O" },
+      }),
+    ).toBe(true);
+    // 셋 다 X (삭제할 산출물 없음) -> 숨김
+    expect(
+      wrapper.vm.showStatusInfoDeleteButton({
+        item: { feedmaker: "X", public_html: "X", http_request: "X" },
       }),
     ).toBe(false);
   });
@@ -2346,6 +2314,25 @@ describe("Problems.vue", () => {
       item: { feed_name: "f1", group_name: "g1" },
     });
     expect(wrapper.vm.showConfirmModal).toBe(true);
+  });
+
+  it("statusInfoDeleteClicked deletes whole feed via group/feed endpoint", async () => {
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    axios.delete = vi
+      .fn()
+      .mockResolvedValueOnce({ data: { status: "success" } });
+    wrapper.vm.statusInfoDeleteClicked({
+      item: { feed_name: "dengeki2", group_name: "plamodel" },
+    });
+    wrapper.vm.handleConfirmOk();
+    await flushPromises();
+
+    expect(axios.delete).toHaveBeenCalledWith(
+      expect.stringContaining("/groups/plamodel/feeds/dengeki2?force=true"),
+    );
   });
 
   it("publicFeedInfoDeleteClicked opens confirm", async () => {

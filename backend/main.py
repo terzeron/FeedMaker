@@ -530,11 +530,15 @@ async def post_feed_info(group_name: str, feed_name: str, request: Request, feed
 
 
 @app.delete("/groups/{group_name}/feeds/{feed_name}")
-async def delete_feed_info(group_name: str, feed_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
-    LOGGER.info("DELETE /groups/%s/feeds/%s -> remove_feed(%s, %s)", group_name, feed_name, group_name, feed_name)
+async def delete_feed_info(group_name: str, feed_name: str, request: Request, force: bool = False, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+    LOGGER.info("DELETE /groups/%s/feeds/%s (force=%s)", group_name, feed_name, force)
     require_admin(request)
     response_object: dict[str, Any] = {}
-    result, error = feed_maker_manager.remove_feed(group_name, feed_name)
+    # force=True: 디렉터리가 없는 고아(등록/요청만 남은) 피드까지 모두 정리
+    if force:
+        result, error = feed_maker_manager.remove_feed_completely(group_name, feed_name)
+    else:
+        result, error = feed_maker_manager.remove_feed(group_name, feed_name)
     if result or not error:
         response_object["status"] = "success"
     else:
