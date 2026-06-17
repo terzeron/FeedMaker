@@ -40,53 +40,49 @@ class NewlistCollectorTest(unittest.TestCase):
         self.assertEqual(expected1, actual)
 
         # normal input
-        test_input = '''
+        test_input = """
 https://cartoon.media.daum.net/webtoon/view/dontgiveheart\t그 책에 마음을 주지 마세요
 https://cartoon.media.daum.net/webtoon/view/haksajaeseng\t학사재생
 https://cartoon.media.daum.net/webtoon/view/exchangerate\t환율이 바뀌었나요?
 https://cartoon.media.daum.net/webtoon/view/mujigaebridge\t무지개다리 파수꾼
-'''
+"""
         actual = self.collector.split_result_into_items(test_input)
         self.assertEqual(4, len(actual))
         for item in actual:
             self.assertEqual(3, len(item))
 
-        # abnormal input
-        test_input = '''
+        # abnormal input: non-record lines (no tab after rstrip) are skipped,
+        # valid records survive instead of the whole batch being discarded
+        test_input = """
 https://cartoon.media.daum.net/webtoon/view/dontgiveheart\t그 책에 마음을 주지 마세요
 https://cartoon.media.daum.net/webtoon/view/haksajaeseng\t
 https://cartoon.media.daum.net/webtoon/view/exchangerate
 https://cartoon.media.daum.net/webtoon/view/mujigaebridge\t무지개다리 파수꾼
-'''
-        with patch.object(LOGGER, "error") as mock_error:
+"""
+        with patch.object(LOGGER, "warning") as mock_warning:
             actual = self.collector.split_result_into_items(test_input)
-            self.assertEqual(0, len(actual))
+            self.assertEqual([("https://cartoon.media.daum.net/webtoon/view/dontgiveheart", "그 책에 마음을 주지 마세요", []), ("https://cartoon.media.daum.net/webtoon/view/mujigaebridge", "무지개다리 파수꾼", [])], actual)
 
-            args_list = mock_error.call_args_list
-            expected = call(
-                "Error: Can't split a line into link and title, line='%s'", 'https://cartoon.media.daum.net/webtoon/view/haksajaeseng')
+            args_list = mock_warning.call_args_list
+            expected = call("Warning: skipping non-record line, line='%s'", "https://cartoon.media.daum.net/webtoon/view/exchangerate")
             self.assertIn(expected, args_list)
 
-    @patch('bin.new_list_collector.Crawler')
-    @patch('bin.new_list_collector.Process')
+    @patch("bin.new_list_collector.Crawler")
+    @patch("bin.new_list_collector.Process")
     def test_compose_url_list(self, mock_process, mock_crawler) -> None:
         # Mock crawler response
         mock_crawler_instance = MagicMock()
         mock_crawler.return_value = mock_crawler_instance
-        mock_crawler_instance.run.return_value = (
-            '<strong class="title"><a href="/entry.naver?docId=123">테스트 제목 1</a></strong>',
-            None,
-            None
-        )
+        mock_crawler_instance.run.return_value = ('<strong class="title"><a href="/entry.naver?docId=123">테스트 제목 1</a></strong>', None, None)
 
         # Mock process response
         mock_process.exec_cmd.return_value = (
-            'https://terms.naver.com/entry.naver?docId=123\t테스트 제목 1\n'
-            'https://terms.naver.com/entry.naver?docId=456\t테스트 제목 2\n'
-            'https://terms.naver.com/entry.naver?docId=789\t테스트 제목 3\n'
-            'https://terms.naver.com/entry.naver?docId=012\t테스트 제목 4\n'
-            'https://terms.naver.com/entry.naver?docId=345\t테스트 제목 5\n',
-            None
+            "https://terms.naver.com/entry.naver?docId=123\t테스트 제목 1\n"
+            "https://terms.naver.com/entry.naver?docId=456\t테스트 제목 2\n"
+            "https://terms.naver.com/entry.naver?docId=789\t테스트 제목 3\n"
+            "https://terms.naver.com/entry.naver?docId=012\t테스트 제목 4\n"
+            "https://terms.naver.com/entry.naver?docId=345\t테스트 제목 5\n",
+            None,
         )
 
         actual = self.collector._compose_url_list()
@@ -108,10 +104,7 @@ https://cartoon.media.daum.net/webtoon/view/mujigaebridge\t무지개다리 파�
         return num_lines, num_items
 
     def test_save_new_list_to_file(self) -> None:
-        new_list: list[tuple[str, str, list[str]]] = [
-            ("http://cartoon.media.daum.net/webtoon/view/dontgiveheart", "그 책에 마음을 주지 마세요", []),
-            ("http://cartoon.media.daum.net/webtoon/view/mujigaebridge", "무지개다리 파수꾼", [])
-        ]
+        new_list: list[tuple[str, str, list[str]]] = [("http://cartoon.media.daum.net/webtoon/view/dontgiveheart", "그 책에 마음을 주지 마세요", []), ("http://cartoon.media.daum.net/webtoon/view/mujigaebridge", "무지개다리 파수꾼", [])]
         self.collector._save_new_list_to_file(new_list)
         if self.collector.new_list_file_path.is_file():
             num_lines, num_items = NewlistCollectorTest.count_tsv_file(self.collector.new_list_file_path)
@@ -120,31 +113,27 @@ https://cartoon.media.daum.net/webtoon/view/mujigaebridge\t무지개다리 파�
         else:
             self.fail()
 
-    @patch('bin.new_list_collector.Crawler')
-    @patch('bin.new_list_collector.Process')
+    @patch("bin.new_list_collector.Crawler")
+    @patch("bin.new_list_collector.Process")
     def test_collect(self, mock_process, mock_crawler) -> None:
         # Mock crawler response
         mock_crawler_instance = MagicMock()
         mock_crawler.return_value = mock_crawler_instance
-        mock_crawler_instance.run.return_value = (
-            '<strong class="title"><a href="/entry.naver?docId=123">테스트 제목 1</a></strong>',
-            None,
-            None
-        )
+        mock_crawler_instance.run.return_value = ('<strong class="title"><a href="/entry.naver?docId=123">테스트 제목 1</a></strong>', None, None)
 
         # Mock process response
         mock_process.exec_cmd.return_value = (
-            'https://terms.naver.com/entry.naver?docId=123\t테스트 제목 1\n'
-            'https://terms.naver.com/entry.naver?docId=456\t테스트 제목 2\n'
-            'https://terms.naver.com/entry.naver?docId=789\t테스트 제목 3\n'
-            'https://terms.naver.com/entry.naver?docId=012\t테스트 제목 4\n'
-            'https://terms.naver.com/entry.naver?docId=345\t테스트 제목 5\n'
-            'https://terms.naver.com/entry.naver?docId=678\t테스트 제목 6\n'
-            'https://terms.naver.com/entry.naver?docId=901\t테스트 제목 7\n'
-            'https://terms.naver.com/entry.naver?docId=234\t테스트 제목 8\n'
-            'https://terms.naver.com/entry.naver?docId=567\t테스트 제목 9\n'
-            'https://terms.naver.com/entry.naver?docId=890\t테스트 제목 10\n',
-            None
+            "https://terms.naver.com/entry.naver?docId=123\t테스트 제목 1\n"
+            "https://terms.naver.com/entry.naver?docId=456\t테스트 제목 2\n"
+            "https://terms.naver.com/entry.naver?docId=789\t테스트 제목 3\n"
+            "https://terms.naver.com/entry.naver?docId=012\t테스트 제목 4\n"
+            "https://terms.naver.com/entry.naver?docId=345\t테스트 제목 5\n"
+            "https://terms.naver.com/entry.naver?docId=678\t테스트 제목 6\n"
+            "https://terms.naver.com/entry.naver?docId=901\t테스트 제목 7\n"
+            "https://terms.naver.com/entry.naver?docId=234\t테스트 제목 8\n"
+            "https://terms.naver.com/entry.naver?docId=567\t테스트 제목 9\n"
+            "https://terms.naver.com/entry.naver?docId=890\t테스트 제목 10\n",
+            None,
         )
 
         actual = self.collector.collect()
@@ -171,9 +160,18 @@ class TestSplitResultIntoItemsExtended(unittest.TestCase):
         self.assertEqual(result, [])
 
     def test_no_tab_raises_value_error_path(self) -> None:
-        # single field without tab -> ValueError on unpack -> line 42-44
+        # single field without tab -> not a record -> skipped, yielding []
         result = NewlistCollector.split_result_into_items("no-tab-here")
         self.assertEqual(result, [])
+
+    def test_non_record_line_is_skipped_not_aborted(self) -> None:
+        # A diagnostic/log line (no tab) can leak onto stdout - the data
+        # channel - from a pipeline script (e.g. a translation fallback
+        # warning). Such noise must be skipped, not cause every valid record
+        # collected alongside it to be discarded.
+        test_input = "https://example.com/a\tTitle A\n[fallback] 1개 텍스트가 모든 서비스에서 번역 실패\nhttps://example.com/b\tTitle B\n"
+        result = NewlistCollector.split_result_into_items(test_input)
+        self.assertEqual([("https://example.com/a", "Title A", []), ("https://example.com/b", "Title B", [])], result)
 
 
 class TestComposeUrlListExtended(unittest.TestCase):
