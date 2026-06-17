@@ -438,6 +438,23 @@ class FeedMakerManager:
         _validate_name(feed_name, "feed_name")
         self.feed_manager.remove_public_feed_by_feed_name(feed_name, do_remove_file=True)
 
+    def _remove_feed_artifacts(self, feed_dir_path: Path, feed_name: str) -> None:
+        # remove public img/pdf files
+        self._remove_public_img_pdf_feed_files(feed_name)
+
+        # git rm & commit + remove remainder directory (디렉터리가 있을 때만)
+        if feed_dir_path.is_dir():
+            self._git_rm(feed_dir_path)
+            rmtree(feed_dir_path)
+
+        # re-scan feed (DB/파일 정리는 feed_name 기준이라 디렉터리 존재 여부와 무관하게 동작)
+        FeedManager.remove_config_info(feed_dir_path, do_remove_file=True)
+        FeedManager.remove_rss_info(feed_dir_path, do_remove_file=True)
+        self.feed_manager.remove_public_feed_by_feed_name(feed_name, do_remove_file=True)
+        FeedManager.remove_progress_info(feed_dir_path, do_remove_file=True)
+        AccessLogManager.remove_httpd_access_info(feed_dir_path)
+        self.html_file_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path, do_remove_file=True)
+
     def remove_feed(self, group_name: str, feed_name: str) -> tuple[bool, str]:
         LOGGER.debug(f"# remove_feed({group_name}, {feed_name})")
         _validate_name(group_name, "group_name")
@@ -446,23 +463,16 @@ class FeedMakerManager:
         if not feed_dir_path.is_dir():
             return False, f"can't remove feed '{PathUtil.short_path(feed_dir_path)}'"
 
-        # remove files
-        self._remove_public_img_pdf_feed_files(feed_name)
+        self._remove_feed_artifacts(feed_dir_path, feed_name)
+        return True, ""
 
-        # git rm & commit
-        self._git_rm(feed_dir_path)
-
-        # remove remainder files and directories
-        if feed_dir_path.is_dir():
-            rmtree(feed_dir_path)
-
-        # re-scan feed
-        FeedManager.remove_config_info(feed_dir_path, do_remove_file=True)
-        FeedManager.remove_rss_info(feed_dir_path, do_remove_file=True)
-        self.feed_manager.remove_public_feed_by_feed_name(feed_name, do_remove_file=True)
-        FeedManager.remove_progress_info(feed_dir_path, do_remove_file=True)
-        AccessLogManager.remove_httpd_access_info(feed_dir_path)
-        self.html_file_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path, do_remove_file=True)
+    def remove_feed_completely(self, group_name: str, feed_name: str) -> tuple[bool, str]:
+        # 디렉터리가 없는 고아 상태(등록/요청만 남은 피드)도 퍼블릭 피드/설정/요청 정보를 모두 정리한다.
+        LOGGER.debug(f"# remove_feed_completely({group_name}, {feed_name})")
+        _validate_name(group_name, "group_name")
+        _validate_name(feed_name, "feed_name")
+        feed_dir_path = self.work_dir_path / group_name / feed_name
+        self._remove_feed_artifacts(feed_dir_path, feed_name)
         return True, ""
 
     def remove_group(self, group_name: str) -> tuple[bool, str]:

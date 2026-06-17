@@ -1243,7 +1243,12 @@ export default {
       return _.orderBy(data, [sortBy], [sortDesc ? 'desc' : 'asc']);
     },
     showStatusInfoDeleteButton: function (data) {
-      return data.item["feed_title"] === "" && data.item["public_html"] === "O";
+      // 생성/등록/요청 중 하나라도 존재하면(= 삭제할 산출물이 있으면) 삭제 버튼 노출
+      return (
+        data.item["feedmaker"] === "O" ||
+        data.item["public_html"] === "O" ||
+        data.item["http_request"] === "O"
+      );
     },
     openConfirmModal: function (message, action) {
       this.confirmMessage = message;
@@ -1274,10 +1279,27 @@ export default {
           alert("피드 삭제 요청 중에 오류가 발생하였습니다. " + error);
         });
     },
+    removeFeed(groupName, feedName) {
+      // force=true: 디렉터리가 없는 고아(등록/요청만 남은) 피드까지 일괄 삭제
+      const path =
+        getApiUrlPath() + `/groups/${groupName}/feeds/${feedName}?force=true`;
+      axios
+        .delete(path)
+        .then((res) => {
+          if (res.data.status === "failure") {
+            alert("피드 삭제 중에 오류가 발생하였습니다. " + res.data.message);
+          }
+        })
+        .catch((error) => {
+          alert("피드 삭제 요청 중에 오류가 발생하였습니다. " + error);
+        });
+    },
     statusInfoDeleteClicked(data) {
       this.openConfirmModal("정말로 실행하시겠습니까?", () => {
+        const groupName = data.item["group_name"];
         const feedName = data.item["feed_name"];
-        this.removePublicFeed(feedName);
+        // 퍼블릭 피드 + 피드 디렉터리(설정) + 요청/접근 정보까지 일괄 삭제
+        this.removeFeed(groupName, feedName);
         this.statusInfolist = this.statusInfolist.filter(
           (item) => item !== data.item
         );
