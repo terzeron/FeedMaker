@@ -35,12 +35,16 @@ class NewlistCollector:
             line = line.rstrip()
             if re.search(r"^#", line) or re.search(r"^\s*$", line):
                 continue
-            try:
-                link, title, *metadata = line.split("\t")
-                if not link or not title:
-                    LOGGER.error("Error: Can't split a line into link and title, line='%s'", line)
-                    return []
-            except ValueError:
+            if "\t" not in line:
+                # A record is "link<TAB>title". A line without a tab is not a
+                # record: pipeline scripts share a logger whose console handler
+                # writes to stdout (the data channel), so diagnostic lines
+                # (e.g. a translation fallback warning) can leak in. Skip such
+                # noise instead of discarding every valid item collected so far.
+                LOGGER.warning("Warning: skipping non-record line, line='%s'", line)
+                continue
+            link, title, *metadata = line.split("\t")
+            if not link or not title:
                 LOGGER.error("Error: Can't split a line into link and title, line='%s'", line)
                 return []
             result_list.append((link, title, metadata))
