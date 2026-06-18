@@ -42,7 +42,7 @@
   "devDependencies": {
     "@babel/core": "^8.0.1",
     "@babel/eslint-parser": "^8.0.1",
-    "@babel/preset-env": "^8.0.0-rc.6",
+    "@babel/preset-env": "^8.0.1",
     "@playwright/test": "^1.60.0",
     "@vitejs/plugin-basic-ssl": "^2.3.0",
     "@vitejs/plugin-vue": "^6.0.7",
