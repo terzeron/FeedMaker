@@ -40,7 +40,7 @@
     "vue3-markdown": "^1.2.15"
   },
   "devDependencies": {
-    "@babel/core": "^8.0.0-rc.6",
+    "@babel/core": "^8.0.1",
     "@babel/eslint-parser": "^8.0.0-rc.6",
     "@babel/preset-env": "^8.0.0-rc.6",
     "@playwright/test": "^1.60.0",
