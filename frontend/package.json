@@ -63,6 +63,7 @@
   ],
   "overrides": {
     "glob": "^13.0.6",
+    "@babel/preset-modules": "0.2.0",
     "@babel/plugin-bugfix-safari-rest-destructuring-rhs-array": {
       "@babel/core": "$@babel/core"
     }
