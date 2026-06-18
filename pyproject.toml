@@ -39,7 +39,7 @@ dependencies = [
     "gitpython>=3.1.50",
     "defusedxml>=0.7.1",
     "pdftext>=0.6.3",
-    "slowapi>=0.1.9",
+    "slowapi>=0.1.10",
     "pydantic[email]>=2.13.4",
     "cloakbrowser>=0.3.31",
 ]
