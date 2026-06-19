@@ -233,6 +233,12 @@ class TestDecideCut(unittest.TestCase):
         im = _solid(800, 2000, _CONTENT)
         self.assertEqual(_cut(im, size_limit=1500), 1500)
 
+    def test_band_beyond_size_limit_forces_cut_at_limit(self) -> None:
+        # 자연 밴드가 size_limit(1500) 너머(1700)에만 있다. 거기서 자르면 세그먼트가
+        # 출력 포맷 한계를 넘으므로, 한계 안엔 밴드가 없는 것으로 보고 1500에서 강제 절단.
+        im = _content_with_bands(800, 2000, [(1700, 40, _WHITE)])
+        self.assertEqual(_cut(im, size_limit=1500), 1500)
+
 
 class TestSaveSegment(unittest.TestCase):
     def test_saves_with_format_and_suffix(self) -> None:
@@ -351,6 +357,19 @@ class TestMergeAndSplitStream(unittest.TestCase):
             dir_path = Path(d)
             src = dir_path / "tall.png"
             _solid(800, 20000, _CONTENT).save(src, format="PNG")
+            _, _, segs = self._run(dir_path, [src], output_format="webp")
+            self.assertGreaterEqual(len(segs), 2)
+            for s in segs:
+                self.assertLessEqual(self._wh(s)[1], FORMAT_INFO["WEBP"][1])
+            self.assertEqual(sum(self._wh(s)[1] for s in segs), 20000)
+
+    def test_band_beyond_webp_limit_does_not_overflow(self) -> None:
+        # 네이버 웹툰 회귀: 자연 밴드가 WEBP 한계(16383) 너머(17000)에만 있어도
+        # 세그먼트가 한계를 넘지 않아야 한다(인코딩 실패 방지).
+        with tempfile.TemporaryDirectory() as d:
+            dir_path = Path(d)
+            src = dir_path / "tall.png"
+            _content_with_bands(800, 20000, [(17000, 50, _WHITE)]).save(src, format="PNG")
             _, _, segs = self._run(dir_path, [src], output_format="webp")
             self.assertGreaterEqual(len(segs), 2)
             for s in segs:

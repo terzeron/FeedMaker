@@ -213,7 +213,10 @@ def decide_cut(im: Image.Image, *, target: int, window: int, bandwidth: int, dif
         return min(centers, key=lambda c: abs(c - target))
 
     lo2 = min(max(bandwidth, target + window), height)
-    centers2 = _scan_band_centers(im, lo2, height, bandwidth, diff_threshold, accept, strategy)
+    # size_limit 안에서만 밴드를 찾는다. 한계를 넘는 밴드에서 절단하면 세그먼트가
+    # 출력 포맷의 차원 한계를 초과해 인코딩에 실패한다(아래 강제 절단으로 위임).
+    hi2 = min(height, size_limit)
+    centers2 = _scan_band_centers(im, lo2, hi2, bandwidth, diff_threshold, accept, strategy)
     if centers2:
         return min(centers2)
 
