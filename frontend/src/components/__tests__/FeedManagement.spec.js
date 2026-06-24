@@ -8,7 +8,7 @@ const jsonEditorMock = vi.hoisted(() =>
     this.get = vi.fn().mockReturnValue({});
     this.expandAll = vi.fn();
     this.destroy = vi.fn();
-  })
+  }),
 );
 
 vi.mock("axios");
@@ -2179,6 +2179,282 @@ describe("FeedManagement.vue", () => {
       const target = buttons.find((b) => b.text() === "피드 삭제");
       expect(target).toBeDefined();
       expect(target.classes()).toContain("btn-danger");
+    });
+  });
+
+  describe("additional uncovered coverage", () => {
+    it("startButton shows spinner and hides icon when ref exists", async () => {
+      // $refs는 readonly이므로 항상 렌더링되는 기존 ref(searchButton)를 사용한다.
+      const wrapper = createWrapper();
+      await flushPromises();
+      const btn = wrapper.vm.$refs.searchButton;
+      btn.doShowInitialIcon = true;
+      btn.doShowSpinner = false;
+      wrapper.vm.startButton("searchButton");
+      expect(btn.doShowInitialIcon).toBe(false);
+      expect(btn.doShowSpinner).toBe(true);
+    });
+
+    it("resetButton restores icon and clears spinner when ref exists", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      const btn = wrapper.vm.$refs.searchButton;
+      btn.doShowInitialIcon = false;
+      btn.doShowSpinner = true;
+      wrapper.vm.resetButton("searchButton");
+      expect(btn.doShowInitialIcon).toBe(true);
+      expect(btn.doShowSpinner).toBe(false);
+    });
+
+    it("resetButton logs error when ref is missing", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.resetButton("missingRef");
+      expect(console.error).toHaveBeenCalledWith(
+        "Button ref not found:",
+        "missingRef",
+      );
+    });
+
+    it("hideAllRelatedToSiteConfig destroys existing jsonEditor", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      const destroySpy = vi.fn();
+      wrapper.vm.jsonEditor = { destroy: destroySpy };
+      wrapper.vm.hideAllRelatedToSiteConfig();
+      expect(destroySpy).toHaveBeenCalled();
+      expect(wrapper.vm.jsonEditor).toBeNull();
+    });
+
+    it("getFeedInfo sets an interval whose callback calls checkRunning", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      const setIntervalSpy = vi.spyOn(global, "setInterval");
+      const checkRunningSpy = vi
+        .spyOn(wrapper.vm, "checkRunning")
+        .mockImplementation(() => {});
+
+      axios.get.mockResolvedValueOnce({
+        data: {
+          status: "success",
+          feed_info: {
+            config: {
+              rss: { title: "T", link: "l", description: "D" },
+              collection: { list_url_list: [] },
+              extraction: {},
+            },
+            collection_info: { collect_date: "", total_item_count: 0 },
+            public_feed_info: { num_items: 0, file_size: 0 },
+            progress_info: {
+              current_index: 0,
+              total_item_count: 0,
+              unit_size_per_day: 0,
+              progress_ratio: 0,
+            },
+          },
+        },
+      });
+      axios.get.mockResolvedValue({
+        data: { status: "success", running_status: false },
+      });
+      wrapper.vm.getFeedInfo("g1", "f1");
+      await flushPromises();
+
+      // 3000ms 주기로 등록된 setInterval 콜백을 직접 실행해 line 1014를 탄다.
+      const intervalCall = setIntervalSpy.mock.calls.find((c) => c[1] === 3000);
+      expect(intervalCall).toBeDefined();
+      checkRunningSpy.mockClear();
+      intervalCall[0]();
+      expect(checkRunningSpy).toHaveBeenCalled();
+
+      clearInterval(wrapper.vm.checkRunningInterval);
+      setIntervalSpy.mockRestore();
+      checkRunningSpy.mockRestore();
+    });
+
+    it("initJsonEditor wires a real onChange handler (success and error paths)", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+
+      wrapper.vm.showEditor = true;
+      await wrapper.vm.$nextTick();
+
+      jsonEditorMock.mockClear();
+      wrapper.vm.initJsonEditor();
+      // initJsonEditor 내부의 $nextTick 콜백에서 JSONEditor가 생성됨
+      await wrapper.vm.$nextTick();
+      await flushPromises();
+
+      expect(jsonEditorMock).toHaveBeenCalled();
+      const options = jsonEditorMock.mock.calls.at(-1)[1];
+      expect(typeof options.onChange).toBe("function");
+
+      // 성공 경로: get()이 값을 반환 → jsonData 갱신 (line 1348)
+      wrapper.vm.jsonEditor.get = vi.fn().mockReturnValue({ updated: true });
+      options.onChange();
+      expect(wrapper.vm.jsonData).toEqual({ updated: true });
+
+      // 에러 경로: get()이 throw → catch에서 console.error (line 1350)
+      wrapper.vm.jsonEditor.get = vi.fn(() => {
+        throw new Error("get failed");
+      });
+      expect(() => options.onChange()).not.toThrow();
+      expect(console.error).toHaveBeenCalledWith(
+        "JSON 에디터 데이터 가져오기 실패:",
+        expect.any(Error),
+      );
+    });
+
+    it("binds v-model and renders slots on search/newFeed inputs", async () => {
+      // 기본 BFormInput 스텁(<input />)은 v-model setter와 슬롯을 렌더링하지 않아
+      // 미커버였다. modelValue 바인딩 + 슬롯 렌더링 스텁으로 두 경로를 탄다.
+      const richStubs = {
+        ...stubs,
+        BFormInput: {
+          props: ["modelValue"],
+          emits: ["update:modelValue"],
+          template:
+            '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" /><span class="slot-content"><slot /></span>',
+        },
+      };
+      axios.get.mockResolvedValue({
+        data: { status: "success", groups: [] },
+      });
+      const wrapper = mount(FeedManagement, {
+        global: {
+          stubs: richStubs,
+          mocks: { $route: { params: {} } },
+        },
+      });
+      wrapper.vm.jsonData = { rss: { title: "", link: "", description: "" } };
+      // getGroups가 마운트 직후 표시 플래그를 초기화하므로 flush 이후에 설정한다.
+      await flushPromises();
+      wrapper.vm.showNewFeedNameInput = true;
+      await wrapper.vm.$nextTick();
+
+      const inputs = wrapper.findAll("input");
+      // 검색어 입력 (line 27, 32): placeholder="키워드"인 첫 input
+      await inputs[0].setValue("검색키워드");
+      expect(wrapper.vm.searchKeyword).toBe("검색키워드");
+      // 새 피드 이름 입력 (line 218, 219)
+      const newFeedInput = inputs[inputs.length - 1];
+      await newFeedInput.setValue("새피드");
+      expect(wrapper.vm.newFeedName).toBe("새피드");
+
+      const slotTexts = wrapper.findAll(".slot-content").map((s) => s.text());
+      expect(slotTexts).toContain("검색키워드");
+      expect(slotTexts).toContain("새피드");
+    });
+
+    it("syncs showConfirmModal through BModal v-model update event", async () => {
+      // 기본 BModal 스텁은 update:modelValue를 emit하지 않아 v-model setter(line 403)가
+      // 미커버였다. emit 가능한 스텁으로 setter 경로를 탄다.
+      const modalStubs = {
+        ...stubs,
+        BModal: {
+          props: ["modelValue"],
+          emits: ["update:modelValue"],
+          template:
+            '<div><button class="modal-close" @click="$emit(\'update:modelValue\', false)" /><slot /></div>',
+        },
+      };
+      axios.get.mockResolvedValue({
+        data: { status: "success", groups: [] },
+      });
+      const wrapper = mount(FeedManagement, {
+        global: { stubs: modalStubs, mocks: { $route: { params: {} } } },
+      });
+      wrapper.vm.jsonData = { rss: { title: "", link: "", description: "" } };
+      await flushPromises();
+
+      wrapper.vm.showConfirmModal = true;
+      await wrapper.vm.$nextTick();
+      await wrapper.find(".modal-close").trigger("click");
+      expect(wrapper.vm.showConfirmModal).toBe(false);
+    });
+
+    it("invokes inline @click handlers on rendered group/feed/toggle buttons", async () => {
+      axios.get.mockResolvedValue({
+        data: { status: "success", groups: [], feeds: [] },
+      });
+      axios.put = vi.fn().mockResolvedValue({ data: { status: "success" } });
+      // 기본 MyButton 스텁은 label prop을 렌더링하지 않아 버튼을 텍스트로 찾을 수 없으므로
+      // label을 렌더링하는 스텁을 사용한다. emits 미선언이라 @click은 native로 fall-through되어
+      // trigger("click")으로 인라인 핸들러가 실행된다.
+      const labeledStubs = {
+        ...stubs,
+        MyButton: {
+          props: ["label"],
+          template: "<button>{{ label }}</button>",
+        },
+      };
+      const wrapper = mount(FeedManagement, {
+        global: { stubs: labeledStubs, mocks: { $route: { params: {} } } },
+      });
+      wrapper.vm.jsonData = { rss: { title: "", link: "", description: "" } };
+      await flushPromises();
+
+      // 그룹 버튼 렌더링 후 클릭 → groupNameButtonClicked 인라인 핸들러 (line 88)
+      wrapper.vm.groups = [
+        { name: "groupA", num_feeds: 2 },
+        { name: "groupB", num_feeds: 1 },
+      ];
+      wrapper.vm.showGrouplist = true;
+      await wrapper.vm.$nextTick();
+      const groupBtn = wrapper
+        .findAll("button")
+        .find((b) => b.text().includes("groupB"));
+      expect(groupBtn).toBeDefined();
+      await groupBtn.trigger("click");
+      expect(wrapper.vm.selectedGroupName).toBe("groupB");
+
+      // 피드 버튼 렌더링 후 클릭 → feedNameButtonClicked 인라인 핸들러 (line 111)
+      wrapper.vm.feeds = [{ title: "feedX", name: "feedx" }];
+      wrapper.vm.showFeedlist = true;
+      await wrapper.vm.$nextTick();
+      const feedBtn = wrapper
+        .findAll("button")
+        .find((b) => b.text() === "feedX");
+      expect(feedBtn).toBeDefined();
+      await feedBtn.trigger("click");
+      expect(wrapper.vm.selectedFeedName).toBe("feedx");
+
+      // 검색 결과 피드 버튼 클릭 → searchResultFeedNameButtonClicked (line 59)
+      wrapper.vm.feeds = [
+        { group_name: "g1", feed_title: "검색피드", feed_name: "sf1" },
+      ];
+      wrapper.vm.showSearchResult = true;
+      wrapper.vm.showFeedlist = false;
+      await wrapper.vm.$nextTick();
+      const searchFeedBtn = wrapper
+        .findAll("button")
+        .find((b) => b.text().includes("검색피드"));
+      expect(searchFeedBtn).toBeDefined();
+      await searchFeedBtn.trigger("click");
+      expect(wrapper.vm.selectedFeedName).toBe("sf1");
+
+      // 그룹 토글 버튼 클릭 → toggleStatus('group') 인라인 핸들러 (line 253)
+      wrapper.vm.selectedGroupName = "groupB";
+      wrapper.vm.showToggleGroupButton = true;
+      await wrapper.vm.$nextTick();
+      const toggleGroupBtn = wrapper
+        .findAll("button")
+        .find((b) => b.text() === wrapper.vm.groupStatusLabel);
+      expect(toggleGroupBtn).toBeDefined();
+      await toggleGroupBtn.trigger("click");
+      expect(wrapper.vm.showConfirmModal).toBe(true);
+      wrapper.vm.showConfirmModal = false;
+
+      // 피드 토글 버튼 클릭 → toggleStatus('feed') 인라인 핸들러 (line 299)
+      wrapper.vm.selectedFeedName = "feedx";
+      wrapper.vm.showToggleFeedButton = true;
+      await wrapper.vm.$nextTick();
+      const toggleFeedBtn = wrapper
+        .findAll("button")
+        .find((b) => b.text() === wrapper.vm.feedStatusLabel);
+      expect(toggleFeedBtn).toBeDefined();
+      await toggleFeedBtn.trigger("click");
+      expect(wrapper.vm.showConfirmModal).toBe(true);
     });
   });
 });

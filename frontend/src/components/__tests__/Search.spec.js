@@ -274,6 +274,34 @@ describe("Search.vue", () => {
     expect(html).toContain("검색 실패");
   });
 
+  it("binds v-model and renders default slot on the search input", async () => {
+    // 기본 BFormInput 스텁(<input />)은 modelValue 바인딩도 슬롯도 렌더링하지 않아
+    // v-model의 update 핸들러(setter)와 {{ searchKeyword }} 슬롯이 미커버 상태였다.
+    // modelValue를 바인딩하고 슬롯을 렌더링하는 스텁으로 두 경로를 모두 탄다.
+    const richStubs = {
+      ...stubs,
+      BFormInput: {
+        props: ["modelValue"],
+        emits: ["update:modelValue"],
+        template:
+          '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" /><span class="slot-content"><slot /></span>',
+      },
+    };
+
+    const wrapper = mount(Search, {
+      global: { stubs: richStubs, components: { MyButton } },
+    });
+
+    await wrapper.setData({ searchKeyword: "초기값" });
+    // 슬롯 {{ searchKeyword }}가 렌더링되는지 확인 (line 13)
+    expect(wrapper.find(".slot-content").text()).toBe("초기값");
+
+    // input에 값을 넣어 update:modelValue를 발생시켜 v-model setter를 탄다 (line 8)
+    await wrapper.find("input").setValue("새검색어");
+    expect(wrapper.vm.searchKeyword).toBe("새검색어");
+    expect(wrapper.find(".slot-content").text()).toBe("새검색어");
+  });
+
   it("mounted hook executes without error", () => {
     const wrapper = mount(Search, {
       global: { stubs, components: { MyButton } },
