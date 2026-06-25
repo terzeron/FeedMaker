@@ -49,6 +49,21 @@ class TestValidateName(unittest.TestCase):
         with self.assertRaises(ValueError):
             _validate_name("../etc/passwd", "name")
 
+    def test_dot_dot_segment_raises(self):
+        # 단독 ".." 세그먼트: 슬래시가 없어도 상위 디렉터리 탈출 수단이므로 거부해야 한다
+        with self.assertRaises(ValueError):
+            _validate_name("..", "name")
+
+    def test_single_dot_segment_raises(self):
+        # 단독 "." 세그먼트: 현재 디렉터리 참조이므로 거부해야 한다
+        with self.assertRaises(ValueError):
+            _validate_name(".", "name")
+
+    def test_triple_dot_segment_raises(self):
+        # 점으로만 구성된 이름은 정상 피드명이 될 수 없으므로 거부해야 한다
+        with self.assertRaises(ValueError):
+            _validate_name("...", "name")
+
     def test_slash_raises(self):
         with self.assertRaises(ValueError):
             _validate_name("a/b", "name")

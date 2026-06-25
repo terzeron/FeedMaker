@@ -71,7 +71,9 @@ def verify_facebook_token(access_token: str, expected_email: str) -> bool:
             return False
         return True
     except http_requests.RequestException as e:
-        LOGGER.error("Facebook token verification request failed: %s", e)
+        # 예외 메시지에 access_token이 포함된 요청 URL이 섞일 수 있으므로
+        # 전체 예외 대신 예외 타입명만 로깅한다 (credential 노출 방지)
+        LOGGER.error("Facebook token verification request failed: %s", type(e).__name__)
         return False
 
 

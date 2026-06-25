@@ -1884,6 +1884,143 @@ describe("Problems.vue", () => {
     window.alert.mockRestore();
   });
 
+  it("removeFeed handles failure response", async () => {
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    vi.spyOn(window, "alert").mockImplementation(() => {});
+    axios.delete = vi
+      .fn()
+      .mockResolvedValueOnce({ data: { status: "failure", message: "error" } });
+    wrapper.vm.removeFeed("g1", "f1");
+    await flushPromises();
+    expect(axios.delete).toHaveBeenCalledWith(
+      expect.stringContaining("/groups/g1/feeds/f1?force=true"),
+    );
+    expect(window.alert).toHaveBeenCalledWith(
+      expect.stringContaining("오류가 발생하였습니다"),
+    );
+    window.alert.mockRestore();
+  });
+
+  it("removeFeed handles network error", async () => {
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    vi.spyOn(window, "alert").mockImplementation(() => {});
+    axios.delete = vi.fn().mockRejectedValueOnce(new Error("network error"));
+    wrapper.vm.removeFeed("g1", "f1");
+    await flushPromises();
+    expect(window.alert).toHaveBeenCalledWith(
+      expect.stringContaining("오류가 발생하였습니다"),
+    );
+    window.alert.mockRestore();
+  });
+
+  it("syncs showConfirmModal through BModal v-model update event", async () => {
+    // 기본 BModal 스텁은 update:modelValue를 emit하지 않아 v-model setter가 미커버였다.
+    // emit 가능한 스텁으로 setter(showConfirmModal = $event) 경로를 탄다.
+    const modalStubs = {
+      ...stubs,
+      BModal: {
+        props: ["modelValue"],
+        emits: ["update:modelValue"],
+        template:
+          '<div><button class="modal-close" @click="$emit(\'update:modelValue\', false)" /><slot /></div>',
+      },
+    };
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+    const wrapper = mount(Problems, { global: { stubs: modalStubs } });
+    await flushPromises();
+
+    wrapper.vm.showConfirmModal = true;
+    await wrapper.vm.$nextTick();
+    await wrapper.find(".modal-close").trigger("click");
+    expect(wrapper.vm.showConfirmModal).toBe(false);
+  });
+
+  it("triggers inline template click handlers (sort headers and delete icons)", async () => {
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    // 모든 테이블에 데이터를 직접 주입해 인라인 @click 핸들러(템플릿 화살표 함수)를
+    // DOM 클릭으로 직접 실행한다. 메서드 직접 호출로는 커버되지 않던 경로다.
+    wrapper.vm.statusInfolist = [
+      {
+        feed_title: "A",
+        feed_name: "a",
+        group_name: "g1",
+        feedmaker: "O",
+        public_html: "O",
+        http_request: "O",
+        update_date: "2024-10-10",
+        upload_date: "2024-10-11",
+        access_date: "2024-10-12",
+        view_date: "2024-10-13",
+      },
+    ];
+    wrapper.vm.progressInfolist = [
+      {
+        feed_title: "B",
+        feed_name: "b",
+        group_name: "g1",
+        current_index: 1,
+        total_item_count: 2,
+        unit_size_per_day: 1,
+        progress_ratio: 50,
+        due_date: "2024-10-15",
+      },
+    ];
+    wrapper.vm.publicFeedInfolist = [
+      {
+        feed_title: "C",
+        feed_name: "c",
+        group_name: "g1",
+        num_items: 2,
+        file_size: 500,
+        upload_date: "2020-01-01",
+      },
+    ];
+    wrapper.vm.htmlFileSizelist = [
+      { feed_dir_path: "g1/c", file_path: "g1/c/html/f.html", size: 10 },
+    ];
+    wrapper.vm.htmlFileWithoutImageTaglist = [
+      { feed_dir_path: "g1/e", file_path: "g1/e/html/f3.html" },
+    ];
+    wrapper.vm.htmlFileWithManyImageTaglist = [
+      { feed_dir_path: "g1/d", file_path: "g1/d/html/f2.html", count: 30 },
+    ];
+    wrapper.vm.htmlFileWithImageNotFoundlist = [
+      { feed_dir_path: "g1/f", file_path: "g1/f/html/f4.html" },
+    ];
+    wrapper.vm.elementInfolist = [{ element_name: "title", count: 3 }];
+    wrapper.vm.listUrlInfolist = [
+      { feed_title: "Url", count: 5, group_name: "g1", feed_name: "a" },
+    ];
+    await wrapper.vm.$nextTick();
+
+    // 정렬 가능한 헤더 클릭 → field.sortable ? sortTable(...) : null 인라인 핸들러
+    const sortableHeaders = wrapper.findAll("th.sortable");
+    expect(sortableHeaders.length).toBeGreaterThan(0);
+    for (const th of sortableHeaders) {
+      await th.trigger("click");
+    }
+
+    // 삭제 아이콘 클릭 → xxxDeleteClicked({ item }) 인라인 핸들러 → 확인 모달 오픈
+    const deleteIcons = wrapper.findAll("font-awesome-icon-stub");
+    for (const icon of deleteIcons) {
+      await icon.trigger("click");
+    }
+
+    // 클릭으로 정렬 상태가 갱신되었는지(헤더 핸들러 실행됨) 확인
+    expect(wrapper.vm.statusInfoSortBy).toBeTruthy();
+    // 삭제 아이콘 클릭으로 확인 모달이 열렸는지 확인
+    expect(wrapper.vm.showConfirmModal).toBe(true);
+  });
+
   it("renders all table rows and cells when data is loaded", async () => {
     // status_info with group_name/feed_name for router-link
     axios.get.mockResolvedValueOnce({

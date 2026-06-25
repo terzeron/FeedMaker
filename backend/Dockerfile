@@ -58,21 +58,22 @@ ARG USER_NAME=terzeron
 RUN useradd -l -u $USER_ID $USER_NAME && \
     mkdir -p /app /app/backend /app/bin /app/utils /fma /xml \
         /home/$USER_NAME/.cache/pip /home/$USER_NAME/.local /home/$USER_NAME/.local/bin \
-        /run/dbus /tmp/logs /app/logs && \
-    chown -R $USER_NAME /app /fma /xml /home/$USER_NAME/.cache /home/$USER_NAME/.local /tmp/logs /app/logs
+        /run/dbus && \
+    chown -R $USER_NAME /app /fma /xml /home/$USER_NAME/.cache /home/$USER_NAME/.local
 
 # Bring the prebuilt venv from the builder (no toolchain copied).
 COPY --from=builder --chown=$USER_NAME /app/.venv /app/.venv
 
 WORKDIR /app
-COPY logging.conf /app
+# 컨테이너는 stdout-only 로깅 설정을 사용 (readOnlyRootFilesystem 호환, 로그는 k8s 가 수집).
+# 호스트 CLI 용 logging.conf(파일 핸들러 포함)와 분리.
+COPY logging.docker.conf /app/logging.conf
 COPY backend /app/backend
 COPY bin /app/bin
 COPY utils /app/utils
 
 VOLUME /fma
 VOLUME /xml
-VOLUME /logs
 
 ENV PATH="/app/.venv/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/home/$USER_NAME/.local/bin:/app/bin:/app/utils"
 ENV PYTHONPATH="/app"

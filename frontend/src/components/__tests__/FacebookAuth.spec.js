@@ -283,6 +283,34 @@ describe("FacebookAuth.vue", () => {
     expect(wrapper.emitted("auth-initialized")).toBeTruthy();
   });
 
+  it("does not re-inject the SDK script when #facebook-jssdk already exists", async () => {
+    // 이미 facebook-jssdk 스크립트가 존재하면 IIFE 내부의 조기 return(early return)을
+    // 타서 스크립트를 다시 삽입하지 않는다.
+    document.getElementById("facebook-jssdk")?.remove();
+    const existing = document.createElement("script");
+    existing.id = "facebook-jssdk";
+    existing.dataset.preexisting = "true";
+    document.head.appendChild(existing);
+
+    const scriptCountBefore = document.getElementsByTagName("script").length;
+
+    const wrapper = mount(FacebookAuth, {
+      props: { appId: "real_app_id_123" },
+    });
+    await new Promise((r) => setTimeout(r));
+
+    // 동일 id 스크립트가 하나만 유지되고, 기존 요소가 그대로 남아 있어야 한다.
+    const found = document.getElementById("facebook-jssdk");
+    expect(found).toBe(existing);
+    expect(found.dataset.preexisting).toBe("true");
+    expect(document.getElementsByTagName("script").length).toBe(
+      scriptCountBefore,
+    );
+    expect(wrapper.exists()).toBe(true);
+
+    existing.remove();
+  });
+
   it("sets sdkLoadError when the injected SDK script fails to load", async () => {
     document.getElementById("facebook-jssdk")?.remove();
     if (document.getElementsByTagName("script").length === 0) {

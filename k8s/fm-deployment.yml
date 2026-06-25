@@ -25,11 +25,13 @@ spec:
       containers:
         - name: fm-backend
           image: registry.terzeron.com/terzeron/fm_backend:latest
-          # readOnlyRootFilesystem 미적용: 앱이 /app/run.log(rootfs)에 로깅하므로
-          # 켜면 로깅이 깨진다. logging.conf 경로 변경 후 별도 적용 예정.
+          # rootfs는 읽기전용(CIS / kubescape C-0017). 쓰기가 필요한 경로는 모두 별도 볼륨으로 분리:
+          #   임시·크롬 프로필·크래시패드 → /tmp, 공유메모리 → /dev/shm, 데이터 → PVC(/fma, /xml).
+          #   로그는 파일이 아니라 stdout 으로 출력(logging.docker.conf)하여 k8s 가 수집 → rootfs 쓰기 없음.
           securityContext:
             allowPrivilegeEscalation: false
             runAsNonRoot: true
+            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
@@ -63,6 +65,10 @@ spec:
               value: "3306"
             - name: FM_HOME_DIR
               value: /app
+            # rootfs 읽기전용이라 $HOME(/home/...)이 RO. fontconfig·chromium 등 네이티브
+            # 라이브러리의 $HOME/XDG 기반 캐시·설정 쓰기를 writable emptyDir(/tmp)로 redirect.
+            - name: HOME
+              value: /tmp
             - name: FM_WORK_DIR
               value: /fma
             - name: FM_LOG_DIR
