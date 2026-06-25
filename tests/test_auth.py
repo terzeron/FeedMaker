@@ -45,6 +45,18 @@ class TestVerifyFacebookToken:
         with patch("backend.auth.http_requests.get", side_effect=requests.RequestException("timeout")):
             assert verify_facebook_token("token", "user@example.com") is False
 
+    def test_network_error_does_not_log_access_token(self):
+        """네트워크 오류 로깅 시 access_token이 로그 메시지에 노출되면 안 된다"""
+        import requests
+
+        secret = "SECRET_FB_TOKEN_VALUE"
+        # requests 예외 메시지에 토큰이 포함된 URL이 들어가는 상황을 모사
+        exc = requests.RequestException(f"Failed to connect to https://graph.facebook.com/me?access_token={secret}")
+        with patch("backend.auth.http_requests.get", side_effect=exc), patch("backend.auth.LOGGER") as mock_logger:
+            assert verify_facebook_token(secret, "user@example.com") is False
+            logged = " ".join(repr(c.args) for c in mock_logger.error.call_args_list)
+            assert secret not in logged, f"access_token leaked into log: {logged}"
+
     def test_no_email_in_response(self):
         """Facebook 응답에 email 필드가 없으면 False"""
         mock_response = MagicMock()

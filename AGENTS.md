@@ -337,6 +337,15 @@ Configuration uses `FM_*` prefixed environment variables:
    - Use secure authentication methods
    - Never commit credentials or API keys
 
+   **Trust model (중요):**
+   - 모든 변경/삭제 API 엔드포인트는 `require_admin`으로 보호되며, **admin은 완전히 신뢰되는 주체**로 간주한다.
+   - 피드 설정(`conf.json` / `site_config.json`)에 기술된 collection/extraction 명령은
+     `FeedMakerRunner`가 **서버에서 그대로 실행**한다. 즉 _피드 설정을 등록·수정할 수 있다는 것은
+     사실상 서버에서 임의 명령을 실행할 수 있다는 것과 같다._ (`bin` subprocess 호출 경로)
+   - 따라서 admin 계정 권한 부여(`_get_admin_email_set`)는 OS 셸 접근 권한 수준으로 엄격히 통제해야 한다.
+   - 경로 파라미터(`group_name`/`feed_name`/`html_file_name`)는 `_validate_name`으로 검증한다.
+     검증 문자셋은 `/`를 포함하지 않으므로 디렉터리 구분자 주입은 불가능하다(`.`/`..` 단독 세그먼트는 별도 차단 필요).
+
 5. **Performance**
    - Cache frequently accessed data
    - Use headless browser only when necessary
@@ -412,6 +421,7 @@ Configuration uses `FM_*` prefixed environment variables:
 - Test resources: `tests/resources/` contains sample configs and data
 
 <!-- gitnexus:start -->
+
 # GitNexus — Code Intelligence
 
 This project is indexed by GitNexus as **FeedMaker** (6375 symbols, 12444 relationships, 142 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
@@ -435,22 +445,22 @@ This project is indexed by GitNexus as **FeedMaker** (6375 symbols, 12444 relati
 
 ## Resources
 
-| Resource | Use for |
-|----------|---------|
-| `gitnexus://repo/FeedMaker/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/FeedMaker/clusters` | All functional areas |
-| `gitnexus://repo/FeedMaker/processes` | All execution flows |
-| `gitnexus://repo/FeedMaker/process/{name}` | Step-by-step execution trace |
+| Resource                                   | Use for                                  |
+| ------------------------------------------ | ---------------------------------------- |
+| `gitnexus://repo/FeedMaker/context`        | Codebase overview, check index freshness |
+| `gitnexus://repo/FeedMaker/clusters`       | All functional areas                     |
+| `gitnexus://repo/FeedMaker/processes`      | All execution flows                      |
+| `gitnexus://repo/FeedMaker/process/{name}` | Step-by-step execution trace             |
 
 ## CLI
 
-| Task | Read this skill file |
-|------|---------------------|
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
+| Task                                         | Read this skill file                                        |
+| -------------------------------------------- | ----------------------------------------------------------- |
+| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md`       |
+| Blast radius / "What breaks if I change X?"  | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
+| Trace bugs / "Why is X failing?"             | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md`       |
+| Rename / extract / split / refactor          | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md`     |
+| Tools, resources, schema reference           | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md`           |
+| Index, status, clean, wiki CLI commands      | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md`             |
 
 <!-- gitnexus:end -->

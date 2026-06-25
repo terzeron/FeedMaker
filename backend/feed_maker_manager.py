@@ -33,7 +33,10 @@ _SAFE_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9가-힣_.\-]+$")
 
 def _validate_name(name: str, label: str = "name") -> None:
     """경로 탐색 공격 방지를 위한 이름 검증"""
-    if not name or not _SAFE_NAME_PATTERN.match(name):
+    # 허용 문자셋에는 '/'가 없어 디렉터리 구분자 주입은 불가능하지만,
+    # 점으로만 이루어진 이름('.', '..', '...')은 단독 세그먼트로 상위/현재 디렉터리를
+    # 가리켜 경로 탐색에 악용될 수 있으므로 별도로 거부한다.
+    if not name or not _SAFE_NAME_PATTERN.match(name) or name.strip(".") == "":
         raise ValueError(f"Invalid {label}: {name!r}")
 
 
