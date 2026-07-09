@@ -338,6 +338,7 @@ dependencies = [
     { name = "feedparser" },
     { name = "filelock" },
     { name = "gitpython" },
+    { name = "kiwipiepy" },
     { name = "lxml" },
     { name = "ordered-set" },
     { name = "pdf2image" },
@@ -386,6 +387,7 @@ requires-dist = [
     { name = "feedparser", specifier = ">=6.0.12" },
     { name = "filelock", specifier = ">=3.29.4" },
     { name = "gitpython", specifier = ">=3.1.50" },
+    { name = "kiwipiepy", specifier = ">=0.23.2" },
     { name = "lxml", specifier = ">=6.1.1" },
     { name = "ordered-set", specifier = ">=4.1.0" },
     { name = "pdf2image", specifier = ">=1.17.0" },
@@ -519,6 +521,30 @@ sdist = { url = "https://files.pythonhosted.org/packages/72/34/14ca021ce8e5dfedc
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cb/b1/3846dd7f199d53cb17f49cba7e651e9ce294d8497c8c150530ed11865bb8/iniconfig-2.3.0-py3-none-any.whl", hash = "sha256:f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12", size = 7484, upload-time = "2025-10-18T21:55:41.639Z" },
 ]
+
+[[package]]
+name = "kiwipiepy"
+version = "0.23.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "kiwipiepy-model" },
+    { name = "numpy" },
+    { name = "tqdm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c6/3f/b317dfd0085341a8e2b24fa8eddd7e709b07a91e6bcf20b8d8952ca26a03/kiwipiepy-0.23.2.tar.gz", hash = "sha256:632d627531ceaf4b55bd5c01d50eebdae0253c79c2c8a3f682f2e68492f36198", size = 2468793, upload-time = "2026-06-11T15:36:55.269Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fe/d8/9d6bde6ad64e0b1d4d66fcc1a45c819b4afbf9d21763d7e1e427913dab13/kiwipiepy-0.23.2-cp39-abi3-macosx_10_14_x86_64.whl", hash = "sha256:951aa58836697f467d4436fefddb91ccb864673415f3dcd805c67f757100cb2e", size = 14919737, upload-time = "2026-06-11T16:04:04.292Z" },
+    { url = "https://files.pythonhosted.org/packages/4b/dd/10dd6b63daf1c3e25ca72512d6c0ebbdac15911782f37ca283f10d3b753a/kiwipiepy-0.23.2-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:8410195a640b1c3ec164e69f3249e2d7c9b3dcd2222f5a5a245eed1c27f1ca55", size = 5733448, upload-time = "2026-06-11T15:38:33.594Z" },
+    { url = "https://files.pythonhosted.org/packages/81/c9/622cb3800e04b887d2fddfc05746e326f1864b4518fa3746d8887fefc219/kiwipiepy-0.23.2-cp39-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:c9cbe16ab16236935e8c596209ead8513c3fc54c162e7218fa06d484522812bc", size = 5030678, upload-time = "2026-06-11T15:58:25.053Z" },
+    { url = "https://files.pythonhosted.org/packages/7f/0a/c3d4c9e4e43494ede5badd39ef157de33e46eb5668659afd80ef7c713dda/kiwipiepy-0.23.2-cp39-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:46a0a9fd36727736e8010ff54c655639f5df1c2ec34b92679cd3a94e8734d81f", size = 11513350, upload-time = "2026-06-11T16:21:37.365Z" },
+    { url = "https://files.pythonhosted.org/packages/c6/5d/a18b133599bed0adbf62878deff1e786f7edafefa8b843b269f1c7bd92ac/kiwipiepy-0.23.2-cp39-abi3-win_amd64.whl", hash = "sha256:2ee49d007b55955ffe4d91d56c9adaae6f358f8c6d5c281efbdf8162ecbad3e2", size = 3613895, upload-time = "2026-06-11T15:59:57.052Z" },
+]
+
+[[package]]
+name = "kiwipiepy-model"
+version = "0.23.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/77/59/28403890c5f757254bf2068ff321fb3e656fb2e5658a3de8bfc092e4fd83/kiwipiepy_model-0.23.0.tar.gz", hash = "sha256:498a22f5585e6c4a162423d7557eb3ee3f71cddc6e0aeb2650c50467e85933e2", size = 87976912, upload-time = "2026-03-17T16:28:32.318Z" }
 
 [[package]]
 name = "librt"
@@ -1126,6 +1152,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ca/ac/a597c3a0e02b26cbed6dd07df68be1e57684766fd1c381dee9b170a99690/testcontainers-4.14.2.tar.gz", hash = "sha256:1340ccf16fe3acd9389a6c9e1d9ab21d9fe99a8afdf8165f89c3e69c1967d239", size = 166841, upload-time = "2026-03-18T05:19:16.696Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/13/2d/26b8b30067d94339afee62c3edc9b803a6eb9332f521ba77d8aaab5de873/testcontainers-4.14.2-py3-none-any.whl", hash = "sha256:0d0522c3cd8f8d9627cda41f7a6b51b639fa57bdc492923c045117933c668d68", size = 125712, upload-time = "2026-03-18T05:19:15.29Z" },
+]
+
+[[package]]
+name = "tqdm"
+version = "4.68.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ae/5f/57ff8b434839e70dab45601284ea413e947a63799891b7553e5960a793a8/tqdm-4.68.4.tar.gz", hash = "sha256:19829c9673638f2a0b8617da4cdcb927e831cd88bcfcb6e78d42a4d1af131520", size = 792418, upload-time = "2026-07-07T09:58:18.369Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/22/2a/5e5e750890ada51017d18d0d4c30da696e5b5bd3180947729927628fc3cb/tqdm-4.68.4-py3-none-any.whl", hash = "sha256:5168118b2368f48c561afda8020fd79195b1bdb0bdf8086b88442c267a315dc2", size = 676612, upload-time = "2026-07-07T09:58:16.256Z" },
 ]
 
 [[package]]
