@@ -39,8 +39,8 @@ class FeedMaker:
     DEFAULT_WINDOW_SIZE = 5
     IMAGE_TAG_FMT_STR = "<img src='%s/1x1.jpg?feed=%s&item=%s'/>"
 
-    def __init__(self, *, feed_dir_path: Path, do_collect_by_force: bool, do_collect_only: bool, rss_file_path: Path, window_size: int = DEFAULT_WINDOW_SIZE) -> None:
-        LOGGER.debug("# FeedMaker(feed_dir_path=%s, do_collect_by_force=%s, do_collect_only=%s, rss_file_path=%s)", PathUtil.short_path(feed_dir_path), do_collect_by_force, do_collect_only, PathUtil.short_path(rss_file_path))
+    def __init__(self, *, feed_dir_path: Path, do_collect_by_force: bool, do_collect_only: bool, rss_file_path: Path, window_size: int = DEFAULT_WINDOW_SIZE, do_extract_only: bool = False) -> None:
+        LOGGER.debug("# FeedMaker(feed_dir_path=%s, do_collect_by_force=%s, do_collect_only=%s, do_extract_only=%s, rss_file_path=%s)", PathUtil.short_path(feed_dir_path), do_collect_by_force, do_collect_only, do_extract_only, PathUtil.short_path(rss_file_path))
 
         self.work_dir_path = Path(Env.get("FM_WORK_DIR"))
         self.feed_dir_path = feed_dir_path
@@ -49,6 +49,7 @@ class FeedMaker:
         self.rss_conf: dict[str, Any] = {}
         self.do_collect_by_force = do_collect_by_force
         self.do_collect_only = do_collect_only
+        self.do_extract_only = do_extract_only
         self.rss_file_path = rss_file_path
         self.window_size = window_size
 
@@ -569,10 +570,15 @@ class FeedMaker:
                 return False
         else:
             # 피딩 중인 피드는 최신 피드항목을 받아옴
-            recent_feed_list = self._get_recent_feed_list()
-            if not recent_feed_list:
-                LOGGER.error("Error: Can't get recent feed list from urls")
-                return False
+            recent_feed_list: list[tuple[str, str, list[str]]] = []
+            if self.do_extract_only:
+                # -e 옵션: collection(신규 목록 수집)을 건너뛰고 기존 목록으로 추출만 진행
+                LOGGER.info("skipping collection stage (do_extract_only)")
+            else:
+                recent_feed_list = self._get_recent_feed_list()
+                if not recent_feed_list:
+                    LOGGER.error("Error: Can't get recent feed list from urls")
+                    return False
 
             if self.collection_conf.get("ignore_old_list", False):
                 old_feed_list.clear()
