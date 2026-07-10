@@ -60,6 +60,7 @@ class FeedMakerRunner:
                 do_remove_all_files = options.get("do_remove_all_files", False)
                 force_collection_opt = options.get("force_collection_opt", False)
                 collect_only_opt = options.get("collect_only_opt", False)
+                extract_only_opt = options.get("extract_only_opt", False)
                 window_size = options.get("window_size", FeedMaker.DEFAULT_WINDOW_SIZE)
 
                 if do_remove_all_files:
@@ -72,7 +73,7 @@ class FeedMakerRunner:
 
                 # make_feed.py 실행하여 feed 파일 생성
                 LOGGER.info("* making feed file '%s'", PathUtil.short_path(rss_file_path))
-                feed_maker = FeedMaker(feed_dir_path=feed_dir_path, do_collect_by_force=force_collection_opt, do_collect_only=collect_only_opt, rss_file_path=rss_file_path, window_size=window_size)
+                feed_maker = FeedMaker(feed_dir_path=feed_dir_path, do_collect_by_force=force_collection_opt, do_collect_only=collect_only_opt, rss_file_path=rss_file_path, window_size=window_size, do_extract_only=extract_only_opt)
                 try:
                     result = feed_maker.make()
                 finally:
@@ -172,6 +173,7 @@ def print_usage() -> None:
     print("\t\t-h: print usage")
     print("\t\t-r: remove all files and execute clearly")
     print("\t\t-c: collection forcibly")
+    print("\t\t-e: skip collection and run extraction and rss generation only")
 
 
 def determine_options() -> tuple[dict[str, Any], list[str]]:
@@ -180,10 +182,11 @@ def determine_options() -> tuple[dict[str, Any], list[str]]:
     do_remove_all_files = False
     force_collection_opt = ""
     collect_only_opt = ""
+    extract_only_opt = ""
     num_feeds = 0
     window_size = FeedMaker.DEFAULT_WINDOW_SIZE
 
-    optlist, args = getopt.getopt(sys.argv[1:], "ahrcln:w:")
+    optlist, args = getopt.getopt(sys.argv[1:], "ahrceln:w:")
     for o, a in optlist:
         match o:
             case "-a":
@@ -195,6 +198,8 @@ def determine_options() -> tuple[dict[str, Any], list[str]]:
                 do_remove_all_files = True
             case "-c":
                 force_collection_opt = "-c"
+            case "-e":
+                extract_only_opt = "-e"
             case "-l":
                 collect_only_opt = "-l"
             case "-n":
@@ -202,7 +207,7 @@ def determine_options() -> tuple[dict[str, Any], list[str]]:
             case "-w":
                 window_size = int(a)
 
-    options = {"do_make_all_feeds": do_make_all_feeds, "do_remove_all_files": do_remove_all_files, "force_collection_opt": force_collection_opt, "collect_only_opt": collect_only_opt, "num_feeds": num_feeds, "window_size": window_size}
+    options = {"do_make_all_feeds": do_make_all_feeds, "do_remove_all_files": do_remove_all_files, "force_collection_opt": force_collection_opt, "collect_only_opt": collect_only_opt, "extract_only_opt": extract_only_opt, "num_feeds": num_feeds, "window_size": window_size}
     return options, args
 
 
@@ -230,7 +235,9 @@ def main() -> int:
         config = Config(feed_dir_path=feed_dir_path)
         collection_conf = config.get_collection_configs()
 
-        if collection_conf.get("is_completed", False) and not options.get("collect_only_opt", ""):
+        # -e(extract_only)가 지정되면 is_completed 피드라도 강제 collection 단계를
+        # 건너뛰고 곧바로 window 추출만 진행한다.
+        if collection_conf.get("is_completed", False) and not options.get("collect_only_opt", "") and not options.get("extract_only_opt", ""):
             temp_options = {"force_collection_opt": "-c"}
             LOGGER.info("run with force_collection_opt '-c'")
             result = runner.make_single_feed(feed_dir_path, temp_options)
