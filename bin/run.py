@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Optional
 from filelock import FileLock, Timeout
 from bin.feed_maker_util import Config, PathUtil, FileManager, NotFoundConfigItemError, Env
-from bin.headless_browser_cloak import HeadlessBrowser
+from bin.headless_browser import HeadlessBrowser
 from bin.notification import Notification
 from bin.feed_maker import FeedMaker
 from bin.problem_manager import ProblemManager

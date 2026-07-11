@@ -10,7 +10,7 @@ from typing import Any
 from shutil import which
 from bin.feed_maker_util import Process, Data, PathUtil
 from bin.crawler import Crawler, Method
-from bin.headless_browser_cloak import HeadlessBrowser
+from bin.headless_browser import HeadlessBrowser
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
