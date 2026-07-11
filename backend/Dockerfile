@@ -27,6 +27,13 @@ RUN --mount=type=cache,target=/tmp/uv-cache \
     HOME=/tmp XDG_CACHE_HOME=/tmp/.cache UV_CACHE_DIR=/tmp/uv-cache \
     uv sync --locked --no-editable
 
+# camoufox(패치 Firefox) 바이너리 + GeoIP DB를 빌드 시 이미지에 굳힌다. 런타임 rootfs는
+# read-only이고 $HOME(/tmp)은 재시작마다 비워지는 emptyDir라, camoufox의 런타임 자동 다운로드
+# (pkgman.camoufox_path, download_if_missing=True)는 egress 의존적이고 재시작마다 ~200MB를
+# 다시 받는다. XDG_CACHE_HOME으로 설치 위치를 /opt/camoufox(platformdirs: $XDG_CACHE_HOME/camoufox)
+# 로 통제해 여기서 한 번만 받아 둔다. 바이너리와 GeoLite2-City.mmdb가 같은 디렉토리에 모인다.
+RUN HOME=/tmp XDG_CACHE_HOME=/opt /app/.venv/bin/python -m camoufox fetch
+
 # ---------------------------------------------------------------------------
 # Stage 2: runtime — no compilers. git IS required: FeedMakerManager uses GitPython
 # (Repo/index.commit) to version feed configs, so the git executable must be present.
@@ -43,7 +50,13 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     chromium chromium-driver gosu curl ca-certificates git \
     libpoppler-cpp2 libpoppler147 libheif1 \
     libcairo2 libcairo-gobject2 \
-    libfontconfig1 libfreetype6 libjpeg62-turbo libpng16-16t64 && \
+    libfontconfig1 libfreetype6 libjpeg62-turbo libpng16-16t64 \
+    # camoufox(패치 Firefox) 런타임 공유 라이브러리 (libxul.so NEEDED 기준, trixie 패키지명).
+    # cairo/fontconfig/freetype은 위에서 이미 설치됨.
+    libgtk-3-0t64 libgdk-pixbuf-2.0-0 libpango-1.0-0 libglib2.0-0t64 \
+    libatk1.0-0t64 libasound2t64 libdbus-1-3 \
+    libx11-6 libx11-xcb1 libxcb1 libxcb-shm0 libxcomposite1 libxcursor1 \
+    libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 && \
     apt-get upgrade -y && \
     # crashpad handler wrapper (same trick as single-stage image)
     printf '#!/bin/sh\nexec /usr/lib/chromium/chrome_crashpad_handler.real "$@" --database=/tmp/crashpad 2>/dev/null || true\n' \
@@ -63,6 +76,10 @@ RUN useradd -l -u $USER_ID $USER_NAME && \
 
 # Bring the prebuilt venv from the builder (no toolchain copied).
 COPY --from=builder --chown=$USER_NAME /app/.venv /app/.venv
+
+# camoufox 바이너리 + GeoIP DB(builder에서 fetch). 런타임에 entrypoint.sh가
+# $HOME/.cache/camoufox(platformdirs 해석 경로)로 symlink하여 재다운로드 없이 사용한다.
+COPY --from=builder --chown=$USER_NAME /opt/camoufox /opt/camoufox
 
 WORKDIR /app
 # 컨테이너는 stdout-only 로깅 설정을 사용 (readOnlyRootFilesystem 호환, 로그는 k8s 가 수집).
