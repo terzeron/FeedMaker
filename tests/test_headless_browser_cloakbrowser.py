@@ -13,7 +13,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, patch
 
-from bin.headless_browser_cloak import HeadlessBrowser, PlaywrightError, PlaywrightTimeoutError
+from bin.headless_browser import PlaywrightError, PlaywrightTimeoutError
+from bin.headless_browser_cloakbrowser import HeadlessBrowserCloakbrowser as HeadlessBrowser
 
 
 def _wait_for_proc_cmdline(pid: int, needle: str, timeout: float = 5.0) -> None:
@@ -43,7 +44,7 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         HeadlessBrowser.cleanup_all_sessions()
 
     def _make_browser(self, **kwargs):
-        with patch("bin.headless_browser_cloak.Env") as mock_env:
+        with patch("bin.headless_browser.Env") as mock_env:
             mock_env.get.side_effect = lambda k, d="": {"FM_CRAWLER_ALLOW_PRIVATE_IPS": "false", "FM_CRAWLER_ALLOWED_HOSTS": ""}.get(k, d)
             defaults = dict(dir_path=Path(tempfile.gettempdir()), timeout=5)
             defaults.update(kwargs)
@@ -85,7 +86,7 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         self.assertFalse(hasattr(HeadlessBrowser, "SETTING_PLUGINS_SCRIPT"))
         self.assertFalse(hasattr(HeadlessBrowser, "SETTING_LANGUAGES_SCRIPT"))
 
-    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    @patch("bin.headless_browser_cloakbrowser._cloak_launch_persistent_context")
     def test_launch_session_passes_stealth_kwargs(self, mock_launch):
         browser = self._make_browser()
         mock_context, _mock_page = self._build_session_mocks()
@@ -111,7 +112,7 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         p.wait()
         return p.pid
 
-    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    @patch("bin.headless_browser_cloakbrowser._cloak_launch_persistent_context")
     def test_launch_session_clears_stale_singleton_lock(self, mock_launch):
         # 비정상 종료로 남은 SingletonLock(소유 프로세스 죽음)은 launch 전에 제거되어야 한다.
         base = Path(tempfile.mkdtemp())
@@ -133,7 +134,7 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         self.assertFalse((profile_dir / "SingletonSocket").is_symlink())
         shutil.rmtree(base, ignore_errors=True)
 
-    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    @patch("bin.headless_browser_cloakbrowser._cloak_launch_persistent_context")
     def test_launch_session_preserves_live_singleton_lock(self, mock_launch):
         # 이 profile dir를 실제로 점유한 살아있는 Chromium(= argv에 user-data-dir
         # 포함)이 소유한 lock은 제거하면 안 된다 (정상 동시 사용 보호).
@@ -160,7 +161,7 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         self.assertTrue(lock_path.is_symlink(), "live SingletonLock owned by this profile must NOT be removed")
         shutil.rmtree(base, ignore_errors=True)
 
-    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    @patch("bin.headless_browser_cloakbrowser._cloak_launch_persistent_context")
     def test_launch_session_clears_lock_when_pid_reused(self, mock_launch):
         # PID 재사용: unclean exit로 남은 lock이 가리키는 pid를 OS가 이 profile과
         # 무관한 다른 살아있는 프로세스에 재할당한 경우. 단순 liveness 검사만으로는
@@ -185,8 +186,8 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         self.assertFalse(lock_path.is_symlink(), "lock owned by a reused (unrelated) pid must be treated as stale")
         shutil.rmtree(base, ignore_errors=True)
 
-    @patch("bin.headless_browser_cloak.time.sleep")
-    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    @patch("bin.headless_browser_cloakbrowser.time.sleep")
+    @patch("bin.headless_browser_cloakbrowser._cloak_launch_persistent_context")
     def test_launch_session_retries_on_process_singleton_contention(self, mock_launch, mock_sleep):
         # 같은 그룹의 다른 프로세스가 공유 프로파일을 점유 중이면 launch가 ProcessSingleton으로
         # 실패한다. 즉시 죽지 말고 소유자가 끝날 때까지 대기 후 재시도해 성공해야 한다.
@@ -202,9 +203,9 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         self.assertEqual(mock_clear.call_count, 2)
         mock_sleep.assert_called()  # 재시도 사이에 대기했다
 
-    @patch("bin.headless_browser_cloak.Env.get")
-    @patch("bin.headless_browser_cloak.time.sleep")
-    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    @patch("bin.headless_browser_cloakbrowser.Env.get")
+    @patch("bin.headless_browser_cloakbrowser.time.sleep")
+    @patch("bin.headless_browser_cloakbrowser._cloak_launch_persistent_context")
     def test_launch_session_gives_up_on_persistent_contention(self, mock_launch, mock_sleep, mock_env_get):
         # 대기 한도(0초)를 넘기면 재시도하지 않고 에러를 전파한다 → 상위 Layer B가 ""로 흡수.
         mock_env_get.side_effect = lambda k, d="": "0" if k == "FM_CRAWLER_PROFILE_LAUNCH_WAIT" else d
@@ -215,14 +216,14 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
                 browser._launch_session()
         mock_sleep.assert_not_called()  # deadline이 이미 지나 대기 없이 즉시 포기
 
-    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context", None)
+    @patch("bin.headless_browser_cloakbrowser._cloak_launch_persistent_context", None)
     def test_launch_session_import_error_when_cloak_unavailable(self):
         browser = self._make_browser()
         with self.assertRaises(ImportError):
             browser._launch_session()
 
-    @patch("bin.headless_browser_cloak.URLSafety.check_url", return_value=(True, ""))
-    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    @patch("bin.headless_browser.URLSafety.check_url", return_value=(True, ""))
+    @patch("bin.headless_browser_cloakbrowser._cloak_launch_persistent_context")
     def test_make_request_does_not_inject_navigator_overrides(self, mock_launch, _mock_check):
         # make_request 본문이 navigator.plugins / navigator.languages를 JS로 덮어쓰면 안 된다.
         browser = self._make_browser()
@@ -248,8 +249,8 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
             self.assertNotIn("navigator.plugins =", script)
             self.assertNotIn("navigator.languages =", script)
 
-    @patch("bin.headless_browser_cloak.URLSafety.check_url", return_value=(True, ""))
-    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    @patch("bin.headless_browser.URLSafety.check_url", return_value=(True, ""))
+    @patch("bin.headless_browser_cloakbrowser._cloak_launch_persistent_context")
     def test_make_request_returns_empty_on_renderer_crash_in_metadata_eval(self, mock_launch, _mock_check):
         # 렌더러가 page.goto() 이후 page.evaluate() 도중 크래시하면 ("Target crashed")
         # 예외가 전파되어 프로세스 전체를 죽이면 안 된다. goto 크래시와 동일하게 ""를 돌려줘
@@ -263,8 +264,8 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
 
         self.assertEqual(result, "")
 
-    @patch("bin.headless_browser_cloak.URLSafety.check_url", return_value=(True, ""))
-    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    @patch("bin.headless_browser.URLSafety.check_url", return_value=(True, ""))
+    @patch("bin.headless_browser_cloakbrowser._cloak_launch_persistent_context")
     def test_make_request_returns_empty_on_renderer_crash_in_cloudflare_wait(self, mock_launch, _mock_check):
         # _wait_for_cloudflare()의 wait_for_function이 렌더러 크래시로 TargetClosedError를
         # 던지면 (PlaywrightTimeoutError가 아님) 역시 ""를 돌려줘야 한다.
@@ -277,8 +278,8 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
 
         self.assertEqual(result, "")
 
-    @patch("bin.headless_browser_cloak.URLSafety.check_url", return_value=(True, ""))
-    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    @patch("bin.headless_browser.URLSafety.check_url", return_value=(True, ""))
+    @patch("bin.headless_browser_cloakbrowser._cloak_launch_persistent_context")
     def test_make_request_invalidates_dead_session_to_release_profile_lock(self, mock_launch, _mock_check):
         # 렌더러 크래시로 세션이 죽으면, 같은 (공유) 프로파일 dir의 SingletonLock이 잡힌 채
         # 남아 다음 launch가 ProcessSingleton 에러로 실패한다. make_request는 finally에서
@@ -386,7 +387,7 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
             HeadlessBrowser._all_profile_dirs.discard(profile_dir)
             shutil.rmtree(profile_dir, ignore_errors=True)
 
-    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    @patch("bin.headless_browser_cloakbrowser._cloak_launch_persistent_context")
     def test_login_success(self, mock_launch):
         browser = self._make_browser()
         mock_context, mock_page = self._build_session_mocks()
@@ -422,7 +423,7 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         submit_locator.click.assert_called_once()
         mock_write.assert_called_once_with(mock_context)
 
-    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    @patch("bin.headless_browser_cloakbrowser._cloak_launch_persistent_context")
     def test_login_success_with_named_fields_and_submit_fallback(self, mock_launch):
         browser = self._make_browser()
         mock_context, mock_page = self._build_session_mocks()
@@ -454,7 +455,7 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         self.assertTrue(result)
         pw_locator.press.assert_called_once_with("Enter")
 
-    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    @patch("bin.headless_browser_cloakbrowser._cloak_launch_persistent_context")
     def test_login_field_lookup_failure_and_runtime_error(self, mock_launch):
         browser = self._make_browser()
         mock_context, mock_page = self._build_session_mocks()
@@ -466,7 +467,7 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         with patch.object(browser2, "_get_or_create_session", side_effect=RuntimeError("boom")):
             self.assertFalse(browser2.login({"login_url": "https://example.com/login", "id": "tester", "password": "secret"}))
 
-    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    @patch("bin.headless_browser_cloakbrowser._cloak_launch_persistent_context")
     def test_login_no_cookies_after_submit(self, mock_launch):
         browser = self._make_browser()
         mock_context, mock_page = self._build_session_mocks()
@@ -492,13 +493,13 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         mock_page.locator.side_effect = locator_side_effect
         self.assertFalse(browser.login({"login_url": "https://example.com/login", "id": "tester", "password": "secret"}))
 
-    @patch("bin.headless_browser_cloak.URLSafety.check_url", return_value=(False, "blocked"))
+    @patch("bin.headless_browser.URLSafety.check_url", return_value=(False, "blocked"))
     def test_make_request_blocked(self, _mock_check):
         browser = self._make_browser()
         self.assertEqual(browser.make_request("https://blocked.example.com"), "")
 
-    @patch("bin.headless_browser_cloak.URLSafety.check_url", return_value=(True, ""))
-    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    @patch("bin.headless_browser.URLSafety.check_url", return_value=(True, ""))
+    @patch("bin.headless_browser_cloakbrowser._cloak_launch_persistent_context")
     def test_make_request_with_all_options(self, mock_launch, _mock_check):
         browser = self._make_browser(copy_images_from_canvas=True, simulate_scrolling=True, blob_to_dataurl=True, headers={"User-Agent": "test", "Referer": "https://referer.example.com"})
         mock_context, mock_page = self._build_session_mocks()
@@ -536,8 +537,8 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         self.assertEqual(mock_page.wait_for_selector.call_count, 3)
         mock_context.add_init_script.assert_called_once_with(browser.BLOB_INTERCEPTOR_INIT_SCRIPT)
 
-    @patch("bin.headless_browser_cloak.URLSafety.check_url", return_value=(True, ""))
-    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    @patch("bin.headless_browser.URLSafety.check_url", return_value=(True, ""))
+    @patch("bin.headless_browser_cloakbrowser._cloak_launch_persistent_context")
     def test_make_request_returns_empty_when_cloudflare_unresolved(self, mock_launch, _mock_check):
         # If the managed challenge never clears, make_request must return "" (not the
         # interstitial HTML) so crawler.run() retries, discard the persisted clearance so a
@@ -557,7 +558,7 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         # The flagged session is torn down (context.close) so the retry relaunches fresh.
         mock_context.close.assert_called_once()
 
-    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    @patch("bin.headless_browser_cloakbrowser._cloak_launch_persistent_context")
     def test_launch_session_and_register_handlers(self, mock_launch):
         browser = self._make_browser(blob_to_dataurl=True)
         mock_context, mock_page = self._build_session_mocks()
@@ -681,8 +682,8 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
             saved = json.loads((Path(tmpdir) / browser.COOKIE_FILE).read_text(encoding="utf-8"))
             self.assertEqual({c["name"] for c in saved}, {"sid", "cf_clearance"})
 
-    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
-    @patch("bin.headless_browser_cloak.URLSafety.check_url")
+    @patch("bin.headless_browser_cloakbrowser._cloak_launch_persistent_context")
+    @patch("bin.headless_browser.URLSafety.check_url")
     def test_make_request_referer_blocked_and_navigation_errors(self, mock_check, mock_launch):
         browser = self._make_browser(headers={"User-Agent": "test", "Referer": "https://referer.example.com"})
         mock_context, _mock_page = self._build_session_mocks()
@@ -704,8 +705,8 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         page3.goto.side_effect = PlaywrightError("network")
         self.assertEqual(browser3.make_request("https://example.com"), "")
 
-    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
-    @patch("bin.headless_browser_cloak.URLSafety.check_url", return_value=(True, ""))
+    @patch("bin.headless_browser_cloakbrowser._cloak_launch_persistent_context")
+    @patch("bin.headless_browser.URLSafety.check_url", return_value=(True, ""))
     def test_make_request_scrolling_timeout_outer_error_and_finally_invalidation(self, _mock_check, mock_launch):
         browser = self._make_browser(simulate_scrolling=True)
         mock_context, mock_page = self._build_session_mocks()
@@ -751,8 +752,8 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         browser = self._make_browser(wait_until="load")
         self.assertEqual(browser.wait_until, "load")
 
-    @patch("bin.headless_browser_cloak.URLSafety.check_url", return_value=(True, ""))
-    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    @patch("bin.headless_browser.URLSafety.check_url", return_value=(True, ""))
+    @patch("bin.headless_browser_cloakbrowser._cloak_launch_persistent_context")
     def test_wait_until_passed_to_goto(self, mock_launch, _mock_check):
         browser = self._make_browser(wait_until="domcontentloaded")
         mock_context, mock_page = self._build_session_mocks()
@@ -764,8 +765,8 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         url_goto_calls = [c for c in goto_calls if c.args and c.args[0] != "about:blank"]
         self.assertTrue(all(c.kwargs.get("wait_until") == "domcontentloaded" for c in url_goto_calls))
 
-    @patch("bin.headless_browser_cloak.URLSafety.check_url", return_value=(True, ""))
-    @patch("bin.headless_browser_cloak._cloak_launch_persistent_context")
+    @patch("bin.headless_browser.URLSafety.check_url", return_value=(True, ""))
+    @patch("bin.headless_browser_cloakbrowser._cloak_launch_persistent_context")
     def test_wait_until_load_passed_to_goto(self, mock_launch, _mock_check):
         browser = self._make_browser(wait_until="load")
         mock_context, mock_page = self._build_session_mocks()
@@ -777,15 +778,15 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         url_goto_calls = [c for c in goto_calls if c.args and c.args[0] != "about:blank"]
         self.assertTrue(all(c.kwargs.get("wait_until") == "load" for c in url_goto_calls))
 
-    @patch("bin.headless_browser_cloak.HeadlessBrowser.cleanup_all_sessions")
+    @patch("bin.headless_browser_cloakbrowser.HeadlessBrowserCloakbrowser.cleanup_all_sessions")
     def test_cleanup_all_drivers_alias(self, mock_cleanup):
         HeadlessBrowser.cleanup_all_drivers()
         mock_cleanup.assert_called_once()
 
-    @patch("bin.headless_browser_cloak.sys.exit", side_effect=SystemExit(0))
-    @patch("bin.headless_browser_cloak.HeadlessBrowser.cleanup_all_drivers")
+    @patch("bin.headless_browser.sys.exit", side_effect=SystemExit(0))
+    @patch("bin.headless_browser.HeadlessBrowser.cleanup_all_drivers")
     def test_handle_sigterm_cleans_up_and_exits(self, mock_cleanup, mock_exit):
-        from bin.headless_browser_cloak import _handle_sigterm
+        from bin.headless_browser import _handle_sigterm
 
         with self.assertRaises(SystemExit):
             _handle_sigterm(signal.SIGTERM, object())
@@ -801,7 +802,7 @@ class TestRunScrollingScript(unittest.TestCase):
         HeadlessBrowser.cleanup_all_sessions()
 
     def _make_browser(self, **kwargs):
-        with patch("bin.headless_browser_cloak.Env") as mock_env:
+        with patch("bin.headless_browser.Env") as mock_env:
             mock_env.get.side_effect = lambda k, d="": {"FM_CRAWLER_ALLOW_PRIVATE_IPS": "false", "FM_CRAWLER_ALLOWED_HOSTS": ""}.get(k, d)
             defaults = dict(dir_path=Path(tempfile.gettempdir()), simulate_scrolling=True, timeout=5)
             defaults.update(kwargs)
@@ -890,7 +891,7 @@ class TestCloudflareClearedPredicate(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        from bin import headless_browser_cloak as hb
+        from bin import headless_browser_cloakbrowser as hb
 
         if hb._cloak_launch_persistent_context is None:
             raise unittest.SkipTest("cloakbrowser is not installed")
