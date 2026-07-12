@@ -64,13 +64,23 @@ class HeadlessBrowserCamoufox(HeadlessBrowserBase):
     def _stop_camoufox(cam: Any) -> None:
         # Camoufox subclasses playwright's sync PlaywrightContextManager: .start() is
         # __enter__ (starts the sync-playwright driver + its asyncio loop and launches the
-        # browser); the ONLY teardown that also stops that driver is __exit__. Using
-        # anything else (there is no .stop()) leaves the sync-playwright event loop running
-        # in this thread, and the next playwright-sync launch — a second camoufox session
-        # OR the cloakbrowser fallback — then aborts with "Playwright Sync API inside the
-        # asyncio loop". So always unwind via __exit__.
+        # browser); the ONLY teardown that also stops that driver is __exit__. Camoufox's
+        # __exit__ closes browser first and then stops the manager, so a browser.close()
+        # failure can skip the manager cleanup. Close the browser best-effort here, clear
+        # cam.browser, and then always unwind via __exit__ so the sync-playwright loop is
+        # released before a second camoufox launch or the cloakbrowser fallback.
         if cam is None:
             return
+        browser = getattr(cam, "browser", None)
+        if browser is not None:
+            try:
+                browser.close()
+            except Exception as e:  # pragma: no cover - depends on browser process state
+                LOGGER.debug("camoufox browser close during cleanup failed: %s", e)
+            try:
+                cam.browser = None
+            except Exception:  # pragma: no cover - defensive for nonstandard wrappers
+                pass
         try:
             cam.__exit__(None, None, None)
         except Exception as e:  # pragma: no cover - best-effort teardown
