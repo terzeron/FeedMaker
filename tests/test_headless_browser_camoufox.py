@@ -43,6 +43,30 @@ class TestHeadlessBrowserCamoufox(unittest.TestCase):
         HeadlessBrowserCamoufox._close_session(cache)
         cam.__exit__.assert_called_once_with(None, None, None)
 
+    def test_close_session_unwinds_exit_even_when_browser_close_fails(self):
+        # Camoufox.__exit__ closes browser before stopping Playwright's sync manager.
+        # If browser.close() raises, the manager cleanup must still run or fallback to a
+        # second sync engine fails with "Playwright Sync API inside the asyncio loop".
+        class FakeCamoufox:
+            def __init__(self):
+                self.browser = MagicMock()
+                self.browser.close.side_effect = RuntimeError("close failed")
+                self.exit_calls = 0
+
+            def __exit__(self, *args):
+                self.exit_calls += 1
+                self.exit_args = args
+
+        cam = FakeCamoufox()
+        browser = cam.browser
+
+        HeadlessBrowserCamoufox._close_session({"playwright": cam, "context": MagicMock(), "page": MagicMock()})
+
+        browser.close.assert_called_once()
+        self.assertIsNone(cam.browser)
+        self.assertEqual(cam.exit_calls, 1)
+        self.assertEqual(cam.exit_args, (None, None, None))
+
     @patch("bin.headless_browser_camoufox.Camoufox")
     def test_launch_session_uses_no_viewport(self, mock_camoufox_cls):
         # no_viewport avoids the camoufox/playwright juggler setDefaultViewport schema error.
