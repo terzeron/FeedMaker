@@ -47,15 +47,21 @@
                   <td v-for="field in statusInfoFields" :key="field.key" :data-label="field.label">
                     <span v-if="field.key === 'feed_title'">
                       <router-link v-if="item.group_name && item.feed_name" :to="`/management/${item.group_name}/${item.feed_name}`">
-                        {{ item[field.key] || item.feed_name }}
+                        {{ getStatusInfoTitle(item) }}
                       </router-link>
+                      <span v-else>{{ getStatusInfoTitle(item) }}</span>
                     </span>
                     <span v-else-if="field.key === 'action'">
-                      <font-awesome-icon
-                        :icon="['far', 'trash-alt']"
-                        @click="statusInfoDeleteClicked({ item: item })"
+                      <button
                         v-if="showStatusInfoDeleteButton({ item: item })"
-                      />
+                        type="button"
+                        class="btn btn-link btn-sm p-0 text-danger"
+                        :title="getStatusInfoActionLabel(item)"
+                        :aria-label="getStatusInfoActionLabel(item)"
+                        @click="statusInfoDeleteClicked({ item: item })"
+                      >
+                        <font-awesome-icon :icon="['far', 'trash-alt']" />
+                      </button>
                     </span>
                     <span v-else-if="['update_date','upload_date','access_date','view_date'].includes(field.key)" class="date-cell">{{ item[field.key] }}</span>
                     <span v-else>{{ item[field.key] }}</span>
@@ -1242,12 +1248,33 @@ export default {
 
       return _.orderBy(data, [sortBy], [sortDesc ? 'desc' : 'asc']);
     },
+    getStatusInfoTitle: function (item) {
+      return item["feed_title"] || item["feed_name"] || "";
+    },
+    canRemoveStatusInfoByApi: function (item) {
+      return Boolean(item["group_name"] && item["feed_name"]);
+    },
+    getStatusInfoActionLabel: function (item) {
+      return this.canRemoveStatusInfoByApi(item) ? "피드 삭제" : "DB 삭제 정보";
+    },
     showStatusInfoDeleteButton: function (data) {
-      // 생성/등록/요청 중 하나라도 존재하면(= 삭제할 산출물이 있으면) 삭제 버튼 노출
+      // 생성/등록/요청 산출물이 있거나, 제목만 남은 고아 메타데이터이면 삭제 액션 노출
       return (
         data.item["feedmaker"] === "O" ||
         data.item["public_html"] === "O" ||
-        data.item["http_request"] === "O"
+        data.item["http_request"] === "O" ||
+        Boolean(this.getStatusInfoTitle(data.item))
+      );
+    },
+    getStatusInfoDeleteMessage: function (item) {
+      if (this.canRemoveStatusInfoByApi(item)) {
+        return "정말로 실행하시겠습니까?";
+      }
+
+      const title = this.getStatusInfoTitle(item) || "(제목 없음)";
+      return (
+        "이 레코드는 그룹명과 피드명이 비어 있어 API 삭제 경로를 만들 수 없습니다.\n" +
+        `DB에서 feed_info의 group_name='', feed_name='' 레코드를 삭제해야 합니다. 제목: ${title}`
       );
     },
     openConfirmModal: function (message, action) {
@@ -1295,9 +1322,12 @@ export default {
         });
     },
     statusInfoDeleteClicked(data) {
-      this.openConfirmModal("정말로 실행하시겠습니까?", () => {
+      this.openConfirmModal(this.getStatusInfoDeleteMessage(data.item), () => {
         const groupName = data.item["group_name"];
         const feedName = data.item["feed_name"];
+        if (!this.canRemoveStatusInfoByApi(data.item)) {
+          return;
+        }
         // 퍼블릭 피드 + 피드 디렉터리(설정) + 요청/접근 정보까지 일괄 삭제
         this.removeFeed(groupName, feedName);
         this.statusInfolist = this.statusInfolist.filter(
@@ -1380,7 +1410,7 @@ export default {
       if (!date) {
         return "";
       }
-      let d = dayjs(date);
+      const d = dayjs(date);
       if (!d.isValid()) {
         return "";
       }
