@@ -282,6 +282,19 @@ describe("Problems.vue", () => {
         item: { feedmaker: "X", public_html: "X", http_request: "X" },
       }),
     ).toBe(false);
+    // 식별자는 비었지만 제목이 남은 고아 메타데이터 -> 노출
+    expect(
+      wrapper.vm.showStatusInfoDeleteButton({
+        item: {
+          feed_title: "마인화산",
+          feed_name: "",
+          group_name: "",
+          feedmaker: "X",
+          public_html: "X",
+          http_request: "X",
+        },
+      }),
+    ).toBe(true);
   });
 
   it("handles empty data arrays", async () => {
@@ -776,6 +789,7 @@ describe("Problems.vue", () => {
           {
             feed_title: "",
             feed_name: "orphan",
+            group_name: "g",
             public_html: true,
             http_request: false,
             feedmaker: false,
@@ -825,6 +839,70 @@ describe("Problems.vue", () => {
       .mockResolvedValueOnce({ data: { status: "success" } });
     wrapper.vm.handleConfirmOk();
     expect(wrapper.vm.statusInfolist.length).toBe(0);
+  });
+
+  it("renders title and action for status rows without group/feed identity", async () => {
+    axios.get.mockResolvedValueOnce({
+      data: {
+        status: "success",
+        result: [
+          {
+            feed_title: "마인화산",
+            feed_name: "",
+            group_name: "",
+            public_html: false,
+            http_request: false,
+            feedmaker: false,
+            update_date: null,
+            upload_date: null,
+            access_date: null,
+            view_date: null,
+          },
+        ],
+      },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: {
+        status: "success",
+        result: {
+          html_file_size_map: [],
+          html_file_with_many_image_tag_map: [],
+          html_file_without_image_tag_map: [],
+          html_file_image_not_found_map: [],
+        },
+      },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+    axios.delete = vi.fn();
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("마인화산");
+    expect(wrapper.find('button[aria-label="DB 삭제 정보"]').exists()).toBe(
+      true,
+    );
+    expect(wrapper.find("font-awesome-icon-stub").exists()).toBe(true);
+
+    const item = wrapper.vm.statusInfolist[0];
+    wrapper.vm.statusInfoDeleteClicked({ item });
+    expect(wrapper.vm.confirmMessage).toContain("group_name='', feed_name=''");
+
+    wrapper.vm.handleConfirmOk();
+    expect(axios.delete).not.toHaveBeenCalled();
+    expect(wrapper.vm.statusInfolist.length).toBe(1);
   });
 
   it("handles API failure responses for each problem type", async () => {
