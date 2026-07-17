@@ -17,6 +17,8 @@ from git import Repo
 
 from bin.run import FeedMakerRunner
 from bin.feed_maker_util import Config, Env, PathUtil, URL
+from bin.db import DB
+from bin.models import FeedInfo
 from bin.feed_manager import FeedManager, FeedUrlCountInfo, ElementCountInfo, PublicFeedInfo, SearchResultFeedInfo, FeedProgressInfo, GroupInfo, GroupFeedInfo, SingleFeedInfo
 from bin.access_log_manager import AccessLogManager
 from bin.html_file_manager import HtmlFileManager
@@ -476,6 +478,39 @@ class FeedMakerManager:
         _validate_name(feed_name, "feed_name")
         feed_dir_path = self.work_dir_path / group_name / feed_name
         self._remove_feed_artifacts(feed_dir_path, feed_name)
+        return True, ""
+
+    def remove_status_info_record(self, status_info: dict[str, Any]) -> tuple[bool, str]:
+        """Delete a malformed status_info row that cannot be addressed by /groups/{group}/feeds/{feed}.
+
+        Normal rows still go through remove_feed_completely(), which cleans files and related
+        resource metadata. This method is for DB-only rows with a missing group or feed name.
+        """
+        group_name = str(status_info.get("group_name") or "")
+        feed_name = str(status_info.get("feed_name") or "")
+        feed_title = str(status_info.get("feed_title") or "")
+
+        if group_name and feed_name:
+            return self.remove_feed_completely(group_name, feed_name)
+
+        if group_name:
+            _validate_name(group_name, "group_name")
+        if feed_name:
+            _validate_name(feed_name, "feed_name")
+            self._remove_public_img_pdf_feed_files(feed_name)
+            self.feed_manager.remove_public_feed_by_feed_name(feed_name, do_remove_file=True)
+        elif not feed_title:
+            return False, "feed_title is required when group_name and feed_name are empty"
+
+        with DB.session_ctx() as s:
+            query = s.query(FeedInfo).filter(FeedInfo.group_name == group_name, FeedInfo.feed_name == feed_name)
+            if feed_title:
+                query = query.filter(FeedInfo.feed_title == feed_title)
+            rows = query.all()
+            if len(rows) != 1:
+                return False, f"expected exactly one feed_info row, found {len(rows)}"
+            s.delete(rows[0])
+
         return True, ""
 
     def remove_group(self, group_name: str) -> tuple[bool, str]:

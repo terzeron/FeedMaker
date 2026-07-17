@@ -1390,6 +1390,48 @@ class TestRemoveFeedCompletely(unittest.TestCase):
                 FeedMakerManager.remove_feed_completely(mgr, "../evil", "feed1")
 
 
+class TestRemoveStatusInfoRecord(unittest.TestCase):
+    def test_empty_identity_deletes_exact_db_record(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = _make_manager(Path(tmp))
+            row = MagicMock()
+            session = MagicMock()
+            query = MagicMock()
+            session.query.return_value = query
+            query.filter.return_value = query
+            query.all.return_value = [row]
+
+            with patch("backend.feed_maker_manager.DB.session_ctx") as mock_session_ctx:
+                mock_session_ctx.return_value.__enter__.return_value = session
+                mock_session_ctx.return_value.__exit__.return_value = None
+
+                result, error = mgr.remove_status_info_record(
+                    {
+                        "group_name": "",
+                        "feed_name": "",
+                        "feed_title": "마인화산",
+                        "feedmaker": False,
+                        "public_html": False,
+                        "http_request": False,
+                    }
+                )
+
+            self.assertTrue(result)
+            self.assertEqual(error, "")
+            session.delete.assert_called_once_with(row)
+
+    def test_empty_identity_without_title_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = _make_manager(Path(tmp))
+
+            with patch("backend.feed_maker_manager.DB.session_ctx") as mock_session_ctx:
+                result, error = mgr.remove_status_info_record({"group_name": "", "feed_name": "", "feed_title": ""})
+
+            self.assertFalse(result)
+            self.assertIn("feed_title is required", error)
+            mock_session_ctx.assert_not_called()
+
+
 class TestDefect1RemoveGroupEdgeCases(unittest.TestCase):
     @patch("backend.feed_maker_manager.AccessLogManager.remove_httpd_access_info")
     @patch("backend.feed_maker_manager.FeedManager.remove_progress_info")

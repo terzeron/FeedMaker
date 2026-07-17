@@ -1255,7 +1255,7 @@ export default {
       return Boolean(item["group_name"] && item["feed_name"]);
     },
     getStatusInfoActionLabel: function (item) {
-      return this.canRemoveStatusInfoByApi(item) ? "피드 삭제" : "DB 삭제 정보";
+      return this.canRemoveStatusInfoByApi(item) ? "피드 삭제" : "DB 레코드 삭제";
     },
     showStatusInfoDeleteButton: function (data) {
       // 생성/등록/요청 산출물이 있거나, 제목만 남은 고아 메타데이터이면 삭제 액션 노출
@@ -1273,8 +1273,8 @@ export default {
 
       const title = this.getStatusInfoTitle(item) || "(제목 없음)";
       return (
-        "이 레코드는 그룹명과 피드명이 비어 있어 API 삭제 경로를 만들 수 없습니다.\n" +
-        `DB에서 feed_info의 group_name='', feed_name='' 레코드를 삭제해야 합니다. 제목: ${title}`
+        "이 레코드는 그룹명과 피드명이 비어 있어 feed_info DB 레코드를 삭제합니다.\n" +
+        `제목: ${title}`
       );
     },
     openConfirmModal: function (message, action) {
@@ -1321,11 +1321,39 @@ export default {
           alert("피드 삭제 요청 중에 오류가 발생하였습니다. " + error);
         });
     },
+    buildStatusInfoDeletePayload(item) {
+      return {
+        feed_name: item["feed_name"] || "",
+        feed_title: item["feed_title"] || "",
+        group_name: item["group_name"] || "",
+        feedmaker: item["feedmaker"] === "O",
+        public_html: item["public_html"] === "O",
+        http_request: item["http_request"] === "O",
+      };
+    },
+    removeStatusInfoRecord(item) {
+      const path = getApiUrlPath() + "/problems/status_info";
+      axios
+        .delete(path, { data: this.buildStatusInfoDeletePayload(item) })
+        .then((res) => {
+          if (res.data.status === "failure") {
+            alert("피드 삭제 중에 오류가 발생하였습니다. " + res.data.message);
+          } else {
+            this.statusInfolist = this.statusInfolist.filter(
+              (current) => current !== item
+            );
+          }
+        })
+        .catch((error) => {
+          alert("피드 삭제 요청 중에 오류가 발생하였습니다. " + error);
+        });
+    },
     statusInfoDeleteClicked(data) {
       this.openConfirmModal(this.getStatusInfoDeleteMessage(data.item), () => {
         const groupName = data.item["group_name"];
         const feedName = data.item["feed_name"];
         if (!this.canRemoveStatusInfoByApi(data.item)) {
+          this.removeStatusInfoRecord(data.item);
           return;
         }
         // 퍼블릭 피드 + 피드 디렉터리(설정) + 요청/접근 정보까지 일괄 삭제
