@@ -357,6 +357,10 @@ class DummyFeedMakerManager:
     def remove_feed(self, group_name, feed_name):
         return (True, None)
 
+    def remove_status_info_record(self, status_info):
+        self.status_info_removed = status_info
+        return (True, None)
+
     # remove list
     def remove_list(self, group_name, feed_name):
         return None
@@ -395,6 +399,9 @@ class FailingFeedMakerManager(DummyFeedMakerManager):
 
     def remove_feed(self, group_name, feed_name):
         return (None, "remove feed error")
+
+    def remove_status_info_record(self, status_info):
+        return (None, "remove status info error")
 
     def check_running(self, group_name, feed_name):
         return None
@@ -655,6 +662,44 @@ def test_delete_feed_info_failure():
     r = asyncio.run(main.delete_feed_info("g", "f", request=req, feed_maker_manager=mgr))
     assert r["status"] == "failure"
     assert r["message"] == "remove feed error"
+
+
+def test_delete_problem_status_info_empty_identity_payload():
+    main.require_admin = lambda _request: None
+    mgr = DummyFeedMakerManager()
+    req = types.SimpleNamespace()
+    payload = main.StatusInfoDeleteRequest(
+        feed_name="",
+        feed_title="마인화산",
+        group_name="",
+        feedmaker=False,
+        public_html=False,
+        http_request=False,
+    )
+
+    r = asyncio.run(main.delete_problem_status_info(payload, request=req, feed_maker_manager=mgr))
+
+    assert r["status"] == "success"
+    assert mgr.status_info_removed == {
+        "feed_name": "",
+        "feed_title": "마인화산",
+        "group_name": "",
+        "feedmaker": False,
+        "public_html": False,
+        "http_request": False,
+    }
+
+
+def test_delete_problem_status_info_failure():
+    main.require_admin = lambda _request: None
+    mgr = FailingFeedMakerManager()
+    req = types.SimpleNamespace()
+    payload = main.StatusInfoDeleteRequest(feed_name="", feed_title="마인화산", group_name="")
+
+    r = asyncio.run(main.delete_problem_status_info(payload, request=req, feed_maker_manager=mgr))
+
+    assert r["status"] == "failure"
+    assert r["message"] == "remove status info error"
 
 
 # --- remove_list, remove_html, remove_html_file with require_admin mock ---

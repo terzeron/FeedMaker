@@ -264,6 +264,15 @@ class ProblemType(str, Enum):
     STATUS = "status_info"
 
 
+class StatusInfoDeleteRequest(BaseModel):
+    feed_name: str = ""
+    feed_title: str = ""
+    group_name: str = ""
+    feedmaker: bool = False
+    public_html: bool = False
+    http_request: bool = False
+
+
 @app.get("/problems/{problem_type}")
 async def get_problems(problem_type: ProblemType, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("/problems/%r -> get_problems_%r()", problem_type, problem_type)
@@ -288,6 +297,20 @@ async def get_problems(problem_type: ProblemType, feed_maker_manager: FeedMakerM
         response_object["message"] = error
         response_object["status"] = "failure"
 
+    return response_object
+
+
+@app.delete("/problems/status_info")
+async def delete_problem_status_info(body: StatusInfoDeleteRequest, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+    LOGGER.info("DELETE /problems/status_info -> delete_problem_status_info()")
+    require_admin(request)
+    response_object: dict[str, Any] = {}
+    result, error = feed_maker_manager.remove_status_info_record(body.model_dump())
+    if result or not error:
+        response_object["status"] = "success"
+    else:
+        response_object["message"] = error
+        response_object["status"] = "failure"
     return response_object
 
 

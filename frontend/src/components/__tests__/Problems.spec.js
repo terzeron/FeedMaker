@@ -891,18 +891,33 @@ describe("Problems.vue", () => {
     await flushPromises();
 
     expect(wrapper.text()).toContain("마인화산");
-    expect(wrapper.find('button[aria-label="DB 삭제 정보"]').exists()).toBe(
+    expect(wrapper.find('button[aria-label="DB 레코드 삭제"]').exists()).toBe(
       true,
     );
     expect(wrapper.find("font-awesome-icon-stub").exists()).toBe(true);
 
     const item = wrapper.vm.statusInfolist[0];
     wrapper.vm.statusInfoDeleteClicked({ item });
-    expect(wrapper.vm.confirmMessage).toContain("group_name='', feed_name=''");
+    expect(wrapper.vm.confirmMessage).toContain("DB 레코드를 삭제합니다");
 
+    axios.delete.mockResolvedValueOnce({ data: { status: "success" } });
     wrapper.vm.handleConfirmOk();
-    expect(axios.delete).not.toHaveBeenCalled();
-    expect(wrapper.vm.statusInfolist.length).toBe(1);
+    await flushPromises();
+
+    expect(axios.delete).toHaveBeenCalledWith(
+      expect.stringContaining("/problems/status_info"),
+      {
+        data: {
+          feed_name: "",
+          feed_title: "마인화산",
+          group_name: "",
+          feedmaker: false,
+          public_html: false,
+          http_request: false,
+        },
+      },
+    );
+    expect(wrapper.vm.statusInfolist.length).toBe(0);
   });
 
   it("handles API failure responses for each problem type", async () => {
