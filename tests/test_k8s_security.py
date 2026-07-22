@@ -62,6 +62,16 @@ class TestContainerLoggingToStdout:
         df = DOCKERFILE.read_text(encoding="utf-8")
         assert "COPY logging.docker.conf /app/logging.conf" in df, "Dockerfile 이 logging.docker.conf 를 사용하지 않는다"
 
+    def test_docker_console_handler_level_is_info(self):
+        """컨테이너엔 파일 핸들러가 없어 console 이 곧 stdout 이고, feed 파이프라인이 그 stdout 을
+        HTML content 로 캡처한다(Process.exec_cmd). console 을 DEBUG 로 두면 DEBUG 로그가 생성
+        HTML 을 오염시키므로, 호스트 logging.conf 와 동일하게 INFO 여야 한다."""
+        import configparser
+
+        parser = configparser.RawConfigParser()
+        parser.read(LOGGING_DOCKER_CONF, encoding="utf-8")
+        assert parser.get("handler_consoleHandler", "level") == "INFO", "컨테이너 consoleHandler 가 INFO 가 아니다 — DEBUG 면 생성 HTML 이 오염된다"
+
     def test_host_logging_conf_keeps_file_handler(self):
         """호스트 CLI 용 logging.conf 는 기존 파일 로깅(run.log) 동작을 유지해야 한다."""
         conf = LOGGING_CONF.read_text(encoding="utf-8")
