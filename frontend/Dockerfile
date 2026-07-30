@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
-FROM node:22.16.0@sha256:71bcbb3b215b3fa84b5b167585675072f4c270855e37a599803f1a58141a0716 AS build
+FROM node:22.23.2@sha256:7725a5c2c83eed1d36258c66efae14b1ceccd021db9ed1d9559d3335ed3d68ed AS build
 
 WORKDIR /app
-COPY frontend/package.json frontend/package-lock.json ./
+COPY frontend/package.json frontend/package-lock.json frontend/.npmrc ./
 RUN npm install -g npm@10.9.2 && npm install && npx browserslist@latest --update-db
 
 ARG GIT_COMMIT=unknown
