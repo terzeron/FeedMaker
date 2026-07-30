@@ -2,6 +2,9 @@
   "name": "FeedMakerWeb",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.23.2"
+  },
   "scripts": {
     "serve": "vite --host 0.0.0.0",
     "build": "node build-with-version.js",
