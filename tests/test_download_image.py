@@ -3,6 +3,7 @@
 
 
 import io
+import re
 import runpy
 import unittest
 from pathlib import Path
@@ -399,9 +400,7 @@ class TestDownloadImageMain(unittest.TestCase):
 
 
 class TestNewOptions(unittest.TestCase):
-    """신규 옵션 --keep-img-meta-only / --dedupe-consecutive-images /
-    --remove-not-found-images / --replace-nbsp / --strip-wrapper-tags /
-    --exclude-img-url-pattern 테스트"""
+    """--keep-img-meta-only 옵션 테스트"""
 
     def setUp(self) -> None:
         self.work_dir = Env.get("FM_WORK_DIR") + "/naver/one_second"
@@ -419,16 +418,6 @@ class TestNewOptions(unittest.TestCase):
         self._patcher_config.stop()
         self._patcher_mkdir.stop()
         self._patcher_is_dir.stop()
-
-    def _run(self, extra_args: list, stdin_data: str, mock_dl_side_effect=None, mock_dl_return=None):
-        argv = ["download_image.py", "-f", self.work_dir] + extra_args + ["https://example.com/page"]
-        with patch("utils.image_downloader.ImageDownloader.download_image") as mock_dl, patch("sys.argv", argv), patch("sys.stdin", new=io.StringIO(stdin_data)), patch("sys.stdout", new_callable=io.StringIO) as out:
-            if mock_dl_side_effect is not None:
-                mock_dl.side_effect = mock_dl_side_effect
-            elif mock_dl_return is not None:
-                mock_dl.return_value = mock_dl_return
-            ret = utils.download_image.main()
-        return ret, out.getvalue()
 
     @patch("utils.image_downloader.ImageDownloader.download_image")
     def test_keep_img_meta_only_discards_non_img_elements(self, mock_dl: MagicMock) -> None:
@@ -458,117 +447,6 @@ class TestNewOptions(unittest.TestCase):
         self.assertIn("<meta", output)
         self.assertIn("<style>", output)
         self.assertNotIn("<div>", output)
-
-    @patch("utils.image_downloader.ImageDownloader.download_image")
-    def test_dedupe_consecutive_images(self, mock_dl: MagicMock) -> None:
-        """--keep-img-meta-only --dedupe-consecutive-images: 연속 중복 이미지 제거"""
-        url = f"{self.img_prefix}/one_second/same.webp"
-        mock_dl.return_value = (True, url)
-        argv = ["download_image.py", "--keep-img-meta-only", "--dedupe-consecutive-images", "-f", self.work_dir, "https://example.com/page"]
-        # 동일 이미지가 두 번 연속
-        stdin_data = "<img src='https://example.com/1.jpg'/>\n<img src='https://example.com/1.jpg'/>"
-        with patch("sys.argv", argv), patch("sys.stdin", new=io.StringIO(stdin_data)), patch("sys.stdout", new_callable=io.StringIO) as out:
-            ret = utils.download_image.main()
-        self.assertEqual(ret, 0)
-        self.assertEqual(out.getvalue().count("<img src="), 1)
-
-    @patch("utils.image_downloader.ImageDownloader.download_image")
-    def test_dedupe_consecutive_images_different_urls(self, mock_dl: MagicMock) -> None:
-        """--dedupe-consecutive-images: 다른 이미지는 모두 출력"""
-        mock_dl.side_effect = [(True, f"{self.img_prefix}/one_second/a.webp"), (True, f"{self.img_prefix}/one_second/b.webp")]
-        argv = ["download_image.py", "--keep-img-meta-only", "--dedupe-consecutive-images", "-f", self.work_dir, "https://example.com/page"]
-        stdin_data = "<img src='https://example.com/1.jpg'/>\n<img src='https://example.com/2.jpg'/>"
-        with patch("sys.argv", argv), patch("sys.stdin", new=io.StringIO(stdin_data)), patch("sys.stdout", new_callable=io.StringIO) as out:
-            ret = utils.download_image.main()
-        self.assertEqual(ret, 0)
-        self.assertEqual(out.getvalue().count("<img src="), 2)
-
-    @patch("utils.image_downloader.ImageDownloader.download_image")
-    def test_remove_not_found_images_skips_placeholder_in_src(self, mock_dl: MagicMock) -> None:
-        """--remove-not-found-images: src에 image-not-found.png 포함 이미지 제거"""
-        mock_dl.return_value = (True, f"{self.img_prefix}/one_second/ok.webp")
-        argv = ["download_image.py", "--keep-img-meta-only", "--remove-not-found-images", "-f", self.work_dir, "https://example.com/page"]
-        stdin_data = "<img src='https://example.com/image-not-found.png'/>\n<img src='https://example.com/ok.jpg'/>"
-        with patch("sys.argv", argv), patch("sys.stdin", new=io.StringIO(stdin_data)), patch("sys.stdout", new_callable=io.StringIO) as out:
-            ret = utils.download_image.main()
-        self.assertEqual(ret, 0)
-        output = out.getvalue()
-        self.assertEqual(output.count("<img src="), 1)
-        self.assertNotIn("image-not-found.png", output)
-
-    @patch("utils.image_downloader.ImageDownloader.download_image")
-    def test_remove_not_found_images_suppresses_not_found_output(self, mock_dl: MagicMock) -> None:
-        """--remove-not-found-images: 다운로드 실패 시 not_found.png 출력 억제"""
-        mock_dl.return_value = (None, None)
-        argv = ["download_image.py", "--keep-img-meta-only", "--remove-not-found-images", "-f", self.work_dir, "https://example.com/page"]
-        stdin_data = "<img src='https://example.com/broken.jpg'/>"
-        with patch("sys.argv", argv), patch("sys.stdin", new=io.StringIO(stdin_data)), patch("sys.stdout", new_callable=io.StringIO) as out:
-            ret = utils.download_image.main()
-        self.assertEqual(ret, 0)
-        self.assertNotIn("not_found", out.getvalue())
-
-    def test_replace_nbsp(self) -> None:
-        """--replace-nbsp: NBSP( )를 일반 공백으로 치환"""
-        argv = ["download_image.py", "--replace-nbsp", "-f", self.work_dir, "https://example.com/page"]
-        stdin_data = "텍스트 사이의 NBSP"
-        with patch("utils.image_downloader.ImageDownloader.download_image"), patch("sys.argv", argv), patch("sys.stdin", new=io.StringIO(stdin_data)), patch("sys.stdout", new_callable=io.StringIO) as out:
-            ret = utils.download_image.main()
-        self.assertEqual(ret, 0)
-        output = out.getvalue()
-        self.assertNotIn(" ", output)
-        self.assertIn("텍스트 사이의 NBSP", output)
-
-    def test_strip_wrapper_tags(self) -> None:
-        """--strip-wrapper-tags: article/html/head/body 태그 제거"""
-        argv = ["download_image.py", "--strip-wrapper-tags", "-f", self.work_dir, "https://example.com/page"]
-        stdin_data = "<html><head></head><body><article>내용</article></body></html>"
-        with patch("utils.image_downloader.ImageDownloader.download_image"), patch("sys.argv", argv), patch("sys.stdin", new=io.StringIO(stdin_data)), patch("sys.stdout", new_callable=io.StringIO) as out:
-            ret = utils.download_image.main()
-        self.assertEqual(ret, 0)
-        output = out.getvalue()
-        self.assertNotIn("<html>", output)
-        self.assertNotIn("<body>", output)
-        self.assertNotIn("<head>", output)
-        self.assertNotIn("<article>", output)
-        self.assertNotIn("</html>", output)
-        self.assertIn("내용", output)
-
-    @patch("utils.image_downloader.ImageDownloader.download_image")
-    def test_exclude_img_url_pattern(self, mock_dl: MagicMock) -> None:
-        """--exclude-img-url-pattern: 패턴 일치 이미지 URL 제거"""
-        mock_dl.return_value = (True, f"{self.img_prefix}/one_second/ok.webp")
-        argv = ["download_image.py", "--exclude-img-url-pattern", r"ad\.example\.com", "-f", self.work_dir, "https://example.com/page"]
-        stdin_data = "<img src='https://ad.example.com/banner.jpg'/><img src='https://example.com/ok.jpg'/>"
-        with patch("sys.argv", argv), patch("sys.stdin", new=io.StringIO(stdin_data)), patch("sys.stdout", new_callable=io.StringIO) as out:
-            ret = utils.download_image.main()
-        self.assertEqual(ret, 0)
-        output = out.getvalue()
-        self.assertNotIn("ad.example.com", output)
-        self.assertIn("ok.webp", output)
-
-    @patch("utils.image_downloader.ImageDownloader.download_image")
-    def test_remove_not_found_images_in_default_mode(self, mock_dl: MagicMock) -> None:
-        """--remove-not-found-images: keep-img-meta-only 없이 기본 모드에서도 동작"""
-        mock_dl.return_value = (True, f"{self.img_prefix}/one_second/ok.webp")
-        argv = ["download_image.py", "--remove-not-found-images", "-f", self.work_dir, "https://example.com/page"]
-        stdin_data = "<img src='https://example.com/image-not-found.png'/>"
-        with patch("sys.argv", argv), patch("sys.stdin", new=io.StringIO(stdin_data)), patch("sys.stdout", new_callable=io.StringIO) as out:
-            ret = utils.download_image.main()
-        self.assertEqual(ret, 0)
-        self.assertNotIn("<img", out.getvalue())
-        mock_dl.assert_not_called()
-
-    @patch("utils.image_downloader.ImageDownloader.download_image")
-    def test_exclude_img_url_pattern_in_default_mode(self, mock_dl: MagicMock) -> None:
-        """--exclude-img-url-pattern: 기본 모드에서도 패턴 일치 이미지 제거"""
-        mock_dl.return_value = (True, f"{self.img_prefix}/one_second/ok.webp")
-        argv = ["download_image.py", "--exclude-img-url-pattern", r"blocked\.com", "-f", self.work_dir, "https://example.com/page"]
-        stdin_data = "<img src='https://blocked.com/img.jpg'/>"
-        with patch("sys.argv", argv), patch("sys.stdin", new=io.StringIO(stdin_data)), patch("sys.stdout", new_callable=io.StringIO) as out:
-            ret = utils.download_image.main()
-        self.assertEqual(ret, 0)
-        self.assertNotIn("<img", out.getvalue())
-        mock_dl.assert_not_called()
 
 
 class TestIsSameOriginBlockedDomains(unittest.TestCase):
@@ -628,32 +506,6 @@ class TestMainBlock(unittest.TestCase):
             self.assertEqual(cm.exception.code, -1)
 
 
-class TestReplaceImgTagRemoveNotFound(unittest.TestCase):
-    """replace_img_tag: remove_not_found_images=True 경로 (lines 68-74)"""
-
-    @patch("utils.download_image.ImageDownloader.download_image", return_value=(None, None))
-    def test_falsy_new_img_url_with_remove_not_found_returns_empty(self, _mock_dl):
-        """download_image가 (None, None)을 반환하고 remove_not_found_images=True → '' 반환 (line 69)"""
-        from utils.download_image import replace_img_tag
-
-        mock_match = MagicMock()
-        mock_match.group.side_effect = lambda key: {"img_url": "https://example.com/img.jpg", 0: "<img src='https://example.com/img.jpg'/>"}[key]
-        crawler = MagicMock()
-        result = replace_img_tag(mock_match, crawler=crawler, feed_img_dir_path=Path("/tmp"), quality=75, remove_not_found_images=True)
-        self.assertEqual(result, "")
-
-    @patch("utils.download_image.ImageDownloader.download_image", side_effect=OSError("disk full"))
-    def test_os_error_with_remove_not_found_returns_empty(self, _mock_dl):
-        """download_image가 OSError 발생하고 remove_not_found_images=True → '' 반환 (line 74)"""
-        from utils.download_image import replace_img_tag
-
-        mock_match = MagicMock()
-        mock_match.group.side_effect = lambda key: {"img_url": "https://example.com/img.jpg", 0: "<img src='https://example.com/img.jpg'/>"}[key]
-        crawler = MagicMock()
-        result = replace_img_tag(mock_match, crawler=crawler, feed_img_dir_path=Path("/tmp"), quality=75, remove_not_found_images=True)
-        self.assertEqual(result, "")
-
-
 class TestKeepImgMetaOnly(unittest.TestCase):
     """main()의 keep_img_meta_only 경로 미커버 분기 테스트 (lines 163-188)"""
 
@@ -697,19 +549,6 @@ class TestKeepImgMetaOnly(unittest.TestCase):
         self.assertEqual(out.getvalue(), "")
         mock_dl.assert_not_called()
 
-    def test_exclude_img_url_pattern_skipped(self) -> None:
-        """--keep-img-meta-only + --exclude-img-url-pattern + 패턴 매칭 URL → 이미지 출력 없음 (line 166-167)"""
-        page_url = "https://example.com/page"
-        argv = ["download_image.py", "--keep-img-meta-only", "--exclude-img-url-pattern", r"ads\.", "-f", self.work_dir, page_url]
-        stdin_data = "<img src='https://ads.example.com/banner.jpg'/>"
-
-        def configure(mock_dl):
-            mock_dl.return_value = (None, None)
-
-        ret, output = self._run(argv, stdin_data, mock_dl_config=configure)
-        self.assertEqual(ret, 0)
-        self.assertEqual(output, "")
-
     def test_data_image_svg_skipped(self) -> None:
         """--keep-img-meta-only + data:image/svg src → 이미지 출력 없음 (line 168-169)"""
         page_url = "https://example.com/page"
@@ -738,8 +577,8 @@ class TestKeepImgMetaOnly(unittest.TestCase):
         self.assertIn(new_url, output)
         self.assertIn("width='100%'", output)
 
-    def test_download_failure_none_none_without_remove_not_found(self) -> None:
-        """--keep-img-meta-only + download 실패(None,None) + remove_not_found=False → not_found.png 출력 (lines 183-184)"""
+    def test_download_failure_none_none_prints_not_found(self) -> None:
+        """--keep-img-meta-only + download 실패(None,None) → not_found.png 출력"""
         page_url = "https://example.com/page"
         argv = ["download_image.py", "--keep-img-meta-only", "-f", self.work_dir, page_url]
         stdin_data = "<img src='https://example.com/broken.jpg'/>"
@@ -752,8 +591,8 @@ class TestKeepImgMetaOnly(unittest.TestCase):
         self.assertIn("not_found.png", output)
         self.assertIn("not exist or size 0", output)
 
-    def test_download_os_error_without_remove_not_found(self) -> None:
-        """--keep-img-meta-only + download OSError + remove_not_found=False → error placeholder 출력 (lines 185-188)"""
+    def test_download_os_error_prints_error_placeholder(self) -> None:
+        """--keep-img-meta-only + download OSError → error placeholder 출력"""
         page_url = "https://example.com/page"
         argv = ["download_image.py", "--keep-img-meta-only", "-f", self.work_dir, page_url]
         stdin_data = "<img src='https://example.com/broken.jpg'/>"
@@ -765,6 +604,102 @@ class TestKeepImgMetaOnly(unittest.TestCase):
         self.assertEqual(ret, 0)
         self.assertIn("not_found.png", output)
         self.assertIn("error occurred", output)
+
+
+class TestImgPatternIgnoresLazyLoadAttributes(unittest.TestCase):
+    """_IMG_PATTERN 은 src 만 인식하고 data-src 류 유사 속성은 무시해야 한다.
+
+    lazy-load 속성의 src 통일은 extractor(bin/extractor.py) 또는 피드별
+    post_process 스크립트의 책임이며, download_image.py 는 정규화된 src 만 본다.
+    """
+
+    def _extract(self, tag: str):
+        m = re.search(utils.download_image._IMG_PATTERN, tag)
+        return m.group("img_url") if m else None
+
+    def test_data_src_after_src_is_ignored(self) -> None:
+        self.assertEqual(self._extract("<img src='A.jpg' data-src='B.jpg'/>"), "A.jpg")
+
+    def test_data_src_before_src_is_ignored(self) -> None:
+        self.assertEqual(self._extract("<img data-src='B.jpg' src='A.jpg'/>"), "A.jpg")
+
+    def test_data_lazy_src_is_ignored(self) -> None:
+        self.assertEqual(self._extract("<img src='A.jpg' data-lazy-src='B.jpg'/>"), "A.jpg")
+
+    def test_o_src_is_ignored(self) -> None:
+        self.assertEqual(self._extract("<img src='A.jpg' o_src='B.jpg'/>"), "A.jpg")
+
+    def test_data_original_is_ignored(self) -> None:
+        self.assertEqual(self._extract("<img src='A.jpg' data-original='B.jpg'/>"), "A.jpg")
+
+    def test_normalized_tag_still_matches(self) -> None:
+        self.assertEqual(self._extract("<img src='A.jpg'/>"), "A.jpg")
+
+    def test_tag_with_other_attributes_still_matches(self) -> None:
+        self.assertEqual(self._extract("<img class='lazy' src='A.jpg' width='100'/>"), "A.jpg")
+
+    def test_data_uri_still_matches(self) -> None:
+        self.assertEqual(self._extract("<img src='data:image/png;base64,AAA'/>"), "data:image/png;base64,AAA")
+
+
+class TestModeScopedRules(unittest.TestCase):
+    """svg 스킵과 연속 중복 제거는 --keep-img-meta-only 전용 규칙이다.
+
+    공통 함수(replace_img_tag)로 합치면서 이 모드 경계가 유지되는지 검증한다.
+    """
+
+    def setUp(self) -> None:
+        self.work_dir = Env.get("FM_WORK_DIR") + "/naver/one_second"
+        self.img_prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
+        self._patcher_is_dir = patch("pathlib.Path.is_dir", return_value=True)
+        self._patcher_mkdir = patch("pathlib.Path.mkdir")
+        mock_cfg = MagicMock()
+        mock_cfg.get_extraction_configs.return_value = {"user_agent": "", "exclude_ad_images": False}
+        self._patcher_config = patch("utils.download_image.Config", return_value=mock_cfg)
+        self._patcher_is_dir.start()
+        self._patcher_mkdir.start()
+        self._patcher_config.start()
+
+    def tearDown(self) -> None:
+        self._patcher_config.stop()
+        self._patcher_mkdir.stop()
+        self._patcher_is_dir.stop()
+
+    def _run(self, extra_args: list, stdin_data: str, dl_return=None, dl_side_effect=None):
+        argv = ["download_image.py"] + extra_args + ["-f", self.work_dir, "https://example.com/page"]
+        with patch("utils.image_downloader.ImageDownloader.download_image") as mock_dl, patch("sys.argv", argv), patch("sys.stdin", new=io.StringIO(stdin_data)), patch("sys.stdout", new_callable=io.StringIO) as out:
+            if dl_side_effect is not None:
+                mock_dl.side_effect = dl_side_effect
+            else:
+                mock_dl.return_value = dl_return
+            ret = utils.download_image.main()
+        return ret, out.getvalue()
+
+    def test_svg_data_uri_skipped_in_keep_img_meta_only(self) -> None:
+        """keep 모드: inline svg 는 출력에서 제거된다"""
+        stdin_data = "<img src='data:image/svg+xml;base64,PHN2Zz48L3N2Zz4='/>"
+        ret, output = self._run(["--keep-img-meta-only"], stdin_data, dl_return=(True, f"{self.img_prefix}/one_second/a.webp"))
+        self.assertEqual(ret, 0)
+        self.assertEqual(output.strip(), "")
+
+    def test_svg_data_uri_becomes_not_found_in_default_mode(self) -> None:
+        """기본 모드: inline svg 는 스킵 대상이 아니며 다운로드 실패 시 not_found 로 남는다"""
+        stdin_data = "<img src='data:image/svg+xml;base64,PHN2Zz48L3N2Zz4='/>"
+        ret, output = self._run([], stdin_data, dl_return=(None, None))
+        self.assertEqual(ret, 0)
+        self.assertIn("not_found.png", output)
+
+
+class TestMakeImgTag(unittest.TestCase):
+    """_make_img_tag: width 속성만 보존하고 나머지는 제거"""
+
+    def test_preserves_width(self) -> None:
+        result = utils.download_image._make_img_tag("https://web/a.webp", "<img src='x.jpg' width='100' alt='버림'/>")
+        self.assertEqual(result, "<img src='https://web/a.webp' width='100'/>")
+
+    def test_without_width(self) -> None:
+        result = utils.download_image._make_img_tag("https://web/a.webp", "<img src='x.jpg' alt='버림'/>")
+        self.assertEqual(result, "<img src='https://web/a.webp'/>")
 
 
 if __name__ == "__main__":
