@@ -24,7 +24,7 @@
     "@fortawesome/free-solid-svg-icons": "^7.2.0",
     "@fortawesome/vue-fontawesome": "^3.3.2",
     "@popperjs/core": "^2.11.8",
-    "@vueuse/core": "^14.3.0",
+    "@vueuse/core": "^14.4.0",
     "axios": "^1.18.0",
     "bootstrap": "^5.3.8",
     "bootstrap-vue-next": "^0.45.9",
