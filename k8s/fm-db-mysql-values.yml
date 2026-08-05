@@ -1,0 +1,48 @@
+---
+# bitnami/mysql 9.19.1 (fm-db) values.
+#
+# resources 를 --set 대신 이 파일에 두는 이유:
+#   `helm upgrade` 때 --set 목록을 빠뜨리면 QoS 가 Guaranteed → BestEffort 로 조용히
+#   내려가고, 호스트 메모리가 고갈되면 DB 가 가장 먼저 죽는다.
+#   2026-08-04 OOM storm 에서 실제로 kill 됐다 (oom_score_adj 1000).
+#   install / upgrade 모두 `-f fm-db-mysql-values.yml` 로 넘긴다.
+#
+# 자격증명은 여기 두지 않는다. auth.existingSecret 으로 미리 만든 secret 을 참조한다
+# (helm --set 으로 넘기면 `ps` 와 release values 에 평문으로 남는다).
+
+auth:
+  existingSecret: fm-db-mysql
+  database: feedmaker
+  username: feedmaker
+
+# 이미지 태그를 명시적으로 고정한다. Bitnami 가 구 태그를 registry 에서 정리했기 때문에
+# chart 기본값에 맡기면 재설치 시 pull 이 실패할 수 있다.
+image:
+  registry: docker.io
+  repository: bitnami/mysql
+  tag: 8.0.36-debian-11-r4
+  pullPolicy: IfNotPresent
+
+volumePermissions:
+  enabled: true
+  # init container 도 requests == limits 여야 한다. QoS 판정은 init container 를 포함하므로
+  # 하나라도 비면 pod 전체가 Guaranteed 가 되지 않는다.
+  resources:
+    requests: { memory: 128Mi, cpu: 100m }
+    limits: { memory: 128Mi, cpu: 100m }
+
+primary:
+  persistence:
+    enabled: true
+    existingClaim: mysql-pvc
+  # service.type 은 LoadBalancer 유지 — 로컬/LAN 에서 DB 직접 접근이 필요하다.
+  service:
+    type: LoadBalancer
+  livenessProbe:
+    timeoutSeconds: 5
+  terminationGracePeriodSeconds: 60
+  # QoS Guaranteed(oom_score_adj -997) 를 위해 requests == limits, cpu·memory 둘 다.
+  # 1Gi 근거: 10일 관측 peak 444MiB + 여유 2.3배 / 500m 근거: peak 26m + 넉넉한 여유
+  resources:
+    requests: { memory: 1Gi, cpu: 500m }
+    limits: { memory: 1Gi, cpu: 500m }
