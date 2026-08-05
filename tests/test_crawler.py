@@ -20,7 +20,7 @@ from pathlib import Path as _Path
 import json
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from bin.crawler import LoginManager
+from bin.crawler import LoginManager, to_latin1_safe_url
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -1348,6 +1348,125 @@ class TestCrawlerTryLogin(unittest.TestCase):
     def tearDown(self):
         for f in self.tmp.iterdir():
             f.unlink(missing_ok=True)
+
+
+class TestToLatin1SafeUrl(unittest.TestCase):
+    """HTTP header values must be latin-1 encodable; non-ASCII URLs get percent-encoded."""
+
+    def test_ascii_url_is_returned_unchanged(self):
+        url = "https://example.com/webtoon?page=1&sort=desc"
+        self.assertEqual(to_latin1_safe_url(url), url)
+
+    def test_non_latin1_url_is_percent_encoded(self):
+        # A 한글 path in a Referer header would otherwise raise UnicodeEncodeError inside
+        # requests when it builds the header block.
+        encoded = to_latin1_safe_url("https://example.com/웹툰/1?q=만화")
+        encoded.encode("latin-1")  # must not raise
+        self.assertIn("%EC%9B%B9%ED%88%B0", encoded)
+        self.assertTrue(encoded.startswith("https://example.com/"))
+
+    def test_reserved_characters_survive_encoding(self):
+        encoded = to_latin1_safe_url("https://example.com/목록?a=1&b=2#부분")
+        self.assertIn("?a=1&b=2", encoded)
+        self.assertIn("#", encoded)
+
+
+class TestLoginConfigPermissionHandling(unittest.TestCase):
+    """The credential file is tightened to 0600, but a failure to do so must not block login."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.config_file = self.tmp / ".login.json"
+        self.config_file.write_text(json.dumps({"login_url": "http://example.com/login", "id": "user1", "password": "pass1"}), encoding="utf-8")
+        os.chmod(self.config_file, 0o644)
+
+    def test_world_readable_config_is_tightened_to_0600(self):
+        result = LoginManager.load_login_config(self.tmp)
+
+        self.assertIsNotNone(result)
+        self.assertEqual(self.config_file.stat().st_mode & 0o777, 0o600)
+
+    def test_chmod_failure_is_logged_but_config_is_still_loaded(self):
+        # e.g. a read-only mount or a file owned by another user: losing the hardening is
+        # worth a warning, but refusing to log in would break the feed entirely.
+        with patch("bin.crawler.os.chmod", side_effect=OSError("read-only file system")):
+            result = LoginManager.load_login_config(self.tmp)
+
+        assert result is not None
+        self.assertEqual(result["id"], "user1")
+
+
+class TestRequestsClientPersistsResponseCookies(unittest.TestCase):
+    """Cookies set by the main response must land in the on-disk jar for the next run."""
+
+    @patch("bin.crawler.Env.get", return_value="false")
+    def setUp(self, mock_env):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.client = RequestsClient(dir_path=self.tmp)
+
+    @patch("bin.crawler.URLSafety.check_url", return_value=(True, ""))
+    @patch("requests.get")
+    def test_response_cookies_are_written_to_jar(self, mock_get, mock_check):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.encoding = "utf-8"
+        mock_resp.text = "<html><body>ok</body></html>"
+        mock_resp.request = MagicMock(url="http://example.com/page")
+        mock_resp.cookies = RequestsCookieJar()
+        mock_resp.cookies.set("sid", "from-main-response")
+        mock_get.return_value = mock_resp
+
+        _, error, _, status = self.client.make_request("http://example.com/page")
+
+        self.assertEqual(status, 200)
+        self.assertEqual(error, "")
+        cookie_file = self.tmp / RequestsClient.COOKIE_FILE
+        self.assertTrue(cookie_file.is_file())
+        saved = {c["name"]: c["value"] for c in json.loads(cookie_file.read_text(encoding="utf-8"))}
+        self.assertEqual(saved["sid"], "from-main-response")
+
+    @patch("bin.crawler.URLSafety.check_url", return_value=(True, ""))
+    @patch("requests.get")
+    def test_no_jar_is_written_when_response_has_no_cookies(self, mock_get, mock_check):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.encoding = "utf-8"
+        mock_resp.text = "<html><body>ok</body></html>"
+        mock_resp.request = MagicMock(url="http://example.com/page")
+        mock_resp.cookies = RequestsCookieJar()
+        mock_get.return_value = mock_resp
+
+        self.client.make_request("http://example.com/page")
+
+        self.assertFalse((self.tmp / RequestsClient.COOKIE_FILE).is_file())
+
+
+class TestGetOptionStrRetryOptions(unittest.TestCase):
+    """get_option_str builds the crawler.py command line used by feed_maker."""
+
+    def test_retry_and_retry_sleep_are_emitted(self):
+        actual = Crawler.get_option_str({"num_retries": 3, "retry_sleep": 7})
+        self.assertIn("--retry=3", actual)
+        self.assertIn("--retry-sleep=7", actual)
+
+    def test_zero_retry_values_are_omitted(self):
+        # 0/None are falsy: emitting "--retry=0" would disable the built-in default of 1.
+        actual = Crawler.get_option_str({"num_retries": 0, "retry_sleep": 0})
+        self.assertNotIn("--retry=", actual)
+        self.assertNotIn("--retry-sleep=", actual)
+
+
+class TestMainRetrySleepOption(unittest.TestCase):
+    @patch("bin.crawler.Crawler")
+    def test_main_with_retry_sleep(self, mock_crawler_cls: MagicMock) -> None:
+        mock_crawler_cls.return_value.run.return_value = ("ok", "", {})
+
+        with patch.object(_sys, "argv", ["crawler.py", "--retry-sleep=9", "https://example.com"]):
+            result = main()
+
+        self.assertEqual(result, 0)
+        call_kwargs = mock_crawler_cls.call_args
+        self.assertEqual(call_kwargs.kwargs.get("retry_sleep"), 9)
 
 
 if __name__ == "__main__":

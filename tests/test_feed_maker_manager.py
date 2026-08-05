@@ -688,6 +688,29 @@ class TestExtractTitlesFromPublicFeed(unittest.TestCase):
             self.assertEqual(result[0]["title"], "Has Title")
             self.assertEqual(result[0]["date"], "")  # pubDate 없음
 
+    def test_unparsable_pubdate_falls_back_to_empty_date(self):
+        # A malformed pubDate (hand-edited feed, broken generator) must not abort the whole
+        # title listing — the item is still shown, just without a date.
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            mgr = _make_manager(tmp_path)
+            xml_content = """<?xml version="1.0"?>
+<rss><channel>
+  <item><title>Broken Date</title><pubDate>not a date at all</pubDate></item>
+  <item><title>Good Date</title><pubDate>Mon, 01 Jan 2024 00:00:00 +0000</pubDate></item>
+</channel></rss>"""
+            (tmp_path / "brokendate.xml").write_text(xml_content)
+
+            with patch("backend.feed_maker_manager.FeedManager.public_feed_dir_path", tmp_path):
+                result, error = mgr.extract_titles_from_public_feed("brokendate")
+
+            self.assertIsInstance(result, list)
+            self.assertEqual(len(result), 2)
+            self.assertEqual(result[0]["title"], "Broken Date")
+            self.assertEqual(result[0]["date"], "")
+            self.assertEqual(result[1]["date"], "24-01-01")
+            self.assertEqual(error, "")
+
     def test_html_mtime_used_when_earlier_than_pubdate(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -1160,6 +1183,22 @@ class TestToggleFeed(unittest.TestCase):
             with self.assertRaises(ValueError):
                 mgr.toggle_feed("group1", "../evil")
 
+    @patch("backend.feed_maker_manager.FeedManager.toggle_feed")
+    def test_git_mv_error_is_returned_without_touching_db(self, mock_db_toggle):
+        # If the rename failed the directory is still in its old place, so syncing is_active
+        # in the DB would leave the DB disagreeing with the filesystem.
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            mgr = _make_manager(tmp_path)
+            (tmp_path / "group1" / "feed1").mkdir(parents=True)
+
+            with patch.object(mgr, "_git_mv", return_value=("", "git mv failed")):
+                result, error = mgr.toggle_feed("group1", "feed1")
+
+            self.assertEqual(result, "")
+            self.assertEqual(error, "git mv failed")
+            mock_db_toggle.assert_not_called()
+
 
 class TestToggleGroup(unittest.TestCase):
     @patch("backend.feed_maker_manager.FeedManager.toggle_group")
@@ -1211,6 +1250,22 @@ class TestToggleGroup(unittest.TestCase):
             mgr = _make_manager(Path(tmp))
             with self.assertRaises(ValueError):
                 mgr.toggle_group("../evil")
+
+    @patch("backend.feed_maker_manager.FeedManager.toggle_group")
+    def test_git_mv_error_is_returned_without_touching_db(self, mock_db_toggle):
+        # A failed rename must not cascade into flipping is_active for every feed in the
+        # group; the directory is still active on disk.
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            mgr = _make_manager(tmp_path)
+            (tmp_path / "group1" / "feed1").mkdir(parents=True)
+
+            with patch.object(mgr, "_git_mv", return_value=("", "git mv failed")):
+                result, error = mgr.toggle_group("group1")
+
+            self.assertEqual(result, "")
+            self.assertEqual(error, "git mv failed")
+            mock_db_toggle.assert_not_called()
 
 
 class TestCheckRunning(unittest.TestCase):
@@ -1405,20 +1460,79 @@ class TestRemoveStatusInfoRecord(unittest.TestCase):
                 mock_session_ctx.return_value.__enter__.return_value = session
                 mock_session_ctx.return_value.__exit__.return_value = None
 
-                result, error = mgr.remove_status_info_record(
-                    {
-                        "group_name": "",
-                        "feed_name": "",
-                        "feed_title": "마인화산",
-                        "feedmaker": False,
-                        "public_html": False,
-                        "http_request": False,
-                    }
-                )
+                result, error = mgr.remove_status_info_record({"group_name": "", "feed_name": "", "feed_title": "마인화산", "feedmaker": False, "public_html": False, "http_request": False})
 
             self.assertTrue(result)
             self.assertEqual(error, "")
             session.delete.assert_called_once_with(row)
+
+    def test_complete_identity_delegates_to_remove_feed_completely(self):
+        # A well-formed row is not a "malformed status_info" case: it must go through the
+        # full cleanup (files + resource metadata), not a bare DB delete.
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = _make_manager(Path(tmp))
+
+            with patch.object(mgr, "remove_feed_completely", return_value=(True, "")) as mock_remove, patch("backend.feed_maker_manager.DB.session_ctx") as mock_session_ctx:
+                result, error = mgr.remove_status_info_record({"group_name": "group1", "feed_name": "feed1", "feed_title": "제목"})
+
+            self.assertTrue(result)
+            self.assertEqual(error, "")
+            mock_remove.assert_called_once_with("group1", "feed1")
+            mock_session_ctx.assert_not_called()
+
+    def test_feed_name_only_cleans_public_files_before_db_delete(self):
+        # group_name is missing, so there is no feed directory to walk — but the public
+        # img/pdf/feed artifacts are addressed by feed_name alone and must still be removed.
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = _make_manager(Path(tmp))
+            row = MagicMock()
+            session = MagicMock()
+            query = MagicMock()
+            session.query.return_value = query
+            query.filter.return_value = query
+            query.all.return_value = [row]
+
+            with patch.object(mgr, "_remove_public_img_pdf_feed_files") as mock_remove_public, patch("backend.feed_maker_manager.DB.session_ctx") as mock_session_ctx:
+                mock_session_ctx.return_value.__enter__.return_value = session
+                mock_session_ctx.return_value.__exit__.return_value = None
+
+                result, error = mgr.remove_status_info_record({"group_name": "", "feed_name": "feed1", "feed_title": ""})
+
+            self.assertTrue(result)
+            self.assertEqual(error, "")
+            mock_remove_public.assert_called_once_with("feed1")
+            mgr.feed_manager.remove_public_feed_by_feed_name.assert_called_once_with("feed1", do_remove_file=True)
+            session.delete.assert_called_once_with(row)
+
+    def test_group_name_only_is_validated(self):
+        # A path-traversal group name must be rejected even on this DB-only cleanup path.
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = _make_manager(Path(tmp))
+            with self.assertRaises(ValueError):
+                mgr.remove_status_info_record({"group_name": "../evil", "feed_name": "", "feed_title": "제목"})
+
+    def test_ambiguous_match_is_refused_without_deleting(self):
+        # Deleting when the filter matches 0 or 2+ rows would either be a no-op reported as
+        # success or wipe an unrelated feed's row.
+        for rows in ([], [MagicMock(), MagicMock()]):
+            with self.subTest(row_count=len(rows)):
+                with tempfile.TemporaryDirectory() as tmp:
+                    mgr = _make_manager(Path(tmp))
+                    session = MagicMock()
+                    query = MagicMock()
+                    session.query.return_value = query
+                    query.filter.return_value = query
+                    query.all.return_value = rows
+
+                    with patch("backend.feed_maker_manager.DB.session_ctx") as mock_session_ctx:
+                        mock_session_ctx.return_value.__enter__.return_value = session
+                        mock_session_ctx.return_value.__exit__.return_value = None
+
+                        result, error = mgr.remove_status_info_record({"group_name": "", "feed_name": "", "feed_title": "마인화산"})
+
+                    self.assertFalse(result)
+                    self.assertIn(f"found {len(rows)}", error)
+                    session.delete.assert_not_called()
 
     def test_empty_identity_without_title_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:

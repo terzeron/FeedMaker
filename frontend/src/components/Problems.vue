@@ -246,9 +246,10 @@
                 >
                   <td v-for="field in htmlFileSizeFields" :key="field.key">
                     <span v-if="field.key === 'feed_title'" class="feed-title-ellipsis" :title="item[field.key]">
-                      <a :href="`/management/${item.feed_dir_path.split('/')[0]}/${item.feed_dir_path.split('/')[1]}`">
+                      <a v-if="getFeedDirLink(item)" :href="getFeedDirLink(item)">
                         {{ item[field.key] }}
                       </a>
+                      <span v-else>{{ item[field.key] }}</span>
                     </span>
                     <span v-else-if="field.key === 'action'">
                       <font-awesome-icon
@@ -316,9 +317,10 @@
                     :key="field.key"
                   >
                     <span v-if="field.key === 'feed_title'" class="feed-title-ellipsis" :title="item[field.key]">
-                      <a :href="`/management/${item.feed_dir_path.split('/')[0]}/${item.feed_dir_path.split('/')[1]}`">
+                      <a v-if="getFeedDirLink(item)" :href="getFeedDirLink(item)">
                         {{ item[field.key] }}
                       </a>
+                      <span v-else>{{ item[field.key] }}</span>
                     </span>
                     <span v-else-if="field.key === 'action'">
                       <font-awesome-icon
@@ -388,9 +390,10 @@
                     :key="field.key"
                   >
                     <span v-if="field.key === 'feed_title'" class="feed-title-ellipsis" :title="item[field.key]">
-                      <a :href="`/management/${item.feed_dir_path.split('/')[0]}/${item.feed_dir_path.split('/')[1]}`">
+                      <a v-if="getFeedDirLink(item)" :href="getFeedDirLink(item)">
                         {{ item[field.key] }}
                       </a>
+                      <span v-else>{{ item[field.key] }}</span>
                     </span>
                     <span v-else-if="field.key === 'action'">
                       <font-awesome-icon
@@ -463,9 +466,10 @@
                     :key="field.key"
                   >
                     <span v-if="field.key === 'feed_title'" class="feed-title-ellipsis" :title="item[field.key]">
-                      <a :href="`/management/${item.feed_dir_path.split('/')[0]}/${item.feed_dir_path.split('/')[1]}`">
+                      <a v-if="getFeedDirLink(item)" :href="getFeedDirLink(item)">
                         {{ item[field.key] }}
                       </a>
+                      <span v-else>{{ item[field.key] }}</span>
                     </span>
                     <span v-else-if="field.key === 'action'">
                       <font-awesome-icon
@@ -1247,6 +1251,13 @@ export default {
       }
 
       return _.orderBy(data, [sortBy], [sortDesc ? 'desc' : 'asc']);
+    },
+    getFeedDirLink: function (item) {
+      // feed_dir_path는 "group/feed" 형태이지만 누락되거나 잘린 채로 올 수 있다.
+      const parts = item["feed_dir_path"]
+        ? item["feed_dir_path"].split("/")
+        : [];
+      return parts.length >= 2 ? `/management/${parts[0]}/${parts[1]}` : "";
     },
     getStatusInfoTitle: function (item) {
       return item["feed_title"] || item["feed_name"] || "";

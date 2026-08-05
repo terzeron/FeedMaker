@@ -28,9 +28,7 @@
             class="m-0"
             placeholder="키워드"
             @keyup.enter="search"
-          >
-            {{ searchKeyword }}
-          </BFormInput>
+          />
           <my-button
             ref="searchButton"
             label="검색"
@@ -215,9 +213,7 @@
         <BRow id="actions" class="m-0 p-0">
           <BCol cols="12" class="m-0 p-1">
             <BInputGroup prepend="피드" class="m-0" v-if="showNewFeedNameInput">
-              <BFormInput class="m-0" v-model="newFeedName">
-                {{ newFeedName }}
-              </BFormInput>
+              <BFormInput class="m-0" v-model="newFeedName" />
               <BInputGroupText class="p-0">
                 <my-button
                   ref="saveButton"
@@ -619,7 +615,7 @@ export default {
       return "그룹 " + (this.groupStatus ? "비활성화" : "활성화");
     },
     groupStatusIcon: function () {
-      return "toggle-" + (this.feedStatus ? "off" : "on");
+      return "toggle-" + (this.groupStatus ? "off" : "on");
     },
     title: function () {
       return this.jsonData.rss["title"];

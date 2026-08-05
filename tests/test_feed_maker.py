@@ -1710,5 +1710,48 @@ class TestFetchOldFeedListWindowWriteIndexData(FeedMakerMakeTestBase):
             self.assertIsNotNone(result)
 
 
+class TestMakeExtractOnly(FeedMakerMakeTestBase):
+    """make() with do_extract_only skips the collection stage."""
+
+    def test_extract_only_skips_collection(self) -> None:
+        # -e 옵션: 신규 목록 수집(NewlistCollector)을 건너뛰고 기존 목록으로 추출만 진행한다.
+        # 수집 결과가 비어 있어도 "can't get recent feed list" 실패로 떨어지지 않아야 한다.
+        self.maker.do_extract_only = True
+
+        with patch.object(FeedMaker, "_get_recent_feed_list") as mock_recent, patch.object(FeedMaker, "_diff_feeds_and_make_htmls", return_value=[("http://x.com/1", "X", [])]) as mock_diff, patch.object(FeedMaker, "_generate_rss_feed", return_value=True), patch("bin.feed_maker.Uploader.upload"):
+            result = self.maker.make()
+
+        self.assertTrue(result)
+        mock_recent.assert_not_called()
+        # 수집 단계를 건너뛰었으므로 최근 목록은 빈 리스트로 diff에 전달된다
+        self.assertEqual(mock_diff.call_args.args[0], [])
+
+
+class TestMakeHtmlFileVanishedAfterWrite(FeedMakerMakeTestBase):
+    """_make_html_file: the written file is gone when its size is measured."""
+
+    def test_missing_file_after_write_is_treated_as_zero_size(self) -> None:
+        # 방어 분기: 쓰기 직후 파일이 사라진 경우(외부 정리 프로세스, tmpfs 만료 등)
+        # stat()으로 죽지 않고 size 0으로 보아 피드에서 제외해야 한다.
+        item_url = "http://example.com/page/vanished"
+        html_path = FeedMaker._get_html_file_path(self.html_dir, item_url)
+        real_is_file = Path.is_file
+
+        def is_file(self_path):
+            if self_path == html_path:
+                return False
+            return real_is_file(self_path)
+
+        with patch("bin.feed_maker.Crawler") as mock_crawler_cls, patch("bin.feed_maker.Extractor.extract_content", return_value="<html>extracted</html>"), patch.object(Path, "is_file", is_file):
+            mock_crawler_cls.get_option_str.return_value = ""
+            mock_crawler_cls.return_value.run.return_value = ("<html>raw</html>", None, None)
+
+            result = self.maker._make_html_file(item_url, "Vanished")
+
+        self.assertFalse(result)
+        # 내용은 실제로 기록되었으나 크기 측정 시점에는 없는 것으로 취급되었다
+        self.assertTrue(html_path.exists())
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -274,17 +274,17 @@ describe("Search.vue", () => {
     expect(html).toContain("검색 실패");
   });
 
-  it("binds v-model and renders default slot on the search input", async () => {
-    // 기본 BFormInput 스텁(<input />)은 modelValue 바인딩도 슬롯도 렌더링하지 않아
-    // v-model의 update 핸들러(setter)와 {{ searchKeyword }} 슬롯이 미커버 상태였다.
-    // modelValue를 바인딩하고 슬롯을 렌더링하는 스텁으로 두 경로를 모두 탄다.
+  it("binds v-model on the search input", async () => {
+    // 기본 BFormInput 스텁(<input />)은 modelValue를 바인딩하지 않아 v-model의
+    // update 핸들러(setter)가 미커버 상태였다. 실제 BFormInput과 동일하게
+    // 단일 <input> root로 modelValue를 바인딩하는 스텁으로 그 경로를 탄다.
     const richStubs = {
       ...stubs,
       BFormInput: {
         props: ["modelValue"],
         emits: ["update:modelValue"],
         template:
-          '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" /><span class="slot-content"><slot /></span>',
+          '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
       },
     };
 
@@ -293,13 +293,12 @@ describe("Search.vue", () => {
     });
 
     await wrapper.setData({ searchKeyword: "초기값" });
-    // 슬롯 {{ searchKeyword }}가 렌더링되는지 확인 (line 13)
-    expect(wrapper.find(".slot-content").text()).toBe("초기값");
+    // modelValue가 input으로 전달되는지 확인
+    expect(wrapper.find("input").element.value).toBe("초기값");
 
     // input에 값을 넣어 update:modelValue를 발생시켜 v-model setter를 탄다 (line 8)
     await wrapper.find("input").setValue("새검색어");
     expect(wrapper.vm.searchKeyword).toBe("새검색어");
-    expect(wrapper.find(".slot-content").text()).toBe("새검색어");
   });
 
   it("mounted hook executes without error", () => {
@@ -383,5 +382,47 @@ describe("Search.vue", () => {
     // Cancel error should be ignored, site result should stay in initial state
     expect(wrapper.vm.siteResults.length).toBe(1);
     expect(wrapper.vm.siteResults[0].status).toBe("loading");
+  });
+
+  it("leaves search state to the newer search when aborted", async () => {
+    // abort()가 실제로 signal.aborted를 세우는 컨트롤러로 교체하여
+    // finally의 `if (!signal.aborted)` 스킵 경로를 태운다.
+    global.AbortController = vi.fn(function MockAbortController() {
+      this.signal = { aborted: false };
+      this.abort = () => {
+        this.signal.aborted = true;
+      };
+    });
+
+    // 1st search: site names 응답 보류 (두 번째 검색이 중단시킴)
+    let resolveFirst;
+    axios.get.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveFirst = resolve;
+        }),
+    );
+    // 2nd search: site names 즉시 응답
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", site_names: [] },
+    });
+
+    const wrapper = mount(Search, {
+      global: { stubs, components: { MyButton } },
+    });
+
+    await wrapper.setData({ searchKeyword: "드래곤" });
+    const first = wrapper.vm.search();
+
+    await wrapper.setData({ searchKeyword: "무림" });
+    const second = wrapper.vm.search();
+
+    resolveFirst({ data: { status: "success", site_names: [] } });
+    await Promise.all([first, second]);
+    await flushPromises();
+
+    // 중단된 첫 검색은 상태를 되돌리지 않고, 두 번째 검색이 정리한다.
+    expect(wrapper.vm.isSearching).toBe(false);
+    expect(wrapper.vm.abortController).toBeNull();
   });
 });

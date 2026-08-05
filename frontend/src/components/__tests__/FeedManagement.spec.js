@@ -2289,12 +2289,12 @@ describe("FeedManagement.vue", () => {
       const options = jsonEditorMock.mock.calls.at(-1)[1];
       expect(typeof options.onChange).toBe("function");
 
-      // 성공 경로: get()이 값을 반환 → jsonData 갱신 (line 1348)
+      // 성공 경로: get()이 값을 반환 → jsonData 갱신 (line 1344)
       wrapper.vm.jsonEditor.get = vi.fn().mockReturnValue({ updated: true });
       options.onChange();
       expect(wrapper.vm.jsonData).toEqual({ updated: true });
 
-      // 에러 경로: get()이 throw → catch에서 console.error (line 1350)
+      // 에러 경로: get()이 throw → catch에서 console.error (line 1346)
       wrapper.vm.jsonEditor.get = vi.fn(() => {
         throw new Error("get failed");
       });
@@ -2305,16 +2305,16 @@ describe("FeedManagement.vue", () => {
       );
     });
 
-    it("binds v-model and renders slots on search/newFeed inputs", async () => {
-      // 기본 BFormInput 스텁(<input />)은 v-model setter와 슬롯을 렌더링하지 않아
-      // 미커버였다. modelValue 바인딩 + 슬롯 렌더링 스텁으로 두 경로를 탄다.
+    it("binds v-model on search/newFeed inputs", async () => {
+      // 기본 BFormInput 스텁(<input />)은 modelValue를 바인딩하지 않아 v-model
+      // setter가 미커버였다. 실제와 동일한 단일 <input> root 스텁으로 경로를 탄다.
       const richStubs = {
         ...stubs,
         BFormInput: {
           props: ["modelValue"],
           emits: ["update:modelValue"],
           template:
-            '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" /><span class="slot-content"><slot /></span>',
+            '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
         },
       };
       axios.get.mockResolvedValue({
@@ -2333,21 +2333,17 @@ describe("FeedManagement.vue", () => {
       await wrapper.vm.$nextTick();
 
       const inputs = wrapper.findAll("input");
-      // 검색어 입력 (line 27, 32): placeholder="키워드"인 첫 input
+      // 검색어 입력 (line 27): placeholder="키워드"인 첫 input
       await inputs[0].setValue("검색키워드");
       expect(wrapper.vm.searchKeyword).toBe("검색키워드");
-      // 새 피드 이름 입력 (line 218, 219)
+      // 새 피드 이름 입력 (line 216)
       const newFeedInput = inputs[inputs.length - 1];
       await newFeedInput.setValue("새피드");
       expect(wrapper.vm.newFeedName).toBe("새피드");
-
-      const slotTexts = wrapper.findAll(".slot-content").map((s) => s.text());
-      expect(slotTexts).toContain("검색키워드");
-      expect(slotTexts).toContain("새피드");
     });
 
     it("syncs showConfirmModal through BModal v-model update event", async () => {
-      // 기본 BModal 스텁은 update:modelValue를 emit하지 않아 v-model setter(line 403)가
+      // 기본 BModal 스텁은 update:modelValue를 emit하지 않아 v-model setter(line 399)가
       // 미커버였다. emit 가능한 스텁으로 setter 경로를 탄다.
       const modalStubs = {
         ...stubs,
@@ -2394,7 +2390,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.jsonData = { rss: { title: "", link: "", description: "" } };
       await flushPromises();
 
-      // 그룹 버튼 렌더링 후 클릭 → groupNameButtonClicked 인라인 핸들러 (line 88)
+      // 그룹 버튼 렌더링 후 클릭 → groupNameButtonClicked 인라인 핸들러 (line 86)
       wrapper.vm.groups = [
         { name: "groupA", num_feeds: 2 },
         { name: "groupB", num_feeds: 1 },
@@ -2408,7 +2404,7 @@ describe("FeedManagement.vue", () => {
       await groupBtn.trigger("click");
       expect(wrapper.vm.selectedGroupName).toBe("groupB");
 
-      // 피드 버튼 렌더링 후 클릭 → feedNameButtonClicked 인라인 핸들러 (line 111)
+      // 피드 버튼 렌더링 후 클릭 → feedNameButtonClicked 인라인 핸들러 (line 109)
       wrapper.vm.feeds = [{ title: "feedX", name: "feedx" }];
       wrapper.vm.showFeedlist = true;
       await wrapper.vm.$nextTick();
@@ -2419,7 +2415,7 @@ describe("FeedManagement.vue", () => {
       await feedBtn.trigger("click");
       expect(wrapper.vm.selectedFeedName).toBe("feedx");
 
-      // 검색 결과 피드 버튼 클릭 → searchResultFeedNameButtonClicked (line 59)
+      // 검색 결과 피드 버튼 클릭 → searchResultFeedNameButtonClicked (line 57)
       wrapper.vm.feeds = [
         { group_name: "g1", feed_title: "검색피드", feed_name: "sf1" },
       ];
@@ -2433,7 +2429,7 @@ describe("FeedManagement.vue", () => {
       await searchFeedBtn.trigger("click");
       expect(wrapper.vm.selectedFeedName).toBe("sf1");
 
-      // 그룹 토글 버튼 클릭 → toggleStatus('group') 인라인 핸들러 (line 253)
+      // 그룹 토글 버튼 클릭 → toggleStatus('group') 인라인 핸들러 (line 249)
       wrapper.vm.selectedGroupName = "groupB";
       wrapper.vm.showToggleGroupButton = true;
       await wrapper.vm.$nextTick();
@@ -2445,7 +2441,7 @@ describe("FeedManagement.vue", () => {
       expect(wrapper.vm.showConfirmModal).toBe(true);
       wrapper.vm.showConfirmModal = false;
 
-      // 피드 토글 버튼 클릭 → toggleStatus('feed') 인라인 핸들러 (line 299)
+      // 피드 토글 버튼 클릭 → toggleStatus('feed') 인라인 핸들러 (line 295)
       wrapper.vm.selectedFeedName = "feedx";
       wrapper.vm.showToggleFeedButton = true;
       await wrapper.vm.$nextTick();

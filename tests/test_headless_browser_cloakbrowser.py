@@ -13,6 +13,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, patch
 
+from bin import headless_browser_cloakbrowser as hb_module
 from bin.headless_browser import PlaywrightError, PlaywrightTimeoutError
 from bin.headless_browser_cloakbrowser import HeadlessBrowserCloakbrowser as HeadlessBrowser
 
@@ -947,6 +948,82 @@ class TestCloudflareClearedPredicate(unittest.TestCase):
         # markers already gone and the real title set, but the body has no children
         # yet. Capturing here yields head-only HTML, so the predicate must wait.
         self.assertFalse(self._eval("", title="픽 미 업!"))
+
+
+class TestSingletonLockHelpers(unittest.TestCase):
+    """Unit-level coverage of the pid-liveness / ownership helpers that decide whether a
+    SingletonLock is stale. Getting these wrong either wedges the profile forever (stale
+    lock preserved) or corrupts a live browser's profile (live lock broken)."""
+
+    def test_pid_alive_rejects_nonpositive_pid(self):
+        # A lock target with a missing or unparsable pid yields <= 0; os.kill(0, 0) would
+        # signal the whole process group, so it must never be attempted.
+        with patch("bin.headless_browser_cloakbrowser.os.kill") as mock_kill:
+            self.assertFalse(HeadlessBrowser._pid_alive(0))
+            self.assertFalse(HeadlessBrowser._pid_alive(-1))
+            mock_kill.assert_not_called()
+
+    def test_pid_alive_treats_permission_error_as_alive(self):
+        # The process exists but belongs to another user — a genuine live owner.
+        with patch("bin.headless_browser_cloakbrowser.os.kill", side_effect=PermissionError):
+            self.assertTrue(HeadlessBrowser._pid_alive(4242))
+
+    def test_pid_alive_treats_other_oserror_as_dead(self):
+        with patch("bin.headless_browser_cloakbrowser.os.kill", side_effect=OSError("unexpected")):
+            self.assertFalse(HeadlessBrowser._pid_alive(4242))
+
+    def test_pid_owns_profile_false_when_pid_gone_and_procfs_present(self):
+        # procfs exists but the entry doesn't → the pid died; not an owner.
+        with patch("builtins.open", side_effect=FileNotFoundError), patch("bin.headless_browser_cloakbrowser.os.path.isdir", return_value=True):
+            self.assertIs(HeadlessBrowser._pid_owns_profile(4242, "/tmp/profile"), False)
+
+    def test_pid_owns_profile_unknown_without_procfs(self):
+        # Off Linux there is no way to check argv; returning None lets the caller fall back
+        # to a conservative liveness-only decision instead of breaking a possibly-live lock.
+        with patch("builtins.open", side_effect=FileNotFoundError), patch("bin.headless_browser_cloakbrowser.os.path.isdir", return_value=False):
+            self.assertIsNone(HeadlessBrowser._pid_owns_profile(4242, "/tmp/profile"))
+
+    def test_pid_owns_profile_unknown_when_cmdline_unreadable(self):
+        # Hardened kernels (hidepid) deny cmdline reads; ownership is then undecidable.
+        with patch("builtins.open", side_effect=PermissionError):
+            self.assertIsNone(HeadlessBrowser._pid_owns_profile(4242, "/tmp/profile"))
+
+    def test_clear_stale_lock_treats_regular_file_as_stale(self):
+        # An abnormal non-symlink SingletonLock has no owner to consult; it can only block
+        # every future launch, so it and its companions are removed.
+        with tempfile.TemporaryDirectory() as tmp:
+            lock_path = Path(tmp) / "SingletonLock"
+            lock_path.write_text("not-a-symlink", encoding="utf-8")
+            cookie_path = Path(tmp) / "SingletonCookie"
+            cookie_path.write_text("x", encoding="utf-8")
+
+            HeadlessBrowser._clear_stale_singleton_lock(tmp)
+
+            self.assertFalse(lock_path.exists())
+            self.assertFalse(cookie_path.exists())
+
+    def test_clear_stale_lock_handles_unparsable_pid_in_target(self):
+        # A truncated/garbled "<host>-<pid>" target can't identify an owner → treat as stale.
+        with tempfile.TemporaryDirectory() as tmp:
+            lock_path = Path(tmp) / "SingletonLock"
+            lock_path.symlink_to(f"{socket.gethostname()}-not-a-pid")
+
+            HeadlessBrowser._clear_stale_singleton_lock(tmp)
+
+            self.assertFalse(lock_path.is_symlink())
+
+    def test_clear_stale_lock_warns_when_artifact_cannot_be_removed(self):
+        # A read-only profile dir must produce a diagnosable warning per artifact rather
+        # than an unhandled OSError out of the launch path.
+        with tempfile.TemporaryDirectory() as tmp:
+            lock_path = Path(tmp) / "SingletonLock"
+            lock_path.symlink_to(f"{socket.gethostname()}-0")
+
+            with patch("bin.headless_browser_cloakbrowser.os.unlink", side_effect=OSError("read-only file system")), patch.object(hb_module.LOGGER, "warning") as mock_warning:
+                HeadlessBrowser._clear_stale_singleton_lock(tmp)
+
+            self.assertTrue(lock_path.is_symlink())
+            self.assertEqual(mock_warning.call_count, 3)
 
 
 if __name__ == "__main__":

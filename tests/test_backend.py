@@ -664,30 +664,77 @@ def test_delete_feed_info_failure():
     assert r["message"] == "remove feed error"
 
 
+# --- delete_feed_info force=True routes to the orphan-aware cleanup ---
+
+
+class RecordingRemoveManager:
+    """Records which removal path the endpoint chose."""
+
+    def __init__(self, result=True, error=""):
+        self.result = result
+        self.error = error
+        self.calls: list[tuple[str, str, str]] = []
+
+    async def aclose(self):
+        return None
+
+    def remove_feed(self, group_name, feed_name):
+        self.calls.append(("remove_feed", group_name, feed_name))
+        return self.result, self.error
+
+    def remove_feed_completely(self, group_name, feed_name):
+        self.calls.append(("remove_feed_completely", group_name, feed_name))
+        return self.result, self.error
+
+
+def test_delete_feed_info_force_uses_remove_feed_completely():
+    """force=True는 디렉터리가 없는 고아 피드까지 정리하는 경로를 타야 한다."""
+    main.require_admin = lambda _request: None
+    mgr = RecordingRemoveManager()
+    req = types.SimpleNamespace()
+    r = asyncio.run(main.delete_feed_info("g", "f", request=req, force=True, feed_maker_manager=mgr))
+    assert r["status"] == "success"
+    assert mgr.calls == [("remove_feed_completely", "g", "f")]
+
+
+def test_delete_feed_info_without_force_uses_remove_feed():
+    main.require_admin = lambda _request: None
+    mgr = RecordingRemoveManager()
+    req = types.SimpleNamespace()
+    r = asyncio.run(main.delete_feed_info("g", "f", request=req, feed_maker_manager=mgr))
+    assert r["status"] == "success"
+    assert mgr.calls == [("remove_feed", "g", "f")]
+
+
+def test_delete_feed_info_force_failure_reports_error():
+    main.require_admin = lambda _request: None
+    mgr = RecordingRemoveManager(result=False, error="orphan cleanup failed")
+    req = types.SimpleNamespace()
+    r = asyncio.run(main.delete_feed_info("g", "f", request=req, force=True, feed_maker_manager=mgr))
+    assert r["status"] == "failure"
+    assert r["message"] == "orphan cleanup failed"
+
+
+def test_login_request_accepts_omitted_picture_url():
+    """profile_picture_url 미지정(None)은 검증을 통과해야 한다."""
+    req = main.LoginRequest(email="test@example.com", name="T", access_token="tok")
+    assert req.profile_picture_url is None
+
+
+def test_login_request_validator_passes_none_through():
+    assert main.LoginRequest.validate_picture_url_scheme(None) is None
+
+
 def test_delete_problem_status_info_empty_identity_payload():
     main.require_admin = lambda _request: None
     mgr = DummyFeedMakerManager()
     req = types.SimpleNamespace()
-    payload = main.StatusInfoDeleteRequest(
-        feed_name="",
-        feed_title="마인화산",
-        group_name="",
-        feedmaker=False,
-        public_html=False,
-        http_request=False,
-    )
+    payload = main.StatusInfoDeleteRequest(feed_name="", feed_title="마인화산", group_name="", feedmaker=False, public_html=False, http_request=False)
 
     r = asyncio.run(main.delete_problem_status_info(payload, request=req, feed_maker_manager=mgr))
 
     assert r["status"] == "success"
-    assert mgr.status_info_removed == {
-        "feed_name": "",
-        "feed_title": "마인화산",
-        "group_name": "",
-        "feedmaker": False,
-        "public_html": False,
-        "http_request": False,
-    }
+    assert mgr.status_info_removed == {"feed_name": "", "feed_title": "마인화산", "group_name": "", "feedmaker": False, "public_html": False, "http_request": False}
 
 
 def test_delete_problem_status_info_failure():
