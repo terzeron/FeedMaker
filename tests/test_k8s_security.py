@@ -51,11 +51,11 @@ class TestBackendReadOnlyRootFilesystem:
 
 class TestContainerLoggingToStdout:
     def test_docker_logging_conf_has_no_file_handler(self):
-        """컨테이너 로깅 설정은 파일 핸들러 없이 stdout 으로만 출력해야 rootfs 쓰기가 없다."""
+        """컨테이너 로깅 설정은 파일 핸들러 없이 스트림으로만 출력해야 rootfs 쓰기가 없다."""
         conf = LOGGING_DOCKER_CONF.read_text(encoding="utf-8")
         assert "TimedRotatingFileHandler" not in conf, "컨테이너 로깅에 파일 핸들러가 있다 (rootfs 쓰기 위험)"
         assert "FileHandler" not in conf, "컨테이너 로깅에 파일 핸들러가 있다 (rootfs 쓰기 위험)"
-        assert "StreamHandler" in conf and "sys.stdout" in conf, "컨테이너 로깅이 stdout 으로 나가지 않는다"
+        assert "StreamHandler" in conf and "sys.stderr" in conf, "컨테이너 로깅이 표준 스트림으로 나가지 않는다"
 
     def test_dockerfile_uses_container_logging_conf(self):
         """Dockerfile 이 컨테이너용 stdout 설정을 /app/logging.conf 로 복사해야 한다."""
@@ -71,6 +71,18 @@ class TestContainerLoggingToStdout:
         parser = configparser.RawConfigParser()
         parser.read(LOGGING_DOCKER_CONF, encoding="utf-8")
         assert parser.get("handler_consoleHandler", "level") == "INFO", "컨테이너 consoleHandler 가 INFO 가 아니다 — DEBUG 면 생성 HTML 이 오염된다"
+
+    def test_console_handler_writes_to_stderr(self):
+        """feed 파이프라인은 post_process 스크립트의 stdout 을 HTML content 로 캡처한다
+        (Process.exec_cmd). console 핸들러가 stdout 을 쓰면 로그 줄이 생성 HTML 본문에 섞이므로,
+        호스트·컨테이너 두 설정 모두 stderr 로 나가야 한다."""
+        import configparser
+
+        for conf_path in (LOGGING_CONF, LOGGING_DOCKER_CONF):
+            parser = configparser.RawConfigParser()
+            parser.read(conf_path, encoding="utf-8")
+            args = parser.get("handler_consoleHandler", "args")
+            assert "sys.stderr" in args, f"{conf_path.name} 의 consoleHandler 가 stdout 을 쓴다 — 생성 HTML 이 오염된다"
 
     def test_host_logging_conf_keeps_file_handler(self):
         """호스트 CLI 용 logging.conf 는 기존 파일 로깅(run.log) 동작을 유지해야 한다."""
