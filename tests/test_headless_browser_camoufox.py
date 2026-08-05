@@ -82,6 +82,44 @@ class TestHeadlessBrowserCamoufox(unittest.TestCase):
         self.assertIs(session["playwright"], cam)
         self.assertIs(session["page"], page)
 
+    def test_launch_session_requires_camoufox_installed(self):
+        # camoufox is an optional dependency; a missing install must surface as an explicit
+        # ImportError naming the fetch step, not an AttributeError on None.
+        browser = self._make_browser()
+        with patch("bin.headless_browser_camoufox.Camoufox", None):
+            with self.assertRaises(ImportError):
+                browser._launch_session()
+
+    @patch("bin.headless_browser_camoufox.Camoufox")
+    def test_launch_session_installs_blob_interceptor_when_requested(self, mock_camoufox_cls):
+        # blob_to_dataurl needs the interceptor registered as an init script *before* the
+        # page navigates, otherwise URL.createObjectURL calls are missed.
+        browser = self._make_browser(blob_to_dataurl=True)
+        cam = MagicMock()
+        mock_camoufox_cls.return_value = cam
+        page = cam.start.return_value.new_page.return_value
+
+        browser._launch_session()
+
+        page.context.add_init_script.assert_called_once_with(HeadlessBrowserCamoufox.BLOB_INTERCEPTOR_INIT_SCRIPT)
+
+    @patch("bin.headless_browser_camoufox.Camoufox")
+    def test_launch_session_skips_blob_interceptor_by_default(self, mock_camoufox_cls):
+        browser = self._make_browser()
+        cam = MagicMock()
+        mock_camoufox_cls.return_value = cam
+        page = cam.start.return_value.new_page.return_value
+
+        browser._launch_session()
+
+        page.context.add_init_script.assert_not_called()
+
+    def test_stop_camoufox_is_noop_without_wrapper(self):
+        # _close_session runs from atexit/SIGTERM paths and may see a cache with no wrapper
+        # (launch failed before start()); it must not raise there.
+        HeadlessBrowserCamoufox._stop_camoufox(None)
+        HeadlessBrowserCamoufox._close_session({})
+
     @patch("bin.headless_browser_camoufox.Camoufox")
     def test_launch_session_error_tears_down_camoufox(self, mock_camoufox_cls):
         # If page setup fails after start(), the wrapper must be unwound via __exit__ so the

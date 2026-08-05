@@ -9,9 +9,7 @@
             class="m-0"
             placeholder="키워드"
             @keyup.enter="search"
-          >
-            {{ searchKeyword }}
-          </BFormInput>
+          />
           <my-button
             ref="searchButton"
             label="검색"
