@@ -271,16 +271,16 @@ wheels = [
 
 [[package]]
 name = "cloakbrowser"
-version = "0.5.3"
+version = "0.5.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
     { name = "httpx" },
     { name = "playwright" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3c/66/a0f3e06aadb89f5aa8a403864bf2bce296d2eb10e5983a13a62ce19cb493/cloakbrowser-0.5.3.tar.gz", hash = "sha256:720369cf0fce12cc895e5a09f98b18f809d9c55f17f4d5f854204d720e8133c3", size = 5644946, upload-time = "2026-07-30T01:18:58.282Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ea/66/e7986afaa1309881e7174ddb8f579b96b82ebcc43eeb3a2705c1908db296/cloakbrowser-0.5.6.tar.gz", hash = "sha256:47f95a26d8d7bad608598d5af8373149368777a5f3006bc8b17a409c7dd728df", size = 5694461, upload-time = "2026-08-07T22:17:14.735Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/93/e8/f0d86ca18b3a1e132ffd965268f621897f60c47ea8c61b1ee9a786fffb36/cloakbrowser-0.5.3-py3-none-any.whl", hash = "sha256:9082cfd2f104342fd718d9882984da7674ef6616308dd7932bff4b8bd5cf3cfe", size = 112895, upload-time = "2026-07-30T01:18:56.523Z" },
+    { url = "https://files.pythonhosted.org/packages/81/91/0972dbfb475111180c260667bff1220b49b0a513e2d605cf31acc740900d/cloakbrowser-0.5.6-py3-none-any.whl", hash = "sha256:6acd11f110f480d5ef7e01907f7fcf5f30aa09ccb0efbc13a1749b715454b964", size = 125088, upload-time = "2026-08-07T22:17:13.171Z" },
 ]
 
 [[package]]
@@ -524,7 +524,7 @@ dev = [
 requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.15.0" },
     { name = "camoufox", extras = ["geoip"], specifier = ">=0.4.11" },
-    { name = "cloakbrowser", specifier = ">=0.5.3" },
+    { name = "cloakbrowser", specifier = ">=0.5.6" },
     { name = "defusedxml", specifier = ">=0.7.1" },
     { name = "fastapi", specifier = ">=0.141.1" },
     { name = "feedparser", specifier = ">=6.0.13" },
