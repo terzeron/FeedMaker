@@ -254,6 +254,48 @@ class TestGetSession(unittest.TestCase):
         self.assertGreater(new_expires, min_expected)
 
     @patch("backend.auth.DB.session_ctx")
+    def test_session_beyond_absolute_lifetime_is_deleted(self, mock_session_ctx) -> None:
+        """생성 후 SESSION_MAX_LIFETIME_DAYS를 넘긴 세션은 expires_at이 미래라도 폐기된다"""
+        from backend.auth import SESSION_MAX_LIFETIME_DAYS, get_session
+
+        now = datetime.now(timezone.utc)
+        mock_user_session = MagicMock()
+        mock_user_session.created_at = now - timedelta(days=SESSION_MAX_LIFETIME_DAYS + 1)
+        # sliding 갱신으로 expires_at은 미래로 밀려 있는 상태
+        mock_user_session.expires_at = now + timedelta(days=5)
+        mock_user_session.user_email = "user@example.com"
+        mock_session = MagicMock()
+        mock_session.query.return_value.filter.return_value.first.return_value = mock_user_session
+        mock_session_ctx.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_session_ctx.return_value.__exit__ = MagicMock(return_value=None)
+
+        result = get_session("valid_session_id")
+
+        self.assertIsNone(result)
+        mock_session.delete.assert_called_once_with(mock_user_session)
+
+    @patch("backend.auth.DB.session_ctx")
+    def test_sliding_renewal_capped_by_absolute_lifetime(self, mock_session_ctx) -> None:
+        """sliding 갱신은 created_at + SESSION_MAX_LIFETIME_DAYS를 넘지 않는다"""
+        from backend.auth import SESSION_MAX_LIFETIME_DAYS, get_session
+
+        now = datetime.now(timezone.utc)
+        created_at = now - timedelta(days=SESSION_MAX_LIFETIME_DAYS - 2)  # 상한까지 2일 남음
+        mock_user_session = MagicMock()
+        mock_user_session.created_at = created_at
+        mock_user_session.expires_at = now + timedelta(days=1)
+        mock_user_session.user_email = "user@example.com"
+        mock_session = MagicMock()
+        mock_session.query.return_value.filter.return_value.first.return_value = mock_user_session
+        mock_session_ctx.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_session_ctx.return_value.__exit__ = MagicMock(return_value=None)
+
+        result = get_session("valid_session_id")
+
+        self.assertIsNotNone(result)
+        self.assertEqual(mock_user_session.expires_at, created_at + timedelta(days=SESSION_MAX_LIFETIME_DAYS))
+
+    @patch("backend.auth.DB.session_ctx")
     def test_timezone_naive_session(self, mock_session_ctx) -> None:
         """DB에서 timezone-naive datetime이 올 수 있음"""
         naive_dt = datetime(2099, 1, 1, 0, 0, 0)  # naive (no tzinfo)
@@ -529,8 +571,8 @@ class TestRequireAdminRoleSeparation(unittest.TestCase):
 
     @patch("backend.auth.Env.get")
     @patch("backend.auth.require_auth")
-    def test_fallback_to_login_list_when_admin_list_unset(self, mock_auth, mock_env) -> None:
-        """FM_ADMIN_EMAIL_LIST 미설정 시 로그인 허용 목록으로 폴백(하위 호환)."""
+    def test_login_allowed_is_admin_when_admin_list_unset(self, mock_auth, mock_env) -> None:
+        """FM_ADMIN_EMAIL_LIST 미설정 시 기본 모델은 '로그인 가능 == 관리자'."""
         mock_user = MagicMock()
         mock_user.user_email = "user@example.com"
         mock_auth.return_value = mock_user
@@ -540,6 +582,21 @@ class TestRequireAdminRoleSeparation(unittest.TestCase):
 
         result = require_admin(MagicMock())
         self.assertEqual(result, mock_user)
+
+    @patch("backend.auth.Env.get")
+    @patch("backend.auth.require_auth")
+    def test_not_in_login_list_is_not_admin(self, mock_auth, mock_env) -> None:
+        """폴백 경로에서도 로그인 허용 목록에 없는 이메일은 관리자가 아니다."""
+        mock_user = MagicMock()
+        mock_user.user_email = "stranger@example.com"
+        mock_auth.return_value = mock_user
+        mock_env.side_effect = self._env_side({"FM_ADMIN_EMAIL_LIST": "", "FM_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST": "user@example.com"})
+
+        from backend.auth import require_admin
+
+        with self.assertRaises(HTTPException) as ctx:
+            require_admin(MagicMock())
+        self.assertEqual(ctx.exception.status_code, 403)
 
 
 class TestLoginLockout(unittest.TestCase):

@@ -86,7 +86,43 @@ class Data:
 
 
 class Process:
-    _DISALLOWED_EXECUTABLES = {"sh", "bash", "zsh", "ksh", "fish", "env"}
+    # 실행을 허용하는 시스템 유틸리티(절대경로). 실제 피드 설정에서 쓰이는 3종만 유지한다.
+    # /bin은 배포판에 따라 /usr/bin의 심볼릭 링크이므로 두 표기를 모두 등재한다.
+    _ALLOWED_SYSTEM_EXECUTABLES = {"/usr/bin/grep", "/usr/bin/shuf", "/usr/bin/tail", "/bin/grep", "/bin/shuf", "/bin/tail"}
+
+    # FM_HOME_DIR 하위에서 실행을 허용하는 서브디렉터리. FM_HOME_DIR 전체를 허용하면
+    # .venv/bin의 python3 등이 포함되어 인터프리터를 통한 우회가 되살아나므로 좁혀 둔다.
+    _ALLOWED_HOME_SUBDIRS = ("bin", "utils")
+
+    @staticmethod
+    def _allowed_exec_roots() -> tuple[Path, ...]:
+        """스크립트 실행을 허용하는 프로젝트 소유 디렉터리.
+
+        FM_WORK_DIR 하위에는 그룹 디렉터리('../foo.py')와 피드 디렉터리('./foo.py')가
+        모두 포함되므로, 그룹별·피드별 임의 스크립트가 그대로 허용된다.
+        FM_HOME_DIR은 bin/, utils/만 허용한다(공용 스크립트: download_image.py 등).
+        """
+        roots: list[Path] = []
+        work_dir = Env.get("FM_WORK_DIR", "").strip()
+        if work_dir:
+            roots.append(Path(work_dir).resolve())
+        home_dir = Env.get("FM_HOME_DIR", "").strip()
+        if home_dir:
+            roots.extend((Path(home_dir) / sub).resolve() for sub in Process._ALLOWED_HOME_SUBDIRS)
+        return tuple(roots)
+
+    @staticmethod
+    def _is_allowed_executable(program: str, resolved: Path) -> bool:
+        """실행을 허용할 대상인지 판정한다(allowlist).
+
+        시스템 유틸리티는 설정에 적힌 절대경로를 정규화해서 비교한다. resolved를 쓰지 않는
+        이유는 /usr/bin/shuf 같은 경로가 uutils-coreutils로 심볼릭 링크된 환경에서
+        .resolve()가 /usr/lib/cargo/bin/coreutils/shuf로 바뀌어 환경마다 달라지기 때문이다.
+        (심볼릭 링크를 따라간 결과로 비교하면 같은 설정이 호스트에서만 실패한다)
+        """
+        if program.startswith("/") and os.path.normpath(program) in Process._ALLOWED_SYSTEM_EXECUTABLES:
+            return True
+        return any(resolved.is_relative_to(root) for root in Process._allowed_exec_roots())
 
     @staticmethod
     def _resolve_executable(program: str, dir_path: Path) -> Optional[str]:
@@ -126,13 +162,14 @@ class Process:
             return [], "Empty command"
 
         program = argv[0]
-        program_base = Path(program).name
-        if program_base in Process._DISALLOWED_EXECUTABLES:
-            return [], f"Execution of '{program_base}' is not allowed"
-
         resolved = Process._resolve_executable(program, dir_path)
         if not resolved:
             return [], f"Error in getting path of executable '{program}'"
+
+        # 이름 denylist가 아니라 경로 allowlist로 판정한다. 이름을 거부하는 방식은
+        # 인터프리터를 통한 우회(인라인 코드 실행 플래그 등)를 막지 못한다.
+        if not Process._is_allowed_executable(program, Path(resolved)):
+            return [], f"Execution of '{program}' is not allowed"
 
         argv[0] = resolved
         return argv, ""

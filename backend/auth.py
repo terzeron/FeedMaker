@@ -21,7 +21,15 @@ LOGGER = logging.getLogger(__name__)
 # Session configuration
 SESSION_COOKIE_NAME = "session_id"
 SESSION_EXPIRY_DAYS = 30
+# 생성 시점 기준 절대 상한. sliding 갱신으로도 이 시각을 넘길 수 없어, 탈취된 세션이
+# 접근만으로 무기한 연장되는 것을 막는다.
+SESSION_MAX_LIFETIME_DAYS = 30
 COOKIE_MAX_AGE = SESSION_EXPIRY_DAYS * 24 * 60 * 60  # seconds
+
+
+def _as_utc(value: datetime) -> datetime:
+    """DB에서 온 timezone-naive datetime을 UTC로 간주해 aware datetime으로 만든다."""
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
 
 
 def get_cookie_domain() -> Optional[str]:
@@ -85,10 +93,12 @@ def generate_session_id() -> str:
 def create_session(user_email: str, user_name: str, profile_picture_url: Optional[str] = None) -> str:
     """Create a new session in the database and return session ID"""
     session_id = generate_session_id()
-    expires_at = datetime.now(timezone.utc) + timedelta(days=SESSION_EXPIRY_DAYS)
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(days=SESSION_EXPIRY_DAYS)
 
     with DB.session_ctx() as session:
-        user_session = UserSession(session_id=session_id, user_email=user_email, user_name=user_name, profile_picture_url=profile_picture_url, expires_at=expires_at)
+        # created_at은 절대 상한 계산의 기준이므로 server_default에 맡기지 않고 명시적으로 채운다.
+        user_session = UserSession(session_id=session_id, user_email=user_email, user_name=user_name, profile_picture_url=profile_picture_url, created_at=now, expires_at=expires_at)
         session.add(user_session)
 
     LOGGER.info(f"Created session for user {user_email}")
@@ -111,19 +121,33 @@ def get_session(session_id: str) -> Optional[UserSession]:
 
         # Check if session is expired
         # DB에서 가져온 datetime이 timezone-naive일 수 있으므로 UTC로 처리
-        expires_at = user_session.expires_at
-        if expires_at.tzinfo is None:
-            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        expires_at = _as_utc(user_session.expires_at)
+        now = datetime.now(timezone.utc)
 
-        if expires_at < datetime.now(timezone.utc):
+        if expires_at < now:
             LOGGER.info("Session %s... expired", session_id[:8])
             session.delete(user_session)
             return None
 
-        # Sliding session: extend expiry on every access
-        now = datetime.now(timezone.utc)
+        # 생성 시점 기준 절대 상한. 상한을 넘긴 세션은 sliding 갱신 대상이 아니라 폐기 대상이다.
+        created_at = user_session.created_at
+        if isinstance(created_at, datetime):
+            max_expires_at: Optional[datetime] = _as_utc(created_at) + timedelta(days=SESSION_MAX_LIFETIME_DAYS)
+        else:
+            # created_at은 NOT NULL이라 정상 경로에서는 발생하지 않는다. 상한을 적용할 근거가
+            # 없을 때 전체 사용자를 잠그지는 않되, 조용히 넘기지 않도록 경고를 남긴다.
+            LOGGER.warning("Session %s... has no usable created_at; absolute lifetime cap not applied", session_id[:8])
+            max_expires_at = None
+
+        if max_expires_at is not None and max_expires_at < now:
+            LOGGER.info("Session %s... reached absolute lifetime limit (%d days)", session_id[:8], SESSION_MAX_LIFETIME_DAYS)
+            session.delete(user_session)
+            return None
+
+        # Sliding session: extend expiry on every access (절대 상한 이내로만)
         user_session.last_accessed_at = now
-        user_session.expires_at = now + timedelta(days=SESSION_EXPIRY_DAYS)
+        new_expires_at = now + timedelta(days=SESSION_EXPIRY_DAYS)
+        user_session.expires_at = min(new_expires_at, max_expires_at) if max_expires_at is not None else new_expires_at
         LOGGER.info(f"get_session: Valid session found for {user_session.user_email}")
 
         return user_session
@@ -178,7 +202,7 @@ def require_auth(request: Request) -> UserSession:
     return user_session
 
 
-def _get_login_allowed_email_set() -> set[str]:
+def get_login_allowed_email_set() -> set[str]:
     raw = Env.get("FM_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST", "")
     return {email.strip() for email in raw.split(",") if email.strip()}
 
@@ -186,14 +210,15 @@ def _get_login_allowed_email_set() -> set[str]:
 def _get_admin_email_set() -> set[str]:
     """관리자 이메일 집합.
 
-    FM_ADMIN_EMAIL_LIST가 설정되면 그 목록만 관리자로 본다(role 분리: 로그인 가능 != 관리자).
-    미설정 시 하위 호환을 위해 로그인 허용 목록 전체를 관리자로 폴백한다(경고).
+    이 서비스는 운영자 전용이고 비관리자 role이 존재하지 않으므로, 기본 모델은
+    '로그인 가능 == 관리자'다(로그인 허용 목록 자체가 권한 경계다).
+    운영자가 아닌 계정을 로그인 허용 목록에 추가해야 할 때만 FM_ADMIN_EMAIL_LIST로
+    관리자를 좁힌다(opt-in). 미설정은 정상 상태이므로 경고하지 않는다.
     """
     raw = Env.get("FM_ADMIN_EMAIL_LIST", "").strip()
     if raw:
         return {email.strip() for email in raw.split(",") if email.strip()}
-    LOGGER.warning("FM_ADMIN_EMAIL_LIST not set; falling back to login-allowed emails as admins (no role separation)")
-    return _get_login_allowed_email_set()
+    return get_login_allowed_email_set()
 
 
 def require_admin(request: Request) -> UserSession:
