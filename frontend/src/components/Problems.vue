@@ -1362,10 +1362,10 @@ export default {
           const feedName = data.item["feed_name"];
           // 퍼블릭 피드 + 피드 디렉터리(설정) + 요청/접근 정보까지 일괄 삭제하거나,
           // 그룹명/피드명이 비어 있으면 feed_info DB 레코드만 삭제한다.
-          const removed = this.canRemoveStatusInfoByApi(data.item)
-            ? await this.removeFeed(groupName, feedName)
-            : await this.removeStatusInfoRecord(data.item);
-          if (!removed) return;
+          const removeRequest = this.canRemoveStatusInfoByApi(data.item)
+            ? () => this.removeFeed(groupName, feedName)
+            : () => this.removeStatusInfoRecord(data.item);
+          if (!(await removeRequest())) return;
           this.statusInfolist = this.statusInfolist.filter(
             (item) => item !== data.item
           );

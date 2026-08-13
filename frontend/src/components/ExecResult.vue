@@ -27,22 +27,17 @@ import DOMPurify from "dompurify";
 import { getApiUrlPath } from "@/utils/api";
 
 // markdown-it을 동적으로 import하여 안전하게 처리
-let MarkdownIt = null;
+// (동적 import는 ESM 모듈 캐시를 타므로 인스턴스별 캐싱 가드는 두지 않는다)
 let md = null;
 
 const initMarkdownIt = async () => {
   try {
-    if (!MarkdownIt) {
-      const markdownItModule = await import('markdown-it');
-      MarkdownIt = markdownItModule.default;
-    }
-    if (!md && MarkdownIt) {
-      md = new MarkdownIt({
-        html: true,
-        linkify: true,
-        typographer: true
-      });
-    }
+    const { default: MarkdownIt } = await import('markdown-it');
+    md = new MarkdownIt({
+      html: true,
+      linkify: true,
+      typographer: true
+    });
   } catch (err) {
     console.error("Failed to initialize markdown-it:", err);
   }
@@ -97,7 +92,7 @@ const renderedMarkdown = computed(() => {
     });
   } catch (err) {
     console.error("Markdown rendering error:", err);
-    return source.value || "";
+    return source.value;
   }
 });
 
