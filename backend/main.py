@@ -61,8 +61,6 @@ frontend_url = Env.get("FM_FRONTEND_URL")
 extra_origins = Env.get("FM_CORS_EXTRA_ORIGINS", "")
 origins = [o for o in (item.strip() for item in [frontend_url, *extra_origins.split(",")] if item) if o]
 
-app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=True, allow_methods=["GET", "POST", "PUT", "DELETE"], allow_headers=["Content-Type", "Authorization"])
-
 
 def get_feed_maker_manager(request: Request) -> "FeedMakerManager":
     try:
@@ -104,7 +102,7 @@ async def auth_middleware(request: Request, call_next: Any) -> Response:
 async def request_id_middleware(request: Request, call_next: Any) -> Response:
     """요청마다 상관(correlation) ID를 부여해 audit 로그 추적을 가능하게 한다.
 
-    auth_middleware보다 나중에 등록되어 가장 바깥에서 동작하므로,
+    auth_middleware보다 나중에 등록되어 그보다 바깥에서 동작하므로,
     인증/인가 audit 로그에도 request_id가 채워진다.
     """
     rid = request.headers.get("X-Request-ID") or uuid.uuid4().hex[:16]
@@ -117,6 +115,25 @@ async def request_id_middleware(request: Request, call_next: Any) -> Response:
     return response
 
 
+# CORSMiddleware는 반드시 모든 http 미들웨어보다 나중에 등록해야 한다. Starlette는
+# 나중에 등록한 미들웨어를 더 바깥에 배치하므로, CORS가 안쪽에 있으면 auth_middleware가
+# 401로 조기 반환할 때 CORS 헤더가 붙지 않는다. 브라우저는 헤더 없는 응답을 차단하고
+# axios는 상태 코드 대신 "Network Error"를 던져, 인증 만료가 네트워크 장애로 오인된다.
+app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=True, allow_methods=["GET", "POST", "PUT", "DELETE"], allow_headers=["Content-Type", "Authorization"])
+
+
+def _cors_headers(request: Request) -> dict[str, str]:
+    """허용된 origin의 요청에 붙일 CORS 헤더.
+
+    CORSMiddleware를 거치지 않는 응답(ServerErrorMiddleware가 처리하는 500)에서만
+    쓴다. 정상 경로에서 쓰면 헤더가 중복된다.
+    """
+    origin = request.headers.get("origin")
+    if not origin or origin not in origins:
+        return {}
+    return {"Access-Control-Allow-Origin": origin, "Access-Control-Allow-Credentials": "true", "Vary": "Origin"}
+
+
 @app.exception_handler(ValueError)
 async def value_error_handler(_request: Request, exc: ValueError) -> JSONResponse:
     LOGGER.warning("Invalid input: %s", exc)
@@ -124,9 +141,11 @@ async def value_error_handler(_request: Request, exc: ValueError) -> JSONRespons
 
 
 @app.exception_handler(Exception)
-async def exception_handler(_request: Request, _exc: Exception) -> JSONResponse:
+async def exception_handler(request: Request, _exc: Exception) -> JSONResponse:
+    # ServerErrorMiddleware는 CORSMiddleware보다도 바깥이라 이 응답은 CORS를 거치지
+    # 않는다. 헤더를 직접 붙여야 브라우저가 500을 읽고 제대로 된 메시지를 띄운다.
     logging.exception("An error occurred")
-    return JSONResponse(status_code=500, content={"message": "Internal server error"})
+    return JSONResponse(status_code=500, content={"message": "Internal server error"}, headers=_cors_headers(request))
 
 
 def handle_exception(exc_type: Type[BaseException], exc_value: BaseException, exc_traceback: Optional[TracebackType]) -> None:
