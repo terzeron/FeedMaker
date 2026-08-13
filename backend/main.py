@@ -24,7 +24,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from backend.feed_maker_manager import FeedMakerManager
-from backend.auth import SESSION_COOKIE_NAME, clear_session_cookie, create_session, delete_session, get_current_user, is_login_locked, record_login_failure, require_admin, reset_login_failures, set_session_cookie, verify_facebook_token
+from backend.auth import SESSION_COOKIE_NAME, clear_session_cookie, create_session, delete_session, get_current_user, get_login_allowed_email_set, is_login_locked, record_login_failure, require_admin, reset_login_failures, set_session_cookie, verify_facebook_token
 from backend.audit import audit_log, request_id_var
 from bin.feed_maker_util import Env
 from bin.access_log_manager import AccessLogManager
@@ -55,7 +55,11 @@ _trusted_proxy_ips = Env.get("FM_TRUSTED_PROXY_IPS", "127.0.0.1")
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=_trusted_proxy_ips)
 
 frontend_url = Env.get("FM_FRONTEND_URL")
-origins = [o for o in [frontend_url, "https://127.0.0.1:8081", "https://localhost:8081", "https://127.0.0.1:8082", "https://localhost:8082"] if o]
+# 개발용 origin(localhost 등)은 코드에 하드코딩하지 않는다. 운영 이미지에까지 실려
+# credential 포함 CORS가 허용되기 때문에, 필요한 환경에서만 환경변수로 추가한다.
+# FM_CORS_EXTRA_ORIGINS: 쉼표로 구분된 origin 목록 (예: https://localhost:8081,https://localhost:8082)
+extra_origins = Env.get("FM_CORS_EXTRA_ORIGINS", "")
+origins = [o for o in (item.strip() for item in [frontend_url, *extra_origins.split(",")] if item) if o]
 
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=True, allow_methods=["GET", "POST", "PUT", "DELETE"], allow_headers=["Content-Type", "Authorization"])
 
@@ -175,9 +179,8 @@ async def login(request: Request, body: LoginRequest) -> JSONResponse:
         LOGGER.warning("Facebook token verification failed for %s from %s", body.email, client_ip)
         raise HTTPException(status_code=401, detail="Facebook 토큰 검증에 실패했습니다.")
 
-    # 허용된 이메일 목록 확인
-    login_allowed_email_list = Env.get("FM_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST", "").split(",")
-    if body.email not in login_allowed_email_list:
+    # 허용된 이메일 목록 확인 (파싱은 auth 모듈의 단일 구현을 사용)
+    if body.email not in get_login_allowed_email_set():
         record_login_failure(body.email, client_ip)
         audit_log("login_denied", email=body.email, outcome="not_allowed", request=request)
         LOGGER.warning("Unauthorized login attempt for %s from %s", body.email, client_ip)
@@ -627,10 +630,18 @@ TRACKING_PIXEL_PATH = FEED_DIR / "img" / "1x1.jpg"
 FEED_DIR_RESOLVED = FEED_DIR.resolve()
 
 
-@app.get("/feed/{feed_name}.xml")
-async def serve_feed(feed_name: str, background_tasks: BackgroundTasks) -> FileResponse:
+def _resolve_feed_xml_path(feed_name: str) -> Optional[Path]:
+    """FEED_DIR 경계 안으로 해석되는 피드 XML 경로. 경계를 벗어나면 None."""
     xml_path = (FEED_DIR / f"{feed_name}.xml").resolve()
     if not xml_path.is_relative_to(FEED_DIR_RESOLVED):
+        return None
+    return xml_path
+
+
+@app.get("/feed/{feed_name}.xml")
+async def serve_feed(feed_name: str, background_tasks: BackgroundTasks) -> FileResponse:
+    xml_path = _resolve_feed_xml_path(feed_name)
+    if xml_path is None:
         raise HTTPException(status_code=400, detail="Invalid feed name")
     if not xml_path.is_file():
         raise HTTPException(status_code=404, detail="Feed not found")
@@ -640,8 +651,12 @@ async def serve_feed(feed_name: str, background_tasks: BackgroundTasks) -> FileR
 
 @app.get("/feed/img/1x1.jpg")
 async def tracking_pixel(background_tasks: BackgroundTasks, feed: str, item: str = "") -> FileResponse:
+    # 인증 면제 엔드포인트이므로 실제로 존재하는 피드에 대해서만 조회를 기록한다.
+    # (임의의 feed 값으로 feed_info 행이 무제한 생성되는 것을 막는다)
     feed_name = feed.removesuffix(".xml")
-    background_tasks.add_task(AccessLogManager.record_item_view, feed_name)
+    xml_path = _resolve_feed_xml_path(feed_name)
+    if xml_path is not None and xml_path.is_file():
+        background_tasks.add_task(AccessLogManager.record_item_view, feed_name)
     if not TRACKING_PIXEL_PATH.is_file():
         raise HTTPException(status_code=404, detail="Tracking pixel not found")
     return FileResponse(TRACKING_PIXEL_PATH, media_type="image/jpeg")

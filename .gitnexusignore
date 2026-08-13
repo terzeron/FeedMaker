@@ -1,0 +1,8 @@
+# GitNexus 인덱싱 대상 조정 (.gitignore 문법, negation 지원)
+#
+# gitnexus의 내장 DEFAULT_IGNORE_LIST는 'bin'을 빌드 산출물로 보고 제외한다
+# (dist/config/ignore-service.js의 "Build Outputs" 항목: dist, build, out, output, bin, obj, target).
+# 이 프로젝트의 bin/은 빌드 산출물이 아니라 크롤링/피드 생성 엔진 소스이므로 negation으로 되살린다.
+# 제외된 상태에서는 bin/의 모든 심볼이 impact/context/cypher에서 'Target not found'가 되어
+# CLAUDE.md가 요구하는 편집 전 impact 분석을 수행할 수 없었다.
+!bin/

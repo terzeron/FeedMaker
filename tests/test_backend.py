@@ -952,8 +952,7 @@ class TestBackendLogin(unittest.TestCase):
     """Login endpoint: lines 121-132"""
 
     def test_login_success(self):
-        with patch.object(bmain, "verify_facebook_token", return_value=True), patch.object(bmain, "Env") as mock_env, patch.object(bmain, "create_session", return_value="session123") as mock_create, patch.object(bmain, "set_session_cookie"):
-            mock_env.get.return_value = "user@example.com"
+        with patch.object(bmain, "verify_facebook_token", return_value=True), patch.object(bmain, "get_login_allowed_email_set", return_value={"user@example.com"}), patch.object(bmain, "create_session", return_value="session123") as mock_create, patch.object(bmain, "set_session_cookie"):
             http_req = MagicMock(spec=Request)
             body = bmain.LoginRequest(email="user@example.com", name="User", access_token="tok", profile_picture_url="https://example.com/pic.jpg")
             response = asyncio.run(bmain.login(http_req, body))
@@ -961,8 +960,7 @@ class TestBackendLogin(unittest.TestCase):
             mock_create.assert_called_once_with("user@example.com", "User", "https://example.com/pic.jpg")
 
     def test_login_create_session_exception(self):
-        with patch.object(bmain, "verify_facebook_token", return_value=True), patch.object(bmain, "Env") as mock_env, patch.object(bmain, "create_session", side_effect=RuntimeError("db error")):
-            mock_env.get.return_value = "user@example.com"
+        with patch.object(bmain, "verify_facebook_token", return_value=True), patch.object(bmain, "get_login_allowed_email_set", return_value={"user@example.com"}), patch.object(bmain, "create_session", side_effect=RuntimeError("db error")):
             http_req = MagicMock(spec=Request)
             body = bmain.LoginRequest(email="user@example.com", name="User", access_token="tok")
 
@@ -1295,11 +1293,37 @@ class TestFeedServingEndpoints:
         pixel_file = img_dir / "1x1.jpg"
         pixel_file.write_bytes(b"\xff\xd8\xff\xe0")  # minimal JPEG header
 
-        with patch("backend.main.TRACKING_PIXEL_PATH", pixel_file), patch("backend.main.AccessLogManager.record_item_view") as mock_record, patch("backend.main.get_current_user", return_value=None):
+        (tmp_path / "myfeed.xml").write_text("<rss/>")
+
+        with patch("backend.main.FEED_DIR", tmp_path), patch("backend.main.FEED_DIR_RESOLVED", tmp_path.resolve()), patch("backend.main.TRACKING_PIXEL_PATH", pixel_file), patch("backend.main.AccessLogManager.record_item_view") as mock_record, patch("backend.main.get_current_user", return_value=None):
             response = client.get("/feed/img/1x1.jpg?feed=myfeed.xml&item=item001")
             assert response.status_code == 200
             assert "image" in response.headers["content-type"]
             mock_record.assert_called_once_with("myfeed")
+
+    def test_tracking_pixel_unknown_feed_not_recorded(self, tmp_path):
+        """존재하지 않는 피드 이름으로는 조회를 기록하지 않는다 (미인증 임의 feed_info 행 생성 차단)"""
+        img_dir = tmp_path / "img"
+        img_dir.mkdir()
+        pixel_file = img_dir / "1x1.jpg"
+        pixel_file.write_bytes(b"\xff\xd8\xff\xe0")
+
+        with patch("backend.main.FEED_DIR", tmp_path), patch("backend.main.FEED_DIR_RESOLVED", tmp_path.resolve()), patch("backend.main.TRACKING_PIXEL_PATH", pixel_file), patch("backend.main.AccessLogManager.record_item_view") as mock_record, patch("backend.main.get_current_user", return_value=None):
+            response = client.get("/feed/img/1x1.jpg?feed=attacker_supplied_name")
+            assert response.status_code == 200  # 픽셀 자체는 정상 제공
+            mock_record.assert_not_called()
+
+    def test_tracking_pixel_path_traversal_not_recorded(self, tmp_path):
+        """FEED_DIR 밖으로 해석되는 feed 값은 기록하지 않는다"""
+        img_dir = tmp_path / "img"
+        img_dir.mkdir()
+        pixel_file = img_dir / "1x1.jpg"
+        pixel_file.write_bytes(b"\xff\xd8\xff\xe0")
+
+        with patch("backend.main.FEED_DIR", tmp_path), patch("backend.main.FEED_DIR_RESOLVED", tmp_path.resolve()), patch("backend.main.TRACKING_PIXEL_PATH", pixel_file), patch("backend.main.AccessLogManager.record_item_view") as mock_record, patch("backend.main.get_current_user", return_value=None):
+            response = client.get("/feed/img/1x1.jpg?feed=..%2F..%2Fetc%2Fpasswd")
+            assert response.status_code == 200
+            mock_record.assert_not_called()
 
     def test_tracking_pixel_without_item_param(self, tmp_path):
         img_dir = tmp_path / "img"
