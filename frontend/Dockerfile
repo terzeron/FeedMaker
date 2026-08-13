@@ -3,7 +3,10 @@ FROM node:22.23.2@sha256:7725a5c2c83eed1d36258c66efae14b1ceccd021db9ed1d9559d333
 
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json frontend/.npmrc ./
-RUN npm install -g npm@10.9.2 && npm install && npx browserslist@latest --update-db
+# package.json engines가 npm>=11을 요구하고 .npmrc는 engine-strict=true이므로
+# base 이미지 번들 npm(10.9.8)으로는 install이 EBADENGINE으로 실패한다.
+# lockfile을 생성한 로컬 npm과 동일 버전으로 고정한다.
+RUN npm install -g npm@11.19.0 && npm install && npx browserslist@latest --update-db
 
 ARG GIT_COMMIT=unknown
 COPY frontend/ .
