@@ -1304,33 +1304,37 @@ export default {
       this.showConfirmModal = false;
       this.pendingAction = null;
     },
+    // 삭제 API 호출을 비관적(pessimistic)으로 처리한다. 서버가 성공을 확인해 준
+    // 경우에만 true를 반환하므로, 호출부는 true일 때만 목록에서 행을 제거한다.
+    // 낙관적 갱신과 달리 롤백 코드가 필요 없고, 실패한 삭제가 성공한 것처럼
+    // 보이는 일도 없다.
+    async requestRemoval(sendRequest, label) {
+      try {
+        const res = await sendRequest();
+        if (res.data.status === "failure") {
+          alert(`${label} 중에 오류가 발생하였습니다. ` + res.data.message);
+          return false;
+        }
+        return true;
+      } catch (error) {
+        if (error.response && error.response.status === 401) {
+          alert("로그인이 만료되었습니다. 다시 로그인해 주세요.");
+          this.$router.push("/login");
+        } else {
+          alert(`${label} 요청 중에 오류가 발생하였습니다. ` + error);
+        }
+        return false;
+      }
+    },
     removePublicFeed(feedName) {
       const path = getApiUrlPath() + `/public_feeds/${feedName}`;
-      axios
-        .delete(path)
-        .then((res) => {
-          if (res.data.status === "failure") {
-            alert("피드 삭제 중에 오류가 발생하였습니다. " + res.data.message);
-          }
-        })
-        .catch((error) => {
-          alert("피드 삭제 요청 중에 오류가 발생하였습니다. " + error);
-        });
+      return this.requestRemoval(() => axios.delete(path), "피드 삭제");
     },
     removeFeed(groupName, feedName) {
       // force=true: 디렉터리가 없는 고아(등록/요청만 남은) 피드까지 일괄 삭제
       const path =
         getApiUrlPath() + `/groups/${groupName}/feeds/${feedName}?force=true`;
-      axios
-        .delete(path)
-        .then((res) => {
-          if (res.data.status === "failure") {
-            alert("피드 삭제 중에 오류가 발생하였습니다. " + res.data.message);
-          }
-        })
-        .catch((error) => {
-          alert("피드 삭제 요청 중에 오류가 발생하였습니다. " + error);
-        });
+      return this.requestRemoval(() => axios.delete(path), "피드 삭제");
     },
     buildStatusInfoDeletePayload(item) {
       return {
@@ -1344,40 +1348,34 @@ export default {
     },
     removeStatusInfoRecord(item) {
       const path = getApiUrlPath() + "/problems/status_info";
-      axios
-        .delete(path, { data: this.buildStatusInfoDeletePayload(item) })
-        .then((res) => {
-          if (res.data.status === "failure") {
-            alert("피드 삭제 중에 오류가 발생하였습니다. " + res.data.message);
-          } else {
-            this.statusInfolist = this.statusInfolist.filter(
-              (current) => current !== item
-            );
-          }
-        })
-        .catch((error) => {
-          alert("피드 삭제 요청 중에 오류가 발생하였습니다. " + error);
-        });
+      return this.requestRemoval(
+        () =>
+          axios.delete(path, { data: this.buildStatusInfoDeletePayload(item) }),
+        "피드 삭제"
+      );
     },
     statusInfoDeleteClicked(data) {
-      this.openConfirmModal(this.getStatusInfoDeleteMessage(data.item), () => {
-        const groupName = data.item["group_name"];
-        const feedName = data.item["feed_name"];
-        if (!this.canRemoveStatusInfoByApi(data.item)) {
-          this.removeStatusInfoRecord(data.item);
-          return;
+      this.openConfirmModal(
+        this.getStatusInfoDeleteMessage(data.item),
+        async () => {
+          const groupName = data.item["group_name"];
+          const feedName = data.item["feed_name"];
+          // 퍼블릭 피드 + 피드 디렉터리(설정) + 요청/접근 정보까지 일괄 삭제하거나,
+          // 그룹명/피드명이 비어 있으면 feed_info DB 레코드만 삭제한다.
+          const removeRequest = this.canRemoveStatusInfoByApi(data.item)
+            ? () => this.removeFeed(groupName, feedName)
+            : () => this.removeStatusInfoRecord(data.item);
+          if (!(await removeRequest())) return;
+          this.statusInfolist = this.statusInfolist.filter(
+            (item) => item !== data.item
+          );
         }
-        // 퍼블릭 피드 + 피드 디렉터리(설정) + 요청/접근 정보까지 일괄 삭제
-        this.removeFeed(groupName, feedName);
-        this.statusInfolist = this.statusInfolist.filter(
-          (item) => item !== data.item
-        );
-      });
+      );
     },
     publicFeedInfoDeleteClicked(data) {
-      this.openConfirmModal("정말로 실행하시겠습니까?", () => {
+      this.openConfirmModal("정말로 실행하시겠습니까?", async () => {
         const feedName = data.item["feed_name"];
-        this.removePublicFeed(feedName);
+        if (!(await this.removePublicFeed(feedName))) return;
         this.publicFeedInfolist = this.publicFeedInfolist.filter(
           (item) => item !== data.item
         );
@@ -1391,23 +1389,11 @@ export default {
       const path =
         getApiUrlPath() +
         `/groups/${groupName}/feeds/${feedName}/htmls/${htmlFileName}`;
-      axios
-        .delete(path)
-        .then((res) => {
-          if (res.data.status === "failure") {
-            alert("실행 중에 오류가 발생하였습니다. " + res.data.message);
-          } else {
-            //
-          }
-        })
-        .catch((error) => {
-          alert("실행 요청 중에 오류가 발생하였습니다. " + error);
-        });
-      return true;
+      return this.requestRemoval(() => axios.delete(path), "실행");
     },
     imageWithoutImageTagDeleteClicked(data) {
-      this.openConfirmModal("정말로 실행하시겠습니까?", () => {
-        this.removeHtmlFile(data.item["file_path"]);
+      this.openConfirmModal("정말로 실행하시겠습니까?", async () => {
+        if (!(await this.removeHtmlFile(data.item["file_path"]))) return;
         this.htmlFileWithoutImageTaglist =
           this.htmlFileWithoutImageTaglist.filter(
             (item) => item !== data.item
@@ -1415,8 +1401,8 @@ export default {
       });
     },
     imageWithManyImageTagDeleteClicked(data) {
-      this.openConfirmModal("정말로 실행하시겠습니까?", () => {
-        this.removeHtmlFile(data.item["file_path"]);
+      this.openConfirmModal("정말로 실행하시겠습니까?", async () => {
+        if (!(await this.removeHtmlFile(data.item["file_path"]))) return;
         this.htmlFileWithManyImageTaglist =
           this.htmlFileWithManyImageTaglist.filter(
             (item) => item !== data.item
@@ -1424,8 +1410,8 @@ export default {
       });
     },
     imageNotFoundDeleteClicked(data) {
-      this.openConfirmModal("정말로 실행하시겠습니까?", () => {
-        this.removeHtmlFile(data.item["file_path"]);
+      this.openConfirmModal("정말로 실행하시겠습니까?", async () => {
+        if (!(await this.removeHtmlFile(data.item["file_path"]))) return;
         this.htmlFileWithImageNotFoundlist =
           this.htmlFileWithImageNotFoundlist.filter(
             (item) => item !== data.item
@@ -1433,8 +1419,8 @@ export default {
       });
     },
     htmlFileSizeDeleteClicked(data) {
-      this.openConfirmModal("정말로 실행하시겠습니까?", () => {
-        this.removeHtmlFile(data.item["file_path"]);
+      this.openConfirmModal("정말로 실행하시겠습니까?", async () => {
+        if (!(await this.removeHtmlFile(data.item["file_path"]))) return;
         this.htmlFileSizelist = this.htmlFileSizelist.filter(
           (item) => item !== data.item
         );

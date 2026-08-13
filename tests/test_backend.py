@@ -140,6 +140,69 @@ def test_cors_origins_excludes_empty_string():
     assert "" not in bm.origins
 
 
+def test_cors_middleware_is_outermost():
+    """CORSMiddleware가 사용자 미들웨어 스택의 가장 바깥에 있어야 한다.
+
+    Starlette는 나중에 등록한 미들웨어를 더 바깥에 배치하고, user_middleware
+    리스트는 바깥→안쪽 순서다. auth_middleware가 CORS보다 바깥에 있으면
+    401 조기 반환이 CORSMiddleware를 건너뛰어 CORS 헤더 없는 응답이 나가고,
+    브라우저는 이를 차단해 axios가 "Network Error"로 보고한다.
+    """
+    import backend.main as bm
+
+    stack = [m.cls.__name__ for m in bm.app.user_middleware]
+    assert stack[0] == "CORSMiddleware", f"CORSMiddleware must be outermost, got {stack}"
+
+
+def test_cors_header_present_on_401():
+    """미들웨어가 조기 반환하는 401에도 CORS 헤더가 붙어야 한다"""
+    import backend.main as bm
+
+    origin = bm.origins[0]
+    with patch("backend.main.get_current_user", return_value=None):
+        response = client.delete("/groups/g/feeds/f/htmls/x.html", headers={"Origin": origin})
+
+    assert response.status_code == 401
+    assert response.headers.get("access-control-allow-origin") == origin
+    assert response.headers.get("access-control-allow-credentials") == "true"
+
+
+def test_cors_header_present_on_500():
+    """ServerErrorMiddleware가 처리하는 500에도 CORS 헤더가 붙어야 한다.
+
+    ServerErrorMiddleware는 CORSMiddleware보다도 바깥이라 미들웨어 순서만으로는
+    해결되지 않는다. 예외 핸들러가 직접 헤더를 붙여야 한다.
+    """
+    import backend.main as bm
+
+    origin = bm.origins[0]
+    non_raising_client = TestClient(app, raise_server_exceptions=False)
+    original_search = app.state.feed_maker_manager.search
+    app.state.feed_maker_manager.search = MagicMock(side_effect=RuntimeError("boom"))
+    try:
+        response = non_raising_client.get("/search/anything", headers={"Origin": origin})
+    finally:
+        app.state.feed_maker_manager.search = original_search
+
+    assert response.status_code == 500
+    assert response.headers.get("access-control-allow-origin") == origin
+    assert response.headers.get("access-control-allow-credentials") == "true"
+
+
+def test_cors_header_absent_for_unknown_origin_on_500():
+    """허용되지 않은 origin에는 500에도 CORS 헤더를 붙이지 않는다"""
+    non_raising_client = TestClient(app, raise_server_exceptions=False)
+    original_search = app.state.feed_maker_manager.search
+    app.state.feed_maker_manager.search = MagicMock(side_effect=RuntimeError("boom"))
+    try:
+        response = non_raising_client.get("/search/anything", headers={"Origin": "https://evil.example.com"})
+    finally:
+        app.state.feed_maker_manager.search = original_search
+
+    assert response.status_code == 500
+    assert "access-control-allow-origin" not in response.headers
+
+
 def test_login_rate_limit_enforced():
     """로그인 엔드포인트 rate limit: 분당 10회 초과 시 429 반환"""
     from backend.main import limiter
@@ -936,11 +999,13 @@ def test_value_error_handler():
 
 
 def test_exception_handler():
-    req = types.SimpleNamespace()
+    # 핸들러가 origin을 읽어 CORS 헤더를 결정하므로 headers를 가진 request가 필요하다
+    req = types.SimpleNamespace(headers={})
     exc = RuntimeError("unexpected")
     r = asyncio.run(main.exception_handler(req, exc))
     assert isinstance(r, JSONResponse)
     assert r.status_code == 500
+    assert "access-control-allow-origin" not in r.headers
 
 
 # ────────────────────────────────────────────────────────

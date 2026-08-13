@@ -42,4 +42,13 @@ describe("FacebookAuth.vue - SDK 로드 완료 상태", () => {
     delete window.FB;
     expect(wrapper.vm.isInitialized()).toBe(false);
   });
+
+  // FB.api가 error 필드 없는 falsy 응답(빈 문자열 등)을 주는 경우.
+  // response.error가 undefined라 메시지 삼항의 우변('unknown error')을 탄다.
+  it("getProfile은 응답에 error 필드가 없으면 'unknown error'로 reject한다", async () => {
+    const wrapper = await mountLoaded();
+    window.FB.api = vi.fn((path, opts, cb) => cb(""));
+
+    await expect(wrapper.vm.getProfile()).rejects.toMatch("unknown error");
+  });
 });

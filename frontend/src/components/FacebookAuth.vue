@@ -105,24 +105,19 @@ const login = async () => {
     scope: 'public_profile, email' // 필요한 권한 지정
   };
 
-  try {
-    return new Promise((resolve, reject) => {
-      window.FB.login(function (response) {
-        if (response.authResponse) {
-          if (response.status === 'connected') {
-            resolve(response.authResponse.accessToken);
-          } else {
-            reject('Login failed: ' + response.status);
-          }
+  return new Promise((resolve, reject) => {
+    window.FB.login(function (response) {
+      if (response.authResponse) {
+        if (response.status === 'connected') {
+          resolve(response.authResponse.accessToken);
         } else {
-          reject('User cancelled login or did not fully authorize.');
+          reject('Login failed: ' + response.status);
         }
-      }, loginOptions);
-    });
-  } catch (error) {
-    console.error('Login failed: ', error);
-    throw error;
-  }
+      } else {
+        reject('User cancelled login or did not fully authorize.');
+      }
+    }, loginOptions);
+  });
 };
 
 const logout = async () => {

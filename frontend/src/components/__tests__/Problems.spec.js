@@ -838,6 +838,7 @@ describe("Problems.vue", () => {
       .fn()
       .mockResolvedValueOnce({ data: { status: "success" } });
     wrapper.vm.handleConfirmOk();
+    await flushPromises();
     expect(wrapper.vm.statusInfolist.length).toBe(0);
   });
 
@@ -1272,6 +1273,7 @@ describe("Problems.vue", () => {
       .fn()
       .mockResolvedValueOnce({ data: { status: "success" } });
     wrapper.vm.handleConfirmOk();
+    await flushPromises();
     expect(wrapper.vm.publicFeedInfolist.length).toBe(0);
   });
 
@@ -1321,6 +1323,7 @@ describe("Problems.vue", () => {
       .fn()
       .mockResolvedValueOnce({ data: { status: "success" } });
     wrapper.vm.handleConfirmOk();
+    await flushPromises();
     expect(wrapper.vm.htmlFileSizelist.length).toBe(0);
   });
 
@@ -1366,6 +1369,7 @@ describe("Problems.vue", () => {
       .fn()
       .mockResolvedValueOnce({ data: { status: "success" } });
     wrapper.vm.handleConfirmOk();
+    await flushPromises();
     expect(wrapper.vm.htmlFileWithoutImageTaglist.length).toBe(0);
   });
 
@@ -1410,6 +1414,7 @@ describe("Problems.vue", () => {
       .fn()
       .mockResolvedValueOnce({ data: { status: "success" } });
     wrapper.vm.handleConfirmOk();
+    await flushPromises();
     expect(wrapper.vm.htmlFileWithManyImageTaglist.length).toBe(0);
   });
 
@@ -1454,6 +1459,7 @@ describe("Problems.vue", () => {
       .fn()
       .mockResolvedValueOnce({ data: { status: "success" } });
     wrapper.vm.handleConfirmOk();
+    await flushPromises();
     expect(wrapper.vm.htmlFileWithImageNotFoundlist.length).toBe(0);
   });
 
@@ -2467,13 +2473,116 @@ describe("Problems.vue", () => {
     axios.delete = vi
       .fn()
       .mockResolvedValueOnce({ data: { status: "success" } });
-    const result = wrapper.vm.removeHtmlFile("g/f/html/test.html");
-    await flushPromises();
+    const result = await wrapper.vm.removeHtmlFile("g/f/html/test.html");
 
     expect(result).toBe(true);
     expect(axios.delete).toHaveBeenCalledWith(
       expect.stringContaining("/groups/g/feeds/f/htmls/test.html"),
     );
+  });
+
+  it("removeHtmlFile returns false and keeps the row when the API fails", async () => {
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    vi.spyOn(window, "alert").mockImplementation(() => {});
+
+    axios.delete = vi
+      .fn()
+      .mockResolvedValueOnce({ data: { status: "failure", message: "fail" } });
+    expect(await wrapper.vm.removeHtmlFile("g/f/html/test.html")).toBe(false);
+
+    axios.delete = vi.fn().mockRejectedValueOnce(new Error("network"));
+    expect(await wrapper.vm.removeHtmlFile("g/f/html/test.html")).toBe(false);
+
+    window.alert.mockRestore();
+  });
+
+  // 비관적 삭제 계약: 서버가 성공을 확인해 준 경우에만 목록에서 행이 사라진다.
+  // 실패했는데 행이 사라지면 새로고침 시 되살아나 사용자를 혼란스럽게 한다.
+  describe("pessimistic delete keeps the row on failure", () => {
+    const mountProblems = async () => {
+      axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+      const wrapper = mount(Problems, { global: { stubs } });
+      await flushPromises();
+      vi.spyOn(window, "alert").mockImplementation(() => {});
+      return wrapper;
+    };
+
+    it("publicFeedInfoDeleteClicked keeps the row when the request fails", async () => {
+      const wrapper = await mountProblems();
+      wrapper.vm.publicFeedInfolist = [{ feed_name: "x", feed_title: "X" }];
+      // 컴포넌트가 보는 reactive proxy를 그대로 넘겨야 filter의 !== 비교가 성립한다
+      const item = wrapper.vm.publicFeedInfolist[0];
+
+      wrapper.vm.publicFeedInfoDeleteClicked({ item });
+      axios.delete = vi.fn().mockRejectedValueOnce(new Error("network"));
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+
+      expect(wrapper.vm.publicFeedInfolist).toEqual([item]);
+      window.alert.mockRestore();
+    });
+
+    it("statusInfoDeleteClicked keeps the row when the feed delete fails", async () => {
+      const wrapper = await mountProblems();
+      // group_name + feed_name 존재 → removeFeed 경로
+      wrapper.vm.statusInfolist = [
+        { group_name: "g", feed_name: "f", feed_title: "T" },
+      ];
+      const item = wrapper.vm.statusInfolist[0];
+
+      wrapper.vm.statusInfoDeleteClicked({ item });
+      axios.delete = vi
+        .fn()
+        .mockResolvedValueOnce({ data: { status: "failure", message: "no" } });
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+
+      expect(wrapper.vm.statusInfolist).toEqual([item]);
+      window.alert.mockRestore();
+    });
+
+    it("statusInfoDeleteClicked keeps the row when the DB record delete fails", async () => {
+      const wrapper = await mountProblems();
+      // group_name/feed_name 없음 → removeStatusInfoRecord 경로
+      wrapper.vm.statusInfolist = [
+        { group_name: "", feed_name: "", feed_title: "T" },
+      ];
+      const item = wrapper.vm.statusInfolist[0];
+
+      wrapper.vm.statusInfoDeleteClicked({ item });
+      axios.delete = vi.fn().mockRejectedValueOnce(new Error("network"));
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+
+      expect(wrapper.vm.statusInfolist).toEqual([item]);
+      window.alert.mockRestore();
+    });
+  });
+
+  it("removeHtmlFile redirects to login on 401", async () => {
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+    const push = vi.fn();
+    const wrapper = mount(Problems, {
+      global: { stubs, mocks: { $router: { push } } },
+    });
+    await flushPromises();
+
+    vi.spyOn(window, "alert").mockImplementation(() => {});
+
+    const unauthorized = new Error("Request failed with status code 401");
+    unauthorized.response = { status: 401 };
+    axios.delete = vi.fn().mockRejectedValueOnce(unauthorized);
+
+    expect(await wrapper.vm.removeHtmlFile("g/f/html/test.html")).toBe(false);
+    expect(window.alert).toHaveBeenCalledWith(
+      expect.stringContaining("로그인이 만료"),
+    );
+    expect(push).toHaveBeenCalledWith("/login");
+
+    window.alert.mockRestore();
   });
 
   it("getShortDate returns empty for invalid date", () => {

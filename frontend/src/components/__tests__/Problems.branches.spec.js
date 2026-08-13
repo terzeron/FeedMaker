@@ -287,4 +287,153 @@ describe("Problems.vue - 미커버 분기", () => {
       expect(wrapper.find("a").attributes("href")).toBe("/management/g1/f1");
     });
   });
+
+  // 비관적 삭제: removeHtmlFile이 false를 주면 목록에서 행을 지우지 않고 빠져나온다.
+  describe("HTML 파일 삭제 실패 시 행 유지", () => {
+    const cases = [
+      ["imageWithoutImageTagDeleteClicked", "htmlFileWithoutImageTaglist"],
+      ["imageWithManyImageTagDeleteClicked", "htmlFileWithManyImageTaglist"],
+      ["imageNotFoundDeleteClicked", "htmlFileWithImageNotFoundlist"],
+      ["htmlFileSizeDeleteClicked", "htmlFileSizelist"],
+    ];
+
+    it.each(cases)(
+      "%s는 삭제 실패 시 행을 남긴다",
+      async (handler, listName) => {
+        const wrapper = mountWith();
+        await flushPromises();
+
+        await wrapper.setData({
+          [listName]: [{ file_path: "g/f/html/a.html", file_name: "a.html" }],
+        });
+        const item = wrapper.vm[listName][0];
+
+        wrapper.vm[handler]({ item });
+        axios.delete.mockResolvedValueOnce({
+          data: { status: "failure", message: "실패" },
+        });
+        wrapper.vm.handleConfirmOk();
+        await flushPromises();
+
+        expect(wrapper.vm[listName]).toEqual([item]);
+        expect(alertSpy).toHaveBeenCalled();
+      },
+    );
+
+    it.each(cases)(
+      "%s는 삭제 성공 시 행을 제거한다",
+      async (handler, listName) => {
+        const wrapper = mountWith();
+        await flushPromises();
+
+        await wrapper.setData({
+          [listName]: [{ file_path: "g/f/html/a.html", file_name: "a.html" }],
+        });
+        const item = wrapper.vm[listName][0];
+
+        wrapper.vm[handler]({ item });
+        axios.delete.mockResolvedValueOnce({ data: { status: "success" } });
+        wrapper.vm.handleConfirmOk();
+        await flushPromises();
+
+        expect(wrapper.vm[listName]).toEqual([]);
+      },
+    );
+  });
+
+  describe("status_info 삭제 성공", () => {
+    it("피드 삭제가 성공하면 목록에서 행을 제거한다", async () => {
+      const wrapper = mountWith();
+      await flushPromises();
+
+      await wrapper.setData({
+        statusInfolist: [{ group_name: "g", feed_name: "f", feed_title: "T" }],
+      });
+      const item = wrapper.vm.statusInfolist[0];
+
+      wrapper.vm.statusInfoDeleteClicked({ item });
+      axios.delete.mockResolvedValueOnce({ data: { status: "success" } });
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+
+      expect(wrapper.vm.statusInfolist).toEqual([]);
+    });
+  });
+
+  // sorted* computed는 항상 배열을 돌려주므로, 로딩 플레이스홀더(v-else)는
+  // computed를 덮어쓴 파생 컴포넌트로만 렌더링 상태를 확인할 수 있다.
+  describe("로딩 플레이스홀더", () => {
+    it("정렬된 목록이 배열이 아니면 모든 표에 '데이터를 불러오는 중...'을 보여준다", async () => {
+      const nullComputed = Object.fromEntries(
+        Object.keys(Problems.computed)
+          .filter((key) => key.startsWith("sorted"))
+          .map((key) => [key, () => null]),
+      );
+      const LoadingProblems = {
+        ...Problems,
+        computed: { ...Problems.computed, ...nullComputed },
+      };
+
+      axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+      const wrapper = mount(LoadingProblems, { global: { stubs } });
+      await flushPromises();
+
+      const placeholders = wrapper.findAll("p.text-muted");
+      expect(placeholders).toHaveLength(9);
+      expect(placeholders[0].text()).toBe("데이터를 불러오는 중...");
+      expect(wrapper.find("table").exists()).toBe(false);
+    });
+  });
+
+  // 이 세 표는 기본 필드가 모두 sortable이라, 정렬 불가 컬럼 클릭 분기는
+  // 필드 정의에 sortable:false 컬럼을 추가해야 확인할 수 있다.
+  describe("정렬 불가 컬럼 클릭", () => {
+    const cases = [
+      ["progressInfoFields", "progressInfoSortBy", "progress_ratio", "비정렬P"],
+      ["listUrlInfoFields", "listUrlInfoSortBy", "count", "비정렬L"],
+      ["elementInfoFields", "elementInfoSortBy", "count", "비정렬E"],
+    ];
+
+    it.each(cases)(
+      "%s의 sortable:false 컬럼은 클릭해도 정렬 기준이 바뀌지 않는다",
+      async (fieldsName, sortByName, defaultSortBy, label) => {
+        const wrapper = mountWith();
+        await flushPromises();
+
+        await wrapper.setData({
+          [fieldsName]: [
+            ...wrapper.vm[fieldsName],
+            { key: "noop", label, sortable: false },
+          ],
+        });
+
+        const th = wrapper
+          .findAll("th")
+          .find((node) => node.text().includes(label));
+        expect(th).toBeTruthy();
+        await th.trigger("click");
+
+        expect(wrapper.vm[sortByName]).toBe(defaultSortBy);
+      },
+    );
+  });
+
+  describe("퍼블릭 피드 표의 그 외 컬럼", () => {
+    it("전용 렌더링이 없는 컬럼은 값을 그대로 출력한다", async () => {
+      const wrapper = mountWith();
+      await flushPromises();
+
+      await wrapper.setData({
+        publicFeedInfoFields: [
+          ...wrapper.vm.publicFeedInfoFields,
+          { key: "etc", label: "기타", sortable: true },
+        ],
+        publicFeedInfolist: [
+          { feed_name: "f", feed_title: "T", size: 1, etc: "기타값" },
+        ],
+      });
+
+      expect(wrapper.text()).toContain("기타값");
+    });
+  });
 });

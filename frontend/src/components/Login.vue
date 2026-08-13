@@ -168,12 +168,6 @@ const login = async () => {
     return;
   }
 
-  if (!authRef.value) {
-    console.error("AuthRef is not available");
-    showError("Facebook Auth 참조를 찾을 수 없습니다.");
-    return;
-  }
-
   loginLoading.value = true;
   try {
     accessToken.value = await authRef.value.login();

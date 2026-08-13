@@ -31,4 +31,63 @@ test.describe("Problems 페이지", () => {
     const count = await table.count();
     expect(count).toBeGreaterThan(0);
   });
+
+  // 비관적 삭제 계약: 서버가 성공을 확인해 준 뒤에만 행이 사라진다.
+  test("피드 삭제를 확인하면 삭제 요청 후 행이 사라진다", async ({ page }) => {
+    const deleteUrls = [];
+    await page.route("**/groups/*/feeds/*", (route) => {
+      if (route.request().method() !== "DELETE") {
+        return route.fallback();
+      }
+      deleteUrls.push(route.request().url());
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ status: "success" }),
+      });
+    });
+
+    await page.goto("/problems");
+    await page.waitForLoadState("networkidle");
+
+    const deleteButton = page.locator('button[title="피드 삭제"]');
+    await expect(deleteButton).toHaveCount(1);
+    await deleteButton.click();
+
+    await expect(page.getByText("정말로 실행하시겠습니까?")).toBeVisible();
+    await page.getByRole("button", { name: "확인", exact: true }).click();
+
+    await expect(deleteButton).toHaveCount(0);
+    expect(deleteUrls).toHaveLength(1);
+    // 고아 피드까지 지우기 위해 force=true로 요청한다.
+    expect(deleteUrls[0]).toContain("/groups/webtoon/feeds/naver_webtoon");
+    expect(deleteUrls[0]).toContain("force=true");
+  });
+
+  test("피드 삭제를 취소하면 요청 없이 행이 남는다", async ({ page }) => {
+    const deleteUrls = [];
+    await page.route("**/groups/*/feeds/*", (route) => {
+      if (route.request().method() !== "DELETE") {
+        return route.fallback();
+      }
+      deleteUrls.push(route.request().url());
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ status: "success" }),
+      });
+    });
+
+    await page.goto("/problems");
+    await page.waitForLoadState("networkidle");
+
+    const deleteButton = page.locator('button[title="피드 삭제"]');
+    await expect(deleteButton).toHaveCount(1);
+    await deleteButton.click();
+
+    await page.getByRole("button", { name: "취소", exact: true }).click();
+
+    await expect(deleteButton).toHaveCount(1);
+    expect(deleteUrls).toHaveLength(0);
+  });
 });
