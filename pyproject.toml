@@ -33,7 +33,7 @@ dependencies = [
     "resvg-py>=0.3.3",
     "sqlalchemy>=2.0.51",
     "urllib3>=2.7.0",
-    "uvicorn>=0.52.0",
+    "uvicorn>=0.52.1",
     "feedparser>=6.0.13",
     "termcolor>=3.1.0",
     # security pin: GHSA-9rj7-rf2p-w77r 외 4건, fixed in 3.1.58
