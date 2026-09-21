@@ -390,7 +390,7 @@ class HeadlessBrowserBase:
     _CLOUDFLARE_CLEARED_PREDICATE = """
         () => {
             if (window._cf_chl_opt) return false;
-            if (document.querySelector('iframe[src*="challenges.cloudflare.com"], #cf-content, [data-translate="checking_browser"]')) return false;
+            if (document.querySelector('iframe[src*="challenges.cloudflare.com/cdn-cgi/challenge"], #cf-content, [data-translate="checking_browser"]')) return false;
             const t = document.title || "";
             if (t.includes("Just a moment") || t.includes("잠시만")) return false;
             // After an interactive Turnstile challenge clears, Cloudflare reloads to the
@@ -658,13 +658,21 @@ class HeadlessBrowserBase:
 # Canonical per-engine cookie jar filenames. Kept here as the single source of
 # truth so the engine subclasses and the facade never drift apart. Separate files
 # stop the cloakbrowser (Chromium) and camoufox (Firefox) jars cross-contaminating.
-ENGINE_COOKIE_FILES: dict[str, str] = {"camoufox": "cookies.camoufox.json", "cloakbrowser": "cookies.cloakbrowser.json"}
-_ENGINE_NAMES: tuple[str, ...] = ("camoufox", "cloakbrowser")
+ENGINE_COOKIE_FILES: dict[str, str] = {
+    "camoufox": "cookies.camoufox.json",
+    "cloakbrowser": "cookies.cloakbrowser.json",
+    "patchright": "cookies.patchright.json",
+    "nodriver": "cookies.nodriver.json",
+    "flaresolverr": "cookies.flaresolverr.json",
+    "rebrowser_playwright": "cookies.rebrowser_playwright.json",
+}
+_DEFAULT_ENGINE_NAMES: tuple[str, ...] = ("camoufox", "cloakbrowser")
+_ENGINE_NAMES: tuple[str, ...] = (*_DEFAULT_ENGINE_NAMES, "patchright", "nodriver", "flaresolverr", "rebrowser_playwright")
 
 
 def _import_engine_class(name: str) -> Optional[type["HeadlessBrowserBase"]]:
     # Import an engine class by name, tolerating a missing optional dependency
-    # (camoufox / cloakbrowser not installed) by returning None. The engine modules
+    # by returning None. The engine modules
     # import only names defined ABOVE this point in this module, so this is not circular.
     try:
         if name == "camoufox":
@@ -675,6 +683,22 @@ def _import_engine_class(name: str) -> Optional[type["HeadlessBrowserBase"]]:
             from bin.headless_browser_cloakbrowser import HeadlessBrowserCloakbrowser
 
             return HeadlessBrowserCloakbrowser
+        if name == "patchright":
+            from bin.headless_browser_patchright import HeadlessBrowserPatchright
+
+            return HeadlessBrowserPatchright
+        if name == "nodriver":
+            from bin.headless_browser_nodriver import HeadlessBrowserNodriver
+
+            return HeadlessBrowserNodriver
+        if name == "flaresolverr":
+            from bin.headless_browser_flaresolverr import HeadlessBrowserFlaresolverr
+
+            return HeadlessBrowserFlaresolverr
+        if name == "rebrowser_playwright":
+            from bin.headless_browser_rebrowser_playwright import HeadlessBrowserRebrowserPlaywright
+
+            return HeadlessBrowserRebrowserPlaywright
     except ImportError as e:  # pragma: no cover - only when an engine dep is absent
         LOGGER.warning("headless engine '%s' is unavailable: %s", name, e)
     return None
@@ -697,15 +721,21 @@ def _load_engine_class(name: str) -> Optional[type["HeadlessBrowserBase"]]:
     return _ENGINE_CLASSES.get(name)
 
 
-def _resolve_engine_order() -> list[str]:
+def _resolve_engine_order(browser_fallback: Optional[list[str]] = None) -> list[str]:
     # FM_HEADLESS_BACKEND: comma-separated engine names in priority order. Default puts
     # camoufox first — its Firefox build clears the Cloudflare managed challenge on
     # tkor*/toonkor mirrors that the cloakbrowser Chromium (v146) no longer solves —
     # with cloakbrowser kept as a fallback for sites where the Firefox engine misbehaves.
-    raw = Env.get("FM_HEADLESS_BACKEND", "camoufox,cloakbrowser")
-    names = [n.strip().lower() for n in raw.split(",") if n.strip()]
+    if browser_fallback:
+        names = [name.strip().lower() for name in browser_fallback if name.strip()]
+        unknown = [name for name in names if name not in _ENGINE_NAMES]
+        if unknown:
+            raise ValueError(f"unknown headless browser engine: {', '.join(unknown)}")
+    else:
+        raw = Env.get("FM_HEADLESS_BACKEND", ",".join(_DEFAULT_ENGINE_NAMES))
+        names = [name.strip().lower() for name in raw.split(",") if name.strip()]
     order = [n for n in names if n in _ENGINE_NAMES]
-    return order or list(_ENGINE_NAMES)
+    return list(dict.fromkeys(order)) or list(_DEFAULT_ENGINE_NAMES)
 
 
 class HeadlessBrowser:
@@ -718,9 +748,27 @@ class HeadlessBrowser:
     COOKIE_FILE: str = ENGINE_COOKIE_FILES[_resolve_engine_order()[0]]
 
     def __init__(self, **kwargs: Any) -> None:
+        browser_fallback = kwargs.pop("browser_fallback", None)
         self._kwargs = kwargs
-        self._engine_order = _resolve_engine_order()
+        self._engine_order = _resolve_engine_order(browser_fallback)
+        self.COOKIE_FILE = ENGINE_COOKIE_FILES[self._engine_order[0]]
         self._engines: dict[str, HeadlessBrowserBase] = {}
+
+    @staticmethod
+    def _contains_cloudflare_challenge(html: str) -> bool:
+        lowered = html.lower()
+        return any(
+            marker in lowered
+            for marker in (
+                "window._cf_chl_opt",
+                'id="cf-content"',
+                "id='cf-content'",
+                'data-translate="checking_browser"',
+                "data-translate='checking_browser'",
+                "<title>just a moment",
+                "<title>잠시만",
+            )
+        )
 
     def __getattr__(self, name: str) -> Any:
         # Only invoked for attributes not found normally. Delegate public attribute reads
@@ -745,7 +793,7 @@ class HeadlessBrowser:
             engine = self._engine(name)
             if engine is not None:
                 return engine
-        raise ImportError("no headless browser engine is available (install camoufox or cloakbrowser)")
+        raise ImportError("no configured headless browser engine is available")
 
     def make_request(self, url: str, download_file: Optional[Path] = None) -> str:
         available = [n for n in self._engine_order if _load_engine_class(n) is not None]
@@ -755,15 +803,16 @@ class HeadlessBrowser:
             if engine is None:
                 continue
             result = engine.make_request(url, download_file=download_file)
-            if result:
+            if result and not self._contains_cloudflare_challenge(result):
                 return result
+            if result:
+                LOGGER.warning("headless engine '%s' returned a Cloudflare challenge for '%s'", name, url)
+                result = ""
             if i < len(available) - 1:
-                # Tear down this engine's cached session before trying the next one. Both
-                # engines drive playwright-sync, and only ONE sync-playwright instance can
-                # be live per thread; a still-cached camoufox session would otherwise make
-                # the cloakbrowser fallback abort with "Playwright Sync API inside the
-                # asyncio loop". recycle_session() runs the engine's _close_session, which
-                # fully stops its driver/event loop and frees the thread for the next launch.
+                # Tear down this engine's cached session before trying the next one.
+                # Playwright-compatible engines can keep a sync driver loop alive, while
+                # Chromium engines can retain a profile lock. recycle_session() releases
+                # those resources before the fallback starts.
                 type(engine).recycle_session()
                 LOGGER.warning("headless engine '%s' returned empty for '%s'; falling back to '%s'", name, url, available[i + 1])
         return result

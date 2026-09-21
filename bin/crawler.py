@@ -368,6 +368,7 @@ class Crawler:
         disable_headless: bool = False,
         blob_to_dataurl: bool = False,
         wait_until: str = "domcontentloaded",
+        browser_fallback: Optional[list[str]] = None,
     ) -> None:
         LOGGER.debug(
             "# Crawler(dir_path=%s, render_js=%s, method=%s, headers=%r, timeout=%d, num_retries=%d, retry_sleep=%d, encoding=%s, verify_ssl=%s, copy_images_from_canvas=%s, simulate_scrolling=%s, disable_headless=%s, blob_to_dataurl=%s, wait_until=%s)",
@@ -401,9 +402,10 @@ class Crawler:
         self.disable_headless = disable_headless
         self.blob_to_dataurl = blob_to_dataurl
         self.wait_until = wait_until
+        self.browser_fallback = browser_fallback
         if self.render_js:
             # headless browser
-            self.headless_browser = HeadlessBrowser(dir_path=self.dir_path, headers=self.headers, copy_images_from_canvas=copy_images_from_canvas, simulate_scrolling=simulate_scrolling, disable_headless=disable_headless, blob_to_dataurl=blob_to_dataurl, timeout=timeout, wait_until=wait_until)
+            self.headless_browser = HeadlessBrowser(dir_path=self.dir_path, headers=self.headers, copy_images_from_canvas=copy_images_from_canvas, simulate_scrolling=simulate_scrolling, disable_headless=disable_headless, blob_to_dataurl=blob_to_dataurl, timeout=timeout, wait_until=wait_until, browser_fallback=browser_fallback)
         else:
             self.requests_client = RequestsClient(dir_path=self.dir_path, method=method, headers=self.headers, timeout=timeout, encoding=encoding, verify_ssl=verify_ssl)
 
@@ -464,6 +466,9 @@ class Crawler:
             option_str += f" --retry={options['num_retries']}"
         if "retry_sleep" in options and options["retry_sleep"]:
             option_str += f" --retry-sleep={options['retry_sleep']}"
+        if "browser_fallback" in options and options["browser_fallback"]:
+            browser_fallback = ",".join(options["browser_fallback"])
+            option_str += f" --browser-fallback='{browser_fallback}'"
 
         return option_str
 
@@ -473,7 +478,7 @@ class Crawler:
             return
         # 쿠키 파일이 이미 존재하면 로그인 스킵
         if self.render_js:
-            cookie_file = self.headless_browser._get_cookie_dir() / HeadlessBrowser.COOKIE_FILE
+            cookie_file = self.headless_browser._get_cookie_dir() / self.headless_browser.COOKIE_FILE
         else:
             cookie_file = self.requests_client._get_cookie_dir() / RequestsClient.COOKIE_FILE
         if cookie_file.is_file():
@@ -539,6 +544,7 @@ def print_usage() -> None:
     print("\t--referer=<referer>")
     print("\t--retry=<# of retries>")
     print("\t--retry-sleep=<seconds between retries>")
+    print("\t--browser-fallback=<ordered comma-separated browser engines>")
 
 
 def main() -> int:
@@ -558,13 +564,14 @@ def main() -> int:
     disable_headless: bool = False
     blob_to_dataurl: bool = False
     wait_until: str = "domcontentloaded"
+    browser_fallback: Optional[list[str]] = None
 
     if len(sys.argv) == 1:
         print_usage()
         sys.exit(-1)
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hf:", ["spider", "render-js=", "verify-ssl=", "copy-images-from-canvas=", "simulate-scrolling=", "disable-headless=", "blob-to-dataurl=", "wait-until=", "download=", "encoding=", "user-agent=", "referer=", "header=", "timeout=", "retry=", "retry-sleep="])
+        opts, args = getopt.getopt(sys.argv[1:], "hf:", ["spider", "render-js=", "verify-ssl=", "copy-images-from-canvas=", "simulate-scrolling=", "disable-headless=", "blob-to-dataurl=", "wait-until=", "download=", "encoding=", "user-agent=", "referer=", "header=", "timeout=", "retry=", "retry-sleep=", "browser-fallback="])
     except getopt.GetoptError:
         print_usage()
         sys.exit(-1)
@@ -607,6 +614,8 @@ def main() -> int:
                 num_retries = int(a)
             case "--retry-sleep":
                 retry_sleep = int(a)
+            case "--browser-fallback":
+                browser_fallback = [name.strip() for name in a.split(",") if name.strip()]
             case "--download":
                 download_file = Path(a)
             case "--encoding":
@@ -629,6 +638,7 @@ def main() -> int:
         disable_headless=disable_headless,
         blob_to_dataurl=blob_to_dataurl,
         wait_until=wait_until,
+        browser_fallback=browser_fallback,
     )
     response, error, _ = crawler.run(url, download_file=download_file)
     if not response:

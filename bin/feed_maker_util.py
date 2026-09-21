@@ -617,6 +617,7 @@ class Config:
                     "list_url_list": Config._get_list_config_value(collection_conf, "list_url_list", []),
                     "post_process_script_list": Config._get_list_config_value(collection_conf, "post_process_script_list", []),
                     "headers": Config._get_dict_config_value(collection_conf, "headers", {}),
+                    "browser_fallback": Config._get_list_config_value(collection_conf, "browser_fallback", []),
                 }
                 return conf
 
@@ -650,6 +651,7 @@ class Config:
                     "post_process_script_list": Config._get_list_config_value(extraction_conf, "post_process_script_list", []),
                     "headers": Config._get_dict_config_value(extraction_conf, "headers", {}),
                     "exclude_ad_images": Config._get_bool_config_value(extraction_conf, "exclude_ad_images", False),
+                    "browser_fallback": Config._get_list_config_value(extraction_conf, "browser_fallback", []),
                 }
                 return conf
 
