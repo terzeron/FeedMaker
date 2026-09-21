@@ -20,6 +20,18 @@ class TestHeadlessBrowserFacade(unittest.TestCase):
             mock_env.get.side_effect = lambda k, d="": "cloakbrowser" if k == "FM_HEADLESS_BACKEND" else d
             self.assertEqual(_resolve_engine_order(), ["cloakbrowser"])
 
+    def test_explicit_browser_fallback_overrides_environment(self):
+        with patch("bin.headless_browser.Env") as mock_env:
+            mock_env.get.return_value = "cloakbrowser"
+            self.assertEqual(
+                _resolve_engine_order(["patchright", "nodriver", "camoufox"]),
+                ["patchright", "nodriver", "camoufox"],
+            )
+
+    def test_explicit_browser_fallback_rejects_unknown_engine(self):
+        with self.assertRaisesRegex(ValueError, "unknown headless browser engine"):
+            _resolve_engine_order(["camoufox", "unknown"])
+
     def test_import_engine_class_returns_none_for_unknown_name(self):
         # Nothing raises on an unrecognized engine name — that keeps a bogus
         # FM_HEADLESS_BACKEND value from crashing module import.
@@ -34,6 +46,15 @@ class TestHeadlessBrowserFacade(unittest.TestCase):
 
     def test_cookie_file_tracks_primary_engine(self):
         self.assertEqual(HeadlessBrowser.COOKIE_FILE, "cookies.camoufox.json")
+
+    def test_explicit_browser_fallback_tracks_primary_cookie_file(self):
+        facade = HeadlessBrowser(
+            dir_path=Path(tempfile.gettempdir()),
+            timeout=5,
+            browser_fallback=["nodriver", "camoufox"],
+        )
+        self.assertEqual(facade.COOKIE_FILE, "cookies.nodriver.json")
+        self.assertEqual(facade._engine_order, ["nodriver", "camoufox"])
 
     def _facade(self):
         return HeadlessBrowser(dir_path=Path(tempfile.gettempdir()), timeout=5)
@@ -77,6 +98,32 @@ class TestHeadlessBrowserFacade(unittest.TestCase):
 
         self.assertEqual(result, "<html>fallback</html>")
         # only the failed primary was torn down before falling back; the successful fallback is kept
+        self.assertEqual(recycle_calls, ["camoufox"])
+
+    def test_make_request_falls_back_when_primary_returns_cloudflare_challenge(self):
+        recycle_calls: list[str] = []
+
+        class FakeCamoufox:
+            @classmethod
+            def recycle_session(cls):
+                recycle_calls.append("camoufox")
+
+            def make_request(self, url, download_file=None):
+                return "<html><script>window._cf_chl_opt = {};</script></html>"
+
+        class FakeCloak:
+            def make_request(self, url, download_file=None):
+                return "<html><body>content</body></html>"
+
+        facade = self._facade()
+        facade._engine_order = ["camoufox", "cloakbrowser"]
+        engines = {"camoufox": FakeCamoufox(), "cloakbrowser": FakeCloak()}
+        with patch("bin.headless_browser._load_engine_class", return_value=object), patch.object(
+            facade, "_engine", side_effect=lambda name: engines[name]
+        ):
+            result = facade.make_request("https://example.com")
+
+        self.assertEqual(result, "<html><body>content</body></html>")
         self.assertEqual(recycle_calls, ["camoufox"])
 
     def test_make_request_returns_empty_when_no_engine_instantiates(self):

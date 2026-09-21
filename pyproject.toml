@@ -45,6 +45,9 @@ dependencies = [
     "cloakbrowser>=0.5.6",
     "camoufox[geoip]>=0.4.11",
     "kiwipiepy>=0.23.2",
+    "patchright>=1.63.0",
+    "nodriver>=0.50.3",
+    "rebrowser-playwright>=1.52.0",
 ]
 
 [tool.ruff]

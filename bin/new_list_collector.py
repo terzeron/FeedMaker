@@ -73,6 +73,7 @@ class NewlistCollector:
             disable_headless=conf.get("disable_headless", False),
             blob_to_dataurl=conf.get("blob_to_dataurl", False),
             wait_until=conf.get("wait_until", "domcontentloaded"),
+            browser_fallback=conf.get("browser_fallback", []),
         )
         option_str = Crawler.get_option_str(self.collection_conf)
         for url in conf.get("list_url_list", []):

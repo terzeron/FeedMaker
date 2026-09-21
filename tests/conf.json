@@ -14,7 +14,11 @@
       "post_process_script_list": [
         "shuf"
       ],
-      "headers": {}
+      "headers": {},
+      "browser_fallback": [
+        "camoufox",
+        "cloakbrowser"
+      ]
     },
     "extraction": {
       "timeout": 30,
@@ -32,7 +36,11 @@
       "post_process_script_list": [
         "post_process_script_for_navercast.py"
       ],
-      "headers": {}
+      "headers": {},
+      "browser_fallback": [
+        "patchright",
+        "nodriver"
+      ]
     },
     "rss": {
       "title": "네이버캐스트 모바일"

@@ -90,6 +90,28 @@ class TestCrawler(unittest.TestCase):
         actual = Crawler.get_option_str(options)
         self.assertNotIn("--wait-until", actual)
 
+    def test_get_option_str_with_browser_fallback(self) -> None:
+        actual = Crawler.get_option_str(
+            {"browser_fallback": ["camoufox", "cloakbrowser", "patchright"]}
+        )
+        self.assertIn(
+            "--browser-fallback='camoufox,cloakbrowser,patchright'",
+            actual,
+        )
+
+    @patch("bin.crawler.HeadlessBrowser")
+    def test_crawler_passes_browser_fallback_to_headless_browser(
+        self, mock_headless_browser: MagicMock
+    ) -> None:
+        Crawler(
+            render_js=True,
+            browser_fallback=["patchright", "nodriver"],
+        )
+        self.assertEqual(
+            mock_headless_browser.call_args.kwargs["browser_fallback"],
+            ["patchright", "nodriver"],
+        )
+
     def test_crawler_wait_until_default(self) -> None:
         crawler = Crawler()
         self.assertEqual(crawler.wait_until, "domcontentloaded")
@@ -634,6 +656,27 @@ class TestCrawlerMain(unittest.TestCase):
         self.assertEqual(result, 0)
         call_kwargs = mock_crawler_cls.call_args
         self.assertTrue(call_kwargs.kwargs.get("render_js") or call_kwargs[1].get("render_js"))
+
+    @patch("bin.crawler.Crawler")
+    def test_main_with_browser_fallback(self, mock_crawler_cls: MagicMock) -> None:
+        mock_crawler_cls.return_value.run.return_value = ("ok", "", {})
+
+        with patch.object(
+            _sys,
+            "argv",
+            [
+                "crawler.py",
+                "--browser-fallback=patchright,nodriver,camoufox",
+                "https://example.com",
+            ],
+        ):
+            result = main()
+
+        self.assertEqual(result, 0)
+        self.assertEqual(
+            mock_crawler_cls.call_args.kwargs["browser_fallback"],
+            ["patchright", "nodriver", "camoufox"],
+        )
 
     @patch("bin.crawler.Crawler")
     def test_main_with_verify_ssl_false(self, mock_crawler_cls: MagicMock) -> None:

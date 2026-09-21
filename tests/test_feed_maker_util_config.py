@@ -27,8 +27,9 @@ class ConfigTest(unittest.TestCase):
                     "sort_field_pattern": None,
                     "post_process_script_list": ["shuf"],
                     "headers": {},
+                    "browser_fallback": ["camoufox", "cloakbrowser"],
                 },
-                "extraction": {"timeout": 30, "render_js": False, "user_agent": True, "element_id_list": ["ct", "content"], "element_class_list": ["se_doc_viewer", "content_view"], "element_path_list": [], "post_process_script_list": ["post_process_script_for_navercast.py"], "headers": {}},
+                "extraction": {"timeout": 30, "render_js": False, "user_agent": True, "element_id_list": ["ct", "content"], "element_class_list": ["se_doc_viewer", "content_view"], "element_path_list": [], "post_process_script_list": ["post_process_script_for_navercast.py"], "headers": {}, "browser_fallback": ["patchright", "nodriver"]},
                 "rss": {"title": "네이버캐스트 모바일"},
             }
         }
@@ -173,6 +174,11 @@ class ConfigTest(unittest.TestCase):
         actual = configs["wait_until"]
         self.assertEqual("domcontentloaded", actual)
 
+        self.assertEqual(
+            configs["browser_fallback"],
+            ["camoufox", "cloakbrowser"],
+        )
+
     def test_get_extraction_configs(self) -> None:
         configs = self.config.get_extraction_configs()
         actual = isinstance(configs, dict)
@@ -208,6 +214,11 @@ class ConfigTest(unittest.TestCase):
 
         actual = configs["wait_until"]
         self.assertEqual("domcontentloaded", actual)
+
+        self.assertEqual(
+            configs["browser_fallback"],
+            ["patchright", "nodriver"],
+        )
 
     def test_get_rss_configs(self) -> None:
         # 1. ignore_broken_link가 설정에 없을 때
