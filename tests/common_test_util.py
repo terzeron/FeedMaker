@@ -39,7 +39,7 @@ def start_mysql_container():
             # Test code...
     """
     LOGGER.info("Starting MySQL container...")
-    mysql = MySqlContainer(image="mysql:8.0", username="test", password="test", dbname="test")
+    mysql = MySqlContainer(image="mysql:8.4", username="test", password="test", dbname="test")
 
     try:
         mysql.start()

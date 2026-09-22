@@ -1,5 +1,15 @@
 ---
-# bitnami/mysql 9.19.1 (fm-db) values.
+# groundhog2k/mysql 3.1.4 (fm-db) values.
+#
+# 왜 bitnami 를 떠났나: bitnami/mysql chart(14.0.3)는 2025-08-15 이후 갱신이 없고,
+# 기본 이미지 docker.io/bitnami/mysql:9.4.0-debian-12-r1 이 registry 에서 삭제돼
+# pull 이 실패한다(docker.io/bitnami/mysql 은 현재 태그 0개). bitnamilegacy 로 우회해도
+# 그 저장소가 2025-08-13 에 동결돼 base OS 패치가 끊겼다 — 8.0.40 / 8.4.4 / 9.4.0 모두
+# CRITICAL 18~19 건으로 버전을 올려도 줄지 않는다.
+# 이 chart 는 Oracle 공식 이미지를 쓴다 (mysql:8.4 기준 CRITICAL 1 / HIGH 27).
+#
+# release 이름을 fm-db 로 유지하면 StatefulSet/Service 이름이 fm-db-mysql 로 그대로여서
+# fm-deployment.yml 의 FM_DB_HOST=fm-db-mysql 과 pod 이름 fm-db-mysql-0 이 바뀌지 않는다.
 #
 # resources 를 --set 대신 이 파일에 두는 이유:
 #   `helm upgrade` 때 --set 목록을 빠뜨리면 QoS 가 Guaranteed → BestEffort 로 조용히
@@ -7,42 +17,87 @@
 #   2026-08-04 OOM storm 에서 실제로 kill 됐다 (oom_score_adj 1000).
 #   install / upgrade 모두 `-f fm-db-mysql-values.yml` 로 넘긴다.
 #
-# 자격증명은 여기 두지 않는다. auth.existingSecret 으로 미리 만든 secret 을 참조한다
+# 자격증명은 여기 두지 않는다. existingSecret 으로 미리 만든 secret 을 참조한다
 # (helm --set 으로 넘기면 `ps` 와 release values 에 평문으로 남는다).
 
-auth:
-  existingSecret: fm-db-mysql
-  database: feedmaker
-  username: feedmaker
-
-# 이미지 태그를 명시적으로 고정한다. Bitnami 가 구 태그를 registry 에서 정리했기 때문에
-# chart 기본값에 맡기면 재설치 시 pull 이 실패할 수 있다.
 image:
   registry: docker.io
-  repository: bitnami/mysql
-  tag: 8.0.36-debian-11-r4
+  repository: mysql
+  # 8.4 는 LTS. 9.x 는 Innovation 계열이라 분기마다 EOL 되므로 DB 에는 쓰지 않는다
+  # (9.7.0/9.7.1/9.7.2 가 2026-05/07/09 로 3개월 간격).
+  # chart appVersion 기본값이 9.7.2 이므로 반드시 명시적으로 고정한다.
+  #
+  # 패치 버전까지 적는다. "8.4" 는 롤링 태그라 pod 재시작만으로 8.4.12, 8.4.13 으로
+  # 조용히 올라간다. MySQL 은 기동 시 데이터 디렉터리를 새 포맷으로 올리고 다운그레이드가
+  # 불가능하므로, 의도하지 않은 시점에 되돌릴 수 없는 변경이 일어난다.
+  # 올릴 때는 이 값을 직접 바꾼다. (tm_dev 의 k8s/mysql-deployment.yml 과 같은 이유)
+  tag: "8.4.11"
   pullPolicy: IfNotPresent
 
-volumePermissions:
-  enabled: true
-  # init container 도 requests == limits 여야 한다. QoS 판정은 init container 를 포함하므로
-  # 하나라도 비면 pod 전체가 Guaranteed 가 되지 않는다.
-  resources:
-    requests: { memory: 128Mi, cpu: 100m }
-    limits: { memory: 128Mi, cpu: 100m }
+settings:
+  # MySQL 8.4 의 기본값은 utf8mb4 / utf8mb4_0900_ai_ci 다. 그런데 feedmaker DB 는
+  # utf8mb4 / utf8mb4_general_ci 로 만들어져 있다. collation 이 다르면 정렬과 비교
+  # 결과가 달라지므로 서버 기본값을 기존과 동일하게 고정한다.
+  arguments:
+    - --character-set-server=utf8mb4
+    - --collation-server=utf8mb4_general_ci
+  existingSecret: fm-db-mysql
+  rootPassword:
+    secretKey: mysql-root-password
 
-primary:
-  persistence:
-    enabled: true
-    existingClaim: mysql-pvc
-  # service.type 은 LoadBalancer 유지 — 로컬/LAN 에서 DB 직접 접근이 필요하다.
-  service:
-    type: LoadBalancer
-  livenessProbe:
-    timeoutSeconds: 5
-  terminationGracePeriodSeconds: 60
-  # QoS Guaranteed(oom_score_adj -997) 를 위해 requests == limits, cpu·memory 둘 다.
-  # 1Gi 근거: 10일 관측 peak 444MiB + 여유 2.3배 / 500m 근거: peak 26m + 넉넉한 여유
-  resources:
-    requests: { memory: 1Gi, cpu: 500m }
-    limits: { memory: 1Gi, cpu: 500m }
+# 첫 기동 시 DB 와 앱 사용자를 만든다. existingSecret 을 쓰면 name/user/password
+# 세 값 모두 그 secret 의 키를 가리켜야 한다 (chart 가 항상 secretKeyRef 로 주입한다).
+# 그래서 fm.sh 가 만드는 secret 에 mysql-database / mysql-user 키가 추가로 필요하다.
+userDatabase:
+  existingSecret: fm-db-mysql
+  name:
+    secretKey: mysql-database
+  user:
+    secretKey: mysql-user
+  password:
+    secretKey: mysql-password
+
+storage:
+  # 기존 mysql-pvc 를 재사용하지 않는다. bitnami 는 /bitnami/mysql, 공식 이미지는
+  # /var/lib/mysql 에 데이터를 두므로 레이아웃이 달라 그대로 붙이면 빈 디렉터리로 보고
+  # 새로 초기화한다. 새 PVC 로 옮기면 구 PVC(mysql-pvc)가 손대지 않은 채 남아
+  # 문제가 생겼을 때 helm 만 되돌려 복구할 수 있다.
+  # mysql8-pvc 는 PV 와 hostPath 를 쓰지 않는다 (근거는 fm-volume.yml 주석 참고).
+  persistentVolumeClaimName: mysql8-pvc
+  volumeName: db-volume
+
+service:
+  # LoadBalancer 유지 — 로컬/LAN 에서 DB 직접 접근이 필요하다.
+  # 기존 주소를 그대로 물려받아 외부 접속 설정을 바꾸지 않는다.
+  type: LoadBalancer
+  loadBalancerIP: 10.10.10.4
+  port: 3306
+
+# QoS Guaranteed(oom_score_adj -997) 를 위해 requests == limits, cpu·memory 둘 다.
+# 1Gi 근거: 10일 관측 peak 444MiB + 여유 2.3배 / 500m 근거: peak 26m + 넉넉한 여유
+resources:
+  requests: { memory: 1Gi, cpu: 500m }
+  limits: { memory: 1Gi, cpu: 500m }
+
+# init container 도 requests == limits 여야 한다. QoS 판정은 init container 를 포함하므로
+# 하나라도 비면 pod 전체가 Guaranteed 가 되지 않는다. 검증에서 실제로 Burstable 로
+# 떨어지는 것을 확인하고 채웠다 (bitnami chart 의 volumePermissions.resources 와 같은 역할).
+initResources:
+  requests: { memory: 128Mi, cpu: 100m }
+  limits: { memory: 128Mi, cpu: 100m }
+
+# rootfs 읽기전용 등 CIS 하드닝. chart 기본값과 같지만, 운영 매니페스트와 같은 수준임을
+# 파일에서 눈으로 확인할 수 있도록 명시한다.
+securityContext:
+  allowPrivilegeEscalation: false
+  privileged: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 999
+  runAsGroup: 999
+  capabilities:
+    drop: [ALL]
+
+podSecurityContext:
+  fsGroup: 999
+  supplementalGroups: [999]

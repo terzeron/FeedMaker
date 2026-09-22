@@ -38,6 +38,33 @@ spec:
   volumeName: mysql-pv
 
 ---
+# MySQL 8.4(groundhog2k chart) 용 별도 볼륨.
+#
+# 기존 mysql-pv 를 재사용하지 않는다. bitnami 는 /bitnami/mysql, 공식 이미지는
+# /var/lib/mysql 에 데이터를 두므로 레이아웃이 달라 그대로 붙이면 빈 디렉터리로 보고
+# 새로 초기화한다. 새 볼륨으로 덤프를 복원하면 구 mysql-pv 가 손대지 않은 채 남아
+# 롤백 경로가 된다.
+#
+# 이 PVC 만 PV 와 hostPath 를 쓰지 않는다 (tm_dev 의 k8s/mysql-deployment.yml 과 같은 방식).
+# 위의 fm-pv / public-html-pv 는 이미 내용이 있는 호스트 디렉터리를 붙이는 것이라
+# 경로가 본질이지만, DB 데이터는 안을 사람이 열어볼 일이 없는 불투명한 저장소다.
+# 경로를 적지 않으면 기본 StorageClass 가 할당하므로 호스트마다 경로를 맞출 필요가 없고,
+# root 소유 디렉터리를 미리 만들어 chown 해 둘 필요도 없다. 동적 볼륨은 podSecurityContext
+# 의 fsGroup 이 적용돼 mysqld 가 비root(uid 999)로 바로 쓸 수 있다 — 정적 hostPath 로
+# 두면 entrypoint 가 chown 을 못 해 runAsNonRoot 기동이 깨진다.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql8-pvc
+  namespace: feedmaker
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
