@@ -15,7 +15,7 @@ RUN GIT_COMMIT=$GIT_COMMIT npm run build
 
 # non-root nginx: master/worker 모두 uid 101로 실행, pid/temp는 /tmp 사용.
 # 8080(>=1024) 바인딩이므로 privileged port가 필요 없어 root 없이 동작한다.
-FROM nginxinc/nginx-unprivileged:1.25@sha256:77e4b763b46ed8be6da1e8cc6386e3965411ea8e86f1c8f254a868d66657bddc
+FROM nginxinc/nginx-unprivileged:1.29@sha256:18d5312e3b7e455cf9e4fb8becfc2dafaf98063dab542759c2a38708956574b7
 
 # base OS 보안 패치 적용 (apt는 root 필요 → 작업 후 비root로 복귀)
 USER root
