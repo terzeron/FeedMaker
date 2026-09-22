@@ -7,7 +7,7 @@
 # ---------------------------------------------------------------------------
 # Stage 1: builder — compiles the venv
 # ---------------------------------------------------------------------------
-FROM python:3.12-slim@sha256:090ba77e2958f6af52a5341f788b50b032dd4ca28377d2893dcf1ecbdfdfe203 AS builder
+FROM python:3.12-slim@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 AS builder
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
@@ -38,7 +38,7 @@ RUN HOME=/tmp XDG_CACHE_HOME=/opt /app/.venv/bin/python -m camoufox fetch
 # Stage 2: runtime — no compilers. git IS required: FeedMakerManager uses GitPython
 # (Repo/index.commit) to version feed configs, so the git executable must be present.
 # ---------------------------------------------------------------------------
-FROM python:3.12-slim@sha256:090ba77e2958f6af52a5341f788b50b032dd4ca28377d2893dcf1ecbdfdfe203
+FROM python:3.12-slim@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9
 
 # Runtime-only: chromium engine + gosu + curl(HEALTHCHECK) + shared libs that the
 # compiled wheels (poppler/heif/cairo) link against. Package names resolved from the
