@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 from typing import Any, Optional
 
-from bin.feed_maker_util import Env, PathUtil, URLSafety
+from bin.feed_maker_util import Env, PathUtil, URLSafety, redact_headers
 
 try:
     from playwright.sync_api import Error as PlaywrightError
@@ -172,7 +172,7 @@ class HeadlessBrowserBase:
         LOGGER.debug(
             "# HeadlessBrowserCloak(dir_path=%s, headers=%r, copy_images_from_canvas=%s, simulate_scrolling=%s, disable_headless=%s, blob_to_dataurl=%s, timeout=%d, wait_until=%s)",
             PathUtil.short_path(dir_path),
-            headers,
+            redact_headers(headers),
             copy_images_from_canvas,
             simulate_scrolling,
             disable_headless,

@@ -16,7 +16,7 @@ import PyRSS2Gen
 from ordered_set import OrderedSet
 from bin.crawler import Crawler, Method
 from bin.extractor import Extractor
-from bin.feed_maker_util import Config, URL, Datetime, Process, Data, PathUtil, FileManager, header_str, NotFoundConfigItemError, Env
+from bin.feed_maker_util import Config, URL, Datetime, Process, Data, PathUtil, FileManager, header_str, NotFoundConfigItemError, Env, redact_command
 from bin.new_list_collector import NewlistCollector
 from bin.uploader import Uploader
 
@@ -249,7 +249,7 @@ class FeedMaker:
             )
             option_str = Crawler.get_option_str(conf)
             crawler_cmd = f"crawler.py -f '{self.feed_dir_path}' {option_str} '{item_url}'"
-            LOGGER.debug(f"cmd={crawler_cmd}")
+            LOGGER.debug("cmd=%s", redact_command(crawler_cmd))
             try:
                 result, error, _ = crawler.run(item_url)
                 if not result or error:
@@ -260,7 +260,7 @@ class FeedMaker:
                 content: Optional[str] = result
                 if not conf.get("bypass_element_extraction", False):
                     extraction_cmd = f"extractor.py -f '{self.feed_dir_path}' '{item_url}'"
-                    LOGGER.debug(f"cmd={extraction_cmd}")
+                    LOGGER.debug("cmd=%s", redact_command(extraction_cmd))
                     content = Extractor.extract_content(conf, item_url, input_data=result)
                     if not content:
                         self._add_failed_url(item_url, "Extractor failed")
@@ -273,11 +273,11 @@ class FeedMaker:
                         post_process_cmd = f"{post_process_script}"
                     else:
                         post_process_cmd = f"{post_process_script} -f {shlex.quote(str(self.feed_dir_path))} {shlex.quote(item_url)}"
-                    LOGGER.debug(f"cmd={post_process_cmd}")
+                    LOGGER.debug("cmd=%s", redact_command(post_process_cmd))
                     result, error_msg = Process.exec_cmd(post_process_cmd, dir_path=self.feed_dir_path, input_data=content)
-                    LOGGER.debug(f"cmd={post_process_cmd}")
+                    LOGGER.debug("cmd=%s", redact_command(post_process_cmd))
                     if not result or error_msg:
-                        LOGGER.error("Error: No result in executing command '%s', %r", post_process_cmd, error_msg)
+                        LOGGER.error("Error: No result in executing command '%s', %r", redact_command(post_process_cmd), error_msg)
                         self._add_failed_url(item_url, f"Post-process failed: {error_msg}")
                         return False
                     content = result
@@ -542,9 +542,7 @@ class FeedMaker:
         self.collection_conf = config.get_collection_configs()
         self.extraction_conf = config.get_extraction_configs()
         self.rss_conf = config.get_rss_configs()
-        LOGGER.debug(f"self.collection_conf={self.collection_conf}")
-        LOGGER.debug(f"self.extraction_conf={self.extraction_conf}")
-        LOGGER.debug(f"self.rss_conf={self.rss_conf}")
+        LOGGER.debug("Loaded collection, extraction, and RSS configuration")
 
         # window_size (get value from configuration in case unspecified manually by run.py)
         if self.window_size == FeedMaker.DEFAULT_WINDOW_SIZE:

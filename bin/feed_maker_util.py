@@ -185,11 +185,11 @@ class Process:
 
     @staticmethod
     def exec_cmd(cmd: str, dir_path: Path = Path.cwd(), input_data: Optional[str] = None) -> tuple[str, str]:
-        LOGGER.debug("# Process.exec_cmd(cmd=%s, dir_path=%s, input_data=%d bytes)", cmd, PathUtil.short_path(dir_path), len(input_data) if input_data else 0)
+        LOGGER.debug("# Process.exec_cmd(cmd=%s, dir_path=%s, input_data=%d bytes)", redact_command(cmd), PathUtil.short_path(dir_path), len(input_data) if input_data else 0)
         argv, error = Process._build_argv(cmd, dir_path)
         if error:
             return "", error
-        LOGGER.debug("argv=%s", argv)
+        LOGGER.debug("argv=%s", shlex.split(redact_command(shlex.join(argv))))
         try:
             with subprocess.Popen(argv, shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8") as p:
                 result, error = p.communicate(input=input_data)
@@ -210,7 +210,7 @@ class Process:
             # shebang이 없어 ENOEXEC(Exec format error)가 나는 경우 등.
             # shell=False에서는 이런 OSError가 Popen에서 그대로 올라오므로
             # 호출부가 정상 에러 경로로 인지할 수 있도록 문자열로 반환한다.
-            return "", f"Error executing command '{cmd}', {e}"
+            return "", f"Error executing command '{redact_command(cmd)}', {e}"
         return result or "", ""
 
     @staticmethod
@@ -413,6 +413,28 @@ def redact_headers(headers: Optional[dict[str, str]]) -> dict[str, str]:
     if not headers:
         return {}
     return {k: ("***REDACTED***" if k.lower() in _SENSITIVE_HEADER_KEYS else v) for k, v in headers.items()}
+
+
+def redact_command(cmd: str) -> str:
+    """CLI 명령 로그에서 crawler의 민감 헤더 값을 가린다."""
+    try:
+        argv = shlex.split(cmd)
+    except ValueError:
+        if re.search(r"(?i)(?:--header|-H)(?:=|\s)", cmd):
+            return "[REDACTED command containing headers]"
+        return cmd
+
+    for index, arg in enumerate(argv):
+        if arg.startswith("--header=") or arg.startswith("-H="):
+            header_value = arg.split("=", 1)[1]
+            if re.search(r"(?i)(?:^|;\s*)(?:authorization|cookie|set-cookie|x-api-key|x-auth-token|proxy-authorization)\s*:", header_value):
+                argv[index] = arg.split("=", 1)[0] + "=[REDACTED]"
+        elif arg in ("--header", "-H") and index + 1 < len(argv):
+            header_value = argv[index + 1]
+            if re.search(r"(?i)(?:^|;\s*)(?:authorization|cookie|set-cookie|x-api-key|x-auth-token|proxy-authorization)\s*:", header_value):
+                argv[index + 1] = "[REDACTED]"
+
+    return shlex.join(argv)
 
 
 class URLSafety:

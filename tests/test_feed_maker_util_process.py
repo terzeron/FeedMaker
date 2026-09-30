@@ -11,13 +11,30 @@ from shutil import which
 from unittest.mock import patch
 import subprocess
 
-from bin.feed_maker_util import Process
+from bin.feed_maker_util import Process, redact_command
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
 class ProcessTest(unittest.TestCase):
+    def test_redact_command_hides_sensitive_headers(self) -> None:
+        command = "crawler.py --header='User-Agent: test; Cookie: session=secret; Authorization: Bearer secret-token' https://example.com"
+
+        redacted = redact_command(command)
+
+        self.assertNotIn("session=secret", redacted)
+        self.assertNotIn("secret-token", redacted)
+        self.assertIn("--header=[REDACTED]", redacted)
+
+    def test_redact_command_hides_header_when_command_quotes_are_invalid(self) -> None:
+        command = "crawler.py --header='Cookie: session=secret"
+
+        redacted = redact_command(command)
+
+        self.assertNotIn("session=secret", redacted)
+        self.assertIn("[REDACTED", redacted)
+
     def test_replace_script_path(self) -> None:
         # 시스템 유틸리티는 allowlist에 등재된 절대경로로 지정해야 한다.
         # (bare name "shuf"는 PATH 조회로 해석되지만 프로젝트 디렉터리 밖이라 거부된다)

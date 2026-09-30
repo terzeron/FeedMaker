@@ -8,7 +8,7 @@ import logging.config
 from pathlib import Path
 from typing import Any
 from bin.crawler import Crawler, Method
-from bin.feed_maker_util import URL, NotFoundConfigFileError, NotFoundConfigItemError
+from bin.feed_maker_util import URL, NotFoundConfigFileError, NotFoundConfigItemError, redact_headers
 
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -39,7 +39,7 @@ def clean_url(url: str, scheme: str = "https", path: str = "") -> str:
 
 
 def get_location_recursively(url: str, config: dict[str, Any]) -> tuple[str, str]:
-    LOGGER.debug(f"# get_location_recursively(url={url}, config={config})")
+    LOGGER.debug("# get_location_recursively(url=%s)", url)
     crawler = Crawler(method=Method.GET, num_retries=config.get("num_retries", 1), render_js=config.get("render_js", False), encoding=config.get("encoding", "utf-8"), headers=config.get("headers", None), timeout=config.get("timeout", 60), simulate_scrolling=config.get("simulate_scrolling", False))
     try:
         response, error, response_headers = crawler.run(url, allow_redirects=False)
@@ -50,7 +50,7 @@ def get_location_recursively(url: str, config: dict[str, Any]) -> tuple[str, str
         new_url = ""
         LOGGER.debug("response_size=%d, new_url='%s'", response_size, new_url)
         if response_headers:
-            LOGGER.debug("response_headers=%r", response_headers)
+            LOGGER.debug("response_headers=%r", redact_headers(response_headers))
             if "Location" in response_headers:
                 new_url = response_headers["Location"]
             elif "location" in response_headers:
@@ -83,7 +83,7 @@ def get_location_recursively(url: str, config: dict[str, Any]) -> tuple[str, str
 
 
 def get(url: str, config: dict[str, Any]) -> tuple[bool, str, str]:
-    LOGGER.debug(f"# get(url={url}, config={config})")
+    LOGGER.debug("# get(url=%s)", url)
     print("getting start")
     new_url, response = get_location_recursively(url, config)
     LOGGER.debug("new_url='%s', len(response)=%d", new_url, len(response))
