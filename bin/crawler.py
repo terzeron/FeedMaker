@@ -375,7 +375,7 @@ class Crawler:
             PathUtil.short_path(dir_path),
             render_js,
             method,
-            headers,
+            redact_headers(headers),
             timeout,
             num_retries,
             retry_sleep,

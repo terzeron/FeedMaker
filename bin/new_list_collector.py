@@ -8,7 +8,7 @@ import logging.config
 from pathlib import Path
 from typing import Any
 from shutil import which
-from bin.feed_maker_util import Process, Data, PathUtil
+from bin.feed_maker_util import Process, Data, PathUtil, redact_command
 from bin.crawler import Crawler, Method
 from bin.headless_browser import HeadlessBrowser
 
@@ -18,7 +18,7 @@ LOGGER = logging.getLogger()
 
 class NewlistCollector:
     def __init__(self, feed_dir_path: Path, collection_conf: dict[str, Any], new_list_file_path: Path) -> None:
-        LOGGER.debug("# NewlistCollector(feed_dir_path=%s, collection_conf=%r, new_list_file_path=%s", PathUtil.short_path(feed_dir_path), collection_conf, PathUtil.short_path(new_list_file_path))
+        LOGGER.debug("# NewlistCollector(feed_dir_path=%s, new_list_file_path=%s)", PathUtil.short_path(feed_dir_path), PathUtil.short_path(new_list_file_path))
         self.feed_dir_path: Path = feed_dir_path
         self.collection_conf: dict[str, Any] = collection_conf
         self.new_list_file_path: Path = new_list_file_path
@@ -78,7 +78,7 @@ class NewlistCollector:
         option_str = Crawler.get_option_str(self.collection_conf)
         for url in conf.get("list_url_list", []):
             crawler_cmd = f"crawler.py -f '{self.feed_dir_path}' {option_str} '{url}'"
-            LOGGER.debug("cmd=%s", crawler_cmd)
+            LOGGER.debug("cmd=%s", redact_command(crawler_cmd))
             try:
                 result, error, _ = crawler.run(url)
                 if not result:
@@ -96,10 +96,10 @@ class NewlistCollector:
                 HeadlessBrowser.recycle_session()
 
             capture_cmd = f"{self.collection_conf['item_capture_script']} -f '{self.feed_dir_path}'"
-            LOGGER.debug("cmd=%s", capture_cmd)
+            LOGGER.debug("cmd=%s", redact_command(capture_cmd))
             result, error = Process.exec_cmd(capture_cmd, dir_path=self.feed_dir_path, input_data=result)
             if not result or error:
-                LOGGER.warning("Warning: can't get result from item capture script, cmd='%s', %r", capture_cmd, error)
+                LOGGER.warning("Warning: can't get result from item capture script, cmd='%s', %r", redact_command(capture_cmd), error)
                 continue
 
             for post_process_script in self.collection_conf.get("post_process_script_list", []):
@@ -109,10 +109,10 @@ class NewlistCollector:
                     post_process_cmd = f"{post_process_script}"
                 else:
                     post_process_cmd = f"{post_process_script} -f '{self.feed_dir_path}' '{url}'"
-                LOGGER.debug("cmd=%s", post_process_cmd)
+                LOGGER.debug("cmd=%s", redact_command(post_process_cmd))
                 result, error = Process.exec_cmd(post_process_cmd, dir_path=self.feed_dir_path, input_data=result)
                 if not result or error:
-                    LOGGER.warning("Warning: can't get result from post process scripts, cmd='%s', %r", post_process_cmd, error)
+                    LOGGER.warning("Warning: can't get result from post process scripts, cmd='%s', %r", redact_command(post_process_cmd), error)
 
             url_list = self.split_result_into_items(result)
             result_list.extend(url_list)

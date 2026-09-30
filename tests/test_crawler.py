@@ -36,6 +36,15 @@ MOCK_HEADLESS_HTML = "<!DOCTYPE html><html><body>Test</body></html>"
 class TestCrawler(unittest.TestCase):
     """Test Crawler with mock responses"""
 
+    def test_constructor_logs_redact_sensitive_headers(self) -> None:
+        with self.assertLogs(level="DEBUG") as captured:
+            Crawler(headers={"Cookie": "session=secret", "Authorization": "Bearer secret-token"})
+
+        log_output = "\n".join(captured.output)
+        self.assertNotIn("session=secret", log_output)
+        self.assertNotIn("secret-token", log_output)
+        self.assertIn("***REDACTED***", log_output)
+
     @classmethod
     def setUpClass(cls) -> None:
         # patcher 등록
