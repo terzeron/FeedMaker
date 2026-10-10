@@ -519,6 +519,20 @@ async def toggle_feed(group_name: str, feed_name: str, request: Request, feed_ma
     return response_object
 
 
+@app.put("/groups/{group_name}/feeds/{feed_name}/start_index/advance")
+def advance_start_index(group_name: str, feed_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+    LOGGER.info("PUT /groups/%s/feeds/%s/start_index/advance -> advance_start_index(%s, %s)", group_name, feed_name, group_name, feed_name)
+    require_admin(request)
+    response_object: dict[str, Any] = {}
+    result, error = feed_maker_manager.advance_start_index(group_name, feed_name)
+    if result:
+        response_object["status"] = "success"
+    else:
+        response_object["message"] = error
+        response_object["status"] = "failure"
+    return response_object
+
+
 @app.delete("/groups/{group_name}/feeds/{feed_name}/list")
 async def remove_list(group_name: str, feed_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("DELETE /groups/%s/feeds/%s/list -> remove_list(%s, %s)", group_name, feed_name, group_name, feed_name)

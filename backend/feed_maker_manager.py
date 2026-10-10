@@ -410,6 +410,35 @@ class FeedMakerManager:
             LOGGER.debug("deleting %s", PathUtil.short_path(feed_pdf_dir_path))
             rmtree(feed_pdf_dir_path)
 
+    def advance_start_index(self, group_name: str, feed_name: str, step: int = 5) -> tuple[bool, str]:
+        LOGGER.debug("# advance_start_index(group_name='%s', feed_name='%s', step=%d)", group_name, feed_name, step)
+        _validate_name(group_name, "group_name")
+        _validate_name(feed_name, "feed_name")
+        feed_dir_path = self.work_dir_path / group_name / feed_name
+        conf_file_path = feed_dir_path / Config.DEFAULT_CONF_FILE
+        try:
+            with conf_file_path.open("r", encoding="utf-8") as infile:
+                conf_data = json.load(infile)
+        except (OSError, json.JSONDecodeError):
+            return False, "can't read configuration file"
+        if not conf_data.get("configuration", {}).get("collection", {}).get("is_completed", False):
+            return False, "feed is not completed"
+
+        start_index_file_path = feed_dir_path / "start_idx.txt"
+        if not start_index_file_path.is_file():
+            return False, "start_idx.txt not found"
+        with start_index_file_path.open("r", encoding="utf-8") as infile:
+            line = infile.readline().rstrip("\n")
+        # 형식: "<start_index>\t<mtime>" - mtime은 유지해서 진행률 계산 기준을 바꾸지 않는다
+        index_str, sep, mtime_str = line.partition("\t")
+        if not index_str.isdigit():
+            return False, "invalid format of start_idx.txt"
+        with start_index_file_path.open("w", encoding="utf-8") as outfile:
+            outfile.write(f"{int(index_str) + step}{sep}{mtime_str}\n")
+
+        self.problem_manager.update_feed_info(feed_dir_path)
+        return True, ""
+
     def remove_list(self, group_name: str, feed_name: str) -> None:
         LOGGER.debug("# remove_list(group_name='%s', feed_name='%s')", group_name, feed_name)
         _validate_name(group_name, "group_name")

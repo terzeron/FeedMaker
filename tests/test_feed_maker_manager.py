@@ -1913,5 +1913,54 @@ class TestPathTraversalBlocked:
             git_manager.remove_group("../../etc")
 
 
+class TestAdvanceStartIndex(unittest.TestCase):
+    def _setup_feed(self, tmp_path, is_completed, start_idx_line):
+        feed_dir = tmp_path / "g1" / "f1"
+        feed_dir.mkdir(parents=True)
+        conf = {"configuration": {"collection": {"is_completed": is_completed}}}
+        (feed_dir / "conf.json").write_text(json.dumps(conf), encoding="utf-8")
+        if start_idx_line is not None:
+            (feed_dir / "start_idx.txt").write_text(start_idx_line, encoding="utf-8")
+        return feed_dir
+
+    def test_advance_increases_index_and_keeps_mtime(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            feed_dir = self._setup_feed(Path(tmp), True, "11\t2026-01-01T00:00:00+09:00\n")
+            mgr = _make_manager(Path(tmp))
+            result, error = mgr.advance_start_index("g1", "f1")
+            self.assertTrue(result)
+            self.assertEqual("", error)
+            self.assertEqual("16\t2026-01-01T00:00:00+09:00\n", (feed_dir / "start_idx.txt").read_text(encoding="utf-8"))
+            mgr.problem_manager.update_feed_info.assert_called_once_with(feed_dir)
+
+    def test_rejects_not_completed_feed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            feed_dir = self._setup_feed(Path(tmp), False, "11\t2026-01-01T00:00:00+09:00\n")
+            mgr = _make_manager(Path(tmp))
+            result, _ = mgr.advance_start_index("g1", "f1")
+            self.assertFalse(result)
+            self.assertEqual("11\t2026-01-01T00:00:00+09:00\n", (feed_dir / "start_idx.txt").read_text(encoding="utf-8"))
+
+    def test_rejects_missing_start_idx_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self._setup_feed(Path(tmp), True, None)
+            mgr = _make_manager(Path(tmp))
+            result, _ = mgr.advance_start_index("g1", "f1")
+            self.assertFalse(result)
+
+    def test_rejects_invalid_start_idx_format(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self._setup_feed(Path(tmp), True, "abc\n")
+            mgr = _make_manager(Path(tmp))
+            result, _ = mgr.advance_start_index("g1", "f1")
+            self.assertFalse(result)
+
+    def test_rejects_invalid_name(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = _make_manager(Path(tmp))
+            with self.assertRaises(ValueError):
+                mgr.advance_start_index("..", "f1")
+
+
 if __name__ == "__main__":
     unittest.main()
