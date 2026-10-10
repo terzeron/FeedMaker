@@ -306,6 +306,15 @@
               variant="danger"
               v-if="showRemoveFeedButton"
             />
+            <my-button
+              ref="advanceStartIndexButton"
+              label="시작위치 +5"
+              @click="advanceStartIndex"
+              :initial-icon="['fas', 'play']"
+              :show-initial-icon="true"
+              :disabled="!isCompleted"
+              v-if="showRemoveFeedButton"
+            />
           </BCol>
 
           <BCol cols="12" class="m-0 p-1 button_list">
@@ -557,6 +566,7 @@ export default {
       showToggleFeedButton: false,
       showToggleGroupButton: false,
       showRemoveHtmlButton: false,
+      isCompleted: false,
       showNewFeedNameInput: false,
       showSiteConfig: false,
       showFeedInfo: false,
@@ -775,6 +785,7 @@ export default {
       this.showRemoveHtmlButton = false;
       this.showToggleFeedButton = false;
       this.showRemoveFeedButton = false;
+      this.isCompleted = false;
       this.showFeedInfo = false;
       this.clearAlert();
       if (this.jsonEditor) {
@@ -940,7 +951,6 @@ export default {
         this.setActiveFeed(index);
       }
       this.selectedFeedName = feedName;
-
       // show and hide
       this.showFeedlist = false;
       this.showFeedlistButton = true;
@@ -990,6 +1000,7 @@ export default {
           } else {
             const feed_info = res.data["feed_info"];
             this.jsonData = feed_info["config"];
+            this.isCompleted = feed_info["config"]["collection"]["is_completed"] === true;
 
             this.setCollectionInfo(
               feed_info["collection_info"],
@@ -1182,6 +1193,27 @@ export default {
           .catch((error) => {
             console.error(error);
             this.resetButton("removelistButton");
+          });
+      });
+    },
+    advanceStartIndex: function () {
+      console.log(`advanceStartIndex()`);
+      this.openConfirmModal("정말로 실행하시겠습니까?", () => {
+        this.startButton("advanceStartIndexButton");
+        const url = getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/start_index/advance`;
+        axios
+          .put(url)
+          .then((res) => {
+            if (res.data.status === "failure") {
+              this.alert(res.data.message);
+            } else {
+              this.getFeedInfo(this.selectedGroupName, this.selectedFeedName);
+            }
+            this.endButton("advanceStartIndexButton");
+          })
+          .catch((error) => {
+            console.error(error);
+            this.resetButton("advanceStartIndexButton");
           });
       });
     },

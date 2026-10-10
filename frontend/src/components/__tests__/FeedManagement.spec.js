@@ -1297,6 +1297,85 @@ describe("FeedManagement.vue", () => {
     });
   });
 
+  describe("advanceStartIndex", () => {
+    it("getFeedInfo가 is_completed=true를 isCompleted에 반영한다", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      axios.get.mockResolvedValue({
+        data: {
+          status: "success",
+          running_status: false,
+          feed_info: {
+            config: {
+              rss: { title: "T", link: "l", description: "D" },
+              collection: { is_completed: true, list_url_list: [] },
+              extraction: {},
+            },
+            collection_info: { collect_date: null, total_item_count: 0 },
+            public_feed_info: { num_items: 0, file_size: 0 },
+            progress_info: {
+              current_index: 0,
+              total_item_count: 0,
+              unit_size_per_day: 0,
+              progress_ratio: 0,
+            },
+          },
+        },
+      });
+      wrapper.vm.isCompleted = false;
+      wrapper.vm.getFeedInfo("g1", "f1");
+      await flushPromises();
+      expect(wrapper.vm.isCompleted).toBe(true);
+    });
+
+    it("getFeedInfo가 is_completed=false를 isCompleted에 반영한다", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      axios.get.mockResolvedValue({
+        data: {
+          status: "success",
+          running_status: false,
+          feed_info: {
+            config: {
+              rss: { title: "T", link: "l", description: "D" },
+              collection: { is_completed: false, list_url_list: [] },
+              extraction: {},
+            },
+            collection_info: { collect_date: null, total_item_count: 0 },
+            public_feed_info: { num_items: 0, file_size: 0 },
+            progress_info: {
+              current_index: 0,
+              total_item_count: 0,
+              unit_size_per_day: 0,
+              progress_ratio: 0,
+            },
+          },
+        },
+      });
+      wrapper.vm.isCompleted = true;
+      wrapper.vm.getFeedInfo("g1", "f1");
+      await flushPromises();
+      expect(wrapper.vm.isCompleted).toBe(false);
+    });
+
+    it("확인 후 start_index/advance를 PUT 한다", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      axios.put = vi.fn().mockResolvedValueOnce({ data: { status: "success" } });
+      axios.get.mockResolvedValue({
+        data: { status: "failure", message: "skip" },
+      });
+      wrapper.vm.advanceStartIndex();
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      expect(axios.put).toHaveBeenCalledWith(
+        expect.stringContaining("/groups/g1/feeds/f1/start_index/advance")
+      );
+    });
+  });
+
   describe("removelist / removeHtml confirm action execution", () => {
     it("executes removelist on confirm", async () => {
       const wrapper = createWrapper();
