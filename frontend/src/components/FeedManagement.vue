@@ -1105,6 +1105,10 @@ export default {
             this.alert(res.data.message);
           }
           this.getFeedInfo(this.selectedGroupName, this.newFeedName);
+          // 실패 메시지를 덮어쓰지 않도록 성공했을 때만 RSS 항목 목록을 펼침
+          if (res.data.status !== "failure") {
+            this.getItemsOfRss();
+          }
           this.endButton("runButton");
         })
         .catch((error) => {

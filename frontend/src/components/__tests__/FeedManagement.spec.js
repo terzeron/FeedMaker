@@ -806,6 +806,40 @@ describe("FeedManagement.vue", () => {
       expect(axios.post).toHaveBeenCalled();
     });
 
+    it("실행 후 RSS 항목 목록을 펼친다", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.newFeedName = "f1";
+      wrapper.vm.selectedFeedName = "f1";
+      const spy = vi.spyOn(wrapper.vm, "getItemsOfRss").mockImplementation(() => {});
+      axios.post.mockResolvedValueOnce({ data: { status: "success" } });
+      axios.get.mockResolvedValue({
+        data: { status: "failure", message: "skip" },
+      });
+      wrapper.vm.run();
+      await flushPromises();
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it("실행이 실패하면 RSS 항목 목록을 호출하지 않는다", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.newFeedName = "f1";
+      wrapper.vm.selectedFeedName = "f1";
+      const spy = vi.spyOn(wrapper.vm, "getItemsOfRss").mockImplementation(() => {});
+      axios.post.mockResolvedValueOnce({
+        data: { status: "failure", message: "run failed" },
+      });
+      axios.get.mockResolvedValue({
+        data: { status: "failure", message: "skip" },
+      });
+      wrapper.vm.run();
+      await flushPromises();
+      expect(spy).not.toHaveBeenCalled();
+    });
+
     it("handles run API error", async () => {
       const wrapper = createWrapper();
       await flushPromises();
