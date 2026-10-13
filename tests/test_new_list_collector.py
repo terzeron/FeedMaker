@@ -217,6 +217,35 @@ class TestComposeUrlListExtended(unittest.TestCase):
         result = self.collector._compose_url_list()
         self.assertEqual(result, [])
 
+    @patch("bin.new_list_collector.HeadlessBrowser")
+    @patch("bin.new_list_collector.Process")
+    @patch("bin.new_list_collector.Crawler")
+    def test_render_js_recycles_browser_session_before_capture(self, mock_crawler_cls, mock_process, mock_browser) -> None:
+        """render_js=True 이면 캡처 subprocess 실행 전에 캐시된 브라우저 세션을 해제한다"""
+        mock_crawler_cls.return_value.run.return_value = ("<html>ok</html>", None, None)
+        order = MagicMock()
+        order.attach_mock(mock_browser.recycle_session, "recycle")
+        order.attach_mock(mock_process.exec_cmd, "exec_cmd")
+        mock_process.exec_cmd.return_value = ("", "capture error")
+        self.collector.collection_conf["render_js"] = True
+
+        self.collector._compose_url_list()
+
+        mock_browser.recycle_session.assert_called()
+        self.assertEqual("recycle", order.mock_calls[0][0])
+
+    @patch("bin.new_list_collector.HeadlessBrowser")
+    @patch("bin.new_list_collector.Process")
+    @patch("bin.new_list_collector.Crawler")
+    def test_without_render_js_does_not_recycle_browser_session(self, mock_crawler_cls, mock_process, mock_browser) -> None:
+        mock_crawler_cls.return_value.run.return_value = ("<html>ok</html>", None, None)
+        mock_process.exec_cmd.return_value = ("", "capture error")
+        self.collector.collection_conf["render_js"] = False
+
+        self.collector._compose_url_list()
+
+        mock_browser.recycle_session.assert_not_called()
+
     @patch("bin.new_list_collector.which")
     @patch("bin.new_list_collector.Process")
     @patch("bin.new_list_collector.Crawler")

@@ -54,8 +54,7 @@ export default defineConfig(({ mode }) => {
         provider: 'v8',
         reporter: ['text', 'lcov', 'html'],
         reportsDirectory: 'coverage',
-        include: ['src/**/*.{js,vue}'],
-        exclude: ['src/main.js', 'src/**/index.js']
+        include: ['src/**/*.{js,vue}']
       }
     }
   };

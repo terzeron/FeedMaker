@@ -235,6 +235,47 @@ describe("FeedManagement.vue - 미커버 분기", () => {
     });
   });
 
+  describe("advanceStartIndex 실패 경로", () => {
+    const prepare = async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      return wrapper;
+    };
+
+    it("서버가 failure를 반환하면 메시지를 alert로 표시하고 피드 정보를 다시 읽지 않는다", async () => {
+      const wrapper = await prepare();
+      axios.put = vi
+        .fn()
+        .mockResolvedValueOnce({
+          data: { status: "failure", message: "advance failed" },
+        });
+      const getFeedInfoSpy = vi.spyOn(wrapper.vm, "getFeedInfo");
+
+      wrapper.vm.advanceStartIndex();
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+
+      expect(wrapper.vm.alertMessage).toBe("advance failed");
+      expect(getFeedInfoSpy).not.toHaveBeenCalled();
+    });
+
+    it("요청이 예외로 실패하면 에러를 기록하고 버튼 상태를 초기화한다", async () => {
+      const wrapper = await prepare();
+      const error = new Error("network down");
+      axios.put = vi.fn().mockRejectedValueOnce(error);
+      const resetSpy = vi.spyOn(wrapper.vm, "resetButton");
+
+      wrapper.vm.advanceStartIndex();
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+
+      expect(console.error).toHaveBeenCalledWith(error);
+      expect(resetSpy).toHaveBeenCalledWith("advanceStartIndexButton");
+    });
+  });
+
   describe("mounted 방어 로직", () => {
     it("groups/feeds가 null이면 빈 배열로 대체한다", async () => {
       const wrapper = createWrapper({
