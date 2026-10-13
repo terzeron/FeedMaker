@@ -443,11 +443,9 @@ class TestURLMethods(unittest.TestCase):
         self.assertEqual("example.com", result)
 
     def test_get_url_domain_no_scheme(self) -> None:
-        """No scheme separator (line 645)"""
+        """No scheme separator returns an empty domain"""
         result = URL.get_url_domain("just-a-string")
-        # host_index = -1 + 3 = 2, so it finds domain from index 2
-        # This is an edge case in the implementation
-        self.assertIsInstance(result, str)
+        self.assertEqual("", result)
 
     def test_get_url_path_no_path(self) -> None:
         """URL without path after domain (line 652->656)"""
@@ -458,6 +456,18 @@ class TestURLMethods(unittest.TestCase):
         """No slash after host (line 667)"""
         result = URL.get_url_prefix("http://example.com")
         self.assertEqual("", result)
+
+    def test_get_url_path_without_scheme_returns_empty(self) -> None:
+        """스킴 구분자가 없으면 경로를 추측하지 않고 빈 문자열을 반환한다"""
+        self.assertEqual("", URL.get_url_path("/a/b/c"))
+        self.assertEqual("", URL.get_url_path("example.com/a/b"))
+        self.assertEqual("", URL.get_url_path(""))
+
+    def test_get_url_prefix_without_scheme_returns_empty(self) -> None:
+        """스킴 구분자가 없으면 prefix를 추측하지 않고 빈 문자열을 반환한다"""
+        self.assertEqual("", URL.get_url_prefix("/a/b/c"))
+        self.assertEqual("", URL.get_url_prefix("example.com/a/b"))
+        self.assertEqual("", URL.get_url_prefix(""))
 
     def test_encode_suffix(self) -> None:
         """URL.encode_suffix (lines 701-705)"""
@@ -808,12 +818,11 @@ class TestEnvGetNoneValue(unittest.TestCase):
 
 
 class TestURLGetDomainNoScheme(unittest.TestCase):
-    """URL.get_url_domain: L645 is unreachable (host_index = find()+3, always >= 0)"""
+    """URL.get_url_domain: 스킴 구분자가 없으면 빈 문자열을 반환한다"""
 
-    def test_no_scheme_returns_partial(self) -> None:
-        # find("://") returns -1, host_index = -1+3 = 2, always >= 0
-        result = URL.get_url_domain("just-a-string-without-scheme")
-        self.assertIsInstance(result, str)
+    def test_no_scheme_returns_empty(self) -> None:
+        self.assertEqual("", URL.get_url_domain("just-a-string-without-scheme"))
+        self.assertEqual("", URL.get_url_domain(""))
 
 
 if __name__ == "__main__":

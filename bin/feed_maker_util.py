@@ -712,8 +712,9 @@ class URL:
     @staticmethod
     def get_url_domain(url: str) -> str:
         scheme_separator = "://"
-        host_index = url.find(scheme_separator) + len(scheme_separator)
-        if host_index >= 0:
+        separator_index = url.find(scheme_separator)
+        if separator_index >= 0:
+            host_index = separator_index + len(scheme_separator)
             first_slash_index = url[host_index:].find("/")
             if first_slash_index >= 0:
                 return url[host_index : (host_index + first_slash_index)]
@@ -724,8 +725,9 @@ class URL:
     @staticmethod
     def get_url_path(url: str) -> str:
         scheme_separator = "://"
-        host_index = url.find(scheme_separator) + len(scheme_separator)
-        if host_index >= 0:
+        separator_index = url.find(scheme_separator)
+        if separator_index >= 0:
+            host_index = separator_index + len(scheme_separator)
             first_slash_index = url[host_index:].find("/")
             if first_slash_index >= 0:
                 return url[(host_index + first_slash_index) :]
@@ -735,8 +737,9 @@ class URL:
     @staticmethod
     def get_url_prefix(url: str) -> str:
         scheme_separator = "://"
-        host_index = url.find(scheme_separator) + len(scheme_separator)
-        if host_index >= 0:
+        separator_index = url.find(scheme_separator)
+        if separator_index >= 0:
+            host_index = separator_index + len(scheme_separator)
             last_slash_index = url.rfind("/", host_index)
             if last_slash_index >= 0:
                 return url[: (last_slash_index + 1)]
