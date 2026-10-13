@@ -145,6 +145,16 @@ class TestSendEmailBySmtp(unittest.TestCase):
 
     @patch("bin.notification.smtplib.SMTP")
     @patch("bin.notification.Env.get")
+    def test_missing_recipients_fails_cleanly(self, mock_env_get: MagicMock, mock_smtp_cls: MagicMock) -> None:
+        # 빈 MSG_EMAIL_RECIPIENT_LIST는 __init__에서 IndexError가 나므로, 생성 후 목록을 비워 이 경로를 확인한다.
+        n = self._create_notification(mock_env_get)
+        n.email_recipient_list = []
+        result = n._send_email_by_smtp("test message", "subject")
+        self.assertFalse(result)
+        mock_smtp_cls.assert_not_called()
+
+    @patch("bin.notification.smtplib.SMTP")
+    @patch("bin.notification.Env.get")
     def test_missing_smtp_server_fails_cleanly(self, mock_env_get: MagicMock, mock_smtp_cls: MagicMock) -> None:
         # Regression: when MSG_SMTP_SERVER is absent (smtp_host == "") the send must
         # fail cleanly without ever constructing an SMTP connection. Previously this

@@ -1441,5 +1441,26 @@ def test_tracking_pixel_missing(tmp_path):
         assert exc_info.value.status_code == 404
 
 
+
+# --- advance_start_index ---
+
+
+def test_advance_start_index_success():
+    mgr = MagicMock()
+    mgr.advance_start_index.return_value = (True, None)
+    with patch.object(main, "require_admin"):
+        r = main.advance_start_index("g", "f", request=types.SimpleNamespace(), feed_maker_manager=mgr)
+    assert r == {"status": "success"}
+    mgr.advance_start_index.assert_called_once_with("g", "f")
+
+
+def test_advance_start_index_failure_returns_error_message():
+    mgr = MagicMock()
+    mgr.advance_start_index.return_value = (False, "advance error")
+    with patch.object(main, "require_admin"):
+        r = main.advance_start_index("g", "f", request=types.SimpleNamespace(), feed_maker_manager=mgr)
+    assert r == {"status": "failure", "message": "advance error"}
+
+
 if __name__ == "__main__":
     pytest.main()

@@ -35,6 +35,27 @@ class ProcessTest(unittest.TestCase):
         self.assertNotIn("session=secret", redacted)
         self.assertIn("[REDACTED", redacted)
 
+    def test_redact_command_keeps_unbalanced_quotes_without_header(self) -> None:
+        command = "crawler.py 'unterminated"
+
+        self.assertEqual(command, redact_command(command))
+
+    def test_redact_command_hides_sensitive_header_given_as_separate_argument(self) -> None:
+        command = "crawler.py -H 'Authorization: Bearer secret-token' https://example.com"
+
+        redacted = redact_command(command)
+
+        self.assertNotIn("secret-token", redacted)
+        self.assertIn("[REDACTED]", redacted)
+        self.assertIn("https://example.com", redacted)
+
+    def test_redact_command_keeps_non_sensitive_header_given_as_separate_argument(self) -> None:
+        command = "crawler.py --header 'User-Agent: test' https://example.com"
+
+        redacted = redact_command(command)
+
+        self.assertIn("User-Agent: test", redacted)
+
     def test_replace_script_path(self) -> None:
         # 시스템 유틸리티는 allowlist에 등재된 절대경로로 지정해야 한다.
         # (bare name "shuf"는 PATH 조회로 해석되지만 프로젝트 디렉터리 밖이라 거부된다)

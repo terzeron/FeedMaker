@@ -52,6 +52,15 @@ class TestDetermineOptions(unittest.TestCase):
         self.assertEqual(options["force_collection_opt"], "-c")
 
     @patch("bin.run.FeedMaker")
+    def test_flag_e(self, mock_fm):
+        mock_fm.DEFAULT_WINDOW_SIZE = 5
+        from bin.run import determine_options
+
+        with patch.object(sys, "argv", ["run.py", "-e"]):
+            options, args = determine_options()
+        self.assertEqual(options["extract_only_opt"], "-e")
+
+    @patch("bin.run.FeedMaker")
     def test_flag_l(self, mock_fm):
         mock_fm.DEFAULT_WINDOW_SIZE = 5
         from bin.run import determine_options

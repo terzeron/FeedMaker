@@ -50,6 +50,34 @@ class TestDownloadImageCacheHit(unittest.TestCase):
         crawler.run.assert_not_called()
 
 
+class TestDownloadImageWebpCacheHit(unittest.TestCase):
+    @patch("utils.image_downloader.FileManager")
+    @patch("utils.image_downloader.Env")
+    def test_converted_webp_cache_hit_returns_webp(self, mock_env: MagicMock, mock_fm: MagicMock) -> None:
+        crawler = MagicMock()
+        mock_env.get.return_value = "http://img.example.com"
+
+        mock_cache_path = MagicMock(spec=Path)
+        mock_cache_path.is_file.return_value = False
+        mock_webp_path = MagicMock(spec=Path)
+        mock_webp_path.is_file.return_value = True
+        mock_webp_path.stat.return_value = MagicMock(st_size=2048)
+        mock_cache_path.with_suffix.return_value = mock_webp_path
+        mock_fm.get_cache_file_path.return_value = mock_cache_path
+        mock_fm.get_cache_url.return_value = "http://img.example.com/feed/abc123.webp"
+
+        feed_dir = MagicMock(spec=Path)
+        feed_dir.name = "feed"
+
+        path, url = ImageDownloader.download_image(crawler, feed_dir, "http://example.com/photo.jpg")
+
+        self.assertEqual(path, mock_webp_path)
+        self.assertEqual(url, "http://img.example.com/feed/abc123.webp")
+        mock_cache_path.with_suffix.assert_called_once_with(".webp")
+        self.assertEqual(".webp", mock_fm.get_cache_url.call_args.kwargs["suffix"])
+        crawler.run.assert_not_called()
+
+
 class TestDownloadImageBase64(unittest.TestCase):
     @patch("utils.image_downloader.ImageDownloader.convert_image_format")
     @patch("utils.image_downloader.FileManager")
@@ -783,7 +811,6 @@ class TestNonWebpSamePath(unittest.TestCase):
 
 
 # --- Merged from test_image_optimization.py ---
-
 
 
 def create_test_image(width: int, height: int, format: str = "PNG") -> Path:

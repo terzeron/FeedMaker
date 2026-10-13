@@ -1955,6 +1955,24 @@ class TestAdvanceStartIndex(unittest.TestCase):
             result, _ = mgr.advance_start_index("g1", "f1")
             self.assertFalse(result)
 
+    def test_rejects_missing_conf_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "g1" / "f1").mkdir(parents=True)
+            mgr = _make_manager(Path(tmp))
+            result, error = mgr.advance_start_index("g1", "f1")
+            self.assertFalse(result)
+            self.assertEqual("can't read configuration file", error)
+
+    def test_rejects_malformed_conf_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            feed_dir = self._setup_feed(Path(tmp), True, "11\t2026-01-01T00:00:00+09:00\n")
+            (feed_dir / "conf.json").write_text("{not json", encoding="utf-8")
+            mgr = _make_manager(Path(tmp))
+            result, error = mgr.advance_start_index("g1", "f1")
+            self.assertFalse(result)
+            self.assertEqual("can't read configuration file", error)
+            self.assertEqual("11\t2026-01-01T00:00:00+09:00\n", (feed_dir / "start_idx.txt").read_text(encoding="utf-8"))
+
     def test_rejects_invalid_name(self):
         with tempfile.TemporaryDirectory() as tmp:
             mgr = _make_manager(Path(tmp))
