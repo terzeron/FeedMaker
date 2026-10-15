@@ -47,7 +47,7 @@
     "@babel/core": "^8.0.6",
     "@babel/eslint-parser": "^8.0.7",
     "@babel/preset-env": "^8.0.6",
-    "@playwright/test": "^1.62.1",
+    "@playwright/test": "^1.64.0",
     "@vitejs/plugin-basic-ssl": "^2.3.0",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vitest/coverage-v8": "^5.0.0",
