@@ -179,7 +179,6 @@
                     <BTd colspan="2">
                       <BProgress
                         :max="totalItemCount"
-                        show-progress
                         height="1.5rem"
                         style="position: relative; overflow: hidden;"
                       >
