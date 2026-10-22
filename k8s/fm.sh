@@ -1,6 +1,7 @@
 #!/bin/bash 
 
-cd ~/k8s
+# 이 스크립트가 쓰는 *.yml 은 이 파일과 같은 디렉터리에 있다.
+cd "$(dirname "${BASH_SOURCE[0]}")"
 
 # DB credentials must be provided via environment (do NOT hardcode here).
 : "${MYSQL_PASSWORD:?set MYSQL_PASSWORD before running}"
@@ -13,9 +14,11 @@ kubectl create namespace feedmaker
 echo "applying fm-volume"
 kubectl apply -f fm-volume.yml
 
-# nginx
-echo "installing nginx by helm"
-helm install web bitnami/nginx -n feedmaker --version 18.3.5 --create-namespace --set staticSitePVC=public-html-pvc --set replicaCount=1 -f web-nginx-values.yml
+# nginx (정적 파일 + feed 프록시). bitnami chart 대신 공식 nginx-unprivileged plain manifest를 쓴다.
+# 정식 manifest는 클러스터 저장소(~/k8s/static_web/web-nginx.yaml)에 있다. Service web-nginx 는 별도로 두며
+# 그 selector가 app.kubernetes.io/instance=web-oss 이다(처음 설치라면 아래 Service를 함께 만든다).
+echo "applying web-nginx"
+kubectl apply -f ~/k8s/static_web/web-nginx.yaml
 
 # deployments
 # 자격증명을 helm --set 으로 넘기면 `ps` 와 helm release values 에 평문으로 남는다.
@@ -54,24 +57,7 @@ kubectl apply -f fm-configmap.yml
 echo "applying fm-deployment"
 kubectl apply -f fm-deployment.yml
 
-# browserless
-helm install fm skm/browserless-chrome -n feedmaker --create-namespace --set replicaCount=2
-
-# resources 를 helm values 가 아니라 설치 후 kubectl 로 지정한다.
-# 이 chart(browserless-chrome 0.0.4)는 skm repo 가 사라져 `helm show values` 로
-# resources 의 values 키를 확인할 수 없다. 확인 못 한 키를 --set 으로 추측해 넘기면
-# 조용히 무시되므로, 결과가 검증되는 kubectl 로 처리한다.
-# 지정하지 않으면 QoS BestEffort(oom_score_adj 1000) 라 호스트 메모리 고갈 시
-# 가장 먼저 죽는다 (2026-08-04 OOM storm).
-# 근거: 10일 관측 peak memory 188MiB / cpu 39m. Chrome 은 튈 수 있어 limits 는 넉넉히.
-# skm repo 가 복구되면 `helm show values skm/browserless-chrome` 로 키를 확인해
-# values 파일로 옮기는 것이 낫다.
-echo "setting browserless resources"
-kubectl -n feedmaker rollout status deploy/fm-browserless-chrome --timeout=180s
-kubectl -n feedmaker set resources deploy/fm-browserless-chrome \
-  --containers=browserless-chrome \
-  --requests=memory=256Mi,cpu=100m --limits=memory=1Gi,cpu=1
-kubectl -n feedmaker rollout status deploy/fm-browserless-chrome --timeout=180s
+# browserless는 2026-10에 제거했다(사용하지 않음). 이전에는 여기서 helm install fm skm/browserless-chrome 을 실행했다.
 
 # ingress
 echo "applying fm-ingress"

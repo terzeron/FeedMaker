@@ -1,13 +1,46 @@
-# CP-4: kube-apiserver 감사(audit) 정책 — 최소 Metadata 레벨.
+# CP-4: kube-apiserver 감사(audit) 정책 — Metadata 레벨(본문은 기록하지 않는다).
 # 적용: kube-apiserver 인자에 --audit-policy-file 로 이 파일 경로를 지정한다.
 # (cis-hardening-apply.sh 가 ${SNAP_DATA}/args/audit-policy.yaml 로 복사한다)
+#
+# 규칙은 위에서부터 처음 맞는 것이 적용된다. 그래서 "잡음 제거(None)"를 맨 앞에 둔다.
+# 2026-10-22 실측(apiserver /metrics, 3.8시간): 쓰기 요청의 59%가 leases, 13%가 endpoints였고,
+# 이전 정책(모든 쓰기를 Metadata로 기록)은 하루 약 34만 건 / 170MB로 추정되어
+# --audit-log-maxsize=100 x maxbackup=10(최대 1GB)이면 보존 기간이 30일이 아니라 약 6일이 된다.
+# 아래 잡음 규칙으로 쓰기 이벤트의 약 85%를 제외한다(보안상 의미가 낮은 시스템 컨트롤러의 반복 갱신).
 apiVersion: audit.k8s.io/v1
 kind: Policy
-# 노이즈 큰 read-only/health 류는 기록하지 않는다.
 omitStages:
   - RequestReceived
 rules:
-  # 민감 리소스(secret/configmap) 접근은 Metadata 로 남긴다(본문 비기록).
+  # --- 잡음 제거 -------------------------------------------------------------
+  # 리더 선출, endpoints 갱신, events, 인증/인가 위임 호출은 반복적이고 보안 분석 가치가 낮다.
+  - level: None
+    resources:
+      - group: "coordination.k8s.io"
+        resources: ["leases"]
+      - group: ""
+        resources: ["events", "endpoints"]
+      - group: "discovery.k8s.io"
+        resources: ["endpointslices"]
+      - group: "authentication.k8s.io"
+        resources: ["tokenreviews"]
+      - group: "authorization.k8s.io"
+        resources: ["subjectaccessreviews"]
+  # 컨트롤러가 반복 갱신하는 status 서브리소스(예: Traefik이 gateway/backendtlspolicies status를 갱신).
+  - level: None
+    verbs: ["update", "patch"]
+    resources:
+      - group: ""
+        resources: ["pods/status", "nodes/status", "services/status"]
+      - group: "apps"
+        resources: ["deployments/status", "statefulsets/status", "replicasets/status", "daemonsets/status"]
+      - group: "gateway.networking.k8s.io"
+        resources: ["*/status"]
+  # 헬스체크와 API discovery
+  - level: None
+    nonResourceURLs: ["/healthz*", "/livez*", "/readyz*", "/version", "/metrics", "/openapi*"]
+  # --- 보존할 이벤트 -----------------------------------------------------------
+  # 민감 리소스(secret/configmap) 접근은 읽기를 포함해 Metadata 로 남긴다(본문 비기록).
   - level: Metadata
     resources:
       - group: ""
@@ -21,7 +54,12 @@ rules:
   # 쓰기성 동작(create/update/patch/delete)은 Metadata 로 기록.
   - level: Metadata
     verbs: ["create", "update", "patch", "delete", "deletecollection"]
-  # 잡음 억제: 읽기 전용/조회는 기록하지 않음.
+  # 익명/인증 실패 흔적은 읽기라도 남긴다. 익명 접근(system:anonymous)을 끄기 전에 누가 쓰는지 확인하는 용도.
+  - level: Metadata
+    users: ["system:anonymous"]
+  - level: Metadata
+    userGroups: ["system:unauthenticated"]
+  # 잡음 억제: 나머지 읽기 전용/조회는 기록하지 않음.
   - level: None
     verbs: ["get", "list", "watch"]
   # 그 외 기본은 Metadata.
