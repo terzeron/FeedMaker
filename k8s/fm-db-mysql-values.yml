@@ -31,7 +31,7 @@ image:
   # 조용히 올라간다. MySQL 은 기동 시 데이터 디렉터리를 새 포맷으로 올리고 다운그레이드가
   # 불가능하므로, 의도하지 않은 시점에 되돌릴 수 없는 변경이 일어난다.
   # 올릴 때는 이 값을 직접 바꾼다. (tm_dev 의 k8s/mysql-deployment.yml 과 같은 이유)
-  tag: "8.4.11"
+  tag: "8.4.13"
   pullPolicy: IfNotPresent
 
 settings:
@@ -101,3 +101,10 @@ securityContext:
 podSecurityContext:
   fsGroup: 999
   supplementalGroups: [999]
+  seccompProfile:
+    type: RuntimeDefault
+# user namespace 제외: 클러스터의 MutatingAdmissionPolicy(~/k8s/userns-mutating-policy.yaml)가 feedmaker 네임스페이스의
+# Pod에 hostUsers: false 를 넣는데, 이 chart의 MySQL은 그 상태에서 /var/run/mysqld(emptyDir)에 소켓을 만들지 못해
+# 소켓 기반 시작 프로브가 실패한다(2026-10-22 실측, 약 5분간 not Ready). 라벨로 제외한다.
+podLabels:
+  userns: disabled

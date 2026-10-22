@@ -1,3 +1,7 @@
+# [폐기 2026-10-22] bitnami/nginx chart(release web)는 더 쓰지 않는다. bitnami 이미지 태그가 Docker Hub에서 삭제되어
+# 재기동이 불가능해졌고, 공식 nginx-unprivileged 이미지 + plain manifest로 교체했다.
+# 현재 정식 manifest: ~/k8s/static_web/web-nginx.yaml (서버 블록은 이 파일의 serverBlock과 동일하며 ConfigMap으로 옮겼다).
+# 이 파일은 옛 release의 롤백 기록으로만 남긴다. fm.sh 는 더 이상 이 파일을 쓰지 않는다.
 serverBlock: |-
   server {
     listen 0.0.0.0:8080;

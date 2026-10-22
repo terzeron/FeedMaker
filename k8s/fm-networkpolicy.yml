@@ -43,6 +43,17 @@ spec:
       ports:
         - protocol: TCP
           port: 8010
+    # web-nginx(공식 nginx-unprivileged, static_web/web-nginx.yaml)가 XML 피드 요청을 fm-backend:8010 으로
+    # 프록시한다. 이 규칙이 없으면 연결이 막혀 5초 타임아웃 후 정적 파일로 fallback 된다(접근 기록 누락).
+    # 이 정책은 2026-10-22 현재 클러스터에 적용되어 있지 않다. 적용하기 전에 fm-backend에 접근하는
+    # 다른 주체(호스트의 NodePort 사용 등)가 없는지 확인한다.
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: nginx
+      ports:
+        - protocol: TCP
+          port: 8010
   # egress 미지정 = 제한 없음 (크롤러 외부 접근 보존)
 ---
 apiVersion: networking.k8s.io/v1
