@@ -115,6 +115,8 @@ curl -s 'http://127.0.0.1:19090/api/v1/targets?state=active' | python3 -c "impor
 실패 징후: `kubectl logs/exec`가 403, `kubectl top`이 `metrics not available`, Prometheus의 `kubelet` 타깃이 down.
 롤백: `kubelet.bak.<타임스탬프>` 복원 후 kubelite 재시작.
 
+**2단계 실행 결과 (2026-10-23)**: 적용 성공. `kubectl logs/exec` 정상, Prometheus kubelet 타깃 3개 up, 비정상 Pod 없음. 스크립트의 `kubectl top` 검증이 한 번 실패로 나왔으나 kubelet 재기동 직후 metrics-server의 첫 수집이 `connection refused`였던 일시 현상이었다(곧 정상, APIService Available). 이 일시 실패 때문에 검증을 90초 재시도로 고쳤다. Webhook이 실제로 집행되는지도 확인했다: 권한 없는 SA(`wiki/default`) 토큰으로 kubelet `/pods`·`/metrics` → **403**, Prometheus SA 토큰 `/metrics` → 200, 익명 `/pods` → 401(이전 AlwaysAllow에서는 인증만 되면 열려 있었다).
+
 ### 3단계 — 익명 접근 차단 (CP-2)
 
 ```bash
@@ -123,6 +125,8 @@ sudo APPLY_AUDIT=0 APPLY_ADMISSION=0 APPLY_ANON=1 bash k8s/cis-hardening-apply.s
 
 스크립트가 익명 `/readyz`가 **401**인지 확인한다. 추가 확인: 외부 호스트 응답, `kubectl get nodes`, `microk8s status`.
 롤백: `kube-apiserver.bak.<타임스탬프>` 복원 후 kubelite 재시작.
+
+**3단계 실행 결과 (2026-10-23)**: 적용 성공. 익명 `/readyz`, `/healthz`, `/livez`, `/version`, `/api`가 모두 401. 인증된 접근(관리자 `kubectl`)은 그대로이고, 클러스터 구성요소 로그(kube-system, metallb-system, cert-manager, traefik, textmanager, observability, automation, blog, wiki, feedmaker)에서 최근 5분간 Unauthorized 0건, `kubectl top` 정상, Prometheus 타깃 15개 up, 인증서 11개 Ready, 외부 호스트 10개 정상, 비정상 Pod 없음. 이로써 계획 항목 중 CP-1~CP-6과 NodeRestriction이 모두 적용됐다. 남은 것은 CP-7(아래 결정 사항)과 H-1(범위 밖)이다.
 
 ## CP-7 결정 — 적용하지 않는다 (사용자 판단 필요)
 
@@ -145,10 +149,19 @@ sudo systemctl restart snap.microk8s.daemon-kubelite
 sleep 30; sysctl vm.overcommit_memory      # 1 이면 kubelet이 덮어쓴 것
 ```
 
+**진단 결과 (2026-10-23, 사용자 실행)**: `sysctl -w vm.overcommit_memory=0` 후 kubelite를 재시작하자 값이 **1로 되돌아갔다.** kubelet이 시작할 때마다 덮어쓴다는 것이 확정됐다. 따라서 `99-oom-hardening.conf`(0)는 부팅 때 적용돼도 kubelet 시작 직후 1이 되어 **한 번도 실제로 적용된 적이 없다.**
+
+같은 시점의 호스트 상태:
+- RAM 27GiB(가용 10GiB), **스왑 8GiB 중 거의 전부 사용(여유 5.6MB)**. 스왑 상위는 node 874MB, 호스트 docker의 elasticsearch-nori(java) 616MB.
+- 메모리 limit이 없는 컨테이너 31개. QoS는 BestEffort 18 / Burstable 24 / Guaranteed 5. BestEffort에 **Traefik, Prometheus(실사용 약 982Mi), Grafana, Calico controllers, MetalLB, hostpath-provisioner**가 있다(OOM 시 가장 먼저 죽는 후보, oom_score_adj 1000).
+- Burstable도 request가 작으면 adj가 999에 가까워 실질적 보호는 Guaranteed(request=limit, adj -997)뿐이다.
+- 커널 문서 기준 이해로는 overcommit 0(heuristic)은 한 번의 할당이 RAM+스왑을 넘는 "명백한 초과"만 거부하므로 점진적으로 커지는 폭주 프로세스는 막지 못한다(이 호스트에서 직접 시험하지는 않았다).
+
 선택지:
 
-- **A (권장)**: CP-7은 건너뛰고(CIS 4.2.6 예외로 문서화), OOM 대응을 유효하게 만든다. 예: kubelite 서비스 drop-in의 `ExecStartPost`로 시작 직후 `sysctl -w vm.overcommit_memory=0`을 다시 적용. 이는 kubelet이 시작 때 한 번만 쓰는 것을 전제로 하며 위 진단으로 확인한 뒤에 한다.
-- B: OOM 대응(0)을 포기하고 CP-7 적용. 실제 사고에 대한 대응이었으므로 권장하지 않는다.
+- **A (권장)**: CP-7은 건너뛴다(CIS 4.2.6 예외로 문서화). overcommit 값은 강제하지 않는다 — 한 번도 적용된 적이 없어 켜면 검증되지 않은 동작 변경이다. 대신 효과가 큰 쪽을 한다: 인프라 Pod(Traefik, Prometheus, Grafana, Calico, MetalLB, hostpath-provisioner 등)에 메모리 request=limit(Guaranteed)을 지정한다. `99-oom-hardening.conf`는 실제로 적용되지 않는다는 사실을 주석에 적거나 지운다(거짓 안심 방지).
+- B: overcommit 0을 실제로 적용하려면 kubelet이 덮어쓴 **뒤에** 다시 써야 한다. 시작 직후 실행되는 `ExecStartPost`는 kubelet보다 먼저 실행되어 다시 덮이므로 소용이 없다(이전 문서의 제안은 틀렸다). kubelite에 `PartOf`로 묶은 별도 oneshot 유닛이 시작 후 수십 초 뒤에 `sysctl -w`를 실행하는 식이어야 한다. 위 이유로 권장하지 않는다.
+- C: OOM 대응(0)을 포기하고 CP-7 적용. 실제 사고에 대한 대응 의도였으므로 권장하지 않는다.
 
 스크립트는 `APPLY_KERNEL=1`일 때 이 충돌을 감지하면 거부한다(`FORCE_KERNEL=1`로만 우회).
 

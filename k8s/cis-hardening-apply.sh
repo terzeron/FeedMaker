@@ -18,6 +18,9 @@
 #   APPLY_RBAC=1        CP-1  `microk8s enable rbac`. 이미 RBAC 이면 건너뛴다.            [기본 OFF]
 #   APPLY_KERNEL=1      CP-7  kubelet --protect-kernel-defaults=true                    [기본 OFF]
 #                             /etc/sysctl.d 의 vm.overcommit_memory 와 충돌하면 거부한다(FORCE_KERNEL=1 로 무시).
+#   APPLY_ENCRYPT=1     CP-8  etcd(dqlite) Secret 저장 시 암호화(aescbc)                        [기본 OFF]
+#                             키는 ${ARGS_DIR}/encryption-config.yaml(root 전용)에만 있다. 이 파일을 잃으면 모든 Secret 을
+#                             읽을 수 없으므로 클러스터 밖에 사본을 보관한다. 값은 출력하지 않는다.
 #   APPLY_BASELINE=1    (호환용) APPLY_AUDIT 와 APPLY_ADMISSION 의 기본값을 정한다. CP-2 는 더 이상 포함하지 않는다.
 #   DRY_RUN=1           파일을 바꾸지 않고 바뀔 내용만 출력한다(sudo 불필요).
 #   CP-6(약한 cipher 제거)는 이미 적용돼 있어 생략한다.
@@ -51,6 +54,8 @@ APPLY_ANON="${APPLY_ANON:-0}"
 APPLY_KUBELET_AUTHZ="${APPLY_KUBELET_AUTHZ:-0}"
 APPLY_RBAC="${APPLY_RBAC:-0}"
 APPLY_KERNEL="${APPLY_KERNEL:-0}"
+APPLY_ENCRYPT="${APPLY_ENCRYPT:-0}"
+ENC_CONFIG="${ARGS_DIR}/encryption-config.yaml"
 FORCE_KERNEL="${FORCE_KERNEL:-0}"
 
 NEED_RESTART=0
@@ -115,7 +120,7 @@ rollback_all() {
   say "!! 복원 후에도 API가 준비되지 않았다. 수동 확인 필요: journalctl -u snap.microk8s.daemon-kubelite -n 80"
 }
 
-echo "== CIS hardening apply (audit=${APPLY_AUDIT} admission=${APPLY_ADMISSION} anon=${APPLY_ANON} kubelet-authz=${APPLY_KUBELET_AUTHZ} rbac=${APPLY_RBAC} kernel=${APPLY_KERNEL} dry-run=${DRY_RUN}) =="
+echo "== CIS hardening apply (audit=${APPLY_AUDIT} admission=${APPLY_ADMISSION} anon=${APPLY_ANON} kubelet-authz=${APPLY_KUBELET_AUTHZ} rbac=${APPLY_RBAC} kernel=${APPLY_KERNEL} encrypt=${APPLY_ENCRYPT} dry-run=${DRY_RUN}) =="
 
 # ---- 사전 점검 -------------------------------------------------------------
 [[ -f "${APISERVER}" && -f "${KUBELET}" ]] || { echo "ERROR: ${ARGS_DIR} 에 kube-apiserver/kubelet 인자 파일이 없다" >&2; exit 1; }
@@ -188,6 +193,34 @@ if [[ "${APPLY_KERNEL}" == "1" ]]; then
   NEED_RESTART=1
 fi
 
+if [[ "${APPLY_ENCRYPT}" == "1" ]]; then
+  echo "[CP-8] Secret 저장 암호화(aescbc). identity 를 뒤에 둬서 기존 평문 Secret 도 읽는다."
+  backup "${APISERVER}"
+  if [[ -f "${ENC_CONFIG}" ]]; then
+    say "  already: ${ENC_CONFIG} 있음(키를 새로 만들지 않는다)"
+  elif [[ "${DRY_RUN}" == "1" ]]; then
+    say "  (dry-run) 32바이트 키를 만들어 ${ENC_CONFIG} 를 0600 으로 쓴다"
+  else
+    ( umask 077
+      cat > "${ENC_CONFIG}" <<EOT
+apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+resources:
+  - resources: ["secrets"]
+    providers:
+      - aescbc:
+          keys:
+            - name: key1
+              secret: $(head -c 32 /dev/urandom | base64)
+      - identity: {}
+EOT
+    )
+    chmod 600 "${ENC_CONFIG}"; say "  wrote: ${ENC_CONFIG} (0600, 키는 출력하지 않음)"
+  fi
+  set_flag "${APISERVER}" "--encryption-provider-config" "${ENC_CONFIG}"
+  NEED_RESTART=1
+fi
+
 if [[ "${NEED_RESTART}" == "1" ]]; then
   restart_kubelite || { rollback_all; exit 1; }
 fi
@@ -202,6 +235,12 @@ if [[ "${APPLY_RBAC}" == "1" ]]; then
     microk8s enable rbac || true
     restart_kubelite || { rollback_all; exit 1; }
   fi
+fi
+
+if [[ "${APPLY_ENCRYPT}" == "1" && "${DRY_RUN}" != "1" ]]; then
+  echo "[CP-8] 기존 Secret 을 모두 다시 써서 암호화한다(값은 출력하지 않는다)"
+  "${KUBECTL[@]}" get secrets -A -o json | "${KUBECTL[@]}" replace -f - >/dev/null
+  say "  Secret 재기록 완료: $("${KUBECTL[@]}" get secrets -A --no-headers | wc -l)개"
 fi
 
 [[ "${DRY_RUN}" == "1" ]] && { echo "== dry-run 끝. 변경된 것은 없다. =="; exit 0; }
@@ -223,7 +262,17 @@ fi
 if [[ "${APPLY_KUBELET_AUTHZ}" == "1" ]]; then
   echo "-- kubelet Webhook 인가 경로(apiserver->kubelet, 토큰 클라이언트) --"
   "${KUBECTL[@]}" logs -n kube-system deploy/coredns --tail=1 >/dev/null 2>&1 && echo "  kubectl logs OK" || echo "  !! kubectl logs 실패(kubelet 인가 문제 의심)"
-  "${KUBECTL[@]}" top nodes >/dev/null 2>&1 && echo "  kubectl top nodes OK" || echo "  !! kubectl top 실패(metrics-server -> kubelet 인가 문제 의심)"
+  # kubelet 재기동 직후 metrics-server 의 첫 수집이 connection refused 로 실패해 잠시 top 이 안 된다(2026-10-23 관찰).
+  # 일시 현상과 인가 문제를 구분하려고 최대 90초 재시도한다.
+  top_ok=0
+  for _ in $(seq 1 18); do "${KUBECTL[@]}" top nodes >/dev/null 2>&1 && { top_ok=1; break; }; sleep 5; done
+  [[ "${top_ok}" == "1" ]] && echo "  kubectl top nodes OK" || echo "  !! kubectl top 90초 뒤에도 실패(metrics-server -> kubelet 인가 문제 의심: metrics-server 로그의 403 확인)"
+fi
+if [[ "${APPLY_ENCRYPT}" == "1" ]]; then
+  B="${SNAP_DATA}/var/kubernetes/backend"
+  echo "-- Secret 저장 형식(암호화 'k8s:enc:aescbc' / 전체) --"
+  /snap/microk8s/current/bin/dqlite -s "file://${B}/cluster.yaml" -c "${B}/cluster.crt" -k "${B}/cluster.key" k8s \
+    "SELECT SUM(CAST(value AS TEXT) LIKE 'k8s:enc:aescbc%') || ' / ' || COUNT(*) FROM kine WHERE name LIKE '/registry/secrets/%'" 2>&1 | tail -1 || true
 fi
 echo "-- 워크로드 정상성(비정상 Pod) --"
 "${KUBECTL[@]}" get pods -A --no-headers | grep -vE 'Running|Completed' || echo "  비정상 Pod 없음"
