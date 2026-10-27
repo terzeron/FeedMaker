@@ -9,8 +9,13 @@
 # ---------------------------------------------------------------------------
 FROM python:3.12-slim@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 AS builder
 
+# apt 보안 패치 레이어의 캐시 키. build.sh가 ISO 주차를 넘겨 주 1회 재실행시킨다.
+# 이 값이 고정이면 아래 apt-get upgrade가 캐시에서 재사용되어 chromium 등의 패치가 적용되지 않는다.
+ARG APT_REFRESH=0
+
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    : "apt refresh ${APT_REFRESH}" && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
     libpoppler-dev libpoppler-cpp-dev libheif-dev libcairo2-dev \
@@ -40,11 +45,14 @@ RUN HOME=/tmp XDG_CACHE_HOME=/opt /app/.venv/bin/python -m camoufox fetch
 # ---------------------------------------------------------------------------
 FROM python:3.12-slim@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9
 
+ARG APT_REFRESH=0
+
 # Runtime-only: chromium engine + gosu + curl(HEALTHCHECK) + shared libs that the
 # compiled wheels (poppler/heif/cairo) link against. Package names resolved from the
 # -dev packages' runtime deps on debian (python:3.12-slim base).
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    : "apt refresh ${APT_REFRESH}" && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
     chromium chromium-driver gosu curl ca-certificates git \
