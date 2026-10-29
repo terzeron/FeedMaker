@@ -410,6 +410,17 @@ class TestRequestsClientCookieFiles(unittest.TestCase):
         self.assertEqual(self.client.cookies["token"], "xyz")
         self.assertEqual(self.client.cookies["session"], "abc")
 
+    def test_write_cookies_restricts_file_to_owner(self):
+        # Session cookies are credentials: a new jar is 0600 and an old 0644 jar is tightened.
+        cookie_file = self.tmp / RequestsClient.COOKIE_FILE
+        jar = RequestsCookieJar()
+        jar.set("session", "abc")
+        self.client.write_cookies_to_file(jar)
+        self.assertEqual(cookie_file.stat().st_mode & 0o777, 0o600)
+        cookie_file.chmod(0o644)
+        self.client.write_cookies_to_file(jar)
+        self.assertEqual(cookie_file.stat().st_mode & 0o777, 0o600)
+
     def test_read_cookies_no_file(self):
         self.client.cookies = {}
         self.client.read_cookies_from_file()

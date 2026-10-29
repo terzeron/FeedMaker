@@ -344,7 +344,10 @@ class HeadlessBrowserBase:
     def _write_cookies_to_file(self, context: BrowserContext) -> None:
         cookies = [c for c in context.cookies() if self._is_persistable_cookie(c.get("name", ""))]
         cookie_file = self._get_cookie_dir() / self.COOKIE_FILE
-        with cookie_file.open("w", encoding="utf-8") as f:
+        # cf_clearance and session cookies are credentials: owner-only, also for an existing 0644 jar.
+        fd = os.open(cookie_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(cookies, f, indent=2, ensure_ascii=False)
 
     def _discard_persisted_cookies(self) -> None:

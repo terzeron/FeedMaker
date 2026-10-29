@@ -745,6 +745,22 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
             saved = json.loads((Path(tmpdir) / browser.COOKIE_FILE).read_text(encoding="utf-8"))
             self.assertEqual({c["name"] for c in saved}, {"sid", "cf_clearance"})
 
+    def test_write_cookies_restricts_file_to_owner(self):
+        # cf_clearance and session cookies are credentials; a jar left at 0644 (old runs)
+        # is tightened on the next write, and a new jar is created as 0600.
+        with tempfile.TemporaryDirectory() as tmpdir:
+            browser = self._make_browser(dir_path=Path(tmpdir))
+            cookie_file = Path(tmpdir) / browser.COOKIE_FILE
+            cookie_file.write_text("[]", encoding="utf-8")
+            cookie_file.chmod(0o644)
+            mock_context = MagicMock()
+            mock_context.cookies.return_value = [{"name": "cf_clearance", "value": "keep", "domain": ".example.com"}]
+            browser._write_cookies_to_file(mock_context)
+            self.assertEqual(cookie_file.stat().st_mode & 0o777, 0o600)
+            cookie_file.unlink()
+            browser._write_cookies_to_file(mock_context)
+            self.assertEqual(cookie_file.stat().st_mode & 0o777, 0o600)
+
     @patch("bin.headless_browser_cloakbrowser._cloak_launch_persistent_context")
     @patch("bin.headless_browser.URLSafety.check_url")
     def test_make_request_referer_blocked_and_navigation_errors(self, mock_check, mock_launch):

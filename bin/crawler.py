@@ -189,7 +189,10 @@ class RequestsClient:
         self._trim_cookies()
         cookie_data = [{"name": k, "value": v} for k, v in self.cookies.items()]
         cookie_file = self._get_cookie_dir() / RequestsClient.COOKIE_FILE
-        with cookie_file.open("w", encoding="utf-8") as f:
+        # Session cookies are credentials: owner-only, also for an existing 0644 jar.
+        fd = os.open(cookie_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(cookie_data, f, indent=2, ensure_ascii=False)
 
     def _trim_cookies(self) -> None:
