@@ -22,6 +22,8 @@ class NewlistCollector:
         self.feed_dir_path: Path = feed_dir_path
         self.collection_conf: dict[str, Any] = collection_conf
         self.new_list_file_path: Path = new_list_file_path
+        # 목록 수집 실패 원인. 사용자에게 보여줄 메시지로 FeedMaker까지 전달된다.
+        self.failure_reason: str = ""
 
     def __del__(self) -> None:
         del self.collection_conf
@@ -83,6 +85,8 @@ class NewlistCollector:
                 result, error, _ = crawler.run(url)
                 if not result:
                     LOGGER.error("Warning: can't get result from web page '%s', %s", url, error)
+                    if crawler.last_status_code in (401, 403):
+                        self.failure_reason = f"no permission to access the data source (HTTP {crawler.last_status_code}): {url}"
                     continue
             except UnicodeDecodeError as e:
                 LOGGER.error(e)

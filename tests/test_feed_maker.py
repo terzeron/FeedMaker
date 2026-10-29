@@ -306,6 +306,16 @@ class TestFeedMaker(unittest.TestCase):
             self.assertEqual(1, len(actual))
             self.assertEqual(3, len(actual[0]))
 
+    def test_3_get_recent_feed_list_keeps_failure_reason(self) -> None:
+        with patch("bin.feed_maker.NewlistCollector") as mock_collector:
+            mock_instance = mock_collector.return_value
+            mock_instance.collect.return_value = []
+            mock_instance.failure_reason = "no permission to access the data source (HTTP 401): https://example.com/list"
+
+            actual = self.maker._get_recent_feed_list()
+            self.assertEqual([], actual)
+            self.assertEqual(mock_instance.failure_reason, self.maker.failure_reason)
+
     def test_4_diff_feeds_and_make_htmls(self) -> None:
         # Mock all external dependencies
         with patch("bin.feed_maker_util.Process.exec_cmd", side_effect=lambda *a, **k: ("mock_result", None)):

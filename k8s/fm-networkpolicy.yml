@@ -75,3 +75,26 @@ spec:
       ports:
         - protocol: TCP
           port: 8080
+---
+# fm-db MySQL: 같은 네임스페이스(fm-backend 등)와 LAN(호스트·단말, LB 10.10.10.4 경유 포함)만 허용한다.
+# 다른 네임스페이스의 Pod(blog, wiki 등)는 접속하지 못한다.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: fm-db-policy
+  namespace: feedmaker
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: fm-db
+      app.kubernetes.io/name: mysql
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+        - ipBlock:
+            cidr: 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 3306

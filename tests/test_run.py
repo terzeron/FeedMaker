@@ -136,6 +136,25 @@ class TestFeedMakerRunnerMakeSingleFeed(unittest.TestCase):
             mock_unlink.assert_called_once_with(missing_ok=True)
             self.assertTrue(result)
 
+    @patch("bin.run.FileManager")
+    @patch("bin.run.FeedMaker")
+    @patch("bin.run.FileLock")
+    def test_failure_reason_is_propagated(self, mock_filelock, mock_fm_cls, mock_file_mgr):
+        runner = self._make_runner()
+        feed_dir = Path("/tmp/fm_work/group/feed")
+
+        mock_fm = MagicMock()
+        mock_fm.make.return_value = False
+        mock_fm.failure_reason = "no permission to access the data source (HTTP 401): https://example.com/list"
+        mock_fm_cls.return_value = mock_fm
+        mock_filelock.return_value.__enter__ = MagicMock()
+        mock_filelock.return_value.__exit__ = MagicMock(return_value=False)
+
+        with patch.object(Path, "is_file", return_value=False):
+            result = runner.make_single_feed(feed_dir, options={})
+        self.assertFalse(result)
+        self.assertEqual(mock_fm.failure_reason, runner.failure_reason)
+
     @patch("bin.run.FileLock")
     def test_filelock_timeout(self, mock_filelock):
         runner = self._make_runner()

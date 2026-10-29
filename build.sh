@@ -11,7 +11,7 @@ GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
 build_backend() {
     echo "=== Building backend ==="
-    docker build -q -f backend/Dockerfile \
+    docker build -q --pull --build-arg "APT_REFRESH=$(date +%G%V)" -f backend/Dockerfile \
         --build-arg FM_BACKEND_PORT="$FM_BACKEND_PORT" \
         --build-arg USER_ID="${USER_ID:-$(id -u)}" \
         --build-arg USER_NAME="${USER_NAME:-$(whoami)}" \

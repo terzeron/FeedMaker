@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM node:22.23.2@sha256:7725a5c2c83eed1d36258c66efae14b1ceccd021db9ed1d9559d3335ed3d68ed AS build
+FROM node:22.23.4@sha256:63538dfe497cc29dfafdda25ada09b46db68a3f4cc205abf1f5d6bf0913f3384 AS build
 
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json frontend/.npmrc ./

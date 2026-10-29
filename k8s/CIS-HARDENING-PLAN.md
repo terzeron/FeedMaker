@@ -150,10 +150,10 @@ kubectl auth can-i '*' '*' --as=system:anonymous   # -> no
 | 항목 | 상태 | 비고 |
 |---|---|---|
 | CP-1 RBAC | **적용됨** | `--authorization-mode=RBAC,Node`. `microk8s enable rbac`은 인자 파일만 바꾸므로 `sudo systemctl restart snap.microk8s.daemon-kubelite`가 추가로 필요했다. default SA의 `create pods`가 no로 확인됨 |
-| CP-2 apiserver anonymous-auth=false | **미적용** | kubelet 쪽만 false. `sudo APPLY_BASELINE=1 bash cis-hardening-apply.sh` 대상 |
-| CP-3 kubelet authorization-mode=Webhook | **미적용** | `APPLY_RBAC=1` 경로. RBAC가 이미 켜졌으므로 이제 시도할 수 있다 |
-| CP-4 API 감사 로그 | **미적용** | `--audit-*` 인자와 `audit-policy.yaml`이 없다 |
-| CP-5 PSS | **계획보다 강하게 적용됨** | feedmaker는 `enforce=baseline`(+`warn/audit=restricted`). 10개 네임스페이스에 baseline enforce. 단 NodeRestriction admission 플러그인은 **미적용**(`--enable-admission-plugins=EventRateLimit`만 있음) |
+| CP-2 apiserver anonymous-auth=false | **적용됨(2026-10-23)** | 익명 `/readyz`·`/healthz`·`/livez`·`/version`·`/api` 모두 401. 적용 후 구성요소 로그에 Unauthorized 없음, Prometheus 타깃 15개 up, 외부 호스트 10개 정상 |
+| CP-3 kubelet authorization-mode=Webhook | **적용됨(2026-10-23)** | 권한 없는 SA 토큰은 kubelet API 403, Prometheus SA는 200, 익명 401 확인 |
+| CP-4 API 감사 로그 | **적용됨(2026-10-22)** | 약 34MB/일(잡음 규칙 적용), 익명/미인증 접근 0건(약 3.7만 건 중) |
+| CP-5 PSS | **계획보다 강하게 적용됨** | feedmaker는 `enforce=baseline`(+`warn/audit=restricted`). 10개 네임스페이스에 baseline enforce. NodeRestriction도 **적용됨(2026-10-22)**(`NodeRestriction,EventRateLimit`) |
 | CP-6 약한 cipher 제거 | **적용됨** | apiserver `--tls-cipher-suites`에 CBC/3DES 없음 |
 | CP-7 kubelet protect-kernel-defaults | **미적용** | 커널 sysctl 선행 확인 필요 |
 | H-1 MySQL 외부 노출 축소 | **미적용** | fm-db는 여전히 LoadBalancer 10.10.10.4. **호스트 쪽 `.env` 3곳이 `FM_DB_HOST=10.10.10.4`를 쓴다**(`fm/.env`, `fm_dev/.env`, `fma/.env`). ClusterIP로 바꾸면 이 값들을 함께 바꿔야 한다 |

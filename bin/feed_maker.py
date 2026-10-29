@@ -52,6 +52,8 @@ class FeedMaker:
         self.do_extract_only = do_extract_only
         self.rss_file_path = rss_file_path
         self.window_size = window_size
+        # make() 실패 원인. 사용자에게 보여줄 메시지로 FeedMakerRunner까지 전달된다.
+        self.failure_reason: str = ""
 
         self.list_dir = self.feed_dir_path / "newlist"
         self.html_dir = self.feed_dir_path / "html"
@@ -420,7 +422,9 @@ class FeedMaker:
         short_date_str = Datetime.get_short_date_str()
         new_list_file_path = FeedMaker._get_list_file_path(self.list_dir, short_date_str)
         collector = NewlistCollector(self.feed_dir_path, self.collection_conf, new_list_file_path)
-        return collector.collect()
+        recent_feed_list = collector.collect()
+        self.failure_reason = collector.failure_reason
+        return recent_feed_list
 
     def _get_new_feeds(self, recent_feed_list: list[tuple[str, str, list[str]]], old_feed_list: list[tuple[str, str, list[str]]]) -> list[tuple[str, str, list[str]]]:
         # (link, title) 키 기반으로 새로운 피드만 필터링 (루프 사용)

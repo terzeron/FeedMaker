@@ -196,6 +196,29 @@ class TestComposeUrlListExtended(unittest.TestCase):
         self.assertEqual(result, [])
 
     @patch("bin.new_list_collector.Crawler")
+    def test_access_denied_sets_failure_reason(self, mock_crawler_cls) -> None:
+        instance = MagicMock()
+        mock_crawler_cls.return_value = instance
+        instance.run.return_value = ("", "unauthorized", None)
+        instance.last_status_code = 401
+
+        result = self.collector._compose_url_list()
+        self.assertEqual(result, [])
+        self.assertIn("no permission to access the data source", self.collector.failure_reason)
+        self.assertIn("HTTP 401", self.collector.failure_reason)
+        self.assertIn("http://example.com/list", self.collector.failure_reason)
+
+    @patch("bin.new_list_collector.Crawler")
+    def test_other_error_keeps_failure_reason_empty(self, mock_crawler_cls) -> None:
+        instance = MagicMock()
+        mock_crawler_cls.return_value = instance
+        instance.run.return_value = ("", "server error", None)
+        instance.last_status_code = 500
+
+        self.collector._compose_url_list()
+        self.assertEqual(self.collector.failure_reason, "")
+
+    @patch("bin.new_list_collector.Crawler")
     def test_crawler_run_unicode_decode_error(self, mock_crawler_cls) -> None:
         """crawler.run raises UnicodeDecodeError -> line 66-68"""
         instance = MagicMock()

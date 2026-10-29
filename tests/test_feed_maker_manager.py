@@ -916,6 +916,25 @@ class TestRun(unittest.TestCase):
             self.assertFalse(result)
             self.assertIn("error", error)
 
+    def test_run_recent_fails_with_failure_reason(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            mgr = _make_manager(tmp_path)
+            feed_dir = tmp_path / "group1" / "feed1"
+            feed_dir.mkdir(parents=True)
+            conf_data = {"configuration": {"collection": {}, "extraction": {}, "rss": {}}}
+            (feed_dir / "conf.json").write_text(json.dumps(conf_data))
+
+            mock_runner = MagicMock()
+            mock_runner.make_single_feed.return_value = False
+            mock_runner.failure_reason = "no permission to access the data source (HTTP 401): https://example.com/list"
+
+            with patch("backend.feed_maker_manager.FeedMakerRunner", return_value=mock_runner):
+                result, error = mgr.run("group1", "feed1")
+
+            self.assertFalse(result)
+            self.assertEqual("error in making a feed with recent articles: no permission to access the data source (HTTP 401): https://example.com/list", error)
+
     def test_run_invalid_config(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

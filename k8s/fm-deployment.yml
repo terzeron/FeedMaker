@@ -6,6 +6,7 @@ metadata:
   namespace: feedmaker
 spec:
   replicas: 1
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: fm-backend-app
@@ -198,6 +199,7 @@ metadata:
   namespace: feedmaker
 spec:
   replicas: 1
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: fm-frontend-app

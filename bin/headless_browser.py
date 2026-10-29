@@ -4,6 +4,7 @@ import atexit
 import hashlib
 import json
 import logging.config
+import math
 import os
 import shutil
 import signal
@@ -13,6 +14,7 @@ import threading
 import time
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import urlparse
 
 from bin.feed_maker_util import Env, PathUtil, URLSafety, redact_headers
 
@@ -342,7 +344,10 @@ class HeadlessBrowserBase:
     def _write_cookies_to_file(self, context: BrowserContext) -> None:
         cookies = [c for c in context.cookies() if self._is_persistable_cookie(c.get("name", ""))]
         cookie_file = self._get_cookie_dir() / self.COOKIE_FILE
-        with cookie_file.open("w", encoding="utf-8") as f:
+        # cf_clearance and session cookies are credentials: owner-only, also for an existing 0644 jar.
+        fd = os.open(cookie_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(cookies, f, indent=2, ensure_ascii=False)
 
     def _discard_persisted_cookies(self) -> None:
@@ -386,6 +391,11 @@ class HeadlessBrowserBase:
     # before giving up. Kept separate from (and larger than) the per-navigation timeout
     # because an interactive Turnstile solve routinely needs longer than a plain page load.
     _CLOUDFLARE_CHALLENGE_TIMEOUT_SEC: int = 90
+    # An interactive Turnstile widget never clears by itself; it waits for the
+    # "Verify you are human" checkbox. Look for the widget at this interval and
+    # click it at most _CLOUDFLARE_MAX_CLICKS times per wait.
+    _CLOUDFLARE_CLICK_INTERVAL_SEC: int = 10
+    _CLOUDFLARE_MAX_CLICKS: int = 3
     # Predicate is true once no Cloudflare interstitial remains on the page.
     _CLOUDFLARE_CLEARED_PREDICATE = """
         () => {
@@ -410,13 +420,58 @@ class HeadlessBrowserBase:
         # present and otherwise blocks until the challenge clears (or times out).
         # Returns True once cleared (or no challenge was present), False if it never
         # cleared within the timeout — the caller uses this to retry instead of
-        # capturing the interstitial.
-        try:
-            page.wait_for_function(self._CLOUDFLARE_CLEARED_PREDICATE, timeout=self._CLOUDFLARE_CHALLENGE_TIMEOUT_SEC * 1000)
+        # capturing the interstitial. While waiting, it pauses every click interval
+        # to tick the Turnstile checkbox if one is shown.
+        deadline = time.monotonic() + self._CLOUDFLARE_CHALLENGE_TIMEOUT_SEC
+        clicks = 0
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                LOGGER.warning("Cloudflare challenge did not clear within %ds", self._CLOUDFLARE_CHALLENGE_TIMEOUT_SEC)
+                return False
+            wait_sec = min(remaining, self._CLOUDFLARE_CLICK_INTERVAL_SEC) if clicks < self._CLOUDFLARE_MAX_CLICKS else remaining
+            try:
+                page.wait_for_function(self._CLOUDFLARE_CLEARED_PREDICATE, timeout=wait_sec * 1000)
+                return True
+            except PlaywrightTimeoutError:
+                pass
+            if clicks < self._CLOUDFLARE_MAX_CLICKS and time.monotonic() < deadline:
+                try:
+                    if self._try_click_cloudflare_checkbox(page):
+                        clicks += 1
+                        LOGGER.info("Clicked Cloudflare checkbox (attempt %d/%d)", clicks, self._CLOUDFLARE_MAX_CLICKS)
+                except PlaywrightError as e:
+                    clicks += 1
+                    LOGGER.debug("Cloudflare checkbox interaction failed: %r", e)
+
+    @staticmethod
+    def _is_cloudflare_challenge_frame(url: str) -> bool:
+        # Only a real Turnstile widget qualifies: an https iframe served from
+        # challenges.cloudflare.com under the challenge-platform path.
+        parsed = urlparse(url)
+        return parsed.scheme == "https" and parsed.hostname == "challenges.cloudflare.com" and parsed.path.startswith("/cdn-cgi/challenge-platform/")
+
+    @staticmethod
+    def _cloudflare_checkbox_point(x: float, y: float, width: float, height: float) -> Optional[tuple[float, float]]:
+        # The checkbox sits near the left edge of a widget of the usual size, so the
+        # click follows the iframe's current box, not a fixed screen position.
+        if not (200 <= width <= 400 and 40 <= height <= 100) or not (math.isfinite(x) and math.isfinite(y)) or x < 0 or y < 0:
+            return None
+        return x + 20, y + height / 2
+
+    @classmethod
+    def _try_click_cloudflare_checkbox(cls, page: Page) -> bool:
+        for frame in page.frames:
+            if not cls._is_cloudflare_challenge_frame(frame.url):
+                continue
+            element = frame.frame_element()
+            box = element.bounding_box() if element else None
+            point = cls._cloudflare_checkbox_point(box["x"], box["y"], box["width"], box["height"]) if box else None
+            if point is None:
+                continue
+            page.mouse.click(*point)
             return True
-        except PlaywrightTimeoutError:
-            LOGGER.warning("Cloudflare challenge did not clear within %ds", self._CLOUDFLARE_CHALLENGE_TIMEOUT_SEC)
-            return False
+        return False
 
     def _wait_for_marker(self, page: Page, marker_id: str) -> None:
         try:
@@ -476,6 +531,8 @@ class HeadlessBrowserBase:
             context: BrowserContext = session["context"]
 
             page.goto(login_url, wait_until=self.wait_until, timeout=self.timeout * 1000)  # type: ignore[arg-type]
+            # A login page behind Cloudflare shows no form until the challenge clears.
+            self._wait_for_cloudflare(page)
 
             id_field = config.get("id_field", "")
             password_field = config.get("password_field", "")
@@ -658,14 +715,7 @@ class HeadlessBrowserBase:
 # Canonical per-engine cookie jar filenames. Kept here as the single source of
 # truth so the engine subclasses and the facade never drift apart. Separate files
 # stop the cloakbrowser (Chromium) and camoufox (Firefox) jars cross-contaminating.
-ENGINE_COOKIE_FILES: dict[str, str] = {
-    "camoufox": "cookies.camoufox.json",
-    "cloakbrowser": "cookies.cloakbrowser.json",
-    "patchright": "cookies.patchright.json",
-    "nodriver": "cookies.nodriver.json",
-    "flaresolverr": "cookies.flaresolverr.json",
-    "rebrowser_playwright": "cookies.rebrowser_playwright.json",
-}
+ENGINE_COOKIE_FILES: dict[str, str] = {"camoufox": "cookies.camoufox.json", "cloakbrowser": "cookies.cloakbrowser.json", "patchright": "cookies.patchright.json", "nodriver": "cookies.nodriver.json", "flaresolverr": "cookies.flaresolverr.json", "rebrowser_playwright": "cookies.rebrowser_playwright.json"}
 _DEFAULT_ENGINE_NAMES: tuple[str, ...] = ("camoufox", "cloakbrowser")
 _ENGINE_NAMES: tuple[str, ...] = (*_DEFAULT_ENGINE_NAMES, "patchright", "nodriver", "flaresolverr", "rebrowser_playwright")
 
@@ -757,18 +807,7 @@ class HeadlessBrowser:
     @staticmethod
     def _contains_cloudflare_challenge(html: str) -> bool:
         lowered = html.lower()
-        return any(
-            marker in lowered
-            for marker in (
-                "window._cf_chl_opt",
-                'id="cf-content"',
-                "id='cf-content'",
-                'data-translate="checking_browser"',
-                "data-translate='checking_browser'",
-                "<title>just a moment",
-                "<title>잠시만",
-            )
-        )
+        return any(marker in lowered for marker in ("window._cf_chl_opt", "challenges.cloudflare.com/cdn-cgi/challenge", 'id="cf-content"', "id='cf-content'", 'data-translate="checking_browser"', "data-translate='checking_browser'", "<title>just a moment", "<title>잠시만"))
 
     def __getattr__(self, name: str) -> Any:
         # Only invoked for attributes not found normally. Delegate public attribute reads

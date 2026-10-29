@@ -389,7 +389,10 @@ class FeedMakerManager:
 
                 result = runner.make_single_feed(feed_dir_path, options={})
                 if not result:
-                    return False, "error in making a feed with recent articles"
+                    message = "error in making a feed with recent articles"
+                    if runner.failure_reason:
+                        message += f": {runner.failure_reason}"
+                    return False, message
             else:
                 return False, "invalid format of configuration file"
 
