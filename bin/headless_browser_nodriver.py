@@ -11,8 +11,12 @@ from bin.headless_browser import ENGINE_COOKIE_FILES, LOGGER, HeadlessBrowserBas
 
 try:
     import nodriver
+    from nodriver import ProtocolException
+
+    _CDP_ERRORS: tuple[type[Exception], ...] = (ProtocolException, RuntimeError)
 except ImportError:  # pragma: no cover - exercised when nodriver is unavailable.
     nodriver = None
+    _CDP_ERRORS = (RuntimeError,)
 
 
 class HeadlessBrowserNodriver(HeadlessBrowserBase):
@@ -47,14 +51,56 @@ class HeadlessBrowserNodriver(HeadlessBrowserBase):
             )
             or self._CLOUDFLARE_CHALLENGE_TIMEOUT_SEC
         )
-        deadline = time.monotonic() + timeout
+        start = time.monotonic()
+        deadline = start + timeout
+        # Same policy as the Playwright engines: an interactive Turnstile widget waits
+        # for its checkbox, so tick it every click interval, at most _CLOUDFLARE_MAX_CLICKS times.
+        next_click = start + self._CLOUDFLARE_CLICK_INTERVAL_SEC
+        clicks = 0
         while True:
             html = await tab.get_content()
             if not self._contains_cloudflare_challenge(html):
                 return html
-            if time.monotonic() >= deadline:
+            now = time.monotonic()
+            if now >= deadline:
                 return None
+            if clicks < self._CLOUDFLARE_MAX_CLICKS and now >= next_click:
+                try:
+                    if await self._try_click_cloudflare_checkbox_cdp(tab):
+                        clicks += 1
+                        LOGGER.info("Clicked Cloudflare checkbox (attempt %d/%d)", clicks, self._CLOUDFLARE_MAX_CLICKS)
+                except _CDP_ERRORS as e:
+                    clicks += 1
+                    LOGGER.debug("Cloudflare checkbox interaction failed: %r", e)
+                next_click = time.monotonic() + self._CLOUDFLARE_CLICK_INTERVAL_SEC
             await asyncio.sleep(1)
+
+    async def _try_click_cloudflare_checkbox_cdp(self, tab: Any) -> bool:
+        # nodriver has no frame boxes, so walk the pierced DOM (closed shadow roots and
+        # nested documents included) for the Turnstile iframe and click it via CDP input.
+        cdp = nodriver.cdp
+        nodes = [await tab.send(cdp.dom.get_document(depth=-1, pierce=True))]
+        while nodes:
+            node = nodes.pop()
+            if node.node_name == "IFRAME":
+                attrs = node.attributes or []
+                if self._is_cloudflare_challenge_frame(dict(zip(attrs[::2], attrs[1::2])).get("src", "")):
+                    try:
+                        q = (await tab.send(cdp.dom.get_box_model(backend_node_id=node.backend_node_id))).content
+                    except _CDP_ERRORS:
+                        # The frame can detach while the tree is inspected.
+                        q = None
+                    point = self._cloudflare_checkbox_point(q[0], q[1], q[2] - q[0], q[5] - q[1]) if q and len(q) == 8 else None
+                    if point is not None:
+                        x, y = point
+                        for kind, button, buttons in (("mouseMoved", "none", 0), ("mousePressed", "left", 1), ("mouseReleased", "left", 0)):
+                            await tab.send(cdp.input_.dispatch_mouse_event(kind, x=x, y=y, button=cdp.input_.MouseButton(button), buttons=buttons, click_count=1))
+                        return True
+            nodes.extend(node.children or [])
+            nodes.extend(node.shadow_roots or [])
+            if node.content_document is not None:
+                nodes.append(node.content_document)
+        return False
 
     async def _scroll(self, tab: Any) -> None:
         deadline = time.monotonic() + self._MAX_SCROLL_SECS

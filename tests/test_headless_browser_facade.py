@@ -23,10 +23,7 @@ class TestHeadlessBrowserFacade(unittest.TestCase):
     def test_explicit_browser_fallback_overrides_environment(self):
         with patch("bin.headless_browser.Env") as mock_env:
             mock_env.get.return_value = "cloakbrowser"
-            self.assertEqual(
-                _resolve_engine_order(["patchright", "nodriver", "camoufox"]),
-                ["patchright", "nodriver", "camoufox"],
-            )
+            self.assertEqual(_resolve_engine_order(["patchright", "nodriver", "camoufox"]), ["patchright", "nodriver", "camoufox"])
 
     def test_explicit_browser_fallback_rejects_unknown_engine(self):
         with self.assertRaisesRegex(ValueError, "unknown headless browser engine"):
@@ -48,11 +45,7 @@ class TestHeadlessBrowserFacade(unittest.TestCase):
         self.assertEqual(HeadlessBrowser.COOKIE_FILE, "cookies.camoufox.json")
 
     def test_explicit_browser_fallback_tracks_primary_cookie_file(self):
-        facade = HeadlessBrowser(
-            dir_path=Path(tempfile.gettempdir()),
-            timeout=5,
-            browser_fallback=["nodriver", "camoufox"],
-        )
+        facade = HeadlessBrowser(dir_path=Path(tempfile.gettempdir()), timeout=5, browser_fallback=["nodriver", "camoufox"])
         self.assertEqual(facade.COOKIE_FILE, "cookies.nodriver.json")
         self.assertEqual(facade._engine_order, ["nodriver", "camoufox"])
 
@@ -118,13 +111,15 @@ class TestHeadlessBrowserFacade(unittest.TestCase):
         facade = self._facade()
         facade._engine_order = ["camoufox", "cloakbrowser"]
         engines = {"camoufox": FakeCamoufox(), "cloakbrowser": FakeCloak()}
-        with patch("bin.headless_browser._load_engine_class", return_value=object), patch.object(
-            facade, "_engine", side_effect=lambda name: engines[name]
-        ):
+        with patch("bin.headless_browser._load_engine_class", return_value=object), patch.object(facade, "_engine", side_effect=lambda name: engines[name]):
             result = facade.make_request("https://example.com")
 
         self.assertEqual(result, "<html><body>content</body></html>")
         self.assertEqual(recycle_calls, ["camoufox"])
+
+    def test_contains_cloudflare_challenge_detects_turnstile_iframe(self):
+        html = '<html><body><iframe src="https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/g/turnstile"></iframe></body></html>'
+        self.assertTrue(HeadlessBrowser._contains_cloudflare_challenge(html))
 
     def test_make_request_returns_empty_when_no_engine_instantiates(self):
         # The engine class loads but construction yields nothing usable: the loop must skip

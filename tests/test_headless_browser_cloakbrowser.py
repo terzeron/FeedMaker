@@ -11,6 +11,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from typing import Optional
 from unittest.mock import MagicMock, PropertyMock, patch
 
 from bin import headless_browser_cloakbrowser as hb_module
@@ -413,11 +414,13 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
 
         mock_page.locator.side_effect = locator_side_effect
 
-        with patch.object(browser, "_write_cookies_to_file") as mock_write:
+        with patch.object(browser, "_write_cookies_to_file") as mock_write, patch.object(browser, "_wait_for_cloudflare", return_value=True) as mock_wait:
             result = browser.login({"login_url": "https://example.com/login", "id": "tester", "password": "secret"})
 
         self.assertTrue(result)
         mock_page.goto.assert_called_once()
+        # 로그인 페이지가 challenge 뒤에 있으면 form을 찾기 전에 체크박스 대기를 거친다.
+        mock_wait.assert_called_once_with(mock_page)
         id_locator.wait_for.assert_called_once()
         id_locator.fill.assert_called_once_with("tester")
         pw_locator.fill.assert_called_once_with("secret")
@@ -451,7 +454,9 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         mock_page.locator.side_effect = locator_side_effect
         mock_page.wait_for_function.side_effect = PlaywrightTimeoutError("stay")
 
-        result = browser.login({"login_url": "https://example.com/login", "id": "tester", "password": "secret", "id_field": 'user"name', "password_field": "password"})
+        # 즉시 실패하는 mock으로 challenge 대기를 돌리면 90초 busy loop가 돌며 메모리가 쌓인다.
+        with patch.object(browser, "_wait_for_cloudflare", return_value=True):
+            result = browser.login({"login_url": "https://example.com/login", "id": "tester", "password": "secret", "id_field": 'user"name', "password_field": "password"})
 
         self.assertTrue(result)
         pw_locator.press.assert_called_once_with("Enter")
@@ -548,6 +553,8 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         mock_context, mock_page = self._build_session_mocks()
         mock_launch.return_value = mock_context
         mock_page.wait_for_function.side_effect = PlaywrightTimeoutError("challenge stuck")
+        # 대기 상한을 0으로 줄인다. mock은 즉시 실패하므로 그대로 두면 90초 busy loop가 된다.
+        browser._CLOUDFLARE_CHALLENGE_TIMEOUT_SEC = 0
 
         with patch.object(browser, "_discard_persisted_cookies") as mock_discard:
             result = browser.make_request("https://example.com")
@@ -649,9 +656,63 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
         # wait_for_selector. Both must swallow a timeout without raising.
         page.wait_for_function.side_effect = PlaywrightTimeoutError("cf timeout")
         page.wait_for_selector.side_effect = PlaywrightTimeoutError("marker timeout")
-        self.assertFalse(browser._wait_for_cloudflare(page))
+        page.frames = []
+        clock = iter(range(0, 1000, browser._CLOUDFLARE_CLICK_INTERVAL_SEC))
+        with patch("bin.headless_browser.time.monotonic", side_effect=lambda: next(clock)):
+            self.assertFalse(browser._wait_for_cloudflare(page))
         browser._wait_for_marker(page, "marker")
-        page.wait_for_function.assert_called_once_with(browser._CLOUDFLARE_CLEARED_PREDICATE, timeout=browser._CLOUDFLARE_CHALLENGE_TIMEOUT_SEC * 1000)
+        page.wait_for_function.assert_called_with(browser._CLOUDFLARE_CLEARED_PREDICATE, timeout=browser._CLOUDFLARE_CLICK_INTERVAL_SEC * 1000)
+        page.mouse.click.assert_not_called()
+
+    @staticmethod
+    def _challenge_frame(url: str = "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/g/turnstile", box: Optional[dict] = None) -> MagicMock:
+        frame = MagicMock()
+        frame.url = url
+        frame.frame_element.return_value.bounding_box.return_value = box if box is not None else {"x": 100.0, "y": 200.0, "width": 300.0, "height": 65.0}
+        return frame
+
+    def test_wait_for_cloudflare_clicks_turnstile_checkbox(self):
+        browser = self._make_browser()
+        page = MagicMock()
+        page.frames = [self._challenge_frame()]
+        # 첫 대기는 challenge가 남아 timeout, 클릭 뒤 두 번째 대기에서 해제된다.
+        page.wait_for_function.side_effect = [PlaywrightTimeoutError("cf timeout"), None]
+        self.assertTrue(browser._wait_for_cloudflare(page))
+        page.mouse.click.assert_called_once_with(120.0, 232.5)
+
+    def test_wait_for_cloudflare_click_is_bounded(self):
+        browser = self._make_browser()
+        page = MagicMock()
+        page.frames = [self._challenge_frame()]
+        page.wait_for_function.side_effect = PlaywrightTimeoutError("cf timeout")
+        clock = iter(range(0, 1000, browser._CLOUDFLARE_CLICK_INTERVAL_SEC))
+        with patch("bin.headless_browser.time.monotonic", side_effect=lambda: next(clock)):
+            self.assertFalse(browser._wait_for_cloudflare(page))
+        self.assertEqual(browser._CLOUDFLARE_MAX_CLICKS, page.mouse.click.call_count)
+
+    def test_wait_for_cloudflare_click_error_keeps_waiting(self):
+        browser = self._make_browser()
+        page = MagicMock()
+        page.frames = [self._challenge_frame()]
+        page.mouse.click.side_effect = PlaywrightError("detached")
+        page.wait_for_function.side_effect = [PlaywrightTimeoutError("cf timeout"), None]
+        self.assertTrue(browser._wait_for_cloudflare(page))
+
+    def test_try_click_ignores_non_turnstile_frames(self):
+        browser = self._make_browser()
+        frames = [
+            self._challenge_frame(url="https://example.com/cdn-cgi/challenge-platform/test"),
+            self._challenge_frame(url="https://challenges.cloudflare.com.evil.test/cdn-cgi/challenge-platform/test"),
+            self._challenge_frame(url="http://challenges.cloudflare.com/cdn-cgi/challenge-platform/test"),
+            self._challenge_frame(url="https://challenges.cloudflare.com/not-a-challenge"),
+            self._challenge_frame(box={"x": 100.0, "y": 200.0, "width": 1000.0, "height": 65.0}),
+            self._challenge_frame(box={"x": -5.0, "y": 200.0, "width": 300.0, "height": 65.0}),
+        ]
+        for frame in frames:
+            page = MagicMock()
+            page.frames = [frame]
+            self.assertFalse(browser._try_click_cloudflare_checkbox(page))
+            page.mouse.click.assert_not_called()
 
     def test_wait_for_cloudflare_predicate_detects_modern_challenge(self):
         # The cleared-predicate must recognise the modern managed-challenge / Turnstile
@@ -669,7 +730,8 @@ class TestHeadlessBrowserCloak(unittest.TestCase):
 
         page = MagicMock()
         self.assertTrue(browser._wait_for_cloudflare(page))
-        page.wait_for_function.assert_called_once_with(predicate, timeout=browser._CLOUDFLARE_CHALLENGE_TIMEOUT_SEC * 1000)
+        page.wait_for_function.assert_called_once_with(predicate, timeout=browser._CLOUDFLARE_CLICK_INTERVAL_SEC * 1000)
+        page.mouse.click.assert_not_called()
 
     def test_write_cookies_persists_clearance_drops_transient_cookies(self):
         # cf_clearance is the multi-hour clearance token and is persisted so a later run can

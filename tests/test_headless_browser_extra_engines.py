@@ -208,6 +208,88 @@ class TestNodriverEngine(_BrowserTestCase):
         with patch("bin.headless_browser_nodriver.Env.get", return_value="1"), patch("bin.headless_browser_nodriver.time", SimpleNamespace(monotonic=MagicMock(return_value=0))), patch("bin.headless_browser_nodriver.asyncio.sleep", new=AsyncMock()):
             self.assertEqual(asyncio.run(browser._wait_for_cloudflare_html(tab)), "<html>ready</html>")
 
+    @staticmethod
+    def _iframe(backend_node_id, src):
+        # nodriver parses node ids into BackendNodeId; get_box_model calls its to_json().
+        from nodriver.cdp.dom import BackendNodeId
+
+        return SimpleNamespace(node_name="IFRAME", backend_node_id=BackendNodeId(backend_node_id), attributes=["src", src], children=None, shadow_roots=None, content_document=None)
+
+    @staticmethod
+    def _cdp_tab(document, boxes):
+        # Unwrap nodriver's CDP command generators and answer like a browser would.
+        tab = MagicMock()
+        sent = []
+
+        async def send(cdp_obj):
+            command = next(cdp_obj)
+            sent.append(command)
+            if command["method"] == "DOM.getDocument":
+                return document
+            if command["method"] == "DOM.getBoxModel":
+                box = boxes.get(command["params"]["backendNodeId"])
+                if box is None:
+                    raise RuntimeError("detached")
+                return SimpleNamespace(content=box)
+            return None
+
+        tab.send = AsyncMock(side_effect=send)
+        return tab, sent
+
+    def test_cdp_click_targets_turnstile_in_closed_shadow_root(self):
+        browser = self._make_browser(HeadlessBrowserNodriver)
+        turnstile = "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/g/turnstile"
+        shadow_root = SimpleNamespace(node_name="#document-fragment", attributes=None, children=[self._iframe(41, "https://example.org/ad"), self._iframe(42, turnstile), self._iframe(43, turnstile)], shadow_roots=None, content_document=None)
+        document = SimpleNamespace(node_name="#document", attributes=None, children=None, shadow_roots=[shadow_root], content_document=None)
+        tab, sent = self._cdp_tab(document, {41: [0, 0, 300, 0, 300, 65, 0, 65], 42: [100, 200, 400, 200, 400, 265, 100, 265]})
+        self.assertTrue(asyncio.run(browser._try_click_cloudflare_checkbox_cdp(tab)))
+        self.assertTrue(sent[0]["params"]["pierce"])
+        # The ad iframe is never measured; the detached Turnstile frame (43) is skipped.
+        self.assertNotIn(41, [c["params"].get("backendNodeId") for c in sent if c["method"] == "DOM.getBoxModel"])
+        events = [c["params"] for c in sent if c["method"] == "Input.dispatchMouseEvent"]
+        self.assertEqual([e["type"] for e in events], ["mouseMoved", "mousePressed", "mouseReleased"])
+        self.assertTrue(all(e["x"] == 120 and e["y"] == 232.5 for e in events))
+        self.assertEqual([e["buttons"] for e in events], [0, 1, 0])
+
+    def test_cdp_click_ignores_oversized_or_foreign_frames(self):
+        browser = self._make_browser(HeadlessBrowserNodriver)
+        frames = [self._iframe(1, "https://challenges.cloudflare.com.evil.test/cdn-cgi/challenge-platform/x"), self._iframe(2, "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/x")]
+        document = SimpleNamespace(node_name="#document", attributes=None, children=frames, shadow_roots=None, content_document=None)
+        tab, sent = self._cdp_tab(document, {1: [100, 200, 400, 200, 400, 265, 100, 265], 2: [0, 0, 1000, 0, 1000, 65, 0, 65]})
+        self.assertFalse(asyncio.run(browser._try_click_cloudflare_checkbox_cdp(tab)))
+        self.assertNotIn("Input.dispatchMouseEvent", [c["method"] for c in sent])
+
+    def test_wait_for_cloudflare_clicks_checkbox_after_interval(self):
+        browser = self._make_browser(HeadlessBrowserNodriver)
+        tab = MagicMock()
+        tab.get_content = AsyncMock(side_effect=["<title>Just a moment...</title>", "<title>Just a moment...</title>", "<html>ready</html>"])
+        interval = browser._CLOUDFLARE_CLICK_INTERVAL_SEC
+        # start, 1st poll (before interval: no click), 2nd poll (interval reached: click), next_click reset
+        clock = MagicMock(side_effect=[0, interval - 1, interval, interval])
+        with (
+            patch("bin.headless_browser_nodriver.Env.get", return_value="90"),
+            patch("bin.headless_browser_nodriver.time", SimpleNamespace(monotonic=clock)),
+            patch("bin.headless_browser_nodriver.asyncio.sleep", new=AsyncMock()),
+            patch.object(browser, "_try_click_cloudflare_checkbox_cdp", new=AsyncMock(return_value=True)) as click,
+        ):
+            self.assertEqual(asyncio.run(browser._wait_for_cloudflare_html(tab)), "<html>ready</html>")
+        click.assert_awaited_once_with(tab)
+
+    def test_wait_for_cloudflare_click_attempts_are_bounded(self):
+        browser = self._make_browser(HeadlessBrowserNodriver)
+        tab = MagicMock()
+        tab.get_content = AsyncMock(return_value="<title>Just a moment...</title>")
+        ticks = iter(range(0, 10_000, browser._CLOUDFLARE_CLICK_INTERVAL_SEC))
+        with (
+            patch("bin.headless_browser_nodriver.Env.get", return_value="90"),
+            patch("bin.headless_browser_nodriver.time", SimpleNamespace(monotonic=lambda: next(ticks))),
+            patch("bin.headless_browser_nodriver.asyncio.sleep", new=AsyncMock()),
+            patch.object(browser, "_try_click_cloudflare_checkbox_cdp", new=AsyncMock(side_effect=RuntimeError("socket closed"))) as click,
+        ):
+            self.assertIsNone(asyncio.run(browser._wait_for_cloudflare_html(tab)))
+        # Errors count as attempts, so a broken connection cannot click forever.
+        self.assertEqual(click.await_count, browser._CLOUDFLARE_MAX_CLICKS)
+
     def test_scroll_handles_invalid_height_and_scrolls_back_to_top(self):
         browser = self._make_browser(HeadlessBrowserNodriver)
         tab = MagicMock()
