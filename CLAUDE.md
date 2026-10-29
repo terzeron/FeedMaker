@@ -65,6 +65,10 @@ npm run build          # 프로덕션 빌드 (버전 포함)
 ./build.sh             # Docker 이미지 빌드 및 레지스트리 푸시 (requires .env)
 ```
 
+## 참고 문서
+
+- Cloudflare challenge 체크박스 자동 클릭: `docs/CLOUDFLARE-CHALLENGE.md` (엔진·사이트 변경 전 먼저 확인)
+
 ## Environment
 
 - `.env` 파일 필요 (빌드/배포 시): `FM_BACKEND_PORT` 등 설정

@@ -186,6 +186,7 @@ uv run ruff check .
 - **`extractor.py`** - HTML parsing and content extraction
 - **`feed_maker.py`** - RSS XML generation
 - **`headless_browser_cloak.py`** - cloakbrowser (patched-Chromium) browser automation for JavaScript-heavy and Cloudflare-protected sites
+  - Cloudflare Turnstile checkbox auto-click: see `docs/CLOUDFLARE-CHALLENGE.md`
 - **Data managers** - Feeds, problems, HTML files, access logs
 
 #### 4. Utilities (`utils/`)
