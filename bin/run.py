@@ -24,6 +24,8 @@ class FeedMakerRunner:
         LOGGER.debug(f"# FeedMakerRunner(html_archiving_period={html_archiving_period}, list_archiving_period={list_archiving_period})")
         self.html_archiving_period = html_archiving_period
         self.list_archiving_period = list_archiving_period
+        # 마지막 make_single_feed() 실패 원인. backend가 사용자 메시지에 덧붙인다.
+        self.failure_reason = ""
         self.work_dir_path = Path(Env.get("FM_WORK_DIR"))
         if not self.work_dir_path.is_dir():
             LOGGER.error("Error: Can't find work directory '%s'", PathUtil.short_path(self.work_dir_path))
@@ -41,6 +43,7 @@ class FeedMakerRunner:
         LOGGER.debug("# make_single_feed(feed_dir_path='%s', options=%r)", PathUtil.short_path(feed_dir_path), options)
 
         start_time = datetime.now(timezone.utc)
+        self.failure_reason = ""
 
         lock_file_path = feed_dir_path / ".feed_maker_runner.lock"
         if lock_file_path.is_file():
@@ -76,6 +79,7 @@ class FeedMakerRunner:
                 feed_maker = FeedMaker(feed_dir_path=feed_dir_path, do_collect_by_force=force_collection_opt, do_collect_only=collect_only_opt, rss_file_path=rss_file_path, window_size=window_size, do_extract_only=extract_only_opt)
                 try:
                     result = feed_maker.make()
+                    self.failure_reason = feed_maker.failure_reason
                 finally:
                     # 피드 단위로 Chromium 세션을 재활용 — 같은 피드그룹 안에서 자원이 누적되어
                     # N번째 피드부터 page.evaluate/page.goto가 무한 대기에 빠지는 현상을 차단.

@@ -100,26 +100,13 @@ class TestCrawler(unittest.TestCase):
         self.assertNotIn("--wait-until", actual)
 
     def test_get_option_str_with_browser_fallback(self) -> None:
-        actual = Crawler.get_option_str(
-            {"browser_fallback": ["camoufox", "cloakbrowser", "patchright"]}
-        )
-        self.assertIn(
-            "--browser-fallback='camoufox,cloakbrowser,patchright'",
-            actual,
-        )
+        actual = Crawler.get_option_str({"browser_fallback": ["camoufox", "cloakbrowser", "patchright"]})
+        self.assertIn("--browser-fallback='camoufox,cloakbrowser,patchright'", actual)
 
     @patch("bin.crawler.HeadlessBrowser")
-    def test_crawler_passes_browser_fallback_to_headless_browser(
-        self, mock_headless_browser: MagicMock
-    ) -> None:
-        Crawler(
-            render_js=True,
-            browser_fallback=["patchright", "nodriver"],
-        )
-        self.assertEqual(
-            mock_headless_browser.call_args.kwargs["browser_fallback"],
-            ["patchright", "nodriver"],
-        )
+    def test_crawler_passes_browser_fallback_to_headless_browser(self, mock_headless_browser: MagicMock) -> None:
+        Crawler(render_js=True, browser_fallback=["patchright", "nodriver"])
+        self.assertEqual(mock_headless_browser.call_args.kwargs["browser_fallback"], ["patchright", "nodriver"])
 
     def test_crawler_wait_until_default(self) -> None:
         crawler = Crawler()
@@ -512,6 +499,21 @@ class TestCrawlerRunRetryStatusCodes(unittest.TestCase):
         self.assertEqual(mock_rc.make_request.call_count, 1)
 
     @patch("bin.crawler.RequestsClient")
+    def test_last_status_code_is_recorded(self, mock_rc_cls):
+        mock_rc = MagicMock()
+        mock_rc.make_request.return_value = ("", "unauthorized", {}, 401)
+        mock_rc_cls.return_value = mock_rc
+
+        crawler = Crawler(num_retries=1)
+        crawler.requests_client = mock_rc
+        crawler.run("http://example.com/page")
+        self.assertEqual(crawler.last_status_code, 401)
+
+        mock_rc.make_request.return_value = MOCK_HTML_RESPONSE
+        crawler.run("http://example.com/page")
+        self.assertEqual(crawler.last_status_code, 200)
+
+    @patch("bin.crawler.RequestsClient")
     def test_no_retry_on_404(self, mock_rc_cls):
         mock_rc = MagicMock()
         mock_rc.make_request.return_value = ("", "not found", {}, 404)
@@ -670,22 +672,11 @@ class TestCrawlerMain(unittest.TestCase):
     def test_main_with_browser_fallback(self, mock_crawler_cls: MagicMock) -> None:
         mock_crawler_cls.return_value.run.return_value = ("ok", "", {})
 
-        with patch.object(
-            _sys,
-            "argv",
-            [
-                "crawler.py",
-                "--browser-fallback=patchright,nodriver,camoufox",
-                "https://example.com",
-            ],
-        ):
+        with patch.object(_sys, "argv", ["crawler.py", "--browser-fallback=patchright,nodriver,camoufox", "https://example.com"]):
             result = main()
 
         self.assertEqual(result, 0)
-        self.assertEqual(
-            mock_crawler_cls.call_args.kwargs["browser_fallback"],
-            ["patchright", "nodriver", "camoufox"],
-        )
+        self.assertEqual(mock_crawler_cls.call_args.kwargs["browser_fallback"], ["patchright", "nodriver", "camoufox"])
 
     @patch("bin.crawler.Crawler")
     def test_main_with_verify_ssl_false(self, mock_crawler_cls: MagicMock) -> None:

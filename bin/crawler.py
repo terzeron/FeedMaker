@@ -403,9 +403,13 @@ class Crawler:
         self.blob_to_dataurl = blob_to_dataurl
         self.wait_until = wait_until
         self.browser_fallback = browser_fallback
+        # 마지막 run()의 HTTP 상태 코드. 실패 원인(401/403 등)을 호출자에게 전달하는 데 쓴다.
+        self.last_status_code: Optional[int] = None
         if self.render_js:
             # headless browser
-            self.headless_browser = HeadlessBrowser(dir_path=self.dir_path, headers=self.headers, copy_images_from_canvas=copy_images_from_canvas, simulate_scrolling=simulate_scrolling, disable_headless=disable_headless, blob_to_dataurl=blob_to_dataurl, timeout=timeout, wait_until=wait_until, browser_fallback=browser_fallback)
+            self.headless_browser = HeadlessBrowser(
+                dir_path=self.dir_path, headers=self.headers, copy_images_from_canvas=copy_images_from_canvas, simulate_scrolling=simulate_scrolling, disable_headless=disable_headless, blob_to_dataurl=blob_to_dataurl, timeout=timeout, wait_until=wait_until, browser_fallback=browser_fallback
+            )
         else:
             self.requests_client = RequestsClient(dir_path=self.dir_path, method=method, headers=self.headers, timeout=timeout, encoding=encoding, verify_ssl=verify_ssl)
 
@@ -495,6 +499,7 @@ class Crawler:
     def run(self, url: str, data: Any = None, download_file: Optional[Path] = None, allow_redirects: bool = True) -> tuple[str, str, Optional[Headers]]:
         LOGGER.debug(f"# run(url={url}, data={data!r}, download_file={download_file}, allow_redirects={allow_redirects})")
         self._try_login()
+        self.last_status_code = None
         error: str = ""
         headers: Headers = {}
         for i in range(self.num_retries):
@@ -508,6 +513,7 @@ class Crawler:
             else:
                 try:
                     response, error, headers, status_code = self.requests_client.make_request(url, download_file=download_file, data=data, allow_redirects=allow_redirects)
+                    self.last_status_code = status_code
                     if response:
                         return response, "", None
                 except requests.exceptions.ReadTimeout as e:
@@ -571,7 +577,9 @@ def main() -> int:
         sys.exit(-1)
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hf:", ["spider", "render-js=", "verify-ssl=", "copy-images-from-canvas=", "simulate-scrolling=", "disable-headless=", "blob-to-dataurl=", "wait-until=", "download=", "encoding=", "user-agent=", "referer=", "header=", "timeout=", "retry=", "retry-sleep=", "browser-fallback="])
+        opts, args = getopt.getopt(
+            sys.argv[1:], "hf:", ["spider", "render-js=", "verify-ssl=", "copy-images-from-canvas=", "simulate-scrolling=", "disable-headless=", "blob-to-dataurl=", "wait-until=", "download=", "encoding=", "user-agent=", "referer=", "header=", "timeout=", "retry=", "retry-sleep=", "browser-fallback="]
+        )
     except getopt.GetoptError:
         print_usage()
         sys.exit(-1)
