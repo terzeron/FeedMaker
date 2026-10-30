@@ -131,16 +131,21 @@ class FeedMakerRunner:
                 failed_feed_list.append(feed_dir_path.parent.name + "/" + feed_name)
                 continue
 
-            if collection_conf.get("is_completed", False):
-                result = self.make_single_feed(feed_dir_path, options={"force_collection_opt": "-c"})
-                if not result:
-                    LOGGER.warning(f"Warning: can't make a feed '{feed_name} with all completed articles, {result}")
-                    failed_feed_list.append(feed_dir_path.parent.name + "/" + feed_name)
-                    continue
+            try:
+                if collection_conf.get("is_completed", False):
+                    result = self.make_single_feed(feed_dir_path, options={"force_collection_opt": "-c"})
+                    if not result:
+                        LOGGER.warning(f"Warning: can't make a feed '{feed_name} with all completed articles, {result}")
+                        failed_feed_list.append(feed_dir_path.parent.name + "/" + feed_name)
+                        continue
 
-            result = self.make_single_feed(feed_dir_path, options={})
-            if not result:
-                LOGGER.warning(f"Warning: can't make a feed '{feed_name}' with recent articles, {result}")
+                result = self.make_single_feed(feed_dir_path, options={})
+                if not result:
+                    LOGGER.warning(f"Warning: can't make a feed '{feed_name}' with recent articles, {result}")
+                    failed_feed_list.append(feed_dir_path.parent.name + "/" + feed_name)
+            except NotFoundConfigItemError as e:
+                # 피드 하나의 설정 누락이 전체 실행(run.py -a)을 중단시키지 않도록 격리
+                LOGGER.error(e)
                 failed_feed_list.append(feed_dir_path.parent.name + "/" + feed_name)
 
         end_time = datetime.now(timezone.utc)
