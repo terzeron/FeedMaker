@@ -38,9 +38,16 @@ settings:
   # MySQL 8.4 의 기본값은 utf8mb4 / utf8mb4_0900_ai_ci 다. 그런데 feedmaker DB 는
   # utf8mb4 / utf8mb4_general_ci 로 만들어져 있다. collation 이 다르면 정렬과 비교
   # 결과가 달라지므로 서버 기본값을 기존과 동일하게 고정한다.
+  #
+  # socket 을 인자로 고정하는 이유: 2026-10-31 호스트 재부팅(커널 7.0.0-42, containerd 2.2.2-0ubuntu1.2
+  # 적용) 뒤 mysqld 가 /etc/my.cnf 를 읽지 않아(`mysqld --print-defaults` 출력 없음) socket 을
+  # /var/lib/mysql/mysql.sock 에 만들었다. chart 의 startup probe(mysqladmin status)는
+  # /var/run/mysqld/mysqld.sock 을 찾아 실패했고, kubelet 이 5분마다 DB 를 재시작했다.
+  # 설정 파일 읽기 여부와 무관하게 probe 가 보는 경로로 맞춘다.
   arguments:
     - --character-set-server=utf8mb4
     - --collation-server=utf8mb4_general_ci
+    - --socket=/var/run/mysqld/mysqld.sock
   existingSecret: fm-db-mysql
   rootPassword:
     secretKey: mysql-root-password
