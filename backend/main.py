@@ -490,6 +490,16 @@ async def remove_html(group_name: str, feed_name: str, request: Request, feed_ma
     return response_object
 
 
+@app.delete("/groups/{group_name}/feeds/{feed_name}/images")
+async def remove_images(group_name: str, feed_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+    LOGGER.info("DELETE /groups/%s/feeds/%s/images -> remove_images(%s, %s)", group_name, feed_name, group_name, feed_name)
+    require_admin(request)
+    response_object: dict[str, Any] = {}
+    feed_maker_manager.remove_images(group_name, feed_name)
+    response_object["status"] = "success"
+    return response_object
+
+
 @app.post("/groups/{group_name}/feeds/{feed_name}/run")
 def run_feed(group_name: str, feed_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("POST /groups/%s/feeds/%s/run -> run_feed(%s, %s)", group_name, feed_name, group_name, feed_name)

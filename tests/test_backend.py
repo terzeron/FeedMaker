@@ -432,6 +432,10 @@ class DummyFeedMakerManager:
     def remove_html(self, group_name, feed_name):
         return None
 
+    def remove_images(self, group_name, feed_name):
+        self.removed_images = (group_name, feed_name)
+        return None
+
     def remove_html_file(self, group_name, feed_name, html_file_name):
         return None
 
@@ -839,6 +843,33 @@ def test_remove_html_file():
     assert r["status"] == "success"
 
 
+def test_remove_images():
+    main.require_admin = lambda _request: None
+    mgr = DummyFeedMakerManager()
+    req = types.SimpleNamespace()
+    r = asyncio.run(main.remove_images("g", "f", request=req, feed_maker_manager=mgr))
+    assert r["status"] == "success"
+    assert mgr.removed_images == ("g", "f")
+
+
+def test_remove_images_requires_admin(monkeypatch):
+    def _deny(_request):
+        raise HTTPException(status_code=403, detail="forbidden")
+
+    monkeypatch.setattr(main, "require_admin", _deny)
+    mgr = DummyFeedMakerManager()
+    with pytest.raises(HTTPException) as exc_info:
+        asyncio.run(main.remove_images("g", "f", request=types.SimpleNamespace(), feed_maker_manager=mgr))
+    assert exc_info.value.status_code == 403
+    assert not hasattr(mgr, "removed_images")
+
+
+def test_remove_images_endpoint_requires_auth():
+    with patch("backend.main.get_current_user", return_value=None):
+        response = client.delete("/groups/g/feeds/f/images")
+    assert response.status_code == 401
+
+
 # --- check_running success True ---
 
 
@@ -1241,6 +1272,9 @@ class DummyFeedMakerManagerEndpoints:
     def remove_html(self, group_name, feed_name):
         return None
 
+    def remove_images(self, group_name, feed_name):
+        return None
+
     # run/check/feed info
     def run(self, group_name, feed_name):
         return (True, None)
@@ -1439,7 +1473,6 @@ def test_tracking_pixel_missing(tmp_path):
         with pytest.raises(HTTPException) as exc_info:
             asyncio.run(main.tracking_pixel(MagicMock(), feed="test.xml"))
         assert exc_info.value.status_code == 404
-
 
 
 # --- advance_start_index ---

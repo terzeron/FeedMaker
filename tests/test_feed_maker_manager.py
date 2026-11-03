@@ -1038,6 +1038,59 @@ class TestRemoveHtml(unittest.TestCase):
             mgr.html_file_manager.remove_html_file_in_path_from_info.assert_called_once()
 
 
+class TestRemoveImages(unittest.TestCase):
+    def test_removes_feed_img_dir_recursively(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = _make_manager(Path(tmp))
+            img_dir = mgr.img_dir_path / "feed1"
+            (img_dir / "sub").mkdir(parents=True)
+            (img_dir / "a.jpg").write_text("fake")
+            (img_dir / "sub" / "b.png").write_text("fake")
+            other_dir = mgr.img_dir_path / "feed2"
+            other_dir.mkdir(parents=True)
+            (other_dir / "c.jpg").write_text("fake")
+
+            mgr.remove_images("group1", "feed1")
+
+            self.assertFalse(img_dir.exists())
+            # 다른 피드의 이미지와 상위 디렉터리는 유지된다
+            self.assertTrue((other_dir / "c.jpg").exists())
+            self.assertTrue(mgr.img_dir_path.is_dir())
+            mgr.html_file_manager.assert_not_called()
+
+    def test_no_dir_no_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = _make_manager(Path(tmp))
+            mgr.remove_images("group1", "feed1")
+            self.assertFalse((mgr.img_dir_path / "feed1").exists())
+
+    def test_file_instead_of_dir_is_kept(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = _make_manager(Path(tmp))
+            mgr.img_dir_path.mkdir(parents=True)
+            not_dir = mgr.img_dir_path / "feed1"
+            not_dir.write_text("not a dir")
+            mgr.remove_images("group1", "feed1")
+            self.assertTrue(not_dir.is_file())
+
+    def test_invalid_feed_name_raises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = _make_manager(Path(tmp))
+            for bad in ("..", ".", "../evil", "a/b", ""):
+                with self.assertRaises(ValueError):
+                    mgr.remove_images("group1", bad)
+
+    def test_invalid_group_name_raises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = _make_manager(Path(tmp))
+            img_dir = mgr.img_dir_path / "feed1"
+            img_dir.mkdir(parents=True)
+            with self.assertRaises(ValueError):
+                mgr.remove_images("../evil", "feed1")
+            # 검증 실패 시 아무것도 지우지 않는다
+            self.assertTrue(img_dir.is_dir())
+
+
 class TestRemoveHtmlFile(unittest.TestCase):
     def test_removes_single_file(self):
         with tempfile.TemporaryDirectory() as tmp:

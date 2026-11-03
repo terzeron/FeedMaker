@@ -332,6 +332,8 @@ describe("FeedManagement.vue", () => {
       expect(wrapper.vm.showToggleFeedButton).toBe(true);
       expect(wrapper.vm.showRemoveFeedButton).toBe(true);
       expect(wrapper.vm.showFeedInfo).toBe(true);
+      expect(wrapper.vm.showRemoveHtmlButton).toBe(true);
+      expect(wrapper.vm.showRemoveImagesButton).toBe(true);
     });
 
     it("hideAllRelatedToFeed clears all flags", async () => {
@@ -342,6 +344,8 @@ describe("FeedManagement.vue", () => {
       expect(wrapper.vm.showEditor).toBe(false);
       expect(wrapper.vm.showNewFeedNameInput).toBe(false);
       expect(wrapper.vm.showRunButton).toBe(false);
+      expect(wrapper.vm.showRemoveHtmlButton).toBe(false);
+      expect(wrapper.vm.showRemoveImagesButton).toBe(false);
     });
 
     it("showAllRelatedToGroup sets group buttons when group selected", async () => {
@@ -812,7 +816,9 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.selectedGroupName = "g1";
       wrapper.vm.newFeedName = "f1";
       wrapper.vm.selectedFeedName = "f1";
-      const spy = vi.spyOn(wrapper.vm, "getItemsOfRss").mockImplementation(() => {});
+      const spy = vi
+        .spyOn(wrapper.vm, "getItemsOfRss")
+        .mockImplementation(() => {});
       axios.post.mockResolvedValueOnce({ data: { status: "success" } });
       axios.get.mockResolvedValue({
         data: { status: "failure", message: "skip" },
@@ -828,7 +834,9 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.selectedGroupName = "g1";
       wrapper.vm.newFeedName = "f1";
       wrapper.vm.selectedFeedName = "f1";
-      const spy = vi.spyOn(wrapper.vm, "getItemsOfRss").mockImplementation(() => {});
+      const spy = vi
+        .spyOn(wrapper.vm, "getItemsOfRss")
+        .mockImplementation(() => {});
       axios.post.mockResolvedValueOnce({
         data: { status: "failure", message: "run failed" },
       });
@@ -1397,7 +1405,9 @@ describe("FeedManagement.vue", () => {
       await flushPromises();
       wrapper.vm.selectedGroupName = "g1";
       wrapper.vm.selectedFeedName = "f1";
-      axios.put = vi.fn().mockResolvedValueOnce({ data: { status: "success" } });
+      axios.put = vi
+        .fn()
+        .mockResolvedValueOnce({ data: { status: "success" } });
       axios.get.mockResolvedValue({
         data: { status: "failure", message: "skip" },
       });
@@ -1405,8 +1415,36 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.handleConfirmOk();
       await flushPromises();
       expect(axios.put).toHaveBeenCalledWith(
-        expect.stringContaining("/groups/g1/feeds/f1/start_index/advance")
+        expect.stringContaining("/groups/g1/feeds/f1/start_index/advance"),
       );
+    });
+
+    it("실패 응답이면 alert를 띄운다", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      axios.put = vi.fn().mockResolvedValueOnce({
+        data: { status: "failure", message: "feed is not completed" },
+      });
+      wrapper.vm.advanceStartIndex();
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      expect(wrapper.vm.alertMessage).toBe("feed is not completed");
+    });
+
+    it("네트워크 오류면 버튼을 reset 한다", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      const resetSpy = vi.spyOn(wrapper.vm, "resetButton");
+      axios.put = vi.fn().mockRejectedValueOnce(new Error("network"));
+      wrapper.vm.advanceStartIndex();
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      expect(resetSpy).toHaveBeenCalledWith("advanceStartIndexButton");
+      expect(console.error).toHaveBeenCalled();
     });
   });
 
@@ -1708,6 +1746,68 @@ describe("FeedManagement.vue", () => {
       await flushPromises();
       const html = wrapper.html();
       expect(html).toContain("SearchResult");
+    });
+  });
+
+  describe("removeImages", () => {
+    const setup = async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.selectedFeedName = "f1";
+      return wrapper;
+    };
+
+    it("opens confirm modal without calling API before confirm", async () => {
+      const wrapper = await setup();
+      axios.delete = vi.fn();
+      wrapper.vm.removeImages();
+      expect(wrapper.vm.showConfirmModal).toBe(true);
+      expect(axios.delete).not.toHaveBeenCalled();
+    });
+
+    it("calls DELETE on images endpoint after confirm and ends button", async () => {
+      const wrapper = await setup();
+      const startSpy = vi.spyOn(wrapper.vm, "startButton");
+      const endSpy = vi.spyOn(wrapper.vm, "endButton");
+      wrapper.vm.removeImages();
+
+      axios.delete = vi
+        .fn()
+        .mockResolvedValueOnce({ data: { status: "success" } });
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      expect(axios.delete).toHaveBeenCalledTimes(1);
+      expect(axios.delete.mock.calls[0][0]).toMatch(
+        /\/groups\/g1\/feeds\/f1\/images$/,
+      );
+      expect(startSpy).toHaveBeenCalledWith("removeImagesButton");
+      expect(endSpy).toHaveBeenCalledWith("removeImagesButton");
+      expect(wrapper.vm.alertMessage).toBeFalsy();
+    });
+
+    it("shows alert on failure response", async () => {
+      const wrapper = await setup();
+      wrapper.vm.removeImages();
+
+      axios.delete = vi.fn().mockResolvedValueOnce({
+        data: { status: "failure", message: "Images delete failed" },
+      });
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      expect(wrapper.vm.alertMessage).toBe("Images delete failed");
+    });
+
+    it("resets button on network error", async () => {
+      const wrapper = await setup();
+      const resetSpy = vi.spyOn(wrapper.vm, "resetButton");
+      wrapper.vm.removeImages();
+
+      axios.delete = vi.fn().mockRejectedValueOnce(new Error("network"));
+      wrapper.vm.handleConfirmOk();
+      await flushPromises();
+      expect(resetSpy).toHaveBeenCalledWith("removeImagesButton");
+      expect(console.error).toHaveBeenCalled();
     });
   });
 
@@ -2263,6 +2363,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.jsonData = { rss: { title: "", link: "", description: "" } };
       wrapper.vm.showRemovelistButton = true;
       wrapper.vm.showRemoveHtmlButton = true;
+      wrapper.vm.showRemoveImagesButton = true;
       wrapper.vm.showRemoveFeedButton = true;
       return wrapper;
     };
@@ -2283,6 +2384,27 @@ describe("FeedManagement.vue", () => {
       const target = buttons.find((b) => b.text() === "HTML 삭제");
       expect(target).toBeDefined();
       expect(target.classes()).toContain("btn-warning");
+    });
+
+    it("이미지 삭제 버튼은 warning variant이고 HTML 삭제 바로 다음에 있다", async () => {
+      const wrapper = createWrapperWithVariantStub();
+      await wrapper.vm.$nextTick();
+      const labels = wrapper.findAll("button").map((b) => b.text());
+      const htmlIdx = labels.indexOf("HTML 삭제");
+      expect(htmlIdx).toBeGreaterThanOrEqual(0);
+      expect(labels[htmlIdx + 1]).toBe("이미지 삭제");
+      const target = wrapper
+        .findAll("button")
+        .find((b) => b.text() === "이미지 삭제");
+      expect(target.classes()).toContain("btn-warning");
+    });
+
+    it("이미지 삭제 버튼은 플래그가 false면 렌더링되지 않는다", async () => {
+      const wrapper = createWrapperWithVariantStub();
+      wrapper.vm.showRemoveImagesButton = false;
+      await wrapper.vm.$nextTick();
+      const labels = wrapper.findAll("button").map((b) => b.text());
+      expect(labels).not.toContain("이미지 삭제");
     });
 
     it("피드 삭제 버튼은 danger variant를 가진다", async () => {

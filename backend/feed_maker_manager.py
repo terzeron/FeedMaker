@@ -461,6 +461,17 @@ class FeedMakerManager:
             rmtree(html_dir_path)
         self.html_file_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path, do_remove_file=True)
 
+    def remove_images(self, group_name: str, feed_name: str) -> None:
+        LOGGER.debug("# remove_images(group_name='%s', feed_name='%s')", group_name, feed_name)
+        _validate_name(group_name, "group_name")
+        _validate_name(feed_name, "feed_name")
+        # 이미지는 그룹과 무관하게 WEB_SERVICE_IMAGE_DIR_PREFIX/<feed_name> 아래에 저장된다
+        # (WEB_SERVICE_IMAGE_URL_PREFIX/<feed_name>으로 서비스되는 디렉터리)
+        feed_img_dir_path = self.img_dir_path / feed_name
+        if feed_img_dir_path.is_dir():
+            LOGGER.debug("deleting %s", PathUtil.short_path(feed_img_dir_path))
+            rmtree(feed_img_dir_path)
+
     def remove_html_file(self, group_name: str, feed_name: str, html_file_name: str) -> None:
         LOGGER.debug("# remove_html_file(group_name='%s', feed_name='%s')", group_name, feed_name)
         _validate_name(group_name, "group_name")

@@ -289,6 +289,15 @@
               v-if="showRemoveHtmlButton"
             />
             <my-button
+              ref="removeImagesButton"
+              label="이미지 삭제"
+              @click="removeImages"
+              :initial-icon="['fas', 'eraser']"
+              :show-initial-icon="true"
+              variant="warning"
+              v-if="showRemoveImagesButton"
+            />
+            <my-button
               ref="toggleFeedButton"
               :label="feedStatusLabel"
               @click="toggleStatus('feed')"
@@ -565,6 +574,7 @@ export default {
       showToggleFeedButton: false,
       showToggleGroupButton: false,
       showRemoveHtmlButton: false,
+      showRemoveImagesButton: false,
       isCompleted: false,
       showNewFeedNameInput: false,
       showSiteConfig: false,
@@ -768,6 +778,7 @@ export default {
       this.showRegisterToFeedlyButton = true;
       this.showRemovelistButton = true;
       this.showRemoveHtmlButton = true;
+      this.showRemoveImagesButton = true;
       this.showToggleFeedButton = true;
       this.showRemoveFeedButton = true;
       this.showFeedInfo = true;
@@ -782,6 +793,7 @@ export default {
       this.showRegisterToFeedlyButton = false;
       this.showRemovelistButton = false;
       this.showRemoveHtmlButton = false;
+      this.showRemoveImagesButton = false;
       this.showToggleFeedButton = false;
       this.showRemoveFeedButton = false;
       this.isCompleted = false;
@@ -1236,6 +1248,25 @@ export default {
           .catch((error) => {
             console.error(error);
             this.resetButton("removeHtmlButton");
+          });
+      });
+    },
+    removeImages: function () {
+      console.log(`removeImages()`);
+      this.openConfirmModal("정말로 실행하시겠습니까?", () => {
+        this.startButton("removeImagesButton");
+        const url = getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/images`;
+        axios
+          .delete(url)
+          .then((res) => {
+            if (res.data.status === "failure") {
+              this.alert(res.data.message);
+            }
+            this.endButton("removeImagesButton");
+          })
+          .catch((error) => {
+            console.error(error);
+            this.resetButton("removeImagesButton");
           });
       });
     },
