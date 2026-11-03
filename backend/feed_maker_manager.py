@@ -22,7 +22,7 @@ from bin.models import FeedInfo
 from bin.feed_manager import FeedManager, FeedUrlCountInfo, PublicFeedInfo, SearchResultFeedInfo, FeedProgressInfo, GroupInfo, GroupFeedInfo, SingleFeedInfo
 from bin.access_log_manager import AccessLogManager
 from bin.html_file_manager import HtmlFileManager
-from bin.problem_manager import ProblemManager
+from bin.problem_manager import ProblemManager, FeedImageDirSizeInfo
 from utils.search_manga_site import SearchManager
 
 
@@ -174,6 +174,11 @@ class FeedMakerManager:
     def get_problems_list_url_info() -> tuple[dict[str, FeedUrlCountInfo], str]:
         LOGGER.debug("# get_problems_list_url_info()")
         return FeedManager.get_feed_name_list_url_count_map(), ""
+
+    @staticmethod
+    def get_problems_image_dir_size_info() -> tuple[dict[str, FeedImageDirSizeInfo], str]:
+        LOGGER.debug("# get_problems_image_dir_size_info()")
+        return ProblemManager.get_feed_image_dir_size_map(), ""
 
     @staticmethod
     def _determine_keyword_in_config_item(keyword: str, config: dict[str, Any], *args: str) -> bool:

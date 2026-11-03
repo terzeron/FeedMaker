@@ -112,7 +112,7 @@ def test_unauthenticated_exec_result_rejected():
 def test_unauthenticated_problems_rejected():
     """인증 없이 /problems/{type} 접근 시 401 반환"""
     with patch("backend.main.get_current_user", return_value=None):
-        for problem_type in ["progress_info", "public_feed_info", "html_info", "list_url_info", "status_info"]:
+        for problem_type in ["progress_info", "public_feed_info", "html_info", "list_url_info", "status_info", "image_dir_size_info"]:
             response = client.get(f"/problems/{problem_type}")
             assert response.status_code == 401, f"/problems/{problem_type} should return 401"
 
@@ -367,6 +367,9 @@ class DummyFeedMakerManager:
     def get_problems_list_url_info(self):
         return (None, "list url error")
 
+    def get_problems_image_dir_size_info(self):
+        return (None, "image dir size error")
+
     def get_problems_status_info(self):
         return (None, "status error")
 
@@ -501,6 +504,10 @@ def test_get_problems_failure():
     r = asyncio.run(main.get_problems(main.ProblemType.STATUS, feed_maker_manager=mgr))
     assert r["status"] == "failure"
     assert r["message"] == "status error"
+
+    r = asyncio.run(main.get_problems(main.ProblemType.IMAGE_DIR_SIZE, feed_maker_manager=mgr))
+    assert r["status"] == "failure"
+    assert r["message"] == "image dir size error"
 
 
 # --- search failure ---
@@ -1227,6 +1234,9 @@ class DummyFeedMakerManagerEndpoints:
     def get_problems_list_url_info(self):
         return ([{"c": 1}], None)
 
+    def get_problems_image_dir_size_info(self):
+        return ({"feed1": {"feed_name": "feed1", "feed_title": "t", "group_name": "g", "num_files": 2, "size": 8192}}, None)
+
     def get_problems_status_info(self):
         return ([{"status": 1}], None)
 
@@ -1302,6 +1312,10 @@ def test_exec_and_search_and_problems_endpoints():
 
     r = asyncio.run(main.get_problems(main.ProblemType.STATUS, feed_maker_manager=mgr))
     assert r["status"] == "success"
+
+    r = asyncio.run(main.get_problems(main.ProblemType.IMAGE_DIR_SIZE, feed_maker_manager=mgr))
+    assert r["status"] == "success"
+    assert r["result"]["feed1"]["size"] == 8192
 
     r = asyncio.run(main.search("test", feed_maker_manager=mgr))
     assert r["status"] == "success" and "is_active" in r["feeds"][0]

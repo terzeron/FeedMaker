@@ -2716,4 +2716,103 @@ describe("Problems.vue", () => {
     expect(wrapper.vm.publicFeedInfolist).toEqual([]);
     console.error.mockRestore();
   });
+
+  describe("피드별 이미지 디렉터리 크기 표", () => {
+    const IMAGE_DIR_SIZE_PATH = "/problems/image_dir_size_info";
+    const mockImageDirSize = (response) => {
+      axios.get.mockImplementation((url) => {
+        if (url.endsWith(IMAGE_DIR_SIZE_PATH)) {
+          return response instanceof Error ? Promise.reject(response) : Promise.resolve(response);
+        }
+        return Promise.resolve({ data: { status: "success", result: [] } });
+      });
+    };
+
+    it("크기 내림차순으로 표시하고 크기를 읽기 쉬운 단위로 바꾼다", async () => {
+      mockImageDirSize({
+        data: {
+          status: "success",
+          result: [
+            { feed_name: "small", feed_title: "Small", group_name: "g1", num_files: 3, size: 2048 },
+            { feed_name: "big", feed_title: "Big", group_name: "g2", num_files: 100, size: 5 * 1024 * 1024 },
+            { feed_name: "orphan", feed_title: "", group_name: "", num_files: 1, size: 0 },
+          ],
+        },
+      });
+      const wrapper = mount(Problems, { global: { stubs } });
+      await flushPromises();
+
+      expect(axios.get).toHaveBeenCalledWith(expect.stringContaining(IMAGE_DIR_SIZE_PATH));
+      const list = wrapper.vm.sortedImageDirSizeInfolist;
+      expect(list.map((o) => o.feed_name)).toEqual(["big", "small", "orphan"]);
+      expect(list[0].size_formatted).toBe("5 MB");
+      expect(list[1].size_formatted).toBe("2 KB");
+      expect(list[2].size_formatted).toBe("0 B");
+      // 고아 디렉터리는 피드 이름을 제목으로 쓴다
+      expect(list[2].feed_title).toBe("orphan");
+
+      const html = wrapper.html();
+      expect(html).toContain("피드별 이미지 디렉터리 크기");
+      expect(html).toContain("Big");
+      expect(html).toContain("5 MB");
+    });
+
+    it("컬럼 클릭으로 정렬 기준을 바꾼다", async () => {
+      mockImageDirSize({
+        data: {
+          status: "success",
+          result: [
+            { feed_name: "a", feed_title: "A", group_name: "g", num_files: 1, size: 9000 },
+            { feed_name: "b", feed_title: "B", group_name: "g", num_files: 50, size: 100 },
+          ],
+        },
+      });
+      const wrapper = mount(Problems, { global: { stubs } });
+      await flushPromises();
+
+      expect(wrapper.vm.imageDirSizeInfoSortBy).toBe("size");
+      expect(wrapper.vm.imageDirSizeInfoSortDesc).toBe(true);
+
+      wrapper.vm.sortTable("imageDirSizeInfo", "num_files");
+      expect(wrapper.vm.sortedImageDirSizeInfolist.map((o) => o.feed_name)).toEqual(["a", "b"]);
+      wrapper.vm.sortTable("imageDirSizeInfo", "num_files");
+      expect(wrapper.vm.sortedImageDirSizeInfolist.map((o) => o.feed_name)).toEqual(["b", "a"]);
+    });
+
+    it("객체 형태 결과를 배열로 바꾼다", async () => {
+      mockImageDirSize({
+        data: {
+          status: "success",
+          result: { big: { feed_name: "big", feed_title: "Big", group_name: "g", num_files: 2, size: 4096 } },
+        },
+      });
+      const wrapper = mount(Problems, { global: { stubs } });
+      await flushPromises();
+
+      expect(wrapper.vm.imageDirSizeInfolist.length).toBe(1);
+      expect(wrapper.vm.imageDirSizeInfolist[0].size_formatted).toBe("4 KB");
+    });
+
+    it.each([
+      ["failure 응답", { data: { status: "failure", message: "err" } }],
+      ["배열도 객체도 아닌 결과", { data: { status: "success", result: null } }],
+    ])("%s이면 빈 목록이 된다", async (_label, response) => {
+      mockImageDirSize(response);
+      const wrapper = mount(Problems, { global: { stubs } });
+      await flushPromises();
+
+      expect(wrapper.vm.sortedImageDirSizeInfolist).toEqual([]);
+    });
+
+    it("요청이 실패하면 빈 목록이 된다", async () => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      mockImageDirSize(new Error("network"));
+      const wrapper = mount(Problems, { global: { stubs } });
+      await flushPromises();
+
+      expect(wrapper.vm.sortedImageDirSizeInfolist).toEqual([]);
+      expect(errorSpy).toHaveBeenCalled();
+      errorSpy.mockRestore();
+    });
+  });
 });

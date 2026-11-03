@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
+import asyncio
 import sys
 import uuid
 import logging
@@ -283,6 +284,7 @@ class ProblemType(str, Enum):
     HTML = "html_info"
     LIST_URL = "list_url_info"
     STATUS = "status_info"
+    IMAGE_DIR_SIZE = "image_dir_size_info"
 
 
 class StatusInfoDeleteRequest(BaseModel):
@@ -304,12 +306,14 @@ async def get_problems(problem_type: ProblemType, feed_maker_manager: FeedMakerM
         ProblemType.HTML: feed_maker_manager.get_problems_html_info,
         ProblemType.LIST_URL: feed_maker_manager.get_problems_list_url_info,
         ProblemType.STATUS: feed_maker_manager.get_problems_status_info,
+        ProblemType.IMAGE_DIR_SIZE: feed_maker_manager.get_problems_image_dir_size_info,
     }
 
     handler = info_methods.get(problem_type)
     if not handler:
         raise HTTPException(404, f"Problem type {problem_type} not found")
-    result, error = handler()
+    # 이미지 디렉터리 스캔 등 blocking I/O가 이벤트 루프를 막지 않도록 스레드에서 실행한다
+    result, error = await asyncio.to_thread(handler)
     if result or not error:
         response_object["result"] = result
         response_object["status"] = "success"

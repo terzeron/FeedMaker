@@ -373,6 +373,14 @@ class TestGetProblemsHtmlInfo(unittest.TestCase):
         self.assertEqual(result, {"feed1": 5})
         self.assertEqual(error, "")
 
+    @patch("backend.feed_maker_manager.ProblemManager.get_feed_image_dir_size_map")
+    def test_image_dir_size_info_delegates_to_problem_manager(self, mock_get):
+        mock_get.return_value = {"feed1": {"size": 4096}}
+        result, error = FeedMakerManager.get_problems_image_dir_size_info()
+        mock_get.assert_called_once()
+        self.assertEqual(result, {"feed1": {"size": 4096}})
+        self.assertEqual(error, "")
+
 
 class TestDetermineKeywordInConfigItem(unittest.TestCase):
     def test_keyword_in_top_level(self):

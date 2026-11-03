@@ -580,6 +580,65 @@
           </div>
         </BCardBody>
       </BCol>
+      <BCol cols="12" lg="4" class="m-0 p-0">
+        <BCardHeader
+          header-bg-variant="dark"
+          header-text-variant="white"
+          header-tag="header"
+        >
+          피드별 이미지 디렉터리 크기
+        </BCardHeader>
+        <BCardBody class="m-0 p-0">
+          <div
+            v-if="sortedImageDirSizeInfolist && Array.isArray(sortedImageDirSizeInfolist)"
+            class="table-responsive"
+          >
+            <table
+              class="table table-striped table-hover table-sm table-bordered m-0 p-0 no-action-col"
+            >
+              <thead>
+                <tr>
+                  <th
+                    v-for="field in imageDirSizeInfoFields"
+                    :key="field.key"
+                    :class="{
+                      sortable: field.sortable,
+                      'sort-asc': field.sortable && imageDirSizeInfoSortBy === field.key && !imageDirSizeInfoSortDesc,
+                      'sort-desc': field.sortable && imageDirSizeInfoSortBy === field.key && imageDirSizeInfoSortDesc
+                    }"
+                    @click="field.sortable ? sortTable('imageDirSizeInfo', field.key) : null"
+                  >
+                    {{ field.label }}
+                    <span v-if="field.sortable" class="sort-icon">
+                      <span v-if="imageDirSizeInfoSortBy === field.key">
+                        {{ imageDirSizeInfoSortDesc ? '↓' : '↑' }}
+                      </span>
+                      <span v-else>↕</span>
+                    </span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(item, index) in sortedImageDirSizeInfolist" :key="index">
+                  <td v-for="field in imageDirSizeInfoFields" :key="field.key">
+                    <span v-if="field.key === 'feed_title'">
+                      <router-link v-if="item.group_name && item.feed_name" :to="`/management/${item.group_name}/${item.feed_name}`">
+                        {{ item[field.key] }}
+                      </router-link>
+                      <span v-else>{{ item[field.key] }}</span>
+                    </span>
+                    <span v-else-if="field.key === 'size'">{{ item.size_formatted }}</span>
+                    <span v-else>{{ item[field.key] }}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-else class="text-center p-3">
+            <p class="text-muted">데이터를 불러오는 중...</p>
+          </div>
+        </BCardBody>
+      </BCol>
     </BRow>
 
     <BRow>
@@ -1078,6 +1137,10 @@ export default {
         : [];
       return this.sortData(data, this.publicFeedInfoSortBy, this.publicFeedInfoSortDesc);
     },
+    sortedImageDirSizeInfolist: function () {
+      const data = Array.isArray(this.imageDirSizeInfolist) ? this.imageDirSizeInfolist : [];
+      return this.sortData(data, this.imageDirSizeInfoSortBy, this.imageDirSizeInfoSortDesc);
+    },
   },
   data: function () {
     return {
@@ -1159,6 +1222,14 @@ export default {
       publicFeedInfoSortBy: "size",
       publicFeedInfoSortDesc: true,
       publicFeedInfolist: [],
+      imageDirSizeInfoFields: [
+        { key: "feed_title", label: "제목", sortable: true },
+        { key: "num_files", label: "파일 수", sortable: true },
+        { key: "size", label: "크기", sortable: true },
+      ],
+      imageDirSizeInfoSortBy: "size",
+      imageDirSizeInfoSortDesc: true,
+      imageDirSizeInfolist: [],
 
       // Modal related data
       showConfirmModal: false,
@@ -1394,6 +1465,7 @@ export default {
       this.htmlFileWithManyImageTaglist = [];
       this.htmlFileWithImageNotFoundlist = [];
       this.publicFeedInfolist = [];
+      this.imageDirSizeInfolist = [];
 
       // Feed status info
       const pathStatusInfo = getApiUrlPath() + "/problems/status_info";
@@ -1700,6 +1772,40 @@ export default {
           console.error(error);
           this.listUrlInfolist = [];
         });
+
+      // Image directory size info (backend가 크기 내림차순으로 준다)
+      const pathImageDirSizeInfo = getApiUrlPath() + "/problems/image_dir_size_info";
+      axios
+        .get(pathImageDirSizeInfo)
+        .then((resImageDirSizeInfo) => {
+          if (resImageDirSizeInfo.data.status === "failure") {
+            this.imageDirSizeInfolist = [];
+          } else {
+            let result = resImageDirSizeInfo.data["result"];
+            if (
+              result &&
+              typeof result === "object" &&
+              !Array.isArray(result)
+            ) {
+              result = Object.values(result);
+            } else if (!Array.isArray(result)) {
+              result = [];
+            }
+
+            this.imageDirSizeInfolist = _.map(result, (o) => {
+              // DB에 없는 고아 디렉터리는 제목이 비어 있으므로 피드 이름으로 대신한다
+              return {
+                ...o,
+                feed_title: o["feed_title"] || o["feed_name"],
+                size_formatted: this.formatFileSize(o["size"]),
+              };
+            });
+          }
+        })
+        .catch((error) => {
+          console.error(error);
+          this.imageDirSizeInfolist = [];
+        });
     },
   },
   mounted: function () {
@@ -1712,6 +1818,7 @@ export default {
     this.htmlFileWithManyImageTaglist = [];
     this.htmlFileWithImageNotFoundlist = [];
     this.publicFeedInfolist = [];
+    this.imageDirSizeInfolist = [];
 
     // 인증 검증은 router guard에서 처리됨 (server-side validation)
     // localStorage의 session_expiry 검증 제거 (보안 취약점)
