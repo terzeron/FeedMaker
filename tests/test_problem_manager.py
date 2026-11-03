@@ -333,8 +333,8 @@ class TestGetFeedImageDirSizeMap(unittest.TestCase):
         result = self._call()
 
         self.assertEqual(result["feed_a"]["size"], expected)
-        self.assertEqual(result["feed_a"]["num_files"], 3)
         self.assertEqual(result["feed_a"]["feed_name"], "feed_a")
+        self.assertNotIn("num_files", result["feed_a"])
 
     def test_estimates_from_sample_for_large_directory(self) -> None:
         # 크기가 모두 같으면 표본 평균 × 파일 수가 실제 합과 같다
@@ -343,7 +343,6 @@ class TestGetFeedImageDirSizeMap(unittest.TestCase):
         with patch.object(ProblemManager, "image_dir_size_sample_count", 4):
             result = self._call()
 
-        self.assertEqual(result["feed_big"]["num_files"], 30)
         self.assertEqual(result["feed_big"]["size"], expected)
 
     def test_sorted_by_size_descending(self) -> None:
@@ -355,7 +354,6 @@ class TestGetFeedImageDirSizeMap(unittest.TestCase):
 
         self.assertEqual(list(result), ["large", "small", "empty"])
         self.assertEqual(result["empty"]["size"], 0)
-        self.assertEqual(result["empty"]["num_files"], 0)
 
     def test_ignores_files_and_subdirs_at_top_level(self) -> None:
         (self.img_dir_path / "stray.jpg").write_bytes(b"x")
@@ -364,8 +362,9 @@ class TestGetFeedImageDirSizeMap(unittest.TestCase):
 
         result = self._call()
 
+        # 하위 디렉터리는 크기에 넣지 않으므로 파일 1개(10바이트) 크기만 잡힌다
         self.assertEqual(list(result), ["feed_a"])
-        self.assertEqual(result["feed_a"]["num_files"], 1)
+        self.assertEqual(result["feed_a"]["size"], (self.img_dir_path / "feed_a" / "0.jpg").stat().st_blocks * 512)
 
     def test_fills_title_and_group_from_feed_info(self) -> None:
         self._make_files("feed_a", [10])

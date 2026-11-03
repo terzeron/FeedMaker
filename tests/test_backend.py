@@ -1235,7 +1235,7 @@ class DummyFeedMakerManagerEndpoints:
         return ([{"c": 1}], None)
 
     def get_problems_image_dir_size_info(self):
-        return ({"feed1": {"feed_name": "feed1", "feed_title": "t", "group_name": "g", "num_files": 2, "size": 8192}}, None)
+        return ({"feed1": {"feed_name": "feed1", "feed_title": "t", "group_name": "g", "size": 8192}}, None)
 
     def get_problems_status_info(self):
         return ([{"status": 1}], None)

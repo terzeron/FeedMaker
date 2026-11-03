@@ -159,6 +159,7 @@ describe("Problems.vue - 미커버 분기", () => {
           { feed_dir_path: "g/a", file_name: "f.html" },
         ],
         publicFeedInfolist: [{ feed_title: "A", feed_name: "a", size: 1 }],
+        imageDirSizeInfolist: [{ feed_title: "A", feed_name: "a", group_name: "g", size: 1 }],
       });
 
       const before = {
@@ -168,13 +169,14 @@ describe("Problems.vue - 미커버 분기", () => {
         htmlFileWithManyImageTag: wrapper.vm.htmlFileWithManyImageTagSortBy,
         htmlFileWithImageNotFound: wrapper.vm.htmlFileWithImageNotFoundSortBy,
         publicFeedInfo: wrapper.vm.publicFeedInfoSortBy,
+        imageDirSizeInfo: wrapper.vm.imageDirSizeInfoSortBy,
       };
 
       const actionHeaders = wrapper
         .findAll("th")
         .filter((th) => th.text().includes("작업"));
-      // 작업 컬럼을 가진 6개 테이블
-      expect(actionHeaders).toHaveLength(6);
+      // 작업 컬럼을 가진 7개 테이블
+      expect(actionHeaders).toHaveLength(7);
       for (const th of actionHeaders) {
         await th.trigger("click");
       }
@@ -434,6 +436,25 @@ describe("Problems.vue - 미커버 분기", () => {
       });
 
       expect(wrapper.text()).toContain("기타값");
+    });
+  });
+
+  describe("이미지 디렉터리 크기 표의 그 외 컬럼", () => {
+    it("전용 렌더링이 없는 컬럼은 값을 그대로 출력한다", async () => {
+      const wrapper = mountWith();
+      await flushPromises();
+
+      await wrapper.setData({
+        imageDirSizeInfoFields: [
+          ...wrapper.vm.imageDirSizeInfoFields,
+          { key: "etc", label: "기타", sortable: true },
+        ],
+        imageDirSizeInfolist: [
+          { feed_name: "f", feed_title: "T", group_name: "g", size: 1, etc: "이미지기타값" },
+        ],
+      });
+
+      expect(wrapper.text()).toContain("이미지기타값");
     });
   });
 });

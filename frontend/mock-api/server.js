@@ -952,7 +952,6 @@ function buildProblemResult(problemType) {
         group_name,
         feed_name,
         feed_title,
-        num_files: (i + 1) * 10,
         size: (i + 1) * 10 * 300 * 1024
       })).sort((a, b) => b.size - a.size);
     case 'list_url_info':

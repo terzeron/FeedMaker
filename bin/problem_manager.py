@@ -20,7 +20,6 @@ class FeedImageDirSizeInfo(TypedDict):
     feed_name: str
     feed_title: str
     group_name: str
-    num_files: int
     size: int
 
 
@@ -109,7 +108,7 @@ class ProblemManager:
         return feed_name_status_info_map
 
     @classmethod
-    def _estimate_dir_size(cls, dir_path: Path) -> tuple[int, int]:
+    def _estimate_dir_size(cls, dir_path: Path) -> int:
         # du처럼 디스크 점유 크기(st_blocks)를 쓰되, 속도를 위해 파일 수는 stat 없이 세고
         # 균등 간격 표본의 평균 크기 × 파일 수로 전체 크기를 추정한다.
         # 파일 수가 표본 수 이하이면 모든 파일을 stat하므로 정확한 값이 된다.
@@ -117,11 +116,11 @@ class ProblemManager:
             files = [entry for entry in it if entry.is_file(follow_symlinks=False)]
         num_files = len(files)
         if num_files == 0:
-            return 0, 0
+            return 0
         step = max(1, num_files // cls.image_dir_size_sample_count)
         sample = files[::step]
         sample_size = sum(entry.stat(follow_symlinks=False).st_blocks * 512 for entry in sample)
-        return num_files, sample_size * num_files // len(sample)
+        return sample_size * num_files // len(sample)
 
     @classmethod
     def get_feed_image_dir_size_map(cls) -> dict[str, FeedImageDirSizeInfo]:
@@ -132,7 +131,7 @@ class ProblemManager:
             return {}
 
         # 이미지는 그룹과 무관하게 WEB_SERVICE_IMAGE_DIR_PREFIX/<feed_name> 아래에 저장된다
-        feed_name_size_map: dict[str, tuple[int, int]] = {}
+        feed_name_size_map: dict[str, int] = {}
         with os.scandir(img_dir_prefix) as it:
             for entry in it:
                 if entry.is_dir(follow_symlinks=False):
@@ -149,9 +148,9 @@ class ProblemManager:
                     feed_name_title_group_map[row.feed_name] = (row.feed_title or "", row.group_name or "")
 
         result: dict[str, FeedImageDirSizeInfo] = {}
-        for feed_name, (num_files, size) in sorted(feed_name_size_map.items(), key=lambda item: item[1][1], reverse=True):
+        for feed_name, size in sorted(feed_name_size_map.items(), key=lambda item: item[1], reverse=True):
             feed_title, group_name = feed_name_title_group_map.get(feed_name, ("", ""))
-            result[feed_name] = FeedImageDirSizeInfo(feed_name=feed_name, feed_title=feed_title, group_name=group_name, num_files=num_files, size=size)
+            result[feed_name] = FeedImageDirSizeInfo(feed_name=feed_name, feed_title=feed_title, group_name=group_name, size=size)
         return result
 
     def update_feed_info(self, feed_dir_path: Path, new_feed_dir_path: Optional[Path] = None) -> None:

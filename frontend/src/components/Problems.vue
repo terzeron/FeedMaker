@@ -594,7 +594,7 @@
             class="table-responsive"
           >
             <table
-              class="table table-striped table-hover table-sm table-bordered m-0 p-0 no-action-col"
+              class="table table-striped table-hover table-sm table-bordered m-0 p-0"
             >
               <thead>
                 <tr>
@@ -628,6 +628,14 @@
                       <span v-else>{{ item[field.key] }}</span>
                     </span>
                     <span v-else-if="field.key === 'size'">{{ item.size_formatted }}</span>
+                    <span v-else-if="field.key === 'action'">
+                      <!-- 그룹을 모르는 고아 디렉터리는 삭제 API(/groups/{group}/...)를 호출할 수 없다 -->
+                      <font-awesome-icon
+                        v-if="item.group_name && item.feed_name"
+                        :icon="['far', 'trash-alt']"
+                        @click="imageDirDeleteClicked({ item: item })"
+                      />
+                    </span>
                     <span v-else>{{ item[field.key] }}</span>
                   </td>
                 </tr>
@@ -1224,8 +1232,8 @@ export default {
       publicFeedInfolist: [],
       imageDirSizeInfoFields: [
         { key: "feed_title", label: "제목", sortable: true },
-        { key: "num_files", label: "파일 수", sortable: true },
         { key: "size", label: "크기", sortable: true },
+        { key: "action", label: "작업", sortable: false },
       ],
       imageDirSizeInfoSortBy: "size",
       imageDirSizeInfoSortDesc: true,
@@ -1429,6 +1437,21 @@ export default {
       this.openConfirmModal("정말로 실행하시겠습니까?", async () => {
         if (!(await this.removeHtmlFile(data.item["file_path"]))) return;
         this.htmlFileSizelist = this.htmlFileSizelist.filter(
+          (item) => item !== data.item
+        );
+      });
+    },
+    removeImageDir(groupName, feedName) {
+      const path =
+        getApiUrlPath() + `/groups/${groupName}/feeds/${feedName}/images`;
+      return this.requestRemoval(() => axios.delete(path), "이미지 삭제");
+    },
+    imageDirDeleteClicked(data) {
+      this.openConfirmModal("정말로 실행하시겠습니까?", async () => {
+        const groupName = data.item["group_name"];
+        const feedName = data.item["feed_name"];
+        if (!(await this.removeImageDir(groupName, feedName))) return;
+        this.imageDirSizeInfolist = this.imageDirSizeInfolist.filter(
           (item) => item !== data.item
         );
       });

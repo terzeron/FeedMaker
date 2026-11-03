@@ -2733,9 +2733,9 @@ describe("Problems.vue", () => {
         data: {
           status: "success",
           result: [
-            { feed_name: "small", feed_title: "Small", group_name: "g1", num_files: 3, size: 2048 },
-            { feed_name: "big", feed_title: "Big", group_name: "g2", num_files: 100, size: 5 * 1024 * 1024 },
-            { feed_name: "orphan", feed_title: "", group_name: "", num_files: 1, size: 0 },
+            { feed_name: "small", feed_title: "Small", group_name: "g1", size: 2048 },
+            { feed_name: "big", feed_title: "Big", group_name: "g2", size: 5 * 1024 * 1024 },
+            { feed_name: "orphan", feed_title: "", group_name: "", size: 0 },
           ],
         },
       });
@@ -2753,6 +2753,8 @@ describe("Problems.vue", () => {
 
       const html = wrapper.html();
       expect(html).toContain("피드별 이미지 디렉터리 크기");
+      expect(html).toContain("작업");
+      expect(html).not.toContain("파일 수");
       expect(html).toContain("Big");
       expect(html).toContain("5 MB");
     });
@@ -2762,8 +2764,8 @@ describe("Problems.vue", () => {
         data: {
           status: "success",
           result: [
-            { feed_name: "a", feed_title: "A", group_name: "g", num_files: 1, size: 9000 },
-            { feed_name: "b", feed_title: "B", group_name: "g", num_files: 50, size: 100 },
+            { feed_name: "a", feed_title: "A", group_name: "g", size: 9000 },
+            { feed_name: "b", feed_title: "B", group_name: "g", size: 100 },
           ],
         },
       });
@@ -2773,9 +2775,9 @@ describe("Problems.vue", () => {
       expect(wrapper.vm.imageDirSizeInfoSortBy).toBe("size");
       expect(wrapper.vm.imageDirSizeInfoSortDesc).toBe(true);
 
-      wrapper.vm.sortTable("imageDirSizeInfo", "num_files");
+      wrapper.vm.sortTable("imageDirSizeInfo", "feed_title");
       expect(wrapper.vm.sortedImageDirSizeInfolist.map((o) => o.feed_name)).toEqual(["a", "b"]);
-      wrapper.vm.sortTable("imageDirSizeInfo", "num_files");
+      wrapper.vm.sortTable("imageDirSizeInfo", "feed_title");
       expect(wrapper.vm.sortedImageDirSizeInfolist.map((o) => o.feed_name)).toEqual(["b", "a"]);
     });
 
@@ -2783,7 +2785,7 @@ describe("Problems.vue", () => {
       mockImageDirSize({
         data: {
           status: "success",
-          result: { big: { feed_name: "big", feed_title: "Big", group_name: "g", num_files: 2, size: 4096 } },
+          result: { big: { feed_name: "big", feed_title: "Big", group_name: "g", size: 4096 } },
         },
       });
       const wrapper = mount(Problems, { global: { stubs } });
@@ -2813,6 +2815,76 @@ describe("Problems.vue", () => {
       expect(wrapper.vm.sortedImageDirSizeInfolist).toEqual([]);
       expect(errorSpy).toHaveBeenCalled();
       errorSpy.mockRestore();
+    });
+
+    describe("이미지 디렉터리 삭제", () => {
+      const rows = [
+        { feed_name: "big", feed_title: "Big", group_name: "g2", size: 5 * 1024 * 1024 },
+        { feed_name: "small", feed_title: "Small", group_name: "g1", size: 2048 },
+        { feed_name: "orphan", feed_title: "", group_name: "", size: 0 },
+      ];
+      let alertSpy;
+
+      beforeEach(() => {
+        alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+        mockImageDirSize({ data: { status: "success", result: rows.map((o) => ({ ...o })) } });
+      });
+
+      afterEach(() => {
+        alertSpy.mockRestore();
+      });
+
+      it("그룹이 있는 행에만 삭제 아이콘을 표시한다", async () => {
+        const wrapper = mount(Problems, { global: { stubs } });
+        await flushPromises();
+
+        // 다른 표는 모두 비어 있으므로 아이콘은 이 표의 것만 있다
+        expect(wrapper.findAll("font-awesome-icon-stub").length).toBe(2);
+      });
+
+      it("아이콘을 누르면 확인 후 이미지 삭제 API를 호출하고 행을 지운다", async () => {
+        const wrapper = mount(Problems, { global: { stubs } });
+        await flushPromises();
+        axios.delete = vi.fn().mockResolvedValueOnce({ data: { status: "success" } });
+
+        await wrapper.findAll("font-awesome-icon-stub")[0].trigger("click");
+        expect(wrapper.vm.showConfirmModal).toBe(true);
+        expect(axios.delete).not.toHaveBeenCalled();
+
+        wrapper.vm.handleConfirmOk();
+        await flushPromises();
+
+        expect(axios.delete).toHaveBeenCalledWith(expect.stringContaining("/groups/g2/feeds/big/images"));
+        expect(wrapper.vm.sortedImageDirSizeInfolist.map((o) => o.feed_name)).toEqual(["small", "orphan"]);
+      });
+
+      it("삭제가 실패하면 알림을 띄우고 행을 남긴다", async () => {
+        const wrapper = mount(Problems, { global: { stubs } });
+        await flushPromises();
+        axios.delete = vi.fn().mockResolvedValueOnce({ data: { status: "failure", message: "denied" } });
+
+        const item = wrapper.vm.imageDirSizeInfolist[1];
+        wrapper.vm.imageDirDeleteClicked({ item });
+        wrapper.vm.handleConfirmOk();
+        await flushPromises();
+
+        expect(axios.delete).toHaveBeenCalledWith(expect.stringContaining("/groups/g1/feeds/small/images"));
+        expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining("이미지 삭제 중에 오류가 발생하였습니다. denied"));
+        expect(wrapper.vm.imageDirSizeInfolist.length).toBe(3);
+      });
+
+      it("확인 모달을 취소하면 API를 호출하지 않는다", async () => {
+        const wrapper = mount(Problems, { global: { stubs } });
+        await flushPromises();
+        axios.delete = vi.fn();
+
+        wrapper.vm.imageDirDeleteClicked({ item: wrapper.vm.imageDirSizeInfolist[0] });
+        wrapper.vm.handleConfirmCancel();
+        await flushPromises();
+
+        expect(axios.delete).not.toHaveBeenCalled();
+        expect(wrapper.vm.imageDirSizeInfolist.length).toBe(3);
+      });
     });
   });
 });
