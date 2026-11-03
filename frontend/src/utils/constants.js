@@ -29,7 +29,6 @@ export const PROBLEM_TYPES = {
   PROGRESS_INFO: 'progress_info',
   PUBLIC_FEED_INFO: 'public_feed_info',
   HTML_INFO: 'html_info',
-  ELEMENT_INFO: 'element_info',
   LIST_URL_INFO: 'list_url_info'
 };
 

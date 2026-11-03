@@ -52,7 +52,6 @@ describe("Problems.vue - 미커버 분기", () => {
       await wrapper.setData({
         progressInfolist: null,
         listUrlInfolist: null,
-        elementInfolist: null,
         htmlFileSizelist: null,
         htmlFileWithoutImageTaglist: null,
         htmlFileWithManyImageTaglist: null,
@@ -62,7 +61,6 @@ describe("Problems.vue - 미커버 분기", () => {
 
       expect(wrapper.vm.sortedProgressInfolist).toEqual([]);
       expect(wrapper.vm.sortedListUrlInfolist).toEqual([]);
-      expect(wrapper.vm.sortedElementInfolist).toEqual([]);
       expect(wrapper.vm.sortedHtmlFileSizelist).toEqual([]);
       expect(wrapper.vm.sortedHtmlFileWithoutImageTaglist).toEqual([]);
       expect(wrapper.vm.sortedHtmlFileWithManyImageTaglist).toEqual([]);
@@ -379,19 +377,18 @@ describe("Problems.vue - 미커버 분기", () => {
       await flushPromises();
 
       const placeholders = wrapper.findAll("p.text-muted");
-      expect(placeholders).toHaveLength(9);
+      expect(placeholders).toHaveLength(8);
       expect(placeholders[0].text()).toBe("데이터를 불러오는 중...");
       expect(wrapper.find("table").exists()).toBe(false);
     });
   });
 
-  // 이 세 표는 기본 필드가 모두 sortable이라, 정렬 불가 컬럼 클릭 분기는
+  // 이 두 표는 기본 필드가 모두 sortable이라, 정렬 불가 컬럼 클릭 분기는
   // 필드 정의에 sortable:false 컬럼을 추가해야 확인할 수 있다.
   describe("정렬 불가 컬럼 클릭", () => {
     const cases = [
       ["progressInfoFields", "progressInfoSortBy", "progress_ratio", "비정렬P"],
       ["listUrlInfoFields", "listUrlInfoSortBy", "count", "비정렬L"],
-      ["elementInfoFields", "elementInfoSortBy", "count", "비정렬E"],
     ];
 
     it.each(cases)(

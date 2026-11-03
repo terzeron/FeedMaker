@@ -281,7 +281,6 @@ class ProblemType(str, Enum):
     PROGRESS = "progress_info"
     PUBLIC_FEED = "public_feed_info"
     HTML = "html_info"
-    ELEMENT = "element_info"
     LIST_URL = "list_url_info"
     STATUS = "status_info"
 
@@ -303,7 +302,6 @@ async def get_problems(problem_type: ProblemType, feed_maker_manager: FeedMakerM
         ProblemType.PROGRESS: feed_maker_manager.get_problems_progress_info,
         ProblemType.PUBLIC_FEED: feed_maker_manager.get_problems_public_feed_info,
         ProblemType.HTML: feed_maker_manager.get_problems_html_info,
-        ProblemType.ELEMENT: feed_maker_manager.get_problems_element_info,
         ProblemType.LIST_URL: feed_maker_manager.get_problems_list_url_info,
         ProblemType.STATUS: feed_maker_manager.get_problems_status_info,
     }

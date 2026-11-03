@@ -365,14 +365,6 @@ class TestGetProblemsHtmlInfo(unittest.TestCase):
             self.assertEqual(result["html_file_image_not_found_map"], {"d": 4})
             self.assertEqual(error, "")
 
-    @patch("backend.feed_maker_manager.FeedManager.get_element_name_count_map")
-    def test_element_info_delegates_to_feed_manager(self, mock_get):
-        mock_get.return_value = {"div": 10}
-        result, error = FeedMakerManager.get_problems_element_info()
-        mock_get.assert_called_once()
-        self.assertEqual(result, {"div": 10})
-        self.assertEqual(error, "")
-
     @patch("backend.feed_maker_manager.FeedManager.get_feed_name_list_url_count_map")
     def test_list_url_info_delegates_to_feed_manager(self, mock_get):
         mock_get.return_value = {"feed1": 5}

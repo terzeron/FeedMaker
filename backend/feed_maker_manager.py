@@ -19,7 +19,7 @@ from bin.run import FeedMakerRunner
 from bin.feed_maker_util import Config, Env, PathUtil, URL
 from bin.db import DB
 from bin.models import FeedInfo
-from bin.feed_manager import FeedManager, FeedUrlCountInfo, ElementCountInfo, PublicFeedInfo, SearchResultFeedInfo, FeedProgressInfo, GroupInfo, GroupFeedInfo, SingleFeedInfo
+from bin.feed_manager import FeedManager, FeedUrlCountInfo, PublicFeedInfo, SearchResultFeedInfo, FeedProgressInfo, GroupInfo, GroupFeedInfo, SingleFeedInfo
 from bin.access_log_manager import AccessLogManager
 from bin.html_file_manager import HtmlFileManager
 from bin.problem_manager import ProblemManager
@@ -169,11 +169,6 @@ class FeedMakerManager:
             "html_file_without_image_tag_map": self.html_file_manager.get_html_file_without_image_tag_map(),
             "html_file_image_not_found_map": self.html_file_manager.get_html_file_image_not_found_map(),
         }, ""
-
-    @staticmethod
-    def get_problems_element_info() -> tuple[dict[str, ElementCountInfo], str]:
-        LOGGER.debug("# get_problems_element_info()")
-        return FeedManager.get_element_name_count_map(), ""
 
     @staticmethod
     def get_problems_list_url_info() -> tuple[dict[str, FeedUrlCountInfo], str]:

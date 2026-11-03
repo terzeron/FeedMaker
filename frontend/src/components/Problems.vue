@@ -495,59 +495,6 @@
           header-text-variant="white"
           header-tag="header"
         >
-          엘리먼트 사용 개수
-        </BCardHeader>
-        <BCardBody class="m-0 p-0">
-          <div
-            v-if="sortedElementInfolist && Array.isArray(sortedElementInfolist)"
-            class="table-responsive"
-          >
-            <table
-              class="table table-striped table-hover table-sm table-bordered m-0 p-0 no-action-col"
-            >
-              <thead>
-                <tr>
-                  <th
-                    v-for="field in elementInfoFields"
-                    :key="field.key"
-                    :class="{
-                      sortable: field.sortable,
-                      'sort-asc': field.sortable && elementInfoSortBy === field.key && !elementInfoSortDesc,
-                      'sort-desc': field.sortable && elementInfoSortBy === field.key && elementInfoSortDesc
-                    }"
-                    @click="field.sortable ? sortTable('elementInfo', field.key) : null"
-                  >
-                    {{ field.label }}
-                    <span v-if="field.sortable" class="sort-icon">
-                      <span v-if="elementInfoSortBy === field.key">
-                        {{ elementInfoSortDesc ? '↓' : '↑' }}
-                      </span>
-                      <span v-else>↕</span>
-                    </span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(item, index) in sortedElementInfolist" :key="index">
-                  <td v-for="field in elementInfoFields" :key="field.key">
-                    {{ item[field.key] }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div v-else class="text-center p-3">
-            <p class="text-muted">데이터를 불러오는 중...</p>
-          </div>
-        </BCardBody>
-      </BCol>
-
-      <BCol cols="12" lg="4" class="m-0 p-0">
-        <BCardHeader
-          header-bg-variant="dark"
-          header-text-variant="white"
-          header-tag="header"
-        >
           공개 피드 파일 크기
         </BCardHeader>
         <BCardBody class="m-0 p-0">
@@ -1103,10 +1050,6 @@ export default {
       const data = Array.isArray(this.listUrlInfolist) ? this.listUrlInfolist : [];
       return this.sortData(data, this.listUrlInfoSortBy, this.listUrlInfoSortDesc);
     },
-    sortedElementInfolist: function () {
-      const data = Array.isArray(this.elementInfolist) ? this.elementInfolist : [];
-      return this.sortData(data, this.elementInfoSortBy, this.elementInfoSortDesc);
-    },
     sortedHtmlFileSizelist: function () {
       const data = Array.isArray(this.htmlFileSizelist) ? this.htmlFileSizelist : [];
       return this.sortData(data, this.htmlFileSizeSortBy, this.htmlFileSizeSortDesc);
@@ -1172,13 +1115,6 @@ export default {
       listUrlInfoSortBy: "count",
       listUrlInfoSortDesc: true,
       listUrlInfolist: [],
-      elementInfoFields: [
-        { key: "element_name", label: "엘리먼트", sortable: true },
-        { key: "count", label: "개수", sortable: true },
-      ],
-      elementInfoSortBy: "count",
-      elementInfoSortDesc: true,
-      elementInfolist: [],
       htmlFileSizeFields: [
         { key: "feed_title", label: "제목", sortable: true },
         { key: "file_name", label: "파일 이름", sortable: true },
@@ -1453,7 +1389,6 @@ export default {
       this.statusInfolist = [];
       this.progressInfolist = [];
       this.listUrlInfolist = [];
-      this.elementInfolist = [];
       this.htmlFileSizelist = [];
       this.htmlFileWithoutImageTaglist = [];
       this.htmlFileWithManyImageTaglist = [];
@@ -1735,36 +1670,6 @@ export default {
           this.htmlFileWithImageNotFoundlist = [];
         });
 
-      // Element info
-      const pathElementInfo = getApiUrlPath() + "/problems/element_info";
-      axios
-        .get(pathElementInfo)
-        .then((resElementInfo) => {
-          if (resElementInfo.data.status === "failure") {
-            this.elementInfolist = [];
-          } else {
-            // Convert object to array if result is an object
-            let result = resElementInfo.data["result"];
-            if (
-              result &&
-              typeof result === "object" &&
-              !Array.isArray(result)
-            ) {
-              result = Object.values(result);
-            } else if (!Array.isArray(result)) {
-              result = [];
-            }
-
-            this.elementInfolist = _.map(result, (o) => {
-              return o;
-            });
-          }
-        })
-        .catch((error) => {
-          console.error(error);
-          this.elementInfolist = [];
-        });
-
       // List URL count info
       const listUrlInfo = getApiUrlPath() + "/problems/list_url_info";
       axios
@@ -1802,7 +1707,6 @@ export default {
     this.statusInfolist = [];
     this.progressInfolist = [];
     this.listUrlInfolist = [];
-    this.elementInfolist = [];
     this.htmlFileSizelist = [];
     this.htmlFileWithoutImageTaglist = [];
     this.htmlFileWithManyImageTaglist = [];

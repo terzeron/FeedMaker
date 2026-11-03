@@ -11,7 +11,7 @@ from typing import Any, Optional, TypedDict
 
 from bin.feed_maker_util import PathUtil, Env
 from bin.db import DB, Session, or_
-from bin.models import FeedInfo, ElementNameCount
+from bin.models import FeedInfo
 from bin.feed_maker_util import Config
 
 
@@ -49,11 +49,6 @@ class FeedUrlCountInfo(TypedDict):
     feed_name: str
     feed_title: str
     group_name: str
-    count: int
-
-
-class ElementCountInfo(TypedDict):
-    element_name: str
     count: int
 
 
@@ -145,17 +140,6 @@ class FeedManager:
         return feed_name_list_url_count_map
 
     @classmethod
-    def get_element_name_count_map(cls) -> dict[str, ElementCountInfo]:
-        LOGGER.debug("# get_element_name_count_map()")
-        element_name_count_map: dict[str, ElementCountInfo] = {}
-
-        with DB.session_ctx() as s:
-            for row in s.query(ElementNameCount).all():
-                element_name_count_map[row.element_name] = ElementCountInfo(element_name=row.element_name, count=row.count)
-
-        return element_name_count_map
-
-    @classmethod
     def remove_config_info(cls, feed_dir_path: Path, do_remove_file: bool = False) -> None:
         LOGGER.debug("# remove_config_info(feed_dir_path='%s', do_remove_file=%r)", PathUtil.short_path(feed_dir_path), do_remove_file)
         feed_name = feed_dir_path.name
@@ -166,11 +150,10 @@ class FeedManager:
         LOGGER.info("* The removing of config info of feed '%s' is done.", feed_name)
 
     @classmethod
-    def _add_config_info(cls, s: Session, feed_dir_path: Path, element_name_count_map: Optional[dict[str, int]] = None) -> None:
+    def _add_config_info(cls, s: Session, feed_dir_path: Path) -> None:
         if not feed_dir_path.is_dir():
             LOGGER.error("can't find a feed directory '%s'", PathUtil.short_path(feed_dir_path))
             return
-        element_name_count_map = element_name_count_map if element_name_count_map is not None else {}
         feed_name = feed_dir_path.name
         group_name = feed_dir_path.parent.name
 
@@ -193,9 +176,8 @@ class FeedManager:
 
                 with conf_json_file_path.open("r", encoding="utf-8") as infile:
                     json_data = json.load(infile)
-                configuration: dict[str, dict[str, Any]] = {}
                 if json_data:
-                    configuration = json_data.get("configuration", {})
+                    configuration: dict[str, dict[str, Any]] = json_data.get("configuration", {})
                     if configuration:
                         config_str = json.dumps(configuration)
                         rss_data = configuration.get("rss", {})
@@ -206,11 +188,6 @@ class FeedManager:
                         url_list_count = len(collection_data.get("list_url_list", []))
                         is_completed = collection_data.get("is_completed", False)
                         unit_size_per_day = collection_data.get("unit_size_per_day", 0)
-
-                for sub_config_element in ["collection", "extraction", "rss"]:
-                    for element in configuration.get(sub_config_element, {}):
-                        key = sub_config_element[0] + "." + element
-                        element_name_count_map[key] = element_name_count_map.get(key, 0) + 1
 
         existing_feed = s.query(FeedInfo).filter_by(feed_name=feed_name, group_name=group_name).first()
         if existing_feed:
@@ -230,28 +207,15 @@ class FeedManager:
     def add_config_info(cls, feed_dir_path: Path) -> None:
         feed_name = feed_dir_path.name
         with DB.session_ctx() as s:
-            element_name_count_map: dict[str, int] = {}
-            FeedManager._add_config_info(s, feed_dir_path, element_name_count_map)
-            FeedManager._add_element_info(element_name_count_map)
+            FeedManager._add_config_info(s, feed_dir_path)
         LOGGER.info("* The adding of config info of feed '%s' is done.", feed_name)
-
-    @classmethod
-    def _add_element_info(cls, element_name_count_map: dict[str, int], total_element_name_count_map: Optional[dict[str, int]] = None) -> None:
-        if total_element_name_count_map is not None:
-            for element_name, count in element_name_count_map.items():
-                total_element_name_count_map[element_name] = total_element_name_count_map.get(element_name, 0) + count
 
     def load_all_config_files(self, max_num_feeds: Optional[int] = None) -> None:
         LOGGER.debug("# load_all_config_files(max_num_feeds=%r)", max_num_feeds)
         start_ts = datetime.now(timezone.utc)
 
         with DB.session_ctx() as s:
-            # 기존 엘리먼트 카운트 데이터를 모두 삭제하여 누적 방지
-            s.query(ElementNameCount).delete()
-            s.flush()
-
             num_items = 0
-            total_element_name_count_map: dict[str, int] = {}
             for group_dir_path in islice(self.work_dir_path.iterdir(), max_num_feeds):
                 if not group_dir_path.is_dir():
                     continue
@@ -259,14 +223,8 @@ class FeedManager:
                 for feed_dir_path in group_dir_path.iterdir():
                     if not feed_dir_path.is_dir():
                         continue
-                    # 각 피드마다 element_name_count_map을 초기화하여 누적 방지
-                    element_name_count_map: dict[str, int] = {}
-                    FeedManager._add_config_info(s, feed_dir_path, element_name_count_map)
-                    FeedManager._add_element_info(element_name_count_map, total_element_name_count_map)
+                    FeedManager._add_config_info(s, feed_dir_path)
                     num_items += 1
-
-            for element_name, count in total_element_name_count_map.items():
-                s.add(ElementNameCount(element_name=element_name, count=count))
 
         end_ts = datetime.now(timezone.utc)
         LOGGER.info("* The loading of all config files is done. %d items / %s sec", num_items, (end_ts - start_ts))

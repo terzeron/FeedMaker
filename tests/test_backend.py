@@ -112,7 +112,7 @@ def test_unauthenticated_exec_result_rejected():
 def test_unauthenticated_problems_rejected():
     """인증 없이 /problems/{type} 접근 시 401 반환"""
     with patch("backend.main.get_current_user", return_value=None):
-        for problem_type in ["progress_info", "public_feed_info", "html_info", "element_info", "list_url_info", "status_info"]:
+        for problem_type in ["progress_info", "public_feed_info", "html_info", "list_url_info", "status_info"]:
             response = client.get(f"/problems/{problem_type}")
             assert response.status_code == 401, f"/problems/{problem_type} should return 401"
 
@@ -363,9 +363,6 @@ class DummyFeedMakerManager:
 
     def get_problems_html_info(self):
         return (None, "html error")
-
-    def get_problems_element_info(self):
-        return (None, "element error")
 
     def get_problems_list_url_info(self):
         return (None, "list url error")
@@ -1226,9 +1223,6 @@ class DummyFeedMakerManagerEndpoints:
 
     def get_problems_html_info(self):
         return ({"html_file_size_map": [], "html_file_with_many_image_tag_map": [], "html_file_without_image_tag_map": [], "html_file_image_not_found_map": []}, None)
-
-    def get_problems_element_info(self):
-        return ([{"b": 1}], None)
 
     def get_problems_list_url_info(self):
         return ([{"c": 1}], None)

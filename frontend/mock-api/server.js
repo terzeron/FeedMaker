@@ -947,11 +947,6 @@ function buildProblemResult(problemType) {
         html_file_without_image_tag_map: [],
         html_file_image_not_found_map: []
       };
-    case 'element_info':
-      return [
-        { element_name: 'title', count: 12 },
-        { element_name: 'content', count: 9 }
-      ];
     case 'list_url_info':
       return feedInfos.map(({ group_name, feed_name, feed_title, info }) => ({
         group_name,
