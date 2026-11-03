@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
 
+import os
 import logging.config
 from pathlib import Path
-from typing import Any, Optional
-from bin.feed_maker_util import PathUtil
+from typing import Any, Optional, TypedDict
+from bin.feed_maker_util import PathUtil, Env
 from bin.feed_manager import FeedManager
 from bin.access_log_manager import AccessLogManager
 from bin.html_file_manager import HtmlFileManager
@@ -15,9 +16,18 @@ logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
 
 
+class FeedImageDirSizeInfo(TypedDict):
+    feed_name: str
+    feed_title: str
+    group_name: str
+    size: int
+
+
 class ProblemManager:
     num_days = 60
     is_tables_created = False
+    # 이미지 디렉터리 크기 추정 시 stat할 최대 표본 파일 수
+    image_dir_size_sample_count = 200
 
     def __init__(self) -> None:
         if not ProblemManager.is_tables_created:
@@ -96,6 +106,52 @@ class ProblemManager:
                 }
 
         return feed_name_status_info_map
+
+    @classmethod
+    def _estimate_dir_size(cls, dir_path: Path) -> int:
+        # du처럼 디스크 점유 크기(st_blocks)를 쓰되, 속도를 위해 파일 수는 stat 없이 세고
+        # 균등 간격 표본의 평균 크기 × 파일 수로 전체 크기를 추정한다.
+        # 파일 수가 표본 수 이하이면 모든 파일을 stat하므로 정확한 값이 된다.
+        with os.scandir(dir_path) as it:
+            files = [entry for entry in it if entry.is_file(follow_symlinks=False)]
+        num_files = len(files)
+        if num_files == 0:
+            return 0
+        step = max(1, num_files // cls.image_dir_size_sample_count)
+        sample = files[::step]
+        sample_size = sum(entry.stat(follow_symlinks=False).st_blocks * 512 for entry in sample)
+        return sample_size * num_files // len(sample)
+
+    @classmethod
+    def get_feed_image_dir_size_map(cls) -> dict[str, FeedImageDirSizeInfo]:
+        LOGGER.debug("# get_feed_image_dir_size_map()")
+        img_dir_prefix = Env.get("WEB_SERVICE_IMAGE_DIR_PREFIX")
+        if not img_dir_prefix or not Path(img_dir_prefix).is_dir():
+            LOGGER.warning("can't find image directory '%s'", img_dir_prefix)
+            return {}
+
+        # 이미지는 그룹과 무관하게 WEB_SERVICE_IMAGE_DIR_PREFIX/<feed_name> 아래에 저장된다
+        feed_name_size_map: dict[str, int] = {}
+        with os.scandir(img_dir_prefix) as it:
+            for entry in it:
+                if entry.is_dir(follow_symlinks=False):
+                    feed_name_size_map[entry.name] = cls._estimate_dir_size(Path(entry.path))
+        if not feed_name_size_map:
+            return {}
+
+        # 같은 feed_name의 행이 여럿이면 feedmaker=True인 행의 제목·그룹을 우선한다
+        feed_name_title_group_map: dict[str, tuple[str, str]] = {}
+        with DB.session_ctx() as s:
+            rows = s.query(FeedInfo.feed_name, FeedInfo.feed_title, FeedInfo.group_name, FeedInfo.feedmaker).filter(FeedInfo.feed_name.in_(list(feed_name_size_map))).all()
+            for row in rows:
+                if row.feed_name not in feed_name_title_group_map or row.feedmaker:
+                    feed_name_title_group_map[row.feed_name] = (row.feed_title or "", row.group_name or "")
+
+        result: dict[str, FeedImageDirSizeInfo] = {}
+        for feed_name, size in sorted(feed_name_size_map.items(), key=lambda item: item[1], reverse=True):
+            feed_title, group_name = feed_name_title_group_map.get(feed_name, ("", ""))
+            result[feed_name] = FeedImageDirSizeInfo(feed_name=feed_name, feed_title=feed_title, group_name=group_name, size=size)
+        return result
 
     def update_feed_info(self, feed_dir_path: Path, new_feed_dir_path: Optional[Path] = None) -> None:
         LOGGER.debug("# update_feed_info(feed_dir_path=%s, new_feed_dir_path=%s)", PathUtil.short_path(feed_dir_path), PathUtil.short_path(new_feed_dir_path))

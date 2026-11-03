@@ -100,13 +100,6 @@ describe("Problems.vue", () => {
         },
       },
     });
-    // element_info
-    axios.get.mockResolvedValueOnce({
-      data: {
-        status: "success",
-        result: [{ element_name: "title", count: 3 }],
-      },
-    });
     // list_url_info
     axios.get.mockResolvedValueOnce({
       data: {
@@ -125,12 +118,11 @@ describe("Problems.vue", () => {
     expect(wrapper.vm.sortedProgressInfolist.length).toBe(1);
     expect(wrapper.vm.sortedPublicFeedInfolist.length).toBe(1);
     expect(wrapper.vm.sortedHtmlFileSizelist.length).toBe(1);
-    expect(wrapper.vm.sortedElementInfolist.length).toBe(1);
     expect(wrapper.vm.sortedListUrlInfolist.length).toBe(1);
   });
 
   it("toggles sort direction when clicking the same column header", async () => {
-    // Mock all 6 API calls with minimal data
+    // Mock all 5 API calls with minimal data
     axios.get.mockResolvedValueOnce({
       data: {
         status: "success",
@@ -174,9 +166,6 @@ describe("Problems.vue", () => {
           html_file_image_not_found_map: [],
         },
       },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
     });
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
@@ -235,9 +224,6 @@ describe("Problems.vue", () => {
           html_file_image_not_found_map: [],
         },
       },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
     });
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
@@ -321,9 +307,6 @@ describe("Problems.vue", () => {
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
     });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
-    });
 
     axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
@@ -368,9 +351,6 @@ describe("Problems.vue", () => {
           html_file_image_not_found_map: [],
         },
       },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
     });
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
@@ -424,9 +404,6 @@ describe("Problems.vue", () => {
           html_file_image_not_found_map: [],
         },
       },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
     });
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
@@ -495,9 +472,6 @@ describe("Problems.vue", () => {
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
     });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
-    });
 
     axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
@@ -549,9 +523,6 @@ describe("Problems.vue", () => {
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
     });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
-    });
 
     axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
@@ -567,52 +538,6 @@ describe("Problems.vue", () => {
     // Toggle same column
     wrapper.vm.sortTable("htmlFileSize", "feed_title");
     expect(wrapper.vm.htmlFileSizeSortDesc).toBe(true);
-  });
-
-  it("sorts elementInfo table by clicking a column", async () => {
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: {
-        status: "success",
-        result: {
-          html_file_size_map: [],
-          html_file_with_many_image_tag_map: [],
-          html_file_without_image_tag_map: [],
-          html_file_image_not_found_map: [],
-        },
-      },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: {
-        status: "success",
-        result: [
-          { element_name: "title", count: 3 },
-          { element_name: "link", count: 10 },
-        ],
-      },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
-    });
-
-    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
-    const wrapper = mount(Problems, { global: { stubs } });
-    await flushPromises();
-
-    expect(wrapper.vm.sortedElementInfolist.length).toBe(2);
-
-    // Sort by element_name
-    wrapper.vm.sortTable("elementInfo", "element_name");
-    expect(wrapper.vm.elementInfoSortBy).toBe("element_name");
-    expect(wrapper.vm.elementInfoSortDesc).toBe(false);
   });
 
   it("sorts listUrlInfo table by clicking a column", async () => {
@@ -635,9 +560,6 @@ describe("Problems.vue", () => {
           html_file_image_not_found_map: [],
         },
       },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
     });
     axios.get.mockResolvedValueOnce({
       data: {
@@ -688,9 +610,6 @@ describe("Problems.vue", () => {
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
     });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
-    });
 
     axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
@@ -728,9 +647,6 @@ describe("Problems.vue", () => {
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
     });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
-    });
 
     axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
@@ -764,9 +680,6 @@ describe("Problems.vue", () => {
           ],
         },
       },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
     });
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
@@ -817,9 +730,6 @@ describe("Problems.vue", () => {
           html_file_image_not_found_map: [],
         },
       },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
     });
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
@@ -882,9 +792,6 @@ describe("Problems.vue", () => {
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
     });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
-    });
 
     axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     axios.delete = vi.fn();
@@ -922,10 +829,7 @@ describe("Problems.vue", () => {
   });
 
   it("handles API failure responses for each problem type", async () => {
-    // All 6 API calls return failure
-    axios.get.mockResolvedValueOnce({
-      data: { status: "failure" },
-    });
+    // All 5 API calls return failure
     axios.get.mockResolvedValueOnce({
       data: { status: "failure" },
     });
@@ -950,7 +854,6 @@ describe("Problems.vue", () => {
     expect(wrapper.vm.sortedProgressInfolist).toEqual([]);
     expect(wrapper.vm.sortedPublicFeedInfolist).toEqual([]);
     expect(wrapper.vm.sortedHtmlFileSizelist).toEqual([]);
-    expect(wrapper.vm.sortedElementInfolist).toEqual([]);
     expect(wrapper.vm.sortedListUrlInfolist).toEqual([]);
   });
 
@@ -961,7 +864,6 @@ describe("Problems.vue", () => {
     axios.get.mockRejectedValueOnce(new Error("network"));
     axios.get.mockRejectedValueOnce(new Error("network"));
     axios.get.mockRejectedValueOnce(new Error("network"));
-    axios.get.mockRejectedValueOnce(new Error("network"));
 
     axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
@@ -971,7 +873,6 @@ describe("Problems.vue", () => {
     expect(wrapper.vm.sortedProgressInfolist).toEqual([]);
     expect(wrapper.vm.sortedPublicFeedInfolist).toEqual([]);
     expect(wrapper.vm.sortedHtmlFileSizelist).toEqual([]);
-    expect(wrapper.vm.sortedElementInfolist).toEqual([]);
     expect(wrapper.vm.sortedListUrlInfolist).toEqual([]);
     console.error.mockRestore();
   });
@@ -1051,13 +952,6 @@ describe("Problems.vue", () => {
         },
       },
     });
-    // element_info returns object
-    axios.get.mockResolvedValueOnce({
-      data: {
-        status: "success",
-        result: { 0: { element_name: "title", count: 3 } },
-      },
-    });
     // list_url_info returns object
     axios.get.mockResolvedValueOnce({
       data: {
@@ -1078,7 +972,6 @@ describe("Problems.vue", () => {
       1,
     );
     expect(wrapper.vm.sortedHtmlFileSizelist.length).toBe(1);
-    expect(wrapper.vm.sortedElementInfolist.length).toBe(1);
     expect(wrapper.vm.sortedListUrlInfolist.length).toBe(1);
   });
 
@@ -1120,9 +1013,6 @@ describe("Problems.vue", () => {
           html_file_image_not_found_map: [],
         },
       },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
     });
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
@@ -1169,9 +1059,6 @@ describe("Problems.vue", () => {
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
     });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
-    });
 
     axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
@@ -1207,9 +1094,6 @@ describe("Problems.vue", () => {
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: null },
     });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: null },
-    });
 
     axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
@@ -1218,7 +1102,6 @@ describe("Problems.vue", () => {
     expect(wrapper.vm.sortedStatusInfolist).toEqual([]);
     expect(wrapper.vm.sortedProgressInfolist).toEqual([]);
     expect(wrapper.vm.sortedPublicFeedInfolist).toEqual([]);
-    expect(wrapper.vm.sortedElementInfolist).toEqual([]);
     expect(wrapper.vm.sortedListUrlInfolist).toEqual([]);
   });
 
@@ -1253,9 +1136,6 @@ describe("Problems.vue", () => {
           html_file_image_not_found_map: [],
         },
       },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
     });
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
@@ -1307,9 +1187,6 @@ describe("Problems.vue", () => {
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
     });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
-    });
 
     axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
@@ -1349,9 +1226,6 @@ describe("Problems.vue", () => {
           html_file_image_not_found_map: [],
         },
       },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
     });
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
@@ -1399,9 +1273,6 @@ describe("Problems.vue", () => {
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
     });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
-    });
 
     axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
@@ -1440,9 +1311,6 @@ describe("Problems.vue", () => {
           ],
         },
       },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
     });
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
@@ -1498,9 +1366,6 @@ describe("Problems.vue", () => {
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
     });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
-    });
 
     axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
@@ -1544,9 +1409,6 @@ describe("Problems.vue", () => {
           html_file_image_not_found_map: [],
         },
       },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
     });
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
@@ -1605,9 +1467,6 @@ describe("Problems.vue", () => {
           ],
         },
       },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
     });
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
@@ -1672,9 +1531,6 @@ describe("Problems.vue", () => {
           html_file_image_not_found_map: [],
         },
       },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
     });
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
@@ -1746,9 +1602,6 @@ describe("Problems.vue", () => {
           html_file_image_not_found_map: [],
         },
       },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
     });
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
@@ -1836,9 +1689,6 @@ describe("Problems.vue", () => {
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
     });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
-    });
 
     axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
@@ -1875,9 +1725,6 @@ describe("Problems.vue", () => {
       },
     });
     axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: "not_an_array" },
-    });
-    axios.get.mockResolvedValueOnce({
       data: { status: "success", result: 99 },
     });
 
@@ -1892,7 +1739,6 @@ describe("Problems.vue", () => {
     expect(wrapper.vm.sortedHtmlFileWithManyImageTaglist).toEqual([]);
     expect(wrapper.vm.sortedHtmlFileWithoutImageTaglist).toEqual([]);
     expect(wrapper.vm.sortedHtmlFileWithImageNotFoundlist).toEqual([]);
-    expect(wrapper.vm.sortedElementInfolist).toEqual([]);
     expect(wrapper.vm.sortedListUrlInfolist).toEqual([]);
   });
 
@@ -1917,9 +1763,6 @@ describe("Problems.vue", () => {
           html_file_image_not_found_map: [],
         },
       },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
     });
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
@@ -1961,9 +1804,6 @@ describe("Problems.vue", () => {
           html_file_image_not_found_map: [],
         },
       },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
     });
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
@@ -2095,7 +1935,6 @@ describe("Problems.vue", () => {
     wrapper.vm.htmlFileWithImageNotFoundlist = [
       { feed_dir_path: "g1/f", file_path: "g1/f/html/f4.html" },
     ];
-    wrapper.vm.elementInfolist = [{ element_name: "title", count: 3 }];
     wrapper.vm.listUrlInfolist = [
       { feed_title: "Url", count: 5, group_name: "g1", feed_name: "a" },
     ];
@@ -2221,13 +2060,6 @@ describe("Problems.vue", () => {
         },
       },
     });
-    // element_info
-    axios.get.mockResolvedValueOnce({
-      data: {
-        status: "success",
-        result: [{ element_name: "title", count: 3 }],
-      },
-    });
     // list_url_info with group_name/feed_name
     axios.get.mockResolvedValueOnce({
       data: {
@@ -2279,10 +2111,6 @@ describe("Problems.vue", () => {
     expect(html).toContain("ImgNotFound");
     expect(html).toContain("/management/g1/f");
 
-    // element_info table renders element_name and count
-    expect(html).toContain("title");
-    expect(html).toContain("3");
-
     // list_url_info table: router-link
     expect(html).toContain("Url");
     expect(html).toContain("/management/g1/a");
@@ -2311,9 +2139,6 @@ describe("Problems.vue", () => {
           html_file_image_not_found_map: [],
         },
       },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
     });
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
@@ -2357,9 +2182,6 @@ describe("Problems.vue", () => {
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
     });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
-    });
 
     axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
@@ -2396,9 +2218,6 @@ describe("Problems.vue", () => {
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
     });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
-    });
 
     axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
     const wrapper = mount(Problems, { global: { stubs } });
@@ -2430,9 +2249,6 @@ describe("Problems.vue", () => {
           html_file_image_not_found_map: [],
         },
       },
-    });
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
     });
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
@@ -2786,10 +2602,6 @@ describe("Problems.vue", () => {
         },
       },
     });
-    // element_info
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
-    });
     // list_url_info
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
@@ -2866,10 +2678,6 @@ describe("Problems.vue", () => {
         },
       },
     });
-    // element_info
-    axios.get.mockResolvedValueOnce({
-      data: { status: "success", result: [] },
-    });
     // list_url_info
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
@@ -2907,5 +2715,176 @@ describe("Problems.vue", () => {
     expect(wrapper.vm.progressInfolist).toEqual([]);
     expect(wrapper.vm.publicFeedInfolist).toEqual([]);
     console.error.mockRestore();
+  });
+
+  describe("피드별 이미지 디렉터리 크기 표", () => {
+    const IMAGE_DIR_SIZE_PATH = "/problems/image_dir_size_info";
+    const mockImageDirSize = (response) => {
+      axios.get.mockImplementation((url) => {
+        if (url.endsWith(IMAGE_DIR_SIZE_PATH)) {
+          return response instanceof Error ? Promise.reject(response) : Promise.resolve(response);
+        }
+        return Promise.resolve({ data: { status: "success", result: [] } });
+      });
+    };
+
+    it("크기 내림차순으로 표시하고 크기를 읽기 쉬운 단위로 바꾼다", async () => {
+      mockImageDirSize({
+        data: {
+          status: "success",
+          result: [
+            { feed_name: "small", feed_title: "Small", group_name: "g1", size: 2048 },
+            { feed_name: "big", feed_title: "Big", group_name: "g2", size: 5 * 1024 * 1024 },
+            { feed_name: "orphan", feed_title: "", group_name: "", size: 0 },
+          ],
+        },
+      });
+      const wrapper = mount(Problems, { global: { stubs } });
+      await flushPromises();
+
+      expect(axios.get).toHaveBeenCalledWith(expect.stringContaining(IMAGE_DIR_SIZE_PATH));
+      const list = wrapper.vm.sortedImageDirSizeInfolist;
+      expect(list.map((o) => o.feed_name)).toEqual(["big", "small", "orphan"]);
+      expect(list[0].size_formatted).toBe("5 MB");
+      expect(list[1].size_formatted).toBe("2 KB");
+      expect(list[2].size_formatted).toBe("0 B");
+      // 고아 디렉터리는 피드 이름을 제목으로 쓴다
+      expect(list[2].feed_title).toBe("orphan");
+
+      const html = wrapper.html();
+      expect(html).toContain("피드별 이미지 디렉터리 크기");
+      expect(html).toContain("작업");
+      expect(html).not.toContain("파일 수");
+      expect(html).toContain("Big");
+      expect(html).toContain("5 MB");
+    });
+
+    it("컬럼 클릭으로 정렬 기준을 바꾼다", async () => {
+      mockImageDirSize({
+        data: {
+          status: "success",
+          result: [
+            { feed_name: "a", feed_title: "A", group_name: "g", size: 9000 },
+            { feed_name: "b", feed_title: "B", group_name: "g", size: 100 },
+          ],
+        },
+      });
+      const wrapper = mount(Problems, { global: { stubs } });
+      await flushPromises();
+
+      expect(wrapper.vm.imageDirSizeInfoSortBy).toBe("size");
+      expect(wrapper.vm.imageDirSizeInfoSortDesc).toBe(true);
+
+      wrapper.vm.sortTable("imageDirSizeInfo", "feed_title");
+      expect(wrapper.vm.sortedImageDirSizeInfolist.map((o) => o.feed_name)).toEqual(["a", "b"]);
+      wrapper.vm.sortTable("imageDirSizeInfo", "feed_title");
+      expect(wrapper.vm.sortedImageDirSizeInfolist.map((o) => o.feed_name)).toEqual(["b", "a"]);
+    });
+
+    it("객체 형태 결과를 배열로 바꾼다", async () => {
+      mockImageDirSize({
+        data: {
+          status: "success",
+          result: { big: { feed_name: "big", feed_title: "Big", group_name: "g", size: 4096 } },
+        },
+      });
+      const wrapper = mount(Problems, { global: { stubs } });
+      await flushPromises();
+
+      expect(wrapper.vm.imageDirSizeInfolist.length).toBe(1);
+      expect(wrapper.vm.imageDirSizeInfolist[0].size_formatted).toBe("4 KB");
+    });
+
+    it.each([
+      ["failure 응답", { data: { status: "failure", message: "err" } }],
+      ["배열도 객체도 아닌 결과", { data: { status: "success", result: null } }],
+    ])("%s이면 빈 목록이 된다", async (_label, response) => {
+      mockImageDirSize(response);
+      const wrapper = mount(Problems, { global: { stubs } });
+      await flushPromises();
+
+      expect(wrapper.vm.sortedImageDirSizeInfolist).toEqual([]);
+    });
+
+    it("요청이 실패하면 빈 목록이 된다", async () => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      mockImageDirSize(new Error("network"));
+      const wrapper = mount(Problems, { global: { stubs } });
+      await flushPromises();
+
+      expect(wrapper.vm.sortedImageDirSizeInfolist).toEqual([]);
+      expect(errorSpy).toHaveBeenCalled();
+      errorSpy.mockRestore();
+    });
+
+    describe("이미지 디렉터리 삭제", () => {
+      const rows = [
+        { feed_name: "big", feed_title: "Big", group_name: "g2", size: 5 * 1024 * 1024 },
+        { feed_name: "small", feed_title: "Small", group_name: "g1", size: 2048 },
+        { feed_name: "orphan", feed_title: "", group_name: "", size: 0 },
+      ];
+      let alertSpy;
+
+      beforeEach(() => {
+        alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+        mockImageDirSize({ data: { status: "success", result: rows.map((o) => ({ ...o })) } });
+      });
+
+      afterEach(() => {
+        alertSpy.mockRestore();
+      });
+
+      it("그룹이 있는 행에만 삭제 아이콘을 표시한다", async () => {
+        const wrapper = mount(Problems, { global: { stubs } });
+        await flushPromises();
+
+        // 다른 표는 모두 비어 있으므로 아이콘은 이 표의 것만 있다
+        expect(wrapper.findAll("font-awesome-icon-stub").length).toBe(2);
+      });
+
+      it("아이콘을 누르면 확인 후 이미지 삭제 API를 호출하고 행을 지운다", async () => {
+        const wrapper = mount(Problems, { global: { stubs } });
+        await flushPromises();
+        axios.delete = vi.fn().mockResolvedValueOnce({ data: { status: "success" } });
+
+        await wrapper.findAll("font-awesome-icon-stub")[0].trigger("click");
+        expect(wrapper.vm.showConfirmModal).toBe(true);
+        expect(axios.delete).not.toHaveBeenCalled();
+
+        wrapper.vm.handleConfirmOk();
+        await flushPromises();
+
+        expect(axios.delete).toHaveBeenCalledWith(expect.stringContaining("/groups/g2/feeds/big/images"));
+        expect(wrapper.vm.sortedImageDirSizeInfolist.map((o) => o.feed_name)).toEqual(["small", "orphan"]);
+      });
+
+      it("삭제가 실패하면 알림을 띄우고 행을 남긴다", async () => {
+        const wrapper = mount(Problems, { global: { stubs } });
+        await flushPromises();
+        axios.delete = vi.fn().mockResolvedValueOnce({ data: { status: "failure", message: "denied" } });
+
+        const item = wrapper.vm.imageDirSizeInfolist[1];
+        wrapper.vm.imageDirDeleteClicked({ item });
+        wrapper.vm.handleConfirmOk();
+        await flushPromises();
+
+        expect(axios.delete).toHaveBeenCalledWith(expect.stringContaining("/groups/g1/feeds/small/images"));
+        expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining("이미지 삭제 중에 오류가 발생하였습니다. denied"));
+        expect(wrapper.vm.imageDirSizeInfolist.length).toBe(3);
+      });
+
+      it("확인 모달을 취소하면 API를 호출하지 않는다", async () => {
+        const wrapper = mount(Problems, { global: { stubs } });
+        await flushPromises();
+        axios.delete = vi.fn();
+
+        wrapper.vm.imageDirDeleteClicked({ item: wrapper.vm.imageDirSizeInfolist[0] });
+        wrapper.vm.handleConfirmCancel();
+        await flushPromises();
+
+        expect(axios.delete).not.toHaveBeenCalled();
+        expect(wrapper.vm.imageDirSizeInfolist.length).toBe(3);
+      });
+    });
   });
 });

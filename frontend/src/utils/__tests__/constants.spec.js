@@ -41,7 +41,6 @@ describe('utils/constants', () => {
     expect(PROBLEM_TYPES.PROGRESS_INFO).toBe('progress_info');
     expect(PROBLEM_TYPES.PUBLIC_FEED_INFO).toBe('public_feed_info');
     expect(PROBLEM_TYPES.HTML_INFO).toBe('html_info');
-    expect(PROBLEM_TYPES.ELEMENT_INFO).toBe('element_info');
     expect(PROBLEM_TYPES.LIST_URL_INFO).toBe('list_url_info');
   });
 

@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
+import asyncio
 import sys
 import uuid
 import logging
@@ -281,9 +282,9 @@ class ProblemType(str, Enum):
     PROGRESS = "progress_info"
     PUBLIC_FEED = "public_feed_info"
     HTML = "html_info"
-    ELEMENT = "element_info"
     LIST_URL = "list_url_info"
     STATUS = "status_info"
+    IMAGE_DIR_SIZE = "image_dir_size_info"
 
 
 class StatusInfoDeleteRequest(BaseModel):
@@ -303,15 +304,16 @@ async def get_problems(problem_type: ProblemType, feed_maker_manager: FeedMakerM
         ProblemType.PROGRESS: feed_maker_manager.get_problems_progress_info,
         ProblemType.PUBLIC_FEED: feed_maker_manager.get_problems_public_feed_info,
         ProblemType.HTML: feed_maker_manager.get_problems_html_info,
-        ProblemType.ELEMENT: feed_maker_manager.get_problems_element_info,
         ProblemType.LIST_URL: feed_maker_manager.get_problems_list_url_info,
         ProblemType.STATUS: feed_maker_manager.get_problems_status_info,
+        ProblemType.IMAGE_DIR_SIZE: feed_maker_manager.get_problems_image_dir_size_info,
     }
 
     handler = info_methods.get(problem_type)
     if not handler:
         raise HTTPException(404, f"Problem type {problem_type} not found")
-    result, error = handler()
+    # 이미지 디렉터리 스캔 등 blocking I/O가 이벤트 루프를 막지 않도록 스레드에서 실행한다
+    result, error = await asyncio.to_thread(handler)
     if result or not error:
         response_object["result"] = result
         response_object["status"] = "success"
@@ -486,6 +488,16 @@ async def remove_html(group_name: str, feed_name: str, request: Request, feed_ma
     require_admin(request)
     response_object: dict[str, Any] = {}
     feed_maker_manager.remove_html(group_name, feed_name)
+    response_object["status"] = "success"
+    return response_object
+
+
+@app.delete("/groups/{group_name}/feeds/{feed_name}/images")
+async def remove_images(group_name: str, feed_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+    LOGGER.info("DELETE /groups/%s/feeds/%s/images -> remove_images(%s, %s)", group_name, feed_name, group_name, feed_name)
+    require_admin(request)
+    response_object: dict[str, Any] = {}
+    feed_maker_manager.remove_images(group_name, feed_name)
     response_object["status"] = "success"
     return response_object
 

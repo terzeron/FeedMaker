@@ -72,12 +72,6 @@ class HtmlFileInfo(Base):
     __table_args__ = (Index("html_file_info_feed_dir_path_idx", "feed_dir_path"),)
 
 
-class ElementNameCount(Base):
-    __tablename__ = "element_name_count"
-    element_name: Mapped[str] = mapped_column(String(256), default="", primary_key=True)
-    count: Mapped[int] = mapped_column(Integer)
-
-
 class LockForConcurrentLoading(Base):
     __tablename__ = "lock_for_concurrent_loading"
     lock_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True, server_default=text("CURRENT_TIMESTAMP"))

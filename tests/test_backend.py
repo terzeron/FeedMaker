@@ -112,7 +112,7 @@ def test_unauthenticated_exec_result_rejected():
 def test_unauthenticated_problems_rejected():
     """인증 없이 /problems/{type} 접근 시 401 반환"""
     with patch("backend.main.get_current_user", return_value=None):
-        for problem_type in ["progress_info", "public_feed_info", "html_info", "element_info", "list_url_info", "status_info"]:
+        for problem_type in ["progress_info", "public_feed_info", "html_info", "list_url_info", "status_info", "image_dir_size_info"]:
             response = client.get(f"/problems/{problem_type}")
             assert response.status_code == 401, f"/problems/{problem_type} should return 401"
 
@@ -364,11 +364,11 @@ class DummyFeedMakerManager:
     def get_problems_html_info(self):
         return (None, "html error")
 
-    def get_problems_element_info(self):
-        return (None, "element error")
-
     def get_problems_list_url_info(self):
         return (None, "list url error")
+
+    def get_problems_image_dir_size_info(self):
+        return (None, "image dir size error")
 
     def get_problems_status_info(self):
         return (None, "status error")
@@ -430,6 +430,10 @@ class DummyFeedMakerManager:
 
     # remove html
     def remove_html(self, group_name, feed_name):
+        return None
+
+    def remove_images(self, group_name, feed_name):
+        self.removed_images = (group_name, feed_name)
         return None
 
     def remove_html_file(self, group_name, feed_name, html_file_name):
@@ -500,6 +504,10 @@ def test_get_problems_failure():
     r = asyncio.run(main.get_problems(main.ProblemType.STATUS, feed_maker_manager=mgr))
     assert r["status"] == "failure"
     assert r["message"] == "status error"
+
+    r = asyncio.run(main.get_problems(main.ProblemType.IMAGE_DIR_SIZE, feed_maker_manager=mgr))
+    assert r["status"] == "failure"
+    assert r["message"] == "image dir size error"
 
 
 # --- search failure ---
@@ -837,6 +845,33 @@ def test_remove_html_file():
     req = types.SimpleNamespace()
     r = asyncio.run(main.remove_html_file("g", "f", "x.html", request=req, feed_maker_manager=mgr))
     assert r["status"] == "success"
+
+
+def test_remove_images():
+    main.require_admin = lambda _request: None
+    mgr = DummyFeedMakerManager()
+    req = types.SimpleNamespace()
+    r = asyncio.run(main.remove_images("g", "f", request=req, feed_maker_manager=mgr))
+    assert r["status"] == "success"
+    assert mgr.removed_images == ("g", "f")
+
+
+def test_remove_images_requires_admin(monkeypatch):
+    def _deny(_request):
+        raise HTTPException(status_code=403, detail="forbidden")
+
+    monkeypatch.setattr(main, "require_admin", _deny)
+    mgr = DummyFeedMakerManager()
+    with pytest.raises(HTTPException) as exc_info:
+        asyncio.run(main.remove_images("g", "f", request=types.SimpleNamespace(), feed_maker_manager=mgr))
+    assert exc_info.value.status_code == 403
+    assert not hasattr(mgr, "removed_images")
+
+
+def test_remove_images_endpoint_requires_auth():
+    with patch("backend.main.get_current_user", return_value=None):
+        response = client.delete("/groups/g/feeds/f/images")
+    assert response.status_code == 401
 
 
 # --- check_running success True ---
@@ -1196,11 +1231,11 @@ class DummyFeedMakerManagerEndpoints:
     def get_problems_html_info(self):
         return ({"html_file_size_map": [], "html_file_with_many_image_tag_map": [], "html_file_without_image_tag_map": [], "html_file_image_not_found_map": []}, None)
 
-    def get_problems_element_info(self):
-        return ([{"b": 1}], None)
-
     def get_problems_list_url_info(self):
         return ([{"c": 1}], None)
+
+    def get_problems_image_dir_size_info(self):
+        return ({"feed1": {"feed_name": "feed1", "feed_title": "t", "group_name": "g", "size": 8192}}, None)
 
     def get_problems_status_info(self):
         return ([{"status": 1}], None)
@@ -1241,6 +1276,9 @@ class DummyFeedMakerManagerEndpoints:
     def remove_html(self, group_name, feed_name):
         return None
 
+    def remove_images(self, group_name, feed_name):
+        return None
+
     # run/check/feed info
     def run(self, group_name, feed_name):
         return (True, None)
@@ -1274,6 +1312,10 @@ def test_exec_and_search_and_problems_endpoints():
 
     r = asyncio.run(main.get_problems(main.ProblemType.STATUS, feed_maker_manager=mgr))
     assert r["status"] == "success"
+
+    r = asyncio.run(main.get_problems(main.ProblemType.IMAGE_DIR_SIZE, feed_maker_manager=mgr))
+    assert r["status"] == "success"
+    assert r["result"]["feed1"]["size"] == 8192
 
     r = asyncio.run(main.search("test", feed_maker_manager=mgr))
     assert r["status"] == "success" and "is_active" in r["feeds"][0]
@@ -1439,7 +1481,6 @@ def test_tracking_pixel_missing(tmp_path):
         with pytest.raises(HTTPException) as exc_info:
             asyncio.run(main.tracking_pixel(MagicMock(), feed="test.xml"))
         assert exc_info.value.status_code == 404
-
 
 
 # --- advance_start_index ---

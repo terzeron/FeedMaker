@@ -19,10 +19,10 @@ from bin.run import FeedMakerRunner
 from bin.feed_maker_util import Config, Env, PathUtil, URL
 from bin.db import DB
 from bin.models import FeedInfo
-from bin.feed_manager import FeedManager, FeedUrlCountInfo, ElementCountInfo, PublicFeedInfo, SearchResultFeedInfo, FeedProgressInfo, GroupInfo, GroupFeedInfo, SingleFeedInfo
+from bin.feed_manager import FeedManager, FeedUrlCountInfo, PublicFeedInfo, SearchResultFeedInfo, FeedProgressInfo, GroupInfo, GroupFeedInfo, SingleFeedInfo
 from bin.access_log_manager import AccessLogManager
 from bin.html_file_manager import HtmlFileManager
-from bin.problem_manager import ProblemManager
+from bin.problem_manager import ProblemManager, FeedImageDirSizeInfo
 from utils.search_manga_site import SearchManager
 
 
@@ -171,14 +171,14 @@ class FeedMakerManager:
         }, ""
 
     @staticmethod
-    def get_problems_element_info() -> tuple[dict[str, ElementCountInfo], str]:
-        LOGGER.debug("# get_problems_element_info()")
-        return FeedManager.get_element_name_count_map(), ""
-
-    @staticmethod
     def get_problems_list_url_info() -> tuple[dict[str, FeedUrlCountInfo], str]:
         LOGGER.debug("# get_problems_list_url_info()")
         return FeedManager.get_feed_name_list_url_count_map(), ""
+
+    @staticmethod
+    def get_problems_image_dir_size_info() -> tuple[dict[str, FeedImageDirSizeInfo], str]:
+        LOGGER.debug("# get_problems_image_dir_size_info()")
+        return ProblemManager.get_feed_image_dir_size_map(), ""
 
     @staticmethod
     def _determine_keyword_in_config_item(keyword: str, config: dict[str, Any], *args: str) -> bool:
@@ -460,6 +460,17 @@ class FeedMakerManager:
         if html_dir_path.is_dir():
             rmtree(html_dir_path)
         self.html_file_manager.remove_html_file_in_path_from_info("feed_dir_path", feed_dir_path, do_remove_file=True)
+
+    def remove_images(self, group_name: str, feed_name: str) -> None:
+        LOGGER.debug("# remove_images(group_name='%s', feed_name='%s')", group_name, feed_name)
+        _validate_name(group_name, "group_name")
+        _validate_name(feed_name, "feed_name")
+        # 이미지는 그룹과 무관하게 WEB_SERVICE_IMAGE_DIR_PREFIX/<feed_name> 아래에 저장된다
+        # (WEB_SERVICE_IMAGE_URL_PREFIX/<feed_name>으로 서비스되는 디렉터리)
+        feed_img_dir_path = self.img_dir_path / feed_name
+        if feed_img_dir_path.is_dir():
+            LOGGER.debug("deleting %s", PathUtil.short_path(feed_img_dir_path))
+            rmtree(feed_img_dir_path)
 
     def remove_html_file(self, group_name: str, feed_name: str, html_file_name: str) -> None:
         LOGGER.debug("# remove_html_file(group_name='%s', feed_name='%s')", group_name, feed_name)

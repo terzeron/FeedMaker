@@ -14,7 +14,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from bin.feed_maker_util import Datetime, Config
-from bin.feed_manager import FeedManager, FeedUrlCountInfo, ElementCountInfo, PublicFeedInfo, FeedProgressInfo, SearchResultFeedInfo, GroupInfo, GroupFeedInfo, SingleFeedInfo, normalize_feed_identity, NON_FEED_DIR_NAMES
+from bin.feed_manager import FeedManager, FeedUrlCountInfo, PublicFeedInfo, FeedProgressInfo, SearchResultFeedInfo, GroupInfo, GroupFeedInfo, SingleFeedInfo, normalize_feed_identity, NON_FEED_DIR_NAMES
 from bin.db import DB
 from bin.models import FeedInfo, Base
 import json
@@ -79,12 +79,6 @@ class TestFeedManager(unittest.TestCase):
             self.assertIn("feed_title", list_url_count)
             self.assertIn("group_name", list_url_count)
             self.assertIn("count", list_url_count)
-
-    def test_get_element_name_count_map(self) -> None:
-        result: dict[str, ElementCountInfo] = FeedManager.get_element_name_count_map()
-        for _, count in result.items():
-            self.assertIn("element_name", count)
-            self.assertIn("count", count)
 
     def test_add_and_remove_config_info(self) -> None:
         example_conf_file_path = Path(__file__).parent / Config.DEFAULT_CONF_FILE
@@ -537,29 +531,6 @@ class TestGetFeedNameListUrlCountMap(FeedManagerTestBase):
         self.assertEqual(result, {})
 
 
-class TestGetElementNameCountMap(FeedManagerTestBase):
-    def test_returns_map_with_rows(self) -> None:
-        row1 = MagicMock()
-        row1.element_name = "c.list_url_list"
-        row1.count = 10
-        row2 = MagicMock()
-        row2.element_name = "r.title"
-        row2.count = 5
-        self.mock_query.all.return_value = [row1, row2]
-
-        result: dict[str, ElementCountInfo] = FeedManager.get_element_name_count_map()
-
-        self.assertEqual(len(result), 2)
-        self.assertIn("c.list_url_list", result)
-        self.assertEqual(result["c.list_url_list"]["count"], 10)
-        self.assertIn("r.title", result)
-
-    def test_returns_empty_when_no_rows(self) -> None:
-        self.mock_query.all.return_value = []
-        result: dict[str, ElementCountInfo] = FeedManager.get_element_name_count_map()
-        self.assertEqual(result, {})
-
-
 class TestRemoveConfigInfo(FeedManagerTestBase):
     def test_remove_without_file_removal(self) -> None:
         feed_dir_path = MagicMock(spec=Path)
@@ -794,78 +765,20 @@ class TestAddConfigInfo(FeedManagerTestBase):
         self.mock_session.add.assert_called_once()
         self.mock_session.flush.assert_called_once()
 
-    def test_element_name_count_map_accumulates(self) -> None:
-        feed_dir_path = MagicMock(spec=Path)
-        feed_dir_path.is_dir.return_value = True
-        feed_dir_path.name = "feed"
-        feed_dir_path.parent.name = "group"
-
-        conf_file = MagicMock()
-        conf_file.is_file.return_value = True
-
-        config_data = {"configuration": {"rss": {"title": "T", "link": "http://x.com"}, "collection": {"list_url_list": ["u"]}, "extraction": {"element_id": "c"}}}
-
-        def truediv_side_effect(other):
-            if other == Config.DEFAULT_CONF_FILE:
-                return conf_file
-            return MagicMock()
-
-        feed_dir_path.__truediv__ = MagicMock(side_effect=truediv_side_effect)
-        stat_result = MagicMock()
-        stat_result.st_mtime = 1700000000.0
-        feed_dir_path.stat.return_value = stat_result
-
-        self.mock_query.first.return_value = None
-
-        element_map: dict[str, int] = {}
-        with patch("json.load", return_value=config_data):
-            FeedManager._add_config_info(self.mock_session, feed_dir_path, element_map)
-
-        # collection has 'list_url_list' -> 'c.list_url_list'
-        # rss has 'title', 'link' -> 'r.title', 'r.link'
-        # extraction has 'element_id' -> 'e.element_id'
-        self.assertIn("c.list_url_list", element_map)
-        self.assertIn("r.title", element_map)
-        self.assertIn("r.link", element_map)
-        self.assertIn("e.element_id", element_map)
-
 
 class TestAddConfigInfoWrapper(FeedManagerTestBase):
     def test_add_config_info_calls_internal(self) -> None:
         feed_dir_path = MagicMock(spec=Path)
         feed_dir_path.name = "feed"
 
-        with patch.object(FeedManager, "_add_config_info") as mock_add, patch.object(FeedManager, "_add_element_info") as mock_elem:
+        with patch.object(FeedManager, "_add_config_info") as mock_add:
             FeedManager.add_config_info(feed_dir_path)
             mock_add.assert_called_once()
-            mock_elem.assert_called_once()
-
-
-class TestAddElementInfo(FeedManagerTestBase):
-    def test_accumulates_to_total(self) -> None:
-        element_map = {"c.url": 3, "r.title": 1}
-        total_map: dict[str, int] = {"c.url": 5}
-
-        FeedManager._add_element_info(element_map, total_map)
-
-        self.assertEqual(total_map["c.url"], 8)
-        self.assertEqual(total_map["r.title"], 1)
-
-    def test_no_total_map_does_nothing(self) -> None:
-        element_map = {"c.url": 3}
-        # Should not raise
-        FeedManager._add_element_info(element_map, None)
-
-    def test_empty_element_map(self) -> None:
-        total_map: dict[str, int] = {"c.url": 5}
-        FeedManager._add_element_info({}, total_map)
-        self.assertEqual(total_map, {"c.url": 5})
 
 
 class TestLoadAllConfigFiles(FeedManagerTestBase):
     @patch.object(FeedManager, "_add_config_info")
-    @patch.object(FeedManager, "_add_element_info")
-    def test_iterates_directories(self, mock_elem: MagicMock, mock_add: MagicMock) -> None:
+    def test_iterates_directories(self, mock_add: MagicMock) -> None:
         group_dir = MagicMock()
         group_dir.is_dir.return_value = True
         feed_dir1 = MagicMock()
@@ -887,8 +800,7 @@ class TestLoadAllConfigFiles(FeedManagerTestBase):
         mock_add.assert_called_once()
 
     @patch.object(FeedManager, "_add_config_info")
-    @patch.object(FeedManager, "_add_element_info")
-    def test_skips_non_dir_groups(self, mock_elem: MagicMock, mock_add: MagicMock) -> None:
+    def test_skips_non_dir_groups(self, mock_add: MagicMock) -> None:
         non_dir = MagicMock()
         non_dir.is_dir.return_value = False
 

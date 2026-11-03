@@ -300,3 +300,98 @@ class TestGetFeedNameStatusInfoMapDuplicateFiltering(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestGetFeedImageDirSizeMap(unittest.TestCase):
+    def setUp(self) -> None:
+        self.img_dir_path = Path(tempfile.mkdtemp())
+        self.mock_session = MagicMock()
+        self.mock_session.query.return_value.filter.return_value.all.return_value = []
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.img_dir_path)
+
+    def _make_files(self, feed_name: str, sizes: list[int]) -> int:
+        feed_img_dir_path = self.img_dir_path / feed_name
+        feed_img_dir_path.mkdir()
+        total = 0
+        for i, size in enumerate(sizes):
+            file_path = feed_img_dir_path / f"{i}.jpg"
+            file_path.write_bytes(b"x" * size)
+            total += file_path.stat().st_blocks * 512
+        return total
+
+    def _call(self) -> dict[str, Any]:
+        with patch.dict("os.environ", {"WEB_SERVICE_IMAGE_DIR_PREFIX": str(self.img_dir_path)}), patch("bin.db.DB.session_ctx") as mock_session_ctx:
+            mock_session_ctx.return_value.__enter__.return_value = self.mock_session
+            mock_session_ctx.return_value.__exit__.return_value = None
+            return dict(ProblemManager.get_feed_image_dir_size_map())
+
+    def test_exact_size_when_files_fit_in_sample(self) -> None:
+        expected = self._make_files("feed_a", [10, 5000, 9000])
+
+        result = self._call()
+
+        self.assertEqual(result["feed_a"]["size"], expected)
+        self.assertEqual(result["feed_a"]["feed_name"], "feed_a")
+        self.assertNotIn("num_files", result["feed_a"])
+
+    def test_estimates_from_sample_for_large_directory(self) -> None:
+        # 크기가 모두 같으면 표본 평균 × 파일 수가 실제 합과 같다
+        expected = self._make_files("feed_big", [3000] * 30)
+
+        with patch.object(ProblemManager, "image_dir_size_sample_count", 4):
+            result = self._call()
+
+        self.assertEqual(result["feed_big"]["size"], expected)
+
+    def test_sorted_by_size_descending(self) -> None:
+        self._make_files("small", [100])
+        self._make_files("large", [100000, 100000])
+        self._make_files("empty", [])
+
+        result = self._call()
+
+        self.assertEqual(list(result), ["large", "small", "empty"])
+        self.assertEqual(result["empty"]["size"], 0)
+
+    def test_ignores_files_and_subdirs_at_top_level(self) -> None:
+        (self.img_dir_path / "stray.jpg").write_bytes(b"x")
+        self._make_files("feed_a", [10])
+        (self.img_dir_path / "feed_a" / "sub").mkdir()
+
+        result = self._call()
+
+        # 하위 디렉터리는 크기에 넣지 않으므로 파일 1개(10바이트) 크기만 잡힌다
+        self.assertEqual(list(result), ["feed_a"])
+        self.assertEqual(result["feed_a"]["size"], (self.img_dir_path / "feed_a" / "0.jpg").stat().st_blocks * 512)
+
+    def test_fills_title_and_group_from_feed_info(self) -> None:
+        self._make_files("feed_a", [10])
+        self._make_files("orphan", [10])
+        rows = [
+            MagicMock(feed_name="feed_a", feed_title="old", group_name="old_group", feedmaker=False),
+            MagicMock(feed_name="feed_a", feed_title="Feed A", group_name="group1", feedmaker=True),
+        ]
+        self.mock_session.query.return_value.filter.return_value.all.return_value = rows
+
+        result = self._call()
+
+        self.assertEqual(result["feed_a"]["feed_title"], "Feed A")
+        self.assertEqual(result["feed_a"]["group_name"], "group1")
+        self.assertEqual(result["orphan"]["feed_title"], "")
+        self.assertEqual(result["orphan"]["group_name"], "")
+
+    def test_returns_empty_when_image_dir_missing(self) -> None:
+        with patch.dict("os.environ", {"WEB_SERVICE_IMAGE_DIR_PREFIX": str(self.img_dir_path / "nope")}):
+            self.assertEqual(ProblemManager.get_feed_image_dir_size_map(), {})
+
+    def test_returns_empty_when_env_unset(self) -> None:
+        with patch.dict("os.environ", {"WEB_SERVICE_IMAGE_DIR_PREFIX": ""}):
+            self.assertEqual(ProblemManager.get_feed_image_dir_size_map(), {})
+
+    def test_skips_db_query_when_no_feed_dirs(self) -> None:
+        result = self._call()
+
+        self.assertEqual(result, {})
+        self.mock_session.query.assert_not_called()
