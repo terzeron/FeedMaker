@@ -31,7 +31,14 @@ class ImageDownloader:
 
         cache_file_path = FileManager.get_cache_file_path(feed_img_dir_path, img_url)
         if cache_file_path.is_file() and cache_file_path.stat().st_size > 0:
-            return cache_file_path, FileManager.get_cache_url(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX") + "/" + feed_img_dir_path.name, img_url, suffix=cache_file_path.suffix)
+            if cache_file_path.suffix:
+                return cache_file_path, FileManager.get_cache_url(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX") + "/" + feed_img_dir_path.name, img_url, suffix=cache_file_path.suffix)
+            # 확장자 없는 원본이 남아 있으면 변환 전 상태다. 그대로 쓰면 HTML에 확장자 없는 URL이 나가
+            # 변환 후 파일을 찾지 못하므로, 여기서 변환하고 변환된 경로와 URL을 돌려준다.
+            converted_path = ImageDownloader.convert_image_format(cache_file_path, quality=quality)
+            if converted_path and converted_path.is_file():
+                return converted_path, FileManager.get_cache_url(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX") + "/" + feed_img_dir_path.name, img_url, suffix=converted_path.suffix)
+            LOGGER.warning(f"확장자 없는 캐시 파일 변환 실패, 다시 내려받는다: {cache_file_path}")
         # 변환된 .webp 파일이 이미 존재하는지 확인
         webp_cache_path = cache_file_path.with_suffix(".webp")
         if webp_cache_path.is_file() and webp_cache_path.stat().st_size > 0:

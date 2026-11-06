@@ -50,6 +50,32 @@ class TestDownloadImageCacheHit(unittest.TestCase):
         crawler.run.assert_not_called()
 
 
+class TestDownloadImageExtensionlessCacheHit(unittest.TestCase):
+    """확장자 없는 원본 캐시 파일이 남아 있어도 HTML에는 확장자 있는 URL이 나가야 한다."""
+
+    @patch("utils.image_downloader.FileManager")
+    @patch("utils.image_downloader.Env")
+    def test_extensionless_cache_is_converted_to_webp(self, mock_env: MagicMock, mock_fm: MagicMock) -> None:
+        mock_env.get.return_value = "http://img.example.com"
+        mock_fm.get_cache_url.side_effect = lambda prefix, url, suffix="": f"{prefix}/abc123{suffix}"
+
+        with tempfile.TemporaryDirectory() as tmp:
+            feed_dir = Path(tmp) / "feed"
+            feed_dir.mkdir()
+            raw = feed_dir / "abc123"  # 확장자 없는 캐시 파일
+            Image.new("RGB", (10, 10), "red").save(raw, "JPEG")
+            mock_fm.get_cache_file_path.return_value = raw
+
+            crawler = MagicMock()
+            path, url = ImageDownloader.download_image(crawler, feed_dir, "http://example.com/photo.jpg")
+
+            self.assertEqual(path, feed_dir / "abc123.webp")
+            self.assertTrue((feed_dir / "abc123.webp").is_file())
+            self.assertFalse(raw.exists())
+            self.assertEqual(url, "http://img.example.com/feed/abc123.webp")
+            crawler.run.assert_not_called()
+
+
 class TestDownloadImageWebpCacheHit(unittest.TestCase):
     @patch("utils.image_downloader.FileManager")
     @patch("utils.image_downloader.Env")
