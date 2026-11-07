@@ -443,6 +443,19 @@ describe("FeedManagement.vue", () => {
   });
 
   describe("setProgressInfo", () => {
+    it("shows current index, HTML count and newlist count separately", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.showFeedInfo = true;
+      wrapper.vm.setProgressInfo({
+        current_index: 3, html_file_count: 8, total_item_count: 20,
+        unit_size_per_day: 1, progress_ratio: 15,
+      });
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find("#metadata").text()).toContain("3 / 8 / 20 = 15 %");
+      wrapper.unmount();
+    });
+
     it("sets progress metadata", async () => {
       const wrapper = createWrapper();
       await flushPromises();

@@ -1171,7 +1171,7 @@ export default {
       progressInfoFields: [
         { key: "feed_title", label: "제목", sortable: true },
         { key: "current_index", label: "현재", sortable: true },
-        { key: "total_item_count", label: "개수", sortable: true },
+        { key: "html_file_count", label: "개수", sortable: true },
         { key: "unit_size_per_day", label: "단위", sortable: true },
         { key: "progress_ratio", label: "진행률", sortable: true },
         { key: "due_date", label: "마감일", sortable: true },
