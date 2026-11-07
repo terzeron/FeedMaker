@@ -58,6 +58,7 @@ class FeedProgressInfo(TypedDict):
     group_name: str
     current_index: int
     total_item_count: int
+    html_file_count: int
     unit_size_per_day: float
     progress_ratio: float
     due_date: Optional[datetime]
@@ -107,6 +108,7 @@ class PublicFeedDetail(TypedDict):
 class ProgressDetail(TypedDict):
     current_index: int
     total_item_count: int
+    html_file_count: int
     unit_size_per_day: float
     progress_ratio: float
     due_date: Optional[datetime]
@@ -373,6 +375,16 @@ class FeedManager:
         LOGGER.info("* The loading of all public feed files is done. %d items / %s sec", num_items, (end_ts - start_ts))
 
     @classmethod
+    def _count_html_files(cls, group_name: str, feed_name: str) -> int:
+        # DB 이름은 canonical이지만 비활성 디렉터리는 '_' 접두사를 사용한다.
+        for group in (group_name, f"_{group_name}"):
+            for feed in (feed_name, f"_{feed_name}"):
+                feed_dir = cls.work_dir_path / group / feed
+                if feed_dir.is_dir():
+                    return sum(path.is_file() for path in (feed_dir / "html").glob("*.html"))
+        return 0
+
+    @classmethod
     def get_feed_name_progress_info_map(cls) -> dict[str, FeedProgressInfo]:
         LOGGER.debug("# get_feed_name_progress_info_map()")
         feed_name_progress_info_map: dict[str, FeedProgressInfo] = {}
@@ -381,7 +393,7 @@ class FeedManager:
             rows = s.query(FeedInfo).where(FeedInfo.is_completed, FeedInfo.is_active).all()
             for row in rows:
                 feed_name_progress_info_map[row.feed_name] = FeedProgressInfo(
-                    feed_name=row.feed_name, feed_title=row.feed_title, group_name=row.group_name, current_index=row.current_index, total_item_count=row.total_item_count, unit_size_per_day=row.unit_size_per_day or 0.0, progress_ratio=row.progress_ratio or 0.0, due_date=row.due_date
+                    feed_name=row.feed_name, feed_title=row.feed_title, group_name=row.group_name, current_index=row.current_index, total_item_count=row.total_item_count, html_file_count=cls._count_html_files(row.group_name, row.feed_name), unit_size_per_day=row.unit_size_per_day or 0.0, progress_ratio=row.progress_ratio or 0.0, due_date=row.due_date
                 )
 
         return feed_name_progress_info_map
@@ -573,7 +585,7 @@ class FeedManager:
             config_modify_date=feed.config_modify_date,
             collection_info=CollectionDetail(collect_date=feed.collect_date, total_item_count=feed.total_item_count),
             public_feed_info=PublicFeedDetail(public_feed_file_path=feed.public_feed_file_path, file_size=feed.file_size, num_items=feed.num_items, upload_date=feed.upload_date),
-            progress_info=ProgressDetail(current_index=feed.current_index, total_item_count=feed.total_item_count, unit_size_per_day=feed.unit_size_per_day, progress_ratio=feed.progress_ratio, due_date=feed.due_date),
+            progress_info=ProgressDetail(current_index=feed.current_index, total_item_count=feed.total_item_count, html_file_count=cls._count_html_files(group_name, feed_name), unit_size_per_day=feed.unit_size_per_day, progress_ratio=feed.progress_ratio, due_date=feed.due_date),
         )
 
     @classmethod

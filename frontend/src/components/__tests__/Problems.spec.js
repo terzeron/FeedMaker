@@ -57,7 +57,8 @@ describe("Problems.vue", () => {
           {
             feed_title: "B",
             current_index: 1,
-            total_item_count: 2,
+            total_item_count: 20,
+            html_file_count: 8,
             unit_size_per_day: 1,
             progress_ratio: 50,
             due_date: "2024-10-15",
@@ -119,6 +120,8 @@ describe("Problems.vue", () => {
     expect(wrapper.vm.sortedPublicFeedInfolist.length).toBe(1);
     expect(wrapper.vm.sortedHtmlFileSizelist.length).toBe(1);
     expect(wrapper.vm.sortedListUrlInfolist.length).toBe(1);
+    const progressTable = wrapper.findAll("table")[1];
+    expect(progressTable.findAll("tbody tr")[0].findAll("td")[2].text()).toBe("8");
   });
 
   it("toggles sort direction when clicking the same column header", async () => {

@@ -195,7 +195,7 @@
                             padding: 0 4px;
                           "
                         >
-                          {{ currentIndex }} / {{ totalItemCount }} =
+                          {{ currentIndex }} / {{ htmlFileCount }} / {{ totalItemCount }} =
                           {{ progressRatio }} %, {{ unitSizePerDay }}/일
                         </div>
                       </BProgress>
@@ -600,6 +600,7 @@ export default {
       lastUploadDate: "-",
       currentIndex: 0,
       totalItemCount: 0,
+      htmlFileCount: 0,
       unitSizePerDay: 0,
       progressRatio: 0.0,
       feedCompletionDueDate: "-",
@@ -988,6 +989,7 @@ export default {
     },
     setProgressInfo: function (progressInfo) {
       this.currentIndex = progressInfo["current_index"];
+      this.htmlFileCount = progressInfo["html_file_count"] ?? 0;
       this.totalItemCount = progressInfo["total_item_count"];
       this.unitSizePerDay = progressInfo["unit_size_per_day"];
       this.progressRatio = progressInfo["progress_ratio"];
