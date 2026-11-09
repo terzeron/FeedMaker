@@ -1267,6 +1267,49 @@ class TestAddProgressInfo(FeedManagerTestBase):
         self.assertEqual(result, 1)
         self.mock_session.add.assert_called_once()
 
+    def _run_progress_with_unit_size(self, conf_unit_size: float, db_unit_size: float) -> MagicMock:
+        """newlist URL 3개, start_idx 없음 상태에서 _add_progress_info를 실행하고 갱신된 기존 row를 돌려준다."""
+        feed_dir_path = MagicMock(spec=Path)
+        feed_dir_path.is_dir.return_value = True
+        feed_dir_path.name = "my_feed"
+        feed_dir_path.parent.name = "group"
+
+        conf_data = {"configuration": {"collection": {"is_completed": True, "unit_size_per_day": conf_unit_size}}}
+        conf_file = MagicMock()
+        conf_file.is_file.return_value = True
+        start_idx_file = MagicMock()
+        start_idx_file.is_file.return_value = False
+        newlist_dir = MagicMock()
+        newlist_dir.is_dir.return_value = True
+        list_file = MagicMock()
+        list_file.suffix = ".txt"
+        list_file.stat.return_value = MagicMock(st_mtime=1700000000.0)
+        list_file.open.return_value.__enter__ = MagicMock(return_value=iter(["url1\tt1\n", "url2\tt2\n", "url3\tt3\n"]))
+        list_file.open.return_value.__exit__ = MagicMock(return_value=None)
+        newlist_dir.iterdir.return_value = [list_file]
+        files = {Config.DEFAULT_CONF_FILE: conf_file, "start_idx.txt": start_idx_file, "newlist": newlist_dir}
+        feed_dir_path.__truediv__ = MagicMock(side_effect=lambda other: files.get(other, MagicMock()))
+
+        self.mock_query.first.return_value = self._make_feed_row(feed_name="my_feed", is_completed=True, unit_size_per_day=db_unit_size)
+        existing = self._make_feed_row(feed_name="my_feed", group_name="group")
+        self.mock_query.all.return_value = [existing]
+
+        with patch("json.load", return_value=conf_data):
+            FeedManager._add_progress_info(self.mock_session, feed_dir_path)
+        return existing
+
+    def test_unit_size_from_config_when_db_value_is_zero(self) -> None:
+        """DB의 unit_size_per_day가 0이어도 설정 파일 값으로 진행 현황을 계산한다."""
+        existing = self._run_progress_with_unit_size(conf_unit_size=2, db_unit_size=0.0)
+        self.assertEqual(existing.total_item_count, 3)
+        self.assertIsNotNone(existing.due_date)
+
+    def test_zero_unit_size_still_saves_total_item_count(self) -> None:
+        """unit_size_per_day가 0이면 due_date만 비우고 총 아이템 수는 저장한다."""
+        existing = self._run_progress_with_unit_size(conf_unit_size=0, db_unit_size=0.0)
+        self.assertEqual(existing.total_item_count, 3)
+        self.assertIsNone(existing.due_date)
+
     def test_active_feed_no_completed_row(self) -> None:
         """Active feed where DB has no is_completed row."""
         feed_dir_path = MagicMock(spec=Path)
