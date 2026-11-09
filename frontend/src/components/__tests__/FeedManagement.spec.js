@@ -448,8 +448,11 @@ describe("FeedManagement.vue", () => {
       await flushPromises();
       wrapper.vm.showFeedInfo = true;
       wrapper.vm.setProgressInfo({
-        current_index: 3, html_file_count: 8, total_item_count: 20,
-        unit_size_per_day: 1, progress_ratio: 15,
+        current_index: 3,
+        html_file_count: 8,
+        total_item_count: 20,
+        unit_size_per_day: 1,
+        progress_ratio: 15,
       });
       await wrapper.vm.$nextTick();
       expect(wrapper.find("#metadata").text()).toContain("3 / 8 / 20 = 15 %");
@@ -821,6 +824,42 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.run();
       await flushPromises();
       expect(axios.post).toHaveBeenCalled();
+    });
+
+    it("중단 버튼은 실행 중일 때만 보이고 stop API를 호출한다", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.newFeedName = "f1";
+      wrapper.vm.showRunButton = true;
+      wrapper.vm.isRunning = false;
+      await wrapper.vm.$nextTick();
+      expect(wrapper.findComponent({ ref: "stopButton" }).exists()).toBe(false);
+
+      wrapper.vm.isRunning = true;
+      await wrapper.vm.$nextTick();
+      expect(wrapper.findComponent({ ref: "stopButton" }).exists()).toBe(true);
+
+      vi.spyOn(window, "confirm").mockReturnValue(true);
+      axios.post.mockResolvedValueOnce({ data: { status: "success" } });
+      wrapper.vm.stop();
+      await flushPromises();
+      expect(axios.post).toHaveBeenLastCalledWith(
+        expect.stringContaining("/groups/g1/feeds/f1/stop"),
+        {}
+      );
+    });
+
+    it("중단 확인을 취소하면 stop API를 호출하지 않는다", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedGroupName = "g1";
+      wrapper.vm.newFeedName = "f1";
+      vi.spyOn(window, "confirm").mockReturnValue(false);
+      axios.post.mockClear();
+      wrapper.vm.stop();
+      await flushPromises();
+      expect(axios.post).not.toHaveBeenCalled();
     });
 
     it("실행 후 RSS 항목 목록을 펼친다", async () => {

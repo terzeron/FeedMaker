@@ -17,6 +17,7 @@ from ordered_set import OrderedSet
 from bin.crawler import Crawler, Method
 from bin.extractor import Extractor
 from bin.feed_maker_util import Config, URL, Datetime, Process, Data, PathUtil, FileManager, header_str, NotFoundConfigItemError, Env, redact_command
+from bin.feed_manager import FeedManager
 from bin.new_list_collector import NewlistCollector
 from bin.uploader import Uploader
 
@@ -32,6 +33,9 @@ class Comparable(Protocol):
     def __gt__(self, other: Any) -> bool: ...
     def __eq__(self, other: Any) -> bool: ...
 
+
+# 피드 디렉터리에 이 파일이 있으면 실행 중인 FeedMaker가 아이템 사이에서 작업을 중단한다.
+STOP_FLAG_FILE_NAME = ".feed_maker_stop"
 
 class FeedMaker:
     MAX_CONTENT_LENGTH = 64 * 1024
@@ -54,6 +58,9 @@ class FeedMaker:
         self.window_size = window_size
         # make() 실패 원인. 사용자에게 보여줄 메시지로 FeedMakerRunner까지 전달된다.
         self.failure_reason: str = ""
+        self.is_completed_feed: bool = False
+        # 사용자 중단 요청을 감지하면 True. make()가 이후 단계를 건너뛰고 False를 반환한다.
+        self.stop_requested: bool = False
 
         self.list_dir = self.feed_dir_path / "newlist"
         self.html_dir = self.feed_dir_path / "html"
@@ -154,6 +161,13 @@ class FeedMaker:
                 return mycmp(self.obj, other.obj) != 0
 
         return K
+
+    def _check_stop_requested(self) -> bool:
+        if not self.stop_requested and (self.feed_dir_path / STOP_FLAG_FILE_NAME).is_file():
+            LOGGER.warning("Stop requested for '%s'", PathUtil.short_path(self.feed_dir_path))
+            self.stop_requested = True
+            self.failure_reason = "사용자 요청으로 중단되었습니다"
+        return self.stop_requested
 
     def _read_old_feed_list_from_file(self) -> list[tuple[str, str, list[str]]]:
         LOGGER.debug("# _read_old_feed_list_from_file()")
@@ -302,6 +316,8 @@ class FeedMaker:
 
                     # 피드 리스트에 추가
                     LOGGER.info("New: %s\t%s\t%s (%d bytes > %d bytes of template)", item_url, title, PathUtil.short_path(html_file_path), size, self._get_size_of_template())
+                    # html 파일이 새로 만들어질 때마다 진행 중 피드의 진행 현황을 갱신한다.
+                    self._refresh_progress_counts()
                     ret = True
                 else:
                     # 피드 리스트에서 제외
@@ -424,7 +440,18 @@ class FeedMaker:
         collector = NewlistCollector(self.feed_dir_path, self.collection_conf, new_list_file_path)
         recent_feed_list = collector.collect()
         self.failure_reason = collector.failure_reason
+        self._refresh_progress_counts()
         return recent_feed_list
+
+    def _refresh_progress_counts(self) -> None:
+        # 진행 중(is_completed) 피드만 대상. newlist 수집 직후 총 항목 수를 DB에 반영한다.
+        # 진행 현황 갱신 실패가 피드 생성을 막으면 안 되므로 예외는 경고로만 남긴다.
+        if not self.is_completed_feed:
+            return
+        try:
+            FeedManager.refresh_progress_counts(self.feed_dir_path)
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            LOGGER.warning("Failed to refresh progress counts of '%s': %r", PathUtil.short_path(self.feed_dir_path), e)
 
     def _get_new_feeds(self, recent_feed_list: list[tuple[str, str, list[str]]], old_feed_list: list[tuple[str, str, list[str]]]) -> list[tuple[str, str, list[str]]]:
         # (link, title) 키 기반으로 새로운 피드만 필터링 (루프 사용)
@@ -446,11 +473,15 @@ class FeedMaker:
         LOGGER.info(f"Appending {len(new_feed_list)} new items to the feed list")
         merged_feed_list: list[tuple[str, str, list[str]]] = []
         for link, title, _ in new_feed_list:
+            if self._check_stop_requested():
+                return merged_feed_list
             if self._make_html_file(link, title):
                 merged_feed_list.append((link, title, []))
 
         LOGGER.info(f"Appending {len(old_feed_list)} old items to the feed list")
         for link, title, _ in old_feed_list:
+            if self._check_stop_requested():
+                return merged_feed_list
             if self._make_html_file(link, title):
                 merged_feed_list.append((link, title, []))
         return merged_feed_list[: self.window_size]
@@ -552,6 +583,9 @@ class FeedMaker:
         if self.window_size == FeedMaker.DEFAULT_WINDOW_SIZE:
             self.window_size = self.collection_conf.get("window_size", 5)
 
+        # 아래에서 -c/-l로 덮어쓰기 전의 원래 is_completed 값을 진행 현황 갱신용으로 보존
+        self.is_completed_feed = bool(self.collection_conf.get("is_completed", False))
+
         # -c 또는 -l 옵션이 지정된 경우, 설정의 is_completed 값 무시
         if self.do_collect_by_force or self.do_collect_only:
             self.collection_conf["is_completed"] = False
@@ -579,6 +613,8 @@ class FeedMaker:
                 LOGGER.info("skipping collection stage (do_extract_only)")
             else:
                 recent_feed_list = self._get_recent_feed_list()
+                if self._check_stop_requested():
+                    return False
                 if not recent_feed_list:
                     LOGGER.error("Error: Can't get recent feed list from urls")
                     return False
@@ -589,6 +625,8 @@ class FeedMaker:
             # 과거 피드항목 리스트와 최근 피드항목 리스트를 비교함
             if not self.do_collect_only:
                 final_feed_list = self._diff_feeds_and_make_htmls(recent_feed_list, old_feed_list)
+                if self._check_stop_requested():
+                    return False
                 if not final_feed_list or len(final_feed_list) == 0:
                     LOGGER.info("No new feeds, no update of rss file")
 

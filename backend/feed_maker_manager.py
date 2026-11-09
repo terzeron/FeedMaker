@@ -385,7 +385,10 @@ class FeedMakerManager:
                 if json_data["configuration"]["collection"].get("is_completed", False):
                     result = runner.make_single_feed(feed_dir_path, options={"force_collection_opt": "-c"})
                     if not result:
-                        return (False, "error in making a feed with all completed articles")
+                        message = "error in making a feed with all completed articles"
+                        if runner.failure_reason:
+                            message += f": {runner.failure_reason}"
+                        return (False, message)
 
                 result = runner.make_single_feed(feed_dir_path, options={})
                 if not result:
@@ -634,6 +637,13 @@ class FeedMakerManager:
 
         FeedManager.toggle_group(group_name, new_is_active)
         return group_name, ""
+
+    @staticmethod
+    def stop(group_name: str, feed_name: str) -> tuple[bool, str]:
+        LOGGER.debug("# stop(group_name='%s', feed_name='%s')", group_name, feed_name)
+        _validate_name(group_name, "group_name")
+        _validate_name(feed_name, "feed_name")
+        return FeedMakerRunner.request_stop(group_name, feed_name)
 
     @staticmethod
     def check_running(group_name: str, feed_name: str) -> Optional[bool]:

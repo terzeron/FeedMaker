@@ -271,6 +271,15 @@
               v-if="showRunButton"
             />
             <my-button
+              ref="stopButton"
+              label="중단"
+              @click="stop"
+              :initial-icon="['fas', 'stop']"
+              :show-initial-icon="true"
+              variant="danger"
+              v-if="showRunButton && isRunning"
+            />
+            <my-button
               ref="removelistButton"
               label="목록 삭제"
               @click="removelist"
@@ -511,6 +520,7 @@ import {
   faSearch,
   faRss,
   faPlay,
+  faStop,
   faToggleOn,
   faToggleOff,
   faEraser,
@@ -528,6 +538,7 @@ library.add(
   faSearch,
   faRss,
   faPlay,
+  faStop,
   faToggleOn,
   faToggleOff,
   faEraser,
@@ -564,6 +575,7 @@ export default {
       alertMessage: "",
       alertVariant: "danger",
       showRunButton: false,
+      isRunning: false,
       showViewRssButton: false,
       showViewItemsOfRssList: false,
       showRegisterToInoreaderButton: false,
@@ -602,8 +614,7 @@ export default {
       totalItemCount: 0,
       htmlFileCount: 0,
       unitSizePerDay: 0,
-      progressRatio: 0.0,
-      feedCompletionDueDate: "-",
+      progressRatio: 0.0,      feedCompletionDueDate: "-",
 
       checkRunningInterval: null,
       jsonEditor: null,
@@ -1106,6 +1117,7 @@ export default {
     },
     run: function () {
       console.log(`run()`);
+      this.isRunning = true;
       this.startButton("runButton");
       const url =
         getApiUrlPath() +
@@ -1122,11 +1134,35 @@ export default {
           if (res.data.status !== "failure") {
             this.getItemsOfRss();
           }
+          this.isRunning = false;
           this.endButton("runButton");
         })
         .catch((error) => {
           console.error(error);
+          this.isRunning = false;
           this.resetButton("runButton");
+        });
+    },
+    stop: function () {
+      console.log(`stop()`);
+      if (!window.confirm("실행 중인 피드 추출을 중단할까요?")) {
+        return;
+      }
+      this.startButton("stopButton");
+      const url =
+        getApiUrlPath() +
+        `/groups/${this.selectedGroupName}/feeds/${this.newFeedName}/stop`;
+      axios
+        .post(url, {})
+        .then((res) => {
+          if (res.data.status === "failure") {
+            this.alert(res.data.message);
+          }
+          this.resetButton("stopButton");
+        })
+        .catch((error) => {
+          console.error(error);
+          this.resetButton("stopButton");
         });
     },
     viewRss() {
@@ -1382,7 +1418,8 @@ export default {
             }
           } else {
             console.log("running_status:", res.data.running_status, "type:", typeof res.data.running_status);
-            if (res.data.running_status === true) {
+            this.isRunning = res.data.running_status === true;
+            if (this.isRunning) {
               console.log("Starting run button spinner");
               this.startButton("runButton");
             } else {
