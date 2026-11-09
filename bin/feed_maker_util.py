@@ -881,6 +881,23 @@ class FileManager:
                     img_file_path.unlink(missing_ok=True)
 
     @staticmethod
+    def remove_zero_size_image_files_in_list(feed_img_dir_path: Path, img_file_name_list: list[str]) -> None:
+        # 피드 이미지 디렉터리 전체를 순회하지 않고, 주어진 목록의 파일만 검사한다.
+        LOGGER.debug("# remove_zero_size_image_files_in_list(feed_img_dir_path='%s')", PathUtil.short_path(feed_img_dir_path))
+        LOGGER.info("# deleting image files with zero size")
+        resolved_dir_path = feed_img_dir_path.resolve()
+        for img_file_name in img_file_name_list:
+            if img_file_name == FileManager.IMAGE_NOT_FOUND_IMAGE:
+                continue
+            img_file_path = (feed_img_dir_path / img_file_name).resolve()
+            if not img_file_path.is_relative_to(resolved_dir_path):
+                LOGGER.warning("Warning: skipped image path outside of '%s': %s", PathUtil.short_path(feed_img_dir_path), img_file_name)
+                continue
+            if img_file_path.is_file() and img_file_path.stat().st_size == 0:
+                LOGGER.info("* %s", PathUtil.short_path(img_file_path))
+                img_file_path.unlink(missing_ok=True)
+
+    @staticmethod
     def remove_temporary_files(feed_dir_path: Path) -> None:
         LOGGER.debug("# remove_temporary_files(feed_dir_path='%s')", PathUtil.short_path(feed_dir_path))
         LOGGER.info("# deleting temporary files")

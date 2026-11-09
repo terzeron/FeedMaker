@@ -1206,7 +1206,7 @@ class TestMakeHtmlFileThresholdCheck(FeedMakerMakeTestBase):
             patch("bin.feed_maker.Crawler") as mock_crawler_cls,
             patch("bin.feed_maker.Extractor.extract_content", return_value=big_content),
             patch("bin.feed_maker.FileManager.get_incomplete_image_list", return_value=["img1", "img2"]),
-            patch("bin.feed_maker.FileManager.remove_image_files_with_zero_size"),
+            patch("bin.feed_maker.FileManager.remove_zero_size_image_files_in_list") as mock_remove_images,
             patch("bin.feed_maker.FileManager.remove_html_file_without_cached_image_files"),
         ):
             mock_crawler_cls.get_option_str.return_value = ""
@@ -1215,6 +1215,7 @@ class TestMakeHtmlFileThresholdCheck(FeedMakerMakeTestBase):
 
             result = self.maker._make_html_file(item_url, "Threshold")
             self.assertFalse(result)
+            mock_remove_images.assert_called_once_with(self.maker.img_dir_path / self.maker.feed_dir_path.name, ["img1", "img2"])
 
         self.maker.extraction_conf.pop("threshold_to_remove_html_with_incomplete_image", None)
 

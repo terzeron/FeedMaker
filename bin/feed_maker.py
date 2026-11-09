@@ -37,6 +37,7 @@ class Comparable(Protocol):
 # 피드 디렉터리에 이 파일이 있으면 실행 중인 FeedMaker가 아이템 사이에서 작업을 중단한다.
 STOP_FLAG_FILE_NAME = ".feed_maker_stop"
 
+
 class FeedMaker:
     MAX_CONTENT_LENGTH = 64 * 1024
     MAX_NUM_DAYS = 7
@@ -337,7 +338,7 @@ class FeedMaker:
             incomplete_image_list = FileManager.get_incomplete_image_list(html_file_path)
             if threshold_to_remove_html_with_incomplete_image < len(incomplete_image_list):
                 feed_img_dir_path = self.img_dir_path / self.feed_dir_path.name
-                FileManager.remove_image_files_with_zero_size(feed_img_dir_path)
+                FileManager.remove_zero_size_image_files_in_list(feed_img_dir_path, incomplete_image_list)
                 FileManager.remove_html_file_without_cached_image_files(html_file_path)
                 ret = False
 
