@@ -11,6 +11,7 @@ from base64 import b64encode
 from PIL import Image, UnidentifiedImageError
 
 from utils.image_downloader import ImageDownloader
+from bin.feed_maker_util import FileManager
 
 
 class TestDownloadImageBlocked(unittest.TestCase):
@@ -122,9 +123,11 @@ class TestDownloadImageBase64(unittest.TestCase):
         mock_converted = MagicMock(spec=Path)
         mock_converted.is_file.return_value = True
         mock_converted.suffix = ".webp"
+        # .png 임시 경로와 같은 mock이므로 캐시 확인 단계에서는 빈 파일로 보이게 한다
+        mock_converted.stat.return_value = MagicMock(st_size=0)
 
         def with_suffix_fn(s):
-            if s == ".webp":
+            if s in (".webp", ".jpg"):
                 return mock_webp_miss
             return mock_converted
 
@@ -507,6 +510,7 @@ class TestConvertImageFormatNonWEBP(unittest.TestCase):
 
         mock_optimized = MagicMock(spec=Image.Image)
         mock_rgb = MagicMock()
+        mock_optimized.size = (800, 1200)
         mock_optimized.convert.return_value = mock_rgb
         mock_optimize.return_value = mock_optimized
 
@@ -553,6 +557,7 @@ class TestConvertImageFormatNonWEBP(unittest.TestCase):
 
         mock_optimized = MagicMock(spec=Image.Image)
         mock_rgb = MagicMock()
+        mock_optimized.size = (800, 1200)
         mock_rgb.save.side_effect = IOError("write failed")
         mock_optimized.convert.return_value = mock_rgb
         mock_optimize.return_value = mock_optimized
@@ -816,6 +821,7 @@ class TestNonWebpSamePath(unittest.TestCase):
 
         mock_optimized = MagicMock(spec=Image.Image)
         mock_rgb = MagicMock()
+        mock_optimized.size = (800, 1200)
         mock_optimized.convert.return_value = mock_rgb
         mock_optimize.return_value = mock_optimized
 
@@ -834,6 +840,59 @@ class TestNonWebpSamePath(unittest.TestCase):
         mock_rgb.save.assert_called_once_with(cache_path, "WEBP", quality=80)
         cache_path.unlink.assert_not_called()
         self.assertEqual(result, cache_path)
+
+
+class TestConvertImageFormatOversized(unittest.TestCase):
+    """WebP 차원 상한(16383px)을 넘는 이미지는 원본 포맷을 유지한다."""
+
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.dir_path = Path(self.temp_dir.name)
+
+    def tearDown(self) -> None:
+        self.temp_dir.cleanup()
+
+    def _make_extensionless(self, size: tuple[int, int], fmt: str) -> Path:
+        path = self.dir_path / "abc1234"
+        Image.new("RGB", size, color="white").save(path, fmt)
+        return path
+
+    def test_tall_jpeg_is_kept_as_jpg(self) -> None:
+        cache_path = self._make_extensionless((550, 20000), "JPEG")
+        original_bytes = cache_path.read_bytes()
+
+        result = ImageDownloader.convert_image_format(cache_path, quality=75)
+
+        self.assertEqual(result, cache_path.with_suffix(".jpg"))
+        assert result is not None
+        self.assertEqual(result.read_bytes(), original_bytes)
+        self.assertFalse(cache_path.exists())
+
+    def test_tall_png_is_kept_as_png(self) -> None:
+        cache_path = self._make_extensionless((100, 17000), "PNG")
+
+        result = ImageDownloader.convert_image_format(cache_path, quality=75)
+
+        self.assertEqual(result, cache_path.with_suffix(".png"))
+        assert result is not None
+        with Image.open(result) as img:
+            self.assertEqual(img.format, "PNG")
+            self.assertEqual(img.size, (100, 17000))
+
+    @patch("utils.image_downloader.Env")
+    def test_jpg_cache_hit_skips_download(self, mock_env: MagicMock) -> None:
+        mock_env.get.return_value = "http://img.example.com"
+        crawler = MagicMock()
+        img_url = "http://example.com/tall.jpg"
+        cache_path = FileManager.get_cache_file_path(self.dir_path, img_url).with_suffix(".jpg")
+        cache_path.write_bytes(b"\xff\xd8\xff")
+
+        path, url = ImageDownloader.download_image(crawler, self.dir_path, img_url)
+
+        self.assertEqual(path, cache_path)
+        assert url is not None
+        self.assertTrue(url.endswith(".jpg"))
+        crawler.run.assert_not_called()
 
 
 # --- Merged from test_image_optimization.py ---
