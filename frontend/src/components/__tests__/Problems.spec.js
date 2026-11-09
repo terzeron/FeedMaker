@@ -369,6 +369,41 @@ describe("Problems.vue", () => {
     expect(dateCells.length).toBeGreaterThanOrEqual(4);
   });
 
+  it("progressInfo count is red only when html count differs from newlist count", async () => {
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: {
+        status: "success",
+        result: [
+          {
+            feed_title: "Match",
+            html_file_count: 20,
+            total_item_count: 20,
+            progress_ratio: 90,
+          },
+          {
+            feed_title: "Mismatch",
+            html_file_count: 8,
+            total_item_count: 20,
+            progress_ratio: 10,
+          },
+        ],
+      },
+    });
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    const rows = wrapper.findAll("table")[1].findAll("tbody tr");
+    const countSpan = (row) => row.findAll("td")[2].find("span");
+    expect(rows[0].text()).toContain("Match");
+    expect(countSpan(rows[0]).classes()).not.toContain("text-danger");
+    expect(rows[1].text()).toContain("Mismatch");
+    expect(countSpan(rows[1]).classes()).toContain("text-danger");
+  });
+
   it("sorts progressInfo table by clicking a column", async () => {
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
