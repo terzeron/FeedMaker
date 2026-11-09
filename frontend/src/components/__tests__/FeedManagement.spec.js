@@ -826,7 +826,7 @@ describe("FeedManagement.vue", () => {
       expect(axios.post).toHaveBeenCalled();
     });
 
-    it("중단 버튼은 실행 중일 때만 보이고 stop API를 호출한다", async () => {
+    it("실행 버튼은 실행 중일 때 중단 버튼으로 바뀌고 stop API를 호출한다", async () => {
       const wrapper = createWrapper();
       await flushPromises();
       wrapper.vm.selectedGroupName = "g1";
@@ -834,11 +834,11 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.showRunButton = true;
       wrapper.vm.isRunning = false;
       await wrapper.vm.$nextTick();
-      expect(wrapper.findComponent({ ref: "stopButton" }).exists()).toBe(false);
+      expect(wrapper.vm.runButtonLabel).toBe("실행");
 
       wrapper.vm.isRunning = true;
       await wrapper.vm.$nextTick();
-      expect(wrapper.findComponent({ ref: "stopButton" }).exists()).toBe(true);
+      expect(wrapper.vm.runButtonLabel).toBe("중단");
 
       vi.spyOn(window, "confirm").mockReturnValue(true);
       axios.post.mockResolvedValueOnce({ data: { status: "success" } });
@@ -848,6 +848,7 @@ describe("FeedManagement.vue", () => {
         expect.stringContaining("/groups/g1/feeds/f1/stop"),
         {}
       );
+      expect(wrapper.vm.runButtonLabel).toBe("중단 중…");
     });
 
     it("중단 확인을 취소하면 stop API를 호출하지 않는다", async () => {
