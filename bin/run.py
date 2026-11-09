@@ -261,6 +261,14 @@ def main() -> int:
         HeadlessBrowser.cleanup_all_sessions()
         problem_manager.load_all()
     else:
+        # 실행 결과 반영(update_feed_info)은 끝에서만 하므로, 설정 정보를 먼저 DB에 올려
+        # 실행 중에도 problems/management 탭에서 피드를 찾을 수 있게 한다.
+        # DB 갱신 실패가 피드 생성을 막으면 안 되므로 예외는 경고로만 남긴다.
+        try:
+            problem_manager.feed_manager.add_config_info(feed_dir_path)
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            LOGGER.warning("Failed to sync config info of '%s' before run: %r", PathUtil.short_path(feed_dir_path), e)
+
         config = Config(feed_dir_path=feed_dir_path)
         collection_conf = config.get_collection_configs()
 

@@ -764,6 +764,51 @@ class TestMainSingleFeedDefault(unittest.TestCase):
         mock_runner.make_single_feed.assert_called_once()
         mock_pm.update_feed_info.assert_called_once()
 
+    @patch("bin.run.ProblemManager")
+    @patch("bin.run.FeedMakerRunner")
+    @patch("bin.run.Config")
+    @patch("bin.run.determine_options")
+    def test_single_feed_syncs_config_info_before_run(self, mock_det_opts, mock_config_cls, mock_runner_cls, mock_pm_cls):
+        """실행 중에도 탭에서 보이도록 피드 생성 전에 DB의 설정 정보를 먼저 갱신한다."""
+        from bin.run import main
+
+        mock_det_opts.return_value = ({"do_make_all_feeds": False, "do_remove_all_files": False, "force_collection_opt": "", "collect_only_opt": "", "num_feeds": 0, "window_size": 5}, ["/tmp/fm_work/group/feed"])
+        mock_config_cls.return_value.get_collection_configs.return_value = {"is_completed": False}
+
+        call_order: list[str] = []
+        mock_pm = MagicMock()
+        mock_pm.feed_manager.add_config_info.side_effect = lambda *_a, **_k: call_order.append("sync")
+        mock_pm_cls.return_value = mock_pm
+        mock_runner = MagicMock()
+        mock_runner.make_single_feed.side_effect = lambda *_a, **_k: call_order.append("run") or True
+        mock_runner_cls.return_value = mock_runner
+
+        result = main()
+
+        self.assertEqual(result, 0)
+        mock_pm.feed_manager.add_config_info.assert_called_once_with(Path("/tmp/fm_work/group/feed"))
+        self.assertEqual(call_order, ["sync", "run"])
+
+    @patch("bin.run.ProblemManager")
+    @patch("bin.run.FeedMakerRunner")
+    @patch("bin.run.Config")
+    @patch("bin.run.determine_options")
+    def test_single_feed_runs_even_if_config_sync_fails(self, mock_det_opts, mock_config_cls, mock_runner_cls, mock_pm_cls):
+        """초반 DB 갱신 실패가 피드 생성을 막지 않는다."""
+        from bin.run import main
+
+        mock_det_opts.return_value = ({"do_make_all_feeds": False, "do_remove_all_files": False, "force_collection_opt": "", "collect_only_opt": "", "num_feeds": 0, "window_size": 5}, [])
+        mock_config_cls.return_value.get_collection_configs.return_value = {"is_completed": False}
+        mock_pm = MagicMock()
+        mock_pm.feed_manager.add_config_info.side_effect = RuntimeError("db down")
+        mock_pm_cls.return_value = mock_pm
+        mock_runner_cls.return_value.make_single_feed.return_value = True
+
+        result = main()
+
+        self.assertEqual(result, 0)
+        mock_runner_cls.return_value.make_single_feed.assert_called_once()
+
 
 class TestMainSingleFeedIsCompleted(unittest.TestCase):
     """main() single feed, is_completed=True and not collect_only -> runs with -c first."""
