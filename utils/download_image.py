@@ -9,7 +9,7 @@ from collections.abc import Callable
 from pathlib import Path
 from urllib.parse import urlparse
 from utils.image_downloader import ImageDownloader
-from bin.feed_maker_util import Config, IO, PathUtil, Env
+from bin.feed_maker_util import Config, IO, PathUtil, Env, FileManager
 from bin.crawler import Crawler
 
 
@@ -73,10 +73,10 @@ def replace_img_tag(match: re.Match[str], *, crawler: Crawler, feed_img_dir_path
         _, new_img_url = ImageDownloader.download_image(crawler, feed_img_dir_path, img_url, quality=quality)
     except (OSError, IOError, TypeError, ValueError, RuntimeError) as e:
         LOGGER.error(f"이미지 다운로드 중 오류 발생: {e}")
-        return "<img src='not_found.png' alt='error occurred'/>"
+        return f"<img src='{FileManager.IMAGE_NOT_FOUND_IMAGE_URL}' alt='error occurred'/>"
 
     if not new_img_url:
-        return "<img src='not_found.png' alt='not exist or size 0'/>"
+        return f"<img src='{FileManager.IMAGE_NOT_FOUND_IMAGE_URL}' alt='not exist or size 0'/>"
 
     return _make_img_tag(new_img_url, original_tag)
 

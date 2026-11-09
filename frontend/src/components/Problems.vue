@@ -130,6 +130,7 @@
                       >{{ item[field.key] }}%</span
                     >
                     <span v-else-if="field.key === 'html_file_count'"
+                      :class="{ 'text-danger': (item.html_file_count ?? 0) !== (item.total_item_count ?? 0) }"
                       >{{ item.html_file_count ?? 0 }} / {{ item.total_item_count ?? 0 }}</span
                     >
                     <span v-else-if="field.key === 'due_date'" class="date-cell">{{ item[field.key] }}</span>
