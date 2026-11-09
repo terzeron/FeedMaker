@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 import random
@@ -9,10 +10,10 @@ import getopt
 from pathlib import Path
 from typing import Any, Optional
 from filelock import FileLock, Timeout
-from bin.feed_maker_util import Config, PathUtil, FileManager, NotFoundConfigItemError, Env
+from bin.feed_maker_util import Config, PathUtil, FileManager, NotFoundConfigItemError, Env, Process
 from bin.headless_browser import HeadlessBrowser
 from bin.notification import Notification
-from bin.feed_maker import FeedMaker
+from bin.feed_maker import FeedMaker, STOP_FLAG_FILE_NAME
 from bin.problem_manager import ProblemManager
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
@@ -55,6 +56,8 @@ class FeedMakerRunner:
         try:
             logging.getLogger("filelock").setLevel(logging.ERROR)
             with FileLock(str(lock_file_path), timeout=5):
+                # 이전 실행에서 남은 중단 요청이 이번 실행을 막지 않도록 지운다.
+                (feed_dir_path / STOP_FLAG_FILE_NAME).unlink(missing_ok=True)
                 feed_name = feed_dir_path.name
                 LOGGER.info("* %s", PathUtil.short_path(feed_dir_path))
                 rss_file_path = feed_dir_path / f"{feed_name}.xml"
@@ -81,6 +84,7 @@ class FeedMakerRunner:
                     result = feed_maker.make()
                     self.failure_reason = feed_maker.failure_reason
                 finally:
+                    (feed_dir_path / STOP_FLAG_FILE_NAME).unlink(missing_ok=True)
                     # 피드 단위로 Chromium 세션을 재활용 — 같은 피드그룹 안에서 자원이 누적되어
                     # N번째 피드부터 page.evaluate/page.goto가 무한 대기에 빠지는 현상을 차단.
                     # user_data_dir은 보존되어 로그인 상태/쿠키는 유지됨.
@@ -158,6 +162,22 @@ class FeedMakerRunner:
             notification = Notification()
             notification.send_msg(", ".join(failed_feed_list), "Errors of FeedMaker")
         return True
+
+    @staticmethod
+    def request_stop(group_name: str, feed_name: str) -> tuple[bool, str]:
+        """실행 중인 피드 작업에 중단을 요청한다.
+
+        중단 플래그 파일을 만들어 FeedMaker가 다음 아이템 전에 멈추게 하고,
+        지금 도는 하위 프로세스(download_image.py 등)는 바로 종료한다.
+        """
+        if FeedMakerRunner.check_running(group_name, feed_name) is not True:
+            return False, "실행 중인 작업이 없습니다"
+        feed_dir_path = Path(Env.get("FM_WORK_DIR")) / group_name / feed_name
+        (feed_dir_path / STOP_FLAG_FILE_NAME).touch()
+        # 해당 피드 디렉터리 경로를 인자로 받은 하위 프로세스만 종료한다.
+        num_killed = Process.kill_process_group(re.escape(str(feed_dir_path)) + r"(\s|/|$)")
+        LOGGER.info("stop requested for '%s/%s', terminated %d process(es)", group_name, feed_name, num_killed)
+        return True, ""
 
     @staticmethod
     def check_running(group_name: str, feed_name: str) -> Optional[bool]:

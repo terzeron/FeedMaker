@@ -264,10 +264,12 @@
           <BCol cols="12" class="m-0 p-1 button_list">
             <my-button
               ref="runButton"
-              label="실행"
-              @click="run"
-              :initial-icon="['fas', 'play']"
+              :label="runButtonLabel"
+              @click="isRunning ? stop() : run()"
+              :initial-icon="isRunning ? ['fas', 'stop'] : ['fas', 'play']"
               :show-initial-icon="true"
+              :variant="isRunning ? 'danger' : 'primary'"
+              :disabled="isStopping"
               v-if="showRunButton"
             />
             <my-button
@@ -511,6 +513,7 @@ import {
   faSearch,
   faRss,
   faPlay,
+  faStop,
   faToggleOn,
   faToggleOff,
   faEraser,
@@ -528,6 +531,7 @@ library.add(
   faSearch,
   faRss,
   faPlay,
+  faStop,
   faToggleOn,
   faToggleOff,
   faEraser,
@@ -564,6 +568,8 @@ export default {
       alertMessage: "",
       alertVariant: "danger",
       showRunButton: false,
+      isRunning: false,
+      isStopping: false,
       showViewRssButton: false,
       showViewItemsOfRssList: false,
       showRegisterToInoreaderButton: false,
@@ -602,8 +608,7 @@ export default {
       totalItemCount: 0,
       htmlFileCount: 0,
       unitSizePerDay: 0,
-      progressRatio: 0.0,
-      feedCompletionDueDate: "-",
+      progressRatio: 0.0,      feedCompletionDueDate: "-",
 
       checkRunningInterval: null,
       jsonEditor: null,
@@ -615,6 +620,10 @@ export default {
     };
   },
   computed: {
+    runButtonLabel: function () {
+      if (!this.isRunning) return "실행";
+      return this.isStopping ? "중단 중…" : "중단";
+    },
     feedStatus: function () {
       // 선택된 피드의 active 상태 확인
       const selectedFeed = this.feeds.find(feed => feed.name === this.selectedFeedName);
@@ -1106,7 +1115,7 @@ export default {
     },
     run: function () {
       console.log(`run()`);
-      this.startButton("runButton");
+      this.isRunning = true;
       const url =
         getApiUrlPath() +
         `/groups/${this.selectedGroupName}/feeds/${this.newFeedName}/run`;
@@ -1122,11 +1131,37 @@ export default {
           if (res.data.status !== "failure") {
             this.getItemsOfRss();
           }
+          this.isRunning = false;
+          this.isStopping = false;
           this.endButton("runButton");
         })
         .catch((error) => {
           console.error(error);
+          this.isRunning = false;
+          this.isStopping = false;
           this.resetButton("runButton");
+        });
+    },
+    stop: function () {
+      console.log(`stop()`);
+      if (!window.confirm("실행 중인 피드 추출을 중단할까요?")) {
+        return;
+      }
+      this.isStopping = true;
+      const url =
+        getApiUrlPath() +
+        `/groups/${this.selectedGroupName}/feeds/${this.newFeedName}/stop`;
+      axios
+        .post(url, {})
+        .then((res) => {
+          if (res.data.status === "failure") {
+            this.alert(res.data.message);
+            this.isStopping = false;
+          }
+        })
+        .catch((error) => {
+          console.error(error);
+          this.isStopping = false;
         });
     },
     viewRss() {
@@ -1382,11 +1417,9 @@ export default {
             }
           } else {
             console.log("running_status:", res.data.running_status, "type:", typeof res.data.running_status);
-            if (res.data.running_status === true) {
-              console.log("Starting run button spinner");
-              this.startButton("runButton");
-            } else {
-              console.log("Stopping run button spinner");
+            this.isRunning = res.data.running_status === true;
+            if (!this.isRunning) {
+              this.isStopping = false;
               this.endButton("runButton");
             }
           }

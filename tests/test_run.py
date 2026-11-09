@@ -14,7 +14,7 @@ from unittest.mock import patch, Mock, MagicMock  # noqa: F401
 
 from filelock import Timeout
 
-from bin.feed_maker import FeedMaker  # noqa: F401
+from bin.feed_maker import FeedMaker, STOP_FLAG_FILE_NAME  # noqa: F401
 from bin.feed_maker_util import Env, PathUtil, Config  # noqa: F401
 from bin.run import FeedMakerRunner
 
@@ -131,9 +131,10 @@ class TestFeedMakerRunnerMakeSingleFeed(unittest.TestCase):
         mock_stat = MagicMock()
         mock_stat.st_mtime = old_mtime
 
-        with patch.object(Path, "is_file", return_value=True), patch.object(Path, "stat", return_value=mock_stat), patch.object(Path, "unlink") as mock_unlink:
+        with patch.object(Path, "is_file", return_value=True), patch.object(Path, "stat", return_value=mock_stat), patch.object(Path, "unlink", autospec=True) as mock_unlink:
             result = runner.make_single_feed(feed_dir, options={})
-            mock_unlink.assert_called_once_with(missing_ok=True)
+            removed = [call.args[0].name for call in mock_unlink.call_args_list]
+            self.assertIn(".feed_maker_runner.lock", removed)
             self.assertTrue(result)
 
     @patch("bin.run.FileManager")
@@ -1097,3 +1098,28 @@ class TestFeedMakerRunnerIntegration(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestFeedMakerRunnerRequestStop(unittest.TestCase):
+    """request_stop: 실행 중이 아니면 거부, 실행 중이면 플래그 생성과 하위 프로세스 종료"""
+
+    @patch("bin.run.FeedMakerRunner.check_running", return_value=False)
+    def test_not_running_is_rejected(self, _mock_check):
+        ok, message = FeedMakerRunner.request_stop("group", "feed")
+        self.assertFalse(ok)
+        self.assertTrue(message)
+
+    @patch("bin.run.Process.kill_process_group", return_value=2)
+    @patch("bin.run.FeedMakerRunner.check_running", return_value=True)
+    def test_running_creates_flag_and_kills_children(self, _mock_check, mock_kill):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as work_dir:
+            feed_dir = Path(work_dir) / "group" / "feed"
+            feed_dir.mkdir(parents=True)
+            with patch("bin.run.Env.get", return_value=work_dir):
+                ok, message = FeedMakerRunner.request_stop("group", "feed")
+            self.assertTrue(ok)
+            self.assertEqual(message, "")
+            self.assertTrue((feed_dir / STOP_FLAG_FILE_NAME).is_file())
+            self.assertIn(str(feed_dir), mock_kill.call_args[0][0].replace("\\", ""))

@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import patch, Mock
 from xml.dom.minidom import parse
 
-from bin.feed_maker import FeedMaker
+from bin.feed_maker import FeedMaker, STOP_FLAG_FILE_NAME
 from bin.feed_maker_util import Config, Datetime, PathUtil, Env, header_str
 import tempfile
 from unittest.mock import MagicMock  # noqa: F401
@@ -488,6 +488,23 @@ class TestFeedMaker(unittest.TestCase):
                     else:
                         now = Datetime.get_current_time()
                         self.assertGreater(expiry_dt, now, f"Expiry date should be in the future for case: {case}")
+
+
+class TestStopRequest(TestFeedMaker):
+    def test_no_flag_means_not_stopped(self) -> None:
+        self.assertFalse(self.maker._check_stop_requested())
+
+    def test_flag_file_stops_and_sets_reason(self) -> None:
+        (self.feed_dir_path / STOP_FLAG_FILE_NAME).touch()
+        self.assertTrue(self.maker._check_stop_requested())
+        self.assertIn("중단", self.maker.failure_reason)
+
+    def test_diff_stops_before_making_html(self) -> None:
+        (self.feed_dir_path / STOP_FLAG_FILE_NAME).touch()
+        with patch.object(self.maker, "_make_html_file") as mock_make:
+            result = self.maker._diff_feeds_and_make_htmls([("http://a", "a", [])], [("http://b", "b", [])])
+        mock_make.assert_not_called()
+        self.assertEqual(result, [])
 
 
 class TestCmpIntOrStr(unittest.TestCase):

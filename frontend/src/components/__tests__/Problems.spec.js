@@ -121,7 +121,9 @@ describe("Problems.vue", () => {
     expect(wrapper.vm.sortedHtmlFileSizelist.length).toBe(1);
     expect(wrapper.vm.sortedListUrlInfolist.length).toBe(1);
     const progressTable = wrapper.findAll("table")[1];
-    expect(progressTable.findAll("tbody tr")[0].findAll("td")[2].text()).toBe("8");
+    expect(progressTable.findAll("tbody tr")[0].findAll("td")[2].text()).toBe(
+      "8 / 20",
+    );
   });
 
   it("toggles sort direction when clicking the same column header", async () => {
@@ -2725,7 +2727,9 @@ describe("Problems.vue", () => {
     const mockImageDirSize = (response) => {
       axios.get.mockImplementation((url) => {
         if (url.endsWith(IMAGE_DIR_SIZE_PATH)) {
-          return response instanceof Error ? Promise.reject(response) : Promise.resolve(response);
+          return response instanceof Error
+            ? Promise.reject(response)
+            : Promise.resolve(response);
         }
         return Promise.resolve({ data: { status: "success", result: [] } });
       });
@@ -2736,8 +2740,18 @@ describe("Problems.vue", () => {
         data: {
           status: "success",
           result: [
-            { feed_name: "small", feed_title: "Small", group_name: "g1", size: 2048 },
-            { feed_name: "big", feed_title: "Big", group_name: "g2", size: 5 * 1024 * 1024 },
+            {
+              feed_name: "small",
+              feed_title: "Small",
+              group_name: "g1",
+              size: 2048,
+            },
+            {
+              feed_name: "big",
+              feed_title: "Big",
+              group_name: "g2",
+              size: 5 * 1024 * 1024,
+            },
             { feed_name: "orphan", feed_title: "", group_name: "", size: 0 },
           ],
         },
@@ -2745,7 +2759,9 @@ describe("Problems.vue", () => {
       const wrapper = mount(Problems, { global: { stubs } });
       await flushPromises();
 
-      expect(axios.get).toHaveBeenCalledWith(expect.stringContaining(IMAGE_DIR_SIZE_PATH));
+      expect(axios.get).toHaveBeenCalledWith(
+        expect.stringContaining(IMAGE_DIR_SIZE_PATH),
+      );
       const list = wrapper.vm.sortedImageDirSizeInfolist;
       expect(list.map((o) => o.feed_name)).toEqual(["big", "small", "orphan"]);
       expect(list[0].size_formatted).toBe("5 MB");
@@ -2779,16 +2795,27 @@ describe("Problems.vue", () => {
       expect(wrapper.vm.imageDirSizeInfoSortDesc).toBe(true);
 
       wrapper.vm.sortTable("imageDirSizeInfo", "feed_title");
-      expect(wrapper.vm.sortedImageDirSizeInfolist.map((o) => o.feed_name)).toEqual(["a", "b"]);
+      expect(
+        wrapper.vm.sortedImageDirSizeInfolist.map((o) => o.feed_name),
+      ).toEqual(["a", "b"]);
       wrapper.vm.sortTable("imageDirSizeInfo", "feed_title");
-      expect(wrapper.vm.sortedImageDirSizeInfolist.map((o) => o.feed_name)).toEqual(["b", "a"]);
+      expect(
+        wrapper.vm.sortedImageDirSizeInfolist.map((o) => o.feed_name),
+      ).toEqual(["b", "a"]);
     });
 
     it("객체 형태 결과를 배열로 바꾼다", async () => {
       mockImageDirSize({
         data: {
           status: "success",
-          result: { big: { feed_name: "big", feed_title: "Big", group_name: "g", size: 4096 } },
+          result: {
+            big: {
+              feed_name: "big",
+              feed_title: "Big",
+              group_name: "g",
+              size: 4096,
+            },
+          },
         },
       });
       const wrapper = mount(Problems, { global: { stubs } });
@@ -2800,7 +2827,10 @@ describe("Problems.vue", () => {
 
     it.each([
       ["failure 응답", { data: { status: "failure", message: "err" } }],
-      ["배열도 객체도 아닌 결과", { data: { status: "success", result: null } }],
+      [
+        "배열도 객체도 아닌 결과",
+        { data: { status: "success", result: null } },
+      ],
     ])("%s이면 빈 목록이 된다", async (_label, response) => {
       mockImageDirSize(response);
       const wrapper = mount(Problems, { global: { stubs } });
@@ -2822,15 +2852,27 @@ describe("Problems.vue", () => {
 
     describe("이미지 디렉터리 삭제", () => {
       const rows = [
-        { feed_name: "big", feed_title: "Big", group_name: "g2", size: 5 * 1024 * 1024 },
-        { feed_name: "small", feed_title: "Small", group_name: "g1", size: 2048 },
+        {
+          feed_name: "big",
+          feed_title: "Big",
+          group_name: "g2",
+          size: 5 * 1024 * 1024,
+        },
+        {
+          feed_name: "small",
+          feed_title: "Small",
+          group_name: "g1",
+          size: 2048,
+        },
         { feed_name: "orphan", feed_title: "", group_name: "", size: 0 },
       ];
       let alertSpy;
 
       beforeEach(() => {
         alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
-        mockImageDirSize({ data: { status: "success", result: rows.map((o) => ({ ...o })) } });
+        mockImageDirSize({
+          data: { status: "success", result: rows.map((o) => ({ ...o })) },
+        });
       });
 
       afterEach(() => {
@@ -2848,7 +2890,9 @@ describe("Problems.vue", () => {
       it("아이콘을 누르면 확인 후 이미지 삭제 API를 호출하고 행을 지운다", async () => {
         const wrapper = mount(Problems, { global: { stubs } });
         await flushPromises();
-        axios.delete = vi.fn().mockResolvedValueOnce({ data: { status: "success" } });
+        axios.delete = vi
+          .fn()
+          .mockResolvedValueOnce({ data: { status: "success" } });
 
         await wrapper.findAll("font-awesome-icon-stub")[0].trigger("click");
         expect(wrapper.vm.showConfirmModal).toBe(true);
@@ -2857,22 +2901,34 @@ describe("Problems.vue", () => {
         wrapper.vm.handleConfirmOk();
         await flushPromises();
 
-        expect(axios.delete).toHaveBeenCalledWith(expect.stringContaining("/groups/g2/feeds/big/images"));
-        expect(wrapper.vm.sortedImageDirSizeInfolist.map((o) => o.feed_name)).toEqual(["small", "orphan"]);
+        expect(axios.delete).toHaveBeenCalledWith(
+          expect.stringContaining("/groups/g2/feeds/big/images"),
+        );
+        expect(
+          wrapper.vm.sortedImageDirSizeInfolist.map((o) => o.feed_name),
+        ).toEqual(["small", "orphan"]);
       });
 
       it("삭제가 실패하면 알림을 띄우고 행을 남긴다", async () => {
         const wrapper = mount(Problems, { global: { stubs } });
         await flushPromises();
-        axios.delete = vi.fn().mockResolvedValueOnce({ data: { status: "failure", message: "denied" } });
+        axios.delete = vi.fn().mockResolvedValueOnce({
+          data: { status: "failure", message: "denied" },
+        });
 
         const item = wrapper.vm.imageDirSizeInfolist[1];
         wrapper.vm.imageDirDeleteClicked({ item });
         wrapper.vm.handleConfirmOk();
         await flushPromises();
 
-        expect(axios.delete).toHaveBeenCalledWith(expect.stringContaining("/groups/g1/feeds/small/images"));
-        expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining("이미지 삭제 중에 오류가 발생하였습니다. denied"));
+        expect(axios.delete).toHaveBeenCalledWith(
+          expect.stringContaining("/groups/g1/feeds/small/images"),
+        );
+        expect(alertSpy).toHaveBeenCalledWith(
+          expect.stringContaining(
+            "이미지 삭제 중에 오류가 발생하였습니다. denied",
+          ),
+        );
         expect(wrapper.vm.imageDirSizeInfolist.length).toBe(3);
       });
 
@@ -2881,7 +2937,9 @@ describe("Problems.vue", () => {
         await flushPromises();
         axios.delete = vi.fn();
 
-        wrapper.vm.imageDirDeleteClicked({ item: wrapper.vm.imageDirSizeInfolist[0] });
+        wrapper.vm.imageDirDeleteClicked({
+          item: wrapper.vm.imageDirSizeInfolist[0],
+        });
         wrapper.vm.handleConfirmCancel();
         await flushPromises();
 

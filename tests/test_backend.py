@@ -1175,6 +1175,22 @@ class TestBackendFailureEndpoints(unittest.TestCase):
         r = asyncio.run(bmain.toggle_feed("g", "f", request=req, feed_maker_manager=mgr))
         self.assertEqual(r["status"], "failure")
 
+    def test_stop_feed_success_and_failure(self):
+        bmain.require_admin = lambda _: None
+        req = MagicMock()
+
+        class _Mgr:
+            def __init__(self, ok):
+                self.ok = ok
+
+            def stop(self, group_name, feed_name):
+                return (True, "") if self.ok else (False, "실행 중인 작업이 없습니다")
+
+        self.assertEqual(bmain.stop_feed("g", "f", request=req, feed_maker_manager=_Mgr(True))["status"], "success")
+        r = bmain.stop_feed("g", "f", request=req, feed_maker_manager=_Mgr(False))
+        self.assertEqual(r["status"], "failure")
+        self.assertTrue(r["message"])
+
     def test_run_feed_failure(self):
         bmain.require_admin = lambda _: None
         mgr = self._make_failing_manager()

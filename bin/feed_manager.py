@@ -385,6 +385,23 @@ class FeedManager:
         return 0
 
     @classmethod
+    def _count_newlist_items(cls, group_name: str, feed_name: str, default: int) -> int:
+        """newlist/*.txt의 고유 URL 수(수집 대상 피드 아이템 총 수)를 조회 시점에 직접 센다.
+
+        DB 저장값은 run.py가 끝나야 갱신되므로 html 수와 어긋날 수 있다. newlist가 없으면 DB 값을 쓴다.
+        """
+        for group in (group_name, f"_{group_name}"):
+            for feed in (feed_name, f"_{feed_name}"):
+                list_dir = cls.work_dir_path / group / feed / "newlist"
+                if list_dir.is_dir():
+                    urls: set[str] = set()
+                    for list_file_path in list_dir.glob("*.txt"):
+                        with list_file_path.open("r", encoding="utf-8") as infile:
+                            urls.update(line.split("\t")[0] for line in infile)
+                    return len(urls) if urls else default
+        return default
+
+    @classmethod
     def get_feed_name_progress_info_map(cls) -> dict[str, FeedProgressInfo]:
         LOGGER.debug("# get_feed_name_progress_info_map()")
         feed_name_progress_info_map: dict[str, FeedProgressInfo] = {}
@@ -393,7 +410,15 @@ class FeedManager:
             rows = s.query(FeedInfo).where(FeedInfo.is_completed, FeedInfo.is_active).all()
             for row in rows:
                 feed_name_progress_info_map[row.feed_name] = FeedProgressInfo(
-                    feed_name=row.feed_name, feed_title=row.feed_title, group_name=row.group_name, current_index=row.current_index, total_item_count=row.total_item_count, html_file_count=cls._count_html_files(row.group_name, row.feed_name), unit_size_per_day=row.unit_size_per_day or 0.0, progress_ratio=row.progress_ratio or 0.0, due_date=row.due_date
+                    feed_name=row.feed_name,
+                    feed_title=row.feed_title,
+                    group_name=row.group_name,
+                    current_index=row.current_index,
+                    total_item_count=cls._count_newlist_items(row.group_name, row.feed_name, row.total_item_count),
+                    html_file_count=cls._count_html_files(row.group_name, row.feed_name),
+                    unit_size_per_day=row.unit_size_per_day or 0.0,
+                    progress_ratio=row.progress_ratio or 0.0,
+                    due_date=row.due_date,
                 )
 
         return feed_name_progress_info_map
@@ -492,6 +517,15 @@ class FeedManager:
         return 1
 
     @classmethod
+    def refresh_progress_counts(cls, feed_dir_path: Path) -> None:
+        """run.py 실행 도중 진행 중 피드의 수집 대상 총 수(newlist 기준)를 DB에 즉시 반영한다.
+
+        생성된 html 파일 수는 조회 시점에 파일시스템에서 직접 세므로 별도 갱신이 필요 없다.
+        """
+        with DB.session_ctx() as s:
+            cls._add_progress_info(s, feed_dir_path)
+
+    @classmethod
     def add_progress_info(cls, feed_dir_path: Path) -> None:
         feed_name = feed_dir_path.name
         with DB.session_ctx() as s:
@@ -585,7 +619,7 @@ class FeedManager:
             config_modify_date=feed.config_modify_date,
             collection_info=CollectionDetail(collect_date=feed.collect_date, total_item_count=feed.total_item_count),
             public_feed_info=PublicFeedDetail(public_feed_file_path=feed.public_feed_file_path, file_size=feed.file_size, num_items=feed.num_items, upload_date=feed.upload_date),
-            progress_info=ProgressDetail(current_index=feed.current_index, total_item_count=feed.total_item_count, html_file_count=cls._count_html_files(group_name, feed_name), unit_size_per_day=feed.unit_size_per_day, progress_ratio=feed.progress_ratio, due_date=feed.due_date),
+            progress_info=ProgressDetail(current_index=feed.current_index, total_item_count=cls._count_newlist_items(group_name, feed_name, feed.total_item_count), html_file_count=cls._count_html_files(group_name, feed_name), unit_size_per_day=feed.unit_size_per_day, progress_ratio=feed.progress_ratio, due_date=feed.due_date),
         )
 
     @classmethod

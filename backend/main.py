@@ -516,6 +516,20 @@ def run_feed(group_name: str, feed_name: str, request: Request, feed_maker_manag
     return response_object
 
 
+@app.post("/groups/{group_name}/feeds/{feed_name}/stop")
+def stop_feed(group_name: str, feed_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+    LOGGER.info("POST /groups/%s/feeds/%s/stop -> stop_feed(%s, %s)", group_name, feed_name, group_name, feed_name)
+    require_admin(request)
+    response_object: dict[str, Any] = {}
+    result, error = feed_maker_manager.stop(group_name, feed_name)
+    if result:
+        response_object["status"] = "success"
+    else:
+        response_object["message"] = error
+        response_object["status"] = "failure"
+    return response_object
+
+
 @app.put("/groups/{group_name}/feeds/{feed_name}/toggle")
 async def toggle_feed(group_name: str, feed_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("/groups/%s/feeds/%s/toggle -> toggle_feed(%s, %s)", group_name, feed_name, group_name, feed_name)
