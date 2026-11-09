@@ -19,6 +19,29 @@ LOGGER = logging.getLogger(__name__)
 
 class ImageDownloader:
     BLOCKED_DOMAINS = ["egloos.com", "hanafos.com"]
+    # WebP 인코더의 한 변 최대 크기
+    WEBP_SIZE_LIMIT = 16383
+
+    @staticmethod
+    def _keep_oversized_image(cache_file_path: Path, img: Image.Image, optimized_img: Image.Image, quality: int) -> Optional[Path]:
+        # WebP로 저장할 수 없는 긴 이미지는 원본 포맷을 유지한다. 이후 merge_and_split 등이 잘라 쓴다.
+        is_jpeg = (img.format or "").upper() == "JPEG"
+        target_path = cache_file_path.with_suffix(".jpg" if is_jpeg else ".png")
+        try:
+            if optimized_img.size == img.size and (img.format or "").upper() in ("JPEG", "PNG"):
+                if cache_file_path != target_path:
+                    cache_file_path.replace(target_path)
+                return target_path
+            if is_jpeg:
+                optimized_img.convert("RGB").save(target_path, "JPEG", quality=quality)
+            else:
+                optimized_img.save(target_path, "PNG")
+            if cache_file_path != target_path:
+                cache_file_path.unlink(missing_ok=True)
+            return target_path
+        except (OSError, IOError, TypeError, ValueError, RuntimeError) as e:
+            LOGGER.warning(f"WebP 상한 초과 이미지 저장 실패: {e}")
+            return None
 
     @staticmethod
     def download_image(crawler: Crawler, feed_img_dir_path: Path, img_url: str, quality: int = 75) -> tuple[Optional[Path], Optional[str]]:
@@ -39,10 +62,11 @@ class ImageDownloader:
             if converted_path and converted_path.is_file():
                 return converted_path, FileManager.get_cache_url(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX") + "/" + feed_img_dir_path.name, img_url, suffix=converted_path.suffix)
             LOGGER.warning(f"확장자 없는 캐시 파일 변환 실패, 다시 내려받는다: {cache_file_path}")
-        # 변환된 .webp 파일이 이미 존재하는지 확인
-        webp_cache_path = cache_file_path.with_suffix(".webp")
-        if webp_cache_path.is_file() and webp_cache_path.stat().st_size > 0:
-            return webp_cache_path, FileManager.get_cache_url(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX") + "/" + feed_img_dir_path.name, img_url, suffix=".webp")
+        # 변환된 파일이 이미 존재하는지 확인 (WebP 상한을 넘는 이미지는 .jpg/.png로 남는다)
+        for converted_suffix in (".webp", ".jpg", ".png"):
+            converted_cache_path = cache_file_path.with_suffix(converted_suffix)
+            if converted_cache_path.is_file() and converted_cache_path.stat().st_size > 0:
+                return converted_cache_path, FileManager.get_cache_url(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX") + "/" + feed_img_dir_path.name, img_url, suffix=converted_suffix)
 
         # 데이터 URI (base64) 처리
         m = re.search(r"^data:image/(?P<ext>png|jpeg|jpg|webp);base64,(?P<data>.+)", img_url)
@@ -156,6 +180,8 @@ class ImageDownloader:
 
                 # Non-WEBP → convert to WEBP
                 optimized_img = ImageDownloader.optimize_for_webtoon(img)
+                if max(optimized_img.size) > ImageDownloader.WEBP_SIZE_LIMIT:
+                    return ImageDownloader._keep_oversized_image(cache_file_path, img, optimized_img, quality=quality)
                 new_cache_file_path = cache_file_path.with_suffix(".webp")
                 try:
                     optimized_img.convert("RGB").save(new_cache_file_path, "WEBP", quality=quality)
