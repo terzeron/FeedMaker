@@ -377,6 +377,42 @@ class TestFileManagerRemoveImageFilesWithZeroSize(unittest.TestCase):
         FileManager.remove_image_files_with_zero_size(Path("/nonexistent_xyz"))
 
 
+class TestFileManagerRemoveZeroSizeImageFilesInList(unittest.TestCase):
+    """FileManager.remove_zero_size_image_files_in_list: 목록에 있는 파일만 검사한다."""
+
+    def test_removes_only_listed_zero_size_images(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            img_dir = Path(tmpdir) / "feed"
+            img_dir.mkdir()
+            listed_zero = img_dir / "listed_zero.png"
+            listed_zero.write_text("")
+            listed_nonzero = img_dir / "listed_nonzero.png"
+            listed_nonzero.write_text("data")
+            unlisted_zero = img_dir / "unlisted_zero.png"
+            unlisted_zero.write_text("")
+
+            FileManager.remove_zero_size_image_files_in_list(img_dir, ["listed_zero.png", "listed_nonzero.png", "missing.png", FileManager.IMAGE_NOT_FOUND_IMAGE])
+
+            self.assertFalse(listed_zero.exists())
+            self.assertTrue(listed_nonzero.exists())
+            self.assertTrue(unlisted_zero.exists())
+
+    def test_skips_path_outside_image_dir(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            img_dir = Path(tmpdir) / "feed"
+            img_dir.mkdir()
+            outside_zero = Path(tmpdir) / "outside.png"
+            outside_zero.write_text("")
+
+            FileManager.remove_zero_size_image_files_in_list(img_dir, ["../outside.png"])
+
+            self.assertTrue(outside_zero.exists())
+
+
 class TestFileManagerRemoveTemporaryFiles(unittest.TestCase):
     """FileManager.remove_temporary_files"""
 
