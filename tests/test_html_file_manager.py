@@ -493,6 +493,18 @@ class TestHtmlFileManagerExtended(unittest.TestCase):
         self.mock_session.merge.assert_called_once()
         self.mock_session.flush.assert_called_once()
 
+    def test_add_html_file_computes_image_counts(self) -> None:
+        """add_html_file must store image counts; otherwise load_all_html_files skips the file (same mtime) and counts stay 0."""
+        html_dir = self.test_feed_dir_path / "html"
+        html_dir.mkdir(parents=True, exist_ok=True)
+        (html_dir / "notfound.html").write_text("<img src='image-not-found.png'/>\n<img src='1x1.jpg'/>\n")
+
+        self.hfm.add_html_file(self.test_feed_dir_path)
+        merged = self.mock_session.merge.call_args[0][0]
+        self.assertEqual(1, merged.count_with_image_not_found)
+        self.assertEqual(0, merged.count_without_image_tag)
+        self.assertEqual(0, merged.count_with_many_image_tag)
+
     def test_add_html_file_skips_underscore_dirs(self) -> None:
         """Files under directories starting with _ should be skipped."""
         # Create html dir named _hidden under a _group

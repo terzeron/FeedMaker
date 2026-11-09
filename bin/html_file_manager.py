@@ -168,16 +168,11 @@ class HtmlFileManager:
                 st = path.stat()
                 html_file_count += 1
 
-                file_path_str = PathUtil.short_path(path)
-                file_name = self.get_html_file_name(path)
-                feed_dir_path_str = PathUtil.short_path(feed_dir_path)
                 # load_all_html_files의 비교와 일치하도록 초 단위로 정규화한다(MySQL DATETIME 반올림 회피).
                 update_date = datetime.fromtimestamp(st.st_mtime, timezone.utc).replace(microsecond=0)
-                size = st.st_size
-
-                # if size < FeedMaker.get_size_of_template_with_image_tag(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"), feed_name):
-                # print(f"{file_path_str=}, {size=}")
-                s.merge(HtmlFileInfo(file_path=file_path_str, file_name=file_name, feed_dir_path=feed_dir_path_str, size=size, update_date=update_date))
+                # count 컬럼도 여기서 계산해야 한다. 여기서 mtime을 맞춰 두면 load_all_html_files가
+                # 이 파일을 '변경 없음'으로 건너뛰어 count가 기본값 0으로 남는다.
+                s.merge(HtmlFileInfo(**self._prepare_html_file_info(path, update_date)))
                 s.flush()
 
         return html_file_count
