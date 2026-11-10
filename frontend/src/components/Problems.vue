@@ -248,12 +248,18 @@
                   v-for="(item, index) in sortedHtmlFileSizelist"
                   :key="index"
                 >
-                  <td v-for="field in htmlFileSizeFields" :key="field.key">
-                    <span v-if="field.key === 'feed_title'" class="feed-title-ellipsis" :title="item[field.key]">
+                  <td v-for="field in htmlFileSizeFields" :key="field.key" :class="{ 'ellipsis-cell': field.key === 'feed_title' || field.key === 'item_title' }">
+                    <span v-if="field.key === 'feed_title'" class="feed-title-ellipsis cell-ellipsis" :title="item[field.key]">
                       <a v-if="getFeedDirLink(item)" :href="getFeedDirLink(item)">
                         {{ item[field.key] }}
                       </a>
                       <span v-else>{{ item[field.key] }}</span>
+                    </span>
+                    <span v-else-if="field.key === 'item_title'" class="feed-title-ellipsis cell-ellipsis" :title="item.item_title">
+                      <a v-if="item.item_url" :href="item.item_url" target="_blank" rel="noopener noreferrer">
+                        {{ item.item_title || item.item_url }}
+                      </a>
+                      <span v-else>{{ item.item_title }}</span>
                     </span>
                     <span v-else-if="field.key === 'action'">
                       <font-awesome-icon
@@ -468,12 +474,19 @@
                   <td
                     v-for="field in htmlFileWithImageNotFoundFields"
                     :key="field.key"
+                   :class="{ 'ellipsis-cell': field.key === 'feed_title' || field.key === 'item_title' }"
                   >
-                    <span v-if="field.key === 'feed_title'" class="feed-title-ellipsis" :title="item[field.key]">
+                    <span v-if="field.key === 'feed_title'" class="feed-title-ellipsis cell-ellipsis" :title="item[field.key]">
                       <a v-if="getFeedDirLink(item)" :href="getFeedDirLink(item)">
                         {{ item[field.key] }}
                       </a>
                       <span v-else>{{ item[field.key] }}</span>
+                    </span>
+                    <span v-else-if="field.key === 'item_title'" class="feed-title-ellipsis cell-ellipsis" :title="item.item_title">
+                      <a v-if="item.item_url" :href="item.item_url" target="_blank" rel="noopener noreferrer">
+                        {{ item.item_title || item.item_url }}
+                      </a>
+                      <span v-else>{{ item.item_title }}</span>
                     </span>
                     <span v-else-if="field.key === 'action'">
                       <font-awesome-icon
@@ -977,6 +990,29 @@
   text-decoration: underline;
 }
 
+/* 칸 폭에 맞춘 말줄임 (작은 HTML / 이미지 없는 HTML 테이블)
+   테이블은 auto layout이라 긴 nowrap 텍스트가 칸을 늘린다. max-width: 0으로
+   내용 폭이 칸 폭 계산에 끼지 않게 하고, width 비율로 칸 폭을 정한다. */
+.table td.ellipsis-cell {
+  width: 30%;
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feed-title-ellipsis.cell-ellipsis {
+  display: block;
+  max-width: 100%;
+}
+
+.cell-ellipsis a {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .feed-title-ellipsis a:hover {
   color: #0056b3;
   text-decoration: underline;
@@ -1192,6 +1228,7 @@ export default {
       listUrlInfolist: [],
       htmlFileSizeFields: [
         { key: "feed_title", label: "제목", sortable: true },
+        { key: "item_title", label: "아이템", sortable: true },
         { key: "file_name", label: "파일 이름", sortable: true },
         { key: "size", label: "크기", sortable: true },
         { key: "action", label: "작업", sortable: false },
@@ -1218,6 +1255,7 @@ export default {
       htmlFileWithManyImageTaglist: [],
       htmlFileWithImageNotFoundFields: [
         { key: "feed_title", label: "제목", sortable: true },
+        { key: "item_title", label: "아이템", sortable: true },
         { key: "file_name", label: "파일 이름", sortable: true },
         { key: "action", label: "작업", sortable: false },
       ],
