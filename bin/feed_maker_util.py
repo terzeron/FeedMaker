@@ -869,6 +869,9 @@ class FileManager:
                         incomplete_image_list = FileManager.get_incomplete_image_list(html_file_path)
                         if threshold_to_remove_html_with_incomplete_image < len(incomplete_image_list):
                             FileManager.remove_html_file_without_cached_image_files(html_file_path)
+                        elif incomplete_image_list:
+                            # threshold 이하라 HTML은 남기지만, 누락 사실은 조용히 넘기지 않는다
+                            LOGGER.warning("Warning: '%s' kept with %d incomplete image(s) (threshold %d): %r", PathUtil.short_path(html_file_path), len(incomplete_image_list), threshold_to_remove_html_with_incomplete_image, incomplete_image_list)
 
     @staticmethod
     def remove_image_files_with_zero_size(feed_img_dir_path: Path) -> None:

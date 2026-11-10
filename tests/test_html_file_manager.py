@@ -106,6 +106,24 @@ class TestHtmlFileManager(unittest.TestCase):
             self.assertIn("feed_dir_path", html_file_info)
             self.assertIn("count", html_file_info)
 
+    def test_prepare_html_file_info_counts_missing_cached_images(self) -> None:
+        # placeholder뿐 아니라 디스크에서 사라진 캐시 이미지도 image-not-found로 세어야 한다
+        from bin.feed_maker_util import FileManager
+
+        prefix = Env.get("WEB_SERVICE_IMAGE_URL_PREFIX")
+        html_dir_path = self.test_feed_dir_path / "html"
+        html_dir_path.mkdir(exist_ok=True)
+        html_path = html_dir_path / "a1b2c3d.html"
+        html_path.write_text(f"<img src='{prefix}/{self.test_feed_name}/exists_ms001.webp'/>\n<img src='{prefix}/{self.test_feed_name}/missing_ms002.webp'/>\n<img src='{prefix}/image-not-found.png' alt='not exist or size 0'/>\n", encoding="utf-8")
+        with tempfile.TemporaryDirectory() as img_root:
+            feed_img_dir_path = Path(img_root) / self.test_feed_name
+            feed_img_dir_path.mkdir()
+            (feed_img_dir_path / "exists_ms001.webp").write_bytes(b"x")
+            with patch.object(FileManager, "IMAGE_DIR_PATH", Path(img_root)):
+                info = self.hfm._prepare_html_file_info(html_path, datetime.now(timezone.utc))
+
+        self.assertEqual(2, info["count_with_image_not_found"])
+
     def _prepare_fixture_for_html_files(self, html_dir_path: Path) -> None:
         # small html file: fc68456.html
         small_file = "fc68456.html"

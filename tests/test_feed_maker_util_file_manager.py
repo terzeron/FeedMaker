@@ -179,6 +179,20 @@ class FileManagerTest(unittest.TestCase):
 
         self.assertFalse(self.html_file2_path.is_file())
 
+    def test_remove_html_files_without_cached_image_files_warns_within_threshold(self) -> None:
+        # threshold 이하 누락은 HTML을 남기되 경고 로그로 드러내야 한다
+        import json
+
+        conf = json.loads(self.conf_file_path.read_text(encoding="utf-8"))
+        conf["configuration"]["extraction"]["threshold_to_remove_html_with_incomplete_image"] = 1
+        self.conf_file_path.write_text(json.dumps(conf), encoding="utf-8")
+
+        with patch.object(LOGGER, "warning") as mock_warning:
+            FileManager.remove_html_files_without_cached_image_files(self.feed_dir_path, self.feed_img_dir_path)
+            self.assertTrue(assert_in_mock_logger(f"'{self.non_cached_img_file}'", mock_warning, do_submatch=True))
+
+        self.assertTrue(self.html_file2_path.is_file())
+
     def test_remove_temporary_files(self) -> None:
         self.assertTrue(self.garbage_file_path.is_file())
         with patch.object(LOGGER, "info") as _:
