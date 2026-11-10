@@ -1126,6 +1126,18 @@ class TestGetFeedNameProgressInfoMap(FeedManagerTestBase):
         result: dict[str, FeedProgressInfo] = FeedManager.get_feed_name_progress_info_map()
         self.assertEqual(result, {})
 
+    def test_row_without_config_does_not_override_same_name_row_with_config(self) -> None:
+        configured = self._make_feed_row(feed_name="dup", feed_title="Real", group_name="real_group", is_completed=True, config='{"rss": {}}', total_item_count=51)
+        orphan = self._make_feed_row(feed_name="dup", feed_title="", group_name="orphan_group", is_completed=True, config="")
+        for rows in ([configured, orphan], [orphan, configured]):
+            self.mock_query.all.return_value = rows
+
+            result: dict[str, FeedProgressInfo] = FeedManager.get_feed_name_progress_info_map()
+
+            self.assertEqual(len(result), 1)
+            self.assertEqual(result["dup"]["group_name"], "real_group")
+            self.assertEqual(result["dup"]["feed_title"], "Real")
+
 
 class TestRemoveProgressInfo(FeedManagerTestBase):
     def test_remove_without_file(self) -> None:

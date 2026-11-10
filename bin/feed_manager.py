@@ -409,6 +409,10 @@ class FeedManager:
         with DB.session_ctx() as s:
             rows = s.query(FeedInfo).where(FeedInfo.is_completed, FeedInfo.is_active).all()
             for row in rows:
+                # 다른 그룹의 같은 이름 피드 중 설정(conf.json)이 없는 잔여 행이
+                # 설정이 있는 실제 피드 행을 덮어쓰지 않게 한다.
+                if row.feed_name in feed_name_progress_info_map and not row.config:
+                    continue
                 feed_name_progress_info_map[row.feed_name] = FeedProgressInfo(
                     feed_name=row.feed_name,
                     feed_title=row.feed_title,
