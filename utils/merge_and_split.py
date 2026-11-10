@@ -15,9 +15,12 @@ stdin -> stdout. 다운로드는 하지 않고 이미 캐시된 로컬 이미지
 """
 
 import getopt
+import io
 import logging.config
+import os
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 from PIL import Image
@@ -230,7 +233,20 @@ def save_segment(im: Image.Image, feed_img_dir_path: Path, page_url: str, index:
     suffix, _ = FORMAT_INFO[out_format]
     seg_path = FileManager.get_cache_file_path(feed_img_dir_path, page_url, postfix=segment_postfix(index), suffix=suffix)
     save_kwargs = {"quality": quality} if out_format in ("JPEG", "WEBP") else {}
-    im.save(seg_path, format=out_format, **save_kwargs)
+    # 최종 경로에 직접 저장하면 인코딩 동안(큰 세그먼트는 1초 이상) 0바이트 파일이 보인다.
+    # 그 사이 zero-size 정리가 파일을 지우면 save는 예외 없이 끝나 세그먼트가 사라진다.
+    # 메모리에서 인코딩한 뒤 임시 파일에 한 번에 쓰고 원자적으로 교체한다.
+    buffer = io.BytesIO()
+    im.save(buffer, format=out_format, **save_kwargs)
+    fd, tmp_name = tempfile.mkstemp(dir=feed_img_dir_path, prefix=f".{seg_path.name}.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "wb") as tmp_file:
+            tmp_file.write(buffer.getbuffer())
+        os.chmod(tmp_name, 0o644)
+        os.replace(tmp_name, seg_path)
+    except BaseException:
+        Path(tmp_name).unlink(missing_ok=True)
+        raise
     LOGGER.debug("saved segment %s (%dx%d, %s)", PathUtil.short_path(seg_path), im.width, im.height, out_format)
     return seg_path
 

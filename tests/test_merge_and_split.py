@@ -254,6 +254,38 @@ class TestSaveSegment(unittest.TestCase):
                     self.assertEqual(im.format, fmt)
                 seg.unlink()
 
+    def test_never_encodes_directly_into_final_path(self) -> None:
+        # 최종 경로에 직접 인코딩하면 인코딩 동안 0바이트 파일이 보이고, 그 사이
+        # zero-size 정리가 파일을 지워도 save는 예외 없이 끝나 세그먼트가 사라진다.
+        with tempfile.TemporaryDirectory() as d:
+            dir_path = Path(d)
+            save_targets: list[object] = []
+            original_save = Image.Image.save
+
+            def spy_save(self_im: Image.Image, fp: object, *args: object, **kwargs: object) -> None:
+                save_targets.append(fp)
+                original_save(self_im, fp, *args, **kwargs)  # type: ignore[arg-type]
+
+            with patch.object(Image.Image, "save", spy_save):
+                seg = save_segment(_solid(100, 100, (10, 20, 30)), dir_path, "https://example.com/page?id=1", 1, 75, "WEBP")
+
+            self.assertTrue(save_targets)
+            for target in save_targets:
+                self.assertNotEqual(Path(str(target)) if isinstance(target, (str, Path)) else None, seg)
+            with Image.open(seg) as im:
+                self.assertEqual(im.format, "WEBP")
+            self.assertEqual([p.name for p in dir_path.iterdir()], [seg.name])
+
+    def test_replaces_existing_segment_without_leaving_temp_files(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            dir_path = Path(d)
+            first = save_segment(_solid(100, 100, (10, 20, 30)), dir_path, "https://example.com/page?id=1", 1, 75, "WEBP")
+            second = save_segment(_solid(100, 200, (10, 20, 30)), dir_path, "https://example.com/page?id=1", 1, 75, "WEBP")
+            self.assertEqual(first, second)
+            with Image.open(second) as im:
+                self.assertEqual(im.size, (100, 200))
+            self.assertEqual([p.name for p in dir_path.iterdir()], [second.name])
+
 
 class TestSegmentPostfix(unittest.TestCase):
     def test_zero_padded_to_fixed_width(self) -> None:
