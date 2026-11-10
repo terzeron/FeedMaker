@@ -12,7 +12,7 @@ from sqlalchemy.dialects.mysql import insert as mysql_insert
 
 from bin.models import HtmlFileInfo
 from bin.feed_maker import FeedMaker
-from bin.feed_maker_util import PathUtil, Env, URL
+from bin.feed_maker_util import PathUtil, Env, URL, FileManager
 from bin.db import DB, Session
 from bin.feed_manager import FeedManager, SingleFeedInfo
 
@@ -296,8 +296,8 @@ class HtmlFileManager:
                 for line in infile:
                     if re.search(r"1x1\.jpg", line):
                         image_tag_count += 1
-                    if re.search(r"image-not-found\.png", line):
-                        count_with_image_not_found += 1
+            # placeholder(image-not-found.png)와 함께, HTML 생성 뒤 디스크에서 사라진 캐시 이미지도 센다
+            count_with_image_not_found = len(FileManager.get_incomplete_image_list(path))
         except (FileNotFoundError, UnicodeDecodeError) as e:
             LOGGER.warning("Could not process file %s: %s", file_path_str, e)
 
