@@ -454,7 +454,9 @@ class FeedManager:
         due_date: Optional[datetime] = None
         collect_date: Optional[datetime] = None
 
-        # 설정 파일에서 is_completed 값을 읽어옴
+        # 설정 파일에서 is_completed, unit_size_per_day 값을 읽어옴
+        # DB 값은 config 동기화 전이면 0일 수 있어 설정 파일 값을 우선한다.
+        conf_unit_size_per_day: float = 0.0
         conf_file_path = feed_dir_path / Config.DEFAULT_CONF_FILE
         if conf_file_path.is_file():
             try:
@@ -464,12 +466,13 @@ class FeedManager:
                     conf_data = json.load(f)
                 if "configuration" in conf_data and "collection" in conf_data["configuration"]:
                     is_completed = conf_data["configuration"]["collection"].get("is_completed", False)
-            except (OSError, IOError, json.JSONDecodeError, KeyError, TypeError, RuntimeError) as e:
+                    conf_unit_size_per_day = float(conf_data["configuration"]["collection"].get("unit_size_per_day", 0) or 0)
+            except (OSError, IOError, json.JSONDecodeError, KeyError, TypeError, ValueError, RuntimeError) as e:
                 LOGGER.warning("Failed to read is_completed from config file: %s", e)
 
         row = s.query(FeedInfo).where(FeedInfo.feed_name == feed_name, FeedInfo.is_completed).first()
         if row is not None:
-            unit_size_per_day = row.unit_size_per_day
+            unit_size_per_day = conf_unit_size_per_day or row.unit_size_per_day or 0.0
             is_completed = True
             # read current_index from start_idx.txt
             current_index = 0
@@ -497,9 +500,11 @@ class FeedManager:
 
             # progress information
             progress_ratio = int((current_index + 4) * 100 / (total_item_count + 1))
-            remainder = total_item_count - (current_index + 4)
-            num_days = int(math.ceil(remainder / unit_size_per_day))
-            due_date = datetime.now(timezone.utc) + timedelta(days=num_days)
+            # unit_size_per_day가 0이면 완료 예정일을 계산할 수 없으므로 due_date만 비운다.
+            if unit_size_per_day > 0:
+                remainder = total_item_count - (current_index + 4)
+                num_days = int(math.ceil(remainder / unit_size_per_day))
+                due_date = datetime.now(timezone.utc) + timedelta(days=num_days)
 
         # feed_name만으로 검색 (기본키가 feed_name이므로)
         existing_feeds = s.query(FeedInfo).filter_by(feed_name=feed_name, group_name=group_name).all()
@@ -619,7 +624,9 @@ class FeedManager:
             config_modify_date=feed.config_modify_date,
             collection_info=CollectionDetail(collect_date=feed.collect_date, total_item_count=feed.total_item_count),
             public_feed_info=PublicFeedDetail(public_feed_file_path=feed.public_feed_file_path, file_size=feed.file_size, num_items=feed.num_items, upload_date=feed.upload_date),
-            progress_info=ProgressDetail(current_index=feed.current_index, total_item_count=cls._count_newlist_items(group_name, feed_name, feed.total_item_count), html_file_count=cls._count_html_files(group_name, feed_name), unit_size_per_day=feed.unit_size_per_day, progress_ratio=feed.progress_ratio, due_date=feed.due_date),
+            progress_info=ProgressDetail(
+                current_index=feed.current_index, total_item_count=cls._count_newlist_items(group_name, feed_name, feed.total_item_count), html_file_count=cls._count_html_files(group_name, feed_name), unit_size_per_day=feed.unit_size_per_day, progress_ratio=feed.progress_ratio, due_date=feed.due_date
+            ),
         )
 
     @classmethod

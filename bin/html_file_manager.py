@@ -12,7 +12,7 @@ from sqlalchemy.dialects.mysql import insert as mysql_insert
 
 from bin.models import HtmlFileInfo
 from bin.feed_maker import FeedMaker
-from bin.feed_maker_util import PathUtil, Env
+from bin.feed_maker_util import PathUtil, Env, URL
 from bin.db import DB, Session
 from bin.feed_manager import FeedManager, SingleFeedInfo
 
@@ -29,6 +29,8 @@ class HtmlFileDetail(TypedDict):
     update_date: Optional[datetime]
     count: NotRequired[int]
     size: NotRequired[int]
+    item_title: NotRequired[str]
+    item_url: NotRequired[str]
 
 
 class HtmlFileManager:
@@ -59,9 +61,40 @@ class HtmlFileManager:
             return ""
 
     @staticmethod
+    def _get_item_info_map(feed_dir_path: str) -> dict[str, tuple[str, str]]:
+        """newlist 파일을 읽어 HTML 파일 이름(md5.html)을 (원본 링크, 아이템 제목)에 매핑한다."""
+        item_info_map: dict[str, tuple[str, str]] = {}
+        list_dir = HtmlFileManager.work_dir_path / feed_dir_path / "newlist"
+        if not list_dir.is_dir():
+            return item_info_map
+        # 날짜순으로 읽어 같은 링크는 최신 제목이 남게 한다.
+        for list_file_path in sorted(list_dir.iterdir()):
+            if list_file_path.name.startswith(".") or not list_file_path.is_file():
+                continue
+            try:
+                with list_file_path.open("r", encoding="utf-8") as infile:
+                    for line in infile:
+                        fields = line.rstrip("\n").split("\t")
+                        if len(fields) < 2 or not fields[0]:
+                            continue
+                        link, title = fields[0], fields[1]
+                        html_file_name = URL.get_short_md5_name(URL.get_url_path(link)) + ".html"
+                        item_info_map[html_file_name] = (link, title)
+            except (OSError, UnicodeDecodeError) as e:
+                LOGGER.warning("Could not read list file %s: %s", PathUtil.short_path(list_file_path), e)
+        return item_info_map
+
+    @staticmethod
+    def _get_item_info(item_info_cache: dict[str, dict[str, tuple[str, str]]], feed_dir_path: str, file_path: str) -> tuple[str, str]:
+        if feed_dir_path not in item_info_cache:
+            item_info_cache[feed_dir_path] = HtmlFileManager._get_item_info_map(feed_dir_path)
+        return item_info_cache[feed_dir_path].get(Path(file_path).name, ("", ""))
+
+    @staticmethod
     def get_html_file_size_map(feed_name: str = "") -> dict[str, HtmlFileDetail]:
         LOGGER.debug("# get_html_file_size_map()")
         html_file_size_map: dict[str, HtmlFileDetail] = {}
+        item_info_cache: dict[str, dict[str, tuple[str, str]]] = {}
 
         with DB.session_ctx() as s:
             rows = s.query(HtmlFileInfo).where(HtmlFileInfo.size < FeedMaker.get_size_of_template_with_image_tag(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"), feed_name)).order_by(HtmlFileInfo.update_date).all()
@@ -72,7 +105,8 @@ class HtmlFileManager:
                 size = row.size
                 update_date = row.update_date
                 feed_title = HtmlFileManager._get_feed_title_from_path(feed_dir_path)
-                html_file_size_map[file_name] = HtmlFileDetail(file_name=file_name, file_path=file_path, feed_title=feed_title, feed_dir_path=feed_dir_path, update_date=update_date, size=size)
+                item_url, item_title = HtmlFileManager._get_item_info(item_info_cache, feed_dir_path, file_path)
+                html_file_size_map[file_name] = HtmlFileDetail(file_name=file_name, file_path=file_path, feed_title=feed_title, feed_dir_path=feed_dir_path, update_date=update_date, size=size, item_title=item_title, item_url=item_url)
 
         return html_file_size_map
 
@@ -116,6 +150,7 @@ class HtmlFileManager:
     def get_html_file_image_not_found_map() -> dict[str, HtmlFileDetail]:
         LOGGER.debug("# get_html_file_image_not_found_map()")
         html_file_image_not_found_map: dict[str, HtmlFileDetail] = {}
+        item_info_cache: dict[str, dict[str, tuple[str, str]]] = {}
 
         with DB.session_ctx() as s:
             rows = s.query(HtmlFileInfo).where(HtmlFileInfo.count_with_image_not_found > 0).order_by(HtmlFileInfo.update_date).all()
@@ -126,7 +161,8 @@ class HtmlFileManager:
                 count = row.count_with_image_not_found
                 update_date = row.update_date
                 feed_title = HtmlFileManager._get_feed_title_from_path(feed_dir_path)
-                html_file_image_not_found_map[file_name] = HtmlFileDetail(file_name=file_name, file_path=file_path, feed_title=feed_title, feed_dir_path=feed_dir_path, update_date=update_date, count=count)
+                item_url, item_title = HtmlFileManager._get_item_info(item_info_cache, feed_dir_path, file_path)
+                html_file_image_not_found_map[file_name] = HtmlFileDetail(file_name=file_name, file_path=file_path, feed_title=feed_title, feed_dir_path=feed_dir_path, update_date=update_date, count=count, item_title=item_title, item_url=item_url)
 
         return html_file_image_not_found_map
 

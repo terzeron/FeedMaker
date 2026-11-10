@@ -430,6 +430,45 @@ class TestHtmlFileManagerExtended(unittest.TestCase):
         self.assertEqual(5, result["f/html/z.html"]["count"])
         self.assertEqual("NF", result["f/html/z.html"]["feed_title"])
 
+    # ── newlist 아이템 매핑 ──
+
+    def test_get_item_info_map_from_newlist(self) -> None:
+        list_dir = self.test_feed_dir_path / "newlist"
+        list_dir.mkdir(parents=True, exist_ok=True)
+        (list_dir / "241101.txt").write_text("https://example.com/a/1\t첫째\nhttps://example.com/a/2\t둘째\textra\n\nbadline\n", encoding="utf-8")
+        (list_dir / ".hidden").write_text("https://example.com/a/3\t숨김\n", encoding="utf-8")
+        feed_dir_path = PathUtil.short_path(self.test_feed_dir_path)
+
+        result = HtmlFileManager._get_item_info_map(feed_dir_path)
+
+        md5_1 = FeedMaker._get_html_file_path(Path("."), "https://example.com/a/1").name
+        md5_2 = FeedMaker._get_html_file_path(Path("."), "https://example.com/a/2").name
+        md5_3 = FeedMaker._get_html_file_path(Path("."), "https://example.com/a/3").name
+        self.assertEqual(("https://example.com/a/1", "첫째"), result[md5_1])
+        self.assertEqual(("https://example.com/a/2", "둘째"), result[md5_2])
+        self.assertNotIn(md5_3, result)
+
+    def test_get_item_info_map_without_newlist(self) -> None:
+        self.assertEqual({}, HtmlFileManager._get_item_info_map("no_group/no_feed"))
+
+    @patch("bin.html_file_manager.HtmlFileManager._get_item_info_map", return_value={"abc.html": ("https://example.com/x", "아이템")})
+    @patch("bin.html_file_manager.HtmlFileManager._get_feed_title_from_path", return_value="Title")
+    def test_html_file_maps_include_item_info(self, mock_title: MagicMock, mock_item_map: MagicMock) -> None:
+        row_size = SimpleNamespace(file_name="feed/html/abc.html", file_path="group/feed/html/abc.html", feed_dir_path="group/feed", size=100, update_date=None)
+        row_nf = SimpleNamespace(file_name="feed/html/zzz.html", file_path="group/feed/html/zzz.html", feed_dir_path="group/feed", count_with_image_not_found=1, update_date=None)
+        self.mock_query.where.return_value = self.mock_query
+        self.mock_query.order_by.return_value = self.mock_query
+
+        self.mock_query.all.return_value = [row_size]
+        size_entry = HtmlFileManager.get_html_file_size_map("feed")["feed/html/abc.html"]
+        self.assertEqual("아이템", size_entry["item_title"])
+        self.assertEqual("https://example.com/x", size_entry["item_url"])
+
+        self.mock_query.all.return_value = [row_nf]
+        nf_entry = HtmlFileManager.get_html_file_image_not_found_map()["feed/html/zzz.html"]
+        self.assertEqual("", nf_entry["item_title"])
+        self.assertEqual("", nf_entry["item_url"])
+
     # ── remove_html_file_in_path_from_info ──
 
     def test_remove_html_file_invalid_dir_type(self) -> None:

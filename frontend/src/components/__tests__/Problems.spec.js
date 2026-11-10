@@ -580,6 +580,72 @@ describe("Problems.vue", () => {
     expect(wrapper.vm.htmlFileSizeSortDesc).toBe(true);
   });
 
+  it("renders item title column with original link in html tables", async () => {
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: { status: "success", result: [] },
+    });
+    axios.get.mockResolvedValueOnce({
+      data: {
+        status: "success",
+        result: {
+          html_file_size_map: [
+            {
+              feed_title: "피드A",
+              feed_dir_path: "g/a",
+              file_path: "g/a/html/a.html",
+              size: 10,
+              item_title: "아이템A",
+              item_url: "https://example.com/a",
+            },
+          ],
+          html_file_with_many_image_tag_map: [],
+          html_file_without_image_tag_map: [],
+          html_file_image_not_found_map: [
+            {
+              feed_title: "피드B",
+              feed_dir_path: "g/b",
+              file_path: "g/b/html/b.html",
+              item_title: "아이템B",
+              item_url: "",
+            },
+          ],
+        },
+      },
+    });
+    axios.get.mockResolvedValue({ data: { status: "success", result: [] } });
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    const labels = (fields) => fields.map((f) => f.key);
+    expect(labels(wrapper.vm.htmlFileSizeFields).slice(0, 2)).toEqual([
+      "feed_title",
+      "item_title",
+    ]);
+    expect(
+      labels(wrapper.vm.htmlFileWithImageNotFoundFields).slice(0, 2),
+    ).toEqual(["feed_title", "item_title"]);
+
+    const link = wrapper.find('a[href="https://example.com/a"]');
+    expect(link.exists()).toBe(true);
+    expect(link.text()).toBe("아이템A");
+    expect(link.attributes("target")).toBe("_blank");
+    expect(link.element.parentElement.classList.contains("cell-ellipsis")).toBe(
+      true,
+    );
+
+    const plain = wrapper
+      .findAll("span.cell-ellipsis")
+      .find((el) => el.attributes("title") === "아이템B");
+    expect(plain).toBeTruthy();
+    expect(plain.find("a").exists()).toBe(false);
+  });
+
   it("sorts listUrlInfo table by clicking a column", async () => {
     axios.get.mockResolvedValueOnce({
       data: { status: "success", result: [] },
