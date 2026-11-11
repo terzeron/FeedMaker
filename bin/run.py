@@ -93,7 +93,7 @@ class FeedMakerRunner:
                 # 불필요한 파일 삭제
                 FileManager.remove_temporary_files(feed_dir_path)
         except Timeout:
-            LOGGER.error("can't run multiple feed makers concurrently")
+            LOGGER.warning("can't run multiple feed makers concurrently")
             return False
 
         end_time = datetime.now(timezone.utc)
