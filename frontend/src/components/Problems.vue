@@ -152,32 +152,32 @@
           header-text-variant="white"
           header-tag="header"
         >
-          피드 URL 개수
+          이미지 없는 HTML 파일
         </BCardHeader>
         <BCardBody class="m-0 p-0">
           <div
-            v-if="sortedListUrlInfolist && Array.isArray(sortedListUrlInfolist)"
+            v-if="sortedHtmlFileWithImageNotFoundlist && Array.isArray(sortedHtmlFileWithImageNotFoundlist)"
             class="table-responsive"
           >
             <table
-              class="table table-striped table-hover table-sm table-bordered m-0 p-0 no-action-col"
+              class="table table-striped table-hover table-sm table-bordered m-0 p-0 text-break"
             >
               <thead>
                 <tr>
                   <th
-                    v-for="field in listUrlInfoFields"
+                    v-for="field in htmlFileWithImageNotFoundFields"
                     :key="field.key"
                     :class="{
                       sortable: field.sortable,
-                      'sort-asc': field.sortable && listUrlInfoSortBy === field.key && !listUrlInfoSortDesc,
-                      'sort-desc': field.sortable && listUrlInfoSortBy === field.key && listUrlInfoSortDesc
+                      'sort-asc': field.sortable && htmlFileWithImageNotFoundSortBy === field.key && !htmlFileWithImageNotFoundSortDesc,
+                      'sort-desc': field.sortable && htmlFileWithImageNotFoundSortBy === field.key && htmlFileWithImageNotFoundSortDesc
                     }"
-                    @click="field.sortable ? sortTable('listUrlInfo', field.key) : null"
+                    @click="field.sortable ? sortTable('htmlFileWithImageNotFound', field.key) : null"
                   >
                     {{ field.label }}
                     <span v-if="field.sortable" class="sort-icon">
-                      <span v-if="listUrlInfoSortBy === field.key">
-                        {{ listUrlInfoSortDesc ? '↓' : '↑' }}
+                      <span v-if="htmlFileWithImageNotFoundSortBy === field.key">
+                        {{ htmlFileWithImageNotFoundSortDesc ? '↓' : '↑' }}
                       </span>
                       <span v-else>↕</span>
                     </span>
@@ -185,14 +185,34 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(item, index) in sortedListUrlInfolist" :key="index">
-                  <td v-for="field in listUrlInfoFields" :key="field.key">
-                    <span v-if="field.key === 'feed_title'">
-                      <router-link v-if="item.group_name && item.feed_name" :to="`/management/${item.group_name}/${item.feed_name}`">
-                        {{ item[field.key] || item.feed_name }}
-                      </router-link>
+                <tr
+                  v-for="(item, index) in sortedHtmlFileWithImageNotFoundlist"
+                  :key="index"
+                >
+                  <td
+                    v-for="field in htmlFileWithImageNotFoundFields"
+                    :key="field.key"
+                   :class="{ 'ellipsis-cell': field.key === 'feed_title' || field.key === 'item_title' }"
+                  >
+                    <span v-if="field.key === 'feed_title'" class="feed-title-ellipsis cell-ellipsis" :title="item[field.key]">
+                      <a v-if="getFeedDirLink(item)" :href="getFeedDirLink(item)">
+                        {{ item[field.key] }}
+                      </a>
                       <span v-else>{{ item[field.key] }}</span>
                     </span>
+                    <span v-else-if="field.key === 'item_title'" class="feed-title-ellipsis cell-ellipsis" :title="item.item_title">
+                      <a v-if="item.item_url" :href="item.item_url" target="_blank" rel="noopener noreferrer">
+                        {{ item.item_title || item.item_url }}
+                      </a>
+                      <span v-else>{{ item.item_title }}</span>
+                    </span>
+                    <span v-else-if="field.key === 'action'">
+                      <font-awesome-icon
+                        :icon="['far', 'trash-alt']"
+                        @click="imageNotFoundDeleteClicked({ item: item })"
+                      />
+                    </span>
+                    <span v-else-if="field.key === 'file_name'" class="text-danger">{{ item[field.key] }}</span>
                     <span v-else>{{ item[field.key] }}</span>
                   </td>
                 </tr>
@@ -434,32 +454,32 @@
           header-text-variant="white"
           header-tag="header"
         >
-          이미지 없는 HTML 파일
+          피드 URL 개수
         </BCardHeader>
         <BCardBody class="m-0 p-0">
           <div
-            v-if="sortedHtmlFileWithImageNotFoundlist && Array.isArray(sortedHtmlFileWithImageNotFoundlist)"
+            v-if="sortedListUrlInfolist && Array.isArray(sortedListUrlInfolist)"
             class="table-responsive"
           >
             <table
-              class="table table-striped table-hover table-sm table-bordered m-0 p-0 text-break"
+              class="table table-striped table-hover table-sm table-bordered m-0 p-0 no-action-col"
             >
               <thead>
                 <tr>
                   <th
-                    v-for="field in htmlFileWithImageNotFoundFields"
+                    v-for="field in listUrlInfoFields"
                     :key="field.key"
                     :class="{
                       sortable: field.sortable,
-                      'sort-asc': field.sortable && htmlFileWithImageNotFoundSortBy === field.key && !htmlFileWithImageNotFoundSortDesc,
-                      'sort-desc': field.sortable && htmlFileWithImageNotFoundSortBy === field.key && htmlFileWithImageNotFoundSortDesc
+                      'sort-asc': field.sortable && listUrlInfoSortBy === field.key && !listUrlInfoSortDesc,
+                      'sort-desc': field.sortable && listUrlInfoSortBy === field.key && listUrlInfoSortDesc
                     }"
-                    @click="field.sortable ? sortTable('htmlFileWithImageNotFound', field.key) : null"
+                    @click="field.sortable ? sortTable('listUrlInfo', field.key) : null"
                   >
                     {{ field.label }}
                     <span v-if="field.sortable" class="sort-icon">
-                      <span v-if="htmlFileWithImageNotFoundSortBy === field.key">
-                        {{ htmlFileWithImageNotFoundSortDesc ? '↓' : '↑' }}
+                      <span v-if="listUrlInfoSortBy === field.key">
+                        {{ listUrlInfoSortDesc ? '↓' : '↑' }}
                       </span>
                       <span v-else>↕</span>
                     </span>
@@ -467,32 +487,13 @@
                 </tr>
               </thead>
               <tbody>
-                <tr
-                  v-for="(item, index) in sortedHtmlFileWithImageNotFoundlist"
-                  :key="index"
-                >
-                  <td
-                    v-for="field in htmlFileWithImageNotFoundFields"
-                    :key="field.key"
-                   :class="{ 'ellipsis-cell': field.key === 'feed_title' || field.key === 'item_title' }"
-                  >
-                    <span v-if="field.key === 'feed_title'" class="feed-title-ellipsis cell-ellipsis" :title="item[field.key]">
-                      <a v-if="getFeedDirLink(item)" :href="getFeedDirLink(item)">
-                        {{ item[field.key] }}
-                      </a>
+                <tr v-for="(item, index) in sortedListUrlInfolist" :key="index">
+                  <td v-for="field in listUrlInfoFields" :key="field.key">
+                    <span v-if="field.key === 'feed_title'">
+                      <router-link v-if="item.group_name && item.feed_name" :to="`/management/${item.group_name}/${item.feed_name}`">
+                        {{ item[field.key] || item.feed_name }}
+                      </router-link>
                       <span v-else>{{ item[field.key] }}</span>
-                    </span>
-                    <span v-else-if="field.key === 'item_title'" class="feed-title-ellipsis cell-ellipsis" :title="item.item_title">
-                      <a v-if="item.item_url" :href="item.item_url" target="_blank" rel="noopener noreferrer">
-                        {{ item.item_title || item.item_url }}
-                      </a>
-                      <span v-else>{{ item.item_title }}</span>
-                    </span>
-                    <span v-else-if="field.key === 'action'">
-                      <font-awesome-icon
-                        :icon="['far', 'trash-alt']"
-                        @click="imageNotFoundDeleteClicked({ item: item })"
-                      />
                     </span>
                     <span v-else>{{ item[field.key] }}</span>
                   </td>
