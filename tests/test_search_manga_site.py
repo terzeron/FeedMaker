@@ -10,7 +10,7 @@ from utils.search_manga_site import EleventoonSite, FunbeSite, JoatoonSite, Meth
 import tempfile
 import unittest
 from unittest.mock import patch, MagicMock
-from utils.search_manga_site import WfwfSite, WtwtSite, BlacktoonSite, TorrentJokSite, TorrentZotaSite, TorrentTopSite, MzgtoonSite, SearchFetchError
+from utils.search_manga_site import WfwfSite, SbxhSite, WtwtSite, BlacktoonSite, TorrentJokSite, TorrentZotaSite, TorrentTopSite, MzgtoonSite, SearchFetchError
 from bin.feed_maker_util import NotFoundConfigFileError
 import io
 
@@ -865,9 +865,42 @@ class TestWfwfSite(SiteTestBase):
     def test_init_and_postfix(self):
         self._create_site_config("wfwf")
         site = WfwfSite("wfwf")
-        self.assertEqual(site.extraction_attrs, {"bypass": "true"})
+        self.assertEqual(site.extraction_attrs, {"class": "t-card"})
         site.set_url_postfix_with_keyword("test")
         self.assertIn("/search.html?q=", site.url_postfix)
+
+    def test_extract_only_result_cards(self):
+        self._create_site_config("wfwf")
+        site = WfwfSite("wfwf")
+        html = '<html><body><header><a href="/ing">연재</a></header><section class="filter-sec"><a class="ftag" href="/sh?q=x">전체</a></section><section class="grid-sec"><div class="thumb-grid"><a class="t-card" href="/list?toon=1"><div class="t-title">웹툰</div></a><a class="t-card" href="/cl?toon=2"><div class="t-title">만화책</div></a></div></section></body></html>'
+        result = site.extract_sub_content(html, site.extraction_attrs)
+        self.assertIn("/list?toon=1", result)
+        self.assertIn("/cl?toon=2", result)
+        self.assertNotIn("/ing", result)
+        self.assertNotIn("/sh?q=x", result)
+
+
+class TestSbxhSite(SiteTestBase):
+    def test_init_and_postfix(self):
+        self._create_site_config("sbxh")
+        site = SbxhSite("sbxh")
+        self.assertEqual(site.extraction_attrs, {"class": "search-results-grid"})
+        site.set_url_postfix_with_keyword("1년차 만렙")
+        self.assertEqual(site.url_postfix, "/search?q=1%EB%85%84%EC%B0%A8%20%EB%A7%8C%EB%A0%99")
+
+    def test_extract_only_result_grid(self):
+        self._create_site_config("sbxh")
+        site = SbxhSite("sbxh")
+        html = '<html><body><main><section class="filter"><a class="chip" href="/search?q=x&amp;kind=webtoon">웹툰</a></section><div class="card-grid search-results-grid"><a class="card" href="/webtoon/1"><p class="subject">작품</p></a></div></main></body></html>'
+        result = site.extract_sub_content(html, site.extraction_attrs)
+        self.assertIn("/webtoon/1", result)
+        self.assertNotIn("kind=webtoon", result)
+
+    def test_extract_empty_result(self):
+        self._create_site_config("sbxh")
+        site = SbxhSite("sbxh")
+        html = '<html><body><main><div class="ep-empty"><div class="t">검색 결과가 없습니다</div></div></main></body></html>'
+        self.assertEqual(site.extract_sub_content(html, site.extraction_attrs), "")
 
 
 class TestWtwtSite(SiteTestBase):
