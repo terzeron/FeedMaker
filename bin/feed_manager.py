@@ -35,6 +35,9 @@ def normalize_feed_identity(group_name: str, feed_name: str) -> Optional[tuple[s
         canonical 이름과 is_active=False를 돌려준다. 접두사가 없으면 이름을
         그대로 두고 is_active=True.
 
+    예외:
+      - 정규화한 group_name 또는 feed_name이 빈 문자열이면 ValueError.
+
     DB의 feed_name/group_name(PK)은 항상 '_' 없는 canonical을 유지하고, 비활성
     표기는 파일시스템 '_' 접두사 + is_active 필드로만 관리한다
     (FeedManager.toggle_feed 참조).
@@ -42,7 +45,12 @@ def normalize_feed_identity(group_name: str, feed_name: str) -> Optional[tuple[s
     if group_name in NON_FEED_DIR_NAMES or feed_name in NON_FEED_DIR_NAMES:
         return None
     is_active = not (group_name.startswith("_") or feed_name.startswith("_"))
-    return group_name.lstrip("_"), feed_name.lstrip("_"), is_active
+    canonical_group_name, canonical_feed_name = group_name.lstrip("_"), feed_name.lstrip("_")
+    # 빈 이름(예: Path('.')에서 온 '')을 PK로 쓰면 ('', '') 쓰레기 행이 생긴다.
+    # 경고는 묻히므로 DB에 쓰기 전에 실패시킨다.
+    if not canonical_group_name or not canonical_feed_name:
+        raise ValueError(f"empty canonical feed identity: group_name={group_name!r}, feed_name={feed_name!r}")
+    return canonical_group_name, canonical_feed_name, is_active
 
 
 class FeedUrlCountInfo(TypedDict):

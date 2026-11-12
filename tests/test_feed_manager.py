@@ -1806,6 +1806,20 @@ class TestNormalizeFeedIdentity(unittest.TestCase):
         self.assertIn("__pycache__", NON_FEED_DIR_NAMES)
         self.assertIsNone(normalize_feed_identity("group", "__pycache__"))
 
+    def test_empty_canonical_name_raises(self) -> None:
+        # 빈 이름이 DB PK로 들어가면 ('', '') 같은 쓰레기 행이 생기므로 조용히 넘기지 않고 실패한다.
+        for group_name, feed_name in [("", "feed"), ("group", ""), ("", ""), ("_", "feed"), ("group", "__")]:
+            with self.subTest(group_name=group_name, feed_name=feed_name):
+                with self.assertRaises(ValueError):
+                    normalize_feed_identity(group_name, feed_name)
+
+    def test_add_config_info_with_dot_path_raises(self) -> None:
+        # Path('.')은 name/parent.name이 모두 ''라서 DB에 쓰기 전에 실패해야 한다.
+        session = MagicMock()
+        with self.assertRaises(ValueError):
+            FeedManager._add_config_info(session, Path("."))
+        session.add.assert_not_called()
+
 
 class TestRemoveNoncanonicalFeedInfo(FeedManagerTestBase):
     def test_deletes_underscore_prefixed_rows(self) -> None:

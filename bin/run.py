@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 
+import os
 import re
 import sys
 from datetime import datetime, timedelta, timezone
@@ -249,7 +250,9 @@ def main() -> int:
         if len(args) > 1:
             print_usage()
             return -1
-        feed_dir_path = Path(args[0])
+        # '.' 같은 상대 경로는 Path.name이 ''가 되어 DB에 빈 feed_name/group_name이 기록된다.
+        # PathUtil.short_path와 같이 symlink는 풀지 않고 abspath로만 정규화한다.
+        feed_dir_path = Path(os.path.abspath(args[0]))
     LOGGER.debug(options)
     LOGGER.debug(PathUtil.short_path(feed_dir_path))
 
