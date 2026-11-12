@@ -1040,6 +1040,19 @@ class TestAddPublicFeed(FeedManagerTestBase):
         self.assertEqual(result, 0)
         self.mock_session.query.assert_not_called()
 
+    def test_hidden_file_is_skipped(self) -> None:
+        # '.xml' 같은 dotfile은 stem이 '.xml'이라 가짜 피드 행이 생기므로 적재하지 않는다.
+        path = MagicMock(spec=Path)
+        path.is_file.return_value = True
+        path.name = ".xml"
+        path.stem = ".xml"
+
+        result = FeedManager._add_public_feed(self.mock_session, path)
+
+        self.assertEqual(result, 0)
+        self.mock_session.query.assert_not_called()
+        self.mock_session.add.assert_not_called()
+
     def test_reads_file_and_updates_existing(self) -> None:
         path = MagicMock(spec=Path)
         path.is_file.return_value = True
@@ -1805,6 +1818,18 @@ class TestNormalizeFeedIdentity(unittest.TestCase):
     def test_pycache_is_excluded(self) -> None:
         self.assertIn("__pycache__", NON_FEED_DIR_NAMES)
         self.assertIsNone(normalize_feed_identity("group", "__pycache__"))
+
+    def test_hidden_dirs_return_none(self) -> None:
+        # '.venv', '.playwright-mcp' 같은 숨김 디렉터리는 피드가 아니다.
+        for group_name, feed_name in [(".venv", "bin"), (".serena", "cache"), ("study", ".playwright-mcp"), (".claude", "skills")]:
+            with self.subTest(group_name=group_name, feed_name=feed_name):
+                self.assertIsNone(normalize_feed_identity(group_name, feed_name))
+
+    def test_tool_dirs_return_none(self) -> None:
+        for name in ["graphify-out", "docs", "logs"]:
+            with self.subTest(name=name):
+                self.assertIn(name, NON_FEED_DIR_NAMES)
+                self.assertIsNone(normalize_feed_identity(name, "cache"))
 
     def test_empty_canonical_name_raises(self) -> None:
         # 빈 이름이 DB PK로 들어가면 ('', '') 같은 쓰레기 행이 생기므로 조용히 넘기지 않고 실패한다.

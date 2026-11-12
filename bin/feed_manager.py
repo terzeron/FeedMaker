@@ -22,14 +22,16 @@ LOGGER = logging.getLogger()
 # 파일시스템 스캔 시 피드로 취급하지 않는 디렉터리.
 # 파이썬/개발 도구가 자동 생성하는 캐시, VCS 메타, 테스트용 디렉터리가
 # feed_info 테이블에 피드로 적재되면 안 된다.
-NON_FEED_DIR_NAMES = frozenset({".git", "test", ".mypy_cache", ".ruff_cache", ".pytest_cache", "__pycache__"})
+# 작업 디렉터리에 함께 있는 캐시/도구/문서 디렉터리. 피드로 적재하지 않는다.
+NON_FEED_DIR_NAMES = frozenset({".git", "test", ".mypy_cache", ".ruff_cache", ".pytest_cache", "__pycache__", "graphify-out", "docs", "logs"})
 
 
 def normalize_feed_identity(group_name: str, feed_name: str) -> Optional[tuple[str, str, bool]]:
     """파일시스템 디렉터리명을 DB의 canonical 식별자로 정규화한다.
 
     반환값:
-      - 캐시/VCS/테스트 디렉터리이면 None (feed_info에 기록하지 않음).
+      - 캐시/VCS/테스트/도구 디렉터리이거나 '.'으로 시작하는 숨김 디렉터리이면
+        None (feed_info에 기록하지 않음).
       - 그 외에는 (group_name, feed_name, is_active) 튜플.
         '_' 접두사가 하나라도 있으면 비활성 피드로 보고 접두사를 모두 제거한
         canonical 이름과 is_active=False를 돌려준다. 접두사가 없으면 이름을
@@ -43,6 +45,8 @@ def normalize_feed_identity(group_name: str, feed_name: str) -> Optional[tuple[s
     (FeedManager.toggle_feed 참조).
     """
     if group_name in NON_FEED_DIR_NAMES or feed_name in NON_FEED_DIR_NAMES:
+        return None
+    if group_name.startswith(".") or feed_name.startswith("."):
         return None
     is_active = not (group_name.startswith("_") or feed_name.startswith("_"))
     canonical_group_name, canonical_feed_name = group_name.lstrip("_"), feed_name.lstrip("_")
@@ -335,6 +339,9 @@ class FeedManager:
     def _add_public_feed(cls, s: Session, public_feed_file_path: Path) -> int:
         if not public_feed_file_path.is_file():
             LOGGER.error("can't find a public feed file '%s'", PathUtil.short_path(public_feed_file_path))
+            return 0
+        if public_feed_file_path.stem.startswith("."):
+            # '.xml' 같은 dotfile은 stem이 '.xml'인 가짜 피드 행을 만든다.
             return 0
 
         feed_name = public_feed_file_path.stem
