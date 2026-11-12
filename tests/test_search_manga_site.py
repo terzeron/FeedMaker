@@ -10,7 +10,7 @@ from utils.search_manga_site import EleventoonSite, FunbeSite, JoatoonSite, Meth
 import tempfile
 import unittest
 from unittest.mock import patch, MagicMock
-from utils.search_manga_site import WfwfSite, WtwtSite, BlacktoonSite, TorrentJokSite, TorrentZotaSite, TorrentTopSite, MzgtoonSite
+from utils.search_manga_site import WfwfSite, WtwtSite, BlacktoonSite, TorrentJokSite, TorrentZotaSite, TorrentTopSite, MzgtoonSite, SearchFetchError
 from bin.feed_maker_util import NotFoundConfigFileError
 import io
 
@@ -74,7 +74,7 @@ def test_search_manga_site() -> None:
                 (EleventoonSite("test_site"), "테스트", "/bbs/search_stx.php?stx=%ED%85%8C%EC%8A%A4%ED%8A%B8"),
                 (FunbeSite("test_site"), "테스트", "/bbs/search.php?stx=%ED%85%8C%EC%8A%A4%ED%8A%B8"),
                 (ToonkorSite("test_site"), "테스트", "/bbs/search_webtoon.php?stx=%ED%85%8C%EC%8A%A4%ED%8A%B8"),
-                (XtoonSite("test_site"), "테스트", "/index.php/search?key=%ED%85%8C%EC%8A%A4%ED%8A%B8"),
+                (XtoonSite("test_site"), "테스트", "/index.php/search?q=%ED%85%8C%EC%8A%A4%ED%8A%B8"),
                 (JoatoonSite("test_site"), "테스트", "/toon/search?k=%ED%85%8C%EC%8A%A4%ED%8A%B8"),
                 (TorrentQqSite("test_site"), "테스트", "/search?q=%ED%85%8C%EC%8A%A4%ED%8A%B8"),
                 (TorrentRjSite("test_site"), "테스트", "/search/index?keywords=%ED%85%8C%EC%8A%A4%ED%8A%B8"),
@@ -692,6 +692,18 @@ class TestExtractSubContentAgit(SiteTestBase):
         self.assertIn("My Manga Title", result)
         self.assertIn("/manga/123.html", result)
 
+    def test_result_is_clickable_link(self):
+        self.site.url_prefix = "https://example.com/webtoon/1.html"
+        content = 'var data = [{"t": "My Manga", "x": "9335"}];'
+        result = self.site.extract_sub_content_from_site_like_agit(content, "Manga")
+        self.assertIn('<a href="https://example.com/webtoon/9335.html" target="_blank">', result)
+
+    def test_title_is_html_escaped(self):
+        content = 'var data = [{"t": "<b>Manga</b>", "x": "1"}];'
+        result = self.site.extract_sub_content_from_site_like_agit(content, "Manga")
+        self.assertIn("&lt;b&gt;Manga&lt;/b&gt;", result)
+        self.assertNotIn("<b>", result)
+
     def test_with_html_wrapper(self):
         content = '<html><head></head><body><pre>var data = [{"t": "Test", "x": "/p/1"}];</pre></body></html>'
         result = self.site.extract_sub_content_from_site_like_agit(content, "Test")
@@ -729,10 +741,16 @@ class TestSearchMethod(SiteTestBase):
         self.assertIn("Found", result)
 
     @patch.object(Site, "get_data_from_site")
-    def test_search_returns_empty_when_no_html(self, mock_get):
+    def test_search_raises_when_no_html(self, mock_get):
         mock_get.return_value = None
-        result = self.site.search("keyword")
-        self.assertEqual(result, "")
+        with self.assertRaises(SearchFetchError):
+            self.site.search("keyword")
+
+    @patch.object(Site, "get_data_from_site")
+    def test_search_raises_when_empty_html(self, mock_get):
+        mock_get.return_value = ""
+        with self.assertRaises(SearchFetchError):
+            self.site.search("keyword")
 
     @patch.object(Site, "get_data_from_site")
     def test_search_calls_preprocess(self, mock_get):
@@ -856,7 +874,7 @@ class TestWtwtSite(SiteTestBase):
     def test_init_and_postfix(self):
         self._create_site_config("wtwt")
         site = WtwtSite("wtwt")
-        self.assertEqual(site.extraction_attrs, {"class": "gallery"})
+        self.assertEqual(site.extraction_attrs, {"class": "webtoon-list"})
         self.assertEqual(site.method, Method.POST)
         site.set_url_postfix_with_keyword("kw")
         self.assertEqual(site.url_postfix, "/sh")
@@ -864,17 +882,26 @@ class TestWtwtSite(SiteTestBase):
     def test_set_payload(self):
         self._create_site_config("wtwt")
         site = WtwtSite("wtwt")
-        site.set_payload("test")
-        self.assertIn("search_txt", site.payload)
+        site.set_payload("테스트")
+        self.assertEqual(site.payload, {"search_txt_val": "테스트".encode("cp949")})
 
 
 class TestXtoonSite(SiteTestBase):
     def test_init_and_postfix(self):
         self._create_site_config("xtoon")
         site = XtoonSite("xtoon")
-        self.assertEqual(site.extraction_attrs, {"class": "katoon-box"})
+        self.assertEqual(site.extraction_attrs, {"class": "comic-link"})
         site.set_url_postfix_with_keyword("manga")
-        self.assertIn("/index.php/search?key=", site.url_postfix)
+        self.assertEqual(site.url_postfix, "/index.php/search?q=manga")
+
+    def test_preprocess_removes_ad_links(self):
+        self._create_site_config("xtoon")
+        site = XtoonSite("xtoon")
+        html = '<main><a class="comic-link" href="https://x.example.com/index.php/ads/8/click?placement=cover">광고</a><a class="comic-link" href="https://x.example.com/index.php/comics/5806">작품</a></main>'
+        result = site.extract_sub_content(site.preprocess_search_result(html), site.extraction_attrs)
+        self.assertIn("/comics/5806", result)
+        self.assertNotIn("/ads/", result)
+        self.assertNotIn("광고", result)
 
 
 class TestJoatoonSite(SiteTestBase):
@@ -914,12 +941,43 @@ class TestEleventoonSite(SiteTestBase):
 
 
 class TestBlacktoonSite(SiteTestBase):
-    def test_init_and_postfix(self):
-        self._create_site_config("blacktoon")
-        site = BlacktoonSite("blacktoon")
-        self.assertEqual(site.extraction_attrs, {"id": "toonbook_list"})
-        site.set_url_postfix_with_keyword("kw")
-        self.assertIn("/index.html#search?", site.url_postfix)
+    MAIN_HTML = """<script>var inc_url2= "https://data.example.com";</script>
+        <script>try { await loadScript(inc_url2+'/webtoon_1.js?s=202611121318'); } catch {}
+        try { await loadScript(inc_url2+'/webtoon_0.js?s=202611121318'); } catch {}</script>"""
+    DATA0 = 'var data0 = [{"x":"9335","t":"독보소요"},{"x":"1","t":"다른 작품"}];\n'
+    DATA1 = 'var data1 = [{"x":"3181","t":"무련전봉"}];\n'
+
+    def _site(self):
+        self._create_site_config("blacktoon", _make_config(url="https://blacktoon427.com/webtoon/9335.html", referer="https://blacktoon427.com/", render_js=True))
+        return BlacktoonSite("blacktoon")
+
+    def test_init_disables_render_js_and_keeps_referer(self):
+        site = self._site()
+        self.assertFalse(site.render_js)
+        self.assertEqual(site.headers, {"Referer": "https://blacktoon427.com/"})
+
+    def test_search_reads_data_files(self):
+        site = self._site()
+        responses = {"https://blacktoon427.com/": self.MAIN_HTML, "https://data.example.com/webtoon_0.js?s=202611121318": self.DATA0, "https://data.example.com/webtoon_1.js?s=202611121318": self.DATA1}
+        with patch.object(BlacktoonSite, "get_data_from_site", side_effect=lambda url="": responses[url]):
+            result = site.search("독보소요")
+        self.assertIn("독보소요", result)
+        self.assertIn("https://blacktoon427.com/webtoon/9335.html", result)
+        self.assertNotIn("다른 작품", result)
+        self.assertNotIn("무련전봉", result)
+
+    def test_search_raises_without_data_file_paths(self):
+        site = self._site()
+        with patch.object(BlacktoonSite, "get_data_from_site", return_value="<html>no scripts</html>"):
+            with self.assertRaises(SearchFetchError):
+                site.search("독보소요")
+
+    def test_search_raises_when_data_file_is_empty(self):
+        site = self._site()
+        responses = {"https://blacktoon427.com/": self.MAIN_HTML}
+        with patch.object(BlacktoonSite, "get_data_from_site", side_effect=lambda url="": responses.get(url, "")):
+            with self.assertRaises(SearchFetchError):
+                site.search("독보소요")
 
 
 class TestTorrentJokSite(SiteTestBase):
@@ -1008,8 +1066,8 @@ class TestMzgtoonSite(SiteTestBase):
     def test_preprocess_search_result_no_pre_tag(self):
         self._create_site_config("mzgtoon", _make_config(url="https://mzg.example.com/path"))
         site = MzgtoonSite("mzgtoon")
-        result = site.preprocess_search_result("<div>No pre tag</div>")
-        self.assertEqual(result, "")
+        with self.assertRaises(SearchFetchError):
+            site.preprocess_search_result("<html><title>Redirecting...</title></html>")
 
     def test_preprocess_search_result_no_toon_data(self):
         self._create_site_config("mzgtoon", _make_config(url="https://mzg.example.com/path"))
@@ -1087,6 +1145,23 @@ class TestSearchManager(SiteTestBase):
         with patch.object(Site, "search", side_effect=Exception("boom")):
             sm.worker(site, "kw")
             self.assertEqual(sm.result_by_site[site], "")
+            self.assertIn("boom", sm.error_by_site["workersite2"])
+
+    def test_search_single_site_fetch_error(self):
+        self._create_site_config("funbe")
+        sm = SearchManager()
+        with patch.object(Site, "get_data_from_site", return_value=None):
+            result, error = sm.search_single_site("funbe", "kw")
+            self.assertEqual(result, "")
+            self.assertIn("SearchFetchError", error)
+
+    def test_search_sites_single_site_records_error(self):
+        self._create_site_config("funbe")
+        sm = SearchManager()
+        with patch.object(FunbeSite, "search", side_effect=SearchFetchError("no response")):
+            result = sm.search_sites("funbe", "kw")
+            self.assertEqual(result, "")
+            self.assertIn("no response", sm.error_by_site["funbe"])
 
     def test_create_site_list(self):
         # Create configs for some sites
@@ -1369,6 +1444,7 @@ class TestSearchMangaSiteMain(unittest.TestCase):
     def test_main_keyword_no_site(self, mock_sm_cls):
         mock_sm = MagicMock()
         mock_sm.search_sites.return_value = "<div>result</div>"
+        mock_sm.error_by_site = {}
         mock_sm_cls.return_value = mock_sm
 
         argv = ["search_manga_site.py", "keyword_test"]
@@ -1384,6 +1460,7 @@ class TestSearchMangaSiteMain(unittest.TestCase):
     def test_main_with_site_name(self, mock_sm_cls):
         mock_sm = MagicMock()
         mock_sm.search_sites.return_value = "<div>site result</div>"
+        mock_sm.error_by_site = {}
         mock_sm_cls.return_value = mock_sm
 
         argv = ["search_manga_site.py", "-s", "funbe", "keyword_test"]
@@ -1398,6 +1475,7 @@ class TestSearchMangaSiteMain(unittest.TestCase):
     def test_main_with_torrent_option(self, mock_sm_cls):
         mock_sm = MagicMock()
         mock_sm.search_sites.return_value = ""
+        mock_sm.error_by_site = {}
         mock_sm_cls.return_value = mock_sm
 
         argv = ["search_manga_site.py", "-t", "keyword_test"]
@@ -1407,6 +1485,22 @@ class TestSearchMangaSiteMain(unittest.TestCase):
             ret = main()
             self.assertEqual(ret, 0)
             mock_sm.search_sites.assert_called_once_with("", "keyword_test", True)
+
+    @patch("utils.search_manga_site.SearchManager")
+    def test_main_returns_nonzero_on_site_error(self, mock_sm_cls):
+        mock_sm = MagicMock()
+        mock_sm.search_sites.return_value = ""
+        mock_sm.error_by_site = {"funbe": "SearchFetchError: no response"}
+        mock_sm_cls.return_value = mock_sm
+
+        argv = ["search_manga_site.py", "-s", "funbe", "keyword_test"]
+        with patch("sys.argv", argv), patch("sys.stdout", new_callable=io.StringIO), patch("sys.stderr", new_callable=io.StringIO) as err:
+            from utils.search_manga_site import main
+
+            ret = main()
+            self.assertEqual(ret, 1)
+            self.assertIn("funbe", err.getvalue())
+            self.assertIn("no response", err.getvalue())
 
 
 if __name__ == "__main__":

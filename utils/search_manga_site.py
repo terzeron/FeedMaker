@@ -3,6 +3,7 @@
 import sys
 import json
 import re
+from html import escape as escape_html
 import getopt
 from threading import Thread
 import logging.config
@@ -17,6 +18,13 @@ from bin.feed_maker_util import URL, HTMLExtractor, NotFoundConfigFileError, Env
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
+
+
+class SearchFetchError(Exception):
+    """검색 응답을 받지 못했거나 검색 결과가 아닌 응답(차단 페이지 등)을 받은 경우.
+
+    빈 검색 결과("결과 없음")와 사이트 장애를 구분하려고 둔다.
+    """
 
 
 class Site:
@@ -266,8 +274,9 @@ class Site:
         data = json.loads(content)
         for item in data:
             if keyword in item["t"]:
-                link = URL.concatenate_url(self.url_prefix, item["x"] + ".html")
-                result_str = f"<div>\n<span>{item['t']}</span>\t<span>{link}</span>\n</div>\n"
+                link = escape_html(URL.concatenate_url(self.url_prefix, item["x"] + ".html"))
+                title = escape_html(item["t"])
+                result_str = f'<div>\n<a href="{link}" target="_blank">{title}</a>\n</div>\n'
                 result_list.append(result_str)
         return "".join(result_list)
 
@@ -276,10 +285,10 @@ class Site:
         self.set_url_postfix_with_keyword(keyword)
         self.set_payload(keyword)
         html = self.get_data_from_site()
-        if html:
-            html = self.preprocess_search_result(html)
-            return self.extract_sub_content(html, self.extraction_attrs)
-        return ""
+        if not html:
+            raise SearchFetchError(f"no response from {self.get_base_url()}{self.url_postfix}")
+        html = self.preprocess_search_result(html)
+        return self.extract_sub_content(html, self.extraction_attrs)
 
     def search_in_site_like_agit(self, keyword: str) -> str:
         LOGGER.debug(f"# search_in_site_like_agit(keyword={keyword})")
@@ -337,7 +346,7 @@ class WfwfSite(Site):
 class WtwtSite(Site):
     def __init__(self, site_name: str) -> None:
         super().__init__(site_name)
-        self.extraction_attrs = {"class": "gallery"}
+        self.extraction_attrs = {"class": "webtoon-list"}
         self.method = Method.POST
         self.headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
@@ -346,17 +355,24 @@ class WtwtSite(Site):
 
     def set_payload(self, keyword: str = "") -> None:
         cp949_keyword = keyword.encode("cp949")
-        self.payload = {"search_txt": cp949_keyword}
+        self.payload = {"search_txt_val": cp949_keyword}
 
 
 class XtoonSite(Site):
     def __init__(self, site_name: str) -> None:
         super().__init__(site_name)
-        self.extraction_attrs = {"class": "katoon-box"}
+        self.extraction_attrs = {"class": "comic-link"}
 
     def set_url_postfix_with_keyword(self, keyword: str) -> None:
         encoded_keyword = quote(keyword)
-        self.url_postfix = "/index.php/search?key=" + encoded_keyword
+        self.url_postfix = "/index.php/search?q=" + encoded_keyword
+
+    def preprocess_search_result(self, search_result: str) -> str:
+        # 광고 카드도 comic-link class를 쓰므로 /ads/ 링크를 제거한다
+        soup = BeautifulSoup(search_result, "html.parser")
+        for a_tag in soup.find_all("a", href=re.compile(r"/ads/")):
+            a_tag.decompose()
+        return str(soup)
 
 
 class JoatoonSite(Site):
@@ -400,12 +416,37 @@ class EleventoonSite(Site):
 
 
 class BlacktoonSite(Site):
+    """검색 결과를 JS가 데이터 파일(webtoon_0.js, webtoon_1.js)에서 그리는 사이트.
+
+    메인 페이지에서 데이터 파일 경로를 찾아 직접 받고, 제목으로 거른다.
+    데이터 파일 서버는 Referer가 없으면 403을 주므로 site_config.json에 referer가 필요하다.
+    """
+
     def __init__(self, site_name: str = "") -> None:
         super().__init__(site_name)
-        self.extraction_attrs = {"id": "toonbook_list"}
+        # 메인 페이지와 데이터 파일 모두 정적 응답이라 JS 렌더링이 필요 없다
+        self.render_js = False
 
-    def set_url_postfix_with_keyword(self, keyword: str = "") -> None:
-        self.url_postfix = "/index.html#search?" + keyword
+    def search(self, keyword: str = "") -> str:
+        LOGGER.debug(f"# search(keyword={keyword})")
+        main_url = self.get_base_url() + "/"
+        main_html = self.get_data_from_site(main_url)
+        if not main_html:
+            raise SearchFetchError(f"no response from {main_url}")
+
+        m = re.search(r'inc_url2\s*=\s*["\']([^"\']+)["\']', main_html)
+        data_paths = sorted(set(re.findall(r"inc_url2\s*\+\s*'(/webtoon_[01]\.js[^']*)'", main_html)))
+        if not m or not data_paths:
+            raise SearchFetchError(f"can't find data file paths in {main_url}")
+
+        result_list: list[str] = []
+        for data_path in data_paths:
+            data_url = m.group(1) + data_path
+            content = self.get_data_from_site(data_url)
+            if not content:
+                raise SearchFetchError(f"no response from {data_url}")
+            result_list.append(self.extract_sub_content_from_site_like_agit(content, keyword))
+        return "".join(result_list)
 
 
 class TorrentJokSite(Site):
@@ -512,7 +553,7 @@ class MzgtoonSite(Site):
 
             return "".join(result_list)
 
-        return ""
+        raise SearchFetchError("unexpected response without JSON <pre> (bot challenge page?)")
 
 
 class SearchManager:
@@ -536,9 +577,11 @@ class SearchManager:
     ]
 
     result_by_site: dict[Site, str] = {}
+    error_by_site: dict[str, str] = {}
 
     def __init__(self) -> None:
         self.result_by_site = {}
+        self.error_by_site = {}
 
     @classmethod
     def get_available_site_names(cls, do_include_torrent_sites: bool = False) -> list[str]:
@@ -573,6 +616,7 @@ class SearchManager:
         except Exception as e:
             LOGGER.warning(f"Failed to search site {site.site_name}: {type(e).__name__}: {e}")
             self.result_by_site[site] = ""
+            self.error_by_site[site.site_name] = f"{type(e).__name__}: {e}"
 
     def _create_site_list(self) -> list[Site]:
         site_list: list[Site] = []
@@ -611,7 +655,8 @@ class SearchManager:
             # single site
             for site in site_list:
                 if site_name == site.site_name:
-                    result_list.append(site.search(keyword))
+                    self.worker(site, keyword)
+                    result_list.append(self.result_by_site[site])
 
         return "".join(result_list)
 
@@ -632,7 +677,9 @@ def main() -> int:
     result = search_manager.search_sites(site_name, keyword, do_include_torrent_sites)
     print(result)
 
-    return 0
+    for failed_site_name, error in search_manager.error_by_site.items():
+        print(f"{failed_site_name}: {error}", file=sys.stderr)
+    return 1 if search_manager.error_by_site else 0
 
 
 if __name__ == "__main__":  # pragma: no cover
