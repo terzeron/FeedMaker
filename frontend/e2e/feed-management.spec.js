@@ -6,6 +6,30 @@ test.describe("Feed Management 페이지", () => {
     await setupAuthenticatedRoutes(page);
   });
 
+  for (const running of [true, false]) {
+    test(`첫 상태 확인 전에는 1초, 확인 후에는 3초 간격으로 조회한다 (${running})`, async ({ page }) => {
+      await page.clock.install();
+      let calls = 0;
+      await page.route("**/check_running", (route) => {
+        calls += 1;
+        return route.fulfill({
+          json: calls === 1
+            ? { status: "failure" }
+            : { status: "success", running_status: running },
+        });
+      });
+      await page.goto("/management/webtoon/naver_webtoon");
+      await expect.poll(() => calls).toBe(1);
+      await page.clock.runFor(1000);
+      await expect.poll(() => calls).toBe(2);
+      await expect(page.getByRole("button", { name: running ? "중단" : "실행", exact: true })).toBeVisible();
+      await page.clock.runFor(2999);
+      expect(calls).toBe(2);
+      await page.clock.runFor(1);
+      await expect.poll(() => calls).toBe(3);
+    });
+  }
+
   test("관리 페이지에 접근하면 그룹 목록이 표시된다", async ({ page }) => {
     await page.goto("/management");
     await page.waitForLoadState("networkidle");
