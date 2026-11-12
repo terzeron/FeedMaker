@@ -169,7 +169,18 @@ class HeadlessBrowserNodriver(HeadlessBrowserBase):
                 return ""
             return f"<!DOCTYPE html>{html}" if html else ""
         finally:
+            # nodriver.stop() signals the subprocess without waiting for its pipes.
+            # Retain it before stop() can clear _process, then drain on this loop.
+            process = getattr(browser, "_process", None)
             browser.stop()
+            if isinstance(process, asyncio.subprocess.Process):
+                try:
+                    await asyncio.wait_for(process.communicate(), timeout=5)
+                except TimeoutError:
+                    LOGGER.warning("nodriver browser did not stop within 5 seconds; killing it")
+                    if process.returncode is None:
+                        process.kill()
+                    await process.communicate()
 
     def make_request(
         self,
