@@ -1,4 +1,4 @@
-import { mount } from "@vue/test-utils";
+import { flushPromises as flushVuePromises, mount } from "@vue/test-utils";
 import FeedManagement from "../FeedManagement.vue";
 import axios from "axios";
 
@@ -1137,6 +1137,42 @@ describe("FeedManagement.vue", () => {
   });
 
   describe("checkRunning", () => {
+    it.each([true, false])("polls immediately, retries every second, then every three seconds (%s)", async (running) => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      vi.useFakeTimers();
+      try {
+        wrapper.vm.selectedGroupName = "g1";
+        wrapper.vm.selectedFeedName = "f1";
+        axios.get.mockReset();
+        axios.get.mockResolvedValueOnce({ data: { status: "success", feed_info: FEED_INFO_CONTRACT } });
+        axios.get.mockResolvedValueOnce({ data: { status: "failure" } });
+        axios.get.mockRejectedValueOnce(new Error("network"));
+        axios.get.mockResolvedValue({ data: { status: "success", running_status: running } });
+        wrapper.vm.getFeedInfo("g1", "f1");
+        await flushVuePromises();
+        const statusCalls = () => axios.get.mock.calls.filter(([url]) => url.endsWith("/check_running")).length;
+        expect(statusCalls()).toBe(1);
+        await vi.advanceTimersByTimeAsync(999);
+        expect(statusCalls()).toBe(1);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(statusCalls()).toBe(2);
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(statusCalls()).toBe(3);
+        expect(wrapper.vm.isRunning).toBe(running);
+        await vi.advanceTimersByTimeAsync(2999);
+        expect(statusCalls()).toBe(3);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(statusCalls()).toBe(4);
+        wrapper.unmount();
+        await vi.advanceTimersByTimeAsync(3000);
+        expect(statusCalls()).toBe(4);
+      } finally {
+        wrapper.unmount();
+        vi.useRealTimers();
+      }
+    });
+
     it("starts button when running", async () => {
       const wrapper = createWrapper();
       await flushPromises();
@@ -2177,7 +2213,7 @@ describe("FeedManagement.vue", () => {
       expect(wrapper.vm.alertMessage).toBe("run failed");
     });
 
-    it("checkRunning failure clears interval and resets button", async () => {
+    it("checkRunning failure keeps interval for retry and resets button", async () => {
       const wrapper = createWrapper();
       await flushPromises();
       wrapper.vm.selectedGroupName = "g1";
@@ -2191,7 +2227,7 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.checkRunning();
       await flushPromises();
       expect(wrapper.vm.alertMessage).toBe("check failed");
-      expect(clearIntervalSpy).toHaveBeenCalledWith(fakeInterval);
+      expect(clearIntervalSpy).not.toHaveBeenCalledWith(fakeInterval);
       clearIntervalSpy.mockRestore();
     });
   });
@@ -2548,8 +2584,8 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.getFeedInfo("g1", "f1");
       await flushPromises();
 
-      // 3000ms 주기로 등록된 setInterval 콜백을 직접 실행해 line 1014를 탄다.
-      const intervalCall = setIntervalSpy.mock.calls.find((c) => c[1] === 3000);
+      // 첫 상태 확인 전에는 1000ms 간격으로 조회한다.
+      const intervalCall = setIntervalSpy.mock.calls.find((c) => c[1] === 1000);
       expect(intervalCall).toBeDefined();
       checkRunningSpy.mockClear();
       intervalCall[0]();

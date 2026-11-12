@@ -611,6 +611,7 @@ export default {
       progressRatio: 0.0,      feedCompletionDueDate: "-",
 
       checkRunningInterval: null,
+      hasRunningStatus: false,
       jsonEditor: null,
 
       // Modal related data
@@ -876,6 +877,7 @@ export default {
       console.log(`getGroups()`);
       if (this.checkRunningInterval) {
         clearInterval(this.checkRunningInterval);
+        this.checkRunningInterval = null;
       }
       const url = getApiUrlPath() + "/groups";
       axios
@@ -928,6 +930,7 @@ export default {
       console.log(`getFeedlistByGroup(${groupName})`);
       if (this.checkRunningInterval) {
         clearInterval(this.checkRunningInterval);
+        this.checkRunningInterval = null;
       }
       const url = getApiUrlPath() + `/groups/${groupName}/feeds`;
       axios
@@ -1013,6 +1016,7 @@ export default {
       const url = getApiUrlPath() + `/groups/${groupName}/feeds/${feedName}`;
       if (this.checkRunningInterval) {
         clearInterval(this.checkRunningInterval);
+        this.checkRunningInterval = null;
       }
       axios
         .get(url)
@@ -1038,10 +1042,11 @@ export default {
             }
             this.hideAllRelatedToGroup();
 
-            this.checkRunning();
+            this.hasRunningStatus = false;
             this.checkRunningInterval = setInterval(() => {
               this.checkRunning();
-            }, 3000);
+            }, 1000);
+            this.checkRunning();
           }
         })
         .catch((error) => {
@@ -1402,7 +1407,7 @@ export default {
       });
     },
     checkRunning: function () {
-      //console.log(`checkRunning()`);
+      const interval = this.checkRunningInterval;
       const url = getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}/check_running`;
       console.log("checkRunning URL:", url);
       axios
@@ -1412,10 +1417,14 @@ export default {
           if (res.data.status === "failure") {
             this.alert(res.data.message);
             this.resetButton("runButton");
-            if (this.checkRunningInterval) {
+          } else if (typeof res.data.running_status === "boolean") {
+            if (!this.hasRunningStatus && interval && this.checkRunningInterval === interval) {
+              this.hasRunningStatus = true;
               clearInterval(this.checkRunningInterval);
+              this.checkRunningInterval = setInterval(() => {
+                this.checkRunning();
+              }, 3000);
             }
-          } else {
             console.log("running_status:", res.data.running_status, "type:", typeof res.data.running_status);
             this.isRunning = res.data.running_status === true;
             if (!this.isRunning) {
@@ -1485,6 +1494,7 @@ export default {
   beforeUnmount: function () {
     if (this.checkRunningInterval) {
       clearInterval(this.checkRunningInterval);
+      this.checkRunningInterval = null;
     }
     if (this.jsonEditor) {
       this.jsonEditor.destroy();

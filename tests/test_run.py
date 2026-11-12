@@ -530,7 +530,31 @@ class TestDefect3RunMainEdgeCases(unittest.TestCase):
             main()
 
         actual_path = mock_runner.make_single_feed.call_args[0][0]
-        self.assertEqual(str(actual_path), "naver/some_feed")
+        self.assertEqual(actual_path, Path.cwd() / "naver" / "some_feed")
+        self.assertEqual(actual_path.name, "some_feed")
+
+    @patch("bin.run.ProblemManager")
+    @patch("bin.run.FeedMakerRunner")
+    @patch("bin.run.Config")
+    def test_dot_path_arg_keeps_feed_and_group_name(self, mock_config, mock_runner_cls, mock_pm):
+        """'.' 인자를 절대 경로로 바꿔 feed_name/group_name이 빈 문자열이 되지 않아야 한다."""
+        mock_config_inst = MagicMock()
+        mock_config_inst.get_collection_configs.return_value = {"is_completed": False}
+        mock_config.return_value = mock_config_inst
+        mock_runner = MagicMock()
+        mock_runner.make_single_feed.return_value = True
+        mock_runner_cls.return_value = mock_runner
+
+        with patch("sys.argv", ["run.py", "."]):
+            from bin.run import main
+
+            main()
+
+        actual_path = mock_runner.make_single_feed.call_args[0][0]
+        self.assertEqual(actual_path, Path.cwd())
+        self.assertNotEqual(actual_path.name, "")
+        self.assertEqual(mock_pm.return_value.feed_manager.add_config_info.call_args[0][0], Path.cwd())
+        self.assertEqual(mock_pm.return_value.update_feed_info.call_args[0][0], Path.cwd())
 
     @patch("bin.run.ProblemManager")
     @patch("bin.run.FeedMakerRunner")
