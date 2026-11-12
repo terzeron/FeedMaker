@@ -336,11 +336,20 @@ class Site:
 class WfwfSite(Site):
     def __init__(self, site_name: str) -> None:
         super().__init__(site_name)
-        self.extraction_attrs = {"bypass": "true"}
+        self.extraction_attrs = {"class": "t-card"}
 
     def set_url_postfix_with_keyword(self, keyword: str) -> None:
         encoded_cp949_keyword: str = quote(keyword.encode("cp949"))
         self.url_postfix = "/search.html?q=" + encoded_cp949_keyword
+
+
+class SbxhSite(Site):
+    def __init__(self, site_name: str) -> None:
+        super().__init__(site_name)
+        self.extraction_attrs = {"class": "search-results-grid"}
+
+    def set_url_postfix_with_keyword(self, keyword: str) -> None:
+        self.url_postfix = "/search?q=" + quote(keyword)
 
 
 class WtwtSite(Site):
@@ -572,6 +581,7 @@ class SearchManager:
         (BlacktoonSite, "blacktoon"),
         (TorrentJokSite, "torrentjok"),
         (WfwfSite, "wfwf"),
+        (SbxhSite, "sbxh"),
         (WtwtSite, "wtwt"),
         (MzgtoonSite, "mzgtoon"),
     ]
