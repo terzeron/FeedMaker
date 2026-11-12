@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import asyncio
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -123,6 +124,40 @@ class TestPlaywrightCompatibleEngines(_BrowserTestCase):
 
 
 class TestNodriverEngine(_BrowserTestCase):
+    def test_fetch_reaps_subprocess_and_closes_pipes_before_returning(self):
+        for fail_navigation, stop_process in ((False, True), (True, True), (False, False)):
+            with self.subTest(fail_navigation=fail_navigation, stop_process=stop_process):
+                browser = self._make_browser(HeadlessBrowserNodriver)
+
+                async def exercise():
+                    process = await asyncio.create_subprocess_exec(sys.executable, "-c", "import time; time.sleep(60)", stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+                    tab = SimpleNamespace(get_content=AsyncMock(return_value="<html>ok</html>"), evaluate=AsyncMock())
+
+                    def stop():
+                        driver._process = None
+                        if stop_process:
+                            process.terminate()
+
+                    driver = SimpleNamespace(_process=process, get=AsyncMock(side_effect=RuntimeError("navigation failed")) if fail_navigation else AsyncMock(return_value=tab), stop=stop)
+                    wait_for = asyncio.wait_for
+                    try:
+                        with patch("bin.headless_browser_nodriver.nodriver", SimpleNamespace(start=AsyncMock(return_value=driver))), patch("bin.headless_browser_nodriver.asyncio.wait_for", new=lambda coro, timeout: wait_for(coro, timeout=0.1)):
+                            if fail_navigation:
+                                with self.assertRaisesRegex(RuntimeError, "navigation failed"):
+                                    await browser._fetch("https://example.com")
+                            else:
+                                self.assertEqual(await browser._fetch("https://example.com"), "<!DOCTYPE html><html>ok</html>")
+                        self.assertIsNotNone(process.returncode, "browser process must exit before the event loop closes")
+                        self.assertTrue(process.stdin.is_closing())
+                        self.assertTrue(process.stdout.at_eof())
+                        self.assertTrue(process.stderr.at_eof())
+                    finally:
+                        if process.returncode is None:
+                            process.kill()
+                        await process.communicate()
+
+                asyncio.run(exercise())
+
     def test_embedded_turnstile_is_not_a_challenge_page(self):
         html = '<html><body><iframe src="https://challenges.cloudflare.com/widget"></iframe></body></html>'
         self.assertFalse(HeadlessBrowserNodriver._contains_cloudflare_challenge(html))
