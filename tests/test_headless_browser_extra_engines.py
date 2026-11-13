@@ -240,8 +240,27 @@ class TestNodriverEngine(_BrowserTestCase):
         browser = self._make_browser(HeadlessBrowserNodriver)
         tab = MagicMock()
         tab.get_content = AsyncMock(side_effect=["<title>Just a moment...</title>", "<html>ready</html>"])
+        tab.evaluate = AsyncMock(return_value="complete")
         with patch("bin.headless_browser_nodriver.Env.get", return_value="1"), patch("bin.headless_browser_nodriver.time", SimpleNamespace(monotonic=MagicMock(return_value=0))), patch("bin.headless_browser_nodriver.asyncio.sleep", new=AsyncMock()):
             self.assertEqual(asyncio.run(browser._wait_for_cloudflare_html(tab)), "<html>ready</html>")
+
+    def test_wait_for_cloudflare_waits_until_document_parsed(self):
+        # browser.get()은 파싱 완료를 기다리지 않으므로 readyState가 loading이면 <head>만 있는 반쪽 HTML이 나온다.
+        browser = self._make_browser(HeadlessBrowserNodriver)
+        tab = MagicMock()
+        tab.get_content = AsyncMock(side_effect=["<html><head></head></html>", "<html><body>full</body></html>"])
+        tab.evaluate = AsyncMock(side_effect=["loading", "interactive"])
+        with patch("bin.headless_browser_nodriver.Env.get", return_value="1"), patch("bin.headless_browser_nodriver.time", SimpleNamespace(monotonic=MagicMock(return_value=0))), patch("bin.headless_browser_nodriver.asyncio.sleep", new=AsyncMock()):
+            self.assertEqual(asyncio.run(browser._wait_for_cloudflare_html(tab)), "<html><body>full</body></html>")
+        tab.evaluate.assert_awaited_with("document.readyState", return_by_value=True)
+
+    def test_wait_for_cloudflare_returns_none_when_document_never_parsed(self):
+        browser = self._make_browser(HeadlessBrowserNodriver)
+        tab = MagicMock()
+        tab.get_content = AsyncMock(return_value="<html><head></head></html>")
+        tab.evaluate = AsyncMock(return_value="loading")
+        with patch("bin.headless_browser_nodriver.Env.get", return_value="1"), patch("bin.headless_browser_nodriver.time", SimpleNamespace(monotonic=MagicMock(side_effect=[0, 2]))), patch("bin.headless_browser_nodriver.asyncio.sleep", new=AsyncMock()):
+            self.assertIsNone(asyncio.run(browser._wait_for_cloudflare_html(tab)))
 
     @staticmethod
     def _iframe(backend_node_id, src):
@@ -298,6 +317,7 @@ class TestNodriverEngine(_BrowserTestCase):
         browser = self._make_browser(HeadlessBrowserNodriver)
         tab = MagicMock()
         tab.get_content = AsyncMock(side_effect=["<title>Just a moment...</title>", "<title>Just a moment...</title>", "<html>ready</html>"])
+        tab.evaluate = AsyncMock(return_value="complete")
         interval = browser._CLOUDFLARE_CLICK_INTERVAL_SEC
         # start, 1st poll (before interval: no click), 2nd poll (interval reached: click), next_click reset
         clock = MagicMock(side_effect=[0, interval - 1, interval, interval])
