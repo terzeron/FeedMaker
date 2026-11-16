@@ -1201,7 +1201,57 @@ class TestRemoveGroup(unittest.TestCase):
                 mgr.remove_group("../evil")
 
 
+class TestSaveConfigFileResolvesDir(unittest.TestCase):
+    POST_DATA = {"configuration": {"collection": {}, "extraction": {}, "rss": {"title": "T"}}}
+
+    def _save(self, tmp_path: Path) -> None:
+        mgr = _make_manager(tmp_path)
+        with patch("backend.feed_maker_manager.FeedManager.add_config_info"), patch("backend.feed_maker_manager.FeedManager.add_rss_info"), patch.object(mgr, "_git_add"):
+            result, error = mgr.save_config_file("group1", "feed1", self.POST_DATA)
+        self.assertTrue(result, error)
+
+    def test_restores_deleted_feed_when_group_dir_missing(self):
+        # 삭제된 피드 복원: 그룹 디렉터리가 없어도 만들어서 저장한다
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            self._save(tmp_path)
+            self.assertTrue((tmp_path / "group1" / "feed1" / "conf.json").is_file())
+
+    def test_saves_into_inactive_group_dir(self):
+        # 비활성 그룹 안에 저장할 때 활성 그룹 디렉터리를 새로 만들지 않는다
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            (tmp_path / "_group1").mkdir()
+            self._save(tmp_path)
+            self.assertTrue((tmp_path / "_group1" / "feed1" / "conf.json").is_file())
+            self.assertFalse((tmp_path / "group1").exists())
+
+    def test_saves_into_inactive_feed_dir(self):
+        # 비활성 피드 디렉터리가 있으면 같은 피드의 활성 디렉터리를 새로 만들지 않는다
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            (tmp_path / "group1" / "_feed1").mkdir(parents=True)
+            self._save(tmp_path)
+            self.assertTrue((tmp_path / "group1" / "_feed1" / "conf.json").is_file())
+            self.assertFalse((tmp_path / "group1" / "feed1").exists())
+
+
 class TestToggleFeed(unittest.TestCase):
+    @patch("backend.feed_maker_manager.FeedManager.toggle_feed")
+    def test_feed_in_inactive_group_is_rejected(self, mock_db_toggle):
+        # 비활성 그룹 안의 피드는 활성화해도 크롤링되지 않으므로 그룹을 먼저 활성화하게 한다
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            mgr = _make_manager(tmp_path)
+            (tmp_path / "_group1" / "_feed1").mkdir(parents=True)
+
+            result, error = mgr.toggle_feed("group1", "feed1")
+
+            self.assertEqual(result, "")
+            self.assertIn("activate the group first", error)
+            self.assertTrue((tmp_path / "_group1" / "_feed1").is_dir())
+            mock_db_toggle.assert_not_called()
+
     @patch("backend.feed_maker_manager.FeedManager.toggle_feed")
     def test_active_to_inactive_renames_dir_and_syncs_db(self, mock_db_toggle):
         mock_db_toggle.return_value = True

@@ -57,6 +57,20 @@ def normalize_feed_identity(group_name: str, feed_name: str) -> Optional[tuple[s
     return canonical_group_name, canonical_feed_name, is_active
 
 
+def get_canonical_feed_identity(feed_dir_path: Path) -> Optional[tuple[str, str]]:
+    """피드 디렉터리 경로에서 DB 조회용 canonical (group_name, feed_name)을 구한다.
+
+    피드/도구 디렉터리가 아니거나 이름이 비어 있으면 None.
+    """
+    try:
+        normalized = normalize_feed_identity(feed_dir_path.parent.name, feed_dir_path.name)
+    except ValueError:
+        return None
+    if normalized is None:
+        return None
+    return normalized[0], normalized[1]
+
+
 class FeedUrlCountInfo(TypedDict):
     feed_name: str
     feed_title: str
@@ -90,6 +104,7 @@ class SearchResultFeedInfo(TypedDict):
     feed_title: str
     group_name: str
     is_active: bool
+    is_deleted: bool
 
 
 class GroupFeedInfo(TypedDict):
@@ -97,6 +112,7 @@ class GroupFeedInfo(TypedDict):
     title: str
     group_name: str
     is_active: bool
+    is_deleted: bool
 
 
 class GroupInfo(TypedDict):
@@ -132,6 +148,8 @@ class SingleFeedInfo(TypedDict):
     group_name: str
     config: dict[str, Any]
     config_modify_date: Optional[datetime]
+    is_active: bool
+    is_deleted: bool
     collection_info: CollectionDetail
     public_feed_info: PublicFeedDetail
     progress_info: ProgressDetail
@@ -147,7 +165,8 @@ class FeedManager:
         feed_name_list_url_count_map: dict[str, FeedUrlCountInfo] = {}
 
         with DB.session_ctx() as s:
-            rows = s.query(FeedInfo).filter(FeedInfo.url_list_count > 1).all()
+            # 삭제된 피드도 url_list_count를 남기므로 비활성 행은 제외한다
+            rows = s.query(FeedInfo).filter(FeedInfo.url_list_count > 1, FeedInfo.is_active).all()
             for row in rows:
                 feed_name_list_url_count_map[row.feed_name] = FeedUrlCountInfo(feed_name=row.feed_name, feed_title=row.feed_title, group_name=row.group_name, count=row.url_list_count)
 
@@ -159,8 +178,13 @@ class FeedManager:
         feed_name = feed_dir_path.name
         if do_remove_file:
             (feed_dir_path / Config.DEFAULT_CONF_FILE).unlink(missing_ok=True)
+        identity = get_canonical_feed_identity(feed_dir_path)
+        if identity is None:
+            return
         with DB.session_ctx() as s:
-            s.query(FeedInfo).filter_by(feed_name=feed_name).update({FeedInfo.is_active: False, FeedInfo.config: "", FeedInfo.config_modify_date: None})
+            # 이름/제목/config 메타데이터는 나중에 conf.json으로 되살릴 수 있도록 남기고 is_active만 끈다.
+            # 같은 이름의 피드가 다른 그룹에 있을 수 있으므로 (group_name, feed_name)으로 한정한다.
+            s.query(FeedInfo).filter_by(group_name=identity[0], feed_name=identity[1]).update({FeedInfo.is_active: False})
         LOGGER.info("* The removing of config info of feed '%s' is done.", feed_name)
 
     @classmethod
@@ -182,26 +206,34 @@ class FeedManager:
         if normalized is None:
             return
         group_name, feed_name, is_active = normalized
-        if is_active:
-            conf_json_file_path = feed_dir_path / Config.DEFAULT_CONF_FILE
-            if feed_dir_path.is_dir() and conf_json_file_path.is_file():
-                st = feed_dir_path.stat()
-                config_modify_date = datetime.fromtimestamp(st.st_mtime, timezone.utc)
+        conf_json_file_path = feed_dir_path / Config.DEFAULT_CONF_FILE
+        if not conf_json_file_path.is_file():
+            # conf.json이 없는 디렉터리(삭제 후 lock 파일만 다시 생긴 경우 등)는 피드가 아니다.
+            # 삭제 시 남겨 둔 메타데이터를 덮어쓰지 않고 비활성으로만 표시한다.
+            existing_row = s.query(FeedInfo).filter_by(feed_name=feed_name, group_name=group_name).first()
+            if existing_row:
+                existing_row.is_active = False
+                s.flush()
+            return
+        # 비활성 피드도 config를 DB에 남겨 파일을 잃었을 때 되살릴 수 있게 한다.
+        if feed_dir_path.is_dir():
+            st = feed_dir_path.stat()
+            config_modify_date = datetime.fromtimestamp(st.st_mtime, timezone.utc)
 
-                with conf_json_file_path.open("r", encoding="utf-8") as infile:
-                    json_data = json.load(infile)
-                if json_data:
-                    configuration: dict[str, dict[str, Any]] = json_data.get("configuration", {})
-                    if configuration:
-                        config_str = json.dumps(configuration)
-                        rss_data = configuration.get("rss", {})
-                        title = rss_data.get("title", "")
-                        if "::" in title:
-                            title = title.split("::")[0]
-                        collection_data = configuration.get("collection", {})
-                        url_list_count = len(collection_data.get("list_url_list", []))
-                        is_completed = collection_data.get("is_completed", False)
-                        unit_size_per_day = collection_data.get("unit_size_per_day", 0)
+            with conf_json_file_path.open("r", encoding="utf-8") as infile:
+                json_data = json.load(infile)
+            if json_data:
+                configuration: dict[str, dict[str, Any]] = json_data.get("configuration", {})
+                if configuration:
+                    config_str = json.dumps(configuration)
+                    rss_data = configuration.get("rss", {})
+                    title = rss_data.get("title", "")
+                    if "::" in title:
+                        title = title.split("::")[0]
+                    collection_data = configuration.get("collection", {})
+                    url_list_count = len(collection_data.get("list_url_list", []))
+                    is_completed = collection_data.get("is_completed", False)
+                    unit_size_per_day = collection_data.get("unit_size_per_day", 0)
 
         existing_feed = s.query(FeedInfo).filter_by(feed_name=feed_name, group_name=group_name).first()
         if existing_feed:
@@ -249,8 +281,11 @@ class FeedManager:
         feed_name = feed_dir_path.name
         if do_remove_file:
             (feed_dir_path / f"{feed_name}.xml").unlink(missing_ok=True)
+        identity = get_canonical_feed_identity(feed_dir_path)
+        if identity is None:
+            return
         with DB.session_ctx() as s:
-            s.query(FeedInfo).filter_by(feed_name=feed_name).update({FeedInfo.feedmaker: False, FeedInfo.rss_update_date: None})
+            s.query(FeedInfo).filter_by(group_name=identity[0], feed_name=identity[1]).update({FeedInfo.feedmaker: False, FeedInfo.rss_update_date: None})
         LOGGER.info("* The removing of rss info of feed '%s' is done.", feed_name)
 
     @classmethod
@@ -400,6 +435,46 @@ class FeedManager:
         return 0
 
     @classmethod
+    def _get_existing_feed_identities(cls) -> set[tuple[str, str]]:
+        """conf.json이 있는 피드의 canonical (group_name, feed_name) 집합.
+
+        삭제는 conf.json을 지우고 DB 메타데이터만 남기므로 이 집합에 없는 DB 행은 삭제된 피드다.
+        """
+        identities: set[tuple[str, str]] = set()
+        if not cls.work_dir_path.is_dir():
+            return identities
+        for group_dir_path in cls.work_dir_path.iterdir():
+            if not group_dir_path.is_dir():
+                continue
+            for feed_dir_path in group_dir_path.iterdir():
+                if not (feed_dir_path / Config.DEFAULT_CONF_FILE).is_file():
+                    continue
+                identity = get_canonical_feed_identity(feed_dir_path)
+                if identity is not None:
+                    identities.add(identity)
+        return identities
+
+    @classmethod
+    def _find_conf_file_path(cls, group_name: str, feed_name: str) -> Optional[Path]:
+        # DB 이름은 canonical이지만 비활성 디렉터리는 '_' 접두사를 사용한다.
+        for group in (group_name, f"_{group_name}"):
+            for feed in (feed_name, f"_{feed_name}"):
+                conf_file_path = cls.work_dir_path / group / feed / Config.DEFAULT_CONF_FILE
+                if conf_file_path.is_file():
+                    return conf_file_path
+        return None
+
+    @staticmethod
+    def _read_config_file(conf_file_path: Path) -> dict[str, Any]:
+        try:
+            with conf_file_path.open("r", encoding="utf-8") as infile:
+                configuration: dict[str, Any] = json.load(infile).get("configuration", {})
+        except (OSError, ValueError, AttributeError) as e:
+            LOGGER.warning("can't read config file '%s': %s", PathUtil.short_path(conf_file_path), e)
+            return {}
+        return configuration
+
+    @classmethod
     def _count_newlist_items(cls, group_name: str, feed_name: str, default: int) -> int:
         """newlist/*.txt의 고유 URL 수(수집 대상 피드 아이템 총 수)를 조회 시점에 직접 센다.
 
@@ -448,8 +523,11 @@ class FeedManager:
         feed_name = feed_dir_path.name
         if do_remove_file:
             (feed_dir_path / "start_idx.txt").unlink(missing_ok=True)
+        identity = get_canonical_feed_identity(feed_dir_path)
+        if identity is None:
+            return
         with DB.session_ctx() as s:
-            s.query(FeedInfo).filter_by(feed_name=feed_name).update({FeedInfo.is_completed: False, FeedInfo.current_index: 0, FeedInfo.total_item_count: 0, FeedInfo.unit_size_per_day: 0, FeedInfo.progress_ratio: 0.0, FeedInfo.due_date: None})
+            s.query(FeedInfo).filter_by(group_name=identity[0], feed_name=identity[1]).update({FeedInfo.is_completed: False, FeedInfo.current_index: 0, FeedInfo.total_item_count: 0, FeedInfo.unit_size_per_day: 0, FeedInfo.progress_ratio: 0.0, FeedInfo.due_date: None})
         LOGGER.info("* The removing of progress info of feed '%s' is done.", feed_name)
 
     @classmethod
@@ -591,7 +669,11 @@ class FeedManager:
                 conditions.append(FeedInfo.feed_name.like(pat, escape="\\") | FeedInfo.feed_title.like(pat, escape="\\") | FeedInfo.group_name.like(pat, escape="\\"))
             combined = or_(*conditions)
             rows = s.query(FeedInfo).where(combined & (FeedInfo.group_name != "")).order_by(FeedInfo.group_name, FeedInfo.feed_name).all()
-            return [SearchResultFeedInfo(feed_name=row.feed_name, feed_title=row.feed_title if row.feed_title else row.feed_name, group_name=row.group_name, is_active=row.is_active) for row in rows]
+            existing = cls._get_existing_feed_identities()
+            return [
+                SearchResultFeedInfo(feed_name=row.feed_name, feed_title=row.feed_title if row.feed_title else row.feed_name, group_name=row.group_name, is_active=row.is_active, is_deleted=(row.group_name, row.feed_name) not in existing)
+                for row in rows
+            ]
 
     @classmethod
     def get_groups(cls) -> list[GroupInfo]:
@@ -601,10 +683,11 @@ class FeedManager:
             # 모든 그룹 이름을 가져와서 중복 제거. '.'으로 시작하는 그룹(.venv,
             # .pytest_cache 등 캐시/도구 디렉터리)은 피드가 아니므로 제외한다.
             group_names = [row.group_name for row in s.query(FeedInfo.group_name).where(FeedInfo.group_name != "", ~FeedInfo.group_name.startswith(".")).distinct().all()]
+            existing = cls._get_existing_feed_identities()
             result: list[GroupInfo] = []
             for group_name in sorted(group_names):
-                # 각 그룹별 피드 수 계산 ('.'으로 시작하는 피드는 제외)
-                count = s.query(FeedInfo).filter_by(group_name=group_name).filter(~FeedInfo.feed_name.startswith(".")).count()
+                # 각 그룹별 피드 수 계산 ('.'으로 시작하는 피드와 삭제된 피드는 제외)
+                count = sum(1 for (group, _feed) in existing if group == group_name and not _feed.startswith("."))
                 # 그룹의 active 상태 확인 (그룹 내 모든 피드가 active인지 확인)
                 active_count = s.query(FeedInfo).filter_by(group_name=group_name, is_active=True).filter(~FeedInfo.feed_name.startswith(".")).count()
                 is_active = active_count > 0  # 그룹에 active 피드가 하나라도 있으면 active
@@ -618,7 +701,11 @@ class FeedManager:
         with DB.session_ctx() as s:
             # '.'으로 시작하는 피드(.ruff_cache, .playwright-mcp 등)는 제외한다.
             rows = s.query(FeedInfo).where(FeedInfo.group_name == group_name, ~FeedInfo.feed_name.startswith(".")).order_by(FeedInfo.feed_name).all()
-            return [GroupFeedInfo(name=row.feed_name, title=row.feed_title if row.feed_title else row.feed_name, group_name=row.group_name, is_active=row.is_active) for row in rows]
+            existing = cls._get_existing_feed_identities()
+            return [
+                GroupFeedInfo(name=row.feed_name, title=row.feed_title if row.feed_title else row.feed_name, group_name=row.group_name, is_active=row.is_active, is_deleted=(row.group_name, row.feed_name) not in existing)
+                for row in rows
+            ]
 
     @classmethod
     def get_feed_info(cls, group_name: str, feed_name: str) -> Optional[SingleFeedInfo]:
@@ -630,10 +717,12 @@ class FeedManager:
         if not feed:
             return None
 
+        conf_file_path = cls._find_conf_file_path(group_name, feed_name)
         if feed.config:
             config_data = json.loads(str(feed.config))
         else:
-            config_data = {}
+            # 로더는 비활성 피드의 config를 비워 두므로 '_' 접두사 디렉터리의 conf.json을 직접 읽는다.
+            config_data = cls._read_config_file(conf_file_path) if conf_file_path else {}
 
         return SingleFeedInfo(
             feed_name=feed.feed_name,
@@ -641,6 +730,9 @@ class FeedManager:
             group_name=feed.group_name,
             config=config_data,
             config_modify_date=feed.config_modify_date,
+            is_active=bool(feed.is_active),
+            # 삭제는 conf.json을 지우고 DB 메타데이터만 남기므로 conf.json 유무로 비활성과 구분한다
+            is_deleted=conf_file_path is None,
             collection_info=CollectionDetail(collect_date=feed.collect_date, total_item_count=feed.total_item_count),
             public_feed_info=PublicFeedDetail(public_feed_file_path=feed.public_feed_file_path, file_size=feed.file_size, num_items=feed.num_items, upload_date=feed.upload_date),
             progress_info=ProgressDetail(

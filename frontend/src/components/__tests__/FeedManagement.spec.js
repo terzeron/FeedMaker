@@ -56,6 +56,8 @@ const FEED_INFO_CONTRACT = {
     collection: { list_url_list: ["https://example.com/list"] },
     extraction: {},
   },
+  is_active: true,
+  is_deleted: false,
   collection_info: {
     collect_date: "2024-01-01T00:00:00Z",
     total_item_count: 10,
@@ -1566,6 +1568,132 @@ describe("FeedManagement.vue", () => {
       wrapper.vm.handleConfirmOk();
       await flushPromises();
       expect(axios.delete).toHaveBeenCalled();
+    });
+  });
+
+  describe("getFeedInfo with inactive feed", () => {
+    const mockInactiveFeedInfo = () => {
+      axios.get.mockResolvedValueOnce({
+        data: {
+          status: "success",
+          feed_info: { ...FEED_INFO_CONTRACT, is_active: false },
+        },
+      });
+    };
+
+    it("비활성 피드도 설정 에디터를 보여 주고 실행 상태를 폴링하지 않는다", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      mockInactiveFeedInfo();
+      wrapper.vm.getFeedInfo("g1", "f1");
+      await flushPromises();
+      expect(wrapper.vm.showEditor).toBe(true);
+      expect(wrapper.vm.jsonData).toEqual(FEED_INFO_CONTRACT.config);
+      expect(wrapper.vm.feedStatus).toBe(false);
+      expect(wrapper.vm.checkRunningInterval).toBeNull();
+    });
+
+    it("비활성 피드는 활성화 버튼만 사용할 수 있다", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      mockInactiveFeedInfo();
+      wrapper.vm.getFeedInfo("g1", "f1");
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      const actionButtons = wrapper
+        .find("#actions")
+        .findAll("button");
+      const enabled = actionButtons.filter((b) => b.attributes("disabled") === undefined);
+      expect(actionButtons.length).toBeGreaterThan(1);
+      expect(enabled.map((b) => b.attributes("label"))).toEqual(["피드 활성화"]);
+    });
+
+    it("삭제된 피드는 복원용 저장 버튼만 사용할 수 있다", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      axios.get.mockResolvedValueOnce({
+        data: {
+          status: "success",
+          feed_info: { ...FEED_INFO_CONTRACT, is_active: false, is_deleted: true },
+        },
+      });
+      wrapper.vm.getFeedInfo("g1", "f1");
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      expect(wrapper.vm.showEditor).toBe(true);
+      expect(wrapper.text()).toContain("삭제된 피드");
+      const enabled = wrapper
+        .find("#actions")
+        .findAll("button")
+        .filter((b) => b.attributes("disabled") === undefined)
+        .map((b) => b.attributes("label"));
+      expect(enabled).toEqual(["저장"]);
+    });
+
+    it("삭제된 피드도 DB 메타데이터가 없으면 저장할 수 없다", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.feedIsDeleted = true;
+      wrapper.vm.jsonData = {};
+      expect(wrapper.vm.canSaveFeed).toBe(false);
+      wrapper.vm.jsonData = FEED_INFO_CONTRACT.config;
+      expect(wrapper.vm.canSaveFeed).toBe(true);
+    });
+
+    it("피드 삭제 요청 전에 실행 상태 폴링을 멈춘다", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.selectedFeedName = "f1";
+      wrapper.vm.checkRunningInterval = setInterval(() => {}, 100000);
+      axios.delete.mockReturnValueOnce(new Promise(() => {}));
+      wrapper.vm.removeFeed();
+      wrapper.vm.handleConfirmOk();
+      expect(wrapper.vm.checkRunningInterval).toBeNull();
+    });
+
+    it("피드 토글 요청 전에 실행 상태 폴링을 멈춘다", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.checkRunningInterval = setInterval(() => {}, 100000);
+      axios.put.mockReturnValueOnce(new Promise(() => {}));
+      wrapper.vm.toggleStatus("feed");
+      wrapper.vm.handleConfirmOk();
+      expect(wrapper.vm.checkRunningInterval).toBeNull();
+    });
+
+    it("목록에서 삭제된 피드에 표시를 붙인다", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      wrapper.vm.showGrouplist = false;
+      wrapper.vm.showFeedlist = true;
+      wrapper.vm.feeds = [
+        { name: "a", title: "A", is_active: true, is_deleted: false },
+        { name: "b", title: "B", is_active: false, is_deleted: true },
+      ];
+      await wrapper.vm.$nextTick();
+      const labels = wrapper.find("#feed_list").findAll("button").map((b) => b.attributes("label"));
+      expect(labels).toEqual(["A", "B (삭제됨)"]);
+    });
+
+    it("활성 피드는 모든 액션 버튼을 사용할 수 있다", async () => {
+      const wrapper = createWrapper();
+      await flushPromises();
+      axios.get.mockResolvedValueOnce({
+        data: { status: "success", feed_info: FEED_INFO_CONTRACT },
+      });
+      axios.get.mockResolvedValue({
+        data: { status: "success", running_status: false },
+      });
+      wrapper.vm.getFeedInfo("g1", "f1");
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      const disabled = wrapper
+        .find("#actions")
+        .findAll("button")
+        .filter((b) => b.attributes("disabled") !== undefined)
+        .map((b) => b.attributes("label"));
+      // 시작위치 +5는 is_completed가 아닐 때 원래 비활성이다
+      expect(disabled).toEqual(["시작위치 +5"]);
     });
   });
 

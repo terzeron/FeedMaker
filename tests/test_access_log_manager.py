@@ -88,7 +88,7 @@ class TestRemoveHttpdAccessInfo(unittest.TestCase):
         AccessLogManager.remove_httpd_access_info(feed_dir_path)
 
         mock_session.query.assert_called_once()
-        mock_session.query.return_value.filter_by.assert_called_once_with(feed_name="my_feed")
+        mock_session.query.return_value.filter_by.assert_called_once_with(group_name="group", feed_name="my_feed")
 
 
 class TestRecordFeedAccessException(unittest.TestCase):

@@ -6,6 +6,7 @@ import logging  # noqa: F401
 import logging.config  # noqa: F401
 import shutil  # noqa: F401
 import sys
+import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -442,12 +443,13 @@ class TestFeedMakerRunnerMakeAllFeeds(unittest.TestCase):
             self.assertIn("fail_feed", mock_notif.send_msg.call_args[0][0])
 
 
+@patch("bin.run.Path.is_dir", return_value=True)
 class TestFeedMakerRunnerCheckRunning(unittest.TestCase):
     """check_running: unlocked, locked, FileNotFoundError"""
 
     @patch("bin.run.Env.get", return_value="/tmp/fm_work")
     @patch("bin.run.FileLock")
-    def test_unlocked_returns_false(self, mock_filelock, mock_env):
+    def test_unlocked_returns_false(self, mock_filelock, mock_env, _mock_is_dir):
         mock_ctx = MagicMock()
         mock_ctx.__enter__ = MagicMock()
         mock_ctx.__exit__ = MagicMock(return_value=False)
@@ -458,7 +460,7 @@ class TestFeedMakerRunnerCheckRunning(unittest.TestCase):
 
     @patch("bin.run.Env.get", return_value="/tmp/fm_work")
     @patch("bin.run.FileLock")
-    def test_locked_returns_true(self, mock_filelock, mock_env):
+    def test_locked_returns_true(self, mock_filelock, mock_env, _mock_is_dir):
         mock_ctx = MagicMock()
         mock_ctx.__enter__ = MagicMock(side_effect=Timeout("/tmp/lock"))
         mock_ctx.__exit__ = MagicMock(return_value=True)
@@ -469,7 +471,7 @@ class TestFeedMakerRunnerCheckRunning(unittest.TestCase):
 
     @patch("bin.run.Env.get", return_value="/tmp/fm_work")
     @patch("bin.run.FileLock")
-    def test_file_not_found_returns_none(self, mock_filelock, mock_env):
+    def test_file_not_found_returns_none(self, mock_filelock, mock_env, _mock_is_dir):
         mock_ctx = MagicMock()
         mock_ctx.__enter__ = MagicMock(side_effect=FileNotFoundError("no file"))
         mock_ctx.__exit__ = MagicMock(return_value=True)
@@ -477,6 +479,17 @@ class TestFeedMakerRunnerCheckRunning(unittest.TestCase):
 
         result = FeedMakerRunner.check_running("group", "feed")
         self.assertIsNone(result)
+
+
+class TestFeedMakerRunnerCheckRunningMissingDir(unittest.TestCase):
+    def test_missing_feed_dir_returns_none_without_creating_it(self):
+        # FileLock은 상위 디렉터리를 만들므로 삭제된 피드 디렉터리가 되살아나지 않아야 한다
+        work_dir = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, work_dir, ignore_errors=True)
+        with patch("bin.run.Env.get", return_value=str(work_dir)):
+            result = FeedMakerRunner.check_running("group", "feed")
+        self.assertIsNone(result)
+        self.assertFalse((work_dir / "group").exists())
 
 
 # ────────────────────────────────────────────────────────
