@@ -29,28 +29,10 @@ class HeadlessBrowserNodriver(HeadlessBrowserBase):
     @staticmethod
     def _contains_cloudflare_challenge(html: str) -> bool:
         lowered = html.lower()
-        return any(
-            marker in lowered
-            for marker in (
-                "window._cf_chl_opt",
-                "challenges.cloudflare.com/cdn-cgi/challenge",
-                'id="cf-content"',
-                "id='cf-content'",
-                'data-translate="checking_browser"',
-                "data-translate='checking_browser'",
-                "<title>just a moment",
-                "<title>잠시만",
-            )
-        )
+        return any(marker in lowered for marker in ("window._cf_chl_opt", "challenges.cloudflare.com/cdn-cgi/challenge", 'id="cf-content"', "id='cf-content'", 'data-translate="checking_browser"', "data-translate='checking_browser'", "<title>just a moment", "<title>잠시만"))
 
     async def _wait_for_cloudflare_html(self, tab: Any) -> Optional[str]:
-        timeout = int(
-            Env.get(
-                "FM_NODRIVER_CHALLENGE_TIMEOUT",
-                str(self._CLOUDFLARE_CHALLENGE_TIMEOUT_SEC),
-            )
-            or self._CLOUDFLARE_CHALLENGE_TIMEOUT_SEC
-        )
+        timeout = int(Env.get("FM_NODRIVER_CHALLENGE_TIMEOUT", str(self._CLOUDFLARE_CHALLENGE_TIMEOUT_SEC)) or self._CLOUDFLARE_CHALLENGE_TIMEOUT_SEC)
         start = time.monotonic()
         deadline = start + timeout
         # Same policy as the Playwright engines: an interactive Turnstile widget waits
@@ -59,12 +41,15 @@ class HeadlessBrowserNodriver(HeadlessBrowserBase):
         clicks = 0
         while True:
             html = await tab.get_content()
-            if not self._contains_cloudflare_challenge(html):
+            challenge = self._contains_cloudflare_challenge(html)
+            # browser.get() returns before parsing finishes, so a still-loading document
+            # serializes as <head> only. Wait for DOMContentLoaded like the Playwright engines.
+            if not challenge and await tab.evaluate("document.readyState", return_by_value=True) != "loading":
                 return html
             now = time.monotonic()
             if now >= deadline:
                 return None
-            if clicks < self._CLOUDFLARE_MAX_CLICKS and now >= next_click:
+            if challenge and clicks < self._CLOUDFLARE_MAX_CLICKS and now >= next_click:
                 try:
                     if await self._try_click_cloudflare_checkbox_cdp(tab):
                         clicks += 1
@@ -105,10 +90,7 @@ class HeadlessBrowserNodriver(HeadlessBrowserBase):
     async def _scroll(self, tab: Any) -> None:
         deadline = time.monotonic() + self._MAX_SCROLL_SECS
         pos = 0
-        bottom = await tab.evaluate(
-            "document.body ? document.body.scrollHeight : 0",
-            return_by_value=True,
-        )
+        bottom = await tab.evaluate("document.body ? document.body.scrollHeight : 0", return_by_value=True)
         try:
             bottom = int(bottom or 0)
         except (TypeError, ValueError):
@@ -124,18 +106,11 @@ class HeadlessBrowserNodriver(HeadlessBrowserBase):
         if nodriver is None:
             raise ImportError("nodriver is not installed; run `pip install nodriver`")
 
-        browser = await nodriver.start(
-            headless=not self.disable_headless,
-            lang="ko-KR",
-        )
+        browser = await nodriver.start(headless=not self.disable_headless, lang="ko-KR")
         try:
             referer = self.headers.get("Referer", "")
             if referer:
-                is_ok, reason = URLSafety.check_url(
-                    referer,
-                    allow_private=self.allow_private_ips,
-                    allowed_hosts_raw=self.allowed_hosts_raw,
-                )
+                is_ok, reason = URLSafety.check_url(referer, allow_private=self.allow_private_ips, allowed_hosts_raw=self.allowed_hosts_raw)
                 if not is_ok:
                     LOGGER.warning("Blocked referer URL: %s (%s)", referer, reason)
                     return ""
@@ -144,25 +119,16 @@ class HeadlessBrowserNodriver(HeadlessBrowserBase):
             tab = await browser.get(url)
             html = await self._wait_for_cloudflare_html(tab)
             if html is None:
-                LOGGER.warning(
-                    "Cloudflare challenge unresolved for '%s'; returning empty to trigger retry",
-                    url,
-                )
+                LOGGER.warning("Cloudflare challenge unresolved for '%s'; returning empty to trigger retry", url)
                 return ""
 
             await tab.evaluate(self.GETTING_METADATA_SCRIPT)
             if self.copy_images_from_canvas:
-                await tab.evaluate(
-                    self.CONVERTING_CANVAS_TO_IMAGES_SCRIPT,
-                    await_promise=True,
-                )
+                await tab.evaluate(self.CONVERTING_CANVAS_TO_IMAGES_SCRIPT, await_promise=True)
             if self.simulate_scrolling:
                 await self._scroll(tab)
             if self.blob_to_dataurl:
-                await tab.evaluate(
-                    self.CONVERTING_BLOB_TO_DATAURL_SCRIPT,
-                    await_promise=True,
-                )
+                await tab.evaluate(self.CONVERTING_BLOB_TO_DATAURL_SCRIPT, await_promise=True)
 
             html = await tab.get_content()
             if self._contains_cloudflare_challenge(html):
@@ -182,17 +148,9 @@ class HeadlessBrowserNodriver(HeadlessBrowserBase):
                         process.kill()
                     await process.communicate()
 
-    def make_request(
-        self,
-        url: str,
-        download_file: Optional[Path] = None,
-    ) -> str:
+    def make_request(self, url: str, download_file: Optional[Path] = None) -> str:
         del download_file
-        is_ok, reason = URLSafety.check_url(
-            url,
-            allow_private=self.allow_private_ips,
-            allowed_hosts_raw=self.allowed_hosts_raw,
-        )
+        is_ok, reason = URLSafety.check_url(url, allow_private=self.allow_private_ips, allowed_hosts_raw=self.allowed_hosts_raw)
         if not is_ok:
             LOGGER.warning("Blocked URL: %s (%s)", url, reason)
             return ""

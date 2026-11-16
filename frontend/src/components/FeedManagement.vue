@@ -52,7 +52,7 @@
       >
         <my-button
           ref="searchResultFeedButton"
-          :label="feed['group_name'] + '/' + feed['feed_title']"
+          :label="feed['group_name'] + '/' + feed['feed_title'] + (feed['is_deleted'] ? ' (삭제됨)' : '')"
           variant="success"
           @click="
             searchResultFeedNameButtonClicked(
@@ -105,7 +105,7 @@
       >
         <my-button
           ref="feedNameButton"
-          :label="feed.title"
+          :label="feed.title + (feed.is_deleted ? ' (삭제됨)' : '')"
           @click="feedNameButtonClicked(selectedGroupName, feed.name, index)"
           :class="{
             active: activeFeedIndex === index,
@@ -137,6 +137,7 @@
           >
             <div>{{ title }}</div>
             <div>{{ selectedGroupName + "/" + selectedFeedName }}</div>
+            <div v-if="feedIsDeleted">삭제된 피드 (저장하면 복원)</div>
           </BCol>
         </BRow>
 
@@ -212,7 +213,7 @@
         <BRow id="actions" class="m-0 p-0">
           <BCol cols="12" class="m-0 p-1">
             <BInputGroup prepend="피드" class="m-0" v-if="showNewFeedNameInput">
-              <BFormInput class="m-0" v-model="newFeedName" />
+              <BFormInput class="m-0" v-model="newFeedName" :disabled="!canSaveFeed" />
               <BInputGroupText class="p-0">
                 <my-button
                   ref="saveButton"
@@ -220,6 +221,7 @@
                   @click="save"
                   :initial-icon="['far', 'save']"
                   :show-initial-icon="true"
+                  :disabled="!canSaveFeed"
                   class="w-100 h-100"
                 />
               </BInputGroupText>
@@ -269,7 +271,7 @@
               :initial-icon="isRunning ? ['fas', 'stop'] : ['fas', 'play']"
               :show-initial-icon="true"
               :variant="isRunning ? 'danger' : 'primary'"
-              :disabled="isStopping"
+              :disabled="isStopping || !feedStatus"
               v-if="showRunButton"
             />
             <my-button
@@ -279,6 +281,7 @@
               :initial-icon="['fas', 'eraser']"
               :show-initial-icon="true"
               variant="warning"
+              :disabled="!feedStatus"
               v-if="showRemovelistButton"
             />
             <my-button
@@ -288,6 +291,7 @@
               :initial-icon="['fas', 'eraser']"
               :show-initial-icon="true"
               variant="warning"
+              :disabled="!feedStatus"
               v-if="showRemoveHtmlButton"
             />
             <my-button
@@ -297,6 +301,7 @@
               :initial-icon="['fas', 'eraser']"
               :show-initial-icon="true"
               variant="warning"
+              :disabled="!feedStatus"
               v-if="showRemoveImagesButton"
             />
             <my-button
@@ -305,6 +310,7 @@
               @click="toggleStatus('feed')"
               :initial-icon="['fas', feedStatusIcon]"
               :show-initial-icon="true"
+              :disabled="feedIsDeleted"
               v-if="showToggleFeedButton"
             />
             <my-button
@@ -314,6 +320,7 @@
               :initial-icon="['far', 'trash-alt']"
               :show-initial-icon="true"
               variant="danger"
+              :disabled="!feedStatus"
               v-if="showRemoveFeedButton"
             />
             <my-button
@@ -322,7 +329,7 @@
               @click="advanceStartIndex"
               :initial-icon="['fas', 'play']"
               :show-initial-icon="true"
-              :disabled="!isCompleted"
+              :disabled="!isCompleted || !feedStatus"
               v-if="showRemoveFeedButton"
             />
           </BCol>
@@ -334,6 +341,7 @@
               @click="viewRss"
               :initial-icon="['fas', 'rss']"
               :show-initial-icon="true"
+              :disabled="!feedStatus"
               v-if="showViewRssButton"
             />
             <my-button
@@ -342,6 +350,7 @@
               @click="registerToInoreader"
               :initial-icon="['fas', 'rss']"
               :show-initial-icon="true"
+              :disabled="!feedStatus"
               v-if="showRegisterToInoreaderButton"
             />
             <my-button
@@ -350,6 +359,7 @@
               @click="registerToFeedly"
               :initial-icon="['fas', 'rss']"
               :show-initial-icon="true"
+              :disabled="!feedStatus"
               v-if="showRegisterToFeedlyButton"
             />
             <my-button
@@ -358,6 +368,7 @@
               @click="getItemsOfRss"
               :initial-icon="['fas', 'rss']"
               :show-initial-icon="true"
+              :disabled="!feedStatus"
               v-if="showViewRssButton"
               />
           </BCol>
@@ -582,6 +593,8 @@ export default {
       showRemoveHtmlButton: false,
       showRemoveImagesButton: false,
       isCompleted: false,
+      feedIsActive: true,
+      feedIsDeleted: false,
       showNewFeedNameInput: false,
       showSiteConfig: false,
       showFeedInfo: false,
@@ -626,6 +639,8 @@ export default {
       return this.isStopping ? "중단 중…" : "중단";
     },
     feedStatus: function () {
+      // 피드 상세 응답의 is_active가 우선한다 (검색 결과 목록은 name 키가 없어 목록 조회로 판별할 수 없음)
+      if (!this.feedIsActive) return false;
       // 선택된 피드의 active 상태 확인
       const selectedFeed = this.feeds.find(feed => feed.name === this.selectedFeedName);
       return selectedFeed ? this.determineStatus(selectedFeed) : true;
@@ -634,6 +649,13 @@ export default {
       // 선택된 그룹의 active 상태 확인
       const selectedGroup = this.groups.find(group => group.name === this.selectedGroupName);
       return selectedGroup ? this.determineStatus(selectedGroup) : true;
+    },
+    canSaveFeed: function () {
+      // 삭제된 피드는 파일이 없어도 DB에 남은 메타데이터(config)가 있으면 저장으로 복원할 수 있다
+      if (this.feedIsDeleted) {
+        return Object.keys(this.jsonData || {}).length >= 3;
+      }
+      return this.feedStatus;
     },
     feedStatusLabel: function () {
       return "피드 " + (this.feedStatus ? "비활성화" : "활성화");
@@ -808,6 +830,8 @@ export default {
       this.showToggleFeedButton = false;
       this.showRemoveFeedButton = false;
       this.isCompleted = false;
+      this.feedIsActive = true;
+      this.feedIsDeleted = false;
       this.showFeedInfo = false;
       this.clearAlert();
       if (this.jsonEditor) {
@@ -1025,12 +1049,15 @@ export default {
             this.alert(res.data.message);
           } else {
             const feed_info = res.data["feed_info"];
-            this.jsonData = feed_info["config"];
-            this.isCompleted = feed_info["config"]["collection"]["is_completed"] === true;
+            this.jsonData = feed_info["config"] || {};
+            this.feedIsActive = feed_info["is_active"] !== false;
+            this.feedIsDeleted = feed_info["is_deleted"] === true;
+            const collection = this.jsonData["collection"] || {};
+            this.isCompleted = collection["is_completed"] === true;
 
             this.setCollectionInfo(
               feed_info["collection_info"],
-              feed_info["config"]["collection"]["list_url_list"].length
+              (collection["list_url_list"] || []).length
             );
             this.setPublicFeedInfo(feed_info["public_feed_info"]);
             this.setProgressInfo(feed_info["progress_info"]);
@@ -1042,6 +1069,10 @@ export default {
             }
             this.hideAllRelatedToGroup();
 
+            // 비활성 피드는 실행할 수 없으므로 실행 상태를 폴링하지 않는다
+            if (!this.feedIsActive) {
+              return;
+            }
             this.hasRunningStatus = false;
             this.checkRunningInterval = setInterval(() => {
               this.checkRunning();
@@ -1183,6 +1214,13 @@ export default {
       const feederLink = "https://feedly.com/i/discover?query=suggesto%2F" + encodeURIComponent(this.rssUrl);
       window.open(feederLink);
     },
+    stopCheckRunning: function () {
+      // 삭제/비활성화 직후 폴링이 lock 파일로 피드 디렉터리를 되살리지 않도록 요청 전에 멈춘다
+      if (this.checkRunningInterval) {
+        clearInterval(this.checkRunningInterval);
+        this.checkRunningInterval = null;
+      }
+    },
     toggleStatus: function (target) {
       console.log(`toggleStatus(${target})`);
       let url = "";
@@ -1194,6 +1232,7 @@ export default {
 
       this.openConfirmModal("정말로 실행하시겠습니까?", () => {
         if (target === "feed") {
+          this.stopCheckRunning();
           this.startButton("toggleFeedButton");
         } else {
           this.startButton("toggleGroupButton");
@@ -1320,6 +1359,7 @@ export default {
       }
 
       this.openConfirmModal("정말로 실행하시겠습니까?", () => {
+        this.stopCheckRunning();
         this.startButton("removeFeedButton");
         const url = getApiUrlPath() + `/groups/${this.selectedGroupName}/feeds/${this.selectedFeedName}`;
         axios
@@ -1449,6 +1489,8 @@ export default {
           this.jsonEditor = new JSONEditor(this.$refs.jsonEditorContainer, {
             mode: 'tree',
             modes: ['tree', 'code', 'text'],
+            // 비활성 피드의 설정은 보기만 허용한다 (삭제된 피드는 복원용으로 편집 허용)
+            onEditable: () => this.canSaveFeed,
             onChange: () => {
               try {
                 this.jsonData = this.jsonEditor.get();

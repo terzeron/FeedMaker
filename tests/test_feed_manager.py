@@ -4,6 +4,7 @@
 
 import unittest
 import shutil
+import tempfile
 import logging.config
 from contextlib import contextmanager
 from pathlib import Path
@@ -530,26 +531,36 @@ class TestGetFeedNameListUrlCountMap(FeedManagerTestBase):
         result: dict[str, FeedUrlCountInfo] = FeedManager.get_feed_name_list_url_count_map()
         self.assertEqual(result, {})
 
+    def test_excludes_inactive_feeds(self) -> None:
+        # 삭제된 피드도 url_list_count를 남기므로 비활성 행은 문제 목록에서 뺀다
+        self.mock_query.all.return_value = []
+        FeedManager.get_feed_name_list_url_count_map()
+        self.assertIn(FeedInfo.is_active, self.mock_query.filter.call_args[0])
+
 
 class TestRemoveConfigInfo(FeedManagerTestBase):
     def test_remove_without_file_removal(self) -> None:
         feed_dir_path = MagicMock(spec=Path)
         feed_dir_path.name = "my_feed"
+        feed_dir_path.parent.name = "my_group"
         feed_dir_path.__truediv__ = MagicMock()
 
         FeedManager.remove_config_info(feed_dir_path, do_remove_file=False)
 
+        # 같은 이름의 다른 그룹 피드를 건드리지 않도록 (group_name, feed_name)으로 한정한다
+        self.mock_query.filter_by.assert_called_once_with(group_name="my_group", feed_name="my_feed")
+
         self.mock_query.update.assert_called_once()
         update_args = self.mock_query.update.call_args[0][0]
-        self.assertEqual(update_args[FeedInfo.is_active], False)
-        self.assertEqual(update_args[FeedInfo.config], "")
-        self.assertIsNone(update_args[FeedInfo.config_modify_date])
+        # 삭제 후에도 이름/config로 되살릴 수 있도록 is_active만 바꾸고 config 메타데이터는 남긴다
+        self.assertEqual(update_args, {FeedInfo.is_active: False})
         # unlink should not be called
         feed_dir_path.__truediv__.return_value.unlink.assert_not_called()
 
     def test_remove_with_file_removal(self) -> None:
         feed_dir_path = MagicMock(spec=Path)
         feed_dir_path.name = "my_feed"
+        feed_dir_path.parent.name = "my_group"
         conf_file = MagicMock()
         feed_dir_path.__truediv__ = MagicMock(return_value=conf_file)
 
@@ -560,6 +571,14 @@ class TestRemoveConfigInfo(FeedManagerTestBase):
 
 
 class TestAddConfigInfo(FeedManagerTestBase):
+    def _make_feed_dir(self, group_name: str, feed_name: str) -> Path:
+        tmp_dir = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp_dir, ignore_errors=True)
+        feed_dir_path = tmp_dir / group_name / feed_name
+        feed_dir_path.mkdir(parents=True)
+        (feed_dir_path / Config.DEFAULT_CONF_FILE).write_text(json.dumps({"configuration": {"rss": {"title": "T"}, "collection": {}}}), encoding="utf-8")
+        return feed_dir_path
+
     def test_not_a_dir_returns_early(self) -> None:
         feed_dir_path = MagicMock(spec=Path)
         feed_dir_path.is_dir.return_value = False
@@ -600,11 +619,7 @@ class TestAddConfigInfo(FeedManagerTestBase):
         self.mock_session.flush.assert_not_called()
 
     def test_disabled_feed_with_underscore_prefix(self) -> None:
-        feed_dir_path = MagicMock(spec=Path)
-        feed_dir_path.is_dir.return_value = True
-        feed_dir_path.name = "_disabled_feed"
-        feed_dir_path.parent.name = "group"
-
+        feed_dir_path = self._make_feed_dir("group", "_disabled_feed")
         self.mock_query.first.return_value = None
 
         FeedManager._add_config_info(self.mock_session, feed_dir_path)
@@ -613,14 +628,11 @@ class TestAddConfigInfo(FeedManagerTestBase):
         added = self.mock_session.add.call_args[0][0]
         self.assertEqual(added.feed_name, "disabled_feed")
         self.assertFalse(added.is_active)
-        self.mock_session.flush.assert_called_once()
+        # 비활성 피드도 config를 DB에 남겨 둔다
+        self.assertEqual(json.loads(added.config), {"rss": {"title": "T"}, "collection": {}})
 
     def test_disabled_group_with_underscore_prefix(self) -> None:
-        feed_dir_path = MagicMock(spec=Path)
-        feed_dir_path.is_dir.return_value = True
-        feed_dir_path.name = "feed"
-        feed_dir_path.parent.name = "_disabled_group"
-
+        feed_dir_path = self._make_feed_dir("_disabled_group", "feed")
         self.mock_query.first.return_value = None
 
         FeedManager._add_config_info(self.mock_session, feed_dir_path)
@@ -629,6 +641,8 @@ class TestAddConfigInfo(FeedManagerTestBase):
         added = self.mock_session.add.call_args[0][0]
         self.assertEqual(added.group_name, "disabled_group")
         self.assertFalse(added.is_active)
+        # 비활성 피드도 config를 DB에 남겨 둔다
+        self.assertEqual(json.loads(added.config), {"rss": {"title": "T"}, "collection": {}})
 
     def test_skips_pycache_group(self) -> None:
         feed_dir_path = MagicMock(spec=Path)
@@ -657,11 +671,7 @@ class TestAddConfigInfo(FeedManagerTestBase):
 
     def test_disabled_feed_with_double_underscore_prefix(self) -> None:
         # 과거 단일 strip 버그가 남긴 '__name' 형태도 canonical로 완전 정규화돼야 한다.
-        feed_dir_path = MagicMock(spec=Path)
-        feed_dir_path.is_dir.return_value = True
-        feed_dir_path.name = "__disabled_feed"
-        feed_dir_path.parent.name = "group"
-
+        feed_dir_path = self._make_feed_dir("group", "__disabled_feed")
         self.mock_query.first.return_value = None
 
         FeedManager._add_config_info(self.mock_session, feed_dir_path)
@@ -670,6 +680,8 @@ class TestAddConfigInfo(FeedManagerTestBase):
         added = self.mock_session.add.call_args[0][0]
         self.assertEqual(added.feed_name, "disabled_feed")
         self.assertFalse(added.is_active)
+        # 비활성 피드도 config를 DB에 남겨 둔다
+        self.assertEqual(json.loads(added.config), {"rss": {"title": "T"}, "collection": {}})
 
     def test_active_feed_reads_config_and_updates_existing(self) -> None:
         feed_dir_path = MagicMock(spec=Path)
@@ -761,9 +773,25 @@ class TestAddConfigInfo(FeedManagerTestBase):
 
         FeedManager._add_config_info(self.mock_session, feed_dir_path)
 
-        # Should still add a record with empty config
-        self.mock_session.add.assert_called_once()
-        self.mock_session.flush.assert_called_once()
+        # conf.json이 없는 디렉터리는 피드가 아니므로 새 행을 만들지 않는다
+        self.mock_session.add.assert_not_called()
+
+    def test_no_conf_file_keeps_existing_metadata(self) -> None:
+        # 삭제 후 lock 파일만 남은 디렉터리가 남겨 둔 config를 덮어쓰지 않고 비활성으로만 표시한다
+        tmp_dir = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp_dir, ignore_errors=True)
+        feed_dir_path = tmp_dir / "group" / "feed"
+        feed_dir_path.mkdir(parents=True)
+        (feed_dir_path / ".feed_maker_runner.lock").touch()
+        row = self._make_feed_row(feed_name="feed", group_name="group", is_active=True, config='{"rss": {}}', feed_title="Title")
+        self.mock_query.first.return_value = row
+
+        FeedManager._add_config_info(self.mock_session, feed_dir_path)
+
+        self.assertFalse(row.is_active)
+        self.assertEqual(row.config, '{"rss": {}}')
+        self.assertEqual(row.feed_title, "Title")
+        self.mock_session.add.assert_not_called()
 
 
 class TestAddConfigInfoWrapper(FeedManagerTestBase):
@@ -818,9 +846,11 @@ class TestRemoveRssInfo(FeedManagerTestBase):
     def test_remove_without_file(self) -> None:
         feed_dir_path = MagicMock(spec=Path)
         feed_dir_path.name = "my_feed"
+        feed_dir_path.parent.name = "my_group"
 
         FeedManager.remove_rss_info(feed_dir_path, do_remove_file=False)
 
+        self.mock_query.filter_by.assert_called_once_with(group_name="my_group", feed_name="my_feed")
         self.mock_query.update.assert_called_once()
         update_args = self.mock_query.update.call_args[0][0]
         self.assertEqual(update_args[FeedInfo.feedmaker], False)
@@ -1156,9 +1186,11 @@ class TestRemoveProgressInfo(FeedManagerTestBase):
     def test_remove_without_file(self) -> None:
         feed_dir_path = MagicMock(spec=Path)
         feed_dir_path.name = "my_feed"
+        feed_dir_path.parent.name = "my_group"
 
         FeedManager.remove_progress_info(feed_dir_path, do_remove_file=False)
 
+        self.mock_query.filter_by.assert_called_once_with(group_name="my_group", feed_name="my_feed")
         self.mock_query.update.assert_called_once()
         update_args = self.mock_query.update.call_args[0][0]
         self.assertFalse(update_args[FeedInfo.is_completed])
@@ -1516,8 +1548,8 @@ class TestGetGroups(FeedManagerTestBase):
         self.mock_query.distinct.return_value = self.mock_query
         self.mock_query.all.return_value = [row_b, row_a]
 
-        # count calls
-        self.mock_query.count.side_effect = [3, 2, 1, 1]
+        # active count calls
+        self.mock_query.count.side_effect = [2, 1]
 
         result: list[GroupInfo] = FeedManager.get_groups()
 
@@ -1538,8 +1570,8 @@ class TestGetGroups(FeedManagerTestBase):
         row.group_name = "g"
         self.mock_query.distinct.return_value = self.mock_query
         self.mock_query.all.return_value = [row]
-        # first count = total, second = active
-        self.mock_query.count.side_effect = [5, 3]
+        # active count
+        self.mock_query.count.side_effect = [3]
 
         result: list[GroupInfo] = FeedManager.get_groups()
 
@@ -1550,11 +1582,24 @@ class TestGetGroups(FeedManagerTestBase):
         row.group_name = "g"
         self.mock_query.distinct.return_value = self.mock_query
         self.mock_query.all.return_value = [row]
-        self.mock_query.count.side_effect = [5, 0]
+        self.mock_query.count.side_effect = [0]
 
         result: list[GroupInfo] = FeedManager.get_groups()
 
         self.assertFalse(result[0]["is_active"])
+
+    def test_num_feeds_excludes_deleted_feeds(self) -> None:
+        # 삭제된 피드(conf.json 없음)는 DB에 남아도 그룹 피드 수에서 뺀다
+        row = MagicMock()
+        row.group_name = "g"
+        self.mock_query.distinct.return_value = self.mock_query
+        self.mock_query.all.return_value = [row]
+        self.mock_query.count.side_effect = [1]
+
+        with patch.object(FeedManager, "_get_existing_feed_identities", return_value={("g", "a"), ("g", "b"), ("other", "c")}):
+            result: list[GroupInfo] = FeedManager.get_groups()
+
+        self.assertEqual(result[0]["num_feeds"], 2)
 
 
 class TestGetFeedsByGroup(FeedManagerTestBase):
@@ -1590,6 +1635,15 @@ class TestGetFeedsByGroup(FeedManagerTestBase):
         self.mock_query.all.return_value = []
         result: list[GroupFeedInfo] = FeedManager.get_feeds_by_group("no_group")
         self.assertEqual(result, [])
+
+    def test_marks_deleted_feeds(self) -> None:
+        rows = [self._make_feed_row(feed_name="alive", group_name="g"), self._make_feed_row(feed_name="gone", group_name="g", is_active=False)]
+        self.mock_query.all.return_value = rows
+
+        with patch.object(FeedManager, "_get_existing_feed_identities", return_value={("g", "alive")}):
+            result: list[GroupFeedInfo] = FeedManager.get_feeds_by_group("g")
+
+        self.assertEqual([(f["name"], f["is_deleted"]) for f in result], [("alive", False), ("gone", True)])
 
 
 class TestDotPrefixFilteringRealDB(unittest.TestCase):
@@ -1629,8 +1683,13 @@ class TestDotPrefixFilteringRealDB(unittest.TestCase):
 
         self.patcher = patch("bin.feed_manager.DB.session_ctx", fake_ctx)
         self.patcher.start()
+        # 피드 수는 conf.json이 있는 피드만 센다
+        identities = {("news", "feedA"), ("news", "feedB"), ("news", ".ruff_cache"), ("blog", "feedC"), ("blog", ".cache")}
+        self.identities_patcher = patch.object(FeedManager, "_get_existing_feed_identities", return_value=identities)
+        self.identities_patcher.start()
 
     def tearDown(self) -> None:
+        self.identities_patcher.stop()
         self.patcher.stop()
         self.session.close()
         self.engine.dispose()
@@ -1701,6 +1760,38 @@ class TestGetFeedInfo(FeedManagerTestBase):
         result: Optional[SingleFeedInfo] = FeedManager.get_feed_info("g", "feed1")
 
         self.assertEqual(result["config"], {})
+
+    def test_inactive_feed_reads_config_from_prefixed_dir(self) -> None:
+        # 로더는 비활성 피드의 config를 비워 두므로 '_' 접두사 디렉터리의 conf.json에서 읽는다
+        config_data = {"rss": {"title": "T"}, "collection": {"list_url_list": []}, "extraction": {}}
+        tmp_dir = Path(tempfile.mkdtemp())
+        feed_dir = tmp_dir / "g" / "_feed1"
+        feed_dir.mkdir(parents=True)
+        self.addCleanup(shutil.rmtree, tmp_dir, ignore_errors=True)
+        (feed_dir / Config.DEFAULT_CONF_FILE).write_text(json.dumps({"configuration": config_data}), encoding="utf-8")
+        feed = self._make_feed_row(feed_name="feed1", group_name="g", config="", is_active=False)
+        self.mock_query.first.return_value = feed
+
+        with patch.object(FeedManager, "work_dir_path", tmp_dir):
+            result: Optional[SingleFeedInfo] = FeedManager.get_feed_info("g", "feed1")
+
+        self.assertEqual(result["config"], config_data)
+        self.assertFalse(result["is_active"])
+        self.assertFalse(result["is_deleted"])
+
+    def test_deleted_feed_keeps_db_config(self) -> None:
+        # 삭제된 피드는 conf.json이 없지만 DB에 남긴 config를 보여 준다
+        config_data = {"rss": {"title": "T"}, "collection": {}, "extraction": {}}
+        tmp_dir = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp_dir, ignore_errors=True)
+        feed = self._make_feed_row(feed_name="feed1", group_name="g", config=json.dumps(config_data), is_active=False)
+        self.mock_query.first.return_value = feed
+
+        with patch.object(FeedManager, "work_dir_path", tmp_dir):
+            result: Optional[SingleFeedInfo] = FeedManager.get_feed_info("g", "feed1")
+
+        self.assertEqual(result["config"], config_data)
+        self.assertTrue(result["is_deleted"])
 
 
 class TestToggleFeed(FeedManagerTestBase):

@@ -349,6 +349,19 @@ class FeedMakerManager:
             return feed_info, ""
         return None, f"can't get feed info of '{group_name}/{feed_name}'"
 
+    def _resolve_feed_dir_path(self, group_name: str, feed_name: str) -> Path:
+        # 비활성 그룹/피드는 '_' 접두사 디렉터리를 쓴다. 기존 디렉터리가 있으면 그곳에 저장해
+        # 같은 피드의 활성/비활성 디렉터리가 동시에 생기지 않게 한다.
+        group_dir_path = self.work_dir_path / group_name
+        inactive_group_dir_path = self.work_dir_path / f"_{group_name}"
+        if not group_dir_path.is_dir() and inactive_group_dir_path.is_dir():
+            group_dir_path = inactive_group_dir_path
+        feed_dir_path = group_dir_path / feed_name
+        inactive_feed_dir_path = group_dir_path / f"_{feed_name}"
+        if not feed_dir_path.is_dir() and inactive_feed_dir_path.is_dir():
+            return inactive_feed_dir_path
+        return feed_dir_path
+
     def save_config_file(self, group_name: str, feed_name: str, post_data: dict[str, Any]) -> tuple[bool, str]:
         LOGGER.debug("# save_config_file(group_name='%s', feed_name='%s', post_data=%r)", group_name, feed_name, post_data)
         _validate_name(group_name, "group_name")
@@ -360,8 +373,9 @@ class FeedMakerManager:
         if not ("collection" in configuration and "extraction" in configuration and "rss" in configuration):
             return (False, "invalid configuration format (no 'collection' or 'extraction' or 'rss')")
 
-        config_file_path = self.work_dir_path / group_name / feed_name / Config.DEFAULT_CONF_FILE
-        config_file_path.parent.mkdir(exist_ok=True)
+        config_file_path = self._resolve_feed_dir_path(group_name, feed_name) / Config.DEFAULT_CONF_FILE
+        # 삭제된 피드를 복원할 때는 그룹 디렉터리도 없을 수 있다
+        config_file_path.parent.mkdir(parents=True, exist_ok=True)
         with config_file_path.open("w", encoding="utf-8") as outfile:
             outfile.write(json.dumps(post_data, indent=2, ensure_ascii=False))
 
@@ -598,6 +612,9 @@ class FeedMakerManager:
         _validate_name(group_name, "group_name")
         _validate_name(feed_name, "feed_name")
         group_dir_path = self.work_dir_path / group_name
+        if not group_dir_path.is_dir() and (self.work_dir_path / f"_{group_name}").is_dir():
+            # 비활성 그룹 안의 피드는 활성화해도 크롤러가 건너뛰므로 그룹을 먼저 활성화해야 한다
+            return "", f"group '{group_name}' is inactive; activate the group first"
         active_dir_path = group_dir_path / feed_name
         inactive_dir_path = group_dir_path / ("_" + feed_name)
 

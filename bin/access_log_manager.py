@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from bin.feed_maker_util import Env
 from bin.models import FeedInfo
 from bin.db import DB
+from bin.feed_manager import get_canonical_feed_identity
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
@@ -51,6 +52,10 @@ class AccessLogManager:
     @classmethod
     def remove_httpd_access_info(cls, feed_dir_path: Path) -> None:
         feed_name = feed_dir_path.name
+        identity = get_canonical_feed_identity(feed_dir_path)
+        if identity is None:
+            return
         with DB.session_ctx() as s:
-            s.query(FeedInfo).filter_by(feed_name=feed_name).update({FeedInfo.http_request: False, FeedInfo.access_date: None})
+            # 같은 이름의 피드가 다른 그룹에 있을 수 있으므로 (group_name, feed_name)으로 한정한다
+            s.query(FeedInfo).filter_by(group_name=identity[0], feed_name=identity[1]).update({FeedInfo.http_request: False, FeedInfo.access_date: None})
         LOGGER.info("* The removing of access info of feed '%s' is done.", feed_name)

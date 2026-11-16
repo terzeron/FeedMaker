@@ -19,7 +19,7 @@ def test_progress_responses_count_actual_html_files(tmp_path, group, feed, has_h
         (html_dir / "ignored.txt").write_text("ignored")
         (html_dir / "directory.html").mkdir()
     row = SimpleNamespace(
-        feed_name="feed", group_name="group", feed_title="Feed", config="{}",
+        feed_name="feed", group_name="group", feed_title="Feed", config="{}", is_active=True,
         config_modify_date=None, collect_date=None, total_item_count=20,
         public_feed_file_path="", file_size=0, num_items=0, upload_date=None,
         current_index=3, unit_size_per_day=1, progress_ratio=15, due_date=None,
