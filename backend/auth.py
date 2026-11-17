@@ -6,7 +6,6 @@ import logging
 import threading
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
-from urllib.parse import urlparse
 import requests as http_requests
 from fastapi import HTTPException, Request, Response
 from fastapi.responses import JSONResponse
@@ -19,7 +18,7 @@ from backend.audit import audit_log
 LOGGER = logging.getLogger(__name__)
 
 # Session configuration
-SESSION_COOKIE_NAME = "session_id"
+SESSION_COOKIE_NAME = "__Host-fm_session"
 SESSION_EXPIRY_DAYS = 30
 # 생성 시점 기준 절대 상한. sliding 갱신으로도 이 시각을 넘길 수 없어, 탈취된 세션이
 # 접근만으로 무기한 연장되는 것을 막는다.
@@ -33,31 +32,7 @@ def _as_utc(value: datetime) -> datetime:
 
 
 def get_cookie_domain() -> Optional[str]:
-    """
-    프론트엔드 URL에서 쿠키 공유를 위한 공통 도메인 추출
-    예: https://fm.terzeron.com -> .terzeron.com
-    """
-    frontend_url = Env.get("FM_FRONTEND_URL")
-    if not frontend_url:
-        LOGGER.warning("FM_FRONTEND_URL not set, cookie domain will be None")
-        return None
-
-    parsed = urlparse(frontend_url)
-    host = parsed.hostname
-    if not host:
-        return None
-
-    # localhost나 IP 주소인 경우 도메인 설정 안 함
-    if host in ("localhost", "127.0.0.1") or host.replace(".", "").isdigit():
-        return None
-
-    # 서브도메인을 제거하고 루트 도메인 추출 (예: fm.terzeron.com -> terzeron.com)
-    parts = host.split(".")
-    if len(parts) >= 2:
-        # 마지막 두 부분을 루트 도메인으로 사용 (예: terzeron.com)
-        root_domain = ".".join(parts[-2:])
-        return f".{root_domain}"
-
+    """API host 전용 쿠키: Domain 속성을 발급하지 않는다."""
     return None
 
 
@@ -65,23 +40,52 @@ def get_cookie_domain() -> Optional[str]:
 COOKIE_DOMAIN = get_cookie_domain()
 
 
+def _reject_facebook_token(reason: str) -> bool:
+    """거부 사유만 남긴다. token·응답 본문은 credential일 수 있어 기록하지 않는다."""
+    LOGGER.warning("Facebook token verification rejected: %s", reason)
+    return False
+
+
 def verify_facebook_token(access_token: str, expected_email: str) -> bool:
-    """Facebook Graph API로 토큰 유효성과 이메일 일치 여부를 검증"""
+    """토큰의 앱, 사용자, 만료와 이메일을 확인한다. 설정 누락은 거부한다."""
+    app_id = Env.get("FM_FACEBOOK_APP_ID", "")
+    app_secret = Env.get("FM_FACEBOOK_APP_SECRET", "")
+    if not app_id or not app_secret:
+        LOGGER.error("Facebook app credentials are not configured")
+        return False
     try:
-        response = http_requests.get("https://graph.facebook.com/me", params={"fields": "email", "access_token": access_token}, timeout=10)
+        response = http_requests.get("https://graph.facebook.com/debug_token", params={"input_token": access_token}, headers={"Authorization": f"Bearer {app_id}|{app_secret}"}, timeout=10)
         if response.status_code != 200:
-            LOGGER.warning("Facebook token verification failed: status %d", response.status_code)
-            return False
-        fb_data = response.json()
-        fb_email = fb_data.get("email")
-        if fb_email != expected_email:
-            LOGGER.warning("Facebook token email mismatch: expected=%s, got=%s", expected_email, fb_email)
-            return False
+            return _reject_facebook_token(f"debug_token status {response.status_code}")
+        payload = response.json()
+        data = payload.get("data") if isinstance(payload, dict) else None
+        if not isinstance(data, dict):
+            return _reject_facebook_token("debug_token payload malformed")
+        if data.get("is_valid") is not True:
+            return _reject_facebook_token("token not valid")
+        if data.get("app_id") != app_id:
+            return _reject_facebook_token("token issued for another app")
+        if data.get("type") != "USER" or not data.get("user_id"):
+            return _reject_facebook_token("not a user token")
+        now = datetime.now(timezone.utc).timestamp()
+        expires_at = data.get("expires_at")
+        if type(expires_at) is not int or expires_at <= now:
+            return _reject_facebook_token("token expired")
+        data_expires = data.get("data_access_expires_at", 0)
+        if type(data_expires) is not int or data_expires < 0 or (data_expires != 0 and data_expires <= now):
+            return _reject_facebook_token("data access expired")
+        response = http_requests.get("https://graph.facebook.com/me", params={"fields": "id,email"}, headers={"Authorization": f"Bearer {access_token}"}, timeout=10)
+        if response.status_code != 200:
+            return _reject_facebook_token(f"me status {response.status_code}")
+        user = response.json()
+        if not isinstance(user, dict) or user.get("id") != data["user_id"]:
+            return _reject_facebook_token("user id mismatch")
+        if user.get("email") != expected_email:
+            return _reject_facebook_token("email mismatch")
         return True
-    except http_requests.RequestException as e:
-        # 예외 메시지에 access_token이 포함된 요청 URL이 섞일 수 있으므로
-        # 전체 예외 대신 예외 타입명만 로깅한다 (credential 노출 방지)
-        LOGGER.error("Facebook token verification request failed: %s", type(e).__name__)
+    except (http_requests.RequestException, ValueError) as e:
+        # URL과 응답·예외 본문에는 credential이 포함될 수 있다.
+        LOGGER.error("Facebook token verification failed: %s", type(e).__name__)
         return False
 
 
@@ -287,9 +291,9 @@ def set_session_cookie(response: Response, session_id: str) -> None:
         max_age=COOKIE_MAX_AGE,
         httponly=True,  # Prevent XSS attacks
         secure=True,  # HTTPS only
-        samesite="lax",  # CSRF protection: 외부 사이트 POST 요청 시 쿠키 미전송
+        samesite="lax",  # same-site CSRF는 Origin 검증으로 차단
         path="/",
-        domain=COOKIE_DOMAIN,  # Allow cookie sharing across subdomains
+        domain=COOKIE_DOMAIN,  # None: host 전용
     )
 
 
@@ -299,4 +303,7 @@ def clear_session_cookie(response: JSONResponse) -> None:
         key=SESSION_COOKIE_NAME,
         path="/",
         domain=COOKIE_DOMAIN,  # Must match the domain used when setting
+        # __Host- 쿠키는 Secure 없는 Set-Cookie를 브라우저가 거부한다. 삭제에도 필요하다.
+        secure=True,
+        httponly=True,
     )

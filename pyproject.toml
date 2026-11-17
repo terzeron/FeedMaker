@@ -42,6 +42,8 @@ dependencies = [
     "pdftext>=0.7.1",
     "slowapi>=0.1.10",
     "pydantic[email]>=2.13.4",
+    # security: enforce patched DNS parser used by email-validator
+    "dnspython>=2.9.2",
     "cloakbrowser>=0.5.6",
     "camoufox[geoip]>=0.4.11",
     "kiwipiepy>=0.23.2",

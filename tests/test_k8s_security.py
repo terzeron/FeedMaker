@@ -89,3 +89,42 @@ class TestContainerLoggingToStdout:
         conf = LOGGING_CONF.read_text(encoding="utf-8")
         assert "TimedRotatingFileHandler" in conf
         assert "'run.log'" in conf, "호스트 logging.conf 의 로그 경로가 바뀌었다 (CLI 부작용 위험)"
+
+
+class TestSecurityRemediation:
+    def test_application_images_follow_build_script(self):
+        """build.sh 는 :latest 를 push 하고 rollout restart 한다. manifest 가 다른 참조를 쓰면 새 빌드가 배포되지 않는다."""
+        import re
+
+        images = re.findall(r"image:\s+(registry\.terzeron\.com/\S+)", DEPLOYMENT.read_text())
+        assert len(images) == 2
+        assert all(image.endswith(":latest") for image in images)
+
+    def test_proxy_trust_is_explicit(self):
+        block = _backend_deployment_block()
+        assert "name: FM_TRUSTED_PROXY_IPS" in block
+        assert "127.0.0.1,10.1.0.0/16" in block
+
+    def test_facebook_credentials_use_secret(self):
+        block = _backend_deployment_block()
+        assert "name: FM_FACEBOOK_APP_ID" in block
+        assert "name: FM_FACEBOOK_APP_SECRET" in block
+        assert block.count("name: fm-facebook") == 2
+
+    def test_debug_and_double_proxy_handling_disabled(self):
+        text = DOCKERFILE.read_text()
+        assert '"--no-proxy-headers"' in text
+        assert '"--log-level", "info"' in text
+
+    def test_mysql_keeps_host_reachable_address(self):
+        """호스트 CLI가 고정 주소로 DB에 붙는다. ClusterIP 전환은 이 경로를 끊는다."""
+        text = (ROOT / "k8s/fm-db-mysql-values.yml").read_text()
+        assert "type: LoadBalancer" in text
+        assert "loadBalancerIP: 10.10.10.4" in text
+
+    def test_mysql_loadbalancer_limited_to_host(self):
+        """LB 주소 접속은 호스트 OS 한 대로 제한한다. 범위를 넓히면 실패해야 한다."""
+        import yaml
+
+        service = yaml.safe_load((ROOT / "k8s/fm-db-mysql-values.yml").read_text())["service"]
+        assert service["loadBalancerSourceRanges"] == ["192.168.0.10/32"]

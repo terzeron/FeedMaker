@@ -151,3 +151,16 @@ class TestNginxIndexHtmlSecurityHeaders:
     def test_no_x_xss_protection_in_index_html_block(self):
         """폐기된 헤더가 index.html 블록에도 없어야 함"""
         assert "X-XSS-Protection" not in self.block
+
+
+class TestNginxStaticAssetSecurityHeaders:
+    def test_static_assets_keep_security_headers(self):
+        conf = _get_conf_text()
+        block = re.search(r"location ~\* .*?\{([^}]+)\}", conf, re.DOTALL).group(1)
+        for name in ["X-Content-Type-Options", "X-Frame-Options", "Referrer-Policy", "Permissions-Policy", "Content-Security-Policy", "Strict-Transport-Security"]:
+            assert _extract_header_value(block, name), f"{name} missing on static assets"
+
+    def test_hsts_on_index_and_server(self):
+        conf = _get_conf_text()
+        for block in [conf.split("location /")[0], _extract_index_html_block(conf)]:
+            assert _extract_header_value(block, "Strict-Transport-Security") == "max-age=31536000"
