@@ -92,3 +92,6 @@ graphify-out
 
 # 보안 점검·조치 문서 (노출 경로와 내부 구성을 담고 있어 저장소에 넣지 않는다)
 docs/SECURITY-REMEDIATION-*.md
+
+# Playwright MCP 실행 산출물
+.playwright-mcp/
