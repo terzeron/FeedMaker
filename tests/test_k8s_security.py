@@ -92,12 +92,13 @@ class TestContainerLoggingToStdout:
 
 
 class TestSecurityRemediation:
-    def test_application_images_pinned(self):
+    def test_application_images_follow_build_script(self):
+        """build.sh 는 :latest 를 push 하고 rollout restart 한다. manifest 가 다른 참조를 쓰면 새 빌드가 배포되지 않는다."""
         import re
 
         images = re.findall(r"image:\s+(registry\.terzeron\.com/\S+)", DEPLOYMENT.read_text())
         assert len(images) == 2
-        assert all(re.search(r"@sha256:[a-f0-9]{64}$", image) for image in images)
+        assert all(image.endswith(":latest") for image in images)
 
     def test_proxy_trust_is_explicit(self):
         block = _backend_deployment_block()
