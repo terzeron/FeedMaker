@@ -17,7 +17,7 @@ from filelock import Timeout
 
 from bin.feed_maker import FeedMaker, STOP_FLAG_FILE_NAME  # noqa: F401
 from bin.feed_maker_util import Env, PathUtil, Config  # noqa: F401
-from bin.run import FeedMakerRunner
+from bin.run import FeedMakerRunner, spread_feeds_by_group
 
 
 class TestDetermineOptions(unittest.TestCase):
@@ -306,8 +306,7 @@ class TestFeedMakerRunnerMakeAllFeeds(unittest.TestCase):
 
     @patch("bin.run.Notification")
     @patch("bin.run.Config")
-    @patch("bin.run.random.shuffle")
-    def test_iterates_directories(self, mock_shuffle, mock_config_cls, mock_notif_cls):
+    def test_iterates_directories(self, mock_config_cls, mock_notif_cls):
         runner = self._make_runner()
 
         # Setup directory structure mocks
@@ -339,8 +338,7 @@ class TestFeedMakerRunnerMakeAllFeeds(unittest.TestCase):
 
     @patch("bin.run.Notification")
     @patch("bin.run.Config")
-    @patch("bin.run.random.shuffle")
-    def test_handles_not_found_config_error(self, mock_shuffle, mock_config_cls, mock_notif_cls):
+    def test_handles_not_found_config_error(self, mock_config_cls, mock_notif_cls):
         from bin.feed_maker_util import NotFoundConfigItemError
 
         runner = self._make_runner()
@@ -375,8 +373,7 @@ class TestFeedMakerRunnerMakeAllFeeds(unittest.TestCase):
 
     @patch("bin.run.Notification")
     @patch("bin.run.Config")
-    @patch("bin.run.random.shuffle")
-    def test_is_completed_feeds(self, mock_shuffle, mock_config_cls, mock_notif_cls):
+    def test_is_completed_feeds(self, mock_config_cls, mock_notif_cls):
         runner = self._make_runner()
 
         feed_dir = MagicMock(spec=Path)
@@ -408,8 +405,7 @@ class TestFeedMakerRunnerMakeAllFeeds(unittest.TestCase):
 
     @patch("bin.run.Notification")
     @patch("bin.run.Config")
-    @patch("bin.run.random.shuffle")
-    def test_failed_feeds_notification(self, mock_shuffle, mock_config_cls, mock_notif_cls):
+    def test_failed_feeds_notification(self, mock_config_cls, mock_notif_cls):
         runner = self._make_runner()
 
         feed_dir = MagicMock(spec=Path)
@@ -1205,3 +1201,75 @@ class TestFeedMakerRunnerRequestStop(unittest.TestCase):
             self.assertEqual(message, "")
             self.assertTrue((feed_dir / STOP_FLAG_FILE_NAME).is_file())
             self.assertIn(str(feed_dir), mock_kill.call_args[0][0].replace("\\", ""))
+
+
+class TestSpreadFeedsByGroup(unittest.TestCase):
+    """spread_feeds_by_group: 같은 그룹 피드를 실행 순서에서 최대한 멀리 떨어뜨린다."""
+
+    @staticmethod
+    def _feeds(counts: dict[str, int]) -> list[Path]:
+        return [Path("/work") / group / f"feed{i}" for group, n in counts.items() for i in range(n)]
+
+    @staticmethod
+    def _groups(feeds: list[Path]) -> list[str]:
+        return [p.parent.name for p in feeds]
+
+    @staticmethod
+    def _max_run(groups: list[str]) -> int:
+        best = run = 0
+        prev = ""
+        for g in groups:
+            run = run + 1 if g == prev else 1
+            prev = g
+            best = max(best, run)
+        return best
+
+    def test_keeps_all_feeds(self) -> None:
+        feeds = self._feeds({"A": 6, "B": 2, "C": 1})
+        result = spread_feeds_by_group(feeds)
+        self.assertCountEqual(result, feeds)
+
+    def test_dominant_group_has_minimal_run(self) -> None:
+        # A가 9개 중 6개이면 2연속은 피할 수 없다. 단순 라운드로빈은 ABCABAAAA(4연속)가 된다.
+        result = spread_feeds_by_group(self._feeds({"A": 6, "B": 2, "C": 1}))
+        self.assertEqual(self._max_run(self._groups(result)), 2)
+
+    def test_same_size_groups_do_not_clump(self) -> None:
+        # 크기가 같은 B, C가 몰리면 A가 붙는다. A가 절반이면 완전 교차가 가능하다.
+        result = spread_feeds_by_group(self._feeds({"A": 8, "B": 3, "C": 3, "D": 2}))
+        self.assertEqual(self._max_run(self._groups(result)), 1)
+
+    def test_max_run_reaches_lower_bound_for_random_distributions(self) -> None:
+        import math
+        import random
+
+        rng = random.Random(1)
+        for _ in range(200):
+            counts = {f"g{i:02d}": rng.choice([1, 1, 2, 3, 5, 8, 13, 20, 40]) for i in range(rng.randint(1, 15))}
+            total = sum(counts.values())
+            largest = max(counts.values())
+            lower_bound = math.ceil(largest / (total - largest + 1))
+            result = spread_feeds_by_group(self._feeds(counts))
+            self.assertCountEqual(result, self._feeds(counts))
+            self.assertEqual(self._max_run(self._groups(result)), lower_bound, counts)
+
+    def test_no_consecutive_when_balanced(self) -> None:
+        result = spread_feeds_by_group(self._feeds({"A": 5, "B": 4, "C": 3, "D": 2, "E": 1}))
+        self.assertEqual(self._max_run(self._groups(result)), 1)
+
+    def test_group_feeds_evenly_spaced(self) -> None:
+        # 큰 그룹의 최소 간격이 전체 수 // 그룹 피드 수 이상이어야 한다. 끝부분에 몰리면 간격이 줄어든다.
+        result = spread_feeds_by_group(self._feeds({"A": 8, "B": 3, "C": 3, "D": 2}))
+        positions = [i for i, p in enumerate(result) if p.parent.name == "A"]
+        gaps = [b - a for a, b in zip(positions, positions[1:])]
+        self.assertGreaterEqual(min(gaps), len(result) // 8)
+
+    def test_deterministic_and_sorted_within_group(self) -> None:
+        feeds = self._feeds({"A": 3, "B": 2})
+        first = spread_feeds_by_group(list(reversed(feeds)))
+        second = spread_feeds_by_group(feeds)
+        self.assertEqual(first, second)
+        self.assertEqual([p.name for p in first if p.parent.name == "A"], ["feed0", "feed1", "feed2"])
+
+    def test_empty(self) -> None:
+        self.assertEqual(spread_feeds_by_group([]), [])

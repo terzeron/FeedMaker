@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 
 
+import math
 import os
 import re
 import sys
 from datetime import datetime, timedelta, timezone
-import random
 import logging.config
 import getopt
+from collections import deque
 from pathlib import Path
 from typing import Any, Optional
 from filelock import FileLock, Timeout
@@ -19,6 +20,61 @@ from bin.problem_manager import ProblemManager
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
+
+
+def spread_feeds_by_group(feed_dir_path_list: list[Path]) -> list[Path]:
+    """같은 피드그룹의 피드가 실행 순서에서 최대한 멀리 떨어지도록 정렬한다.
+
+    피드 수를 가중치로 쓰는 smooth weighted round-robin으로 그룹을 고른다. 큰 그룹도 전체 구간에 고르게 퍼진다.
+    직전 그룹은 피한다. 다만 남은 피드로 연속 실행 상한을 지킬 수 없으면 피하지 않는다.
+    상한은 피할 수 없는 최소값 ceil(최대 그룹 피드 수 / (나머지 피드 수 + 1))이다.
+    같은 입력에는 항상 같은 순서를 돌려준다. 그룹 안에서는 피드 이름순이다.
+    """
+    queues: dict[str, deque[Path]] = {}
+    for feed_dir_path in sorted(feed_dir_path_list, key=lambda p: (p.parent.name, p.name)):
+        queues.setdefault(feed_dir_path.parent.name, deque()).append(feed_dir_path)
+    if not queues:
+        return []
+
+    group_names = sorted(queues, key=lambda g: (-len(queues[g]), g))
+    weights = {g: len(queues[g]) for g in group_names}
+    total = len(feed_dir_path_list)
+    max_run = math.ceil(weights[group_names[0]] / (total - weights[group_names[0]] + 1))
+    current = dict.fromkeys(group_names, 0)
+
+    def is_feasible(pick: str, run_after: int) -> bool:
+        remaining_total = sum(len(q) for q in queues.values()) - 1
+        for group_name, queue in queues.items():
+            left = len(queue) - (1 if group_name == pick else 0)
+            if left == 0:
+                continue
+            pending = left + (run_after if group_name == pick else 0)
+            if math.ceil(pending / (remaining_total - left + 1)) > max_run:
+                return False
+        return True
+
+    result: list[Path] = []
+    last = ""
+    run = 0
+    for _ in range(total):
+        candidates = [g for g in group_names if queues[g]]
+        for group_name in candidates:
+            current[group_name] += weights[group_name]
+        candidates.sort(key=lambda g: -current[g])
+        can_avoid_last = any(g != last and is_feasible(g, 1) for g in candidates)
+        choice = candidates[0]
+        for group_name in candidates:
+            if group_name == last and can_avoid_last:
+                continue
+            run_after = run + 1 if group_name == last else 1
+            if run_after <= max_run and is_feasible(group_name, run_after):
+                choice = group_name
+                break
+        run = run + 1 if choice == last else 1
+        last = choice
+        current[choice] -= total
+        result.append(queues[choice].popleft())
+    return result
 
 
 class FeedMakerRunner:
@@ -120,7 +176,7 @@ class FeedMakerRunner:
                     if not feed_dir_path.name.startswith("_") and feed_dir_path.is_dir() and conf_file_path.is_file():
                         feed_dir_path_list.append(feed_dir_path)
 
-        random.shuffle(feed_dir_path_list)
+        feed_dir_path_list = spread_feeds_by_group(feed_dir_path_list)
         if num_feeds > 0:
             feed_dir_path_list = feed_dir_path_list[:num_feeds]
 
