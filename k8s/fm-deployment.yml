@@ -25,7 +25,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: fm-backend
-          image: registry.terzeron.com/terzeron/fm_backend:latest
+          image: registry.terzeron.com/terzeron/fm_backend@sha256:62bcf52045f3fdad1a32afc711bb4861cc818aacea98dde96943bf7fb4822761
           # rootfs는 읽기전용(CIS / kubescape C-0017). 쓰기가 필요한 경로는 모두 별도 볼륨으로 분리:
           #   임시·크롬 프로필·크래시패드 → /tmp, 공유메모리 → /dev/shm, 데이터 → PVC(/fma, /xml).
           #   로그는 파일이 아니라 stdout 으로 출력(logging.docker.conf)하여 k8s 가 수집 → rootfs 쓰기 없음.
@@ -60,6 +60,20 @@ spec:
           env:
             # --- topology constants (pod-specific; intentionally NOT sourced from .env,
             #     whose values are host-local: FM_DB_HOST/paths differ in the pod) ---
+            # Calico default-ipv4-ippool 실측 CIDR. pod 신뢰 범위이므로 NetworkPolicy와 함께 사용한다.
+            - name: FM_TRUSTED_PROXY_IPS
+              value: "127.0.0.1,10.1.0.0/16"
+            # 별도 승인 후 생성할 Secret. 누락 시 기동 실패로 잘못된 인증 배포를 방지한다.
+            - name: FM_FACEBOOK_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: fm-facebook
+                  key: app-id
+            - name: FM_FACEBOOK_APP_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: fm-facebook
+                  key: app-secret
             - name: FM_DB_HOST
               value: fm-db-mysql
             - name: FM_DB_PORT
@@ -217,7 +231,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: fm-frontend
-          image: registry.terzeron.com/terzeron/fm_frontend:latest
+          image: registry.terzeron.com/terzeron/fm_frontend@sha256:2bbce9f6a97a9b1d66c65a22e0c66b83645060f4ebb2cc24a6d37d8925c1aeec
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

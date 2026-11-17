@@ -31,7 +31,7 @@ image:
   # 조용히 올라간다. MySQL 은 기동 시 데이터 디렉터리를 새 포맷으로 올리고 다운그레이드가
   # 불가능하므로, 의도하지 않은 시점에 되돌릴 수 없는 변경이 일어난다.
   # 올릴 때는 이 값을 직접 바꾼다. (tm_dev 의 k8s/mysql-deployment.yml 과 같은 이유)
-  tag: "8.4.13"
+  tag: "8.4.13@sha256:a81d043930e51745522bd5c430961cf8286f0a23f0a9a2a6e0108f7ea71b0902"
   pullPolicy: IfNotPresent
 
 settings:
@@ -78,6 +78,11 @@ service:
   # 기존 주소를 그대로 물려받아 외부 접속 설정을 바꾸지 않는다.
   type: LoadBalancer
   loadBalancerIP: 10.10.10.4
+  # LB 주소로 들어오는 접속은 호스트 OS(192.168.0.10)만 허용한다. pod 는 Service 이름(ClusterIP)으로
+  # 붙으므로 영향이 없다. 호스트 IP 가 바뀌면 이 값도 바꾼다.
+  # 주의: 이 제한은 LB 주소에만 걸린다. NodePort 경로에는 적용되지 않는다.
+  loadBalancerSourceRanges:
+    - 192.168.0.10/32
   port: 3306
 
 # QoS Guaranteed(oom_score_adj -997) 를 위해 requests == limits, cpu·memory 둘 다.

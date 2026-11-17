@@ -51,9 +51,8 @@ app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
-# X-Forwarded-For를 신뢰할 프록시 IP 목록 (기본: 127.0.0.1 = 동일 호스트 nginx)
+# X-Forwarded-For를 신뢰할 프록시 IP·CIDR 목록 (기본: 127.0.0.1. 운영 값은 k8s/fm-deployment.yml)
 _trusted_proxy_ips = Env.get("FM_TRUSTED_PROXY_IPS", "127.0.0.1")
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=_trusted_proxy_ips)
 
 frontend_url = Env.get("FM_FRONTEND_URL")
 # 개발용 origin(localhost 등)은 코드에 하드코딩하지 않는다. 운영 이미지에까지 실려
@@ -100,6 +99,14 @@ async def auth_middleware(request: Request, call_next: Any) -> Response:
 
 
 @app.middleware("http")
+async def csrf_middleware(request: Request, call_next: Any) -> Response:
+    if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
+        if request.headers.get("origin") not in origins:
+            return JSONResponse(status_code=403, content={"detail": "Origin not allowed"})
+    return await call_next(request)
+
+
+@app.middleware("http")
 async def request_id_middleware(request: Request, call_next: Any) -> Response:
     """요청마다 상관(correlation) ID를 부여해 audit 로그 추적을 가능하게 한다.
 
@@ -116,10 +123,20 @@ async def request_id_middleware(request: Request, call_next: Any) -> Response:
     return response
 
 
+@app.middleware("http")
+async def hsts_middleware(request: Request, call_next: Any) -> Response:
+    """세션 쿠키가 걸리는 API host에도 HSTS를 낸다. frontend nginx와 같은 값이다."""
+    response: Response = await call_next(request)
+    response.headers["Strict-Transport-Security"] = "max-age=31536000"
+    return response
+
+
 # CORSMiddleware는 반드시 모든 http 미들웨어보다 나중에 등록해야 한다. Starlette는
 # 나중에 등록한 미들웨어를 더 바깥에 배치하므로, CORS가 안쪽에 있으면 auth_middleware가
 # 401로 조기 반환할 때 CORS 헤더가 붙지 않는다. 브라우저는 헤더 없는 응답을 차단하고
 # axios는 상태 코드 대신 "Network Error"를 던져, 인증 만료가 네트워크 장애로 오인된다.
+# IP를 인증·rate limit·audit보다 먼저 복원한다. uvicorn 자체 proxy 처리는 비활성화한다.
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=_trusted_proxy_ips)
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=True, allow_methods=["GET", "POST", "PUT", "DELETE"], allow_headers=["Content-Type", "Authorization"])
 
 
@@ -234,7 +251,7 @@ async def logout(request: Request) -> JSONResponse:
 
     user_session = get_current_user(request)
     email = user_session.user_email if user_session else "-"
-    session_id = request.cookies.get("session_id")
+    session_id = request.cookies.get(SESSION_COOKIE_NAME)
     if session_id:
         delete_session(session_id)
     audit_log("logout", email=email, outcome="success", request=request)
@@ -725,4 +742,4 @@ if __name__ == "__main__":  # pragma: no cover
     LOGGER.debug("# main()")
     _host = Env.get("FM_BACKEND_HOST", "127.0.0.1")
     _port = int(Env.get("FM_BACKEND_PORT", "8010"))
-    uvicorn.run(app, host=_host, port=_port)
+    uvicorn.run(app, host=_host, port=_port, proxy_headers=False)

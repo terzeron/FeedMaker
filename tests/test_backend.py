@@ -19,7 +19,7 @@ import unittest
 import backend.main as bmain
 
 # TestClient 인스턴스 생성
-client = TestClient(app)
+client = TestClient(app, headers={"Origin": "https://fm.terzeron.com"})
 
 # 인증된 세션을 시뮬레이션하기 위한 mock 세션 쿠키
 FAKE_SESSION_ID = "test-session-id-for-unit-tests"
@@ -88,8 +88,7 @@ def test_invalid_endpoint():
     assert response.status_code == 404
 
 
-# CSRF 보호는 SameSite=Lax 쿠키 설정으로 브라우저 레벨에서 처리됨
-# 별도의 CSRF 토큰 검증 테스트는 더 이상 필요하지 않음
+# Origin 검증 회귀는 test_security_remediation.py에서 확인한다.
 
 
 def test_unauthenticated_request_rejected():
@@ -959,7 +958,7 @@ def test_remove_group_failure():
 
 
 def test_logout_with_session():
-    req = types.SimpleNamespace(cookies={"session_id": "abc123"})
+    req = types.SimpleNamespace(cookies={SESSION_COOKIE_NAME: "abc123"})
     with patch("backend.main.delete_session") as mock_del, patch("backend.main.clear_session_cookie"):
         r = asyncio.run(main.logout(request=req))
         mock_del.assert_called_once_with("abc123")
@@ -1215,7 +1214,7 @@ def test_set_and_clear_session_cookie():
 
     # Set-Cookie 헤더에 세션 쿠키가 포함되어야 함
     headers = [h.decode().lower() for k, h in r.raw_headers if k.decode().lower() == "set-cookie"]
-    assert any(SESSION_COOKIE_NAME in h for h in headers)
+    assert any(SESSION_COOKIE_NAME.lower() in h for h in headers)
     # SameSite=Lax 설정 확인
     assert any("samesite=lax" in h for h in headers)
 

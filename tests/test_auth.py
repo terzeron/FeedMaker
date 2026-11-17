@@ -6,19 +6,27 @@ from unittest.mock import patch, MagicMock
 
 from backend.auth import verify_facebook_token
 import unittest
+import pytest
 from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 
 
 class TestVerifyFacebookToken:
+    @pytest.fixture(autouse=True)
+    def facebook_config(self):
+        with patch("backend.auth.Env.get", side_effect=lambda key, default="": {"FM_FACEBOOK_APP_ID": "app", "FM_FACEBOOK_APP_SECRET": "secret"}.get(key, default)):
+            yield
+
     def test_valid_token(self):
         """유효한 토큰과 일치하는 이메일이면 True"""
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {"email": "user@example.com"}
+        mock_response.json.return_value = {"id": "user", "email": "user@example.com"}
 
-        with patch("backend.auth.http_requests.get", return_value=mock_response):
+        debug_response = MagicMock(status_code=200)
+        debug_response.json.return_value = {"data": {"app_id": "app", "type": "USER", "user_id": "user", "is_valid": True, "expires_at": 4102444800}}
+        with patch("backend.auth.http_requests.get", side_effect=[debug_response, mock_response]):
             assert verify_facebook_token("valid_token", "user@example.com") is True
 
     def test_email_mismatch(self):
@@ -74,7 +82,7 @@ class TestGetCookieDomain(unittest.TestCase):
         from backend.auth import get_cookie_domain
 
         result = get_cookie_domain()
-        self.assertEqual(result, ".terzeron.com")
+        self.assertIsNone(result)
 
     @patch("backend.auth.Env.get")
     def test_localhost(self, mock_env) -> None:
@@ -519,7 +527,7 @@ class TestSetAndClearSessionCookie(unittest.TestCase):
         set_session_cookie(response, "test_session_id")
         response.set_cookie.assert_called_once()
         kwargs = response.set_cookie.call_args.kwargs
-        self.assertEqual(kwargs["key"], "session_id")
+        self.assertEqual(kwargs["key"], "__Host-fm_session")
         self.assertTrue(kwargs.get("httponly"), "httponly must be True")
         self.assertTrue(kwargs.get("secure"), "secure must be True")
 
@@ -529,6 +537,18 @@ class TestSetAndClearSessionCookie(unittest.TestCase):
         response = MagicMock(spec=JSONResponse)
         clear_session_cookie(response)
         response.delete_cookie.assert_called_once()
+
+    def test_clear_session_cookie_keeps_secure_for_host_prefix(self) -> None:
+        """__Host- 쿠키는 Secure가 없으면 브라우저가 삭제 Set-Cookie를 거부한다."""
+        from backend.auth import clear_session_cookie
+
+        response = JSONResponse(content={})
+        clear_session_cookie(response)
+        cookie = response.headers["set-cookie"]
+        self.assertIn("__Host-fm_session=", cookie)
+        self.assertIn("Secure", cookie)
+        self.assertIn("Max-Age=0", cookie)
+        self.assertNotIn("Domain=", cookie)
 
 
 class TestRequireAdminRoleSeparation(unittest.TestCase):

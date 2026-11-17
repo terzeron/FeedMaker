@@ -118,4 +118,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
 
 USER $USER_NAME
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["uvicorn", "backend.main:app", "--workers", "1", "--host", "0.0.0.0", "--port", "8010", "--log-level", "debug", "--access-log", "--log-config", "/app/logging.conf"]
+CMD ["uvicorn", "backend.main:app", "--workers", "1", "--host", "0.0.0.0", "--port", "8010", "--no-proxy-headers", "--log-level", "info", "--access-log", "--log-config", "/app/logging.conf"]
