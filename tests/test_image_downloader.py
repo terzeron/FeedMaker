@@ -951,6 +951,90 @@ def test_image_optimization():
         original_path.parent.rmdir()
 
 
+class TestKeepOversizedImage(unittest.TestCase):
+    """WebP 상한(16383px)을 넘는 이미지는 WebP 대신 원본 계열 포맷(.jpg/.png)으로 남긴다."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.feed_dir = Path(self._tmp.name)
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def test_resized_jpeg_is_reencoded_as_jpeg(self) -> None:
+        # 너비 제한(1600px)으로 리사이즈된 JPEG는 .jpg로 다시 저장하고 확장자 없는 원본은 지운다
+        raw = self.feed_dir / "abc123"
+        Image.new("RGB", (2000, 100), "red").save(raw, "JPEG")
+
+        with patch.object(ImageDownloader, "WEBP_SIZE_LIMIT", 1500):
+            result = ImageDownloader.convert_image_format(raw, quality=80)
+
+        assert result is not None
+        self.assertEqual(result, self.feed_dir / "abc123.jpg")
+        self.assertFalse(raw.exists())
+        self.assertFalse((self.feed_dir / "abc123.webp").exists())
+        with Image.open(result) as img:
+            self.assertEqual(img.format, "JPEG")
+            self.assertEqual(img.size, (1600, 80))
+
+    def test_non_jpeg_png_format_is_saved_as_png(self) -> None:
+        # GIF처럼 JPEG/PNG가 아닌 원본은 크기가 같아도 그대로 쓰지 않고 PNG로 저장한다
+        raw = self.feed_dir / "abc123"
+        Image.new("P", (40, 60)).save(raw, "GIF")
+
+        with patch.object(ImageDownloader, "WEBP_SIZE_LIMIT", 50):
+            result = ImageDownloader.convert_image_format(raw)
+
+        assert result is not None
+        self.assertEqual(result, self.feed_dir / "abc123.png")
+        self.assertFalse(raw.exists())
+        with Image.open(result) as img:
+            self.assertEqual(img.format, "PNG")
+            self.assertEqual(img.size, (40, 60))
+
+    def test_save_failure_returns_none_and_keeps_original(self) -> None:
+        raw = self.feed_dir / "abc123"
+        Image.new("RGB", (2000, 100), "red").save(raw, "JPEG")
+
+        with Image.open(raw) as img, patch.object(Image.Image, "save", side_effect=OSError("disk full")):
+            optimized = img.resize((1600, 80))
+            result = ImageDownloader._keep_oversized_image(raw, img, optimized, quality=75)
+
+        self.assertIsNone(result)
+        self.assertTrue(raw.exists())
+
+
+class TestDownloadImageCorruptExtensionlessCache(unittest.TestCase):
+    """확장자 없는 캐시가 손상돼 변환에 실패하면 다시 내려받아 복구한다."""
+
+    @patch("utils.image_downloader.FileManager")
+    @patch("utils.image_downloader.Env")
+    def test_corrupt_cache_is_redownloaded(self, mock_env: MagicMock, mock_fm: MagicMock) -> None:
+        mock_env.get.return_value = "http://img.example.com"
+        mock_fm.get_cache_url.side_effect = lambda prefix, url, suffix="": f"{prefix}/abc123{suffix}"
+
+        with tempfile.TemporaryDirectory() as tmp:
+            feed_dir = Path(tmp) / "feed"
+            feed_dir.mkdir()
+            raw = feed_dir / "abc123"
+            raw.write_bytes(b"not an image at all")
+            mock_fm.get_cache_file_path.return_value = raw
+
+            def download(_url: str, download_file: Path) -> tuple[bool, None, None]:
+                Image.new("RGB", (10, 10), "blue").save(download_file, "JPEG")
+                return True, None, None
+
+            crawler = MagicMock()
+            crawler.run.side_effect = download
+            path, url = ImageDownloader.download_image(crawler, feed_dir, "http://example.com/photo.jpg")
+
+            crawler.run.assert_called_once()
+            assert path is not None
+            self.assertEqual(path, feed_dir / "abc123.webp")
+            self.assertTrue(path.is_file())
+            self.assertEqual(url, "http://img.example.com/feed/abc123.webp")
+
+
 def test_webtoon_optimization():
     """웹툰 최적화 기능 테스트"""
     print("=== 웹툰 최적화 기능 테스트 ===\n")

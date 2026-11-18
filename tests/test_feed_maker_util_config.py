@@ -29,7 +29,7 @@ class ConfigTest(unittest.TestCase):
                     "headers": {},
                     "browser_fallback": ["camoufox", "cloakbrowser"],
                 },
-                "extraction": {"timeout": 30, "render_js": False, "user_agent": True, "element_id_list": ["ct", "content"], "element_class_list": ["se_doc_viewer", "content_view"], "element_path_list": [], "post_process_script_list": ["post_process_script_for_navercast.py"], "headers": {}, "browser_fallback": ["patchright", "nodriver"]},
+                "extraction": {"timeout": 30, "render_js": False, "user_agent": True, "element_id_list": ["ct", "content"], "element_class_list": ["se_doc_viewer", "content_view"], "element_path_list": [], "post_process_script_list": ["post_process_script_for_navercast.py"], "headers": {}, "browser_fallback": ["rebrowser_playwright", "flaresolverr"]},
                 "rss": {"title": "네이버캐스트 모바일"},
             }
         }
@@ -217,7 +217,7 @@ class ConfigTest(unittest.TestCase):
 
         self.assertEqual(
             configs["browser_fallback"],
-            ["patchright", "nodriver"],
+            ["rebrowser_playwright", "flaresolverr"],
         )
 
     def test_get_rss_configs(self) -> None:

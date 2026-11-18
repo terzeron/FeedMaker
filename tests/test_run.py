@@ -439,6 +439,45 @@ class TestFeedMakerRunnerMakeAllFeeds(unittest.TestCase):
             self.assertIn("fail_feed", mock_notif.send_msg.call_args[0][0])
 
 
+class TestMakeAllFeedsIsolatesMissingConfigItem(unittest.TestCase):
+    """피드 하나의 설정 누락(make_single_feed에서 발생)이 전체 실행(run.py -a)을 멈추지 않는다."""
+
+    def setUp(self) -> None:
+        self.tmp_root = Path(tempfile.mkdtemp())
+        for group, feed in (("group_a", "bad_feed"), ("group_b", "good_feed")):
+            feed_dir = self.tmp_root / group / feed
+            feed_dir.mkdir(parents=True)
+            (feed_dir / Config.DEFAULT_CONF_FILE).write_text("{}", encoding="utf-8")
+        with patch("bin.run.Env.get", side_effect=lambda k: {"FM_WORK_DIR": str(self.tmp_root), "WEB_SERVICE_IMAGE_DIR_PREFIX": str(self.tmp_root)}[k]):
+            self.runner = FeedMakerRunner(html_archiving_period=30, list_archiving_period=7)
+        self.runner.work_dir_path = self.tmp_root
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.tmp_root, ignore_errors=True)
+
+    @patch("bin.run.Notification")
+    @patch("bin.run.Config")
+    def test_missing_config_item_in_one_feed_continues_others(self, mock_config_cls, mock_notif_cls):
+        from bin.feed_maker_util import NotFoundConfigItemError
+
+        mock_config_cls.DEFAULT_CONF_FILE = Config.DEFAULT_CONF_FILE
+        mock_config_cls.return_value.get_collection_configs.return_value = {"is_completed": False}
+        made: list[str] = []
+
+        def make_single_feed(feed_dir_path: Path, options: dict[str, Any]) -> bool:
+            if feed_dir_path.name == "bad_feed":
+                raise NotFoundConfigItemError("rss_title")
+            made.append(feed_dir_path.name)
+            return True
+
+        with patch.object(self.runner, "make_single_feed", side_effect=make_single_feed):
+            result = self.runner.make_all_feeds(options={})
+
+        self.assertTrue(result)
+        self.assertEqual(made, ["good_feed"])
+        mock_notif_cls.return_value.send_msg.assert_called_once_with("group_a/bad_feed", "Errors of FeedMaker")
+
+
 @patch("bin.run.Path.is_dir", return_value=True)
 class TestFeedMakerRunnerCheckRunning(unittest.TestCase):
     """check_running: unlocked, locked, FileNotFoundError"""

@@ -1781,5 +1781,80 @@ class TestMakeHtmlFileVanishedAfterWrite(FeedMakerMakeTestBase):
         self.assertTrue(html_path.exists())
 
 
+class TestRefreshProgressCounts(FeedMakerMakeTestBase):
+    """newlist 수집 직후 진행 중(is_completed) 피드의 진행 현황을 DB에 반영한다."""
+
+    def test_completed_feed_refreshes_progress(self) -> None:
+        self.maker.is_completed_feed = True
+        with patch("bin.feed_maker.NewlistCollector") as mock_collector, patch("bin.feed_maker.FeedManager.refresh_progress_counts") as mock_refresh:
+            mock_collector.return_value.collect.return_value = [("http://x.com/1", "X", [])]
+            result = self.maker._get_recent_feed_list()
+        self.assertEqual(result, [("http://x.com/1", "X", [])])
+        mock_refresh.assert_called_once_with(self.feed_dir_path)
+
+    def test_non_completed_feed_skips_refresh(self) -> None:
+        self.maker.is_completed_feed = False
+        with patch("bin.feed_maker.NewlistCollector") as mock_collector, patch("bin.feed_maker.FeedManager.refresh_progress_counts") as mock_refresh:
+            mock_collector.return_value.collect.return_value = []
+            self.maker._get_recent_feed_list()
+        mock_refresh.assert_not_called()
+
+    def test_refresh_failure_does_not_block_collection(self) -> None:
+        # 진행 현황 갱신 실패(DB 장애 등)가 피드 생성을 막으면 안 된다
+        self.maker.is_completed_feed = True
+        with patch("bin.feed_maker.NewlistCollector") as mock_collector, patch("bin.feed_maker.FeedManager.refresh_progress_counts", side_effect=RuntimeError("db down")), patch("bin.feed_maker.LOGGER.warning") as mock_warning:
+            mock_collector.return_value.collect.return_value = [("http://x.com/1", "X", [])]
+            result = self.maker._get_recent_feed_list()
+        self.assertEqual(result, [("http://x.com/1", "X", [])])
+        mock_warning.assert_called_once()
+
+
+class TestMakeStopRequested(FeedMakerMakeTestBase):
+    """make() 도중 중지 요청이 들어오면 다음 단계로 넘어가지 않고 실패로 끝난다."""
+
+    def _request_stop(self, *_args: object, **_kwargs: object) -> None:
+        (self.feed_dir_path / STOP_FLAG_FILE_NAME).touch()
+
+    def test_stop_after_collection_skips_html_generation(self) -> None:
+        def collect() -> list[tuple[str, str, list[str]]]:
+            self._request_stop()
+            return [("http://x.com/1", "X", [])]
+
+        with patch("bin.feed_maker.NewlistCollector") as mock_collector, patch.object(FeedMaker, "_diff_feeds_and_make_htmls") as mock_diff, patch.object(FeedMaker, "_generate_rss_feed") as mock_gen:
+            mock_collector.return_value.collect.side_effect = collect
+            result = self.maker.make()
+
+        self.assertFalse(result)
+        mock_diff.assert_not_called()
+        mock_gen.assert_not_called()
+
+    def test_stop_after_html_generation_skips_rss(self) -> None:
+        def diff(*_args: object) -> list[tuple[str, str, list[str]]]:
+            self._request_stop()
+            return [("http://x.com/1", "X", [])]
+
+        with patch("bin.feed_maker.NewlistCollector") as mock_collector, patch.object(FeedMaker, "_diff_feeds_and_make_htmls", side_effect=diff), patch.object(FeedMaker, "_generate_rss_feed") as mock_gen, patch("bin.feed_maker.Uploader.upload") as mock_upload:
+            mock_collector.return_value.collect.return_value = [("http://x.com/1", "X", [])]
+            result = self.maker.make()
+
+        self.assertFalse(result)
+        mock_gen.assert_not_called()
+        mock_upload.assert_not_called()
+
+    def test_stop_during_new_items_skips_old_items(self) -> None:
+        def make_html(link: str, _title: str) -> bool:
+            self._request_stop()
+            return True
+
+        recent: list[tuple[str, str, list[str]]] = [("http://new.com/1", "New", [])]
+        old: list[tuple[str, str, list[str]]] = [("http://old.com/1", "Old", [])]
+        with patch.object(self.maker, "_make_html_file", side_effect=make_html) as mock_make:
+            result = self.maker._diff_feeds_and_make_htmls(recent, old)
+
+        # 신규 항목까지만 만들고, 과거 항목은 만들지 않는다
+        self.assertEqual(result, [("http://new.com/1", "New", [])])
+        mock_make.assert_called_once_with("http://new.com/1", "New")
+
+
 if __name__ == "__main__":
     unittest.main()

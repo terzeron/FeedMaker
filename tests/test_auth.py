@@ -65,6 +65,17 @@ class TestVerifyFacebookToken:
             logged = " ".join(repr(c.args) for c in mock_logger.error.call_args_list)
             assert secret not in logged, f"access_token leaked into log: {logged}"
 
+    def test_me_endpoint_error_rejected_after_valid_debug_token(self):
+        """debug_token이 유효해도 /me 조회가 실패하면 사용자를 확인할 수 없으므로 False"""
+        debug_response = MagicMock(status_code=200)
+        debug_response.json.return_value = {"data": {"app_id": "app", "type": "USER", "user_id": "user", "is_valid": True, "expires_at": 4102444800}}
+        me_response = MagicMock(status_code=500)
+
+        with patch("backend.auth.http_requests.get", side_effect=[debug_response, me_response]) as mock_get:
+            assert verify_facebook_token("token", "user@example.com") is False
+        assert mock_get.call_count == 2
+        me_response.json.assert_not_called()
+
     def test_no_email_in_response(self):
         """Facebook 응답에 email 필드가 없으면 False"""
         mock_response = MagicMock()

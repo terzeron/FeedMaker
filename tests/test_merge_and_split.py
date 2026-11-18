@@ -286,6 +286,18 @@ class TestSaveSegment(unittest.TestCase):
                 self.assertEqual(im.size, (100, 200))
             self.assertEqual([p.name for p in dir_path.iterdir()], [second.name])
 
+    def test_failed_replace_removes_temp_file_and_keeps_previous_segment(self) -> None:
+        # 교체 실패 시 임시 파일이 남지 않고, 기존 세그먼트는 손상 없이 유지되어야 한다
+        with tempfile.TemporaryDirectory() as d:
+            dir_path = Path(d)
+            first = save_segment(_solid(100, 100, (10, 20, 30)), dir_path, "https://example.com/page?id=1", 1, 75, "PNG")
+            with patch("utils.merge_and_split.os.replace", side_effect=OSError("cross-device")), self.assertRaises(OSError):
+                save_segment(_solid(100, 200, (10, 20, 30)), dir_path, "https://example.com/page?id=1", 1, 75, "PNG")
+
+            self.assertEqual([p.name for p in dir_path.iterdir()], [first.name])
+            with Image.open(first) as im:
+                self.assertEqual(im.size, (100, 100))
+
 
 class TestSegmentPostfix(unittest.TestCase):
     def test_zero_padded_to_fixed_width(self) -> None:

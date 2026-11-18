@@ -23,7 +23,7 @@ class TestHeadlessBrowserFacade(unittest.TestCase):
     def test_explicit_browser_fallback_overrides_environment(self):
         with patch("bin.headless_browser.Env") as mock_env:
             mock_env.get.return_value = "cloakbrowser"
-            self.assertEqual(_resolve_engine_order(["patchright", "nodriver", "camoufox"]), ["patchright", "nodriver", "camoufox"])
+            self.assertEqual(_resolve_engine_order(["rebrowser_playwright", "flaresolverr", "camoufox"]), ["rebrowser_playwright", "flaresolverr", "camoufox"])
 
     def test_explicit_browser_fallback_rejects_unknown_engine(self):
         with self.assertRaisesRegex(ValueError, "unknown headless browser engine"):
@@ -45,9 +45,9 @@ class TestHeadlessBrowserFacade(unittest.TestCase):
         self.assertEqual(HeadlessBrowser.COOKIE_FILE, "cookies.camoufox.json")
 
     def test_explicit_browser_fallback_tracks_primary_cookie_file(self):
-        facade = HeadlessBrowser(dir_path=Path(tempfile.gettempdir()), timeout=5, browser_fallback=["nodriver", "camoufox"])
-        self.assertEqual(facade.COOKIE_FILE, "cookies.nodriver.json")
-        self.assertEqual(facade._engine_order, ["nodriver", "camoufox"])
+        facade = HeadlessBrowser(dir_path=Path(tempfile.gettempdir()), timeout=5, browser_fallback=["flaresolverr", "camoufox"])
+        self.assertEqual(facade.COOKIE_FILE, "cookies.flaresolverr.json")
+        self.assertEqual(facade._engine_order, ["flaresolverr", "camoufox"])
 
     def _facade(self):
         return HeadlessBrowser(dir_path=Path(tempfile.gettempdir()), timeout=5)

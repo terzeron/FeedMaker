@@ -1,19 +1,14 @@
 #!/usr/bin/env python
 
-import asyncio
-import sys
 import tempfile
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import requests
 
 from bin.headless_browser import _import_engine_class, _resolve_engine_order
 from bin.headless_browser_flaresolverr import HeadlessBrowserFlaresolverr
-from bin.headless_browser_nodriver import HeadlessBrowserNodriver
-from bin.headless_browser_patchright import HeadlessBrowserPatchright
 from bin.headless_browser_rebrowser_playwright import HeadlessBrowserRebrowserPlaywright
 
 
@@ -29,11 +24,11 @@ class _BrowserTestCase(unittest.TestCase):
 class TestExtraEngineFacade(_BrowserTestCase):
     def test_explicit_engine_order_accepts_extra_engines(self):
         with patch("bin.headless_browser.Env") as mock_env:
-            mock_env.get.side_effect = lambda key, default="": ("patchright,nodriver,flaresolverr,rebrowser_playwright" if key == "FM_HEADLESS_BACKEND" else default)
-            self.assertEqual(_resolve_engine_order(), ["patchright", "nodriver", "flaresolverr", "rebrowser_playwright"])
+            mock_env.get.side_effect = lambda key, default="": ("flaresolverr,rebrowser_playwright" if key == "FM_HEADLESS_BACKEND" else default)
+            self.assertEqual(_resolve_engine_order(), ["flaresolverr", "rebrowser_playwright"])
 
     def test_extra_engine_modules_are_registered(self):
-        expected = {"patchright": HeadlessBrowserPatchright, "nodriver": HeadlessBrowserNodriver, "flaresolverr": HeadlessBrowserFlaresolverr, "rebrowser_playwright": HeadlessBrowserRebrowserPlaywright}
+        expected = {"flaresolverr": HeadlessBrowserFlaresolverr, "rebrowser_playwright": HeadlessBrowserRebrowserPlaywright}
         for name, engine_cls in expected.items():
             with self.subTest(engine=name):
                 self.assertIs(_import_engine_class(name), engine_cls)
@@ -62,16 +57,8 @@ class TestPlaywrightCompatibleEngines(_BrowserTestCase):
         manager.chromium.launch.return_value.close.assert_called_once()
         manager.stop.assert_called_once()
 
-    def test_patchright_launches_playwright_compatible_session(self):
-        self._assert_launch_contract("bin.headless_browser_patchright", HeadlessBrowserPatchright)
-
     def test_rebrowser_launches_playwright_compatible_session(self):
         self._assert_launch_contract("bin.headless_browser_rebrowser_playwright", HeadlessBrowserRebrowserPlaywright)
-
-    def test_patchright_converts_driver_error_to_empty_result(self):
-        browser = self._make_browser(HeadlessBrowserPatchright)
-        with patch("bin.headless_browser_patchright.HeadlessBrowserBase.make_request", side_effect=RuntimeError("patchright driver failed")):
-            self.assertEqual(browser.make_request("https://example.com"), "")
 
     def test_rebrowser_converts_driver_error_to_empty_result(self):
         browser = self._make_browser(HeadlessBrowserRebrowserPlaywright)
@@ -79,14 +66,14 @@ class TestPlaywrightCompatibleEngines(_BrowserTestCase):
             self.assertEqual(browser.make_request("https://example.com"), "")
 
     def test_engine_login_errors_are_converted_to_false(self):
-        for module_name, browser_cls in (("bin.headless_browser_patchright", HeadlessBrowserPatchright), ("bin.headless_browser_rebrowser_playwright", HeadlessBrowserRebrowserPlaywright)):
+        for module_name, browser_cls in (("bin.headless_browser_rebrowser_playwright", HeadlessBrowserRebrowserPlaywright),):
             with self.subTest(engine=module_name):
                 browser = self._make_browser(browser_cls)
                 with patch(f"{module_name}.HeadlessBrowserBase.login", side_effect=RuntimeError("driver failed")):
                     self.assertFalse(browser.login({}))
 
     def test_launch_failure_closes_started_resources(self):
-        for module_name, browser_cls in (("bin.headless_browser_patchright", HeadlessBrowserPatchright), ("bin.headless_browser_rebrowser_playwright", HeadlessBrowserRebrowserPlaywright)):
+        for module_name, browser_cls in (("bin.headless_browser_rebrowser_playwright", HeadlessBrowserRebrowserPlaywright),):
             with self.subTest(engine=module_name):
                 browser = self._make_browser(browser_cls)
                 manager = MagicMock()
@@ -101,7 +88,7 @@ class TestPlaywrightCompatibleEngines(_BrowserTestCase):
                 manager.stop.assert_called_once()
 
     def test_launch_session_reports_missing_optional_dependency(self):
-        for module_name, browser_cls in (("bin.headless_browser_patchright", HeadlessBrowserPatchright), ("bin.headless_browser_rebrowser_playwright", HeadlessBrowserRebrowserPlaywright)):
+        for module_name, browser_cls in (("bin.headless_browser_rebrowser_playwright", HeadlessBrowserRebrowserPlaywright),):
             with self.subTest(engine=module_name):
                 browser = self._make_browser(browser_cls)
                 with patch(f"{module_name}.sync_playwright", None):
@@ -109,7 +96,7 @@ class TestPlaywrightCompatibleEngines(_BrowserTestCase):
                         browser._launch_session()
 
     def test_close_session_swallows_cleanup_errors(self):
-        for browser_cls in (HeadlessBrowserPatchright, HeadlessBrowserRebrowserPlaywright):
+        for browser_cls in (HeadlessBrowserRebrowserPlaywright,):
             with self.subTest(engine=browser_cls.__name__):
                 manager = MagicMock()
                 browser = MagicMock()
@@ -121,282 +108,6 @@ class TestPlaywrightCompatibleEngines(_BrowserTestCase):
                 context.close.assert_called_once()
                 browser.close.assert_called_once()
                 manager.stop.assert_called_once()
-
-
-class TestNodriverEngine(_BrowserTestCase):
-    def test_fetch_reaps_subprocess_and_closes_pipes_before_returning(self):
-        for fail_navigation, stop_process in ((False, True), (True, True), (False, False)):
-            with self.subTest(fail_navigation=fail_navigation, stop_process=stop_process):
-                browser = self._make_browser(HeadlessBrowserNodriver)
-
-                async def exercise():
-                    process = await asyncio.create_subprocess_exec(sys.executable, "-c", "import time; time.sleep(60)", stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-                    tab = SimpleNamespace(get_content=AsyncMock(return_value="<html>ok</html>"), evaluate=AsyncMock())
-
-                    def stop():
-                        driver._process = None
-                        if stop_process:
-                            process.terminate()
-
-                    driver = SimpleNamespace(_process=process, get=AsyncMock(side_effect=RuntimeError("navigation failed")) if fail_navigation else AsyncMock(return_value=tab), stop=stop)
-                    wait_for = asyncio.wait_for
-                    try:
-                        with patch("bin.headless_browser_nodriver.nodriver", SimpleNamespace(start=AsyncMock(return_value=driver))), patch("bin.headless_browser_nodriver.asyncio.wait_for", new=lambda coro, timeout: wait_for(coro, timeout=0.1)):
-                            if fail_navigation:
-                                with self.assertRaisesRegex(RuntimeError, "navigation failed"):
-                                    await browser._fetch("https://example.com")
-                            else:
-                                self.assertEqual(await browser._fetch("https://example.com"), "<!DOCTYPE html><html>ok</html>")
-                        self.assertIsNotNone(process.returncode, "browser process must exit before the event loop closes")
-                        self.assertTrue(process.stdin.is_closing())
-                        self.assertTrue(process.stdout.at_eof())
-                        self.assertTrue(process.stderr.at_eof())
-                    finally:
-                        if process.returncode is None:
-                            process.kill()
-                        await process.communicate()
-
-                asyncio.run(exercise())
-
-    def test_embedded_turnstile_is_not_a_challenge_page(self):
-        html = '<html><body><iframe src="https://challenges.cloudflare.com/widget"></iframe></body></html>'
-        self.assertFalse(HeadlessBrowserNodriver._contains_cloudflare_challenge(html))
-
-    def test_make_request_returns_rendered_html(self):
-        browser = self._make_browser(HeadlessBrowserNodriver)
-        tab = MagicMock()
-        tab.evaluate = AsyncMock(return_value=False)
-        tab.get_content = AsyncMock(return_value="<html><body>ok</body></html>")
-        driver = MagicMock()
-        driver.get = AsyncMock(return_value=tab)
-        nodriver_module = MagicMock()
-        nodriver_module.start = AsyncMock(return_value=driver)
-
-        with patch("bin.headless_browser_nodriver.nodriver", nodriver_module), patch("bin.headless_browser_nodriver.URLSafety.check_url", return_value=(True, "")):
-            result = browser.make_request("https://example.com")
-
-        self.assertEqual(result, "<!DOCTYPE html><html><body>ok</body></html>")
-        driver.get.assert_awaited_once_with("https://example.com")
-        driver.stop.assert_called_once()
-
-    def test_make_request_blocks_unsafe_url_without_starting_browser(self):
-        browser = self._make_browser(HeadlessBrowserNodriver)
-        with patch("bin.headless_browser_nodriver.URLSafety.check_url", return_value=(False, "private address")), patch("bin.headless_browser_nodriver.nodriver") as driver:
-            self.assertEqual(browser.make_request("http://127.0.0.1"), "")
-        driver.start.assert_not_called()
-
-    def test_make_request_converts_runtime_errors_to_empty_result(self):
-        browser = self._make_browser(HeadlessBrowserNodriver)
-
-        def fail_and_close(coroutine):
-            coroutine.close()
-            raise RuntimeError("driver failed")
-
-        with patch("bin.headless_browser_nodriver.URLSafety.check_url", return_value=(True, "")), patch("bin.headless_browser_nodriver.asyncio.run", side_effect=fail_and_close):
-            self.assertEqual(browser.make_request("https://example.com"), "")
-
-    def test_fetch_rejects_unsafe_referer_and_stops_browser(self):
-        browser = self._make_browser(HeadlessBrowserNodriver, headers={"Referer": "http://127.0.0.1"})
-        driver = MagicMock()
-        driver.get = AsyncMock()
-        nodriver_module = MagicMock()
-        nodriver_module.start = AsyncMock(return_value=driver)
-        with patch("bin.headless_browser_nodriver.nodriver", nodriver_module), patch("bin.headless_browser_nodriver.URLSafety.check_url", return_value=(False, "private address")):
-            self.assertEqual(asyncio.run(browser._fetch("https://example.com")), "")
-        driver.get.assert_not_called()
-        driver.stop.assert_called_once()
-
-    def test_fetch_uses_safe_referer_and_optional_page_transforms(self):
-        browser = self._make_browser(HeadlessBrowserNodriver, headers={"Referer": "https://referrer.example"}, copy_images_from_canvas=True, simulate_scrolling=True, blob_to_dataurl=True)
-        tab = MagicMock()
-        tab.evaluate = AsyncMock(side_effect=[None, None, 0, None, None, None])
-        tab.get_content = AsyncMock(return_value="<html>ok</html>")
-        driver = MagicMock()
-        driver.get = AsyncMock(side_effect=[MagicMock(), tab])
-        nodriver_module = MagicMock()
-        nodriver_module.start = AsyncMock(return_value=driver)
-        with (
-            patch("bin.headless_browser_nodriver.nodriver", nodriver_module),
-            patch("bin.headless_browser_nodriver.URLSafety.check_url", return_value=(True, "")),
-            patch("bin.headless_browser_nodriver.time", SimpleNamespace(monotonic=MagicMock(return_value=0))),
-            patch("bin.headless_browser_nodriver.asyncio.sleep", new=AsyncMock()),
-        ):
-            result = asyncio.run(browser._fetch("https://example.com"))
-        self.assertEqual(result, "<!DOCTYPE html><html>ok</html>")
-        self.assertEqual(driver.get.await_args_list[0].args, ("https://referrer.example",))
-        self.assertEqual(driver.get.await_args_list[1].args, ("https://example.com",))
-        self.assertIn(unittest.mock.call(browser.CONVERTING_CANVAS_TO_IMAGES_SCRIPT, await_promise=True), tab.evaluate.await_args_list)
-        self.assertIn(unittest.mock.call(browser.CONVERTING_BLOB_TO_DATAURL_SCRIPT, await_promise=True), tab.evaluate.await_args_list)
-        driver.stop.assert_called_once()
-
-    def test_wait_for_cloudflare_returns_none_after_timeout(self):
-        browser = self._make_browser(HeadlessBrowserNodriver)
-        tab = MagicMock()
-        tab.get_content = AsyncMock(return_value="<title>Just a moment...</title>")
-        with patch("bin.headless_browser_nodriver.Env.get", return_value="1"), patch("bin.headless_browser_nodriver.time", SimpleNamespace(monotonic=MagicMock(side_effect=[0, 2]))), patch("bin.headless_browser_nodriver.asyncio.sleep", new=AsyncMock()):
-            self.assertIsNone(asyncio.run(browser._wait_for_cloudflare_html(tab)))
-
-    def test_wait_for_cloudflare_returns_resolved_page(self):
-        browser = self._make_browser(HeadlessBrowserNodriver)
-        tab = MagicMock()
-        tab.get_content = AsyncMock(side_effect=["<title>Just a moment...</title>", "<html>ready</html>"])
-        tab.evaluate = AsyncMock(return_value="complete")
-        with patch("bin.headless_browser_nodriver.Env.get", return_value="1"), patch("bin.headless_browser_nodriver.time", SimpleNamespace(monotonic=MagicMock(return_value=0))), patch("bin.headless_browser_nodriver.asyncio.sleep", new=AsyncMock()):
-            self.assertEqual(asyncio.run(browser._wait_for_cloudflare_html(tab)), "<html>ready</html>")
-
-    def test_wait_for_cloudflare_waits_until_document_parsed(self):
-        # browser.get()은 파싱 완료를 기다리지 않으므로 readyState가 loading이면 <head>만 있는 반쪽 HTML이 나온다.
-        browser = self._make_browser(HeadlessBrowserNodriver)
-        tab = MagicMock()
-        tab.get_content = AsyncMock(side_effect=["<html><head></head></html>", "<html><body>full</body></html>"])
-        tab.evaluate = AsyncMock(side_effect=["loading", "interactive"])
-        with patch("bin.headless_browser_nodriver.Env.get", return_value="1"), patch("bin.headless_browser_nodriver.time", SimpleNamespace(monotonic=MagicMock(return_value=0))), patch("bin.headless_browser_nodriver.asyncio.sleep", new=AsyncMock()):
-            self.assertEqual(asyncio.run(browser._wait_for_cloudflare_html(tab)), "<html><body>full</body></html>")
-        tab.evaluate.assert_awaited_with("document.readyState", return_by_value=True)
-
-    def test_wait_for_cloudflare_returns_none_when_document_never_parsed(self):
-        browser = self._make_browser(HeadlessBrowserNodriver)
-        tab = MagicMock()
-        tab.get_content = AsyncMock(return_value="<html><head></head></html>")
-        tab.evaluate = AsyncMock(return_value="loading")
-        with patch("bin.headless_browser_nodriver.Env.get", return_value="1"), patch("bin.headless_browser_nodriver.time", SimpleNamespace(monotonic=MagicMock(side_effect=[0, 2]))), patch("bin.headless_browser_nodriver.asyncio.sleep", new=AsyncMock()):
-            self.assertIsNone(asyncio.run(browser._wait_for_cloudflare_html(tab)))
-
-    @staticmethod
-    def _iframe(backend_node_id, src):
-        # nodriver parses node ids into BackendNodeId; get_box_model calls its to_json().
-        from nodriver.cdp.dom import BackendNodeId
-
-        return SimpleNamespace(node_name="IFRAME", backend_node_id=BackendNodeId(backend_node_id), attributes=["src", src], children=None, shadow_roots=None, content_document=None)
-
-    @staticmethod
-    def _cdp_tab(document, boxes):
-        # Unwrap nodriver's CDP command generators and answer like a browser would.
-        tab = MagicMock()
-        sent = []
-
-        async def send(cdp_obj):
-            command = next(cdp_obj)
-            sent.append(command)
-            if command["method"] == "DOM.getDocument":
-                return document
-            if command["method"] == "DOM.getBoxModel":
-                box = boxes.get(command["params"]["backendNodeId"])
-                if box is None:
-                    raise RuntimeError("detached")
-                return SimpleNamespace(content=box)
-            return None
-
-        tab.send = AsyncMock(side_effect=send)
-        return tab, sent
-
-    def test_cdp_click_targets_turnstile_in_closed_shadow_root(self):
-        browser = self._make_browser(HeadlessBrowserNodriver)
-        turnstile = "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/g/turnstile"
-        shadow_root = SimpleNamespace(node_name="#document-fragment", attributes=None, children=[self._iframe(41, "https://example.org/ad"), self._iframe(42, turnstile), self._iframe(43, turnstile)], shadow_roots=None, content_document=None)
-        document = SimpleNamespace(node_name="#document", attributes=None, children=None, shadow_roots=[shadow_root], content_document=None)
-        tab, sent = self._cdp_tab(document, {41: [0, 0, 300, 0, 300, 65, 0, 65], 42: [100, 200, 400, 200, 400, 265, 100, 265]})
-        self.assertTrue(asyncio.run(browser._try_click_cloudflare_checkbox_cdp(tab)))
-        self.assertTrue(sent[0]["params"]["pierce"])
-        # The ad iframe is never measured; the detached Turnstile frame (43) is skipped.
-        self.assertNotIn(41, [c["params"].get("backendNodeId") for c in sent if c["method"] == "DOM.getBoxModel"])
-        events = [c["params"] for c in sent if c["method"] == "Input.dispatchMouseEvent"]
-        self.assertEqual([e["type"] for e in events], ["mouseMoved", "mousePressed", "mouseReleased"])
-        self.assertTrue(all(e["x"] == 120 and e["y"] == 232.5 for e in events))
-        self.assertEqual([e["buttons"] for e in events], [0, 1, 0])
-
-    def test_cdp_click_ignores_oversized_or_foreign_frames(self):
-        browser = self._make_browser(HeadlessBrowserNodriver)
-        frames = [self._iframe(1, "https://challenges.cloudflare.com.evil.test/cdn-cgi/challenge-platform/x"), self._iframe(2, "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/x")]
-        document = SimpleNamespace(node_name="#document", attributes=None, children=frames, shadow_roots=None, content_document=None)
-        tab, sent = self._cdp_tab(document, {1: [100, 200, 400, 200, 400, 265, 100, 265], 2: [0, 0, 1000, 0, 1000, 65, 0, 65]})
-        self.assertFalse(asyncio.run(browser._try_click_cloudflare_checkbox_cdp(tab)))
-        self.assertNotIn("Input.dispatchMouseEvent", [c["method"] for c in sent])
-
-    def test_wait_for_cloudflare_clicks_checkbox_after_interval(self):
-        browser = self._make_browser(HeadlessBrowserNodriver)
-        tab = MagicMock()
-        tab.get_content = AsyncMock(side_effect=["<title>Just a moment...</title>", "<title>Just a moment...</title>", "<html>ready</html>"])
-        tab.evaluate = AsyncMock(return_value="complete")
-        interval = browser._CLOUDFLARE_CLICK_INTERVAL_SEC
-        # start, 1st poll (before interval: no click), 2nd poll (interval reached: click), next_click reset
-        clock = MagicMock(side_effect=[0, interval - 1, interval, interval])
-        with (
-            patch("bin.headless_browser_nodriver.Env.get", return_value="90"),
-            patch("bin.headless_browser_nodriver.time", SimpleNamespace(monotonic=clock)),
-            patch("bin.headless_browser_nodriver.asyncio.sleep", new=AsyncMock()),
-            patch.object(browser, "_try_click_cloudflare_checkbox_cdp", new=AsyncMock(return_value=True)) as click,
-        ):
-            self.assertEqual(asyncio.run(browser._wait_for_cloudflare_html(tab)), "<html>ready</html>")
-        click.assert_awaited_once_with(tab)
-
-    def test_wait_for_cloudflare_click_attempts_are_bounded(self):
-        browser = self._make_browser(HeadlessBrowserNodriver)
-        tab = MagicMock()
-        tab.get_content = AsyncMock(return_value="<title>Just a moment...</title>")
-        ticks = iter(range(0, 10_000, browser._CLOUDFLARE_CLICK_INTERVAL_SEC))
-        with (
-            patch("bin.headless_browser_nodriver.Env.get", return_value="90"),
-            patch("bin.headless_browser_nodriver.time", SimpleNamespace(monotonic=lambda: next(ticks))),
-            patch("bin.headless_browser_nodriver.asyncio.sleep", new=AsyncMock()),
-            patch.object(browser, "_try_click_cloudflare_checkbox_cdp", new=AsyncMock(side_effect=RuntimeError("socket closed"))) as click,
-        ):
-            self.assertIsNone(asyncio.run(browser._wait_for_cloudflare_html(tab)))
-        # Errors count as attempts, so a broken connection cannot click forever.
-        self.assertEqual(click.await_count, browser._CLOUDFLARE_MAX_CLICKS)
-
-    def test_scroll_handles_invalid_height_and_scrolls_back_to_top(self):
-        browser = self._make_browser(HeadlessBrowserNodriver)
-        tab = MagicMock()
-        tab.evaluate = AsyncMock(return_value="invalid")
-        asyncio.run(browser._scroll(tab))
-        self.assertEqual(tab.evaluate.await_count, 1)
-
-        tab.evaluate = AsyncMock(side_effect=[1400, None, None, None, None, None, None])
-        with patch("bin.headless_browser_nodriver.time", SimpleNamespace(monotonic=MagicMock(return_value=0))), patch("bin.headless_browser_nodriver.asyncio.sleep", new=AsyncMock()):
-            asyncio.run(browser._scroll(tab))
-        self.assertIn(unittest.mock.call("window.scrollTo(0, 0); null"), tab.evaluate.await_args_list)
-
-    def test_fetch_rejects_unresolved_challenge_and_stops_browser(self):
-        browser = self._make_browser(HeadlessBrowserNodriver)
-        tab = MagicMock()
-        tab.get_content = AsyncMock(return_value="<title>Just a moment...</title>")
-        driver = MagicMock()
-        driver.get = AsyncMock(return_value=tab)
-        nodriver_module = MagicMock()
-        nodriver_module.start = AsyncMock(return_value=driver)
-        with (
-            patch("bin.headless_browser_nodriver.nodriver", nodriver_module),
-            patch("bin.headless_browser_nodriver.URLSafety.check_url", return_value=(True, "")),
-            patch("bin.headless_browser_nodriver.Env.get", return_value="1"),
-            patch("bin.headless_browser_nodriver.time", SimpleNamespace(monotonic=MagicMock(side_effect=[0, 2]))),
-            patch("bin.headless_browser_nodriver.asyncio.sleep", new=AsyncMock()),
-        ):
-            self.assertEqual(asyncio.run(browser._fetch("https://example.com")), "")
-            driver.stop.assert_called_once()
-
-    def test_fetch_rejects_challenge_that_reappears_after_page_transforms(self):
-        browser = self._make_browser(HeadlessBrowserNodriver)
-        tab = MagicMock()
-        tab.get_content = AsyncMock(side_effect=["<html>ready</html>", "<title>Just a moment...</title>"])
-        tab.evaluate = AsyncMock(return_value=None)
-        driver = MagicMock()
-        driver.get = AsyncMock(return_value=tab)
-        nodriver_module = MagicMock()
-        nodriver_module.start = AsyncMock(return_value=driver)
-        with patch("bin.headless_browser_nodriver.nodriver", nodriver_module), patch("bin.headless_browser_nodriver.URLSafety.check_url", return_value=(True, "")):
-            self.assertEqual(asyncio.run(browser._fetch("https://example.com")), "")
-        driver.stop.assert_called_once()
-
-    def test_fetch_reports_missing_nodriver(self):
-        browser = self._make_browser(HeadlessBrowserNodriver)
-        with patch("bin.headless_browser_nodriver.nodriver", None):
-            with self.assertRaises(ImportError):
-                asyncio.run(browser._fetch("https://example.com"))
-
-    def test_login_is_not_supported(self):
-        browser = self._make_browser(HeadlessBrowserNodriver)
-        self.assertFalse(browser.login({}))
 
 
 class TestFlaresolverrEngine(_BrowserTestCase):
