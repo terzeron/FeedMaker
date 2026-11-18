@@ -944,16 +944,16 @@ wheels = [
 
 [[package]]
 name = "nodriver"
-version = "0.50.3"
+version = "0.50.99"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "deprecated" },
     { name = "mss" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1a/ad/b8b7472ddbf8c28e4ae37ef46d863400ea2688569f3178a083dda8531f3f/nodriver-0.50.3.tar.gz", hash = "sha256:24ca688d8646ef8ffad5c8ce65804e5e7671a779ad26a24d76f6465d5666c631", size = 354439, upload-time = "2026-05-13T13:57:55.27Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d0/2c/8b4c186ee0648cf8dbbbedef19fd0dcde3ecb9bacc53fc7ea8dfeedf326e/nodriver-0.50.99.tar.gz", hash = "sha256:baf8de532bf1e78c9298ab7ea56ea6a586a904290ce6b9ee7dd9ba6f40373211", size = 356536, upload-time = "2026-10-26T13:47:51.462Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4d/23/b2dd278ad941c720f217c5264d7cbfc60dd09d882b5f7fb6c365013a8ce0/nodriver-0.50.3-py3-none-any.whl", hash = "sha256:a053533108c14c309a7613445e6c7fb460b6b165c144a062e1b2f39e4f7b396b", size = 378085, upload-time = "2026-05-13T13:57:51.877Z" },
+    { url = "https://files.pythonhosted.org/packages/96/98/abbed74c4cb62858d7b37a26b4fe2b3ec3fafbc515e50afcd6d3197f23e8/nodriver-0.50.99-py3-none-any.whl", hash = "sha256:8d5dd09e2ecb73829c970989db110dbae5b48937bad86745fb3175969a03d93d", size = 381859, upload-time = "2026-10-26T13:47:46.455Z" },
 ]
 
 [[package]]
