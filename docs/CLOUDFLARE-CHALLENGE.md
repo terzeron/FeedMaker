@@ -21,8 +21,7 @@ headless 엔진이 Cloudflare challenge 화면에서 기다리는 동안 Turnsti
 
 | 엔진                                                     | 대기 함수                                                                                | 클릭 함수                                                                                                                                              |
 | -------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| cloakbrowser, camoufox, patchright, rebrowser_playwright | `HeadlessBrowserBase._wait_for_cloudflare` (`bin/headless_browser.py`)                   | `_try_click_cloudflare_checkbox` — Playwright `page.frames` + `frame_element().bounding_box()` + `page.mouse.click`                                    |
-| nodriver                                                 | `HeadlessBrowserNodriver._wait_for_cloudflare_html` (`bin/headless_browser_nodriver.py`) | `_try_click_cloudflare_checkbox_cdp` — CDP `DOM.getDocument(pierce=True)`로 closed shadow root까지 탐색, `DOM.getBoxModel`, `Input.dispatchMouseEvent` |
+| cloakbrowser, camoufox, rebrowser_playwright             | `HeadlessBrowserBase._wait_for_cloudflare` (`bin/headless_browser.py`)                   | `_try_click_cloudflare_checkbox` — Playwright `page.frames` + `frame_element().bounding_box()` + `page.mouse.click`                                    |
 | flaresolverr                                             | 해당 없음                                                                                | FlareSolverr 서버가 직접 처리한다                                                                                                                      |
 
 공통 정책은 `HeadlessBrowserBase`에 있다.
@@ -31,7 +30,7 @@ headless 엔진이 Cloudflare challenge 화면에서 기다리는 동안 Turnsti
 - 위젯 판정: `_is_cloudflare_challenge_frame(url)`
 - 좌표 계산: `_cloudflare_checkbox_point(x, y, width, height)`
 - 통과 판정(Playwright): `_CLOUDFLARE_CLEARED_PREDICATE`
-- 통과 판정(nodriver·facade): `HeadlessBrowser._contains_cloudflare_challenge(html)`
+- 통과 판정(facade): `HeadlessBrowser._contains_cloudflare_challenge(html)`
 
 challenge 대기는 `make_request`의 referer 방문, 본 페이지 방문, `login`의 로그인 페이지 방문에서 호출한다.
 
@@ -43,7 +42,7 @@ challenge 대기는 `make_request`의 referer 방문, 본 페이지 방문, `log
   실제 화면의 iframe box를 먼저 측정한다. 범위를 넓히면 광고 iframe 오클릭 위험이 커진다.
 - **새 Playwright 계열 엔진을 추가한다**: `HeadlessBrowserBase`를 상속하고 `make_request`·`login`을
   `super()`로 위임하면 자동으로 적용된다.
-- **Playwright가 아닌 엔진을 추가한다**: nodriver처럼 별도 대기 루프가 필요하다.
+- **Playwright가 아닌 엔진을 추가한다**: 별도 대기 루프가 필요하다.
   간격·횟수·좌표 정책은 base의 상수와 static method를 재사용한다.
 - **사이트가 체크박스 없이 계속 막는다**: 클릭으로 풀리지 않는 판정이다. 엔진 fallback 순서
   (`FM_HEADLESS_BACKEND`, `browser_fallback`)나 브라우저 지문을 검토한다. crawler DESIGN §12 검증·§13에 실패 기록이 있다.
@@ -61,7 +60,6 @@ uv run pytest -q tests/test_headless_browser_cloakbrowser.py tests/test_headless
   그러면 `_wait_for_cloudflare`가 90초 동안 sleep 없이 돌고, mock 호출 기록이 쌓여 메모리가 수 GB까지 늘어난다.
   이런 테스트는 `_wait_for_cloudflare`를 patch하거나, `time.monotonic`을 진행시키거나,
   `_CLOUDFLARE_CHALLENGE_TIMEOUT_SEC`를 0으로 줄인다. 실행할 때는 `ulimit -v 6000000`으로 상한을 건다.
-- nodriver CDP 테스트의 node id는 `nodriver.cdp.dom.BackendNodeId`로 감싼다. plain int는 `to_json()`이 없어 실패한다.
 
 ## 5. 검증 상태와 한계 (2026-10-29)
 
@@ -78,7 +76,7 @@ uv run pytest -q tests/test_headless_browser_cloakbrowser.py tests/test_headless
     --render-js=true --browser-fallback=cloakbrowser --retry=1 'https://bt4g.com/search?q=ubuntu'
   ```
 
-- camoufox·patchright·rebrowser_playwright·nodriver의 실사이트 자동 클릭, 쿠키 장기 재사용은 미검증이다.
+- camoufox·rebrowser_playwright의 실사이트 자동 클릭, 쿠키 장기 재사용은 미검증이다.
 - 쿠키 jar(`cookies.*.json`)는 0600으로 쓴다. 예전 실행이 남긴 0644 파일도 다음 저장 때 0600으로 좁힌다.
   bt4g 실행에서 644 → 600 변경을 확인했다.
 - 참고 구현(crawler, Rust)은 cloakbrowser로 bt4g·tokyotosho·1337x를 클릭 1회로 통과했다(2026-10-28).

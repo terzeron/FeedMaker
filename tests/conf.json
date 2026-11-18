@@ -38,8 +38,8 @@
       ],
       "headers": {},
       "browser_fallback": [
-        "patchright",
-        "nodriver"
+        "rebrowser_playwright",
+        "flaresolverr"
       ]
     },
     "rss": {

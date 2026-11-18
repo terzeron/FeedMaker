@@ -715,9 +715,9 @@ class HeadlessBrowserBase:
 # Canonical per-engine cookie jar filenames. Kept here as the single source of
 # truth so the engine subclasses and the facade never drift apart. Separate files
 # stop the cloakbrowser (Chromium) and camoufox (Firefox) jars cross-contaminating.
-ENGINE_COOKIE_FILES: dict[str, str] = {"camoufox": "cookies.camoufox.json", "cloakbrowser": "cookies.cloakbrowser.json", "patchright": "cookies.patchright.json", "nodriver": "cookies.nodriver.json", "flaresolverr": "cookies.flaresolverr.json", "rebrowser_playwright": "cookies.rebrowser_playwright.json"}
+ENGINE_COOKIE_FILES: dict[str, str] = {"camoufox": "cookies.camoufox.json", "cloakbrowser": "cookies.cloakbrowser.json", "flaresolverr": "cookies.flaresolverr.json", "rebrowser_playwright": "cookies.rebrowser_playwright.json"}
 _DEFAULT_ENGINE_NAMES: tuple[str, ...] = ("camoufox", "cloakbrowser")
-_ENGINE_NAMES: tuple[str, ...] = (*_DEFAULT_ENGINE_NAMES, "patchright", "nodriver", "flaresolverr", "rebrowser_playwright")
+_ENGINE_NAMES: tuple[str, ...] = (*_DEFAULT_ENGINE_NAMES, "flaresolverr", "rebrowser_playwright")
 
 
 def _import_engine_class(name: str) -> Optional[type["HeadlessBrowserBase"]]:
@@ -733,14 +733,6 @@ def _import_engine_class(name: str) -> Optional[type["HeadlessBrowserBase"]]:
             from bin.headless_browser_cloakbrowser import HeadlessBrowserCloakbrowser
 
             return HeadlessBrowserCloakbrowser
-        if name == "patchright":
-            from bin.headless_browser_patchright import HeadlessBrowserPatchright
-
-            return HeadlessBrowserPatchright
-        if name == "nodriver":
-            from bin.headless_browser_nodriver import HeadlessBrowserNodriver
-
-            return HeadlessBrowserNodriver
         if name == "flaresolverr":
             from bin.headless_browser_flaresolverr import HeadlessBrowserFlaresolverr
 
