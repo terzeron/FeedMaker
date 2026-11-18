@@ -1453,21 +1453,21 @@ wheels = [
 
 [[package]]
 name = "rebrowser-playwright"
-version = "1.64.101"
+version = "1.64.102"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "greenlet" },
     { name = "pyee" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b4/04/2273f5173c04634a6638c3267a655ec15fb5532d75f92a12df17cea17321/rebrowser_playwright-1.64.101-py3-none-macosx_10_13_x86_64.whl", hash = "sha256:8ed21d8575d166c22194ffcdef10d3e8306bc881240a9b28d1e986fb03d8f562", size = 44357509, upload-time = "2026-10-19T18:55:29.348Z" },
-    { url = "https://files.pythonhosted.org/packages/46/59/caf65ab258fc5c46e50dc13283268f09ec4ec35b32030e64250d739c5aa1/rebrowser_playwright-1.64.101-py3-none-macosx_11_0_arm64.whl", hash = "sha256:68cb91b40405bc3154180f4932366ab42133bfcab4b199e53d969bf4f5303dd4", size = 43023777, upload-time = "2026-10-19T18:55:33.53Z" },
-    { url = "https://files.pythonhosted.org/packages/07/0e/36b7f1be8533c4061c1f832745f606f6f1ba77c25621d3bec6878f504507/rebrowser_playwright-1.64.101-py3-none-macosx_11_0_universal2.whl", hash = "sha256:2ad388255e4ca0e2994e55f117541ee62d424a6f7c1dc86917f87dc23e45f4df", size = 44357511, upload-time = "2026-10-19T18:55:37.693Z" },
-    { url = "https://files.pythonhosted.org/packages/2e/cb/57e778549bdc1e1eff22ce62fb55249064911470322e5b217960b165a53f/rebrowser_playwright-1.64.101-py3-none-manylinux1_x86_64.whl", hash = "sha256:4839d109f292280ed71ff26cbab987645d226f804f5669d27aa56b2b92348dd3", size = 48296260, upload-time = "2026-10-19T18:55:41.978Z" },
-    { url = "https://files.pythonhosted.org/packages/64/1f/9279fd1e31de8176de0d2510830ff880ecf73a5dbc6390e727a891f73d26/rebrowser_playwright-1.64.101-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:fe730d033eabef4e46ddacc7a170e647db66600932601049a3b38d7cd1366a67", size = 47981807, upload-time = "2026-10-19T18:55:46.373Z" },
-    { url = "https://files.pythonhosted.org/packages/48/75/56b9ab4ec2d1c15194407d738234ee2637fc34e6552d3057517a97b06b9c/rebrowser_playwright-1.64.101-py3-none-win32.whl", hash = "sha256:e9f71d2b8036c1ca6367e85a5c553119f6d8f4d670392f522f8b27219c7e96dd", size = 38685186, upload-time = "2026-10-19T18:55:50.446Z" },
-    { url = "https://files.pythonhosted.org/packages/2d/06/cc14982013aad6b6c3305f6eaacc595cce160a6b7a9b208e25f246531499/rebrowser_playwright-1.64.101-py3-none-win_amd64.whl", hash = "sha256:48d25eda2acf5e0c7e7d597be3caf60245066ff2db83abf266e9d804cc94f301", size = 38685189, upload-time = "2026-10-19T18:55:54.694Z" },
-    { url = "https://files.pythonhosted.org/packages/d2/66/3d4e8bc682df00884a1dbe156713daf35fcea663658a8973207a8eac12e5/rebrowser_playwright-1.64.101-py3-none-win_arm64.whl", hash = "sha256:7ac9921edcfc444a4cd0e3c26e4147816f5bbc5dfa36581ccd7199fe97c1b173", size = 34602658, upload-time = "2026-10-19T18:55:59.172Z" },
+    { url = "https://files.pythonhosted.org/packages/82/60/42911e4f71b6be3398667a4179a3496d1565168fef0b2f867522ddb33b81/rebrowser_playwright-1.64.102-py3-none-macosx_10_13_x86_64.whl", hash = "sha256:030ab7a9a4687bf3aeba8500e1e231d9d386c001f5b7f35bf1133c783a37260e", size = 44518953, upload-time = "2026-11-02T20:50:19.648Z" },
+    { url = "https://files.pythonhosted.org/packages/b8/42/fb078a5fd34775d2385aa75881ea58962a2ed010b1ba2f856f3787e589c5/rebrowser_playwright-1.64.102-py3-none-macosx_11_0_arm64.whl", hash = "sha256:a82228966953e906760c89b13767da1bfb22b5da251bef4c38fd88842b7a6fe9", size = 43165215, upload-time = "2026-11-02T20:50:23.022Z" },
+    { url = "https://files.pythonhosted.org/packages/1c/7f/04965e14f5800a139af449eb9de2c9bfc06711b1383dd069cd1cd3f5bb75/rebrowser_playwright-1.64.102-py3-none-macosx_11_0_universal2.whl", hash = "sha256:16dc27b19591e70fc504ceb3f3490ed0b660dea5bacd5e9ca7d87a17268f3251", size = 44518955, upload-time = "2026-11-02T20:50:26.055Z" },
+    { url = "https://files.pythonhosted.org/packages/d6/be/62a59a929c86f940ea5642db5ad7554656cf9a98b360514dd53615eb4fae/rebrowser_playwright-1.64.102-py3-none-manylinux1_x86_64.whl", hash = "sha256:965ae7907012a76bde9fa44bd39b7c5c6c6aa0e88d98e80e752bdfe11a5f052f", size = 48481912, upload-time = "2026-11-02T20:50:29.451Z" },
+    { url = "https://files.pythonhosted.org/packages/53/42/4a6af54726fac11964ea75c9e4ae6a0d66d017a2d63c3470f7179ed4122e/rebrowser_playwright-1.64.102-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c91db8569fd03a81870239d2563ce88527f851305be447da89c338a82a0e5154", size = 48160977, upload-time = "2026-11-02T20:50:32.74Z" },
+    { url = "https://files.pythonhosted.org/packages/27/6c/f40a57f00a218884da0d87cb7a8d84d388e825b21c85a82dc3abe56a9709/rebrowser_playwright-1.64.102-py3-none-win32.whl", hash = "sha256:6267452d890ca58cfb4ca248c27ddea45b9bf2efdcb925318c88990188261670", size = 38811812, upload-time = "2026-11-02T20:50:35.63Z" },
+    { url = "https://files.pythonhosted.org/packages/a5/24/950ee35267228a4412234936a1e51929e16b81e36119c574e857e95012f3/rebrowser_playwright-1.64.102-py3-none-win_amd64.whl", hash = "sha256:f8e941bee865153939b5eebe4d5f3653078f6a509e3c15a7ce74e9aac3aa6f29", size = 38811815, upload-time = "2026-11-02T20:50:38.884Z" },
+    { url = "https://files.pythonhosted.org/packages/06/7b/22e33dcd1901164fe5040cfee20f1fff874f68cbe5b305211130f5aa0635/rebrowser_playwright-1.64.102-py3-none-win_arm64.whl", hash = "sha256:c66e4d8087dcd00f581521c90fa0424baf1c826b2b24353d6ffdf7c2f63bb145", size = 34703856, upload-time = "2026-11-02T20:50:41.724Z" },
 ]
 
 [[package]]
