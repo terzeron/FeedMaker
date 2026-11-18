@@ -6,6 +6,12 @@ updates:
       interval: "weekly"
     target-branch: "develop"
     rebase-strategy: "auto"
+    # 기본 상한 5개에 매주 걸려 나머지 업데이트가 밀렸다 (2026-10~11 매주 정확히 5개).
+    open-pull-requests-limit: 10
+    # 기본값은 pyproject.toml에 적은 직접 의존성만 갱신한다. 전이 의존성(dnspython 등)은
+    # 보안 경보가 떠야만 PR이 오므로, uv.lock의 전이 의존성도 버전 업데이트 대상에 넣는다.
+    allow:
+      - dependency-type: "all"
 
   - package-ecosystem: "npm"
     directory: "/frontend"
@@ -13,3 +19,6 @@ updates:
       interval: "weekly"
     target-branch: "develop"
     rebase-strategy: "auto"
+    # uv와 같은 이유로 상한을 올린다 (2026-10~11 매주 정확히 5개).
+    # npm은 공식 문서상 indirect 지원 목록에 없어 allow: all은 넣지 않는다.
+    open-pull-requests-limit: 10
