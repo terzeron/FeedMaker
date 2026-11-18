@@ -1390,6 +1390,21 @@ class TestToggleGroup(unittest.TestCase):
             mock_db_toggle.assert_not_called()
 
 
+class TestStop(unittest.TestCase):
+    @patch("backend.feed_maker_manager.FeedMakerRunner.request_stop", return_value=(True, ""))
+    def test_delegates_to_runner(self, mock_request_stop):
+        self.assertEqual(FeedMakerManager.stop("group1", "feed1"), (True, ""))
+        mock_request_stop.assert_called_once_with("group1", "feed1")
+
+    @patch("backend.feed_maker_manager.FeedMakerRunner.request_stop")
+    def test_invalid_names_rejected_before_touching_filesystem(self, mock_request_stop):
+        # request_stop은 FM_WORK_DIR/<group>/<feed>에 중단 플래그 파일을 만들므로 경로 탈출을 먼저 막아야 한다
+        for group_name, feed_name in (("../evil", "feed1"), ("group1", "../../etc")):
+            with self.subTest(group_name=group_name, feed_name=feed_name), self.assertRaises(ValueError):
+                FeedMakerManager.stop(group_name, feed_name)
+        mock_request_stop.assert_not_called()
+
+
 class TestCheckRunning(unittest.TestCase):
     @patch("backend.feed_maker_manager.FeedMakerRunner.check_running")
     def test_running(self, mock_check):

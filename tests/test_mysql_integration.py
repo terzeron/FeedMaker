@@ -10,6 +10,9 @@ These tests verify CRUD operations and DB class functionality.
 Note: These tests require Docker to be running.
 """
 
+import json
+import shutil
+import tempfile
 import unittest
 import logging.config
 from pathlib import Path
@@ -18,6 +21,7 @@ from unittest.mock import patch
 
 from tests.common_test_util import start_mysql_container
 from bin.db import DB
+from bin.feed_manager import FeedManager
 from bin.models import SampleTable, FeedInfo, GroupInfo, UserSession
 from backend import auth
 
@@ -796,6 +800,113 @@ class TestAuthMySQLIntegration(unittest.TestCase):
             remaining = {row.session_id for row in session.query(UserSession).all()}
             self.assertNotIn("active_to_delete", remaining)
             self.assertNotIn("expired_to_cleanup", remaining)
+
+
+class TestFeedProgressMySQLIntegration(unittest.TestCase):
+    """진행 중(is_completed) 피드의 진행 현황 갱신과 조회를 실제 MySQL + 파일시스템으로 검증한다."""
+
+    mysql_container = None
+    db_config = None
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls._ctx = start_mysql_container()
+        cls.mysql_container = cls._ctx.__enter__()
+        cls.db_config = {"drivername": "mysql+pymysql", "user": cls.mysql_container.username, "password": cls.mysql_container.password, "host": "localhost", "port": int(cls.mysql_container.get_exposed_port(3306)), "database": cls.mysql_container.dbname}
+        DB.init(cls.db_config)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        DB.dispose_all()
+        cls._ctx.__exit__(None, None, None)
+
+    def setUp(self) -> None:
+        DB.create_all_tables(self.db_config)
+        self.tmp_root = Path(tempfile.mkdtemp())
+        self.group_name = "naver"
+        self.feed_name = "progress_feed"
+        self.feed_dir_path = self.tmp_root / self.group_name / self.feed_name
+        (self.feed_dir_path / "newlist").mkdir(parents=True)
+        (self.feed_dir_path / "html").mkdir()
+        conf = {"configuration": {"collection": {"is_completed": True, "unit_size_per_day": 2}}}
+        (self.feed_dir_path / "conf.json").write_text(json.dumps(conf), encoding="utf-8")
+        (self.feed_dir_path / "start_idx.txt").write_text("3\t2026-11-01 00:00:00\n", encoding="utf-8")
+        # 두 목록 파일에 걸쳐 중복 URL이 있다 → 고유 URL 10개
+        (self.feed_dir_path / "newlist" / "20261101.txt").write_text("".join(f"https://example.com/{i}\tT{i}\n" for i in range(6)), encoding="utf-8")
+        (self.feed_dir_path / "newlist" / "20261102.txt").write_text("".join(f"https://example.com/{i}\tT{i}\n" for i in range(4, 10)), encoding="utf-8")
+        for i in range(2):
+            (self.feed_dir_path / "html" / f"{i}.html").write_text("<html></html>", encoding="utf-8")
+        with DB.session_ctx(db_config=self.db_config) as s:
+            s.add(FeedInfo(feed_name=self.feed_name, group_name=self.group_name, feed_title="Progress", is_active=True, is_completed=True, config=json.dumps(conf), total_item_count=0))
+        self._work_dir_patcher = patch.object(FeedManager, "work_dir_path", self.tmp_root)
+        self._work_dir_patcher.start()
+
+    def tearDown(self) -> None:
+        self._work_dir_patcher.stop()
+        shutil.rmtree(self.tmp_root, ignore_errors=True)
+        DB.drop_all_tables(self.db_config)
+
+    def _db_row(self) -> FeedInfo:
+        with DB.session_ctx(db_config=self.db_config) as s:
+            row = s.query(FeedInfo).filter_by(group_name=self.group_name, feed_name=self.feed_name).one()
+            s.expunge(row)
+            return row
+
+    def test_refresh_progress_counts_persists_newlist_totals(self) -> None:
+        FeedManager.refresh_progress_counts(self.feed_dir_path)
+
+        row = self._db_row()
+        self.assertTrue(row.is_completed)
+        self.assertEqual(row.current_index, 3)
+        self.assertEqual(row.total_item_count, 10)
+        self.assertEqual(row.progress_ratio, int((3 + 4) * 100 / (10 + 1)))
+        self.assertIsNotNone(row.collect_date)
+        # 남은 3개를 하루 2개씩 → 2일 뒤 완료 예정
+        due_date = row.due_date
+        assert due_date is not None
+        due_date = due_date if due_date.tzinfo else due_date.replace(tzinfo=timezone.utc)
+        self.assertAlmostEqual((due_date - datetime.now(timezone.utc)).total_seconds(), timedelta(days=2).total_seconds(), delta=60)
+
+    def test_progress_map_counts_newlist_live_before_db_refresh(self) -> None:
+        FeedManager.refresh_progress_counts(self.feed_dir_path)
+        # run.py 실행 도중 newlist에 새 URL이 추가되었지만 DB는 아직 갱신 전이다
+        with (self.feed_dir_path / "newlist" / "20261103.txt").open("w", encoding="utf-8") as f:
+            f.write("https://example.com/9\tT9\nhttps://example.com/10\tT10\nhttps://example.com/11\tT11\n")
+
+        info = FeedManager.get_feed_name_progress_info_map()[self.feed_name]
+
+        self.assertEqual(self._db_row().total_item_count, 10)
+        self.assertEqual(info["total_item_count"], 12)
+        self.assertEqual(info["html_file_count"], 2)
+        self.assertEqual(info["current_index"], 3)
+
+    def test_progress_map_finds_inactive_prefixed_directories(self) -> None:
+        # 비활성 그룹/피드는 '_' 접두사 디렉터리지만 DB 이름은 canonical이다
+        inactive_dir = self.tmp_root / f"_{self.group_name}" / f"_{self.feed_name}"
+        inactive_dir.parent.mkdir()
+        self.feed_dir_path.rename(inactive_dir)
+
+        info = FeedManager.get_feed_name_progress_info_map()[self.feed_name]
+
+        self.assertEqual(info["total_item_count"], 10)
+        self.assertEqual(info["html_file_count"], 2)
+
+    def test_progress_map_falls_back_to_db_without_newlist(self) -> None:
+        FeedManager.refresh_progress_counts(self.feed_dir_path)
+        shutil.rmtree(self.feed_dir_path / "newlist")
+
+        info = FeedManager.get_feed_name_progress_info_map()[self.feed_name]
+
+        self.assertEqual(info["total_item_count"], 10)
+
+    def test_progress_map_falls_back_to_db_when_newlist_is_empty(self) -> None:
+        FeedManager.refresh_progress_counts(self.feed_dir_path)
+        for list_file in (self.feed_dir_path / "newlist").glob("*.txt"):
+            list_file.unlink()
+
+        info = FeedManager.get_feed_name_progress_info_map()[self.feed_name]
+
+        self.assertEqual(info["total_item_count"], 10)
 
 
 if __name__ == "__main__":
