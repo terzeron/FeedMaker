@@ -15,13 +15,20 @@ RUN GIT_COMMIT=$GIT_COMMIT npm run build
 
 # non-root nginx: master/worker 모두 uid 101로 실행, pid/temp는 /tmp 사용.
 # 8080(>=1024) 바인딩이므로 privileged port가 필요 없어 root 없이 동작한다.
-FROM nginxinc/nginx-unprivileged:stable@sha256:ec0f7ecb1fbd84959ac114e65fb36074ffc97d4d51db0f18ee925162d889dcef
+# nginx2root(CVE-2026-123007 외) 수정판 1.30.7이 nginx-unprivileged 이미지에 아직 없어
+# 공식 nginx 이미지를 쓰고, nginx-unprivileged와 같은 방식으로 비root 실행을 직접 설정한다.
+FROM nginx:1.30.7@sha256:8a7280c664b1a205092ffea6443299e6d307fe65b6f946b02028fa311c29fd01
 
 # base OS 보안 패치 적용 (apt는 root 필요 → 작업 후 비root로 복귀)
+# readOnlyRootFilesystem 호환: user 지시어 제거, pid와 temp 경로를 /tmp(emptyDir)로 옮긴다.
 USER root
 RUN apt-get update && \
     apt-get upgrade -y && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    sed -i -e '/^user  nginx;/d' \
+           -e 's,^pid .*,pid        /tmp/nginx.pid;,' \
+           -e '/^http {/a\    client_body_temp_path /tmp/client_temp;\n    proxy_temp_path       /tmp/proxy_temp_path;\n    fastcgi_temp_path     /tmp/fastcgi_temp;\n    uwsgi_temp_path       /tmp/uwsgi_temp;\n    scgi_temp_path        /tmp/scgi_temp;' \
+           /etc/nginx/nginx.conf
 
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY frontend/default.conf /etc/nginx/conf.d
