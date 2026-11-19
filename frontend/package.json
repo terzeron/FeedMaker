@@ -45,7 +45,7 @@
   },
   "devDependencies": {
     "@babel/core": "^8.0.7",
-    "@babel/eslint-parser": "^8.0.7",
+    "@babel/eslint-parser": "^8.1.2",
     "@babel/preset-env": "^8.0.7",
     "@playwright/test": "^1.65.1",
     "@vitejs/plugin-basic-ssl": "^2.3.0",
