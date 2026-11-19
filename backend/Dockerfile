@@ -102,6 +102,8 @@ VOLUME /xml
 
 ENV PATH="/app/.venv/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/home/$USER_NAME/.local/bin:/app/bin:/app/utils"
 ENV PYTHONPATH="/app"
+# 로그 asctime을 호스트와 같은 KST로 남긴다. 코드는 저장 시각에 UTC를 명시하므로 데이터에는 영향이 없다.
+ENV TZ=Asia/Seoul
 ENV APP_USER=$USER_NAME
 ARG FM_BACKEND_DEFAULT_PORT=8010
 ENV FM_BACKEND_PORT=$FM_BACKEND_DEFAULT_PORT

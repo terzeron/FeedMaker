@@ -80,3 +80,9 @@ class DatetimeTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DatetimeToKstStrTest(unittest.TestCase):
+    def test_utc_is_shown_in_kst(self) -> None:
+        dt = datetime(2026, 11, 19, 14, 13, 34, 123456, tzinfo=timezone.utc)
+        self.assertEqual(Datetime.to_kst_str(dt), "2026-11-19T23:13:34+09:00")

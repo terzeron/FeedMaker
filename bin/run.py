@@ -9,12 +9,13 @@ import sys
 from contextlib import suppress
 from datetime import datetime, timedelta, timezone
 import logging.config
+import logging.handlers
 import getopt
 from collections import deque
 from pathlib import Path
 from typing import Any, Optional
 from filelock import FileLock, Timeout
-from bin.feed_maker_util import Config, PathUtil, FileManager, NotFoundConfigItemError, Env, Process
+from bin.feed_maker_util import Config, PathUtil, FileManager, NotFoundConfigItemError, Env, Process, Datetime
 from bin.headless_browser import HeadlessBrowser
 from bin.notification import Notification
 from bin.feed_maker import FeedMaker, STOP_FLAG_FILE_NAME
@@ -172,8 +173,8 @@ class FeedMakerRunner:
 
         end_time = datetime.now(timezone.utc)
         LOGGER.info("# Running time analysis")
-        LOGGER.info(f"* Start time: {start_time.isoformat(timespec='seconds')}")
-        LOGGER.info(f"* End time: {end_time.isoformat(timespec='seconds')}")
+        LOGGER.info(f"* Start time: {Datetime.to_kst_str(start_time)}")
+        LOGGER.info(f"* End time: {Datetime.to_kst_str(end_time)}")
         LOGGER.info(f"* Elapsed time: {(end_time - start_time).total_seconds()}")
 
         return result
@@ -200,58 +201,88 @@ class FeedMakerRunner:
         failed_feed_list: list[str] = []
         for feed_dir_path in feed_dir_path_list:
             print(feed_dir_path)
-            feed_name = feed_dir_path.name
-            config = Config(feed_dir_path=feed_dir_path)
+            feed_log_handler = self._add_feed_log_handler(feed_dir_path)
             try:
-                collection_conf = config.get_collection_configs()
-            except NotFoundConfigItemError as e:
-                LOGGER.error(e)
-                failed_feed_list.append(feed_dir_path.parent.name + "/" + feed_name)
-                continue
-
-            try:
-                if collection_conf.get("is_completed", False):
-                    result = self.make_single_feed(feed_dir_path, options={"force_collection_opt": "-c", "long_term_task_threshold": LONG_TERM_TASK_THRESHOLD})
-                    if self.is_running_elsewhere:
-                        LOGGER.info("skipping '%s', running in another session", PathUtil.short_path(feed_dir_path))
-                        continue
-                    if self.is_long_term_task:
-                        if not self._spawn_long_term_task(feed_dir_path):
-                            failed_feed_list.append(feed_dir_path.parent.name + "/" + feed_name)
-                        continue
-                    if not result:
-                        LOGGER.warning(f"Warning: can't make a feed '{feed_name} with all completed articles, {result}")
-                        failed_feed_list.append(feed_dir_path.parent.name + "/" + feed_name)
-                        continue
-
-                result = self.make_single_feed(feed_dir_path, options={})
-                if self.is_running_elsewhere:
-                    LOGGER.info("skipping '%s', running in another session", PathUtil.short_path(feed_dir_path))
-                    continue
-                if not result:
-                    LOGGER.warning(f"Warning: can't make a feed '{feed_name}' with recent articles, {result}")
-                    failed_feed_list.append(feed_dir_path.parent.name + "/" + feed_name)
-            except NotFoundConfigItemError as e:
-                # 피드 하나의 설정 누락이 전체 실행(run.py -a)을 중단시키지 않도록 격리
-                LOGGER.error(e)
-                failed_feed_list.append(feed_dir_path.parent.name + "/" + feed_name)
-            except Exception:  # pylint: disable=broad-exception-caught
-                # crawler는 in-process로 돌아 처리하지 않은 예외가 여기까지 올라온다.
-                # 피드 하나의 예외가 나머지 피드 실행을 막지 않게 격리하고,
-                # stderr(run_all.log, 매 회차 덮어씀) 대신 run.log에 traceback을 남긴다.
-                LOGGER.exception("Error: unexpected exception in making a feed '%s'", feed_name)
-                failed_feed_list.append(feed_dir_path.parent.name + "/" + feed_name)
+                self._make_feed_in_all_feeds(feed_dir_path, failed_feed_list)
+            finally:
+                if feed_log_handler:
+                    LOGGER.removeHandler(feed_log_handler)
+                    feed_log_handler.close()
 
         end_time = datetime.now(timezone.utc)
         LOGGER.info("# Running time analysis")
-        LOGGER.info(f"* Start time: {start_time.isoformat(timespec='seconds')}")
-        LOGGER.info(f"* End time: {end_time.isoformat(timespec='seconds')}")
+        LOGGER.info(f"* Start time: {Datetime.to_kst_str(start_time)}")
+        LOGGER.info(f"* End time: {Datetime.to_kst_str(end_time)}")
         LOGGER.info(f"* Elapsed time: {(end_time - start_time).total_seconds()}")
 
         if failed_feed_list:
             notification = Notification()
             notification.send_msg(", ".join(failed_feed_list), "Errors of FeedMaker")
         return True
+
+    def _make_feed_in_all_feeds(self, feed_dir_path: Path, failed_feed_list: list[str]) -> None:
+        feed_name = feed_dir_path.name
+        config = Config(feed_dir_path=feed_dir_path)
+        try:
+            collection_conf = config.get_collection_configs()
+        except NotFoundConfigItemError as e:
+            LOGGER.error(e)
+            failed_feed_list.append(feed_dir_path.parent.name + "/" + feed_name)
+            return
+
+        try:
+            if collection_conf.get("is_completed", False):
+                result = self.make_single_feed(feed_dir_path, options={"force_collection_opt": "-c", "long_term_task_threshold": LONG_TERM_TASK_THRESHOLD})
+                if self.is_running_elsewhere:
+                    LOGGER.info("skipping '%s', running in another session", PathUtil.short_path(feed_dir_path))
+                    return
+                if self.is_long_term_task:
+                    if not self._spawn_long_term_task(feed_dir_path):
+                        failed_feed_list.append(feed_dir_path.parent.name + "/" + feed_name)
+                    return
+                if not result:
+                    LOGGER.warning(f"Warning: can't make a feed '{feed_name} with all completed articles, {result}")
+                    failed_feed_list.append(feed_dir_path.parent.name + "/" + feed_name)
+                    return
+
+            result = self.make_single_feed(feed_dir_path, options={})
+            if self.is_running_elsewhere:
+                LOGGER.info("skipping '%s', running in another session", PathUtil.short_path(feed_dir_path))
+                return
+            if not result:
+                LOGGER.warning(f"Warning: can't make a feed '{feed_name}' with recent articles, {result}")
+                failed_feed_list.append(feed_dir_path.parent.name + "/" + feed_name)
+        except NotFoundConfigItemError as e:
+            # 피드 하나의 설정 누락이 전체 실행(run.py -a)을 중단시키지 않도록 격리
+            LOGGER.error(e)
+            failed_feed_list.append(feed_dir_path.parent.name + "/" + feed_name)
+        except Exception:  # pylint: disable=broad-exception-caught
+            # crawler는 in-process로 돌아 처리하지 않은 예외가 여기까지 올라온다.
+            # 피드 하나의 예외가 나머지 피드 실행을 막지 않게 격리하고,
+            # stderr(run_all.log, 매 회차 덮어씀) 대신 run.log에 traceback을 남긴다.
+            LOGGER.exception("Error: unexpected exception in making a feed '%s'", feed_name)
+            failed_feed_list.append(feed_dir_path.parent.name + "/" + feed_name)
+
+    @staticmethod
+    def _add_feed_log_handler(feed_dir_path: Path) -> Optional[logging.Handler]:
+        """피드를 처리하는 동안 로그를 그 피드 디렉터리의 run.log에도 남긴다.
+
+        이미 같은 파일에 쓰는 handler가 있으면(cwd가 피드 디렉터리인 단일 실행) 중복 기록하지 않는다.
+        """
+        log_file_path = (feed_dir_path / "run.log").resolve()
+        for handler in LOGGER.handlers:
+            if isinstance(handler, logging.FileHandler) and Path(handler.baseFilename).resolve() == log_file_path:
+                return None
+        try:
+            # logging.conf의 run.log 설정과 같게 자정에 rotate하고 1개만 보관한다.
+            feed_log_handler = logging.handlers.TimedRotatingFileHandler(log_file_path, when="midnight", interval=1, backupCount=1, encoding="utf-8")
+        except OSError as e:
+            LOGGER.warning("can't open feed log file '%s': %r", PathUtil.short_path(log_file_path), e)
+            return None
+        feed_log_handler.setLevel(logging.DEBUG)
+        feed_log_handler.setFormatter(logging.Formatter("[%(asctime)s][%(filename)s:%(lineno)d][%(levelname)s] %(message)s"))
+        LOGGER.addHandler(feed_log_handler)
+        return feed_log_handler
 
     @staticmethod
     def _spawn_long_term_task(feed_dir_path: Path) -> bool:

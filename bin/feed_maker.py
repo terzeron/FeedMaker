@@ -424,7 +424,7 @@ class FeedMaker:
         if not mtime:
             LOGGER.error("ERROR: can't read start_idx.txt file")
             return None
-        LOGGER.info(f"start index: {start_index}, end index: {end_index}, last modified time: {mtime}")
+        LOGGER.info(f"start index: {start_index}, end index: {end_index}, last modified time: {Datetime.to_kst_str(mtime)}")
         result_feed_list: list[tuple[str, str, list[str]]] = []
         for i, feed in enumerate(sorted_feed_list):
             feed_id: int = feed.get("id", 0)
@@ -433,7 +433,7 @@ class FeedMaker:
 
         next_start_index, current_time_str = self._write_index_data(start_index, mtime)
         if current_time_str:
-            LOGGER.info(f"next start index: {next_start_index}, current time: {current_time_str}")
+            LOGGER.info(f"next start index: {next_start_index}, current time: {Datetime.to_kst_str(dateutil.parser.parse(current_time_str))}")
         return result_feed_list
 
     def _get_recent_feed_list(self) -> list[tuple[str, str, list[str]]]:

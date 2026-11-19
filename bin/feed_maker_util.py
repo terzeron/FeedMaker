@@ -14,6 +14,7 @@ import json
 import base64
 import logging.config
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from shutil import which
 from urllib.parse import urlparse, urlunparse, quote, urljoin, urlsplit
@@ -247,9 +248,16 @@ class Process:
 
 
 class Datetime:
+    # 로그에 보여줄 시각대. 저장 데이터(start_idx.txt, rss 등)는 계속 UTC를 쓴다.
+    KST = ZoneInfo("Asia/Seoul")
+
     @staticmethod
     def get_current_time() -> datetime:
         return datetime.now(timezone.utc)
+
+    @staticmethod
+    def to_kst_str(dt: datetime) -> str:
+        return dt.astimezone(Datetime.KST).isoformat(timespec="seconds")
 
     @staticmethod
     def _get_time_str(dt: datetime) -> str:
