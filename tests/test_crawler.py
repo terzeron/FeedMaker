@@ -148,6 +148,17 @@ class TestCrawler(unittest.TestCase):
         self.assertIn("Test", actual)
         mock_make_request.assert_called_once_with(url, download_file=None, data=None, allow_redirects=True)
 
+    def test_crawler_empty_user_agent_falls_back_to_default(self) -> None:
+        """conf에 user_agent가 없어 빈 값이나 None이 넘어와도 기본 UA를 쓴다.
+
+        일부 이미지 서버는 UA가 없으면 403을 준다.
+        """
+        from bin.crawler import DEFAULT_USER_AGENT
+
+        for empty in ("", None):
+            crawler = Crawler(headers={"User-Agent": empty, "Referer": "http://test.com"})
+            self.assertEqual(crawler.requests_client.headers["User-Agent"], DEFAULT_USER_AGENT)
+
     @patch("bin.crawler.HeadlessBrowser.make_request")
     def test_crawler_with_render_js(self, mock_make_request: MagicMock) -> None:
         mock_make_request.return_value = MOCK_HEADLESS_HTML

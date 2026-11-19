@@ -394,7 +394,7 @@ class Crawler:
         self.render_js = render_js
         self.method = method
         self.headers: Headers = headers if headers is not None else {}
-        self.headers["User-Agent"] = self.headers.get("User-Agent", DEFAULT_USER_AGENT)
+        self.headers["User-Agent"] = self.headers.get("User-Agent") or DEFAULT_USER_AGENT
         self.timeout = timeout
         self.num_retries = num_retries
         self.retry_sleep = retry_sleep
