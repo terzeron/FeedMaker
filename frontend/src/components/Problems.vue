@@ -200,11 +200,25 @@
                       </a>
                       <span v-else>{{ item[field.key] }}</span>
                     </span>
-                    <span v-else-if="field.key === 'item_title'" class="feed-title-ellipsis cell-ellipsis" :title="item.item_title">
-                      <a v-if="item.item_url" :href="item.item_url" target="_blank" rel="noopener noreferrer">
-                        {{ item.item_title || item.item_url }}
+                    <span v-else-if="field.key === 'item_title'" class="item-title-cell" :title="item.item_title">
+                      <button
+                        type="button"
+                        class="btn btn-link p-0 item-title-link"
+                        @click="openHtmlSourceModal(item)"
+                      >
+                        {{ item.item_title || item.file_name }}
+                      </button>
+                      <a
+                        v-if="item.item_url"
+                        :href="item.item_url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="external-link-icon"
+                        title="원본 사이트 열기"
+                        aria-label="원본 사이트 열기"
+                      >
+                        <font-awesome-icon :icon="['fas', 'arrow-up-right-from-square']" />
                       </a>
-                      <span v-else>{{ item.item_title }}</span>
                     </span>
                     <span v-else-if="field.key === 'action'">
                       <font-awesome-icon
@@ -686,6 +700,21 @@
   >
     <p>{{ confirmMessage }}</p>
   </BModal>
+
+  <!-- HTML Source Modal: sm 미만(폰)에서는 전체 화면, 그 이상은 큰 대화상자 -->
+  <BModal
+    v-model="showHtmlSourceModal"
+    :title="htmlSourceTitle"
+    size="xl"
+    fullscreen="sm"
+    scrollable
+    ok-only
+    ok-title="닫기"
+  >
+    <p v-if="htmlSourceLoading" class="text-muted m-0">불러오는 중...</p>
+    <p v-else-if="htmlSourceError" class="text-danger m-0">{{ htmlSourceError }}</p>
+    <pre v-else class="html-source m-0"><code>{{ htmlSource }}</code></pre>
+  </BModal>
 </template>
 
 <style>
@@ -1014,6 +1043,42 @@
   white-space: nowrap;
 }
 
+/* 아이템 제목(소스 보기) + 외부 링크 아이콘 */
+.item-title-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.item-title-cell .item-title-link {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  font-size: inherit;
+  vertical-align: baseline;
+}
+
+.item-title-cell .external-link-icon {
+  flex: none;
+  padding: 0.25rem; /* 모바일 터치 영역 확보 */
+  line-height: 1;
+  color: #6c757d;
+}
+
+.item-title-cell .external-link-icon:hover {
+  color: #007bff;
+}
+
+.html-source {
+  white-space: pre-wrap; /* 모바일에서 가로 스크롤 없이 읽도록 줄바꿈 */
+  word-break: break-all;
+  font-size: 0.8rem;
+}
+
 .feed-title-ellipsis a:hover {
   color: #0056b3;
   text-decoration: underline;
@@ -1120,9 +1185,10 @@ import dayjs from "dayjs";
 
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faTrashAlt } from "@fortawesome/free-regular-svg-icons";
+import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 
-library.add(faTrashAlt);
+library.add(faTrashAlt, faArrowUpRightFromSquare);
 
 export default {
   name: "ProblemList",
@@ -1286,6 +1352,11 @@ export default {
       showConfirmModal: false,
       confirmMessage: "",
       pendingAction: null,
+      showHtmlSourceModal: false,
+      htmlSourceTitle: "",
+      htmlSource: "",
+      htmlSourceLoading: false,
+      htmlSourceError: "",
     };
   },
   methods: {
@@ -1448,6 +1519,36 @@ export default {
         getApiUrlPath() +
         `/groups/${groupName}/feeds/${feedName}/htmls/${htmlFileName}`;
       return this.requestRemoval(() => axios.delete(path), "실행");
+    },
+    async openHtmlSourceModal(item) {
+      // file_path는 "group/feed/html/file.html" 형태
+      const parts = (item["file_path"] || "").split("/");
+      this.htmlSourceTitle = item["item_title"] || item["file_name"] || "";
+      this.htmlSource = "";
+      this.htmlSourceError = "";
+      this.showHtmlSourceModal = true;
+      if (parts.length < 4) {
+        this.htmlSourceError = "HTML 파일 경로를 알 수 없습니다.";
+        return;
+      }
+      const [groupName, feedName, , htmlFileName] = parts;
+      const path =
+        getApiUrlPath() +
+        `/groups/${groupName}/feeds/${feedName}/htmls/${htmlFileName}`;
+      this.htmlSourceLoading = true;
+      try {
+        const res = await axios.get(path);
+        if (res.data.status === "success") {
+          this.htmlSource = res.data.content;
+        } else {
+          this.htmlSourceError = res.data.message || "HTML 소스를 불러오지 못했습니다.";
+        }
+      } catch (error) {
+        console.error(error);
+        this.htmlSourceError = "HTML 소스를 불러오지 못했습니다.";
+      } finally {
+        this.htmlSourceLoading = false;
+      }
     },
     imageWithoutImageTagDeleteClicked(data) {
       this.openConfirmModal("정말로 실행하시겠습니까?", async () => {

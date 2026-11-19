@@ -489,6 +489,23 @@ async def toggle_group(group_name: str, request: Request, feed_maker_manager: Fe
     return response_object
 
 
+@app.get("/groups/{group_name}/feeds/{feed_name}/htmls/{html_file_name}")
+async def get_html_file_content(group_name: str, feed_name: str, html_file_name: str, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
+    LOGGER.info("/groups/%s/feeds/%s/htmls/%s -> get_html_file_content(%s, %s, %s)", group_name, feed_name, html_file_name, group_name, feed_name, html_file_name)
+    response_object: dict[str, Any] = {}
+    try:
+        content, error = feed_maker_manager.get_html_file_content(group_name, feed_name, html_file_name)
+    except ValueError as e:
+        content, error = "", str(e)
+    if error:
+        response_object["message"] = error
+        response_object["status"] = "failure"
+    else:
+        response_object["content"] = content
+        response_object["status"] = "success"
+    return response_object
+
+
 @app.delete("/groups/{group_name}/feeds/{feed_name}/htmls/{html_file_name}")
 async def remove_html_file(group_name: str, feed_name: str, html_file_name: str, request: Request, feed_maker_manager: FeedMakerManager = Depends(get_feed_maker_manager)) -> dict[str, Any]:
     LOGGER.info("DELETE /groups/%s/feeds/%s/htmls/%s -> remove_html_file(%s, %s, %s)", group_name, feed_name, html_file_name, group_name, feed_name, html_file_name)

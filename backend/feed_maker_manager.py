@@ -489,6 +489,20 @@ class FeedMakerManager:
             LOGGER.debug("deleting %s", PathUtil.short_path(feed_img_dir_path))
             rmtree(feed_img_dir_path)
 
+    def get_html_file_content(self, group_name: str, feed_name: str, html_file_name: str) -> tuple[str, str]:
+        LOGGER.debug("# get_html_file_content(group_name='%s', feed_name='%s', html_file_name='%s')", group_name, feed_name, html_file_name)
+        _validate_name(group_name, "group_name")
+        _validate_name(feed_name, "feed_name")
+        _validate_name(html_file_name, "html_file_name")
+        html_file_path = self.work_dir_path / group_name / feed_name / "html" / html_file_name
+        if not html_file_path.is_file():
+            return "", f"no such html file: {html_file_name}"
+        try:
+            # 깨진 인코딩이 섞인 HTML도 소스 확인은 가능해야 하므로 대체 문자로 읽는다.
+            return html_file_path.read_text(encoding="utf-8", errors="replace"), ""
+        except OSError as e:
+            return "", f"can't read html file: {html_file_name} ({e})"
+
     def remove_html_file(self, group_name: str, feed_name: str, html_file_name: str) -> None:
         LOGGER.debug("# remove_html_file(group_name='%s', feed_name='%s')", group_name, feed_name)
         _validate_name(group_name, "group_name")

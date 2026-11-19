@@ -598,6 +598,32 @@ def test_get_feeds_by_group_failure():
     assert r["message"] == "feeds error"
 
 
+# --- get_html_file_content ---
+
+
+def test_get_html_file_content_success():
+    mgr = MagicMock()
+    mgr.get_html_file_content.return_value = ("<p>본문</p>", "")
+    r = asyncio.run(main.get_html_file_content("g", "f", "a.html", feed_maker_manager=mgr))
+    assert r == {"status": "success", "content": "<p>본문</p>"}
+    mgr.get_html_file_content.assert_called_once_with("g", "f", "a.html")
+
+
+def test_get_html_file_content_missing_file():
+    mgr = MagicMock()
+    mgr.get_html_file_content.return_value = ("", "no such html file: a.html")
+    r = asyncio.run(main.get_html_file_content("g", "f", "a.html", feed_maker_manager=mgr))
+    assert r == {"status": "failure", "message": "no such html file: a.html"}
+
+
+def test_get_html_file_content_invalid_name():
+    mgr = MagicMock()
+    mgr.get_html_file_content.side_effect = ValueError("Invalid html_file_name: '..'")
+    r = asyncio.run(main.get_html_file_content("g", "f", "..", feed_maker_manager=mgr))
+    assert r["status"] == "failure"
+    assert "Invalid html_file_name" in r["message"]
+
+
 # --- get_feed_info success ---
 
 
