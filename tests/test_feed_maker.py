@@ -1858,3 +1858,61 @@ class TestMakeStopRequested(FeedMakerMakeTestBase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestMakeLongTermTask(FeedMakerMakeTestBase):
+    """run.py -a가 넘긴 임계값 이상으로 미처리 항목이 있는 완결 피드는 html을 만들지 않고 장시간 작업으로 표시한다."""
+
+    RECENT = [("http://x.com/1", "X1", []), ("http://x.com/2", "X2", []), ("http://x.com/3", "X3", [])]
+
+    def _set_is_completed(self, value: bool) -> None:
+        conf_file = self.feed_dir_path / Config.DEFAULT_CONF_FILE
+        with conf_file.open("r", encoding="utf-8") as f:
+            conf_data = json.load(f)
+        conf_data["configuration"]["collection"]["is_completed"] = value
+        with conf_file.open("w", encoding="utf-8") as f:
+            json.dump(conf_data, f)
+
+    def _make_maker(self, threshold: int) -> FeedMaker:
+        return FeedMaker(feed_dir_path=self.feed_dir_path, do_collect_by_force=True, do_collect_only=False, rss_file_path=self.rss_file_path, long_term_task_threshold=threshold)
+
+    def _run_make(self, maker: FeedMaker) -> tuple[bool, Mock, Mock]:
+        with patch("bin.feed_maker.NewlistCollector") as mock_collector, patch.object(FeedMaker, "_diff_feeds_and_make_htmls", return_value=self.RECENT) as mock_diff, patch.object(FeedMaker, "_generate_rss_feed", return_value=True) as mock_gen, patch("bin.feed_maker.Uploader.upload"):
+            mock_collector.return_value.collect.return_value = list(self.RECENT)
+            result = maker.make()
+        return result, mock_diff, mock_gen
+
+    def test_hands_off_when_pending_items_reach_threshold(self) -> None:
+        self._set_is_completed(True)
+        maker = self._make_maker(3)
+        result, mock_diff, mock_gen = self._run_make(maker)
+        self.assertTrue(result)
+        self.assertTrue(maker.is_long_term_task)
+        mock_diff.assert_not_called()
+        mock_gen.assert_not_called()
+
+    def test_items_with_complete_html_are_not_counted(self) -> None:
+        self._set_is_completed(True)
+        item_url = self.RECENT[0][0]
+        html_path = FeedMaker._get_html_file_path(self.html_dir, item_url)
+        image_tag = FeedMaker.get_image_tag_str(self.img_url_prefix, self.rss_file_path.name, item_url)
+        html_path.write_text(header_str + "\n" + image_tag + "\n" + "A" * 500, encoding="utf-8")
+        maker = self._make_maker(3)
+        result, mock_diff, _ = self._run_make(maker)
+        self.assertTrue(result)
+        self.assertFalse(maker.is_long_term_task)
+        mock_diff.assert_called_once()
+
+    def test_not_completed_feed_is_never_handed_off(self) -> None:
+        self._set_is_completed(False)
+        maker = self._make_maker(3)
+        _, mock_diff, _ = self._run_make(maker)
+        self.assertFalse(maker.is_long_term_task)
+        mock_diff.assert_called_once()
+
+    def test_threshold_zero_disables_hand_off(self) -> None:
+        self._set_is_completed(True)
+        maker = self._make_maker(0)
+        _, mock_diff, _ = self._run_make(maker)
+        self.assertFalse(maker.is_long_term_task)
+        mock_diff.assert_called_once()

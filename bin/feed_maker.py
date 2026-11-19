@@ -44,7 +44,7 @@ class FeedMaker:
     DEFAULT_WINDOW_SIZE = 5
     IMAGE_TAG_FMT_STR = "<img src='%s/1x1.jpg?feed=%s&item=%s'/>"
 
-    def __init__(self, *, feed_dir_path: Path, do_collect_by_force: bool, do_collect_only: bool, rss_file_path: Path, window_size: int = DEFAULT_WINDOW_SIZE, do_extract_only: bool = False) -> None:
+    def __init__(self, *, feed_dir_path: Path, do_collect_by_force: bool, do_collect_only: bool, rss_file_path: Path, window_size: int = DEFAULT_WINDOW_SIZE, do_extract_only: bool = False, long_term_task_threshold: int = 0) -> None:
         LOGGER.debug("# FeedMaker(feed_dir_path=%s, do_collect_by_force=%s, do_collect_only=%s, do_extract_only=%s, rss_file_path=%s)", PathUtil.short_path(feed_dir_path), do_collect_by_force, do_collect_only, do_extract_only, PathUtil.short_path(rss_file_path))
 
         self.work_dir_path = Path(Env.get("FM_WORK_DIR"))
@@ -62,6 +62,9 @@ class FeedMaker:
         self.is_completed_feed: bool = False
         # 사용자 중단 요청을 감지하면 True. make()가 이후 단계를 건너뛰고 False를 반환한다.
         self.stop_requested: bool = False
+        # 완결 피드의 미처리 항목이 이 값 이상이면 html을 만들지 않고 장시간 작업으로 표시한다. 0이면 판정하지 않는다.
+        self.long_term_task_threshold = long_term_task_threshold
+        self.is_long_term_task: bool = False
 
         self.list_dir = self.feed_dir_path / "newlist"
         self.html_dir = self.feed_dir_path / "html"
@@ -465,6 +468,21 @@ class FeedMaker:
                 new_list.append((link, title, tags))
         return new_list
 
+    def _check_long_term_task(self, recent_feed_list: list[tuple[str, str, list[str]]], old_feed_list: list[tuple[str, str, list[str]]]) -> bool:
+        if self.long_term_task_threshold <= 0 or not self.is_completed_feed or self.do_collect_only:
+            return False
+        # _make_html_file이 기존 html을 재사용하는 조건과 같은 기준으로 미처리 항목을 센다.
+        template_size = FeedMaker.get_size_of_template_with_image_tag(Env.get("WEB_SERVICE_IMAGE_URL_PREFIX"), self.rss_file_path.name)
+        num_pending = 0
+        for link, _, _ in self._get_new_feeds(recent_feed_list, old_feed_list):
+            html_file_path = FeedMaker._get_html_file_path(self.html_dir, link)
+            if not html_file_path.is_file() or html_file_path.stat().st_size <= template_size:
+                num_pending += 1
+        if num_pending < self.long_term_task_threshold:
+            return False
+        LOGGER.info("long-term task: %d items without html file (threshold %d)", num_pending, self.long_term_task_threshold)
+        return True
+
     def _diff_feeds_and_make_htmls(self, recent_feed_list: list[tuple[str, str, list[str]]], old_feed_list: list[tuple[str, str, list[str]]]) -> list[tuple[str, str, list[str]]]:
         LOGGER.debug(f"# _diff_feeds_and_make_htmls(recent_feed_list={recent_feed_list[:10]}, old_feed_list={old_feed_list[:10]})")
 
@@ -622,6 +640,12 @@ class FeedMaker:
 
             if self.collection_conf.get("ignore_old_list", False):
                 old_feed_list.clear()
+
+            # 미처리 항목이 많은 완결 피드는 html과 rss를 만들지 않고 돌아간다.
+            # run.py -a가 이 피드를 별도 세션으로 넘겨 전체 회차가 한 피드에 막히지 않게 한다.
+            if self._check_long_term_task(recent_feed_list, old_feed_list):
+                self.is_long_term_task = True
+                return True
 
             # 과거 피드항목 리스트와 최근 피드항목 리스트를 비교함
             if not self.do_collect_only:
