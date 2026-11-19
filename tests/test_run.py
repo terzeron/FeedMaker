@@ -1481,3 +1481,80 @@ class TestLongTermTask(unittest.TestCase):
             with patch("bin.run.subprocess.Popen"):
                 self.assertTrue(FeedMakerRunner._spawn_long_term_task(feed_dir))
             self.assertEqual(log_file_path.read_text(encoding="utf-8"), "")
+
+
+class TestRunLogInKst(unittest.TestCase):
+    @patch("bin.run.Env.get")
+    def _make_runner(self, mock_env):
+        mock_env.side_effect = lambda k: {"FM_WORK_DIR": "/tmp/fm_work", "WEB_SERVICE_IMAGE_DIR_PREFIX": "/tmp/fm_img"}[k]
+        with patch("pathlib.Path.is_dir", return_value=True):
+            return FeedMakerRunner(html_archiving_period=30, list_archiving_period=7)
+
+    @patch("bin.run.HeadlessBrowser")
+    @patch("bin.run.FileManager")
+    @patch("bin.run.FeedMaker")
+    def test_make_single_feed_logs_start_and_end_time_in_kst(self, mock_fm_cls, _mock_file_mgr, _mock_hb):
+        runner = self._make_runner()
+        mock_fm_cls.return_value.make.return_value = True
+        with tempfile.TemporaryDirectory() as tmp, self.assertLogs(level="INFO") as cm:
+            runner.make_single_feed(Path(tmp), options={})
+        time_lines = [line for line in cm.output if "* Start time:" in line or "* End time:" in line]
+        self.assertEqual(len(time_lines), 2)
+        for line in time_lines:
+            self.assertTrue(line.endswith("+09:00"), line)
+
+
+class TestPerFeedRunLog(unittest.TestCase):
+    """run.py -a는 피드를 처리하는 동안 로그를 그 피드 디렉터리의 run.log에도 남긴다."""
+
+    @patch("bin.run.Env.get")
+    def _make_runner(self, mock_env):
+        mock_env.side_effect = lambda k: {"FM_WORK_DIR": "/tmp/fm_work", "WEB_SERVICE_IMAGE_DIR_PREFIX": "/tmp/fm_img"}[k]
+        with patch("pathlib.Path.is_dir", return_value=True):
+            return FeedMakerRunner(html_archiving_period=30, list_archiving_period=7)
+
+    @patch("bin.run.Notification")
+    @patch("bin.run.Config")
+    def test_feed_log_is_written_to_feed_run_log(self, mock_config_cls, _mock_notif_cls):
+        import logging as _logging
+
+        with tempfile.TemporaryDirectory() as tmp:
+            runner = self._make_runner()
+            runner.work_dir_path = Path(tmp)
+            feed_dirs = []
+            for name in ("feed_a", "feed_b"):
+                feed_dir = Path(tmp) / "group1" / name
+                feed_dir.mkdir(parents=True)
+                (feed_dir / "conf.json").write_text("{}", encoding="utf-8")
+                feed_dirs.append(feed_dir)
+            mock_config_cls.DEFAULT_CONF_FILE = "conf.json"
+            mock_config_cls.return_value.get_collection_configs.return_value = {"is_completed": True}
+            num_handlers = len(_logging.getLogger().handlers)
+
+            def fake_make(feed_dir_path, options):
+                _logging.getLogger().info("making %s %s", feed_dir_path.name, options.get("force_collection_opt", ""))
+                return True
+
+            with patch.object(runner, "make_single_feed", side_effect=fake_make):
+                runner.make_all_feeds(options={})
+
+            self.assertEqual(len(_logging.getLogger().handlers), num_handlers)
+            log_a = (feed_dirs[0] / "run.log").read_text(encoding="utf-8")
+            self.assertIn("making feed_a -c", log_a)
+            self.assertRegex(log_a, r"(?m)making feed_a $")
+            self.assertNotIn("feed_b", log_a)
+            self.assertRegex(log_a, r"^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}\]\[")
+
+    def test_handler_is_not_added_when_same_file_is_already_logged(self):
+        import logging as _logging
+
+        with tempfile.TemporaryDirectory() as tmp:
+            feed_dir = Path(tmp)
+            existing = _logging.FileHandler(str(feed_dir / "run.log"), encoding="utf-8")
+            root = _logging.getLogger()
+            root.addHandler(existing)
+            try:
+                self.assertIsNone(FeedMakerRunner._add_feed_log_handler(feed_dir))
+            finally:
+                root.removeHandler(existing)
+                existing.close()
