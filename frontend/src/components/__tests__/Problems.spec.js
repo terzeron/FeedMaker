@@ -639,11 +639,85 @@ describe("Problems.vue", () => {
       true,
     );
 
-    const plain = wrapper
-      .findAll("span.cell-ellipsis")
+    // 이미지 없는 HTML 테이블: 제목은 소스 보기 버튼, 원본 링크가 없으면 외부 링크 아이콘도 없다.
+    const titleCell = wrapper
+      .findAll("span.item-title-cell")
       .find((el) => el.attributes("title") === "아이템B");
-    expect(plain).toBeTruthy();
-    expect(plain.find("a").exists()).toBe(false);
+    expect(titleCell).toBeTruthy();
+    expect(titleCell.find("button.item-title-link").text()).toBe("아이템B");
+    expect(titleCell.find("a").exists()).toBe(false);
+  });
+
+  it("opens HTML source modal from the image-not-found item title", async () => {
+    axios.get.mockImplementation((url) => {
+      if (url.endsWith("/problems/html_info")) {
+        return Promise.resolve({
+          data: {
+            status: "success",
+            result: {
+              html_file_size_map: [],
+              html_file_with_many_image_tag_map: [],
+              html_file_without_image_tag_map: [],
+              html_file_image_not_found_map: [
+                {
+                  feed_title: "피드B",
+                  feed_dir_path: "g/b",
+                  file_path: "g/b/html/b.html",
+                  item_title: "아이템B",
+                  item_url: "https://example.com/b",
+                },
+              ],
+            },
+          },
+        });
+      }
+      if (url.endsWith("/groups/g/feeds/b/htmls/b.html")) {
+        return Promise.resolve({
+          data: { status: "success", content: "<p>본문</p>" },
+        });
+      }
+      return Promise.resolve({ data: { status: "success", result: [] } });
+    });
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    const titleCell = wrapper.find("span.item-title-cell");
+    const external = titleCell.find("a.external-link-icon");
+    expect(external.attributes("href")).toBe("https://example.com/b");
+    expect(external.attributes("target")).toBe("_blank");
+    expect(external.attributes("rel")).toBe("noopener noreferrer");
+
+    await titleCell.find("button.item-title-link").trigger("click");
+    await flushPromises();
+
+    expect(axios.get).toHaveBeenCalledWith(
+      expect.stringMatching(/\/groups\/g\/feeds\/b\/htmls\/b\.html$/),
+    );
+    expect(wrapper.vm.showHtmlSourceModal).toBe(true);
+    expect(wrapper.vm.htmlSourceTitle).toBe("아이템B");
+    expect(wrapper.find("pre.html-source").text()).toBe("<p>본문</p>");
+  });
+
+  it("shows an error message when HTML source loading fails", async () => {
+    axios.get.mockImplementation((url) => {
+      if (url.endsWith("/groups/g/feeds/b/htmls/b.html")) {
+        return Promise.resolve({
+          data: { status: "failure", message: "no such html file: b.html" },
+        });
+      }
+      return Promise.resolve({ data: { status: "success", result: [] } });
+    });
+    const wrapper = mount(Problems, { global: { stubs } });
+    await flushPromises();
+
+    await wrapper.vm.openHtmlSourceModal({
+      file_path: "g/b/html/b.html",
+      item_title: "아이템B",
+    });
+
+    expect(wrapper.vm.htmlSourceLoading).toBe(false);
+    expect(wrapper.vm.htmlSourceError).toBe("no such html file: b.html");
+    expect(wrapper.find("pre.html-source").exists()).toBe(false);
   });
 
   it("sorts listUrlInfo table by clicking a column", async () => {

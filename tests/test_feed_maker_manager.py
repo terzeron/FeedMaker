@@ -1122,6 +1122,36 @@ class TestRemoveHtmlFile(unittest.TestCase):
                 mgr.remove_html_file("group1", "feed1", "../evil.html")
 
 
+class TestGetHtmlFileContent(unittest.TestCase):
+    def test_returns_file_content(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            mgr = _make_manager(tmp_path)
+            html_dir = tmp_path / "group1" / "feed1" / "html"
+            html_dir.mkdir(parents=True)
+            (html_dir / "page.html").write_text("<p>본문</p>", encoding="utf-8")
+
+            content, error = mgr.get_html_file_content("group1", "feed1", "page.html")
+
+            self.assertEqual(content, "<p>본문</p>")
+            self.assertEqual(error, "")
+
+    def test_missing_file_returns_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = _make_manager(Path(tmp))
+
+            content, error = mgr.get_html_file_content("group1", "feed1", "nonexistent.html")
+
+            self.assertEqual(content, "")
+            self.assertIn("nonexistent.html", error)
+
+    def test_invalid_html_name_raises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            mgr = _make_manager(Path(tmp))
+            with self.assertRaises(ValueError):
+                mgr.get_html_file_content("group1", "feed1", "../evil.html")
+
+
 class TestRemovePublicFeed(unittest.TestCase):
     def test_calls_feed_manager(self):
         with tempfile.TemporaryDirectory() as tmp:
