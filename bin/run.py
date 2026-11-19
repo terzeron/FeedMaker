@@ -208,6 +208,12 @@ class FeedMakerRunner:
                 # 피드 하나의 설정 누락이 전체 실행(run.py -a)을 중단시키지 않도록 격리
                 LOGGER.error(e)
                 failed_feed_list.append(feed_dir_path.parent.name + "/" + feed_name)
+            except Exception:  # pylint: disable=broad-exception-caught
+                # crawler는 in-process로 돌아 처리하지 않은 예외가 여기까지 올라온다.
+                # 피드 하나의 예외가 나머지 피드 실행을 막지 않게 격리하고,
+                # stderr(run_all.log, 매 회차 덮어씀) 대신 run.log에 traceback을 남긴다.
+                LOGGER.exception("Error: unexpected exception in making a feed '%s'", feed_name)
+                failed_feed_list.append(feed_dir_path.parent.name + "/" + feed_name)
 
         end_time = datetime.now(timezone.utc)
         LOGGER.info("# Running time analysis")

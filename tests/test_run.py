@@ -477,6 +477,29 @@ class TestMakeAllFeedsIsolatesMissingConfigItem(unittest.TestCase):
         self.assertEqual(made, ["good_feed"])
         mock_notif_cls.return_value.send_msg.assert_called_once_with("group_a/bad_feed", "Errors of FeedMaker")
 
+    @patch("bin.run.Notification")
+    @patch("bin.run.Config")
+    def test_unexpected_exception_in_one_feed_continues_others(self, mock_config_cls, mock_notif_cls):
+        # in-process crawler에서 처리하지 않은 예외(requests.ChunkedEncodingError 등)가
+        # 피드 하나에서 나도 run.py -a 전체가 죽지 않고, traceback은 run.log에 남아야 한다.
+        mock_config_cls.DEFAULT_CONF_FILE = Config.DEFAULT_CONF_FILE
+        mock_config_cls.return_value.get_collection_configs.return_value = {"is_completed": False}
+        made: list[str] = []
+
+        def make_single_feed(feed_dir_path: Path, options: dict[str, Any]) -> bool:
+            if feed_dir_path.name == "bad_feed":
+                raise KeyError("unexpected")
+            made.append(feed_dir_path.name)
+            return True
+
+        with patch.object(self.runner, "make_single_feed", side_effect=make_single_feed), self.assertLogs(level="ERROR") as logs:
+            result = self.runner.make_all_feeds(options={})
+
+        self.assertTrue(result)
+        self.assertEqual(made, ["good_feed"])
+        mock_notif_cls.return_value.send_msg.assert_called_once_with("group_a/bad_feed", "Errors of FeedMaker")
+        self.assertTrue(any("Traceback" in line and "KeyError" in line for line in logs.output))
+
 
 @patch("bin.run.Path.is_dir", return_value=True)
 class TestFeedMakerRunnerCheckRunning(unittest.TestCase):
