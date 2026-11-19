@@ -252,6 +252,59 @@ class TestRequestsClientRefererErrors(unittest.TestCase):
         self.assertIsNone(status)
 
 
+class TestRequestsClientRefererVisitedOnce(unittest.TestCase):
+    """같은 referer의 페이지 방문은 인스턴스당 한 번만 한다.
+
+    download_image.py는 페이지 하나의 이미지 N장을 같은 Referer로 받는다.
+    이미지마다 referer 페이지를 다시 받으면 요청이 2배가 되어 밀린 피드가 55분 안에 끝나지 않는다.
+    """
+
+    @patch("bin.crawler.Env.get", return_value="false")
+    def setUp(self, mock_env):
+        self.client = RequestsClient(dir_path=Path(tempfile.mkdtemp()))
+        self.client.headers["Referer"] = "http://example.com/ref"
+
+    @staticmethod
+    def _resp(text: str = "ok") -> MagicMock:
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.cookies = RequestsCookieJar()
+        resp.encoding = "utf-8"
+        resp.text = text
+        resp.request = MagicMock(url="http://example.com/img")
+        return resp
+
+    @patch("bin.crawler.URLSafety.check_url", return_value=(True, ""))
+    @patch("requests.get")
+    def test_same_referer_visited_once(self, mock_get, mock_check):
+        mock_get.side_effect = lambda url, **kwargs: self._resp()
+        for i in range(3):
+            self.client.make_request(f"http://example.com/img{i}")
+        visited = [c.args[0] for c in mock_get.call_args_list]
+        self.assertEqual(visited.count("http://example.com/ref"), 1)
+        self.assertEqual(len(visited), 4)
+        # 방문은 한 번이어도 Referer 헤더는 매 이미지 요청에 실린다.
+        for c in mock_get.call_args_list:
+            self.assertEqual(c.kwargs["headers"]["Referer"], "http://example.com/ref")
+
+    @patch("bin.crawler.URLSafety.check_url", return_value=(True, ""))
+    @patch("requests.get")
+    def test_failed_referer_visit_is_retried(self, mock_get, mock_check):
+        calls = {"n": 0}
+
+        def get(url, **kwargs):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise requests.exceptions.ConnectionError("conn err")
+            return self._resp()
+
+        mock_get.side_effect = get
+        self.client.make_request("http://example.com/img0")
+        self.client.make_request("http://example.com/img1")
+        visited = [c.args[0] for c in mock_get.call_args_list]
+        self.assertEqual(visited, ["http://example.com/ref", "http://example.com/ref", "http://example.com/img1"])
+
+
 class TestRequestsClientMethods(unittest.TestCase):
     """make_request POST / HEAD methods"""
 

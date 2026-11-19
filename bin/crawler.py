@@ -159,6 +159,9 @@ class RequestsClient:
         self.encoding: str = encoding or "utf-8"
         self.verify_ssl: bool = verify_ssl
         self._cookie_dir: Optional[Path] = None
+        # 이미 방문한 referer. 한 페이지의 이미지 N장은 같은 referer를 쓰므로
+        # 페이지 방문(쿠키 획득)은 한 번이면 충분하다. 매번 방문하면 요청이 2배가 된다.
+        self._visited_referers: set[str] = set()
         self.allow_private_ips = Env.get("FM_CRAWLER_ALLOW_PRIVATE_IPS", "false").strip().lower() in ("1", "true", "yes", "on")
         self.allowed_hosts_raw = Env.get("FM_CRAWLER_ALLOWED_HOSTS", "")
         if not self.verify_ssl:
@@ -284,6 +287,7 @@ class RequestsClient:
             if not is_ok:
                 LOGGER.warning("Blocked referer URL: %s (%s)", referer, reason)
                 return "", f"blocked url: {reason}", {}, None
+        if referer and referer not in self._visited_referers:
             LOGGER.debug("visiting referer page '%s'", referer)
             self.read_cookies_from_file()
             try:
@@ -298,6 +302,7 @@ class RequestsClient:
                 return "", f"Warning: can't read data from '{url}' for timeout", {}, None
             if referer_response.cookies:
                 self.write_cookies_to_file(referer_response.cookies)
+            self._visited_referers.add(referer)
 
         self.read_cookies_from_file()
         response = None
