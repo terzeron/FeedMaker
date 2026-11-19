@@ -4,7 +4,9 @@
 import math
 import os
 import re
+import subprocess
 import sys
+from contextlib import suppress
 from datetime import datetime, timedelta, timezone
 import logging.config
 import getopt
@@ -20,6 +22,9 @@ from bin.problem_manager import ProblemManager
 
 logging.config.fileConfig(Path(__file__).parent.parent / "logging.conf")
 LOGGER = logging.getLogger()
+
+# run.py -a에서 완결 피드의 미처리 항목이 이 개수 이상이면 별도 세션으로 넘긴다.
+LONG_TERM_TASK_THRESHOLD = 50
 
 
 def spread_feeds_by_group(feed_dir_path_list: list[Path]) -> list[Path]:
@@ -84,6 +89,10 @@ class FeedMakerRunner:
         self.list_archiving_period = list_archiving_period
         # 마지막 make_single_feed() 실패 원인. backend가 사용자 메시지에 덧붙인다.
         self.failure_reason = ""
+        # 마지막 make_single_feed()에서 장시간 작업으로 판정했는지
+        self.is_long_term_task = False
+        # 마지막 make_single_feed()가 다른 세션이 쥔 피드 잠금 때문에 실행하지 못했는지
+        self.is_running_elsewhere = False
         self.work_dir_path = Path(Env.get("FM_WORK_DIR"))
         if not self.work_dir_path.is_dir():
             LOGGER.error("Error: Can't find work directory '%s'", PathUtil.short_path(self.work_dir_path))
@@ -102,6 +111,8 @@ class FeedMakerRunner:
 
         start_time = datetime.now(timezone.utc)
         self.failure_reason = ""
+        self.is_long_term_task = False
+        self.is_running_elsewhere = False
 
         lock_file_path = feed_dir_path / ".feed_maker_runner.lock"
         if lock_file_path.is_file():
@@ -113,6 +124,10 @@ class FeedMakerRunner:
         try:
             logging.getLogger("filelock").setLevel(logging.ERROR)
             with FileLock(str(lock_file_path), timeout=5):
+                # 잠금 파일 mtime은 획득할 때 갱신되지 않을 수 있다.
+                # 위의 1일 경과 잠금 삭제가 실행 중인 장시간 작업의 잠금을 지우지 않도록 획득 시각으로 맞춘다.
+                with suppress(OSError):
+                    lock_file_path.touch()
                 # 이전 실행에서 남은 중단 요청이 이번 실행을 막지 않도록 지운다.
                 (feed_dir_path / STOP_FLAG_FILE_NAME).unlink(missing_ok=True)
                 feed_name = feed_dir_path.name
@@ -136,10 +151,11 @@ class FeedMakerRunner:
 
                 # make_feed.py 실행하여 feed 파일 생성
                 LOGGER.info("* making feed file '%s'", PathUtil.short_path(rss_file_path))
-                feed_maker = FeedMaker(feed_dir_path=feed_dir_path, do_collect_by_force=force_collection_opt, do_collect_only=collect_only_opt, rss_file_path=rss_file_path, window_size=window_size, do_extract_only=extract_only_opt)
+                feed_maker = FeedMaker(feed_dir_path=feed_dir_path, do_collect_by_force=force_collection_opt, do_collect_only=collect_only_opt, rss_file_path=rss_file_path, window_size=window_size, do_extract_only=extract_only_opt, long_term_task_threshold=options.get("long_term_task_threshold", 0))
                 try:
                     result = feed_maker.make()
                     self.failure_reason = feed_maker.failure_reason
+                    self.is_long_term_task = feed_maker.is_long_term_task is True
                 finally:
                     (feed_dir_path / STOP_FLAG_FILE_NAME).unlink(missing_ok=True)
                     # 피드 단위로 Chromium 세션을 재활용 — 같은 피드그룹 안에서 자원이 누적되어
@@ -151,6 +167,7 @@ class FeedMakerRunner:
                 FileManager.remove_temporary_files(feed_dir_path)
         except Timeout:
             LOGGER.warning("can't run multiple feed makers concurrently")
+            self.is_running_elsewhere = True
             return False
 
         end_time = datetime.now(timezone.utc)
@@ -194,13 +211,23 @@ class FeedMakerRunner:
 
             try:
                 if collection_conf.get("is_completed", False):
-                    result = self.make_single_feed(feed_dir_path, options={"force_collection_opt": "-c"})
+                    result = self.make_single_feed(feed_dir_path, options={"force_collection_opt": "-c", "long_term_task_threshold": LONG_TERM_TASK_THRESHOLD})
+                    if self.is_running_elsewhere:
+                        LOGGER.info("skipping '%s', running in another session", PathUtil.short_path(feed_dir_path))
+                        continue
+                    if self.is_long_term_task:
+                        if not self._spawn_long_term_task(feed_dir_path):
+                            failed_feed_list.append(feed_dir_path.parent.name + "/" + feed_name)
+                        continue
                     if not result:
                         LOGGER.warning(f"Warning: can't make a feed '{feed_name} with all completed articles, {result}")
                         failed_feed_list.append(feed_dir_path.parent.name + "/" + feed_name)
                         continue
 
                 result = self.make_single_feed(feed_dir_path, options={})
+                if self.is_running_elsewhere:
+                    LOGGER.info("skipping '%s', running in another session", PathUtil.short_path(feed_dir_path))
+                    continue
                 if not result:
                     LOGGER.warning(f"Warning: can't make a feed '{feed_name}' with recent articles, {result}")
                     failed_feed_list.append(feed_dir_path.parent.name + "/" + feed_name)
@@ -224,6 +251,25 @@ class FeedMakerRunner:
         if failed_feed_list:
             notification = Notification()
             notification.send_msg(", ".join(failed_feed_list), "Errors of FeedMaker")
+        return True
+
+    @staticmethod
+    def _spawn_long_term_task(feed_dir_path: Path) -> bool:
+        """장시간 작업을 단일 피드 실행(run.py <feed_dir>)으로 넘긴다.
+
+        새 세션으로 띄워 run_all_feeds의 timeout이 process group을 종료해도 살아남게 한다.
+        자식이 피드 잠금을 쥐는 동안 이후 회차의 run.py -a는 이 피드를 건너뛴다.
+        """
+        log_file_path = feed_dir_path / "run_long_term.log"
+        try:
+            with log_file_path.open("w", encoding="utf-8") as log_file:
+                subprocess.Popen(  # pylint: disable=consider-using-with
+                    [sys.executable, str(Path(__file__).resolve()), str(feed_dir_path)], cwd=feed_dir_path, stdin=subprocess.DEVNULL, stdout=log_file, stderr=subprocess.STDOUT, start_new_session=True
+                )
+        except OSError as e:
+            LOGGER.error("Error: can't spawn long-term task for '%s': %r", PathUtil.short_path(feed_dir_path), e)
+            return False
+        LOGGER.info("spawned long-term task for '%s' in a new session", PathUtil.short_path(feed_dir_path))
         return True
 
     @staticmethod

@@ -1335,3 +1335,149 @@ class TestSpreadFeedsByGroup(unittest.TestCase):
 
     def test_empty(self) -> None:
         self.assertEqual(spread_feeds_by_group([]), [])
+
+
+class TestLongTermTask(unittest.TestCase):
+    """run.py -a는 장시간 작업을 별도 세션으로 넘기고, 다른 세션이 실행 중인 피드는 실패로 세지 않고 건너뛴다."""
+
+    @patch("bin.run.Env.get")
+    def _make_runner(self, mock_env):
+        mock_env.side_effect = lambda k: {"FM_WORK_DIR": "/tmp/fm_work", "WEB_SERVICE_IMAGE_DIR_PREFIX": "/tmp/fm_img"}[k]
+        with patch("pathlib.Path.is_dir", return_value=True):
+            return FeedMakerRunner(html_archiving_period=30, list_archiving_period=7)
+
+    def _setup_one_feed(self, runner):
+        feed_dir = MagicMock(spec=Path)
+        feed_dir.name = "long_feed"
+        feed_dir.is_dir.return_value = True
+        feed_dir.parent = MagicMock()
+        feed_dir.parent.name = "group1"
+        conf_file = MagicMock()
+        conf_file.is_file.return_value = True
+        feed_dir.__truediv__ = MagicMock(return_value=conf_file)
+        group_dir = MagicMock(spec=Path)
+        group_dir.name = "group1"
+        group_dir.is_dir.return_value = True
+        group_dir.iterdir.return_value = [feed_dir]
+        runner.work_dir_path = MagicMock()
+        runner.work_dir_path.iterdir.return_value = [group_dir]
+        return feed_dir
+
+    @patch("bin.run.Notification")
+    @patch("bin.run.Config")
+    def test_long_term_task_is_spawned_and_skipped(self, mock_config_cls, mock_notif_cls):
+        runner = self._make_runner()
+        feed_dir = self._setup_one_feed(runner)
+        mock_config_cls.return_value.get_collection_configs.return_value = {"is_completed": True}
+
+        def fake_make(_feed_dir_path, options):
+            runner.is_long_term_task = True
+            return True
+
+        with patch.object(runner, "make_single_feed", side_effect=fake_make) as mock_make, patch.object(FeedMakerRunner, "_spawn_long_term_task", return_value=True) as mock_spawn:
+            self.assertTrue(runner.make_all_feeds(options={}))
+        self.assertEqual(mock_make.call_count, 1)
+        self.assertEqual(mock_make.call_args.kwargs["options"]["long_term_task_threshold"], 50)
+        mock_spawn.assert_called_once_with(feed_dir)
+        mock_notif_cls.return_value.send_msg.assert_not_called()
+
+    @patch("bin.run.Notification")
+    @patch("bin.run.Config")
+    def test_failed_spawn_is_reported(self, mock_config_cls, mock_notif_cls):
+        runner = self._make_runner()
+        self._setup_one_feed(runner)
+        mock_config_cls.return_value.get_collection_configs.return_value = {"is_completed": True}
+
+        def fake_make(_feed_dir_path, options):
+            runner.is_long_term_task = True
+            return True
+
+        with patch.object(runner, "make_single_feed", side_effect=fake_make), patch.object(FeedMakerRunner, "_spawn_long_term_task", return_value=False):
+            runner.make_all_feeds(options={})
+        mock_notif_cls.return_value.send_msg.assert_called_once_with("group1/long_feed", "Errors of FeedMaker")
+
+    @patch("bin.run.Notification")
+    @patch("bin.run.Config")
+    def test_feed_running_elsewhere_is_skipped_without_failure(self, mock_config_cls, mock_notif_cls):
+        for is_completed in (True, False):
+            runner = self._make_runner()
+            self._setup_one_feed(runner)
+            mock_config_cls.return_value.get_collection_configs.return_value = {"is_completed": is_completed}
+            mock_notif_cls.reset_mock()
+
+            def fake_make(_feed_dir_path, options, runner=runner):
+                runner.is_running_elsewhere = True
+                return False
+
+            with patch.object(runner, "make_single_feed", side_effect=fake_make) as mock_make:
+                runner.make_all_feeds(options={})
+            self.assertEqual(mock_make.call_count, 1)
+            mock_notif_cls.return_value.send_msg.assert_not_called()
+
+    @patch("bin.run.FileLock")
+    def test_make_single_feed_marks_running_elsewhere_on_lock_timeout(self, mock_filelock):
+        runner = self._make_runner()
+        mock_ctx = MagicMock()
+        mock_ctx.__enter__ = MagicMock(side_effect=Timeout("/tmp/lock"))
+        mock_ctx.__exit__ = MagicMock(return_value=True)
+        mock_filelock.return_value = mock_ctx
+        with patch.object(Path, "is_file", return_value=False):
+            self.assertFalse(runner.make_single_feed(Path("/tmp/fm_work/group/feed"), options={}))
+        self.assertTrue(runner.is_running_elsewhere)
+
+    @patch("bin.run.FileManager")
+    @patch("bin.run.FeedMaker")
+    @patch("bin.run.FileLock")
+    def test_make_single_feed_passes_threshold_and_reads_flag(self, mock_filelock, mock_fm_cls, _mock_file_mgr):
+        runner = self._make_runner()
+        mock_fm_cls.return_value.make.return_value = True
+        mock_fm_cls.return_value.is_long_term_task = True
+        mock_filelock.return_value.__enter__ = MagicMock()
+        mock_filelock.return_value.__exit__ = MagicMock(return_value=False)
+        with patch.object(Path, "is_file", return_value=False):
+            runner.make_single_feed(Path("/tmp/fm_work/group/feed"), options={"force_collection_opt": "-c", "long_term_task_threshold": 50})
+        self.assertEqual(mock_fm_cls.call_args.kwargs["long_term_task_threshold"], 50)
+        self.assertTrue(runner.is_long_term_task)
+        self.assertFalse(runner.is_running_elsewhere)
+
+    def test_make_single_feed_refreshes_lock_file_mtime(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runner = self._make_runner()
+            feed_dir = Path(tmp)
+            lock_file_path = feed_dir / ".feed_maker_runner.lock"
+            lock_file_path.touch()
+            old_time = (datetime.now() - timedelta(hours=23)).timestamp()
+            import os
+
+            os.utime(lock_file_path, (old_time, old_time))
+            with patch("bin.run.FeedMaker") as mock_fm_cls, patch("bin.run.FileManager"), patch("bin.run.HeadlessBrowser"):
+                mock_fm_cls.return_value.make.return_value = True
+                runner.make_single_feed(feed_dir, options={})
+            self.assertGreater(lock_file_path.stat().st_mtime, old_time + 3600)
+
+    def test_spawn_long_term_task_starts_new_session(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            feed_dir = Path(tmp)
+            with patch("bin.run.subprocess.Popen") as mock_popen:
+                self.assertTrue(FeedMakerRunner._spawn_long_term_task(feed_dir))
+            args, kwargs = mock_popen.call_args
+            self.assertEqual(args[0][0], sys.executable)
+            self.assertTrue(args[0][1].endswith("run.py"))
+            self.assertEqual(args[0][2], str(feed_dir))
+            self.assertTrue(kwargs["start_new_session"])
+            self.assertEqual(kwargs["cwd"], feed_dir)
+            self.assertTrue((feed_dir / "run_long_term.log").is_file())
+
+    def test_spawn_long_term_task_returns_false_on_os_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch("bin.run.subprocess.Popen", side_effect=OSError("boom")):
+                self.assertFalse(FeedMakerRunner._spawn_long_term_task(Path(tmp)))
+
+    def test_spawn_long_term_task_overwrites_previous_log(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            feed_dir = Path(tmp)
+            log_file_path = feed_dir / "run_long_term.log"
+            log_file_path.write_text("previous run\n", encoding="utf-8")
+            with patch("bin.run.subprocess.Popen"):
+                self.assertTrue(FeedMakerRunner._spawn_long_term_task(feed_dir))
+            self.assertEqual(log_file_path.read_text(encoding="utf-8"), "")
