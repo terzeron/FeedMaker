@@ -193,5 +193,9 @@ class ImageDownloader:
                     return None
         except UnidentifiedImageError:
             LOGGER.warning(f"Cannot identify image format: {cache_file_path}")
+        except (OSError, ValueError) as e:
+            # 잘린 이미지 등 디코딩 실패: 이 이미지만 건너뛰고, 손상된 캐시를 지워 다음 실행에서 다시 받게 한다.
+            LOGGER.warning(f"이미지 디코딩 실패, 건너뛴다: {PathUtil.short_path(cache_file_path)} ({e})")
+            cache_file_path.unlink(missing_ok=True)
 
         return None

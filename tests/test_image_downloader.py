@@ -1035,6 +1035,49 @@ class TestDownloadImageCorruptExtensionlessCache(unittest.TestCase):
             self.assertEqual(url, "http://img.example.com/feed/abc123.webp")
 
 
+def _write_truncated_jpeg(path: Path) -> None:
+    Image.new("RGB", (200, 200), "red").save(path, "JPEG")
+    data = path.read_bytes()
+    path.write_bytes(data[: len(data) // 2])
+
+
+class TestConvertImageFormatTruncated(unittest.TestCase):
+    """잘린 이미지는 예외 대신 None을 돌려주고 손상된 캐시를 지운다."""
+
+    def test_truncated_image_returns_none_and_removes_cache(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            raw = Path(tmp) / "abc123"
+            _write_truncated_jpeg(raw)
+
+            result = ImageDownloader.convert_image_format(raw, quality=75)
+
+            self.assertIsNone(result)
+            self.assertFalse(raw.exists())
+            self.assertFalse(raw.with_suffix(".webp").exists())
+
+    @patch("utils.image_downloader.FileManager")
+    @patch("utils.image_downloader.Env")
+    def test_truncated_download_returns_none(self, mock_env: MagicMock, mock_fm: MagicMock) -> None:
+        mock_env.get.return_value = "http://img.example.com"
+        with tempfile.TemporaryDirectory() as tmp:
+            feed_dir = Path(tmp) / "feed"
+            feed_dir.mkdir()
+            raw = feed_dir / "abc123"
+            mock_fm.get_cache_file_path.return_value = raw
+
+            def download(_url: str, download_file: Path) -> tuple[bool, None, None]:
+                _write_truncated_jpeg(download_file)
+                return True, None, None
+
+            crawler = MagicMock()
+            crawler.run.side_effect = download
+            path, url = ImageDownloader.download_image(crawler, feed_dir, "http://example.com/photo.jpg")
+
+            self.assertIsNone(path)
+            self.assertIsNone(url)
+            self.assertFalse(raw.exists())
+
+
 def test_webtoon_optimization():
     """웹툰 최적화 기능 테스트"""
     print("=== 웹툰 최적화 기능 테스트 ===\n")
