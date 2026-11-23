@@ -18,13 +18,14 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from fastapi import BackgroundTasks, FastAPI, Request, Depends, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 import uvicorn
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from backend.feed_maker_manager import FeedMakerManager
+from backend.feed_name_translator import FeedNameTranslator
 from backend.auth import SESSION_COOKIE_NAME, clear_session_cookie, create_session, delete_session, get_current_user, get_login_allowed_email_set, is_login_locked, record_login_failure, require_admin, reset_login_failures, set_session_cookie, verify_facebook_token
 from backend.audit import audit_log, request_id_var
 from bin.feed_maker_util import Env
@@ -384,6 +385,24 @@ def search_site(keyword: str) -> dict[str, Any]:
         response_object["message"] = error
         response_object["status"] = "failure"
     return response_object
+
+
+class FeedNameSuggestionRequest(BaseModel):
+    title: str = Field(max_length=500)
+
+
+@app.post("/feed_name_suggestion")
+@limiter.limit("30/minute")
+def suggest_feed_name(request: Request, body: FeedNameSuggestionRequest) -> dict[str, Any]:
+    """rss.title의 `::` 왼쪽 한글을 영문 피드명(소문자, `_` 연결)으로 직역한다."""
+    LOGGER.info("POST /feed_name_suggestion -> suggest_feed_name()")
+    require_admin(request)
+    try:
+        feed_name = FeedNameTranslator().translate(body.title)
+    except Exception as e:
+        LOGGER.error("suggest_feed_name error: %s: %s", type(e).__name__, e)
+        return {"status": "failure", "message": f"{type(e).__name__}: {e}"}
+    return {"status": "success", "feed_name": feed_name}
 
 
 @app.get("/search_sites")

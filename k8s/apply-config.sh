@@ -24,7 +24,8 @@ DRY_RUN=""
 #   - secrets (MYSQL_PASSWORD/ROOT)      -> fm-db-mysql Secret
 #   - host-divergent paths/host (PATH, PYTHONPATH, FM_DB_HOST, FM_*_DIR,
 #     WEB_SERVICE_ROOT_DIR, WEB_SERVICE_*_DIR_PREFIX -> host filesystem paths)
-#   - removed providers (MSG_EMAIL_NHN_CLOUD_*, DEEPL_API_KEY, ANTHROPIC_API_KEY)
+#   - removed providers (MSG_EMAIL_NHN_CLOUD_*, DEEPL_API_KEY)
+#   - ANTHROPIC_API_KEY -> fm-anthropic Secret (secret, not ConfigMap)
 CONFIG_KEYS=(
     MYSQL_DATABASE
     MYSQL_USER
@@ -77,10 +78,41 @@ render() {
         --from-env-file="$ENV_TMP" --dry-run=client -o yaml
 }
 
+# ANTHROPIC_API_KEY -> fm-anthropic Secret (key: api-key), consumed by fm-backend
+# as an optional secretKeyRef. The value is written only to a 0600 temp file and
+# piped to kubectl; it is never echoed, and --dry-run does not render the Secret.
+SECRET_NAME="fm-anthropic"
+SECRET_TMP="$(umask 077 && mktemp)"
+trap 'rm -f "$ENV_TMP" "$SECRET_TMP"' EXIT
+(
+    set +u
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+    if [ -n "${ANTHROPIC_API_KEY-}" ]; then
+        printf 'api-key=%s\n' "$ANTHROPIC_API_KEY"
+    fi
+) > "$SECRET_TMP"
+
+apply_secret() {
+    if [ ! -s "$SECRET_TMP" ]; then
+        echo "warning: ANTHROPIC_API_KEY empty in $ENV_FILE; Secret '$SECRET_NAME' not updated (feed name translation stays disabled)." >&2
+        return
+    fi
+    if [ -n "$DRY_RUN" ]; then
+        echo "# would apply Secret '$SECRET_NAME' (key: api-key) in namespace '$NAMESPACE' (value hidden)"
+        return
+    fi
+    kubectl create secret generic "$SECRET_NAME" -n "$NAMESPACE" \
+        --from-env-file="$SECRET_TMP" --dry-run=client -o yaml | kubectl apply -f -
+    echo "Applied Secret '$SECRET_NAME' in namespace '$NAMESPACE'."
+}
+
 if [ -n "$DRY_RUN" ]; then
     render
+    apply_secret
 else
     render | kubectl apply -f -
     echo "Applied ConfigMap '$CONFIGMAP' in namespace '$NAMESPACE'."
+    apply_secret
     echo "Run 'kubectl rollout restart deployment fm-backend -n $NAMESPACE' (or build.sh) to pick it up."
 fi
