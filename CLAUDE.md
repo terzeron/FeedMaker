@@ -62,8 +62,12 @@ npm run build          # 프로덕션 빌드 (버전 포함)
 ### Build & Deploy
 
 ```bash
-./build.sh             # Docker 이미지 빌드 및 레지스트리 푸시 (requires .env)
+./build.sh             # 개발 버전 배포: Docker 이미지 빌드 및 레지스트리 푸시 (requires .env)
+deploy_and_build       # 리얼 버전 배포 (~/bin/deploy_and_build)
 ```
+
+- 개발 버전 배포는 `./build.sh`로 실행한다.
+- 리얼 버전 배포는 `deploy_and_build`로 실행한다.
 
 ## 참고 문서
 
