@@ -213,7 +213,10 @@
         <BRow id="actions" class="m-0 p-0">
           <BCol cols="12" class="m-0 p-1">
             <BInputGroup prepend="피드" class="m-0" v-if="showNewFeedNameInput">
-              <BFormInput class="m-0" v-model="newFeedName" :disabled="!canSaveFeed" />
+              <BInputGroupText v-if="isTranslatingFeedName" class="bg-white" data-testid="feed-name-spinner">
+                <BSpinner small label="피드명 번역 중" />
+              </BInputGroupText>
+              <BFormInput class="m-0" v-model="newFeedName" :disabled="!canSaveFeed || isTranslatingFeedName" />
               <BInputGroupText class="p-0">
                 <my-button
                   ref="saveButton"
@@ -535,6 +538,9 @@ import MyButton from "./MyButton.vue";
 import JSONEditor from "jsoneditor";
 import "jsoneditor/dist/jsoneditor.css";
 
+// rss.title 키 입력이 이 시간 동안 멈추면 제목이 완성되었다고 보고 번역한다
+const FEED_NAME_TRANSLATION_DELAY_MS = 1000;
+
 
 library.add(
   faTrashAlt,
@@ -626,6 +632,11 @@ export default {
       checkRunningInterval: null,
       hasRunningStatus: false,
       jsonEditor: null,
+
+      // rss.title 편집이 멈추면 한글 제목을 영문 피드명으로 번역한다
+      isTranslatingFeedName: false,
+      feedNameTranslationTimer: null,
+      feedNameTranslationSeq: 0,
 
       // Modal related data
       showConfirmModal: false,
@@ -1478,7 +1489,64 @@ export default {
           this.resetButton("runButton");
         });
     },
+    getRssTitle: function (data) {
+      const title = data && data.rss ? data.rss.title : undefined;
+      return typeof title === "string" ? title : undefined;
+    },
+    cancelFeedNameTranslation: function () {
+      if (this.feedNameTranslationTimer) {
+        clearTimeout(this.feedNameTranslationTimer);
+        this.feedNameTranslationTimer = null;
+      }
+      // 진행 중인 요청의 응답은 무시한다
+      this.feedNameTranslationSeq += 1;
+      this.isTranslatingFeedName = false;
+    },
+    scheduleFeedNameTranslation: function (title) {
+      this.cancelFeedNameTranslation();
+      const source = title.split("::")[0].trim();
+      if (!/[가-힣ㄱ-ㆎ]/.test(source)) {
+        return;
+      }
+      this.feedNameTranslationTimer = setTimeout(() => {
+        this.feedNameTranslationTimer = null;
+        this.translateTitleToFeedName(title);
+      }, FEED_NAME_TRANSLATION_DELAY_MS);
+    },
+    translateTitleToFeedName: function (title) {
+      const seq = ++this.feedNameTranslationSeq;
+      this.isTranslatingFeedName = true;
+      const url = getApiUrlPath() + "/feed_name_suggestion";
+      return axios
+        .post(url, { title })
+        .then((res) => {
+          if (seq !== this.feedNameTranslationSeq) return;
+          if (res.data.status === "failure") {
+            this.alert(`피드명 번역 실패: ${res.data.message}`);
+          } else if (res.data.feed_name) {
+            this.newFeedName = res.data.feed_name;
+            // newFeedName watcher가 rss.link를 바꾼 뒤 편집기에 반영한다.
+            // 반영하지 않으면 다음 onChange가 이전 link로 피드명을 되돌린다.
+            this.$nextTick(() => {
+              if (this.jsonEditor && seq === this.feedNameTranslationSeq) {
+                this.jsonEditor.update(this.jsonData);
+              }
+            });
+          }
+        })
+        .catch((error) => {
+          if (seq !== this.feedNameTranslationSeq) return;
+          console.error("translateTitleToFeedName error:", error);
+          this.alert("피드명 번역 요청에 실패했습니다.");
+        })
+        .finally(() => {
+          if (seq === this.feedNameTranslationSeq) {
+            this.isTranslatingFeedName = false;
+          }
+        });
+    },
     initJsonEditor: function () {
+      this.cancelFeedNameTranslation();
       if (this.jsonEditor) {
         this.jsonEditor.destroy();
         this.jsonEditor = null;
@@ -1493,7 +1561,12 @@ export default {
             onEditable: () => this.canSaveFeed,
             onChange: () => {
               try {
+                const prevTitle = this.getRssTitle(this.jsonData);
                 this.jsonData = this.jsonEditor.get();
+                const newTitle = this.getRssTitle(this.jsonData);
+                if (newTitle !== undefined && newTitle !== prevTitle) {
+                  this.scheduleFeedNameTranslation(newTitle);
+                }
               } catch (e) {
                 console.error('JSON 에디터 데이터 가져오기 실패:', e);
               }
@@ -1534,6 +1607,7 @@ export default {
     }
   },
   beforeUnmount: function () {
+    this.cancelFeedNameTranslation();
     if (this.checkRunningInterval) {
       clearInterval(this.checkRunningInterval);
       this.checkRunningInterval = null;

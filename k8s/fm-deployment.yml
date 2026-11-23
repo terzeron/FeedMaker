@@ -76,6 +76,14 @@ spec:
                 secretKeyRef:
                   name: fm-facebook
                   key: app-secret
+            # 관리 화면의 피드명 자동 번역(/feed_name_suggestion)용. Secret이 없으면
+            # 번역만 실패하고 기동은 된다 (optional).
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: fm-anthropic
+                  key: api-key
+                  optional: true
             - name: FM_DB_HOST
               value: fm-db-mysql
             - name: FM_DB_PORT
