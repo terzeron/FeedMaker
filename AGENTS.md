@@ -125,11 +125,17 @@ uv run ruff check .
 ### Docker Build & Deploy
 
 ```bash
-# Build and push containers
+# Development deployment: build and push containers
 ./build.sh
 
 # The script builds both frontend and backend Docker images
+
+# Production (real) deployment
+deploy_and_build       # ~/bin/deploy_and_build
 ```
+
+- Development deployment: run `./build.sh`.
+- Production (real) deployment: run `deploy_and_build`.
 
 ## Architecture
 
