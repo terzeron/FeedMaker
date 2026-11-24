@@ -507,6 +507,13 @@ class TestFeedMakerRunnerCheckRunning(unittest.TestCase):
 
     @patch("bin.run.Env.get", return_value="/tmp/fm_work")
     @patch("bin.run.FileLock")
+    def test_nonblocking_check_of_locked_feed(self, mock_filelock, mock_env, _mock_is_dir):
+        mock_filelock.return_value.__enter__.side_effect = Timeout("/tmp/lock")
+        self.assertTrue(FeedMakerRunner.check_running("group", "feed", timeout=0))
+        mock_filelock.assert_called_once_with("/tmp/fm_work/group/feed/.feed_maker_runner.lock", timeout=0)
+
+    @patch("bin.run.Env.get", return_value="/tmp/fm_work")
+    @patch("bin.run.FileLock")
     def test_unlocked_returns_false(self, mock_filelock, mock_env, _mock_is_dir):
         mock_ctx = MagicMock()
         mock_ctx.__enter__ = MagicMock()

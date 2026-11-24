@@ -331,13 +331,23 @@ class TestGetProblemsStaticMethods(unittest.TestCase):
         self.assertEqual(result, {"feed1": {"status": "ok"}})
         self.assertEqual(error, "")
 
+    @patch("backend.feed_maker_manager.FeedMakerRunner.check_running")
     @patch("backend.feed_maker_manager.FeedManager.get_feed_name_progress_info_map")
-    def test_progress_info_delegates_to_feed_manager(self, mock_get):
-        mock_get.return_value = {"feed1": {"progress": 50}}
+    def test_progress_info_includes_latest_running_status(self, mock_get, mock_running):
+        mock_get.return_value = {
+            name: {"group_name": "group", "feed_name": name, "progress_ratio": 50}
+            for name in ("active", "idle", "missing")
+        }
+        mock_running.side_effect = [True, False, None, False, True, None]
         result, error = FeedMakerManager.get_problems_progress_info()
         mock_get.assert_called_once()
-        self.assertEqual(result, {"feed1": {"progress": 50}})
+        self.assertEqual([info["running_status"] for info in result.values()], [True, False, False])
+        self.assertEqual(result["active"]["progress_ratio"], 50)
         self.assertEqual(error, "")
+        mock_running.assert_any_call("group", "active", timeout=0)
+
+        result, error = FeedMakerManager.get_problems_progress_info()
+        self.assertEqual([info["running_status"] for info in result.values()], [False, True, False])
 
     @patch("backend.feed_maker_manager.FeedManager.get_feed_name_public_feed_info_map")
     def test_public_feed_info_delegates_to_feed_manager(self, mock_get):

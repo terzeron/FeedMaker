@@ -7,7 +7,7 @@ import logging.config
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from itertools import islice
-from typing import Any, Optional, TypedDict
+from typing import Any, NotRequired, Optional, TypedDict
 
 from bin.feed_maker_util import PathUtil, Env
 from bin.db import DB, Session, or_
@@ -88,6 +88,7 @@ class FeedProgressInfo(TypedDict):
     unit_size_per_day: float
     progress_ratio: float
     due_date: Optional[datetime]
+    running_status: NotRequired[bool]
 
 
 class PublicFeedInfo(TypedDict):
