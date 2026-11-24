@@ -342,6 +342,27 @@ class TestComposeUrlListExtended(unittest.TestCase):
         self.assertEqual(result, [])
 
 
+class TestEmptyResultLogLevel(unittest.TestCase):
+    """빈 수집 결과: 일반 피드는 ERROR, 완결 피드는 WARNING."""
+
+    def _run(self, is_completed_feed: bool) -> list[str]:
+        feed_dir = Path("/tmp/test_feed")
+        conf = {"list_url_list": [], "item_capture_script": "./capture.py"}
+        collector = NewlistCollector(feed_dir, conf, feed_dir / "new_list.txt", is_completed_feed=is_completed_feed)
+        with self.assertLogs(level="WARNING") as cm:
+            self.assertEqual(collector._compose_url_list(), [])
+        del collector
+        return [line for line in cm.output if "Can't get new list" in line]
+
+    def test_normal_feed_logs_error(self) -> None:
+        lines = self._run(is_completed_feed=False)
+        self.assertTrue(lines and lines[0].startswith("ERROR"))
+
+    def test_completed_feed_logs_warning(self) -> None:
+        lines = self._run(is_completed_feed=True)
+        self.assertTrue(lines and lines[0].startswith("WARNING"))
+
+
 class TestSaveNewListToFileExtended(unittest.TestCase):
     """_save_new_list_to_file: IOError -> line 104-106"""
 

@@ -996,6 +996,12 @@ class FeedMakerMakeTestBase(unittest.TestCase):
         self._env_patcher = patch.dict(os.environ, {"FM_WORK_DIR": str(work_dir), "WEB_SERVICE_IMAGE_DIR_PREFIX": str(img_dir)})
         self._env_patcher.start()
 
+        # 완결 피드 경로의 진행 현황 갱신이 실제 DB에 test_make_feed 행을 쓰지 않도록 막는다.
+        # 진행 현황 갱신 자체를 검증하는 테스트는 같은 대상을 다시 patch해 이 mock을 덮어쓴다.
+        refresh_patcher = patch("bin.feed_maker.FeedManager.refresh_progress_counts")
+        refresh_patcher.start()
+        self.addCleanup(refresh_patcher.stop)
+
         sample_conf = Path(__file__).parent / "conf.naverwebtoon.json"
         conf_file = self.feed_dir_path / Config.DEFAULT_CONF_FILE
         shutil.copy(sample_conf, conf_file)
@@ -1600,9 +1606,9 @@ class TestMakeForceCollect(FeedMakerMakeTestBase):
 
 
 class TestMakeCompletedWindowEmpty(FeedMakerMakeTestBase):
-    """make() with is_completed returns False when window is empty."""
+    """make() with is_completed: empty window is a warning, unreadable start_idx is an error."""
 
-    def test_completed_empty_window(self) -> None:
+    def _set_completed(self) -> None:
         conf_file = self.feed_dir_path / Config.DEFAULT_CONF_FILE
 
         with conf_file.open("r", encoding="utf-8") as f:
@@ -1611,7 +1617,46 @@ class TestMakeCompletedWindowEmpty(FeedMakerMakeTestBase):
         with conf_file.open("w", encoding="utf-8") as f:
             json.dump(conf_data, f)
 
-        with patch.object(FeedMaker, "_fetch_old_feed_list_window", return_value=[]):
+    def test_completed_empty_window(self) -> None:
+        # 수집 항목이 0~1개인 완결 피드는 start_idx가 금방 범위를 벗어난다.
+        # 실패로 보지 않고 경고만 남기며, 기존 RSS는 다시 만들지 않는다.
+        self._set_completed()
+
+        with patch.object(FeedMaker, "_fetch_old_feed_list_window", return_value=[]), patch.object(FeedMaker, "_generate_rss_feed") as mock_gen, patch("bin.feed_maker.Uploader.upload") as mock_upload, self.assertLogs(level="WARNING") as cm:
+            result = self.maker.make()
+            self.assertTrue(result)
+            mock_gen.assert_not_called()
+            mock_upload.assert_not_called()
+        self.assertTrue(any("WARNING" in line and "old feed list window" in line for line in cm.output))
+        self.assertFalse(any(line.startswith("ERROR") for line in cm.output))
+
+    def test_completed_window_none(self) -> None:
+        # start_idx.txt를 읽지 못하면(None) 기존대로 실패 처리한다.
+        self._set_completed()
+
+        with patch.object(FeedMaker, "_fetch_old_feed_list_window", return_value=None):
+            result = self.maker.make()
+            self.assertFalse(result)
+
+    def test_completed_forced_collection_empty(self) -> None:
+        # 완결 피드를 -c로 수집할 때 '-n 0'처럼 의도적으로 0건을 수집하면 경고로 끝낸다.
+        self._set_completed()
+        self.maker.do_collect_by_force = True
+
+        with patch("bin.feed_maker.NewlistCollector") as mock_collector, patch.object(FeedMaker, "_generate_rss_feed") as mock_gen, patch("bin.feed_maker.Uploader.upload"), self.assertLogs(level="WARNING") as cm:
+            mock_collector.return_value.collect.return_value = []
+            mock_collector.return_value.failure_reason = ""
+            result = self.maker.make()
+            self.assertTrue(result)
+            mock_gen.assert_not_called()
+            self.assertTrue(mock_collector.call_args.kwargs.get("is_completed_feed"))
+        self.assertFalse(any(line.startswith("ERROR") for line in cm.output))
+
+    def test_normal_feed_empty_collection_is_error(self) -> None:
+        # 진행 중 피드의 0건 수집은 기존대로 실패다.
+        with patch("bin.feed_maker.NewlistCollector") as mock_collector:
+            mock_collector.return_value.collect.return_value = []
+            mock_collector.return_value.failure_reason = ""
             result = self.maker.make()
             self.assertFalse(result)
 
