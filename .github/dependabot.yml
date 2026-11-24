@@ -2,6 +2,10 @@ version: 2
 updates:
   - package-ecosystem: "uv"
     directory: "/"
+    # tm_dev의 Cargo와 같은 정책: 기본 7일, patch 1일 후 갱신 대상으로 삼는다.
+    cooldown:
+      default-days: 7
+      semver-patch-days: 1
     schedule:
       interval: "weekly"
     target-branch: "develop"
