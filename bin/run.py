@@ -320,7 +320,7 @@ class FeedMakerRunner:
         return True, ""
 
     @staticmethod
-    def check_running(group_name: str, feed_name: str) -> Optional[bool]:
+    def check_running(group_name: str, feed_name: str, timeout: float = 1) -> Optional[bool]:
         work_dir_path = Path(Env.get("FM_WORK_DIR"))
         feed_dir_path = work_dir_path / group_name / feed_name
         # FileLock은 상위 디렉터리를 만들므로, 삭제/비활성화된 피드 디렉터리가 lock 파일만 담은 채 되살아나지 않게 막는다
@@ -329,7 +329,7 @@ class FeedMakerRunner:
         lock_file_path = feed_dir_path / ".feed_maker_runner.lock"
         try:
             logging.getLogger("filelock").setLevel(logging.ERROR)
-            with FileLock(str(lock_file_path), timeout=1):
+            with FileLock(str(lock_file_path), timeout=timeout):
                 # unlocked
                 return False
         except Timeout:

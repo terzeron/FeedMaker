@@ -116,11 +116,16 @@
               </thead>
               <tbody>
                 <tr
-                  v-for="(item, index) in sortedProgressInfolist"
-                  :key="index"
+                  v-for="item in sortedProgressInfolist"
+                  :key="`${item.group_name}/${item.feed_name}`"
                 >
-                  <td v-for="field in progressInfoFields" :key="field.key">
+                  <td
+                    v-for="field in progressInfoFields"
+                    :key="field.key"
+                    :class="{ 'progress-running-title': field.key === 'feed_title' && item.running_status === true }"
+                  >
                     <span v-if="field.key === 'feed_title'">
+                      <span v-if="item.running_status === true" class="visually-hidden">추출 진행 중: </span>
                       <router-link v-if="item.group_name && item.feed_name" :to="`/management/${item.group_name}/${item.feed_name}`">
                         {{ item[field.key] || item.feed_name }}
                       </router-link>
@@ -1175,6 +1180,11 @@
   font-size: 0.75em;
   color: #666;
 }
+
+.table td.progress-running-title {
+  background-color: #ffff80;
+  box-shadow: none;
+}
 </style>
 
 <script>
@@ -1286,6 +1296,8 @@ export default {
       progressInfoSortBy: "progress_ratio",
       progressInfoSortDesc: true,
       progressInfolist: [],
+      progressRefreshTimer: null,
+      progressAbortController: null,
       listUrlInfoFields: [
         { key: "feed_title", label: "제목", sortable: true },
         { key: "count", label: "개수", sortable: true },
@@ -1622,10 +1634,32 @@ export default {
       const i = Math.floor(Math.log(bytes) / Math.log(k));
       return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     },
+    async refreshProgressInfo() {
+      if (this.progressAbortController) return;
+      const controller = new AbortController();
+      this.progressAbortController = controller;
+      try {
+        const response = await axios.get(getApiUrlPath() + "/problems/progress_info", {
+          signal: controller.signal,
+          timeout: 15000,
+        });
+        if (controller.signal.aborted || response.data.status !== "success") return;
+        const result = response.data.result;
+        if (!result || typeof result !== "object") return;
+        const items = Array.isArray(result) ? result : Object.values(result);
+        this.progressInfolist = items.map((item) => ({
+          ...item,
+          due_date: this.getShortDate(item.due_date),
+        }));
+      } catch (error) {
+        if (!controller.signal.aborted) console.error(error);
+      } finally {
+        this.progressAbortController = null;
+      }
+    },
     getProblems() {
       // Initialize all table data as empty arrays for safety
       this.statusInfolist = [];
-      this.progressInfolist = [];
       this.listUrlInfolist = [];
       this.htmlFileSizelist = [];
       this.htmlFileWithoutImageTaglist = [];
@@ -1674,37 +1708,7 @@ export default {
           this.statusInfolist = [];
         });
 
-      // Progressive feed progress info
-      const pathProgressInfo = getApiUrlPath() + "/problems/progress_info";
-      axios
-        .get(pathProgressInfo)
-        .then((resProgressInfo) => {
-          if (resProgressInfo.data.status === "failure") {
-            this.progressInfolist = [];
-          } else {
-            // Convert object to array if result is an object
-            let result = resProgressInfo.data["result"];
-            if (
-              result &&
-              typeof result === "object" &&
-              !Array.isArray(result)
-            ) {
-              result = Object.values(result);
-            } else if (!Array.isArray(result)) {
-              result = [];
-            }
-
-            this.progressInfolist = _.map(result, (o) => {
-              // Keep feed_title as plain text, group_name and feed_name will be used in template
-              o["due_date"] = this.getShortDate(o["due_date"]);
-              return o;
-            });
-          }
-        })
-        .catch((error) => {
-          console.error(error);
-          this.progressInfolist = [];
-        });
+      this.refreshProgressInfo();
 
       // Public feed info
       const pathPublicFeedInfo =
@@ -1990,6 +1994,11 @@ export default {
     // 인증 검증은 router guard에서 처리됨 (server-side validation)
     // localStorage의 session_expiry 검증 제거 (보안 취약점)
     this.getProblems();
+    this.progressRefreshTimer = setInterval(() => this.refreshProgressInfo(), 10000);
+  },
+  beforeUnmount() {
+    clearInterval(this.progressRefreshTimer);
+    this.progressAbortController?.abort();
   },
 };
 </script>

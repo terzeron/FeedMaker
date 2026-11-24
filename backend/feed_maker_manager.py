@@ -154,7 +154,11 @@ class FeedMakerManager:
     @staticmethod
     def get_problems_progress_info() -> tuple[dict[str, FeedProgressInfo], str]:
         LOGGER.debug("# get_problems_progress_info()")
-        return FeedManager.get_feed_name_progress_info_map(), ""
+        progress_info = FeedManager.get_feed_name_progress_info_map()
+        for info in progress_info.values():
+            # 실행 중인 피드마다 잠금 해제를 기다리면 주기적 조회가 지연된다.
+            info["running_status"] = FeedMakerRunner.check_running(info["group_name"], info["feed_name"], timeout=0) is True
+        return progress_info, ""
 
     @staticmethod
     def get_problems_public_feed_info() -> tuple[dict[str, PublicFeedInfo], str]:
