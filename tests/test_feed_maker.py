@@ -996,6 +996,12 @@ class FeedMakerMakeTestBase(unittest.TestCase):
         self._env_patcher = patch.dict(os.environ, {"FM_WORK_DIR": str(work_dir), "WEB_SERVICE_IMAGE_DIR_PREFIX": str(img_dir)})
         self._env_patcher.start()
 
+        # 완결 피드 경로의 진행 현황 갱신이 실제 DB에 test_make_feed 행을 쓰지 않도록 막는다.
+        # 진행 현황 갱신 자체를 검증하는 테스트는 같은 대상을 다시 patch해 이 mock을 덮어쓴다.
+        refresh_patcher = patch("bin.feed_maker.FeedManager.refresh_progress_counts")
+        refresh_patcher.start()
+        self.addCleanup(refresh_patcher.stop)
+
         sample_conf = Path(__file__).parent / "conf.naverwebtoon.json"
         conf_file = self.feed_dir_path / Config.DEFAULT_CONF_FILE
         shutil.copy(sample_conf, conf_file)
