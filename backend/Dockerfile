@@ -4,6 +4,31 @@
 # Runtime keeps only what the app needs at run time: chromium(+driver), gosu, curl
 # (HEALTHCHECK), and the *runtime* shared libs for poppler/heif/cairo native wheels.
 
+# uv.lock 전체가 바뀌어도 같은 Camoufox 버전이면 다운로드 캐시를 재사용한다.
+# 별도 stage의 출력 파일 내용만 다음 stage의 캐시 키에 포함한다.
+FROM python:3.12-slim@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 AS camoufox-version
+COPY uv.lock /tmp/uv.lock
+RUN python - <<'PY'
+import tomllib
+from pathlib import Path
+
+lock = tomllib.loads(Path("/tmp/uv.lock").read_text())
+version = next(package["version"] for package in lock["package"] if package["name"] == "camoufox")
+Path("/camoufox-requirements.txt").write_text(f"camoufox[geoip]=={version}\n")
+PY
+
+# 앱 venv와 apt 주간 갱신에서 독립된 다운로드 전용 stage.
+# downloader의 Python 패키지는 최종 이미지에 복사하지 않는다.
+FROM python:3.12-slim@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 AS camoufox
+COPY --from=ghcr.io/astral-sh/uv:0.11.18@sha256:78bc42400d77b0678ba95765305c826652ed5431f399257271dda681d0318f03 /uv /usr/local/bin/uv
+COPY --from=camoufox-version /camoufox-requirements.txt /camoufox-requirements.txt
+RUN --mount=type=cache,target=/tmp/uv-cache \
+    UV_CACHE_DIR=/tmp/uv-cache uv pip install --system -r /camoufox-requirements.txt
+
+# read-only rootfs와 재시작마다 비워지는 $HOME 대신 /opt/camoufox에 설치한다.
+# 런타임 entrypoint가 이 디렉토리를 $HOME/.cache/camoufox로 연결한다.
+RUN HOME=/tmp XDG_CACHE_HOME=/opt python -m camoufox fetch
+
 # ---------------------------------------------------------------------------
 # Stage 1: builder — compiles the venv
 # ---------------------------------------------------------------------------
@@ -31,13 +56,6 @@ COPY pyproject.toml uv.lock README.md /app/
 RUN --mount=type=cache,target=/tmp/uv-cache \
     HOME=/tmp XDG_CACHE_HOME=/tmp/.cache UV_CACHE_DIR=/tmp/uv-cache \
     uv sync --locked --no-editable
-
-# camoufox(패치 Firefox) 바이너리 + GeoIP DB를 빌드 시 이미지에 굳힌다. 런타임 rootfs는
-# read-only이고 $HOME(/tmp)은 재시작마다 비워지는 emptyDir라, camoufox의 런타임 자동 다운로드
-# (pkgman.camoufox_path, download_if_missing=True)는 egress 의존적이고 재시작마다 ~200MB를
-# 다시 받는다. XDG_CACHE_HOME으로 설치 위치를 /opt/camoufox(platformdirs: $XDG_CACHE_HOME/camoufox)
-# 로 통제해 여기서 한 번만 받아 둔다. 바이너리와 GeoLite2-City.mmdb가 같은 디렉토리에 모인다.
-RUN HOME=/tmp XDG_CACHE_HOME=/opt /app/.venv/bin/python -m camoufox fetch
 
 # ---------------------------------------------------------------------------
 # Stage 2: runtime — no compilers. git IS required: FeedMakerManager uses GitPython
@@ -85,9 +103,9 @@ RUN useradd -l -u $USER_ID $USER_NAME && \
 # Bring the prebuilt venv from the builder (no toolchain copied).
 COPY --from=builder --chown=$USER_NAME /app/.venv /app/.venv
 
-# camoufox 바이너리 + GeoIP DB(builder에서 fetch). 런타임에 entrypoint.sh가
+# camoufox 바이너리 + GeoIP DB(전용 stage에서 fetch). 런타임에 entrypoint.sh가
 # $HOME/.cache/camoufox(platformdirs 해석 경로)로 symlink하여 재다운로드 없이 사용한다.
-COPY --from=builder --chown=$USER_NAME /opt/camoufox /opt/camoufox
+COPY --from=camoufox --chown=$USER_NAME /opt/camoufox /opt/camoufox
 
 WORKDIR /app
 # 컨테이너는 stdout-only 로깅 설정을 사용 (readOnlyRootFilesystem 호환, 로그는 k8s 가 수집).
