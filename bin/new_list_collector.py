@@ -17,11 +17,13 @@ LOGGER = logging.getLogger()
 
 
 class NewlistCollector:
-    def __init__(self, feed_dir_path: Path, collection_conf: dict[str, Any], new_list_file_path: Path) -> None:
+    def __init__(self, feed_dir_path: Path, collection_conf: dict[str, Any], new_list_file_path: Path, is_completed_feed: bool = False) -> None:
         LOGGER.debug("# NewlistCollector(feed_dir_path=%s, new_list_file_path=%s)", PathUtil.short_path(feed_dir_path), PathUtil.short_path(new_list_file_path))
         self.feed_dir_path: Path = feed_dir_path
         self.collection_conf: dict[str, Any] = collection_conf
         self.new_list_file_path: Path = new_list_file_path
+        # 완결 피드는 '-n 0'처럼 의도적으로 0건을 수집할 수 있으므로 빈 결과를 경고로 남긴다.
+        self.is_completed_feed: bool = is_completed_feed
         # 목록 수집 실패 원인. 사용자에게 보여줄 메시지로 FeedMaker까지 전달된다.
         self.failure_reason: str = ""
 
@@ -122,7 +124,10 @@ class NewlistCollector:
             result_list.extend(url_list)
 
         if not result_list:
-            LOGGER.error("Error: Can't get new list from '%r'", conf.get("list_url_list", []))
+            if self.is_completed_feed:
+                LOGGER.warning("Warning: Can't get new list from '%r' (completed feed)", conf.get("list_url_list", []))
+            else:
+                LOGGER.error("Error: Can't get new list from '%r'", conf.get("list_url_list", []))
             return []
         result_list = Data.remove_duplicates(result_list)
         return result_list

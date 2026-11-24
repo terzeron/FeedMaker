@@ -441,7 +441,7 @@ class FeedMaker:
 
         short_date_str = Datetime.get_short_date_str()
         new_list_file_path = FeedMaker._get_list_file_path(self.list_dir, short_date_str)
-        collector = NewlistCollector(self.feed_dir_path, self.collection_conf, new_list_file_path)
+        collector = NewlistCollector(self.feed_dir_path, self.collection_conf, new_list_file_path, is_completed_feed=self.is_completed_feed)
         recent_feed_list = collector.collect()
         self.failure_reason = collector.failure_reason
         self._refresh_progress_counts()
@@ -620,10 +620,16 @@ class FeedMaker:
         # 완결여부 설정값 판단
         if self.collection_conf.get("is_completed", False):
             # 완결된 피드는 적재된 리스트에서 일부 피드항목을 꺼내옴
-            final_feed_list = self._fetch_old_feed_list_window(old_feed_list)
-            if not final_feed_list:
+            window_feed_list = self._fetch_old_feed_list_window(old_feed_list)
+            if window_feed_list is None:
                 LOGGER.error("Error: can't fetch old feed list window")
                 return False
+            if not window_feed_list:
+                # 수집 항목이 0~1개인 완결 피드는 start_idx가 금방 항목 범위를 벗어난다.
+                # 의도된 설정('-n 0', '-n 1')이므로 실패로 보지 않고 기존 RSS를 그대로 둔다.
+                LOGGER.warning("Warning: no item in old feed list window (%d items collected), keeping current rss file", len(old_feed_list))
+                return True
+            final_feed_list = window_feed_list
         else:
             # 피딩 중인 피드는 최신 피드항목을 받아옴
             recent_feed_list: list[tuple[str, str, list[str]]] = []
@@ -635,6 +641,10 @@ class FeedMaker:
                 if self._check_stop_requested():
                     return False
                 if not recent_feed_list:
+                    if self.is_completed_feed:
+                        # 완결 피드의 강제 수집(-c)은 '-n 0'처럼 의도적으로 0건일 수 있다.
+                        LOGGER.warning("Warning: Can't get recent feed list from urls (completed feed), keeping current rss file")
+                        return True
                     LOGGER.error("Error: Can't get recent feed list from urls")
                     return False
 
