@@ -98,6 +98,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     chmod +x /usr/lib/chromium/chrome_crashpad_handler && \
     rm -rf /var/lib/apt/lists/*
 
+# Runtime 의존성은 builder의 uv.lock으로 설치한다. 사용하지 않는 system pip는 제외한다.
+RUN python -m pip uninstall --yes pip && rm -rf /usr/local/lib/python3.12/ensurepip
+
 ARG USER_ID=1000
 ARG USER_NAME=terzeron
 RUN useradd -l -u $USER_ID $USER_NAME && \
