@@ -21,8 +21,8 @@
 # (helm --set 으로 넘기면 `ps` 와 release values 에 평문으로 남는다).
 
 image:
-  registry: docker.io
-  repository: mysql
+  registry: registry.terzeron.com
+  repository: security/mysql
   # 8.4 는 LTS. 9.x 는 Innovation 계열이라 분기마다 EOL 되므로 DB 에는 쓰지 않는다
   # (9.7.0/9.7.1/9.7.2 가 2026-05/07/09 로 3개월 간격).
   # chart appVersion 기본값이 9.7.2 이므로 반드시 명시적으로 고정한다.
@@ -31,7 +31,7 @@ image:
   # 조용히 올라간다. MySQL 은 기동 시 데이터 디렉터리를 새 포맷으로 올리고 다운그레이드가
   # 불가능하므로, 의도하지 않은 시점에 되돌릴 수 없는 변경이 일어난다.
   # 올릴 때는 이 값을 직접 바꾼다. (tm_dev 의 k8s/mysql-deployment.yml 과 같은 이유)
-  tag: "8.4.13@sha256:a81d043930e51745522bd5c430961cf8286f0a23f0a9a2a6e0108f7ea71b0902"
+  tag: "8.4.13-20261125-r2@sha256:7a6c838789b3d638776ed24b7f8df0fe657ec46578142d61a23c497185ebbe98"
   pullPolicy: IfNotPresent
 
 settings:
@@ -120,3 +120,6 @@ podSecurityContext:
 # 소켓 기반 시작 프로브가 실패한다(2026-10-22 실측, 약 5분간 not Ready). 라벨로 제외한다.
 podLabels:
   userns: disabled
+
+imagePullSecrets:
+  - name: registry-credentials
