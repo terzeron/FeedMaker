@@ -11,7 +11,7 @@ GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
 build_backend() {
     echo "=== Building backend ==="
-    docker build -q --pull --build-arg "APT_REFRESH=$(date +%G%V)" -f backend/Dockerfile \
+    docker build -q --pull --build-arg "APT_REFRESH=${APT_REFRESH:-$(date +%Y%m%d)}" -f backend/Dockerfile \
         --build-arg FM_BACKEND_PORT="$FM_BACKEND_PORT" \
         --build-arg USER_ID="${USER_ID:-$(id -u)}" \
         --build-arg USER_NAME="${USER_NAME:-$(whoami)}" \
@@ -22,7 +22,7 @@ build_backend() {
 
 build_frontend() {
     echo "=== Building frontend ==="
-    docker build -q -f frontend/Dockerfile --build-arg GIT_COMMIT="$GIT_COMMIT" -t terzeron/fm_frontend . > /dev/null && \
+    docker build -q --build-arg "APT_REFRESH=${APT_REFRESH:-$(date +%Y%m%d)}" -f frontend/Dockerfile --build-arg GIT_COMMIT="$GIT_COMMIT" -t terzeron/fm_frontend . > /dev/null && \
     docker tag terzeron/fm_frontend:latest registry.terzeron.com/terzeron/fm_frontend:latest && \
     docker push -q registry.terzeron.com/terzeron/fm_frontend:latest
 }
