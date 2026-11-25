@@ -22,7 +22,9 @@ FROM nginx:1.30.7@sha256:8a7280c664b1a205092ffea6443299e6d307fe65b6f946b02028fa3
 # base OS 보안 패치 적용 (apt는 root 필요 → 작업 후 비root로 복귀)
 # readOnlyRootFilesystem 호환: user 지시어 제거, pid와 temp 경로를 /tmp(emptyDir)로 옮긴다.
 USER root
-RUN apt-get update && \
+ARG APT_REFRESH=0
+RUN : "apt refresh ${APT_REFRESH}" && \
+    apt-get update && \
     apt-get upgrade -y && \
     rm -rf /var/lib/apt/lists/* && \
     sed -i -e '/^user  nginx;/d' \

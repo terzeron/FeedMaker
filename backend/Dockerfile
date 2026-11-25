@@ -34,7 +34,7 @@ RUN HOME=/tmp XDG_CACHE_HOME=/opt python -m camoufox fetch
 # ---------------------------------------------------------------------------
 FROM python:3.12-slim@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 AS builder
 
-# apt 보안 패치 레이어의 캐시 키. build.sh가 ISO 주차를 넘겨 주 1회 재실행시킨다.
+# apt 보안 패치 레이어의 캐시 키. build.sh가 날짜를 넘겨 하루 1회 재실행시킨다.
 # 이 값이 고정이면 아래 apt-get upgrade가 캐시에서 재사용되어 chromium 등의 패치가 적용되지 않는다.
 ARG APT_REFRESH=0
 
@@ -64,6 +64,8 @@ RUN --mount=type=cache,target=/tmp/uv-cache \
 FROM python:3.12-slim@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9
 
 ARG APT_REFRESH=0
+# 패치 전 APT 캐시가 재사용되더라도 취약한 Chromium으로 빌드하지 않는다.
+ARG CHROMIUM_MIN_VERSION=156.0.8078.108-1~deb13u1
 
 # Runtime-only: chromium engine + gosu + curl(HEALTHCHECK) + shared libs that the
 # compiled wheels (poppler/heif/cairo) link against. Package names resolved from the
@@ -84,6 +86,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libx11-6 libx11-xcb1 libxcb1 libxcb-shm0 libxcomposite1 libxcursor1 \
     libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 && \
     apt-get upgrade -y && \
+    for package in chromium chromium-common chromium-driver; do \
+        installed=$(dpkg-query -W -f='${Version}' "$package") && \
+        dpkg --compare-versions "$installed" ge "$CHROMIUM_MIN_VERSION" || exit 1; \
+    done && \
     # crashpad handler wrapper (same trick as single-stage image)
     printf '#!/bin/sh\nexec /usr/lib/chromium/chrome_crashpad_handler.real "$@" --database=/tmp/crashpad 2>/dev/null || true\n' \
         > /usr/lib/chromium/chrome_crashpad_handler.wrapper && \
