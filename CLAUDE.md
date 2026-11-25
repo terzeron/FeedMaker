@@ -68,6 +68,8 @@ deploy_and_build       # 리얼 버전 배포 (~/bin/deploy_and_build)
 
 - 개발 버전 배포는 `./build.sh`로 실행한다.
 - 리얼 버전 배포는 `deploy_and_build`로 실행한다.
+- backend·frontend APT 레이어는 날짜로 캐시를 갱신한다. 같은 날 강제 갱신은 `APT_REFRESH=새로운값`을 지정한다.
+- backend 빌드는 Chromium·common·driver의 최소 보안 버전을 검사한다. 보안 패치 후 최소 버전을 함께 갱신한다.
 
 ## 참고 문서
 
