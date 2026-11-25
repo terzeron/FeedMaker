@@ -78,3 +78,13 @@ deploy_and_build       # 리얼 버전 배포 (~/bin/deploy_and_build)
 - `.env` 파일 필요 (빌드/배포 시): `FM_BACKEND_PORT` 등 설정
 - 백엔드 환경 변수는 `bin/feed_maker_util.py`의 `Env` 클래스 참조
 - Python 3.12 전용 (`requires-python = ">=3.12,<3.13"`)
+
+## Authentication
+
+- `FM_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST`는 로그인과 기존 세션 모두의 접근 경계다.
+- `backend/auth.py:get_session`은 매 조회마다 현재 허용 목록을 확인한다. 비어 있거나 설정이 없으면 거절한다.
+- 제외된 계정이 요청하면 해당 DB 세션을 만료 연장 전에 삭제한다. 다른 장치의 세션도 각 장치가 요청할 때 삭제한다.
+- 계정을 다시 허용해도 이미 삭제한 세션은 복구되지 않는다. 새 로그인이 필요하다.
+- 허용 목록은 환경 변수다. 배포 설정 변경 후 Pod를 교체해야 실행 중인 프로세스에 반영된다.
+- 폐기한 세션은 보호 API에서 401이다. `/auth/me`는 기존 계약대로 200과 `is_authenticated: false`를 반환한다.
+- 회귀 검증: `tests/test_session_revocation.py`. 운영 DB를 사용하지 않고 실제 SQLAlchemy transaction과 HTTP 인증 경로를 검사한다.

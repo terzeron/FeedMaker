@@ -110,7 +110,7 @@ def create_session(user_email: str, user_name: str, profile_picture_url: Optiona
 
 
 def get_session(session_id: str) -> Optional[UserSession]:
-    """Get session from database and validate expiry"""
+    """Get session from database and validate current access and expiry"""
     if not session_id:
         LOGGER.warning("get_session: Empty session_id provided")
         return None
@@ -121,6 +121,12 @@ def get_session(session_id: str) -> Optional[UserSession]:
 
         if not user_session:
             LOGGER.warning("get_session: No session found for %s...", session_id[:8])
+            return None
+
+        # 로그인 이후 허용 목록에서 제외된 계정은 만료 연장 전에 세션을 폐기한다.
+        if user_session.user_email not in get_login_allowed_email_set():
+            session.delete(user_session)
+            LOGGER.info("Session %s... revoked: account no longer allowed", session_id[:8])
             return None
 
         # Check if session is expired

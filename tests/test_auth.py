@@ -200,6 +200,9 @@ class TestCreateSession(unittest.TestCase):
 
 
 class TestGetSession(unittest.TestCase):
+    def setUp(self) -> None:
+        self.enterContext(patch.dict("os.environ", {"FM_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST": "user@example.com"}))
+
     @patch("backend.auth.DB.session_ctx")
     def test_empty_session_id(self, mock_session_ctx) -> None:
         from backend.auth import get_session
@@ -223,6 +226,7 @@ class TestGetSession(unittest.TestCase):
     @patch("backend.auth.DB.session_ctx")
     def test_expired_session(self, mock_session_ctx) -> None:
         mock_user_session = MagicMock()
+        mock_user_session.user_email = "user@example.com"
         mock_user_session.expires_at = datetime.now(timezone.utc) - timedelta(days=1)
         mock_session = MagicMock()
         mock_session.query.return_value.filter.return_value.first.return_value = mock_user_session

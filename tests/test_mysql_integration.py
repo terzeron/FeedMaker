@@ -738,6 +738,7 @@ class TestAuthMySQLIntegration(unittest.TestCase):
         cls._ctx.__exit__(None, None, None)
 
     def setUp(self) -> None:
+        self.enterContext(patch.dict("os.environ", {"FM_FACEBOOK_LOGIN_ALLOWED_EMAIL_LIST": "user@example.com,expired@example.com"}))
         DB.create_all_tables(self.db_config)
         self._original_session_ctx = DB.session_ctx
         self._db_patch = patch("backend.auth.DB.session_ctx", side_effect=lambda *args, **kwargs: self._original_session_ctx(db_config=self.db_config))
