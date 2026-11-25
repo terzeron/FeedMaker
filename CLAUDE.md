@@ -90,3 +90,11 @@ deploy_and_build       # 리얼 버전 배포 (~/bin/deploy_and_build)
 - 허용 목록은 환경 변수다. 배포 설정 변경 후 Pod를 교체해야 실행 중인 프로세스에 반영된다.
 - 폐기한 세션은 보호 API에서 401이다. `/auth/me`는 기존 계약대로 200과 `is_authenticated: false`를 반환한다.
 - 회귀 검증: `tests/test_session_revocation.py`. 운영 DB를 사용하지 않고 실제 SQLAlchemy transaction과 HTTP 인증 경로를 검사한다.
+
+## 배포 보안 gate (2026-11-26)
+
+기존 build/publish 진입점에서 `~/k8s/security-gates`의 이미지 검사와 배포 후 검사를 실행한다.
+수정 가능한 High/Critical 또는 보안 설정 후퇴가 있으면 종료 코드를 실패로 반환한다.
+검사 실패를 무시하고 push하지 않는다. gate 경로 변경은 `SECURITY_GATE_DIR`로 지정한다.
+세부 기준과 수동 Helm upgrade wrapper는 `~/k8s/security-gates/README.md`를 따른다.
+develop의 build.sh에 반영했다. 다음 정상적인 리얼 버전 반영 때 운영 clone으로 전달한다.
