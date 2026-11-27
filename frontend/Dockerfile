@@ -21,11 +21,14 @@ FROM nginx:1.30.7@sha256:8a7280c664b1a205092ffea6443299e6d307fe65b6f946b02028fa3
 
 # base OS 보안 패치 적용 (apt는 root 필요 → 작업 후 비root로 복귀)
 # readOnlyRootFilesystem 호환: user 지시어 제거, pid와 temp 경로를 /tmp(emptyDir)로 옮긴다.
+# load_module로 쓰지 않는 njs·xslt 모듈을 지워 libxml2(CVE-2026-6653, trixie 미수정)를 이미지에서 뺀다.
 USER root
 ARG APT_REFRESH=0
 RUN : "apt refresh ${APT_REFRESH}" && \
     apt-get update && \
     apt-get upgrade -y && \
+    apt-get purge -y --auto-remove nginx-module-njs nginx-module-xslt libxslt1.1 libxml2 && \
+    ! dpkg -s libxml2 >/dev/null 2>&1 && \
     rm -rf /var/lib/apt/lists/* && \
     sed -i -e '/^user  nginx;/d' \
            -e 's,^pid .*,pid        /tmp/nginx.pid;,' \
