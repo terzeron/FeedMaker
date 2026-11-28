@@ -15,7 +15,7 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Optional
 from filelock import FileLock, Timeout
-from bin.feed_maker_util import Config, PathUtil, FileManager, NotFoundConfigItemError, Env, Process, Datetime
+from bin.feed_maker_util import Config, PathUtil, FileManager, NotFoundConfigItemError, NotFoundConfigFileError, Env, Process, Datetime
 from bin.headless_browser import HeadlessBrowser
 from bin.notification import Notification
 from bin.feed_maker import FeedMaker, STOP_FLAG_FILE_NAME
@@ -222,7 +222,12 @@ class FeedMakerRunner:
 
     def _make_feed_in_all_feeds(self, feed_dir_path: Path, failed_feed_list: list[str]) -> None:
         feed_name = feed_dir_path.name
-        config = Config(feed_dir_path=feed_dir_path)
+        try:
+            config = Config(feed_dir_path=feed_dir_path)
+        except NotFoundConfigFileError:
+            # 목록을 만든 뒤 처리하기 전에 다른 프로세스가 피드를 지운 경우(예: 배치 후속 작업의 피드 삭제). 실패가 아니라 건너뛴다.
+            LOGGER.info("skipping '%s', feed directory or conf.json was removed", PathUtil.short_path(feed_dir_path))
+            return
         try:
             collection_conf = config.get_collection_configs()
         except NotFoundConfigItemError as e:
